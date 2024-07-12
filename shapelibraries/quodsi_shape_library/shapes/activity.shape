@@ -1,0 +1,22 @@
+{
+  "properties": [
+    {
+      name: "q_objecttype",
+      label: "qs_type",
+      type: "string",
+      default: "activity"
+    }
+  ],
+  "geometry": [
+    {
+      "type": "rect",
+      "w": 1,
+      "h": 0.6,
+      "rounding": 10
+    }
+  ],
+  "style": {
+    "fill": { "type": "color", "color": "#FFFFFF" },
+    "stroke": { "color": "#000000", "width": 1 }
+  }
+}

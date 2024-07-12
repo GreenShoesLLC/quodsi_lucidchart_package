@@ -1,0 +1,40 @@
+{
+  "id": "",
+  "version": "1.0.0",
+  "extensions": [
+    {
+      "name": "quodsi_editor_extension",
+      "title": "quodsi_editor_extension",
+      "products": [
+        "chart",
+        "spark",
+        "teamspaces"
+      ],
+      "codePath": "editorextensions\\quodsi_editor_extension\\bin\\extension.js",
+      "scopes": [
+        "READ",
+        "WRITE",
+        "DOWNLOAD",
+        "SHOW_MODAL",
+        "CUSTOM_UI",
+        "NETWORK"
+      ]
+    }
+  ],
+  "shapeLibraries": [
+    {
+      "name": "quodsi_shape_library",
+      "product": "chart",
+      "lcszPath": "shapelibraries\\quodsi_shape_library.lcsz"
+    }
+  ],
+  "oauthProviders": [],
+  "dataConnectors": [
+    {
+      "name": "quodsi_data_connector",
+      "oauthProviderName": "",
+      "callbackBaseUrl": "",
+      "dataActions": {}
+    }
+  ]
+}
