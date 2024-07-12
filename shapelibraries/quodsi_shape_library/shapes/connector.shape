@@ -9,7 +9,7 @@
   ],
   "geometry": [
     {
-      "type": "line",
+      "type": "ellipse",
       "w": 1,
       "h": 0.6,
       "rounding": 10
