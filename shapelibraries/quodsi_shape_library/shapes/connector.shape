@@ -9,7 +9,7 @@
   ],
   "geometry": [
     {
-      "type": "rect",
+      "type": "singleArrow",
       "w": 1,
       "h": 0.6,
       "rounding": 10
