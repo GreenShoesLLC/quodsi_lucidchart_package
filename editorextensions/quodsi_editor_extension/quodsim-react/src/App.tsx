@@ -58,6 +58,8 @@ const App: React.FC = () => {
       handleMessage(event.data);
     };
     window.addEventListener('message', eventListener);
+    // Signal the parent that the React app is ready
+    window.parent.postMessage({ messagetype: 'reactAppReady' }, '*');
     return () => {
       console.log('Removing message event listener');
       window.removeEventListener('message', eventListener);
