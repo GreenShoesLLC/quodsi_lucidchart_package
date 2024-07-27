@@ -4,11 +4,9 @@
   "extensions": [
     {
       "name": "quodsi_editor_extension",
-      "title": "quodsi_editor_extension",
+      "title": "Quodsim",
       "products": [
-        "chart",
-        "spark",
-        "teamspaces"
+        "chart"
       ],
       "codePath": "editorextensions\\quodsi_editor_extension\\bin\\extension.js",
       "scopes": [
