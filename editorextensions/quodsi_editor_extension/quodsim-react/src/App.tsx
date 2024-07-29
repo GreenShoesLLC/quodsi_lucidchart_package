@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import ActivityEditor from './components/ActivityEditor';
 import EntityEditor from './components/EntityEditor';
 import ConnectorEditor from './components/ConnectorEditor';
-import { Activity, Entity, Connector, SimulationObjectType } from './app/models';
+import { SimulationObjectType } from './app/models/enums';
+import { Activity } from './app/models/activity';
+import { Entity } from './app/models/entity';
+import { Connector } from './app/models/connector';
+
 
 const App: React.FC = () => {
   const [editor, setEditor] = useState<JSX.Element | null>(null);

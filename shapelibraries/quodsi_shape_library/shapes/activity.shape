@@ -5,6 +5,12 @@
       label: "qs_type",
       type: "string",
       default: "activity"
+    },
+    {
+      name: "q_data",
+      label: "q_data",
+      type: "string",
+      default: "{\"id\":\"xyz123\",\"name\":\"Custom Activity\",\"capacity\":\"1\",\"inputBufferCapacity\":999,\"outputBufferCapacity\":999,\"operationSteps\":[{\"resourceSetRequest\":null,\"duration\":{\"durationLength\":15,\"durationPeriodUnit\":\"MINUTES\",\"durationType\":\"CONSTANT\",\"distribution\":null}}]}"
     }
   ],
   "geometry": [

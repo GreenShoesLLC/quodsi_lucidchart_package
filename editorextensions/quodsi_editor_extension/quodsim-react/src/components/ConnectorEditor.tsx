@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Connector } from '../app/models';
+import { Connector } from '../app/models/connector';
+
 
 interface Props {
   connector: Connector;

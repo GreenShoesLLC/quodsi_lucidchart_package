@@ -5,6 +5,12 @@
       label: "qs_type",
       type: "string",
       default: "entity"
+    },
+    {
+      name: "q_data",
+      label: "q_data",
+      type: "string",
+      default: "{\"id\":\"defaultEntityId\",\"name\":\"Default Entity\",\"type\":\"Entity\"}"
     }
   ],
   "geometry": [

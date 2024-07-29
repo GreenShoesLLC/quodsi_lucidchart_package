@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Entity } from '../app/models';
+import { Entity } from '../app/models/entity';
+
 
 interface Props {
   entity: Entity;
