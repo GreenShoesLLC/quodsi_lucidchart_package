@@ -9,8 +9,10 @@
   ],
   "geometry": [
     {
-      type: "path",
-       path: "M 0,0 L 5,5"
+      "type": "singleArrow",
+      "w": 1,
+      "h": 0.6,
+      "rounding": 10
     }
   ],
   "style": {

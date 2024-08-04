@@ -6,6 +6,8 @@ import { SimulationObjectType } from './app/models/enums';
 import { Activity } from './app/models/activity';
 import { Entity } from './app/models/entity';
 import { Connector } from './app/models/connector';
+import { TestingButtons } from './components/TestingButtons';
+import { ContentDock } from './components/ContentDock';
 
 
 const App: React.FC = () => {
@@ -15,14 +17,29 @@ const App: React.FC = () => {
 
     // console.log(`handleMessage called with data: ${JSON.stringify(data)}`);
     // console.log("handleMessage called", { data });
-    console.log("handleMessage called with data:", data);
+    console.log("React: handleMessage called with data:", data);
 
     if (data.messagetype === 'lucidchartdata') {
-      const instanceData = JSON.parse(data.instancedata);
-      console.log("instanceData:", instanceData);
+      let instanceData = {};
+
+      try {
+        instanceData = JSON.parse(data.instancedata || '{}');
+        console.log('Parsed instance data:', instanceData);
+      } catch (error) {
+        console.error('Error parsing instance data:', error);
+      }
+
+      console.log("React: instanceData:", instanceData);
       switch (data.simtype) {
+        case 'contentdock':
+          console.log("React: setEditor to ContentDock")
+          setEditor(
+            <ContentDock
+            />
+          );
+          break;
         case 'activity':
-          console.log("setEditor to ActivityEditor")
+          console.log("React: setEditor to ActivityEditor")
           setEditor(
             <ActivityEditor
               activity={instanceData as Activity}
@@ -32,7 +49,7 @@ const App: React.FC = () => {
           );
           break;
         case 'entity':
-          console.log("setEditor to EntityEditor")
+          console.log("React: setEditor to EntityEditor")
           setEditor(
             <EntityEditor
               entity={instanceData as Entity}
@@ -42,7 +59,7 @@ const App: React.FC = () => {
           );
           break;
         case 'connector':
-          console.log("setEditor to ConnectorEditor")
+          console.log("React: setEditor to ConnectorEditor")
           setEditor(
             <ConnectorEditor
               connector={instanceData as Connector}
@@ -56,16 +73,16 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log('Adding message event listener');
+    console.log('React: Adding message event listener');
     const eventListener = (event: MessageEvent) => {
-      console.log('Received message event:', event);
+      console.log('React: Received message event:', event);
       handleMessage(event.data);
     };
     window.addEventListener('message', eventListener);
     // Signal the parent that the React app is ready
     window.parent.postMessage({ messagetype: 'reactAppReady' }, '*');
     return () => {
-      console.log('Removing message event listener');
+      console.log('React: Removing message event listener');
       window.removeEventListener('message', eventListener);
     };
   }, []);
@@ -103,13 +120,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-      {!editor && (
-        <div>
-          <button onClick={() => sendTestMessage(SimulationObjectType.Activity)}>Test Activity2</button>
-          <button onClick={() => sendTestMessage(SimulationObjectType.Entity)}>Test Entity2</button>
-          <button onClick={() => sendTestMessage(SimulationObjectType.Connector)}>Test Connector2</button>
-        </div>
-      )}
+      {!editor && <TestingButtons sendTestMessage={sendTestMessage} />}
       {editor}
     </div>
   );

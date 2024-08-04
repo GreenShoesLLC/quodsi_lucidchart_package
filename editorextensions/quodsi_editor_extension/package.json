@@ -1,5 +1,6 @@
 {
     "devDependencies": {
+        "@types/uuid": "^10.0.0",
         "raw-loader": "^4.0.2",
         "ts-loader": "^9.2.6",
         "typescript": "^5.1.6",
@@ -8,6 +9,7 @@
     "dependencies": {
         "create-react-app": "^5.0.1",
         "lucid-extension-sdk": "^0.0.296",
+        "uuid": "^10.0.0",
         "webpack-shell-plugin-next": "^2.3.1"
     }
 }

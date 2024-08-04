@@ -16,19 +16,30 @@
         	"q_objecttype": "activity"
       		}
         },
-                {
+        {
+            "shape": "connector",
+            "name": "Connector",
+            "defaults": {
+                "fillColor": "#ff0000",
+                "strokeColor": "#00ffff",
+                "strokeWidth": 3,
+                "rounding": 0,
+                "width": 100,
+                "height": 100
+            }
+        },
+        {
             "shape": "entity",
             "name": "Entity",
             "defaults": {
-                "fillColor": "#0000FF",
-                "strokeColor": "#0000FF",
+                "fillColor": "#ff0000",
+                "strokeColor": "#00ffff",
                 "strokeWidth": 3,
                 "rounding": 0,
-                "width": 50,
-                "height": 50
+                "width": 100,
+                "height": 100
             }
         },
-
         {
             "shape": "generator",
             "name": "Generator",
@@ -38,23 +49,9 @@
                 "strokeWidth": 3,
                 "rounding": 0,
                 "width": 100,
-                "height": 50
+                "height": 100
             }
         },
- {
-            "shape": "sink",
-            "name": "Sink",
-            "defaults": {
-                "fillColor": "#ff0000",
-                "strokeColor": "#00ffff",
-                "strokeWidth": 3,
-                "rounding": 0,
-                "width": 100,
-                "height": 50
-            }
-        },
-
- 
         {
             "shape": "resource",
             "name": "Resource",

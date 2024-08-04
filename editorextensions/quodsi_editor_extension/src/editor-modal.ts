@@ -8,18 +8,33 @@ export class EditorModal extends Modal {
     private reactAppReady: boolean = false;
     private firstSelectedItem: ItemProxy | null = null;  // Add this line to store the first selected item
 
-    constructor(client: EditorClient) {
+    /**
+     * Constructor for the EditorModal class.
+     * @param client - The EditorClient instance.
+     * @param title - Optional title for the modal.
+     * @param firstSelectedItem - Optional first selected item to initialize.
+     */
+    constructor(client: EditorClient, title?: string, firstSelectedItem?: ItemProxy | null) {
         super(client, {
-            title: 'Hello world',
+            title: title || 'Properties',
             width: 400,
             height: 300,
             url: 'quodsim-react/index.html',
         });
 
-        const viewport = new Viewport(client);
-        const selection = viewport.getSelectedItems();
-        if (selection.length > 0) {
-            this.firstSelectedItem = selection[0];  // Store the first selected item
+        this.firstSelectedItem = firstSelectedItem || null;
+
+        if (!this.firstSelectedItem) {
+            const viewport = new Viewport(client);
+            const selection = viewport.getSelectedItems();
+            if (selection.length > 0) {
+                this.firstSelectedItem = selection[0];
+            } else {
+                console.error("No items selected");
+            }
+        }
+
+        if (this.firstSelectedItem) {
             const q_objecttypeValue = this.firstSelectedItem.shapeData.get('q_objecttype');
             if (typeof q_objecttypeValue === 'string' || q_objecttypeValue === undefined) {
                 this.q_objecttype = q_objecttypeValue;
@@ -27,8 +42,6 @@ export class EditorModal extends Modal {
             } else {
                 console.error("Invalid type for q_objecttype:", typeof q_objecttypeValue);
             }
-        } else {
-            console.error("No items selected");
         }
     }
 
@@ -155,7 +168,7 @@ export class EditorModal extends Modal {
     }
     private sendInitialMessage(): void {
         if (this.reactAppReady) {
-            let serializedData = '';//this.generateMessage(2);
+            let serializedData = '';
             if (this.firstSelectedItem && this.firstSelectedItem.shapeData) {
                 serializedData = this.firstSelectedItem.shapeData.getString('q_data');
                 // serializedData = JSON.stringify(q_dataValue);

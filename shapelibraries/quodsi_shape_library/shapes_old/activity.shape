@@ -13,18 +13,11 @@
       default: "{\"id\":\"xyz123\",\"name\":\"Custom Activity\",\"capacity\":\"1\",\"inputBufferCapacity\":999,\"outputBufferCapacity\":999,\"operationSteps\":[{\"resourceSetRequest\":null,\"duration\":{\"durationLength\":15,\"durationPeriodUnit\":\"MINUTES\",\"durationType\":\"CONSTANT\",\"distribution\":null}}]}"
     }
   ],
-"defs": [
-       {
-            "name": "titleText",
-            "type": "text",
-            "value": "Activity"
-       }
-    ],
   "geometry": [
     {
       "type": "rect",
       "w": 1,
-      "h": 1,
+      "h": 0.6,
       "rounding": 10
     }
   ],
@@ -32,19 +25,4 @@
     "fill": { "type": "color", "color": "#FFFFFF" },
     "stroke": { "color": "#000000", "width": 1 }
   }
-"shapes": [
-{
-   "textarea": {
-                "name": "title",
-                "text": "{{=@titleText}}",
-                "align": "center",
-                "style": {
-                    "bold": true,
-                    "size": 18
-                },
-                "editable": true
-}
-}
-]
-
 }
