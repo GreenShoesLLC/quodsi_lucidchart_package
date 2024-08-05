@@ -2,6 +2,7 @@ import {
     EditorClient,
     Panel, PanelLocation
 } from 'lucid-extension-sdk';
+import { LucidChartMessageClass } from './LucidChartMessage';
 
 
 export class ContentDockPanel extends Panel {
@@ -18,20 +19,23 @@ export class ContentDockPanel extends Panel {
         });
 
     }
-    private sendInitialMessage(): void {
+
+    public sendMessageToReact(): void {
         if (this.reactAppReady) {
 
-            let serializedData = '';
-            const message = {
-                messagetype: 'lucidchartdata',
-                simtype: 'contentdock',
-                version: '1',
-                instancedata: serializedData
-            };
+            let instancedata = '';
+            // Create an instance of the message
+            const message = LucidChartMessageClass.createMessage(
+                'lucidchartdata',
+                instancedata,
+                'id1',
+                'contentdock',
+                "1"
+            );
 
             console.log("Extension sending message:", message);
 
-            this.sendMessage(message)
+            this.sendMessage(message.toObject())
                 .then(() => {
                     console.log("lucidchartdata Message sent successfully");
                 })
@@ -47,7 +51,7 @@ export class ContentDockPanel extends Panel {
         if (message.messagetype === 'reactAppReady') {
             console.log("Extension received reactAppReady message:");
             this.reactAppReady = true;
-            this.sendInitialMessage();
+            this.sendMessageToReact();
         } else if (message.messagetype === 'modelSaved') {
             const savedActivity = message.data;
             console.log('Model saved:', savedActivity);

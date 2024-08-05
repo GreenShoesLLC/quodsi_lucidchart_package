@@ -8,15 +8,15 @@ import { Entity } from './app/models/entity';
 import { Connector } from './app/models/connector';
 import { TestingButtons } from './components/TestingButtons';
 import { ContentDock } from './components/ContentDock';
+import { Resource } from './app/models/resource';
+import ResourceEditor from './components/ResourceEditor';
+import { LucidChartMessage, LucidChartMessageClass } from './app/models/LucidChartMessage';
 
 
 const App: React.FC = () => {
   const [editor, setEditor] = useState<JSX.Element | null>(null);
 
-  const handleMessage = (data: any) => {
-
-    // console.log(`handleMessage called with data: ${JSON.stringify(data)}`);
-    // console.log("handleMessage called", { data });
+  const handleMessage = (data: LucidChartMessage) => {
     console.log("React: handleMessage called with data:", data);
 
     if (data.messagetype === 'lucidchartdata') {
@@ -31,10 +31,25 @@ const App: React.FC = () => {
 
       console.log("React: instanceData:", instanceData);
       switch (data.simtype) {
+        case 'rightpanel':
+          console.log("React: setEditor to rightpanel")
+          setEditor(
+            <ContentDock />
+          );
+          break;
         case 'contentdock':
           console.log("React: setEditor to ContentDock")
           setEditor(
-            <ContentDock
+            <ContentDock />
+          );
+          break;
+        case 'resource':
+          console.log("React: setEditor to ResourceEditor")
+          setEditor(
+            <ResourceEditor
+              resource={instanceData as Resource}
+              onSave={(resource) => console.log(JSON.stringify(resource))}
+              onCancel={() => setEditor(null)}
             />
           );
           break;
@@ -76,47 +91,59 @@ const App: React.FC = () => {
     console.log('React: Adding message event listener');
     const eventListener = (event: MessageEvent) => {
       console.log('React: Received message event:', event);
-      handleMessage(event.data);
+      handleMessage(event.data as LucidChartMessage);
     };
     window.addEventListener('message', eventListener);
     // Signal the parent that the React app is ready
-    window.parent.postMessage({ messagetype: 'reactAppReady' }, '*');
+    const readyMessage = LucidChartMessageClass.createMessage(
+      'reactAppReady',
+      '{}',
+      ''
+    ).toObject();
+    window.parent.postMessage(readyMessage, '*');
     return () => {
       console.log('React: Removing message event listener');
       window.removeEventListener('message', eventListener);
     };
   }, []);
+  
+const sendTestMessage = (type: SimulationObjectType) => {
+  let testData: LucidChartMessageClass;
 
-  const sendTestMessage = (type: SimulationObjectType) => {
-    let testData;
-    switch (type) {
-      case SimulationObjectType.Activity:
-        testData = {
-          messagetype: 'lucidchartdata',
-          simtype: 'activity',
-          version: '1',
-          instancedata: JSON.stringify({ id: '123', capacity: 3, name: 'Test Activity', type: SimulationObjectType.Activity })
-        };
-        break;
-      case SimulationObjectType.Entity:
-        testData = {
-          messagetype: 'lucidchartdata',
-          simtype: 'entity',
-          version: '1',
-          instancedata: JSON.stringify({ id: '456', name: 'Test Entity', type: SimulationObjectType.Entity })
-        };
-        break;
-      case SimulationObjectType.Connector:
-        testData = {
-          messagetype: 'lucidchartdata',
-          simtype: 'connector',
-          version: '1',
-          instancedata: JSON.stringify({ id: '789', fromActivityId: '123', toActivityId: '456', name: 'Test Connector', type: SimulationObjectType.Connector })
-        };
-        break;
-    }
-    handleMessage(testData);
-  };
+  switch (type) {
+    case SimulationObjectType.Activity:
+      testData = LucidChartMessageClass.createMessage(
+        'lucidchartdata',
+        JSON.stringify({ id: '123', capacity: 3, name: 'Test Activity', type: SimulationObjectType.Activity }),
+        'v1',
+        'activity',
+        '1'
+      );
+      break;
+    case SimulationObjectType.Entity:
+      testData = LucidChartMessageClass.createMessage(
+        'lucidchartdata',
+        JSON.stringify({ id: '456', name: 'Test Entity', type: SimulationObjectType.Entity }),
+        'v1',
+        'entity',
+        '1'
+      );
+      break;
+    case SimulationObjectType.Connector:
+      testData = LucidChartMessageClass.createMessage(
+        'lucidchartdata',
+        JSON.stringify({ id: '789', fromActivityId: '123', toActivityId: '456', name: 'Test Connector', type: SimulationObjectType.Connector }),
+        'v1',
+        'connector',
+        '1'
+      );
+      break;
+    default:
+      throw new Error(`Unsupported SimulationObjectType: ${type}`);
+  }
+
+  handleMessage(testData.toObject());
+};
 
   return (
     <div>

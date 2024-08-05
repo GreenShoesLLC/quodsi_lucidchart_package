@@ -2,6 +2,8 @@ import {
     EditorClient,
     Modal, Viewport, ItemProxy
 } from 'lucid-extension-sdk';
+import { LucidChartMessageClass } from './LucidChartMessage';
+
 
 export class EditorModal extends Modal {
     private q_objecttype: string | undefined;
@@ -12,37 +14,17 @@ export class EditorModal extends Modal {
      * Constructor for the EditorModal class.
      * @param client - The EditorClient instance.
      * @param title - Optional title for the modal.
-     * @param firstSelectedItem - Optional first selected item to initialize.
+     * @param firstItem - Optional first selected item to initialize.
      */
-    constructor(client: EditorClient, title?: string, firstSelectedItem?: ItemProxy | null) {
+    constructor(client: EditorClient, title: string, firstItem: ItemProxy | null, q_objecttype: string | undefined) {
         super(client, {
-            title: title || 'Properties',
+            title: title,
             width: 400,
             height: 300,
             url: 'quodsim-react/index.html',
         });
-
-        this.firstSelectedItem = firstSelectedItem || null;
-
-        if (!this.firstSelectedItem) {
-            const viewport = new Viewport(client);
-            const selection = viewport.getSelectedItems();
-            if (selection.length > 0) {
-                this.firstSelectedItem = selection[0];
-            } else {
-                console.error("No items selected");
-            }
-        }
-
-        if (this.firstSelectedItem) {
-            const q_objecttypeValue = this.firstSelectedItem.shapeData.get('q_objecttype');
-            if (typeof q_objecttypeValue === 'string' || q_objecttypeValue === undefined) {
-                this.q_objecttype = q_objecttypeValue;
-                console.log("Selected object type:", this.q_objecttype);
-            } else {
-                console.error("Invalid type for q_objecttype:", typeof q_objecttypeValue);
-            }
-        }
+        this.firstSelectedItem = firstItem;
+        this.q_objecttype = q_objecttype
     }
 
     protected frameLoaded(): void {
@@ -56,7 +38,7 @@ export class EditorModal extends Modal {
         if (message.messagetype === 'reactAppReady') {
             console.log("React app is ready");
             this.reactAppReady = true;
-            this.sendInitialMessage();
+            this.sendMessageToReact();
         } else if (message.messagetype === 'activitySaved') {
             const savedActivity = message.data;
             console.log('Activity saved:', savedActivity);
@@ -166,24 +148,26 @@ export class EditorModal extends Modal {
 
         return message;
     }
-    private sendInitialMessage(): void {
+    public sendMessageToReact(): void {
         if (this.reactAppReady) {
-            let serializedData = '';
+            let instancedata = '';
+            let lucidId = '';
             if (this.firstSelectedItem && this.firstSelectedItem.shapeData) {
-                serializedData = this.firstSelectedItem.shapeData.getString('q_data');
-                // serializedData = JSON.stringify(q_dataValue);
-                // serializedData = (q_dataValue);
+                instancedata = this.firstSelectedItem.shapeData.getString('q_data');
+                lucidId = this.firstSelectedItem.id;
             }
-            const message = {
-                messagetype: 'lucidchartdata',
-                simtype: this.q_objecttype,
-                version: '1',
-                instancedata: serializedData
-            };
+
+            const message = LucidChartMessageClass.createMessage(
+                'lucidchartdata',
+                instancedata,
+                lucidId,
+                this.q_objecttype,
+                "1"
+            );
 
             console.log("Sending message:", message);
 
-            this.sendMessage(message)
+            this.sendMessage(message.toObject())
                 .then(() => {
                     console.log("lucidchartdata Message sent successfully");
                 })

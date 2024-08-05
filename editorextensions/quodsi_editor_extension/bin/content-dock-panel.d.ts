@@ -3,6 +3,6 @@ export declare class ContentDockPanel extends Panel {
     private static icon;
     private reactAppReady;
     constructor(client: EditorClient, title?: string);
-    private sendInitialMessage;
+    sendMessageToReact(): void;
     protected messageFromFrame(message: any): void;
 }
