@@ -11,6 +11,7 @@ import { ContentDock } from './components/ContentDock';
 import { Resource } from './app/models/resource';
 import ResourceEditor from './components/ResourceEditor';
 import { LucidChartMessage, LucidChartMessageClass } from './app/models/LucidChartMessage';
+import ModelUtilities from './components/ModelUtilities';
 
 
 const App: React.FC = () => {
@@ -24,13 +25,33 @@ const App: React.FC = () => {
 
       try {
         instanceData = JSON.parse(data.instancedata || '{}');
-        console.log('Parsed instance data:', instanceData);
+        // console.log('Parsed instance data:', instanceData);
       } catch (error) {
         console.error('Error parsing instance data:', error);
       }
 
       console.log("React: instanceData:", instanceData);
       switch (data.simtype) {
+        case 'ValidateModel':
+          console.log("React: setEditor to model_utilities")
+          setEditor(
+            <ModelUtilities
+                showConvertButton={false}
+                showValidateButton={true}
+                showRemoveButton={true}
+            />
+          );
+          break;
+        case 'ConvertPageToModel':
+          console.log("React: setEditor to model_utilities")
+          setEditor(
+            <ModelUtilities
+                showConvertButton={true}
+                showValidateButton={false}
+                showRemoveButton={false}
+            />
+          );
+          break;
         case 'rightpanel':
           console.log("React: setEditor to rightpanel")
           setEditor(

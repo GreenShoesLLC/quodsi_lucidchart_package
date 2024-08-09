@@ -20,65 +20,15 @@ const viewport = new Viewport(client);
 const document = new DocumentProxy(client);
 const docId = document.id;
 
-function generateSimpleUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-function getOrCreatePageModelId(): string | null {
-    console.log('getOrCreatePageModelId start');
-    // 1. Get the active page
-    const activePage: PageProxy | undefined = viewport.getCurrentPage();
-
-    // Check if there's an active page
-    if (!activePage) {
-        console.error('No active page found');
-        return null;
-    }
-
-    // 2. Get 'q_data' from the active page or create it if it doesn't exist
-    let q_data: any = activePage.shapeData.get('q_data');
-
-    if (!q_data) {
-        // const pageModelId = uuidv4(); // Generate a new UUID
-        const pageModelId = generateSimpleUUID(); // Generate a new UUID-like string
-        q_data = {
-            id: pageModelId,
-            name: "Model1",
-            type: "Model"
-        };
-
-        console.log('setting q_data');
-        // Add the q_data property to the page
-
-        activePage.shapeData.set('q_data', JSON.stringify(q_data));
-        console.log('successfully set q_data');
-    } else {
-        // If q_data exists but is a string, parse it
-        if (typeof q_data === 'string') {
-            try {
-                q_data = JSON.parse(q_data);
-            } catch (error) {
-                console.error('Error parsing q_data:', error);
-                return null;
-            }
-        }
-    }
-
-    // 3. Get the id value from q_data of the page
-    console.log('getOrCreatePageModelId finish');
-    return q_data.id || null;
-}
 
 client.registerAction('hello', () => {
-    const pageModelId = getOrCreatePageModelId();
-    if (pageModelId) {
-        console.log('Page Model ID:', pageModelId);
+    // const pageModelId = LucidChartUtils.getOrCreatePageModelId(viewport);
+
+    const pageModel = LucidChartUtils.getOrCreatePageModel(viewport);
+    if (pageModel) {
+        console.log('Page Model ID:', pageModel.id);
     } else {
-        console.error('Failed to get or create page model ID');
+        console.error('Failed to get or create page model');
     }
     const modal = new HelloWorldModal(client);
     modal.show();

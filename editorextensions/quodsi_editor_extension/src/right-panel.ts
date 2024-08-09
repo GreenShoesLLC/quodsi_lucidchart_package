@@ -1,21 +1,26 @@
 import {
     EditorClient,
-    Panel, PanelLocation, DocumentProxy
+    Panel, PanelLocation, DocumentProxy,
+    Viewport,
+    PageProxy
 } from 'lucid-extension-sdk';
 import { LucidChartMessageClass } from './LucidChartMessage';
+import { LucidChartUtils } from './lucidChartUtils';
 
 export class RightPanel extends Panel {
     private static icon = 'https://lucid.app/favicon.ico';
     private reactAppReady: boolean = false;
 
     constructor(client: EditorClient) {
+        // console.log("RightPanel constructor called");
+        // by default, this is called when the extension is loaded and only once.
         super(client, {
             title: 'Quodsi Right Panel',
             url: 'quodsim-react/index.html',
             location: PanelLocation.RightDock,
             iconUrl: RightPanel.icon,
         });
-
+        //url: 'quodsim-react/index.html' is not called until the user clicks the panel the first time
     }
     public sendMessageToReact(q_objecttype: string | undefined): void {
         if (this.reactAppReady) {
@@ -48,8 +53,39 @@ export class RightPanel extends Panel {
         if (message.messagetype === 'reactAppReady') {
             console.log("Extension received reactAppReady message:");
             this.reactAppReady = true;
-            this.sendMessageToReact("rightpanel");
-        } else if (message.messagetype === 'activitySaved') {
+            // when the panel button is first clicked by user, React app will send the reactAppReady
+            // and it will be received here.  
+
+            // Need to query the viewport for what is selected here and send the appropriate message.
+            const viewport = new Viewport(this.client);
+            const pageModel = LucidChartUtils.getOrCreatePageModel(viewport, false);
+            if (pageModel) {
+                console.log('Page Model:', pageModel);
+                // Page is a model so lets determine what is selected and send
+
+                this.sendMessageToReact("rightpanel");
+            } else {
+                console.log('Page is not a Model yet');
+                //Page is not a model so QS right panel should offer chance to convert first
+                this.sendMessageToReact("ConvertPageToModel");
+            }
+        } else if (message.messagetype === 'ConvertPageToModel') {
+            console.log('Extension received ConvertPageToModel');
+            const viewport = new Viewport(this.client);
+            const activePage: PageProxy | undefined = viewport.getCurrentPage();
+            if (activePage)
+            {
+                LucidChartUtils.setPageCustomData(activePage)
+                this.sendMessageToReact("ValidateModel");
+            }
+
+
+        } else if (message.messagetype === 'ValidateModel') {
+            console.log('Extension received ValidateModel');
+
+        } else if (message.messagetype === 'RemoveModel') {
+            console.log('Extension received RemoveModel');
+        } else if (message.messagetype === 'RemoveModel') {
             const savedActivity = message.data;
             console.log('Activity saved:', savedActivity);
             // try {

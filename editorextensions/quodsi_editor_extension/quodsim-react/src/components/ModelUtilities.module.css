@@ -1,0 +1,57 @@
+.button-container {
+    display: flex;
+    flex-direction: column; /* Stack buttons vertically */
+    gap: 16px; /* Space between buttons */
+}
+
+.lucid-styling {
+    height: 32px;
+    border-radius: 4px;
+    padding: 0 16px;
+    border: 0;
+    font-family: sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.lucid-styling.primary {
+    background-color: #1071e5;
+    color: white;
+}
+
+.lucid-styling.primary:hover,
+.lucid-styling.primary:active {
+    background-color: #2888fa;
+}
+
+.lucid-styling.secondary {
+    color: #1071e5;
+    border: solid 1px #1071e5;
+    background-color: white;
+}
+
+.lucid-styling.secondary:hover {
+    background-color: #edf5ff;
+}
+
+.lucid-styling.secondary:active {
+    background-color: #cfe4ff;
+}
+
+.lucid-styling.tertiary {
+    color: #1071e5;
+    background-color: white;
+}
+
+.lucid-styling.tertiary:hover {
+    background-color: #edf5ff;
+}
+
+.lucid-styling.tertiary:active {
+    background-color: #cfe4ff;
+}
+
+.lucid-styling:hover {
+    cursor: pointer;
+}

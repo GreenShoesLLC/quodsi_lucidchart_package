@@ -4,8 +4,9 @@ import ExperimentEditor from './ExperimentEditor';
 import { OutputViewer } from './OutputViewer';
 import { Model } from '../app/models/model'; // Make sure this import path is correct
 import { SimulationObjectType } from '../app/models/enums';
+import ModelUtilities from './ModelUtilities';
 
-type TabType = 'model' | 'experiments' | 'output';
+type TabType = 'model' | 'experiments' | 'output' | 'utilities';
 
 export const ContentDock: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('model');
@@ -44,6 +45,14 @@ export const ContentDock: React.FC = () => {
         return <ExperimentEditor />;
       case 'output':
         return <OutputViewer />;
+      case 'utilities':
+        return (
+            <ModelUtilities
+                showConvertButton={false}
+                showValidateButton={true}
+                showRemoveButton={true}
+            />
+        );
       default:
         return null;
     }
@@ -69,6 +78,12 @@ export const ContentDock: React.FC = () => {
           style={{ fontWeight: activeTab === 'output' ? 'bold' : 'normal' }}
         >
           Output
+        </button>
+          <button 
+          onClick={() => setActiveTab('utilities')}
+          style={{ fontWeight: activeTab === 'utilities' ? 'bold' : 'normal' }}
+        >
+          Utilities
         </button>
       </div>
       <div>

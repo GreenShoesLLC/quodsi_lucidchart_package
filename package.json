@@ -1,4 +1,10 @@
 {
+    "private": true,
+    "workspaces": [
+        "editorextensions/quodsi_editor_extension",
+        "quodsim-react",
+        "shared"
+    ],
     "scripts": {
         "create-editor-extension": "npx lucid-package create-editor-extension",
         "create-shape-library": "npx lucid-package create-shape-library",

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../App.css';
 import { Model } from '../app/models/model';
 import { PeriodUnit } from '../app/models/enums/PeriodUnit';
 import { SimulationTimeType } from '../app/models/enums/simulation_time_type';
@@ -47,80 +48,82 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
     onSave(localModel);
   };
 
-  return (
-    <div>
-      <label>
-        Name:
-        <input type="text" name="name" value={localModel.name} onChange={handleChange} />
-      </label>
-      <label>
-        Reps:
-        <input type="number" name="reps" value={localModel.reps} onChange={handleChange} />
-      </label>
-      <label>
-        Forecast Days:
-        <input type="number" name="forecastDays" value={localModel.forecastDays} onChange={handleChange} />
-      </label>
-      <label>
-        Seed:
-        <input type="number" name="seed" value={localModel.seed} onChange={handleChange} />
-      </label>
-      <label>
-        One Clock Unit:
-        <select name="oneClockUnit" value={localModel.oneClockUnit} onChange={handleChange}>
-          {Object.values(PeriodUnit).map(unit => (
-            <option key={unit} value={unit}>{unit}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Simulation Time Type:
-        <select name="simulationTimeType" value={localModel.simulationTimeType} onChange={handleChange}>
-          {Object.values(SimulationTimeType).map(type => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Warmup Clock Period:
-        <input type="number" name="warmupClockPeriod" value={localModel.warmupClockPeriod} onChange={handleChange} />
-      </label>
-      <label>
-        Warmup Clock Period Unit:
-        <select name="warmupClockPeriodUnit" value={localModel.warmupClockPeriodUnit} onChange={handleChange}>
-          {Object.values(PeriodUnit).map(unit => (
-            <option key={unit} value={unit}>{unit}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Run Clock Period:
-        <input type="number" name="runClockPeriod" value={localModel.runClockPeriod} onChange={handleChange} />
-      </label>
-      <label>
-        Run Clock Period Unit:
-        <select name="runClockPeriodUnit" value={localModel.runClockPeriodUnit} onChange={handleChange}>
-          {Object.values(PeriodUnit).map(unit => (
-            <option key={unit} value={unit}>{unit}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Warmup Date Time:
-        <input type="datetime-local" name="warmupDateTime" value={localModel.warmupDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
-      </label>
-      <label>
-        Start Date Time:
-        <input type="datetime-local" name="startDateTime" value={localModel.startDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
-      </label>
-      <label>
-        Finish Date Time:
-        <input type="datetime-local" name="finishDateTime" value={localModel.finishDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
-      </label>
-      <button onClick={handleSave}>Save</button>
-      <button onClick={onCancel}>Cancel</button>
-    </div>
-  );
+    return (
+        <div className="form-container">
+            <div className="form-group">
+                <label htmlFor="name">Name:</label>
+                <input type="text" name="name" id="name" className="lucid-styling" value={localModel.name} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="reps">Reps:</label>
+                <input type="number" name="reps" id="reps" className="lucid-styling" value={localModel.reps} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="forecastDays">Forecast Days:</label>
+                <input type="number" name="forecastDays" id="forecastDays" className="lucid-styling" value={localModel.forecastDays} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="seed">Seed:</label>
+                <input type="number" name="seed" id="seed" className="lucid-styling" value={localModel.seed} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="oneClockUnit">One Clock Unit:</label>
+                <select name="oneClockUnit" id="oneClockUnit" className="lucid-styling" value={localModel.oneClockUnit} onChange={handleChange}>
+                    {Object.values(PeriodUnit).map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="form-group">
+                <label htmlFor="simulationTimeType">Simulation Time Type:</label>
+                <select name="simulationTimeType" id="simulationTimeType" className="lucid-styling" value={localModel.simulationTimeType} onChange={handleChange}>
+                    {Object.values(SimulationTimeType).map(type => (
+                        <option key={type} value={type}>{type}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="form-group">
+                <label htmlFor="warmupClockPeriod">Warmup Clock Period:</label>
+                <input type="number" name="warmupClockPeriod" id="warmupClockPeriod" className="lucid-styling" value={localModel.warmupClockPeriod} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="warmupClockPeriodUnit">Warmup Clock Period Unit:</label>
+                <select name="warmupClockPeriodUnit" id="warmupClockPeriodUnit" className="lucid-styling" value={localModel.warmupClockPeriodUnit} onChange={handleChange}>
+                    {Object.values(PeriodUnit).map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="form-group">
+                <label htmlFor="runClockPeriod">Run Clock Period:</label>
+                <input type="number" name="runClockPeriod" id="runClockPeriod" className="lucid-styling" value={localModel.runClockPeriod} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="runClockPeriodUnit">Run Clock Period Unit:</label>
+                <select name="runClockPeriodUnit" id="runClockPeriodUnit" className="lucid-styling" value={localModel.runClockPeriodUnit} onChange={handleChange}>
+                    {Object.values(PeriodUnit).map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="form-group">
+                <label htmlFor="warmupDateTime">Warmup Date Time:</label>
+                <input type="datetime-local" name="warmupDateTime" id="warmupDateTime" className="lucid-styling" value={localModel.warmupDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="startDateTime">Start Date Time:</label>
+                <input type="datetime-local" name="startDateTime" id="startDateTime" className="lucid-styling" value={localModel.startDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
+            </div>
+            <div className="form-group">
+                <label htmlFor="finishDateTime">Finish Date Time:</label>
+                <input type="datetime-local" name="finishDateTime" id="finishDateTime" className="lucid-styling" value={localModel.finishDateTime?.toISOString().slice(0, 16) || ''} onChange={handleChange} />
+            </div>
+            <div className="form-actions">
+                <button className="lucid-styling primary" onClick={handleSave}>Save</button>
+                <button className="lucid-styling secondary" onClick={onCancel}>Cancel</button>
+            </div>
+        </div>
+    );
 };
 
 export default ModelEditor;

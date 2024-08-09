@@ -1,4 +1,5 @@
-import { ItemProxy } from 'lucid-extension-sdk';
+import { Viewport, ItemProxy, EditorClient, PageProxy } from 'lucid-extension-sdk';
+import { Model } from './models/model';
 export declare class LucidChartUtils {
     static readonly OBJECT_TYPE_KEY = "q_objecttype";
     static readonly DATA_KEY = "q_data";
@@ -15,7 +16,7 @@ export declare class LucidChartUtils {
      * @param firstSelectedItem Optional: A pre-selected item
      * @returns An object containing the first selected item and its object type
      */
-    static getFirstSelectedItemAndType(client: any, firstSelectedItem?: ItemProxy): {
+    static getFirstSelectedItemAndType(client: EditorClient, firstSelectedItem?: ItemProxy): {
         firstSelectedItem: ItemProxy | null;
         objectType: string | undefined;
     };
@@ -25,4 +26,7 @@ export declare class LucidChartUtils {
      * @returns The determined q_objecttype value
      */
     static determineObjectTypeValue(items: ItemProxy[]): string;
+    static generateSimpleUUID(): string;
+    static setPageCustomData(activePage: PageProxy): Model | null;
+    static getOrCreatePageModel(viewport: Viewport, create_if_missing?: boolean): Model | null;
 }

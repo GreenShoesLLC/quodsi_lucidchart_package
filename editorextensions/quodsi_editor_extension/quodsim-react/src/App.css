@@ -1,38 +1,49 @@
-.App {
-  text-align: center;
+.grid-form-container {
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* Adjust columns as needed */
+    gap: 16px; /* Space between rows and columns */
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+label {
+    justify-self: end; /* Align label to the end of the cell */
+    font-weight: 600; /* Use appropriate font weight */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+input, textarea {
+    grid-column: 2; /* Place inputs in the second column */
 }
 
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+
+.form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* Space between form groups */
+    max-width: 600px; /* Adjust based on your design */
+    margin: 0 auto; /* Center the form */
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: adds a subtle shadow */
+    border-radius: 8px; /* Optional: adds rounded corners */
 }
 
-.App-link {
-  color: #61dafb;
+.form-group {
+    display: flex;
+    flex-direction: column;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+label {
+    font-weight: 600; /* Use appropriate font weight */
+    margin-bottom: 8px; /* Space between label and input */
 }
+
+input, select {
+    font-size: 14px; /* Ensure consistency */
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 16px; /* Space between buttons */
+    justify-content: flex-end; /* Align buttons to the end */
+}
+
