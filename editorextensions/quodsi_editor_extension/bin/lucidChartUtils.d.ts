@@ -26,7 +26,14 @@ export declare class LucidChartUtils {
      * @returns The determined q_objecttype value
      */
     static determineObjectTypeValue(items: ItemProxy[]): string;
+    static convertPage(page: PageProxy): boolean;
     static generateSimpleUUID(): string;
+    /**
+     * Deletes the 'q_data' shapeData from the given PageProxy instance.
+     * @param activePage - The PageProxy instance from which to delete the 'q_data'.
+     * @returns A boolean indicating whether the 'q_data' was successfully deleted.
+     */
+    static deletePageCustomData(activePage: PageProxy): boolean;
     static setPageCustomData(activePage: PageProxy): Model | null;
     static getOrCreatePageModel(viewport: Viewport, create_if_missing?: boolean): Model | null;
 }

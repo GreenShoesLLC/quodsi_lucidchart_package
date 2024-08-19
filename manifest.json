@@ -31,8 +31,10 @@
     {
       "name": "quodsi_data_connector",
       "oauthProviderName": "",
-      "callbackBaseUrl": "",
-      "dataActions": {}
+      "callbackBaseUrl": "http://localhost:5000/api",
+      "dataActions": {
+        "Simulate": "simulate"
+      }
     }
   ]
 }

@@ -2,17 +2,18 @@ import React from 'react';
 import styles from './ModelUtilities.module.css';
 import { LucidChartMessageClass } from 'src/app/models/LucidChartMessage';
 
-
 interface ModelUtilitiesProps {
     showConvertButton?: boolean;
     showValidateButton?: boolean;
     showRemoveButton?: boolean;
+    showSimulateButton?: boolean;
 }
 
 const ModelUtilities: React.FC<ModelUtilitiesProps> = ({
     showConvertButton = false,
     showValidateButton = false,
-    showRemoveButton = false
+    showRemoveButton = false,
+    showSimulateButton = false
 }) => {
 
     // Utility function to create and send a message
@@ -49,6 +50,14 @@ const ModelUtilities: React.FC<ModelUtilitiesProps> = ({
                     onClick={() => sendMessage('RemoveModel')}
                 >
                     Remove Model
+                </button>
+            )}
+            {showSimulateButton && (
+                <button
+                    className={`${styles['lucid-styling']} ${styles['secondary']}`}
+                    onClick={() => sendMessage('SimulateModel')}
+                >
+                    Simulate
                 </button>
             )}
         </div>

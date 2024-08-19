@@ -39,6 +39,7 @@ const App: React.FC = () => {
                 showConvertButton={false}
                 showValidateButton={true}
                 showRemoveButton={true}
+                showSimulateButton={true}
             />
           );
           break;
@@ -49,6 +50,7 @@ const App: React.FC = () => {
                 showConvertButton={true}
                 showValidateButton={false}
                 showRemoveButton={false}
+                showSimulateButton={false}
             />
           );
           break;

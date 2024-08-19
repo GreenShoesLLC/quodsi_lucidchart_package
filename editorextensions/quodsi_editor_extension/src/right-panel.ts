@@ -6,6 +6,8 @@ import {
 } from 'lucid-extension-sdk';
 import { LucidChartMessageClass } from './LucidChartMessage';
 import { LucidChartUtils } from './lucidChartUtils';
+import { ConvertPageToModel } from './ConvertPageToModel';
+import { RemoveModelFromPage } from './RemoveModelFromPage';
 
 export class RightPanel extends Panel {
     private static icon = 'https://lucid.app/favicon.ico';
@@ -50,7 +52,19 @@ export class RightPanel extends Panel {
 
     protected messageFromFrame(message: any): void {
         console.log('Message from iframe:', message);
-        if (message.messagetype === 'reactAppReady') {
+        if (message.messagetype === 'SimulateModel') {
+            console.log("Extension: Simulate button pressed");
+            const document = new DocumentProxy(this.client);
+            const docId = document.id;
+            console.log("Extension: docId=", docId);
+            this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'Simulate',
+                actionData: { docId },
+                asynchronous: true
+            });
+            
+        } else if (message.messagetype === 'reactAppReady') {
             console.log("Extension received reactAppReady message:");
             this.reactAppReady = true;
             // when the panel button is first clicked by user, React app will send the reactAppReady
@@ -73,9 +87,10 @@ export class RightPanel extends Panel {
             console.log('Extension received ConvertPageToModel');
             const viewport = new Viewport(this.client);
             const activePage: PageProxy | undefined = viewport.getCurrentPage();
-            if (activePage)
-            {
+            if (activePage) {
                 LucidChartUtils.setPageCustomData(activePage)
+                const converter = new ConvertPageToModel();
+                converter.convert(activePage)
                 this.sendMessageToReact("ValidateModel");
             }
 
@@ -85,6 +100,16 @@ export class RightPanel extends Panel {
 
         } else if (message.messagetype === 'RemoveModel') {
             console.log('Extension received RemoveModel');
+            const viewport = new Viewport(this.client);
+            const activePage: PageProxy | undefined = viewport.getCurrentPage();
+
+
+            if (activePage) {
+                // LucidChartUtils.deletePageCustomData(activePage)
+                const remover = new RemoveModelFromPage(activePage);
+                remover.removeModel();
+                this.sendMessageToReact("ConvertPageToModel");
+            }
         } else if (message.messagetype === 'RemoveModel') {
             const savedActivity = message.data;
             console.log('Activity saved:', savedActivity);

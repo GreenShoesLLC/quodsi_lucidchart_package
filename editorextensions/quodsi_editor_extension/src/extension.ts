@@ -124,5 +124,18 @@ function selectionChangedCallback(items: ItemProxy[]) {
         );
         rightPanel.sendMessage(message.toObject());
     }
+    else if (items.length === 0)
+    {
+        let instancedata = '';
+        // Create an instance of the message
+        const message = LucidChartMessageClass.createMessage(
+            'lucidchartdata',
+            instancedata,
+            'id1',
+            'contentdock',
+            "1"
+        );
+        rightPanel.sendMessage(message.toObject());
+    }
 }
 viewport.hookSelection(selectionChangedCallback);

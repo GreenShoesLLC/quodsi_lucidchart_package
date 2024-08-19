@@ -1,9 +1,11 @@
-import { Viewport, ItemProxy, EditorClient, PageProxy } from 'lucid-extension-sdk';
+import { Viewport, ItemProxy, EditorClient, PageProxy, ERDBlockProxy, CustomBlockProxy } from 'lucid-extension-sdk';
 import { LucidChartMessage } from './LucidChartMessage';
 import { Model } from './models/model';
 import { SimulationObjectType } from './models/enums';
 import { PeriodUnit } from './models/enums/PeriodUnit';
 import { SimulationTimeType } from './models/enums/simulation_time_type';
+import { DefaultSimulationObjects } from './DefaultSimulationObjects';
+import { QuodsiShapeData } from './QuodsiShapeData';
 
 export class LucidChartUtils {
     public static readonly OBJECT_TYPE_KEY = 'q_objecttype';
@@ -71,6 +73,18 @@ export class LucidChartUtils {
             return LucidChartUtils.getShapeDataAttribute(singleItem, LucidChartUtils.OBJECT_TYPE_KEY) || 'undefined';
         }
     }
+
+    static convertPage(page: PageProxy): boolean {
+        for (const [blockId, block] of page.allBlocks) {
+            if (block instanceof CustomBlockProxy) {
+                if (block.isFromStencil('quodsi_shape_library', 'activity')) {
+                    console.log('Found custom shape "my-shape": ' + block.id);
+                }
+            }
+        }
+        return true;
+    }
+
     static generateSimpleUUID(): string {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             const r = Math.random() * 16 | 0;
@@ -78,35 +92,47 @@ export class LucidChartUtils {
             return v.toString(16);
         });
     }
+    /**
+     * Deletes the 'q_data' shapeData from the given PageProxy instance.
+     * @param activePage - The PageProxy instance from which to delete the 'q_data'.
+     * @returns A boolean indicating whether the 'q_data' was successfully deleted.
+     */
+    static deletePageCustomData(activePage: PageProxy): boolean {
+        try {
+            // Check if 'q_data' exists before attempting to delete
+            if (activePage.shapeData.get('q_data')) {
+                // Delete the 'q_data' property from the page
+                activePage.shapeData.delete('q_data');
+                console.log('Extension: successfully deleted Page q_data');
+                return true;
+            } else {
+                console.log('Extension: q_data not found on the Page');
+                return false;
+            }
+        } catch (error) {
+            console.error('Extension: Error deleting Page q_data', error);
+            return false;
+        }
+    }
     
     static setPageCustomData(activePage: PageProxy): Model | null {
-        // Create a q_data object conforming to the Model type
-        const q_data: Model = {
-            id: LucidChartUtils.generateSimpleUUID(), // Generate a new UUID-like string
-            name: "Model1",
-            type: SimulationObjectType.Model,
-            reps: 0, // Provide default or example values
-            forecastDays: 0, // Provide default or example values
-            seed: 12345, // Default value
-            oneClockUnit: PeriodUnit.MINUTES, // Default value
-            simulationTimeType: SimulationTimeType.Clock, // Default value
-            warmupClockPeriod: 0.0, // Default value
-            warmupClockPeriodUnit: PeriodUnit.MINUTES, // Default value
-            runClockPeriod: 0.0, // Default value
-            runClockPeriodUnit: PeriodUnit.MINUTES, // Default value
-            warmupDateTime: null, // Default value
-            startDateTime: null, // Default value
-            finishDateTime: null // Default value
-        };
+        // Use DefaultSimulationObjects to create a default Model object
+        const q_data: Model = DefaultSimulationObjects.initialModel();
 
         console.log('Extension: setting Page q_data');
-        // Add the q_data property to the page
-        activePage.shapeData.set('q_data', JSON.stringify(q_data));
-        console.log('Extension: successfully set Page q_data');
+
+        // Create an instance of QuodsiShapeData to manage shape data
+        const shapeDataHandler = new QuodsiShapeData(activePage);
+
+        // Set the object type and data using QuodsiShapeData
+        shapeDataHandler.setObjectTypeAndData(SimulationObjectType.Model, q_data);
+
+        console.log('Extension: successfully set Page q_data using QuodsiShapeData');
 
         // Return the q_data object
         return q_data;
     }
+
     static getOrCreatePageModel(viewport: Viewport, create_if_missing: boolean = false): Model | null {
         console.log('getOrCreatePageModel start');
 

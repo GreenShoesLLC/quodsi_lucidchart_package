@@ -51,6 +51,7 @@ export const ContentDock: React.FC = () => {
                 showConvertButton={false}
                 showValidateButton={true}
                 showRemoveButton={true}
+                showSimulateButton={true}
             />
         );
       default:
