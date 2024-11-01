@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Connector } from '../app/models/connector';
-
+import BaseEditor from './BaseEditor';
+import { ConnectType } from '../app/models/enums/connectType';
 
 interface Props {
   connector: Connector;
@@ -9,34 +10,61 @@ interface Props {
 }
 
 const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
-  const [localConnector, setLocalConnector] = useState<Connector>(connector);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLocalConnector({ ...localConnector, [name]: value });
-  };
-
-  const handleSave = () => {
-    onSave(localConnector);
-  };
-
   return (
-    <div>
-      <label>
-        Name:
-        <input type="text" name="name" value={localConnector.name} onChange={handleChange} />
-      </label>
-      <label>
-        From Activity ID:
-        <input type="text" name="fromActivityId" value={localConnector.fromActivityId} onChange={handleChange} />
-      </label>
-      <label>
-        To Activity ID:
-        <input type="text" name="toActivityId" value={localConnector.toActivityId} onChange={handleChange} />
-      </label>
-      <button onClick={handleSave}>Save</button>
-      <button onClick={onCancel}>Cancel</button>
-    </div>
+    <BaseEditor
+      data={connector}
+      onSave={onSave}
+      onCancel={onCancel}
+      messageType="connectorSaved"
+    >
+      {(localConnector, handleChange) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label htmlFor="name">Name:</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="lucid-styling"
+              value={localConnector.name}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label htmlFor="probability">Probability:</label>
+            <input
+              type="number"
+              id="probability"
+              name="probability"
+              className="lucid-styling"
+              value={localConnector.probability}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              max="1"
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <label htmlFor="connectType">Connect Type:</label>
+            <select
+              id="connectType"
+              name="connectType"
+              className="lucid-styling"
+              value={localConnector.connectType}
+              onChange={handleChange}
+            >
+              {Object.keys(ConnectType).map((key) => (
+                <option key={key} value={ConnectType[key as keyof typeof ConnectType]}>
+                  {key}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+    </BaseEditor>
   );
 };
 

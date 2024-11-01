@@ -58,19 +58,6 @@ client.registerAction('showEditor', () => {
     modal.show();
 });
 
-client.registerAction('showLineEditor', async () => {
-    const page = await viewport.getCurrentPage();
-    if (page) {
-        const line = page?.addLine({
-            endpoint1: { x: 10, y: 10 },
-            endpoint2: { x: 100, y: 100 },
-        })
-        line.addTextArea('Hello', { location: 0.5, side: 0 })
-        const modal = new EditorModal(client, "Line Editor", line, "");
-        modal.show();
-    }
-
-});
 // client.registerAction('makeSelectionRed', () => {
 //     for (const item of viewport.getSelectedItems()) {
 //         item.properties.set('FillColor', '#ff0000ff');
@@ -79,11 +66,6 @@ client.registerAction('showLineEditor', async () => {
 client.registerAction("twoShapeSelected", () => {
     const items = viewport.getSelectedItems();
     return items.length === 2;
-});
-menu.addContextMenuItem({
-    label: 'Add Line',
-    action: 'showLineEditor',
-    visibleAction: 'twoShapeSelected',
 });
 
 menu.addContextMenuItem({
@@ -104,7 +86,7 @@ const contentDockPanel = new ContentDockPanel(client);
 
 function selectionChangedCallback(items: ItemProxy[]) {
     //send a message from right panel to react
-    //message should contain 
+
     if (items.length === 1) {
         // There's exactly one item
         const selectedItem = items[0];
@@ -114,6 +96,10 @@ function selectionChangedCallback(items: ItemProxy[]) {
         let serializedData = '';
         if (selectedItem.shapeData) {
             serializedData = selectedItem.shapeData.getString(LucidChartUtils.DATA_KEY) || '';
+            console.log('Extension: serializedData=', serializedData);
+        }
+        else {
+            console.log('Extension: Element does not have shape data');
         }
 
         const message = LucidChartMessageClass.createMessage(
@@ -125,18 +111,27 @@ function selectionChangedCallback(items: ItemProxy[]) {
         );
         rightPanel.sendMessage(message.toObject());
     }
-    else if (items.length === 0)
-    {
-        let instancedata = '';
-        // Create an instance of the message
-        const message = LucidChartMessageClass.createMessage(
-            'lucidchartdata',
-            instancedata,
-            'id1',
-            'contentdock',
-            "1"
-        );
-        rightPanel.sendMessage(message.toObject());
+    else if (items.length === 0) {
+        const activePage: PageProxy | undefined = viewport.getCurrentPage();
+        if (activePage) {
+            const selectedItem = activePage;
+            const objectType = selectedItem
+                ? LucidChartUtils.getShapeDataAttribute(selectedItem, LucidChartUtils.OBJECT_TYPE_KEY)
+                : undefined;
+            let serializedData = '';
+            if (selectedItem.shapeData) {
+                serializedData = selectedItem.shapeData.getString(LucidChartUtils.DATA_KEY) || '';
+            }
+            // Create an instance of the message
+            const message = LucidChartMessageClass.createMessage(
+                'lucidchartdata',
+                serializedData,
+                selectedItem.id,
+                objectType,
+                "1"
+            );
+            rightPanel.sendMessage(message.toObject());
+        }
     }
 }
 viewport.hookSelection(selectionChangedCallback);

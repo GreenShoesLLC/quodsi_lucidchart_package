@@ -1,4 +1,4 @@
-import { Viewport, ItemProxy, EditorClient, PageProxy } from 'lucid-extension-sdk';
+import { Viewport, ItemProxy, EditorClient, PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { Model } from './models/model';
 export declare class LucidChartUtils {
     static readonly OBJECT_TYPE_KEY = "q_objecttype";
@@ -9,7 +9,7 @@ export declare class LucidChartUtils {
      * @param attributeKey The key of the shape data attribute
      * @returns The value of the attribute, or undefined if not found or invalid
      */
-    static getShapeDataAttribute(item: ItemProxy, attributeKey: string): string | undefined;
+    static getShapeDataAttribute(item: ElementProxy, attributeKey: string): string | undefined;
     /**
      * Gets the first selected item and its object type
      * @param client The LucidChart client object

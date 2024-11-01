@@ -1,7 +1,7 @@
-import { Viewport, ItemProxy, EditorClient, PageProxy, ERDBlockProxy, CustomBlockProxy } from 'lucid-extension-sdk';
+import { Viewport, ItemProxy, EditorClient, PageProxy, ElementProxy, CustomBlockProxy } from 'lucid-extension-sdk';
 import { LucidChartMessage } from './LucidChartMessage';
 import { Model } from './models/model';
-import { SimulationObjectType } from './models/enums';
+import { SimulationObjectType } from './models/enums/simulationObjectType';
 import { PeriodUnit } from './models/enums/PeriodUnit';
 import { SimulationTimeType } from './models/enums/simulation_time_type';
 import { DefaultSimulationObjects } from './DefaultSimulationObjects';
@@ -17,13 +17,13 @@ export class LucidChartUtils {
      * @param attributeKey The key of the shape data attribute
      * @returns The value of the attribute, or undefined if not found or invalid
      */
-    public static getShapeDataAttribute(item: ItemProxy, attributeKey: string): string | undefined {
+    public static getShapeDataAttribute(item: ElementProxy, attributeKey: string): string | undefined {
         const attributeValue = item.shapeData.get(attributeKey);
         if (typeof attributeValue === 'string' || attributeValue === undefined) {
-            console.log(`${attributeKey} value:`, attributeValue);
+            console.log(`Extension: ${attributeKey} value:`, attributeValue);
             return attributeValue;
         } else {
-            console.error(`Invalid type for ${attributeKey}:`, typeof attributeValue);
+            console.error(`Extension: Invalid type for ${attributeKey}:`, typeof attributeValue);
             return undefined;
         }
     }
@@ -114,7 +114,7 @@ export class LucidChartUtils {
             return false;
         }
     }
-    
+
     static setPageCustomData(activePage: PageProxy): Model | null {
         // Use DefaultSimulationObjects to create a default Model object
         const q_data: Model = DefaultSimulationObjects.initialModel();

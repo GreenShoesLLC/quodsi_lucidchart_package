@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+
+// Update ResourceEditor.tsx
+import React from 'react';
 import { Resource } from '../app/models/resource';
+import BaseEditor from './BaseEditor';
 
 interface Props {
   resource: Resource;
@@ -8,50 +11,42 @@ interface Props {
 }
 
 const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
-  const [localResource, setLocalResource] = useState<Resource>(resource);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLocalResource({ 
-      ...localResource, 
-      [name]: name === 'capacity' ? Number(value) : value 
-    });
-  };
-
-  const handleSave = () => {
-    onSave(localResource);
-    // Send message back to parent
-    window.parent.postMessage({
-      messagetype: 'resourceSaved',
-      data: localResource
-    }, '*');
-  };
-
-
   return (
-    <div>
-      <label>
-        Name:
-        <input 
-          type="text" 
-          name="name" 
-          value={localResource.name} 
-          onChange={handleChange} 
-        />
-      </label>
-      <label>
-        Capacity:
-        <input 
-          type="number" 
-          name="capacity" 
-          value={localResource.capacity} 
-          onChange={handleChange} 
-        />
-      </label>
-      <button onClick={handleSave}>Save</button>
-      <button onClick={onCancel}>Cancel</button>
-    </div>
+    <BaseEditor
+      data={resource}
+      onSave={onSave}
+      onCancel={onCancel}
+      messageType="resourceSaved"
+    >
+      {(localResource, handleChange) => (
+        <div className="editor-container">
+          <div className="editor-field">
+            <label htmlFor="name">Name:</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="lucid-styling"
+              value={localResource.name}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="editor-field">
+            <label htmlFor="capacity">Capacity:</label>
+            <input
+              type="number"
+              id="capacity"
+              name="capacity"
+              className="lucid-styling"
+              value={localResource.capacity}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+      )}
+    </BaseEditor>
   );
 };
 
-export default ResourceEditor;
+export default React.memo(ResourceEditor);

@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "./enums";
+import { SimulationObjectType } from "./enums/simulationObjectType";
 import { SimulationObject } from "./simulation_object";
 
 export interface Scenario extends SimulationObject {

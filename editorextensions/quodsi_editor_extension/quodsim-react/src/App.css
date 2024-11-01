@@ -47,3 +47,27 @@ input, select {
     justify-content: flex-end; /* Align buttons to the end */
 }
 
+/* Base styling for editor form */
+.editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+/* Container for each editor field */
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Styling for buttons */
+.editor-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

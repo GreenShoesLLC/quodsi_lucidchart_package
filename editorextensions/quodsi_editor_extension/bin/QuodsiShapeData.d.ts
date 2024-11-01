@@ -1,5 +1,5 @@
 import { ElementProxy } from "lucid-extension-sdk";
-import { SimulationObjectType } from "./models/enums";
+import { SimulationObjectType } from "./models/enums/simulationObjectType";
 import { SimulationObject } from "./models/simulation_object";
 export declare class QuodsiShapeData {
     private element;

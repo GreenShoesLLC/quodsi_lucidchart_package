@@ -1,6 +1,7 @@
 // TestingButtons.tsx
 import React from 'react';
-import { SimulationObjectType } from '../app/models/enums';
+import { SimulationObjectType } from 'src/app/models/enums/simulationObjectType';
+
 // import { SimulationObjectType } from './yourSimulationTypesFile'; // Adjust this import as needed
 
 interface TestingButtonsProps {

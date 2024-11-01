@@ -2,28 +2,28 @@ import React, { useState } from 'react';
 import ModelEditor from './ModelEditor';
 import ExperimentEditor from './ExperimentEditor';
 import { OutputViewer } from './OutputViewer';
-import { Model } from '../app/models/model'; // Make sure this import path is correct
-import { SimulationObjectType } from '../app/models/enums';
+import { Model } from '../app/models/model'; // Ensure the import path is correct
 import ModelUtilities from './ModelUtilities';
 
 type TabType = 'model' | 'experiments' | 'output' | 'utilities';
 
-export const ContentDock: React.FC = () => {
+interface ModelTabsProps {
+  initialModel: Model;
+}
+
+export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
   const [activeTab, setActiveTab] = useState<TabType>('model');
-  const [model, setModel] = useState<Model>({
-    // Initialize with default values
-    id: '',
-    name: '',
-    reps: 1,
-    forecastDays: 30,
-    type: SimulationObjectType.Model,
-    // Add other default values as needed
-  });
+  const [model, setModel] = useState<Model>(initialModel);
 
   const handleModelSave = (updatedModel: Model) => {
     setModel(updatedModel);
-    // Here you might want to save the model to your backend or perform other actions
     console.log('Model saved:', updatedModel);
+
+    // Send the saved model data to the parent iframe
+    window.parent.postMessage({
+      messagetype: 'modelSaved',
+      data: updatedModel
+    }, '*');
   };
 
   const handleModelCancel = () => {
@@ -80,7 +80,7 @@ export const ContentDock: React.FC = () => {
         >
           Output
         </button>
-          <button 
+        <button 
           onClick={() => setActiveTab('utilities')}
           style={{ fontWeight: activeTab === 'utilities' ? 'bold' : 'normal' }}
         >

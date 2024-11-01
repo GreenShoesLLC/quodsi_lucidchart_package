@@ -1,7 +1,12 @@
-import { SimulationObjectType } from "./enums";
-import { SimulationObject } from "./simulation_object";
-export interface Connector extends SimulationObject {
-    type: SimulationObjectType.Connector;
-    fromActivityId: string;
-    toActivityId?: string;
+import { SimulationObjectType } from "./enums/simulationObjectType";
+import { OperationStep } from "./operationStep";
+import { ConnectType } from "./enums/connectType";
+export declare class Connector {
+    id: string;
+    name: string;
+    probability: number;
+    connectType: ConnectType;
+    operationSteps: OperationStep[];
+    type: SimulationObjectType;
+    constructor(id: string, name: string, probability?: number, connectType?: ConnectType, operationSteps?: OperationStep[]);
 }

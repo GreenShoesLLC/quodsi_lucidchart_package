@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "./enums";
+import { SimulationObjectType } from "./enums/simulationObjectType";
 import { DistributionType } from "./enums/DistributionType";
 import { DurationType } from "./enums/DurationType";
 import { PeriodUnit } from "./enums/PeriodUnit";

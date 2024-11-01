@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Entity } from '../app/models/entity';
-
+import BaseEditor from './BaseEditor';
 
 interface Props {
   entity: Entity;
@@ -9,27 +9,30 @@ interface Props {
 }
 
 const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
-  const [localEntity, setLocalEntity] = useState<Entity>(entity);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setLocalEntity({ ...localEntity, [name]: value });
-  };
-
-  const handleSave = () => {
-    onSave(localEntity);
-  };
-
   return (
-    <div>
-      <label>
-        Name:
-        <input type="text" name="name" value={localEntity.name} onChange={handleChange} />
-      </label>
-      <button onClick={handleSave}>Save</button>
-      <button onClick={onCancel}>Cancel</button>
-    </div>
+    <BaseEditor
+      data={entity}
+      onSave={onSave}
+      onCancel={onCancel}
+      messageType="entitySaved"
+    >
+      {(localEntity, handleChange) => (
+        <div className="editor-container">
+          <div className="editor-field">
+            <label htmlFor="name">Entity Name:</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="lucid-styling"
+              value={localEntity.name}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+      )}
+    </BaseEditor>
   );
 };
 
-export default EntityEditor;
+export default React.memo(EntityEditor);

@@ -1,7 +1,7 @@
 import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import { QuodsiShapeData } from './QuodsiShapeData';
 import { DefaultSimulationObjects } from './DefaultSimulationObjects';
-import { SimulationObjectType } from './models/enums';
+import { SimulationObjectType } from './models/enums/simulationObjectType';
 
 export class ConvertPageToModel {
     /**

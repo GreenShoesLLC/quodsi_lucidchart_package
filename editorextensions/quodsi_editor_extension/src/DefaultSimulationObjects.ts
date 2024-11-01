@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "./models/enums";
+import { SimulationObjectType } from "./models/enums/simulationObjectType";
 import { Model } from "./models/model";
 import { Activity } from "./models/activity";
 import { Connector } from "./models/connector";
@@ -10,6 +10,8 @@ import { Generator } from "./models/generator"; // Assuming you have this model
 import { LucidChartUtils } from "./lucidChartUtils";
 import { PeriodUnit } from "./models/enums/PeriodUnit";
 import { SimulationTimeType } from "./models/enums/simulation_time_type";
+import { ConnectType } from "./models/enums/connectType";
+import { Duration } from "./models/duration";
 
 
 export class DefaultSimulationObjects {
@@ -50,8 +52,9 @@ export class DefaultSimulationObjects {
             id: LucidChartUtils.generateSimpleUUID(),
             name: "Connector1",
             type: SimulationObjectType.Connector,
-            fromActivityId: "",
-            toActivityId: ""
+            connectType: ConnectType.Probability,
+            probability: 1.0,
+            operationSteps: []
         };
     }
 
@@ -101,6 +104,13 @@ export class DefaultSimulationObjects {
             id: LucidChartUtils.generateSimpleUUID(),
             name: "Generator1",
             type: SimulationObjectType.Generator,
+            maxEntities: Infinity,
+            entitiesPerCreation: 1,
+            periodicOccurrences: Infinity,
+            entityType: "All",
+            periodicStartDuration: new Duration(),
+            periodIntervalDuration: new Duration(),
+            activityKeyId: "Start"
             // Add any generator-specific default values here
         };
     }

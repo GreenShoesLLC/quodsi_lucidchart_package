@@ -1,4 +1,11 @@
 {
+  "defs": [
+    {
+      "name": "titleText",
+      "type": "text",
+      "value": "Entity"
+    }
+],
   "properties": [
     {
       name: "q_objecttype",
@@ -25,4 +32,18 @@
     "fill": { "type": "color", "color": "#FFFFFF" },
     "stroke": { "color": "#000000", "width": 1 }
   }
+"shapes": [
+    {
+      "textarea": {
+      "name": "title",
+      "text": "{{=@titleText}}",
+      "align": "center",
+      "style": {
+          "bold": true,
+          "size": 18
+      },
+      "editable": true
+    }
+  }
+]
 }

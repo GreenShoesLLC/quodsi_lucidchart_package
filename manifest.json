@@ -1,5 +1,5 @@
 {
-  "id": "265a72d3-3b33-4187-9c95-c4bc8125ed1e",
+  "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
   "version": "1.0.2",
   "extensions": [
     {
@@ -19,7 +19,13 @@
       ]
     }
   ],
-  "shapeLibraries": [],
+  "shapeLibraries": [
+    {
+      "name": "quodsi_shape_library",
+      "product": "chart",
+      "lcszPath": "shapelibraries\\quodsi_shape_library.lcsz"
+    }
+  ],
   "oauthProviders": [
     {
       "name": "lucid",
@@ -27,7 +33,7 @@
       "authorizationUrl": "https://lucid.app/oauth2/authorize",
       "tokenUrl": "https://api.lucid.co/oauth2/token",
       "scopes": [
-        "folder"
+        "lucidchart.document.content:readonly"
       ],
       "domainWhitelist": [
         "https://api.lucid.co"

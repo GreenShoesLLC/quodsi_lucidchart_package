@@ -2,9 +2,10 @@ import { ElementProxy } from "lucid-extension-sdk";
 import { Activity } from "./models/activity";
 import { Connector } from "./models/connector";
 import { Entity } from "./models/entity";
-import { SimulationObjectType } from "./models/enums";
+import { SimulationObjectType } from "./models/enums/simulationObjectType";
 import { Model } from "./models/model";
 import { Resource } from "./models/resource";
+import { Generator } from "./models/generator";
 import { SimulationObject } from "./models/simulation_object";
 
 export class QuodsiShapeData {
@@ -48,7 +49,7 @@ export class QuodsiShapeData {
             return false;
         }
     }
-    
+
     getObjectType(): SimulationObjectType | null {
         return this.element.shapeData.get(QuodsiShapeData.OBJECT_TYPE_KEY) as SimulationObjectType | null;
     }
@@ -84,6 +85,8 @@ export class QuodsiShapeData {
                 return parsedData as Resource;
             case SimulationObjectType.Entity:
                 return parsedData as Entity;
+            case SimulationObjectType.Generator:
+                return parsedData as Generator;
             // Add cases for other SimulationObjectTypes as needed
             default:
                 return null;

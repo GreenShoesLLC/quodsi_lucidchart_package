@@ -1,0 +1,56 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "LucidPackage",
+      "type": "shell",
+      "command": "npx lucid-package@latest test-editor-extension quodsi_editor_extension",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
+      "label": "ReactApp",
+      "type": "shell",
+      "command": "npx react-scripts start",
+      "options": {
+        "cwd": "${workspaceFolder}/editorextensions/quodsi_editor_extension/quodsim-react"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
+      "label": "DataConnector",
+      "type": "shell",
+      "command": "npm run start",
+      "options": {
+        "cwd": "${workspaceFolder}/dataconnectors/quodsi_data_connector"
+      },
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
+    "label": "Run All",
+    "dependsOn": [
+        "LucidPackage",
+        "ReactApp",
+        "DataConnector"
+    ],
+    "problemMatcher": [],
+    }
+  ]
+}

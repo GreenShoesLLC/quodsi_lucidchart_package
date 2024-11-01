@@ -1,6 +1,21 @@
-import { SimulationObjectType } from "./enums";
-import { SimulationObject } from "./simulation_object";
+import { SimulationObjectType } from "./enums/simulationObjectType";
+import { Duration } from "./duration";
+import { PeriodUnit } from "./enums/PeriodUnit";
 
-export interface Generator extends SimulationObject {
-  type: SimulationObjectType.Generator;
+
+export class Generator {
+  type: SimulationObjectType = SimulationObjectType.Generator;
+
+  constructor(
+    public id: string,
+    public activityKeyId: string = "",
+    public entityType: string = "All",
+    public periodicOccurrences: number = Infinity,
+    public periodIntervalDuration: Duration = new Duration(),
+    public entitiesPerCreation: number = 1,
+
+    public periodicStartDuration: Duration = new Duration(),
+    public maxEntities: number = Infinity,
+
+  ) { }
 }
