@@ -11,7 +11,7 @@ const simulateAction = async (action) => {
         // Log the document ID for debugging purposes
         console.log(`Simulate action triggered for document ID: ${documentId}`);
         // Define the API endpoint
-        const apiUrl = `http://localhost:5000/api/Scenario/simulate/${documentId}`;
+        const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}`;
         // const apiUrl = `${action.context.callbackBaseUrl}/Scenario/simulate/${documentId}`;
         // Make the POST request to the QuodsiAPI's simulate endpoint using axios
         const response = await axios_1.default.post(apiUrl, null, {

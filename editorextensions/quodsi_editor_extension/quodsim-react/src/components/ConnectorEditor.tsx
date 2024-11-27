@@ -1,7 +1,7 @@
-import React from 'react';
-import { Connector } from '../app/models/connector';
-import BaseEditor from './BaseEditor';
-import { ConnectType } from '../app/models/enums/connectType';
+import React from "react";
+import BaseEditor from "./BaseEditor";
+import { Connector } from "src/shared/types/elements/connector";
+import { ConnectType } from "src/shared/types/elements/enums/connectType";
 
 interface Props {
   connector: Connector;
@@ -18,8 +18,8 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
       messageType="connectorSaved"
     >
       {(localConnector, handleChange) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <label htmlFor="name">Name:</label>
             <input
               type="text"
@@ -31,7 +31,7 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <label htmlFor="probability">Probability:</label>
             <input
               type="number"
@@ -46,7 +46,7 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <label htmlFor="connectType">Connect Type:</label>
             <select
               id="connectType"
@@ -56,7 +56,10 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
               onChange={handleChange}
             >
               {Object.keys(ConnectType).map((key) => (
-                <option key={key} value={ConnectType[key as keyof typeof ConnectType]}>
+                <option
+                  key={key}
+                  value={ConnectType[key as keyof typeof ConnectType]}
+                >
                   {key}
                 </option>
               ))}

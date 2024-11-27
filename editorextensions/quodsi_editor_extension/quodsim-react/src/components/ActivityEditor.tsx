@@ -1,141 +1,173 @@
-// Update ActivityEditor.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { Activity } from '../app/models/activity';
-import { PeriodUnit } from '../app/models/enums/PeriodUnit';
-import { DurationType } from '../app/models/enums/DurationType';
-import { OperationStep } from 'src/app/models/operationStep';
+import React, { useState, useEffect } from "react";
+import { Activity } from "src/shared/types/elements/activity";
+import { SimulationObjectType } from "src/shared/types/elements/enums/simulationObjectType";
+import BaseEditor from "./BaseEditor";
 
 interface Props {
-  activity: Activity;
+  activity: any;
   onSave: (activity: Activity) => void;
   onCancel: () => void;
 }
 
+// Helper to convert null/undefined to Infinity for the UI
+const bufferToDisplay = (value: number | null | undefined): number => {
+  if (value === null || value === undefined) return Infinity;
+  return value;
+};
+
+// Helper to convert Infinity to null for the API
+const displayToBuffer = (value: number): number => {
+  if (value >= 999999) return Infinity;
+  return value;
+};
+
 const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
-  const [localActivity, setLocalActivity] = useState<Activity>(activity);
+  // Extract the actual activity data from the nested structure
+  const extractActivityData = (act: any): Activity => {
+    const data = act.data || act;
+    return {
+      id: data.id || "",
+      name: data.name || "New Activity",
+      type: SimulationObjectType.Activity,
+      capacity: data.capacity || 1,
+      inputBufferCapacity: bufferToDisplay(data.inputBufferCapacity),
+      outputBufferCapacity: bufferToDisplay(data.outputBufferCapacity),
+      operationSteps: data.operationSteps || [],
+    };
+  };
+
+  // Create local state for the activity
+  const [localActivity, setLocalActivity] = useState<Activity>(
+    extractActivityData(activity)
+  );
 
   useEffect(() => {
-    setLocalActivity(activity);
+    console.log("ActivityEditor: Received activity data:", activity);
+    const extractedData = extractActivityData(activity);
+    console.log("ActivityEditor: Extracted activity data:", extractedData);
+    setLocalActivity(extractedData);
   }, [activity]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setLocalActivity(prev => ({
-      ...prev,
-      [name]: name === 'capacity' || name === 'inputBufferCapacity' || name === 'outputBufferCapacity' ? parseInt(value, 10) : value
-    }));
-  };
+  const handleSave = (updatedActivity: Activity) => {
+    console.log("ActivityEditor: Preparing to save activity:", updatedActivity);
 
-  const handleOperationStepChange = useCallback((index: number, field: string, value: any) => {
-    setLocalActivity(prev => ({
-      ...prev,
-      operationSteps: prev.operationSteps.map((step, i) =>
-        i === index ? { ...step, [field]: value } : step
-      )
-    }));
-  }, []);
-
-  const handleSave = useCallback(() => {
-    onSave(localActivity);
-    window.parent.postMessage({
-      messagetype: 'activitySaved',
-      data: localActivity
-    }, '*');
-  }, [localActivity, onSave]);
-
-  const handleAddOperationStep = useCallback(() => {
-    const newOperationStep: OperationStep = {
-      resourceSetRequest: null,
-      duration: {
-        durationLength: 0,
-        durationPeriodUnit: PeriodUnit.MINUTES,
-        durationType: DurationType.CONSTANT,
-        distribution: null
-      }
+    // Ensure all required fields are present and properly typed
+    const activityToSave: Activity = {
+      ...updatedActivity,
+      id: updatedActivity.id,
+      type: SimulationObjectType.Activity,
+      name: updatedActivity.name || "New Activity",
+      capacity: updatedActivity.capacity || 1,
+      inputBufferCapacity: displayToBuffer(updatedActivity.inputBufferCapacity),
+      outputBufferCapacity: displayToBuffer(
+        updatedActivity.outputBufferCapacity
+      ),
+      operationSteps: updatedActivity.operationSteps || [],
     };
-    setLocalActivity(prev => ({ ...prev, operationSteps: [...prev.operationSteps, newOperationStep] }));
-  }, []);
 
-  const handleRemoveOperationStep = useCallback((index: number) => {
-    setLocalActivity(prev => ({ ...prev, operationSteps: prev.operationSteps.filter((_, i) => i !== index) }));
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    handleSave();
+    console.log(
+      "ActivityEditor: Saving activity with prepared data:",
+      activityToSave
+    );
+    onSave(activityToSave);
   };
+
+  // Validate the extracted data
+  if (!localActivity?.id) {
+    console.error("Invalid activity data received:", activity);
+    return (
+      <div className="p-4 text-red-600">
+        Invalid activity data. Please try selecting the activity again.
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="editor-form">
-      <div className="editor-container">
-        <div className="editor-field">
-          <label htmlFor="name">Name:</label>
-          <input type="text" id="name" name="name" className="lucid-styling" value={localActivity.name} onChange={handleChange} />
-        </div>
-        <div className="editor-field">
-          <label htmlFor="capacity">Capacity:</label>
-          <input type="number" id="capacity" name="capacity" className="lucid-styling" value={localActivity.capacity} onChange={handleChange} />
-        </div>
-        <div className="editor-field">
-          <label htmlFor="inputBufferCapacity">Input Buffer Capacity:</label>
-          <input type="number" id="inputBufferCapacity" name="inputBufferCapacity" className="lucid-styling" value={localActivity.inputBufferCapacity} onChange={handleChange} />
-        </div>
-        <div className="editor-field">
-          <label htmlFor="outputBufferCapacity">Output Buffer Capacity:</label>
-          <input type="number" id="outputBufferCapacity" name="outputBufferCapacity" className="lucid-styling" value={localActivity.outputBufferCapacity} onChange={handleChange} />
-        </div>
-      </div>
-
-      <div className="editor-field">
-        <label>Operation Steps:</label>
-        <button type="button" className="lucid-styling tertiary" onClick={handleAddOperationStep}>Add Operation Step</button>
-        {localActivity.operationSteps.map((step, index) => (
-          <div key={index} className="editor-operation-step">
-            <div className="editor-field">
-              <label htmlFor={`durationLength-${index}`}>Duration Length:</label>
-              <input
-                type="number"
-                id={`durationLength-${index}`}
-                className="lucid-styling"
-                value={step.duration.durationLength}
-                onChange={(e) => handleOperationStepChange(index, 'duration', { ...step.duration, durationLength: parseFloat(e.target.value) })}
-              />
-            </div>
-            <div className="editor-field">
-              <label htmlFor={`durationPeriodUnit-${index}`}>Duration Period Unit:</label>
-              <select
-                id={`durationPeriodUnit-${index}`}
-                className="lucid-styling"
-                value={step.duration.durationPeriodUnit}
-                onChange={(e) => handleOperationStepChange(index, 'duration', { ...step.duration, durationPeriodUnit: e.target.value as PeriodUnit })}
-              >
-                {Object.values(PeriodUnit).map((unit) => (
-                  <option key={unit} value={unit}>{unit}</option>
-                ))}
-              </select>
-            </div>
-            <div className="editor-field">
-              <label htmlFor={`durationType-${index}`}>Duration Type:</label>
-              <select
-                id={`durationType-${index}`}
-                className="lucid-styling"
-                value={step.duration.durationType}
-                onChange={(e) => handleOperationStepChange(index, 'duration', { ...step.duration, durationType: e.target.value as DurationType })}
-              >
-                {Object.values(DurationType).map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-            <button type="button" className="lucid-styling secondary" onClick={() => handleRemoveOperationStep(index)}>Remove</button>
+    <BaseEditor
+      data={localActivity}
+      onSave={handleSave}
+      onCancel={onCancel}
+      messageType="activitySaved"
+    >
+      {(localData, handleChange) => (
+        <div className="space-y-4">
+          <div className="form-field">
+            <label htmlFor="name" className="block text-sm font-medium">
+              Name:
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              className="lucid-styling w-full"
+              value={localData.name}
+              onChange={handleChange}
+            />
           </div>
-        ))}
-      </div>
-      <div className="editor-buttons">
-        <button type="submit" className="lucid-styling primary">Save</button>
-        <button type="button" onClick={onCancel} className="lucid-styling secondary">Cancel</button>
-      </div>
-    </form>
+
+          <div className="form-field">
+            <label htmlFor="capacity" className="block text-sm font-medium">
+              Capacity:
+            </label>
+            <input
+              type="number"
+              id="capacity"
+              name="capacity"
+              className="lucid-styling w-full"
+              value={localData.capacity}
+              onChange={handleChange}
+              min="1"
+            />
+          </div>
+
+          <div className="form-field">
+            <label
+              htmlFor="inputBufferCapacity"
+              className="block text-sm font-medium"
+            >
+              Input Buffer Capacity:
+            </label>
+            <input
+              type="number"
+              id="inputBufferCapacity"
+              name="inputBufferCapacity"
+              className="lucid-styling w-full"
+              value={
+                localData.inputBufferCapacity === Infinity
+                  ? 999999
+                  : localData.inputBufferCapacity
+              }
+              onChange={handleChange}
+              min="0"
+              max="999999"
+            />
+          </div>
+
+          <div className="form-field">
+            <label
+              htmlFor="outputBufferCapacity"
+              className="block text-sm font-medium"
+            >
+              Output Buffer Capacity:
+            </label>
+            <input
+              type="number"
+              id="outputBufferCapacity"
+              name="outputBufferCapacity"
+              className="lucid-styling w-full"
+              value={
+                localData.outputBufferCapacity === Infinity
+                  ? 999999
+                  : localData.outputBufferCapacity
+              }
+              onChange={handleChange}
+              min="0"
+              max="999999"
+            />
+          </div>
+        </div>
+      )}
+    </BaseEditor>
   );
 };
 

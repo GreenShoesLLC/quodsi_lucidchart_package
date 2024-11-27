@@ -1,7 +1,7 @@
-import React from 'react';
-import { Duration } from '../app/models/duration';
-import { PeriodUnit } from '../app/models/enums/PeriodUnit';
-import { DurationType } from '../app/models/enums/DurationType';
+import React from "react";
+import { DurationType } from "src/shared/types/elements/enums/DurationType";
+import { PeriodUnit } from "src/shared/types/elements/enums/PeriodUnit";
+import { Duration } from "src/shared/types/elements/duration";
 
 interface Props {
   duration: Duration;
@@ -9,26 +9,28 @@ interface Props {
 }
 
 const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = event.target;
     let updatedValue: any = value;
 
-    if (name === 'durationLength') {
+    if (name === "durationLength") {
       updatedValue = parseFloat(value);
-    } else if (name === 'durationPeriodUnit' || name === 'durationType') {
+    } else if (name === "durationPeriodUnit" || name === "durationType") {
       updatedValue = value as PeriodUnit | DurationType;
     }
 
     const updatedDuration = {
       ...duration,
-      [name]: updatedValue
+      [name]: updatedValue,
     };
     onChange(updatedDuration);
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <label htmlFor="durationLength">Duration Length:</label>
         <input
           type="number"
@@ -41,7 +43,7 @@ const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
         />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <label htmlFor="durationPeriodUnit">Duration Period Unit:</label>
         <select
           id="durationPeriodUnit"
@@ -58,7 +60,7 @@ const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
         </select>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
         <label htmlFor="durationType">Duration Type:</label>
         <select
           id="durationType"

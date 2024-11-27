@@ -1,4 +1,3 @@
-import { Model } from "./models/model";
 import { Activity } from "./models/activity";
 import { Connector } from "./models/connector";
 import { Entity } from "./models/entity";
@@ -7,7 +6,6 @@ import { Scenario } from "./models/scenario";
 import { Experiment } from "./models/experiment";
 import { Generator } from "./models/generator";
 export declare class DefaultSimulationObjects {
-    static initialModel(): Model;
     static initialActivity(): Activity;
     static initialConnector(): Connector;
     static initialEntity(): Entity;

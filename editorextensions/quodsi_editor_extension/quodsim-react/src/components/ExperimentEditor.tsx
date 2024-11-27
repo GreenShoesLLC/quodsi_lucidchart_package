@@ -1,11 +1,12 @@
 // ExperimentEditor.tsx
-import React, { useState } from 'react';
-import { Experiment } from '../app/models/experiment';
-import { Scenario } from '../app/models/scenario';
+import React, { useState } from "react";
+import { Experiment } from "src/shared/types/elements/experiment";
+import { Scenario } from "src/shared/types/elements/scenario";
 
 const ExperimentEditor: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
-  const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null);
+  const [selectedExperiment, setSelectedExperiment] =
+    useState<Experiment | null>(null);
 
   const handleAddExperiment = () => {
     // Logic to add a new experiment
@@ -49,9 +50,15 @@ const ExperimentEditor: React.FC = () => {
       <ul>
         {experiments.map((experiment) => (
           <li key={experiment.id}>
-            <span onClick={() => handleSelectExperiment(experiment)}>{experiment.name}</span>
-            <button onClick={() => handleEditExperiment(experiment)}>Edit</button>
-            <button onClick={() => handleDeleteExperiment(experiment)}>Delete</button>
+            <span onClick={() => handleSelectExperiment(experiment)}>
+              {experiment.name}
+            </span>
+            <button onClick={() => handleEditExperiment(experiment)}>
+              Edit
+            </button>
+            <button onClick={() => handleDeleteExperiment(experiment)}>
+              Delete
+            </button>
           </li>
         ))}
       </ul>
@@ -65,9 +72,15 @@ const ExperimentEditor: React.FC = () => {
               <li key={scenario.id}>
                 <span>{scenario.name}</span>
                 <button onClick={() => handleRunScenario(scenario)}>Run</button>
-                <button onClick={() => handleEditScenario(scenario)}>Edit</button>
-                <button onClick={() => handleDeleteScenario(scenario)}>Delete</button>
-                <button onClick={() => handleDuplicateScenario(scenario)}>Duplicate</button>
+                <button onClick={() => handleEditScenario(scenario)}>
+                  Edit
+                </button>
+                <button onClick={() => handleDeleteScenario(scenario)}>
+                  Delete
+                </button>
+                <button onClick={() => handleDuplicateScenario(scenario)}>
+                  Duplicate
+                </button>
               </li>
             ))}
           </ul>

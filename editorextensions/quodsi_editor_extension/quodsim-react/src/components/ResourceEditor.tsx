@@ -1,8 +1,7 @@
-
 // Update ResourceEditor.tsx
-import React from 'react';
-import { Resource } from '../app/models/resource';
-import BaseEditor from './BaseEditor';
+import React from "react";
+import BaseEditor from "./BaseEditor";
+import { Resource } from "src/shared/types/elements/resource";
 
 interface Props {
   resource: Resource;

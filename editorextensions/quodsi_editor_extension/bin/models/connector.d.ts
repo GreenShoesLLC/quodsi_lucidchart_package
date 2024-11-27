@@ -1,12 +1,27 @@
-import { SimulationObjectType } from "./enums/simulationObjectType";
-import { OperationStep } from "./operationStep";
-import { ConnectType } from "./enums/connectType";
-export declare class Connector {
+import { BaseSimulationElement } from '../types/ModelTypes';
+import { ValidationResult } from '../types/ValidationTypes';
+export interface ConnectorData {
     id: string;
     name: string;
+    sourceId: string;
+    targetId: string;
     probability: number;
-    connectType: ConnectType;
-    operationSteps: OperationStep[];
-    type: SimulationObjectType;
-    constructor(id: string, name: string, probability?: number, connectType?: ConnectType, operationSteps?: OperationStep[]);
+    routing: {
+        type: string;
+        conditions: any[];
+    };
+}
+export declare class Connector extends BaseSimulationElement {
+    name: string;
+    sourceId: string;
+    targetId: string;
+    probability: number;
+    routing: {
+        type: string;
+        conditions: any[];
+    };
+    constructor(data: ConnectorData);
+    validate(): ValidationResult;
+    toStorage(): object;
+    fromStorage(data: any): Connector;
 }

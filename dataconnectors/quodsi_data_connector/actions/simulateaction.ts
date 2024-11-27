@@ -14,7 +14,7 @@ export const simulateAction: (action: DataConnectorAsynchronousAction) => Promis
         console.log(`Simulate action triggered for document ID: ${documentId}`);
 
         // Define the API endpoint
-        const apiUrl = `http://localhost:5000/api/Scenario/simulate/${documentId}`;
+        const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}`;
         // const apiUrl = `${action.context.callbackBaseUrl}/Scenario/simulate/${documentId}`;
 
 

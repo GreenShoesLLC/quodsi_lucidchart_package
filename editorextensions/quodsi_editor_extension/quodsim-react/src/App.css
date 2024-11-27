@@ -17,10 +17,10 @@ input, textarea {
 .form-container {
     display: flex;
     flex-direction: column;
-    gap: 16px; /* Space between form groups */
+    gap: 8px; /* Space between form groups */
     max-width: 600px; /* Adjust based on your design */
     margin: 0 auto; /* Center the form */
-    padding: 16px;
+    padding: 12px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: adds a subtle shadow */
     border-radius: 8px; /* Optional: adds rounded corners */
 }
@@ -28,23 +28,35 @@ input, textarea {
 .form-group {
     display: flex;
     flex-direction: column;
+    gap: 4px;
 }
 
 label {
     font-weight: 600; /* Use appropriate font weight */
-    margin-bottom: 8px; /* Space between label and input */
+    margin-bottom: 2px; /* Space between label and input */
 }
 
 input, select {
-    font-size: 14px; /* Ensure consistency */
+    font-size: 12px; /* Ensure consistency */
     border-radius: 4px;
-    padding: 8px;
+    padding: 6px;
+    height: 28px;
+    line-height: 1.2;
+    box-sizing: border-box;
 }
 
+select {
+    padding-right: 20px;
+}
+/* Add specific styling for number inputs if needed */
+input[type="number"] {
+    height: 24px; /* Explicitly set same height */
+}
 .form-actions {
     display: flex;
-    gap: 16px; /* Space between buttons */
+    gap: 12px; /* Space between buttons */
     justify-content: flex-end; /* Align buttons to the end */
+    margin-top: 8px;
 }
 
 /* Base styling for editor form */
