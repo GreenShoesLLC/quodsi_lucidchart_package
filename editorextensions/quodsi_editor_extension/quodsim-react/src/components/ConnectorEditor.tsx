@@ -1,7 +1,7 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Connector } from "src/shared/types/elements/connector";
-import { ConnectType } from "src/shared/types/elements/enums/connectType";
+import { Connector } from "src/shared/types/elements/Connector";
+import { ConnectType } from "src/shared/types/elements/ConnectType";
 
 interface Props {
   connector: Connector;

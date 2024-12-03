@@ -1,5 +1,5 @@
 import { Viewport, ItemProxy, EditorClient, PageProxy, ElementProxy } from 'lucid-extension-sdk';
-import { Model } from '../shared/types/elements/model';
+import { Model } from '../shared/types/elements/Model';
 export declare class LucidChartUtils {
     static readonly OBJECT_TYPE_KEY = "q_objecttype";
     static readonly DATA_KEY = "q_data";

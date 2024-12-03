@@ -1,7 +1,6 @@
-
-import { Distribution } from "./distribution";
-import { DurationType } from "./enums/DurationType";
-import { PeriodUnit } from "./enums/PeriodUnit";
+import { PeriodUnit } from "./PeriodUnit";
+import { DurationType } from "./DurationType";
+import { Distribution } from "./Distribution";
 
 export class Duration {
     constructor(

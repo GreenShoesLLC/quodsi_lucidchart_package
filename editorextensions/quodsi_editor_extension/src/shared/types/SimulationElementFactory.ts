@@ -1,13 +1,13 @@
 import { SimulationElement } from './SimulationElement';
-import { Model } from './elements/model';
-import { Activity } from './elements/activity';
-import { Connector } from './elements/connector';
-import { Resource } from './elements/resource';
-import { Generator } from './elements/generator';
-import { Entity } from './elements/entity';
-import { SimulationObjectType } from './elements/enums/simulationObjectType';
-import { ConnectType } from './elements/enums/connectType';
-import { Duration } from './elements/duration';
+import { Model } from './elements/Model';
+import { Activity } from './elements/Activity';
+import { Connector } from './elements/Connector';
+import { Resource } from './elements/Resource';
+import { Generator } from './elements/Generator';
+import { Entity } from './elements/Entity';
+import { SimulationObjectType } from './elements/SimulationObjectType';
+import { ConnectType } from './elements/ConnectType';
+import { Duration } from './elements/Duration';
 import { SimulationElementWrapper } from './SimulationElementWrapper';
 
 export const SimulationElementFactory = {
@@ -68,8 +68,10 @@ export const SimulationElementFactory = {
 
     createConnector(data: any): Connector {
         return new Connector(
-            data.id,  // Use provided ID instead of generating new one
+            data.id,
             data.name || 'New Connector',
+            data.sourceId,
+            data.targetId,
             data.probability || 1.0,
             data.connectType || ConnectType.Probability,
             data.operationSteps || []

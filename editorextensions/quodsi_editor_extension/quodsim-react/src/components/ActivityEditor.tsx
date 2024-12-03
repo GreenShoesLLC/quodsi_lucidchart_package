@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Activity } from "src/shared/types/elements/activity";
-import { SimulationObjectType } from "src/shared/types/elements/enums/simulationObjectType";
+import { Activity } from "src/shared/types/elements/Activity";
+import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
 import BaseEditor from "./BaseEditor";
 
 interface Props {
@@ -33,6 +33,7 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
       inputBufferCapacity: bufferToDisplay(data.inputBufferCapacity),
       outputBufferCapacity: bufferToDisplay(data.outputBufferCapacity),
       operationSteps: data.operationSteps || [],
+      connectors: [],
     };
   };
 

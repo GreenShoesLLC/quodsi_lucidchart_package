@@ -1,5 +1,5 @@
-import { SimulationObjectType } from "./enums/simulationObjectType";
-import { SimulationObject } from "./simulation_object";
+import { SimulationObjectType } from "./SimulationObjectType";
+import { SimulationObject } from "./SimulationObject";
 export declare class Entity implements SimulationObject {
     id: string;
     name: string;

@@ -1,4 +1,5 @@
-import { Resource } from "./resource";
+import { Resource } from "./Resource";
+
 
 export class ResourceRequest {
     constructor(

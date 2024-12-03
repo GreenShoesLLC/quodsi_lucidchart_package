@@ -1,27 +1,16 @@
-import { SimulationElement } from "../../../shared/types/SimulationElement";
+import { ValidationRule } from "./ValidationRule";
 import { ValidationMessage } from "../../../shared/types/ValidationTypes";
 import { ModelState } from "../interfaces/ModelState";
-import { ValidationRule } from "./ValidationRule";
+import { Activity } from "../../../shared/types/elements/Activity";
 
-/**
- * Validates activity-specific rules
- */
 export class ActivityValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {
-        for (const activityId of state.relationships.activities) {
-            const activity = state.elements.get(activityId);
-            if (!activity) {
-                messages.push({
-                    type: 'error',
-                    message: `Activity ${activityId} exists in relationships but not in elements`,
-                    elementId: activityId
-                });
-                continue;
-            }
+        const activities = state.modelDefinition.activities.getAll();
 
-            this.validateActivityConnectivity(activityId, state, messages);
+        activities.forEach(activity => {
+            this.validateActivityConnectivity(activity.id, state, messages);
             this.validateActivityData(activity, messages);
-        }
+        });
     }
 
     private validateActivityConnectivity(
@@ -49,10 +38,8 @@ export class ActivityValidation extends ValidationRule {
         }
     }
 
-    private validateActivityData(activity: SimulationElement, messages: ValidationMessage[]): void {
-        const activityData = activity as any;
-
-        if (!activityData.name?.trim()) {
+    private validateActivityData(activity: Activity, messages: ValidationMessage[]): void {
+        if (!activity.name?.trim()) {
             messages.push({
                 type: 'warning',
                 message: `Activity ${activity.id} has no name`,
@@ -60,7 +47,7 @@ export class ActivityValidation extends ValidationRule {
             });
         }
 
-        if (typeof activityData.capacity !== 'number' || activityData.capacity < 1) {
+        if (typeof activity.capacity !== 'number' || activity.capacity < 1) {
             messages.push({
                 type: 'error',
                 message: `Activity ${activity.id} has invalid capacity (must be >= 1)`,
@@ -68,61 +55,59 @@ export class ActivityValidation extends ValidationRule {
             });
         }
 
-        this.validateBufferCapacities(activity.id, activityData, messages);
-        this.validateOperationSteps(activity.id, activityData, messages);
+        this.validateBufferCapacities(activity, messages);
+        this.validateOperationSteps(activity, messages);
     }
 
     private validateBufferCapacities(
-        id: string,
-        data: any,
+        activity: Activity,
         messages: ValidationMessage[]
     ): void {
-        if (typeof data.inputBufferCapacity !== 'number' || data.inputBufferCapacity < 0) {
+        if (typeof activity.inputBufferCapacity !== 'number' || activity.inputBufferCapacity < 0) {
             messages.push({
                 type: 'error',
-                message: `Activity ${id} has invalid input buffer capacity`,
-                elementId: id
+                message: `Activity ${activity.id} has invalid input buffer capacity`,
+                elementId: activity.id
             });
         }
 
-        if (typeof data.outputBufferCapacity !== 'number' || data.outputBufferCapacity < 0) {
+        if (typeof activity.outputBufferCapacity !== 'number' || activity.outputBufferCapacity < 0) {
             messages.push({
                 type: 'error',
-                message: `Activity ${id} has invalid output buffer capacity`,
-                elementId: id
+                message: `Activity ${activity.id} has invalid output buffer capacity`,
+                elementId: activity.id
             });
         }
     }
 
     private validateOperationSteps(
-        id: string,
-        data: any,
+        activity: Activity,
         messages: ValidationMessage[]
     ): void {
-        if (!Array.isArray(data.operationSteps)) {
+        if (!Array.isArray(activity.operationSteps)) {
             messages.push({
                 type: 'error',
-                message: `Activity ${id} is missing operation steps property`,
-                elementId: id
+                message: `Activity ${activity.id} is missing operation steps property`,
+                elementId: activity.id
             });
             return;
         }
 
-        if (data.operationSteps.length === 0) {
+        if (activity.operationSteps.length === 0) {
             messages.push({
                 type: 'warning',
-                message: `Activity ${id} has no operation steps defined`,
-                elementId: id
+                message: `Activity ${activity.id} has no operation steps defined`,
+                elementId: activity.id
             });
             return;
         }
 
-        data.operationSteps.forEach((step: any, index: number) => {
+        activity.operationSteps.forEach((step, index) => {
             if (!step.duration?.durationLength) {
                 messages.push({
                     type: 'error',
-                    message: `Activity ${id} operation step ${index + 1} has invalid duration`,
-                    elementId: id
+                    message: `Activity ${activity.id} operation step ${index + 1} has invalid duration`,
+                    elementId: activity.id
                 });
             }
         });

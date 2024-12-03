@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import "../App.css";
-import { Model } from "src/shared/types/elements/model";
-import { PeriodUnit } from "src/shared/types/elements/enums/PeriodUnit";
-import { SimulationTimeType } from "src/shared/types/elements/enums/simulation_time_type";
+import { Model } from "src/shared/types/elements/Model";
+import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
+import { SimulationTimeType } from "src/shared/types/elements/SimulationTimeType";
 
 interface Props {
   model: Model;

@@ -1,6 +1,6 @@
 // types/MessageTypes.ts
 
-import { SimulationObjectType } from './elements/enums/simulationObjectType';
+import { SimulationObjectType } from './elements/SimulationObjectType';
 import { SelectionState } from './SelectionTypes';
 
 

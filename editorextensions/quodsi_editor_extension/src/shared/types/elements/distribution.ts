@@ -1,5 +1,5 @@
 
-import { DistributionType } from "./enums/DistributionType";
+import { DistributionType } from "./DistributionType";
 
 export type DistributionParameters =
     | MultinomialParameters

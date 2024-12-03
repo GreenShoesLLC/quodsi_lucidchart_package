@@ -1,12 +1,12 @@
 import { ElementProxy } from "lucid-extension-sdk";
-import { Activity } from "../shared/types/elements/activity";
-import { Connector } from "../shared/types/elements/connector";
-import { Entity } from "../shared/types/elements/entity";
-import { SimulationObjectType } from "../shared/types/elements/enums/simulationObjectType";
-import { Model } from "../shared/types/elements/model";
-import { Resource } from "../shared/types/elements/resource";
-import { Generator } from "../shared/types/elements/generator";
-import { SimulationObject } from "../shared/types/elements/simulation_object";
+import { Activity } from "../shared/types/elements/Activity";
+import { Connector } from "../shared/types/elements/Connector";
+import { Entity } from "../shared/types/elements/Entity";
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { Model } from "../shared/types/elements/Model";
+import { Resource } from "../shared/types/elements/Resource";
+import { Generator } from "../shared/types/elements/Generator";
+import { SimulationObject } from "../shared/types/elements/SimulationObject";
 import { SimComponentType } from "../shared/types/simComponentTypes";
 
 

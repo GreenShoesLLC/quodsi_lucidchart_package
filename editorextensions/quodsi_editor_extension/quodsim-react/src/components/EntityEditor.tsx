@@ -1,6 +1,6 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Entity } from "src/shared/types/elements/entity";
+import { Entity } from "src/shared/types/elements/Entity";
 
 interface Props {
   entity: Entity;

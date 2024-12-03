@@ -1,6 +1,6 @@
-import { SimulationObjectType } from "./enums/simulationObjectType";
-import { Scenario } from "./scenario";
-import { SimulationObject } from "./simulation_object";
+import { SimulationObjectType } from "./SimulationObjectType";
+import { Scenario } from "./Scenario";
+import { SimulationObject } from "./SimulationObject";
 export interface Experiment extends SimulationObject {
     scenarios: Scenario[];
     type: SimulationObjectType.Experiment;

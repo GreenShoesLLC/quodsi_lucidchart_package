@@ -1,4 +1,4 @@
-import { SimulationObjectType } from './elements/enums/simulationObjectType';
+import { SimulationObjectType } from './elements/SimulationObjectType';
 import { SelectionState } from './SelectionTypes';
 import { ValidationResult } from './ValidationTypes';
 export declare enum MessageTypes {

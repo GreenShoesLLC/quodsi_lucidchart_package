@@ -1,281 +1,226 @@
-import { ActivityRelationships } from '../shared/types/ActivityRelationships';
-import { Connection } from '../shared/types/Connection';
-import { SimulationElement } from '../shared/types/SimulationElement';
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
-import { ValidationResult } from '../shared/types/ValidationTypes';
-import { ModelValidationService } from '../services/validation/ModelValidationService';
-import { ModelState } from '../services/validation/interfaces/ModelState';
+import { ModelValidationService } from "../services/validation/ModelValidationService";
+import { Activity } from "../shared/types/elements/Activity";
+import { Connector } from "../shared/types/elements/Connector";
+import { Generator } from "../shared/types/elements/Generator";
+import { Entity } from "../shared/types/elements/Entity";
+import { Model } from "../shared/types/elements/Model";
+import { ModelDefinition } from "../shared/types/elements/ModelDefinition";
+import { Resource } from "../shared/types/elements/Resource";
+import { SimulationObject } from "../shared/types/elements/SimulationObject";
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { ValidationMessage, ValidationResult } from "../shared/types/ValidationTypes";
+import { StorageAdapter } from "./StorageAdapter";
+import { ElementProxy, PageProxy } from "lucid-extension-sdk";
 
-
-/**
- * Manages the state and relationships of simulation model elements
- */
 export class ModelManager {
-    // Core element storage
-    private elements: Map<string, SimulationElement>;
+    private modelDefinition: ModelDefinition | null = null;
+    private storageAdapter: StorageAdapter;
+    private elementProxies: Map<string, ElementProxy> = new Map();
 
-    // Relationship tracking
-    private relationships: {
-        activities: Set<string>;
-        entities: Set<string>;
-        generators: Set<string>;
-        connectors: Set<string>;
-        resources: Set<string>;
-    };
-
-    // Activity-specific relationships
-    private activityRelationships: Map<string, ActivityRelationships>;
-
-    // Connection tracking
-    private connections: Map<string, Connection>;
-
-    // Validation service
-    private validationService: ModelValidationService;
-
-    constructor() {
-        // Initialize storage
-        this.elements = new Map();
-        this.connections = new Map();
-        this.activityRelationships = new Map();
-
-        // Initialize relationships
-        this.relationships = {
-            activities: new Set<string>(),
-            entities: new Set<string>(),
-            generators: new Set<string>(),
-            connectors: new Set<string>(),
-            resources: new Set<string>()
-        };
-
-        // Initialize validation service
-        this.validationService = new ModelValidationService();
+    constructor(storageAdapter: StorageAdapter) {
+        this.storageAdapter = storageAdapter;
     }
 
     /**
-     * Registers a new element in the model
+     * Initializes a new model definition with data from storage
      */
-    public registerElement(element: SimulationElement): void {
-        console.log('[ModelManager] Registering element:', {
-            id: element.id,
-            type: element.type,
-            data: element
-        });
+    public initializeModel(modelData: Model, pageProxy: PageProxy): void {
+        this.modelDefinition = new ModelDefinition(modelData);
 
-        try {
-            // Store the element
-            this.elements.set(element.id, element);
+        // Store the model data using the page proxy
+        this.storageAdapter.setElementData(
+            pageProxy,
+            modelData,
+            SimulationObjectType.Model
+        );
+    }
 
-            // Track in type-specific collection
-            switch (element.type) {
-                case SimulationObjectType.Activity:
-                    this.relationships.activities.add(element.id);
-                    this.initializeActivityRelationships(element.id);
-                    break;
-                case SimulationObjectType.Generator:
-                    this.relationships.generators.add(element.id);
-                    break;
-                case SimulationObjectType.Resource:
-                    this.relationships.resources.add(element.id);
-                    break;
-                case SimulationObjectType.Connector:
-                    this.relationships.connectors.add(element.id);
-                    const connectorData = element as unknown as Connection;
-
-                    // Enhanced validation and logging for connector data
-                    if (!connectorData.sourceId || !connectorData.targetId) {
-                        console.error('[ModelManager] Invalid connector data - missing source or target:', {
-                            id: element.id,
-                            sourceId: connectorData.sourceId,
-                            targetId: connectorData.targetId,
-                            fullData: connectorData
-                        });
-                        return;
-                    }
-
-                    // Store the connection with full validation
-                    this.connections.set(element.id, {
-                        id: element.id,
-                        sourceId: connectorData.sourceId,
-                        targetId: connectorData.targetId,
-                        probability: connectorData.probability ?? 1.0
-                    });
-
-                    // Update activity relationships if applicable
-                    if (this.activityRelationships.has(connectorData.sourceId)) {
-                        this.activityRelationships.get(connectorData.sourceId)?.outgoingConnectors.add(element.id);
-                    }
-                    if (this.activityRelationships.has(connectorData.targetId)) {
-                        this.activityRelationships.get(connectorData.targetId)?.incomingConnectors.add(element.id);
-                    }
-                    break;
-                case SimulationObjectType.Entity:
-                    this.relationships.entities.add(element.id);
-                    break;
-            }
-
-            console.log('[ModelManager] Element registered successfully:', {
-                id: element.id,
-                type: element.type,
-                collectionsState: {
-                    activities: this.relationships.activities.size,
-                    generators: this.relationships.generators.size,
-                    resources: this.relationships.resources.size,
-                    connectors: this.relationships.connectors.size,
-                    entities: this.relationships.entities.size
-                }
-            });
-        } catch (error) {
-            console.error('[ModelManager] Failed to register element:', {
-                error,
-                element: { id: element.id, type: element.type }
-            });
-            throw error;
+    /**
+      * Registers a simulation element with the appropriate list manager and storage
+      */
+    public registerElement(element: SimulationObject, elementProxy: ElementProxy): void {
+        if (!this.modelDefinition) {
+            throw new Error('Model not initialized');
         }
+
+        // Store the element proxy for future use
+        this.elementProxies.set(element.id, elementProxy);
+
+        // Register with appropriate list manager
+        switch (element.type) {
+            case SimulationObjectType.Activity:
+                this.modelDefinition.activities.add(element as Activity);
+                break;
+            case SimulationObjectType.Connector:
+                this.modelDefinition.connectors.add(element as Connector);
+                break;
+            case SimulationObjectType.Generator:
+                this.modelDefinition.generators.add(element as Generator);
+                break;
+            case SimulationObjectType.Resource:
+                this.modelDefinition.resources.add(element as Resource);
+                break;
+            case SimulationObjectType.Entity:
+                this.modelDefinition.entities.add(element as Entity);
+                break;
+            default:
+                throw new Error(`Unknown element type: ${element.type}`);
+        }
+
+        // Update storage
+        this.storageAdapter.setElementData(
+            elementProxy,
+            element,
+            element.type
+        );
     }
 
     /**
-     * Retrieves an element by ID
+     * Gets an element by ID from any list manager
      */
-    public getElementById(id: string): SimulationElement | undefined {
-        return this.elements.get(id);
+    public getElementById(id: string): SimulationObject | undefined {
+        if (!this.modelDefinition) return undefined;
+
+        return this.modelDefinition.activities.get(id) ||
+            this.modelDefinition.connectors.get(id) ||
+            this.modelDefinition.generators.get(id) ||
+            this.modelDefinition.resources.get(id) ||
+            this.modelDefinition.entities.get(id);
     }
 
     /**
      * Gets all elements of a specific type
      */
-    public getElementsByType(type: SimulationObjectType): SimulationElement[] {
-        const collectionKey = `${type.toLowerCase()}s` as keyof typeof this.relationships;
-        return Array.from(this.relationships[collectionKey])
-            .map(id => this.elements.get(id))
-            .filter((element): element is SimulationElement => element !== undefined);
+    public getElementsByType(type: SimulationObjectType): SimulationObject[] {
+        if (!this.modelDefinition) return [];
+
+        switch (type) {
+            case SimulationObjectType.Activity:
+                return this.modelDefinition.activities.getAll();
+            case SimulationObjectType.Connector:
+                return this.modelDefinition.connectors.getAll();
+            case SimulationObjectType.Generator:
+                return this.modelDefinition.generators.getAll();
+            case SimulationObjectType.Resource:
+                return this.modelDefinition.resources.getAll();
+            case SimulationObjectType.Entity:
+                return this.modelDefinition.entities.getAll();
+            default:
+                return [];
+        }
     }
 
     /**
-     * Gets all connections in the model
+     * Updates an existing element in both memory and storage
      */
-    public getConnections(): Connection[] {
-        return Array.from(this.connections.values());
-    }
-
-    /**
-     * Gets relationships for an activity
-     */
-    public getActivityRelationships(activityId: string): ActivityRelationships | undefined {
-        return this.activityRelationships.get(activityId);
-    }
-
-    /**
-     * Updates an existing element
-     */
-    public updateElement(element: SimulationElement): void {
-        if (!this.elements.has(element.id)) {
-            throw new Error(`Element not found: ${element.id}`);
+    public updateElement(element: SimulationObject): void {
+        if (!this.modelDefinition) {
+            throw new Error('Model not initialized');
         }
 
-        this.elements.set(element.id, element);
+        // Get the element proxy
+        const elementProxy = this.elementProxies.get(element.id);
+        if (!elementProxy) {
+            throw new Error(`No element proxy found for ID: ${element.id}`);
+        }
+
+        // Update in appropriate list manager
+        switch (element.type) {
+            case SimulationObjectType.Activity:
+                this.modelDefinition.activities.add(element as Activity);
+                break;
+            case SimulationObjectType.Connector:
+                this.modelDefinition.connectors.add(element as Connector);
+                break;
+            case SimulationObjectType.Generator:
+                this.modelDefinition.generators.add(element as Generator);
+                break;
+            case SimulationObjectType.Resource:
+                this.modelDefinition.resources.add(element as Resource);
+                break;
+            case SimulationObjectType.Entity:
+                this.modelDefinition.entities.add(element as Entity);
+                break;
+        }
+
+        // Update storage
+        this.storageAdapter.updateElementData(
+            elementProxy,
+            element
+        );
     }
 
     /**
-     * Removes an element from the model
+     * Gets the current Model data
+     */
+    public getModel(): Model | null {
+        return this.modelDefinition?.model ?? null;
+    }
+
+    /**
+     * Gets the ModelDefinition
+     */
+    public getModelDefinition(): ModelDefinition | null {
+        return this.modelDefinition;
+    }
+
+    /**
+     * Removes an element from both memory and storage
      */
     public removeElement(elementId: string): void {
-        const element = this.elements.get(elementId);
-        if (!element) return;
+        if (!this.modelDefinition) return;
 
-        // Remove from main storage
-        this.elements.delete(elementId);
-
-        // Remove from type-specific collection
-        const collectionKey = `${element.type.toLowerCase()}s` as keyof typeof this.relationships;
-        this.relationships[collectionKey].delete(elementId);
-
-        // Clean up relationships
-        if (element.type === SimulationObjectType.Activity) {
-            this.activityRelationships.delete(elementId);
+        // Get the element proxy before removal
+        const elementProxy = this.elementProxies.get(elementId);
+        if (!elementProxy) {
+            console.warn(`No element proxy found for ID: ${elementId}`);
+            return;
         }
 
-        // Clean up connections
-        if (element.type === SimulationObjectType.Connector) {
-            this.connections.delete(elementId);
-        }
+        // Remove from all list managers
+        this.modelDefinition.activities.remove(elementId);
+        this.modelDefinition.connectors.remove(elementId);
+        this.modelDefinition.generators.remove(elementId);
+        this.modelDefinition.resources.remove(elementId);
+        this.modelDefinition.entities.remove(elementId);
+
+        // Remove from storage
+        this.storageAdapter.clearElementData(elementProxy);
+
+        // Remove from proxy map
+        this.elementProxies.delete(elementId);
     }
 
     /**
      * Validates the model using the validation service
      */
     public validateModel(): ValidationResult {
-        const modelState: ModelState = {
-            elements: this.elements,
-            connections: this.connections,
-            activityRelationships: this.activityRelationships,
-            relationships: this.relationships
-        };
+        if (!this.modelDefinition) {
+            return {
+                isValid: false,
+                messages: [{
+                    type: 'error',
+                    message: 'No model initialized'
+                }]
+            };
+        }
 
-        return this.validationService.validate(modelState);
+        const validationService = new ModelValidationService();
+        return validationService.validate(this.modelDefinition);
     }
 
     /**
-     * Gets current model state for debugging
+     * Clears the current model definition and associated storage
      */
-    public getModelState(): string {
-        return JSON.stringify({
-            elements: this.elements.size,
-            relationships: {
-                activities: Array.from(this.relationships.activities),
-                generators: Array.from(this.relationships.generators),
-                connectors: Array.from(this.relationships.connectors),
-                resources: Array.from(this.relationships.resources),
-                entities: Array.from(this.relationships.entities)
-            },
-            connections: Array.from(this.connections.values()),
-            activityRelationships: Array.from(this.activityRelationships.entries())
-        }, null, 2);
-    }
-
-    private initializeActivityRelationships(activityId: string): void {
-        this.activityRelationships.set(activityId, {
-            incomingConnectors: new Set(),
-            outgoingConnectors: new Set(),
-            assignedResources: new Set()
-        });
-    }
-
-    private trackConnection(element: SimulationElement): void {
-        if (element.type !== SimulationObjectType.Connector) return;
-
-        const connectorData = element as unknown as Connection;
-
-        // Validate required connector fields
-        if (!connectorData.sourceId || !connectorData.targetId) {
-            console.error('[ModelManager] Invalid connector data - missing source or target:', {
-                id: element.id,
-                sourceId: connectorData.sourceId,
-                targetId: connectorData.targetId
-            });
-            return;
+    public clear(): void {
+        if (this.modelDefinition) {
+            // Clear storage for all components using their proxies
+            for (const [id, proxy] of this.elementProxies) {
+                this.storageAdapter.clearElementData(proxy);
+            }
         }
 
-        // Ensure probability is valid
-        const probability = connectorData.probability ?? 1.0;
-        if (isNaN(probability) || probability < 0 || probability > 1) {
-            console.error('[ModelManager] Invalid connector probability:', probability);
-            return;
-        }
-
-        // Store the connection with validated data
-        this.connections.set(element.id, {
-            id: element.id,
-            sourceId: connectorData.sourceId,
-            targetId: connectorData.targetId,
-            probability: probability
-        });
-
-        // Update activity relationships
-        if (this.activityRelationships.has(connectorData.sourceId)) {
-            this.activityRelationships.get(connectorData.sourceId)?.outgoingConnectors.add(element.id);
-        }
-        if (this.activityRelationships.has(connectorData.targetId)) {
-            this.activityRelationships.get(connectorData.targetId)?.incomingConnectors.add(element.id);
-        }
+        this.modelDefinition = null;
+        this.elementProxies.clear();
     }
 }

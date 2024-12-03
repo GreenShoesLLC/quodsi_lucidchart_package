@@ -1,5 +1,6 @@
-import { Duration } from "./duration";
-import { ResourceSetRequest } from "./resourceSetRequest";
+import { Duration } from "./Duration";
+import { ResourceSetRequest } from "./ResourceSetRequest";
+
 
 export class OperationStep {
     constructor(

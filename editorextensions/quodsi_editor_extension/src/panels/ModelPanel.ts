@@ -18,10 +18,10 @@ import { SelectionState, SelectionType } from '../shared/types/SelectionTypes';
 import { ConversionService } from '../services/conversion/ConversionService';
 import { RemoveModelFromPage } from '../services/RemoveModelFromPage';
 
-import { Model } from '../shared/types/elements/model';
-import { Activity } from '../shared/types/elements/activity';
-import { Connector } from '../shared/types/elements/connector';
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
+import { Model } from '../shared/types/elements/Model';
+import { Activity } from '../shared/types/elements/Activity';
+import { Connector } from '../shared/types/elements/Connector';
+import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 import { SimulationElementFactory } from '../shared/types/SimulationElementFactory';
 
 

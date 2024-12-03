@@ -1,44 +1,45 @@
-import { ActivityRelationships } from '../shared/types/ActivityRelationships';
-import { Connection } from '../shared/types/Connection';
-import { SimulationElement } from '../shared/types/SimulationElement';
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
-import { ValidationResult } from '../shared/types/ValidationTypes';
-/**
- * Manages the state and relationships of simulation model elements
- */
+import { Model } from "../shared/types/elements/Model";
+import { ModelDefinition } from "../shared/types/elements/ModelDefinition";
+import { SimulationObject } from "../shared/types/elements/SimulationObject";
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { ValidationResult } from "../shared/types/ValidationTypes";
+import { StorageAdapter } from "./StorageAdapter";
+import { ElementProxy, PageProxy } from "lucid-extension-sdk";
 export declare class ModelManager {
-    private elements;
-    private relationships;
-    private activityRelationships;
-    private connections;
-    private validationService;
-    constructor();
+    private modelDefinition;
+    private storageAdapter;
+    private elementProxies;
+    constructor(storageAdapter: StorageAdapter);
     /**
-     * Registers a new element in the model
+     * Initializes a new model definition with data from storage
      */
-    registerElement(element: SimulationElement): void;
+    initializeModel(modelData: Model, pageProxy: PageProxy): void;
     /**
-     * Retrieves an element by ID
+      * Registers a simulation element with the appropriate list manager and storage
+      */
+    registerElement(element: SimulationObject, elementProxy: ElementProxy): void;
+    /**
+     * Gets an element by ID from any list manager
      */
-    getElementById(id: string): SimulationElement | undefined;
+    getElementById(id: string): SimulationObject | undefined;
     /**
      * Gets all elements of a specific type
      */
-    getElementsByType(type: SimulationObjectType): SimulationElement[];
+    getElementsByType(type: SimulationObjectType): SimulationObject[];
     /**
-     * Gets all connections in the model
+     * Updates an existing element in both memory and storage
      */
-    getConnections(): Connection[];
+    updateElement(element: SimulationObject): void;
     /**
-     * Gets relationships for an activity
+     * Gets the current Model data
      */
-    getActivityRelationships(activityId: string): ActivityRelationships | undefined;
+    getModel(): Model | null;
     /**
-     * Updates an existing element
+     * Gets the ModelDefinition
      */
-    updateElement(element: SimulationElement): void;
+    getModelDefinition(): ModelDefinition | null;
     /**
-     * Removes an element from the model
+     * Removes an element from both memory and storage
      */
     removeElement(elementId: string): void;
     /**
@@ -46,9 +47,7 @@ export declare class ModelManager {
      */
     validateModel(): ValidationResult;
     /**
-     * Gets current model state for debugging
+     * Clears the current model definition and associated storage
      */
-    getModelState(): string;
-    private initializeActivityRelationships;
-    private trackConnection;
+    clear(): void;
 }

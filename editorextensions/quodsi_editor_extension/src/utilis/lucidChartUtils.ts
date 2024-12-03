@@ -1,9 +1,10 @@
 import { Viewport, ItemProxy, EditorClient, PageProxy, ElementProxy, CustomBlockProxy } from 'lucid-extension-sdk';
 
 
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
+import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 import { QuodsiShapeData } from './QuodsiShapeData';
-import { Model, ModelUtils } from '../shared/types/elements/model';
+import { Model } from '../shared/types/elements/Model';
+import { ModelUtils } from '../shared/types/elements/ModelUtils';
 
 export class LucidChartUtils {
     public static readonly OBJECT_TYPE_KEY = 'q_objecttype';
@@ -114,22 +115,17 @@ export class LucidChartUtils {
     }
 
     static setPageCustomData(activePage: PageProxy): Model | null {
-        // Use DefaultSimulationObjects to create a default Model object
-        // const q_data: Model = DefaultSimulationObjects.initialModel();
-
-        const q_data: Model = ModelUtils.createNew()
+        const q_data: Model = ModelUtils.createNew();
+        // Update model ID to use page ID
+        q_data.id = activePage.id;
 
         console.log('Extension: setting Page q_data');
 
-        // Create an instance of QuodsiShapeData to manage shape data
         const shapeDataHandler = new QuodsiShapeData(activePage);
-
-        // Set the object type and data using QuodsiShapeData
         shapeDataHandler.setObjectTypeAndData(SimulationObjectType.Model, q_data);
 
         console.log('Extension: successfully set Page q_data using QuodsiShapeData');
 
-        // Return the q_data object
         return q_data;
     }
 

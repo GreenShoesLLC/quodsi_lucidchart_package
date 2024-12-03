@@ -4,48 +4,32 @@ import { ModelState } from '../interfaces/ModelState';
 
 export class ConnectorValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {
-        // Validate each connector
-        for (const [connectorId, connection] of state.connections) {
+        const connectors = state.modelDefinition.connectors.getAll();
+
+        connectors.forEach(connector => {
             // Validate source exists
-            if (!state.elements.has(connection.sourceId)) {
+            if (!state.modelDefinition.activities.get(connector.sourceId)) {
                 messages.push({
                     type: 'error',
-                    message: `Connector ${connectorId} has invalid source (${connection.sourceId})`,
-                    elementId: connectorId
+                    message: `Connector ${connector.id} has invalid source (${connector.sourceId})`,
+                    elementId: connector.id
                 });
             }
 
             // Validate target exists
-            if (!state.elements.has(connection.targetId)) {
+            if (!state.modelDefinition.activities.get(connector.targetId)) {
                 messages.push({
                     type: 'error',
-                    message: `Connector ${connectorId} has invalid target (${connection.targetId})`,
-                    elementId: connectorId
+                    message: `Connector ${connector.id} has invalid target (${connector.targetId})`,
+                    elementId: connector.id
                 });
             }
 
-            // Validate probability
-            if (typeof connection.probability !== 'number' ||
-                connection.probability < 0 ||
-                connection.probability > 1) {
-                messages.push({
-                    type: 'error',
-                    message: `Connector ${connectorId} has invalid probability: ${connection.probability}`,
-                    elementId: connectorId
-                });
-            }
+            this.validateConnectorData(connector, messages);
+        });
 
-            // Validate connector element data
-            const connector = state.elements.get(connectorId);
-            if (connector) {
-                this.validateConnectorData(connector, messages);
-            }
-        }
-
-        // Validate probability distributions for outgoing connections
         this.validateProbabilityDistributions(state, messages);
     }
-
     private validateConnectorData(connector: any, messages: ValidationMessage[]): void {
         // Validate name
         if (!connector.name || connector.name.trim().length === 0) {

@@ -1,5 +1,5 @@
 import { ElementProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
+import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 /**
  * Metadata structure for elements
  */
@@ -25,13 +25,21 @@ export declare class StorageAdapter {
      */
     isQuodsiModel(element: ElementProxy): boolean;
     /**
-     * Sets both data and metadata for an element
+     * Sets both data and metadata for an element, keeping them properly separated
      */
-    setElementData<T>(element: ElementProxy, data: T, type: SimulationObjectType, options?: Partial<Omit<MetaData, 'type' | 'lastModified'>>): void;
+    setElementData<T extends {
+        id: string;
+    }>(element: ElementProxy, data: T, type: SimulationObjectType, options?: Partial<Omit<MetaData, 'type' | 'lastModified'>>): void;
     /**
      * Updates only the data portion of an element's storage
      */
-    updateElementData<T>(element: ElementProxy, data: T): void;
+    updateElementData<T extends {
+        id: string;
+    }>(element: ElementProxy, data: T): void;
+    /**
+     * Strips metadata fields from a data object
+     */
+    private stripMetadataFields;
     /**
      * Retrieves metadata for an element
      */

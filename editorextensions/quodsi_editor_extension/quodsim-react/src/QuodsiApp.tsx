@@ -5,7 +5,7 @@ import {
   MessagePayloads,
   createSerializableMessage,
 } from "./shared/types/MessageTypes";
-import { SimulationObjectType } from "./shared/types/elements/enums/simulationObjectType";
+import { SimulationObjectType } from "./shared/types/elements/SimulationObjectType";
 import { SelectionState } from "./shared/types/SelectionTypes";
 import { SimulationComponentSelector } from "./components/SimulationComponentSelector";
 import { StatusMonitor } from "./components/StatusMonitor";
@@ -91,6 +91,9 @@ const QuodsiApp: React.FC = () => {
         case MessageTypes.CONVERSION_COMPLETE:
           messageHandlers.handleConversionComplete(message.data, deps);
           break;
+        case MessageTypes.ELEMENT_DATA: // Add this case
+          messageHandlers.handleElementData(message.data, deps);
+          break;
       }
     } catch (error) {
       console.error("[QuodsiApp] Error handling message:", error);
@@ -139,38 +142,40 @@ const QuodsiApp: React.FC = () => {
     sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
   };
 
-const handleSave = (data: any) => {
-  console.log("[QuodsiApp] Handling save:", {
-    data,
-    stateSnapshot: state,
-  });
+  const handleSave = (data: any) => {
+    console.log("[QuodsiApp] Handling save:", {
+      data,
+      stateSnapshot: state,
+    });
 
-  // Ensure we have the required data
-  if (!data.id || !data.type) {
-    console.error("[QuodsiApp] Missing required data for save:", data);
-    setError("Invalid data for save operation");
-    return;
-  }
+    // Ensure we have the required data
+    if (!data.id || !data.type) {
+      console.error("[QuodsiApp] Missing required data for save:", data);
+      setError("Invalid data for save operation");
+      return;
+    }
 
-  const elementData = {
-    elementId: data.id,
-    type: data.type,
-    data: {
-      ...data,
-      // Convert infinity values to null for storage
-      inputBufferCapacity:
-        data.inputBufferCapacity === Infinity ? null : data.inputBufferCapacity,
-      outputBufferCapacity:
-        data.outputBufferCapacity === Infinity
-          ? null
-          : data.outputBufferCapacity,
-    },
+    const elementData = {
+      elementId: data.id,
+      type: data.type,
+      data: {
+        ...data,
+        // Convert infinity values to null for storage
+        inputBufferCapacity:
+          data.inputBufferCapacity === Infinity
+            ? null
+            : data.inputBufferCapacity,
+        outputBufferCapacity:
+          data.outputBufferCapacity === Infinity
+            ? null
+            : data.outputBufferCapacity,
+      },
+    };
+
+    console.log("[QuodsiApp] Sending update with data:", elementData);
+    sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
+    setState((prev) => ({ ...prev, isProcessing: true }));
   };
-
-  console.log("[QuodsiApp] Sending update with data:", elementData);
-  sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
-  setState((prev) => ({ ...prev, isProcessing: true }));
-};
 
   const handleCancel = () => {
     console.log("[QuodsiApp] Handling cancel");
@@ -231,7 +236,7 @@ const handleSave = (data: any) => {
       "div",
       { className: "flex-grow overflow-auto" },
       state.editor
-    ),
+    )
     // state.documentId &&
     //   React.createElement(StatusMonitor, {
     //     documentId: state.documentId,

@@ -1,4 +1,4 @@
-import { SimulationObjectType } from '../../shared/types/elements/enums/simulationObjectType';
+import { SimulationObjectType } from './elements/SimulationObjectType';
 /**
  * Information about a block's analysis
  */

@@ -1,4 +1,4 @@
-import { DistributionType } from "./enums/DistributionType";
+import { DistributionType } from "./DistributionType";
 export type DistributionParameters = MultinomialParameters | UniformParameters | TriangularParameters | ExponentialParameters | NormalParameters | LognormalParameters | BetaParameters | GammaParameters | WeibullParameters | DiscreteParameters | PoissonParameters | BinomialParameters | BernoulliParameters | GeometricParameters | NegativeBinomialParameters | ChiSquareParameters | FDistributionParameters | HypergeometricParameters | LaplaceParameters | LogisticParameters | LogSeriesParameters | ParetoParameters | RayleighParameters | TDistributionParameters | VonMisesParameters | WaldParameters | ZipfParameters;
 export interface MultinomialParameters {
     n: number;

@@ -2,8 +2,8 @@ import React from "react";
 
 import BaseEditor from "./BaseEditor";
 import DurationEditor from "./DurationEditor";
-import { Duration } from "src/shared/types/elements/duration";
-import { Generator } from "src/shared/types/elements/generator";
+import { Duration } from "src/shared/types/elements/Duration";
+import { Generator } from "src/shared/types/elements/Generator";
 interface Props {
   generator: Generator;
   onSave: (generator: Generator) => void;

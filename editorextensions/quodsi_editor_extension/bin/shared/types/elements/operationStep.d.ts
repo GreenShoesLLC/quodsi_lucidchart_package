@@ -1,5 +1,5 @@
-import { Duration } from "./duration";
-import { ResourceSetRequest } from "./resourceSetRequest";
+import { Duration } from "./Duration";
+import { ResourceSetRequest } from "./ResourceSetRequest";
 export declare class OperationStep {
     resourceSetRequest: ResourceSetRequest | null;
     duration: Duration;

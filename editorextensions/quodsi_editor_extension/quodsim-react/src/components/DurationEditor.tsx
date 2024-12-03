@@ -1,7 +1,7 @@
 import React from "react";
-import { DurationType } from "src/shared/types/elements/enums/DurationType";
-import { PeriodUnit } from "src/shared/types/elements/enums/PeriodUnit";
-import { Duration } from "src/shared/types/elements/duration";
+import { DurationType } from "src/shared/types/elements/DurationType";
+import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
+import { Duration } from "src/shared/types/elements/Duration";
 
 interface Props {
   duration: Duration;

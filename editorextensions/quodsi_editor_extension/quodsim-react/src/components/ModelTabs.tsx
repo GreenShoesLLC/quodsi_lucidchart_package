@@ -3,7 +3,8 @@ import ModelEditor from "./ModelEditor";
 import ExperimentEditor from "./ExperimentEditor";
 import { OutputViewer } from "./OutputViewer";
 import ModelUtilities from "./ModelUtilities";
-import { Model, ModelUtils } from "src/shared/types/elements/model";
+import { Model } from "src/shared/types/elements/Model";
+import { ModelUtils } from "src/shared/types/elements/ModelUtils";
 
 type TabType = "model" | "experiments" | "output" | "utilities";
 

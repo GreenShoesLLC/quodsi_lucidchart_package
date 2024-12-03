@@ -19,16 +19,16 @@ import {
   SimComponentFactory,
   SimComponentType,
 } from "./types/simComponentTypes";
-import { Model, ModelUtils } from "./shared/types/elements/model";
-import { SimulationObjectType } from "./shared/types/elements/enums/simulationObjectType";
-import { Resource } from "./shared/types/elements/resource";
-import { Activity } from "./shared/types/elements/activity";
-import { Entity } from "./shared/types/elements/entity";
-import { Connector } from "./shared/types/elements/connector";
-import { Generator } from "./shared/types/elements/generator";
-import { PeriodUnit } from "./shared/types/elements/enums/PeriodUnit";
-import { SimulationTimeType } from "./shared/types/elements/enums/simulation_time_type";
-
+import { Model } from "./shared/types/elements/Model";
+import { SimulationObjectType } from "./shared/types/elements/SimulationObjectType";
+import { Resource } from "./shared/types/elements/Resource";
+import { Activity } from "./shared/types/elements/Activity";
+import { Entity } from "./shared/types/elements/Entity";
+import { Connector } from "./shared/types/elements/Connector";
+import { Generator } from "./shared/types/elements/Generator";
+import { PeriodUnit } from "./shared/types/elements/PeriodUnit";
+import { SimulationTimeType } from "./shared/types/elements/SimulationTimeType";
+import { ModelUtils } from "./shared/types/elements/ModelUtils";
 
 const initialModel = new Model(
   "blah",
@@ -210,9 +210,6 @@ const App: React.FC = () => {
       case "rightpanel":
       case "contentdock":
         return <ModelTabs initialModel={initialModel} />;
-      case "model":
-        const completeModel = ModelUtils.createWithDefaults(instanceData);
-        return <ModelTabs initialModel={completeModel} />;
       case "resource":
         return (
           <ResourceEditor

@@ -1,13 +1,13 @@
-import { Activity } from "../shared/types/elements/activity";
-import { Duration } from "../shared/types/elements/duration";
-import { Generator } from "../shared/types/elements/generator";
-import { Connector } from "../shared/types/elements/connector";
-import { Entity } from "../shared/types/elements/entity";
-import { Resource } from "../shared/types/elements/resource";
-import { PeriodUnit } from "../shared/types/elements/enums/PeriodUnit";
-import { DurationType } from "../shared/types/elements/enums/DurationType";
-import { SimulationObjectType } from "../shared/types/elements/enums/simulationObjectType";
-import { ConnectType } from "../shared/types/elements/enums/connectType";
+import { Activity } from "../shared/types/elements/Activity";
+import { Duration } from "../shared/types/elements/Duration";
+import { Generator } from "../shared/types/elements/Generator";
+import { Connector } from "../shared/types/elements/Connector";
+import { Entity } from "../shared/types/elements/Entity";
+import { Resource } from "../shared/types/elements/Resource";
+import { PeriodUnit } from "../shared/types/elements/PeriodUnit";
+import { DurationType } from "../shared/types/elements/DurationType";
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { ConnectType } from "../shared/types/elements/ConnectType";
 
 
 
@@ -56,7 +56,8 @@ export class SimComponentFactory {
             capacity: 1,
             inputBufferCapacity: 999,
             outputBufferCapacity: 999,
-            operationSteps: []
+            operationSteps: [],
+            connectors: []
         }),
 
         [SimComponentType.GENERATOR]: (id: string): Generator => ({
@@ -76,6 +77,8 @@ export class SimComponentFactory {
             id,
             name: "New Connector",
             type: SimulationObjectType.Connector,
+            sourceId: "",
+            targetId: "",
             probability: 1.0,
             connectType: ConnectType.Probability,
             operationSteps: []

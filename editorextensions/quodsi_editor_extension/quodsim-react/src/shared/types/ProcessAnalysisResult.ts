@@ -1,11 +1,8 @@
 import { BlockAnalysis } from "./BlockAnalysis";
-import { ConnectionInfo } from "./ConnectionInfo";
+import { Connector } from "./elements/Connector";
 
 
-/**
- * Tracking structure for process analysis
- */
 export interface ProcessAnalysisResult {
-    connections: Map<string, ConnectionInfo>;
+    connections: Map<string, Connector>;
     blockAnalysis: Map<string, BlockAnalysis>;
 }

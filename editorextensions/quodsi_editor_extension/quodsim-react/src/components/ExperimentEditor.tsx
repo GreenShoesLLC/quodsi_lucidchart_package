@@ -1,7 +1,7 @@
 // ExperimentEditor.tsx
 import React, { useState } from "react";
-import { Experiment } from "src/shared/types/elements/experiment";
-import { Scenario } from "src/shared/types/elements/scenario";
+import { Experiment } from "src/shared/types/elements/Experiment";
+import { Scenario } from "src/shared/types/elements/Scenario";
 
 const ExperimentEditor: React.FC = () => {
   const [experiments, setExperiments] = useState<Experiment[]>([]);

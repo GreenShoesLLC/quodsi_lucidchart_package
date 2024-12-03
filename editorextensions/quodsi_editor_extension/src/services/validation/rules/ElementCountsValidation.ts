@@ -7,21 +7,23 @@ import { ValidationRule } from "./ValidationRule";
  */
 export class ElementCountsValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {
-        if (state.relationships.generators.size === 0) {
+        const { modelDefinition } = state;
+
+        if (modelDefinition.generators.size() === 0) {
             messages.push({
                 type: 'error',
                 message: 'Model must have at least one generator'
             });
         }
 
-        if (state.relationships.activities.size === 0) {
+        if (modelDefinition.activities.size() === 0) {
             messages.push({
                 type: 'error',
                 message: 'Model must have at least one activity'
             });
         }
 
-        if (state.relationships.resources.size === 0) {
+        if (modelDefinition.resources.size() === 0) {
             messages.push({
                 type: 'warning',
                 message: 'Model has no resources defined'

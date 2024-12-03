@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "../shared/types/elements/enums/simulationObjectType";
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
 
 export const createEmptyData = (type: SimulationObjectType, currentLucidId: string) => {
     switch (type) {

@@ -1,5 +1,5 @@
-import { RequestSetType } from "./enums/RequestSetType";
-import { ResourceRequest } from "./resourceRequest";
+import { RequestSetType } from "./RequestSetType";
+import { ResourceRequest } from "./ResourceRequest";
 
 
 export class ResourceSetRequest {

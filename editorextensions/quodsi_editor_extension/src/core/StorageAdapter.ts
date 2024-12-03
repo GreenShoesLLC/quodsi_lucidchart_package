@@ -1,7 +1,5 @@
-// core/StorageAdapter.ts
 import { ElementProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType } from '../shared/types/elements/enums/simulationObjectType';
-
+import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 
 /**
  * Metadata structure for elements
@@ -40,62 +38,58 @@ export class StorageAdapter {
     }
 
     /**
-     * Sets both data and metadata for an element
+     * Sets both data and metadata for an element, keeping them properly separated
      */
-    public setElementData<T>(
+    public setElementData<T extends { id: string }>(
         element: ElementProxy,
         data: T,
         type: SimulationObjectType,
         options: Partial<Omit<MetaData, 'type' | 'lastModified'>> = {}
     ): void {
         try {
-            // Create metadata
+            // Create clean metadata without any data fields
             const meta: MetaData = {
-                id: element.id, // Use LucidChart ID
                 type,
                 version: options.version || this.CURRENT_VERSION,
-                lastModified: new Date().toISOString()
+                lastModified: new Date().toISOString(),
+                id: data.id  // Use the ID from the data object
             };
 
-            // Ensure we're storing strings
-            const serializedData = JSON.stringify(data);
+            // Create a clean data object without metadata fields
+            const cleanData = this.stripMetadataFields(data);
+
+            // Serialize both separately
+            const serializedData = JSON.stringify(cleanData);
             const serializedMeta = JSON.stringify(meta);
 
-            // Verify the serialized data
-            if (typeof serializedData !== 'string' || typeof serializedMeta !== 'string') {
-                throw new Error('Failed to serialize data or metadata');
-            }
-
-            // Store data and metadata
+            // Store separately
             element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
             element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
             console.log('[StorageAdapter] Successfully set element data:', {
-                elementId: element.id,
-                type,
-                dataSize: serializedData.length
+                elementId: data.id,
+                type: type,
+                dataKeys: Object.keys(cleanData)
             });
         } catch (error) {
             console.error('[StorageAdapter] Error setting element data:', error);
-            throw new Error(`Failed to set element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            throw error;
         }
     }
 
     /**
      * Updates only the data portion of an element's storage
      */
-    public updateElementData<T>(element: ElementProxy, data: T): void {
+    public updateElementData<T extends { id: string }>(element: ElementProxy, data: T): void {
         try {
             const existingMeta = this.getMetadata(element);
             if (!existingMeta) {
                 throw new Error('No metadata found for element');
             }
 
-            // Ensure we're storing a string
-            const serializedData = JSON.stringify(data);
-            if (typeof serializedData !== 'string') {
-                throw new Error('Failed to serialize data');
-            }
+            // Clean the data object before storing
+            const cleanData = this.stripMetadataFields(data);
+            const serializedData = JSON.stringify(cleanData);
 
             // Update data
             element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
@@ -103,20 +97,32 @@ export class StorageAdapter {
             // Update lastModified in metadata
             existingMeta.lastModified = new Date().toISOString();
             const serializedMeta = JSON.stringify(existingMeta);
-            if (typeof serializedMeta !== 'string') {
-                throw new Error('Failed to serialize metadata');
-            }
 
             element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
             console.log('[StorageAdapter] Successfully updated element data:', {
-                elementId: element.id,
+                elementId: data.id,
                 type: existingMeta.type
             });
         } catch (error) {
             console.error('[StorageAdapter] Error updating element data:', error);
             throw new Error(`Failed to update element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
+    }
+
+    /**
+     * Strips metadata fields from a data object
+     */
+    private stripMetadataFields<T extends { id: string }>(data: T): Omit<T, 'version' | 'type' | 'lastModified'> {
+        const cleanData = { ...data };
+
+        // Remove metadata fields if they exist, except 'id' which is needed in both
+        const metadataFields = ['version', 'type', 'lastModified'];
+        metadataFields.forEach(field => {
+            delete cleanData[field as keyof typeof cleanData];
+        });
+
+        return cleanData;
     }
 
     /**
@@ -127,8 +133,7 @@ export class StorageAdapter {
             const metaStr = element.shapeData.get(StorageAdapter.META_KEY);
             if (!metaStr || typeof metaStr !== 'string') return null;
 
-            const meta = JSON.parse(metaStr) as MetaData;
-            return meta;
+            return JSON.parse(metaStr) as MetaData;
         } catch (error) {
             console.error('[StorageAdapter] Error getting metadata:', error);
             return null;
@@ -143,14 +148,12 @@ export class StorageAdapter {
             const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
             if (!dataStr || typeof dataStr !== 'string') return null;
 
-            const data = JSON.parse(dataStr) as T;
-            return data;
+            return JSON.parse(dataStr) as T;
         } catch (error) {
             console.error('[StorageAdapter] Error getting element data:', error);
             return null;
         }
     }
-
     /**
      * Gets both data and metadata as a complete storage format
      */

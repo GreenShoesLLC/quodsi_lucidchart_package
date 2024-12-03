@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimulationObjectType } from "../../shared/types/elements/enums/simulationObjectType";
+import { SimulationObjectType } from "../../shared/types/elements/SimulationObjectType";
 import { SimComponentType } from "../../shared/types/simComponentTypes";
 import ActivityEditor from "../../components/ActivityEditor";
 import EntityEditor from "../../components/EntityEditor";

@@ -11,7 +11,7 @@ import {
 import { LucidChartUtils } from '../utilis/lucidChartUtils';
 import { ConvertPageToModel } from '../services/conversion/ConvertPageToModel';
 import { RemoveModelFromPage } from '../services/RemoveModelFromPage';
-import { PageStatus } from '../shared/types/pageStatus';
+import { PageStatus } from '../shared/types/PageStatus';
 import { LucidChartMessageClass } from '../shared/types/LucidChartMessage';
 import { QuodsiShapeData } from '../utilis/QuodsiShapeData';
 

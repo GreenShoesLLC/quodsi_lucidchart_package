@@ -1,6 +1,6 @@
 
 
-import { SimulationObjectType } from "./elements/enums/simulationObjectType";
+import { SimulationObjectType } from "./elements/SimulationObjectType";
 import { ValidationResult } from "./ValidationTypes";
 
 /**

@@ -1,10 +1,10 @@
-import { Activity } from "../shared/types/elements/activity";
-import { Connector } from "../shared/types/elements/connector";
-import { Entity } from "../shared/types/elements/entity";
-import { Resource } from "../shared/types/elements/resource";
-import { Scenario } from "../shared/types/elements/scenario";
-import { Experiment } from "../shared/types/elements/experiment";
-import { Generator } from "../shared/types/elements/generator";
+import { Activity } from "../shared/types/elements/Activity";
+import { Connector } from "../shared/types/elements/Connector";
+import { Entity } from "../shared/types/elements/Entity";
+import { Resource } from "../shared/types/elements/Resource";
+import { Scenario } from "../shared/types/elements/Scenario";
+import { Experiment } from "../shared/types/elements/Experiment";
+import { Generator } from "../shared/types/elements/Generator";
 export declare class DefaultSimulationObjects {
     static initialActivity(): Activity;
     static initialConnector(): Connector;

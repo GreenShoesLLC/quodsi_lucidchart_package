@@ -1,4 +1,4 @@
-import { Scenario } from "./elements/scenario";
+import { Scenario } from "./elements/Scenario";
 
 
 export interface PageStatus {

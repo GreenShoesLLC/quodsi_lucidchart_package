@@ -1,15 +1,15 @@
-import { SimulationObjectType } from "../shared/types/elements/enums/simulationObjectType";
-import { Model } from "../shared/types/elements/model";
-import { Activity } from "../shared/types/elements/activity";
-import { Connector } from "../shared/types/elements/connector";
-import { Entity } from "../shared/types/elements/entity";
-import { Resource } from "../shared/types/elements/resource";
-import { Scenario } from "../shared/types/elements/scenario"; // Assuming you have this model
-import { Experiment } from "../shared/types/elements/experiment"; // Assuming you have this model
-import { Generator } from "../shared/types/elements/generator"; // Assuming you have this model
+import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { Model } from "../shared/types/elements/Model";
+import { Activity } from "../shared/types/elements/Activity";
+import { Connector } from "../shared/types/elements/Connector";
+import { Entity } from "../shared/types/elements/Entity";
+import { Resource } from "../shared/types/elements/Resource";
+import { Scenario } from "../shared/types/elements/Scenario"; // Assuming you have this model
+import { Experiment } from "../shared/types/elements/Experiment"; // Assuming you have this model
+import { Generator } from "../shared/types/elements/Generator"; // Assuming you have this model
 import { LucidChartUtils } from "../utilis/lucidChartUtils";
-import { ConnectType } from "../shared/types/elements/enums/connectType";
-import { Duration } from "../shared/types/elements/duration";
+import { ConnectType } from "../shared/types/elements/ConnectType";
+import { Duration } from "../shared/types/elements/Duration";
 
 
 export class DefaultSimulationObjects {
@@ -21,7 +21,8 @@ export class DefaultSimulationObjects {
             capacity: 1,
             inputBufferCapacity: 999,
             outputBufferCapacity: 999,
-            operationSteps: []
+            operationSteps: [],
+            connectors: []
         };
     }
 
@@ -29,6 +30,8 @@ export class DefaultSimulationObjects {
         return {
             id: LucidChartUtils.generateSimpleUUID(),
             name: "Connector1",
+            sourceId: "",
+            targetId: "",
             type: SimulationObjectType.Connector,
             connectType: ConnectType.Probability,
             probability: 1.0,

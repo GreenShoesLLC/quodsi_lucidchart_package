@@ -1,6 +1,6 @@
-import { SimulationObjectType } from "./enums/simulationObjectType";
-import { Duration } from "./duration";
-import { SimulationObject } from "./simulation_object";
+import { SimulationObjectType } from "./SimulationObjectType";
+import { Duration } from "./Duration";
+import { SimulationObject } from "./SimulationObject";
 
 
 export class Generator implements SimulationObject {

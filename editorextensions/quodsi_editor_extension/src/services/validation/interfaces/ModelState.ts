@@ -1,20 +1,14 @@
 import { ActivityRelationships } from "../../../shared/types/ActivityRelationships";
-import { Connection } from "../../../shared/types/Connection";
-import { SimulationElement } from "../../../shared/types/SimulationElement";
+import { Connector } from "../../../shared/types/elements/Connector";
+import { ModelDefinition } from "../../../shared/types/elements/ModelDefinition";
+
 
 
 /**
  * Interface defining what's needed for model validation
  */
 export interface ModelState {
-    elements: Map<string, SimulationElement>;
-    connections: Map<string, Connection>;
+    modelDefinition: ModelDefinition;
+    connections: Map<string, Connector>;
     activityRelationships: Map<string, ActivityRelationships>;
-    relationships: {
-        activities: Set<string>;
-        entities: Set<string>;
-        generators: Set<string>;
-        connectors: Set<string>;
-        resources: Set<string>;
-    };
 }

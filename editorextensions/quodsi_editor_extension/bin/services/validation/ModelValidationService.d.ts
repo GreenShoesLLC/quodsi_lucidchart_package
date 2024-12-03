@@ -1,10 +1,11 @@
+import { ModelDefinition } from "../../shared/types/elements/ModelDefinition";
 import { ValidationResult } from "../../shared/types/ValidationTypes";
-import { ModelState } from "./interfaces/ModelState";
 /**
  * Main validation service
  */
 export declare class ModelValidationService {
     private rules;
     constructor();
-    validate(state: ModelState): ValidationResult;
+    validate(modelDefinition: ModelDefinition): ValidationResult;
+    private buildActivityRelationships;
 }
