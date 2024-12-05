@@ -1,6 +1,7 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
 import { Entity } from "src/shared/types/elements/Entity";
+import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
 
 interface Props {
   entity: Entity;
@@ -11,7 +12,10 @@ interface Props {
 const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={entity}
+      data={{
+        ...entity,
+        type: SimulationObjectType.Entity, // Explicitly include type
+      }}
       onSave={onSave}
       onCancel={onCancel}
       messageType="entitySaved"

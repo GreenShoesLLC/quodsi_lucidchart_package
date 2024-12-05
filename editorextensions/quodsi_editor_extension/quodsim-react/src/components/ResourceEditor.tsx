@@ -2,6 +2,7 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
 import { Resource } from "src/shared/types/elements/Resource";
+import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
 
 interface Props {
   resource: Resource;
@@ -12,7 +13,7 @@ interface Props {
 const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={resource}
+      data={{ ...resource, type: SimulationObjectType.Resource }}
       onSave={onSave}
       onCancel={onCancel}
       messageType="resourceSaved"

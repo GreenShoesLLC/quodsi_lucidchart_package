@@ -1,13 +1,13 @@
 import { ActivityRelationships } from "../../shared/types/ActivityRelationships";
 import { ModelDefinition } from "../../shared/types/elements/ModelDefinition";
 import { ValidationMessage, ValidationResult } from "../../shared/types/ValidationTypes";
-import { ModelState } from "./interfaces/ModelState";
-import { ActivityValidation } from "./rules/ActivityValidation";
-import { ConnectorValidation } from "./rules/ConnectorValidation";
-import { ElementCountsValidation } from "./rules/ElementCountsValidation";
-import { GeneratorValidation } from "./rules/GeneratorValidation";
-import { ResourceValidation } from "./rules/ResourceValidation";
-import { ValidationRule } from "./rules/ValidationRule";
+import { ModelState } from "./ModelState";
+import { ActivityValidation } from "./ActivityValidation";
+import { ConnectorValidation } from "./ConnectorValidation";
+import { ElementCountsValidation } from "./ElementCountsValidation";
+import { GeneratorValidation } from "./GeneratorValidation";
+import { ResourceValidation } from "./ResourceValidation";
+import { ValidationRule } from "./ValidationRule";
 
 /**
  * Main validation service

@@ -1,8 +1,8 @@
 
 // GeneratorValidation.ts
 import { ValidationRule } from './ValidationRule';
-import { ValidationMessage } from '../../../shared/types/ValidationTypes';
-import { ModelState } from '../interfaces/ModelState';
+import { ValidationMessage } from '../../shared/types/ValidationTypes';
+import { ModelState } from './ModelState';
 
 export class GeneratorValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {

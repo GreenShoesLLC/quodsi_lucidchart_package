@@ -8,21 +8,23 @@ import {
     Viewport,
     BlockProxy,
     LineProxy,
-    DocumentProxy
+    DocumentProxy,
+    ElementProxy
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { MessagePayloads, MessageTypes, isValidMessage } from '../shared/types/MessageTypes';
 
-import { SelectionState, SelectionType } from '../shared/types/SelectionTypes';
+import { SelectionType } from '../shared/types/SelectionType';
 import { ConversionService } from '../services/conversion/ConversionService';
-import { RemoveModelFromPage } from '../services/RemoveModelFromPage';
+import { RemoveModelFromPage } from '../services/conversion/RemoveModelFromPage';
 
 import { Model } from '../shared/types/elements/Model';
 import { Activity } from '../shared/types/elements/Activity';
 import { Connector } from '../shared/types/elements/Connector';
 import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 import { SimulationElementFactory } from '../shared/types/SimulationElementFactory';
+import { SelectionState } from '../shared/types/SelectionState';
 
 
 /**
@@ -60,9 +62,13 @@ export class ModelPanel extends Panel {
             width: 300
         });
 
+        // Initialize storage adapter first
         this.storageAdapter = new StorageAdapter();
-        this.initializeModelManager();
+
+        // Create ConversionService with both required dependencies
         this.conversionService = new ConversionService(this.modelManager, this.storageAdapter);
+
+        this.initializeModelManager();
 
         console.log('[ModelPanel] Initialized');
     }
@@ -75,17 +81,41 @@ export class ModelPanel extends Panel {
             console.log('[ModelPanel] Page is not a Quodsi model, skipping initialization');
             return;
         }
+        else {
+            console.log('[ModelPanel] Page is a Quodsi model, starting initialization');
+        }
 
         try {
             // Load page/model data
             const modelData = this.storageAdapter.getElementData<Model>(currentPage);
             if (modelData) {
-                const modelElement = SimulationElementFactory.createElement(
-                    { type: SimulationObjectType.Model },
-                    modelData
-                );
-                this.modelManager.registerElement(modelElement);
-                console.log('[ModelPanel] Registered model element:', modelElement);
+                console.log('[ModelPanel] Creating model element with:', {
+                    metadataType: SimulationObjectType.Model,
+                    modelData: modelData
+                });
+
+                try {
+                    const modelElement = SimulationElementFactory.createElement(
+                        { type: SimulationObjectType.Model },
+                        modelData
+                    );
+
+                    console.log('[ModelPanel] Created model element:', {
+                        elementType: modelElement.type,
+                        elementId: modelElement.id,
+                        elementStructure: modelElement
+                    });
+
+                    this.modelManager.registerElement(modelElement, currentPage);
+                    console.log('[ModelPanel] Successfully registered model element');
+                } catch (createError) {
+                    console.error('[ModelPanel] Error creating model element:', {
+                        error: createError,
+                        modelData: modelData,
+                        stack: createError instanceof Error ? createError.stack : undefined
+                    });
+                    throw createError;
+                }
             }
 
             // Load blocks (activities, resources, generators, entities)
@@ -99,7 +129,7 @@ export class ModelPanel extends Panel {
                 const blockData = this.storageAdapter.getElementData<Activity>(block);
                 if (blockData) {
                     const element = SimulationElementFactory.createElement(metadata, blockData);
-                    this.modelManager.registerElement(element);
+                    this.modelManager.registerElement(element, block);
                     console.log('[ModelPanel] Registered block element:', {
                         id: element.id,
                         type: element.type
@@ -118,7 +148,7 @@ export class ModelPanel extends Panel {
                 const lineData = this.storageAdapter.getElementData<Connector>(line);
                 if (lineData) {
                     const element = SimulationElementFactory.createElement(metadata, lineData);
-                    this.modelManager.registerElement(element);
+                    this.modelManager.registerElement(element, line);
                     console.log('[ModelPanel] Registered connector element:', {
                         id: element.id,
                         type: element.type
@@ -175,7 +205,23 @@ export class ModelPanel extends Panel {
 
         // Only send updates if React app is ready
         if (this.reactAppReady) {
-            this.sendSelectionUpdate();
+            // Get full element data for selected items
+            const elementData = items.map(item => ({
+                id: item.id,
+                data: this.storageAdapter.getElementData(item),
+                metadata: this.storageAdapter.getMetadata(item)
+            }));
+
+            // Send selection update with element data
+            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+                selectionState: this.currentSelection,
+                elementData: elementData
+            });
+
+            console.log('[ModelPanel] Selection update sent:', {
+                selectionState: this.currentSelection,
+                elementData: elementData
+            });
         }
     }
 
@@ -211,6 +257,16 @@ export class ModelPanel extends Panel {
         if (items.length > 1) return SelectionType.MULTIPLE;
 
         const item = items[0];
+
+        // Check if item has Quodsi data
+        const hasQuodsiData = this.storageAdapter.validateStorage(item);
+
+        // If it's a single item without Quodsi data, return UNCONVERTED_ELEMENT
+        if (!hasQuodsiData && (item instanceof BlockProxy || item instanceof LineProxy)) {
+            return SelectionType.UNCONVERTED_ELEMENT;
+        }
+
+        // Rest of existing logic for items with Quodsi data
         if (item instanceof BlockProxy) {
             const meta = this.storageAdapter.getMetadata(item);
             return meta?.type
@@ -325,6 +381,7 @@ export class ModelPanel extends Panel {
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
+        const document = new DocumentProxy(this.client);
 
         if (!currentPage) {
             this.sendTypedMessage(MessageTypes.ERROR, {
@@ -335,19 +392,18 @@ export class ModelPanel extends Panel {
 
         try {
             // Create instance of RemoveModelFromPage
-            const remover = new RemoveModelFromPage(currentPage);
+            const remover = new RemoveModelFromPage(currentPage, this.storageAdapter);
 
             // Remove the model
             remover.removeModel();
 
             // Clear model manager state
-            this.modelManager = new ModelManager();
+            this.modelManager = new ModelManager(this.storageAdapter);
 
             // Notify React app of successful removal
             this.sendTypedMessage(MessageTypes.MODEL_REMOVED);
 
             // Refresh the panel state after removal
-            const document = new DocumentProxy(this.client);
             this.sendInitialState(currentPage, false, document.id);
 
         } catch (error) {
@@ -414,7 +470,7 @@ export class ModelPanel extends Panel {
             pageId: page.id,
             documentId,
             pageTitle: page.getTitle(),
-            canConvert: this.conversionService.canConvertPage(page),
+            canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
             hasModelData: isModel ? 'yes' : 'no'
         });
 
@@ -422,7 +478,7 @@ export class ModelPanel extends Panel {
             isModel,
             pageId: page.id,
             documentId,
-            canConvert: this.conversionService.canConvertPage(page),
+            canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
             modelData: isModel ? this.storageAdapter.getElementData(page) : null,
             selectionState: this.currentSelection
         });
@@ -514,7 +570,10 @@ export class ModelPanel extends Panel {
      * Handles element data update
      */
     private handleUpdateElementData(updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]): void {
-        console.log('[ModelPanel] Handling update element data:', updateData);
+        console.log('[ModelPanel] Received element update data:', {
+            updateData,
+            selectedItems: new Viewport(this.client).getSelectedItems().map(item => item.id)
+        });
 
         try {
             const viewport = new Viewport(this.client);
@@ -523,25 +582,41 @@ export class ModelPanel extends Panel {
                 throw new Error('No active page found');
             }
 
-            // First try to find the element using stored ID
-            let element = this.findElementById(updateData.elementId);
+            // Get the currently selected item from viewport
+            const selectedItems = viewport.getSelectedItems();
+            console.log('[ModelPanel] Selected items:', selectedItems.map(item => item.id));
 
+            const element = selectedItems.find(item => item.id === updateData.elementId);
             if (!element) {
-                // If not found directly, try to find by iterating through all elements
-                for (const [, block] of currentPage.allBlocks) {
-                    const meta = this.storageAdapter.getMetadata(block);
-                    if (meta && meta.id === updateData.elementId) {
-                        element = block;
-                        break;
-                    }
-                }
+                throw new Error(`Element not found in selection: ${updateData.elementId}`);
             }
 
-            if (!element) {
-                throw new Error(`Element not found: ${updateData.elementId}`);
+            console.log('[ModelPanel] Found element:', {
+                id: element.id,
+                type: element instanceof BlockProxy ? 'Block' : 'Line'
+            });
+
+            // First, ensure model manager is initialized
+            if (!this.modelManager.getModel()) {
+                console.log('[ModelPanel] Initializing model manager');
+                const model = {
+                    id: currentPage.id,
+                    name: currentPage.getTitle() || 'New Model',
+                    type: SimulationObjectType.Model
+                };
+                this.modelManager.initializeModel(model as Model, currentPage);
             }
 
-            // Update element data
+            // Then register the element with the model manager
+            const elementData = {
+                id: updateData.elementId,
+                type: updateData.type,
+                ...updateData.data
+            };
+            this.modelManager.registerElement(elementData, element);
+            console.log('[ModelPanel] Element registered with model manager');
+
+            // Update storage
             this.storageAdapter.setElementData(
                 element,
                 updateData.data,
@@ -551,14 +626,9 @@ export class ModelPanel extends Panel {
                     version: this.storageAdapter.CURRENT_VERSION
                 }
             );
+            console.log('[ModelPanel] Storage update successful');
 
-            // Update model manager
-            this.modelManager.updateElement({
-                id: updateData.elementId,
-                type: updateData.type,
-                ...updateData.data
-            });
-
+            // Send success message
             this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
                 elementId: updateData.elementId
             });
@@ -567,6 +637,7 @@ export class ModelPanel extends Panel {
             if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
                 this.sendSelectionUpdate();
             }
+
         } catch (error) {
             console.error('[ModelPanel] Error updating element:', error);
             this.sendTypedMessage(MessageTypes.ERROR, {
@@ -639,11 +710,15 @@ export class ModelPanel extends Panel {
     /**
      * Finds an element by ID
      */
-    private findElementById(id: string): ItemProxy | null {
+    private findElementById(id: string): ElementProxy | PageProxy | null {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         if (!currentPage) return null;
 
+        // First check if the ID matches the page itself
+        if (id === currentPage.id) {
+            return currentPage;
+        }
         // Log available elements for debugging
         console.log('[ModelPanel] Looking for element:', id);
         console.log('[ModelPanel] Available blocks:', Array.from(currentPage.allBlocks.keys()));

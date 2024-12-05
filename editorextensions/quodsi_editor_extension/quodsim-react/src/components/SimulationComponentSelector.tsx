@@ -1,28 +1,17 @@
 import React from "react";
-import {
-  SimComponentType,
-  SimComponentTypes,
-} from "src/types/simComponentTypes";
+import { SimComponentType } from "src/shared/types/simComponentType";
+import { SimComponentTypes,} from "src/shared/types/simComponentTypes";
 
 interface SimulationComponentSelectorProps {
   currentType?: SimComponentType;
-  onTypeChange: (newType: SimComponentType) => void;
+  elementId: string; // Add this
+  onTypeChange: (newType: SimComponentType, elementId: string) => void;
   disabled?: boolean;
 }
 
 export const SimulationComponentSelector: React.FC<
   SimulationComponentSelectorProps
-> = ({ currentType, onTypeChange, disabled = false }) => {
-  const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newType = event.target.value as SimComponentType;
-    console.log("[SimComponentSelector] Type change initiated:", {
-      from: currentType,
-      to: newType,
-      timestamp: new Date().toISOString(),
-    });
-    onTypeChange(newType);
-  };
-
+> = ({ currentType, elementId, onTypeChange, disabled = false }) => {
   return (
     <div className="w-full p-4 bg-gray-50 border-b">
       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -30,7 +19,9 @@ export const SimulationComponentSelector: React.FC<
       </label>
       <select
         value={currentType || ""}
-        onChange={handleChange}
+        onChange={(e) =>
+          onTypeChange(e.target.value as SimComponentType, elementId)
+        }
         disabled={disabled}
         className="block w-full p-2 border rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
       >

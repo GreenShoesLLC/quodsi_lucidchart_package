@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { SimComponentType } from "./shared/types/simComponentTypes";
+import { SimComponentType } from "./shared/types/simComponentType";
 import {
   MessageTypes,
   MessagePayloads,
   createSerializableMessage,
 } from "./shared/types/MessageTypes";
 import { SimulationObjectType } from "./shared/types/elements/SimulationObjectType";
-import { SelectionState } from "./shared/types/SelectionTypes";
+
 import { SimulationComponentSelector } from "./components/SimulationComponentSelector";
 import { StatusMonitor } from "./components/StatusMonitor";
 import { ErrorDisplay } from "./components/ui/ErrorDisplay";
@@ -15,6 +15,7 @@ import { messageHandlers } from "./services/messageHandlers/messageHandlers";
 import { typeMappers } from "./utils/typeMappers";
 import { createEmptyData } from "./utils/emptyDataCreator";
 import { createEditorComponent } from "./services/editors/editorFactory";
+import { SelectionContextProvider } from "./components/SelectionContextProvider";
 
 export interface QuodsiAppState {
   editor: React.ReactElement | null;
@@ -69,9 +70,20 @@ const QuodsiApp: React.FC = () => {
       setEditor,
       setEditorForElement,
       setError,
+      handleSave,
+      handleCancel,
+      handleComponentTypeChange,
     };
 
     try {
+      // Add more detailed logging for selection changes
+      if (message.messagetype === MessageTypes.SELECTION_CHANGED) {
+        console.log("[QuodsiApp] Received selection change:", {
+          selectionState: message.data?.selectionState,
+          elementData: message.data?.elementData,
+        });
+      }
+
       switch (message.messagetype) {
         case MessageTypes.INITIAL_STATE:
           messageHandlers.handleInitialState(message.data, deps);
@@ -80,10 +92,17 @@ const QuodsiApp: React.FC = () => {
           messageHandlers.handleModelRemoved(deps);
           break;
         case MessageTypes.SELECTION_CHANGED:
-          messageHandlers.handleSelectionChanged(message.data, deps);
+          // Ensure we have element data before handling selection change
+          if (message.data?.elementData) {
+            messageHandlers.handleSelectionChanged(message.data, deps);
+          } else {
+            console.warn(
+              "[QuodsiApp] Selection changed but no element data provided"
+            );
+          }
           break;
         case MessageTypes.UPDATE_SUCCESS:
-          messageHandlers.handleUpdateSuccess(deps);
+          messageHandlers.handleUpdateSuccess(message.data, deps);
           break;
         case MessageTypes.ERROR:
           messageHandlers.handleError(message.data, deps);
@@ -91,7 +110,7 @@ const QuodsiApp: React.FC = () => {
         case MessageTypes.CONVERSION_COMPLETE:
           messageHandlers.handleConversionComplete(message.data, deps);
           break;
-        case MessageTypes.ELEMENT_DATA: // Add this case
+        case MessageTypes.ELEMENT_DATA:
           messageHandlers.handleElementData(message.data, deps);
           break;
       }
@@ -100,7 +119,6 @@ const QuodsiApp: React.FC = () => {
       setError(`Error handling message: ${error}`);
     }
   }, []);
-
   useEffect(() => {
     const eventListener = (event: MessageEvent) => {
       console.log("[QuodsiApp] Received message:", event.data);
@@ -115,12 +133,24 @@ const QuodsiApp: React.FC = () => {
     };
   }, [handleMessage, sendToParent]);
 
-  const handleComponentTypeChange = (newType: SimComponentType) => {
-    console.log("[QuodsiApp] Component type change requested:", {
-      from: state.currentComponentType,
-      to: newType,
-      lucidId: state.currentLucidId,
+  type TypeChangeHandler = (
+    newType: SimComponentType,
+    elementId: string
+  ) => void;
+
+  const handleComponentTypeChange: TypeChangeHandler = (newType, elementId) => {
+    console.log("[QuodsiApp] Starting component type change:", {
+      elementId,
+      currentState: state,
+      newType,
     });
+
+    if (!elementId) {
+      console.error("[QuodsiApp] Cannot change type - no element ID provided", {
+        newType: newType,
+      });
+      return;
+    }
 
     setState((prev) => ({
       ...prev,
@@ -130,45 +160,57 @@ const QuodsiApp: React.FC = () => {
 
     const simulationType =
       typeMappers.mapComponentTypeToSimulationType(newType);
-    const emptyData = createEmptyData(simulationType, state.currentLucidId);
+    const emptyData = createEmptyData(simulationType, elementId);
 
     const elementData = {
-      elementId: state.currentLucidId,
+      elementId,
       type: simulationType,
       data: emptyData,
     };
 
-    console.log("[QuodsiApp] Sending type change update:", elementData);
-    sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
-  };
+    console.log("[QuodsiApp] Prepared update data:", elementData);
 
+    try {
+      sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
+      console.log("[QuodsiApp] Update message sent");
+    } catch (error) {
+      console.error("[QuodsiApp] Error sending update:", error);
+      setState((prev) => ({ ...prev, isProcessing: false }));
+    }
+  };
   const handleSave = (data: any) => {
     console.log("[QuodsiApp] Handling save:", {
       data,
       stateSnapshot: state,
     });
 
-    // Ensure we have the required data
-    if (!data.id || !data.type) {
+    if (!data.id) {
       console.error("[QuodsiApp] Missing required data for save:", data);
       setError("Invalid data for save operation");
       return;
     }
 
+    // Use type from data or from state
+    const type =
+      data.type ||
+      (state.currentComponentType
+        ? typeMappers.mapComponentTypeToSimulationType(
+            state.currentComponentType
+          )
+        : undefined);
+
+    if (!type) {
+      console.error("[QuodsiApp] Missing type information for save:", data);
+      setError("Missing type information for save");
+      return;
+    }
+
     const elementData = {
       elementId: data.id,
-      type: data.type,
+      type: type,
       data: {
         ...data,
-        // Convert infinity values to null for storage
-        inputBufferCapacity:
-          data.inputBufferCapacity === Infinity
-            ? null
-            : data.inputBufferCapacity,
-        outputBufferCapacity:
-          data.outputBufferCapacity === Infinity
-            ? null
-            : data.outputBufferCapacity,
+        type: type, // Ensure type is included in data
       },
     };
 
@@ -182,11 +224,12 @@ const QuodsiApp: React.FC = () => {
     setEditor(null);
   };
 
-  const setEditorForElement = (element: {
-    id: string;
-    data: any;
-    metadata: any;
-  }) => {
+  const setEditorForElement = (element: any) => {
+    if (!element?.id || !element?.metadata?.type) {
+      console.error("[QuodsiApp] Invalid element data:", element);
+      return;
+    }
+
     const elementType = element.metadata.type as SimulationObjectType;
     const componentType =
       typeMappers.mapSimulationTypeToComponentType(elementType);
@@ -197,33 +240,32 @@ const QuodsiApp: React.FC = () => {
       currentComponentType: componentType,
     }));
 
-    const editor = createEditorComponent(
+    const editorComponent = createEditorComponent(
       elementType,
       element.data,
       {
         onSave: handleSave,
         onCancel: handleCancel,
         onTypeChange: handleComponentTypeChange,
+        elementId: element.id, // Add this line to include the elementId
       },
       state.isProcessing
     );
 
-    if (editor) {
+    if (editorComponent) {
       setEditor(
         React.createElement(
           React.Fragment,
           null,
-          React.createElement(SimulationComponentSelector, {
+          React.createElement(SelectionContextProvider, {
+            elementId: element.id,
             currentType: componentType,
             onTypeChange: handleComponentTypeChange,
             disabled: state.isProcessing,
           }),
-          editor
+          editorComponent
         )
       );
-    } else {
-      setEditor(null);
-      setError(`Unable to create editor for element type: ${elementType}`);
     }
   };
 

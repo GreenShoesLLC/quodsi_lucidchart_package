@@ -1,6 +1,6 @@
 import { ValidationRule } from './ValidationRule';
-import { ValidationMessage } from '../../../shared/types/ValidationTypes';
-import { ModelState } from '../interfaces/ModelState';
+import { ValidationMessage } from '../../shared/types/ValidationTypes';
+import { ModelState } from './ModelState';
 
 export class ConnectorValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {

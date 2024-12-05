@@ -1,5 +1,5 @@
 import { SimulationObjectType } from './elements/SimulationObjectType';
-import { SelectionState } from './SelectionTypes';
+import { SelectionState } from './SelectionState';
 import { ValidationResult } from './ValidationTypes';
 export declare enum MessageTypes {
     REACT_APP_READY = "reactAppReady",

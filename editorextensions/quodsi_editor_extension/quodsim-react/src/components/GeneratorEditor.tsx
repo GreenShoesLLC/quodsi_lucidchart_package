@@ -4,6 +4,7 @@ import BaseEditor from "./BaseEditor";
 import DurationEditor from "./DurationEditor";
 import { Duration } from "src/shared/types/elements/Duration";
 import { Generator } from "src/shared/types/elements/Generator";
+import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
 interface Props {
   generator: Generator;
   onSave: (generator: Generator) => void;
@@ -28,7 +29,7 @@ const GeneratorEditor: React.FC<Props> = ({ generator, onSave, onCancel }) => {
     // <div style={{ padding: '10px', margin: '10px' }}> {/* Debug border */}
     //   <div>GeneratorEditor Debug</div> {/* Debug text */}
     <BaseEditor
-      data={generator}
+      data={{ ...generator, type: SimulationObjectType.Generator }}
       onSave={onSave}
       onCancel={onCancel}
       messageType="generatorSaved"

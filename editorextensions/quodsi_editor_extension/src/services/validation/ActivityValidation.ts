@@ -1,7 +1,7 @@
 import { ValidationRule } from "./ValidationRule";
-import { ValidationMessage } from "../../../shared/types/ValidationTypes";
-import { ModelState } from "../interfaces/ModelState";
-import { Activity } from "../../../shared/types/elements/Activity";
+import { ValidationMessage } from "../../shared/types/ValidationTypes";
+import { ModelState } from "./ModelState";
+import { Activity } from "../../shared/types/elements/Activity";
 
 export class ActivityValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {

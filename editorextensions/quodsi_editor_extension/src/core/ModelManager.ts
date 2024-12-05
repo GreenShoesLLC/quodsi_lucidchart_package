@@ -39,12 +39,23 @@ export class ModelManager {
       * Registers a simulation element with the appropriate list manager and storage
       */
     public registerElement(element: SimulationObject, elementProxy: ElementProxy): void {
+        // Store the element proxy for future use
+        this.elementProxies.set(element.id, elementProxy);
+
+        // Handle Model type specially
+        if (element.type === SimulationObjectType.Model) {
+            // Create new model definition without updating storage
+            this.modelDefinition = new ModelDefinition(element as Model);
+
+            // Skip storage update during initialization
+            // We'll only update storage in response to user actions
+            return;
+        }
+
+        // For non-Model types, ensure model definition exists
         if (!this.modelDefinition) {
             throw new Error('Model not initialized');
         }
-
-        // Store the element proxy for future use
-        this.elementProxies.set(element.id, elementProxy);
 
         // Register with appropriate list manager
         switch (element.type) {
@@ -67,12 +78,8 @@ export class ModelManager {
                 throw new Error(`Unknown element type: ${element.type}`);
         }
 
-        // Update storage
-        this.storageAdapter.setElementData(
-            elementProxy,
-            element,
-            element.type
-        );
+        // Skip storage update during initialization
+        // Storage updates should only happen in response to user actions
     }
 
     /**

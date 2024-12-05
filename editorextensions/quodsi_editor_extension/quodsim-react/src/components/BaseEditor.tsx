@@ -27,6 +27,7 @@ const BaseEditor = <T extends BaseSimulationElement>({
   children,
   messageType,
 }: BaseEditorProps<T>) => {
+  // Ensure we keep the full data including type
   const [localData, setLocalData] = useState<T>(data);
 
   useEffect(() => {
@@ -49,18 +50,12 @@ const BaseEditor = <T extends BaseSimulationElement>({
 
   const handleSave = () => {
     console.log("BaseEditor handleSave:", localData);
-    onSave(localData);
-    window.parent.postMessage(
-      {
-        messagetype: messageType,
-        data: {
-          elementId: localData.id,
-          data: localData,
-          type: localData.type,
-        },
-      },
-      "*"
-    );
+    // Preserve all data including type when saving
+    onSave({
+      ...localData,
+      // Ensure type is preserved from original data if not in localData
+      type: localData.type || data.type,
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

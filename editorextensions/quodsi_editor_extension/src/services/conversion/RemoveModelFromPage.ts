@@ -1,9 +1,9 @@
 // RemoveModelFromPage.ts
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
-import { StorageAdapter } from '../core/StorageAdapter';
+import { StorageAdapter } from '../../core/StorageAdapter';
 
 export class RemoveModelFromPage {
-    private storageAdapter: StorageAdapter;
+
     private static readonly LEGACY_KEYS = [
         'q_objecttype',
         'q_data',
@@ -11,36 +11,26 @@ export class RemoveModelFromPage {
         'q_status_prior'
     ];
 
-    constructor(private page: PageProxy) {
-        this.storageAdapter = new StorageAdapter();
-    }
+    constructor(
+        private page: PageProxy,
+        private storageAdapter: StorageAdapter
+    ) { }
 
     /**
      * Removes all model-related data from the page and its elements
      */
     public removeModel(): void {
-        console.log('[RemoveModelFromPage] Starting model removal process');
+        // Clear model data from page
+        this.storageAdapter.clearElementData(this.page);
 
-        try {
-            // Remove data from the page itself
-            this.clearElementData(this.page);
+        // Clear data from all blocks
+        for (const [, block] of this.page.allBlocks) {
+            this.storageAdapter.clearElementData(block);
+        }
 
-            // Remove data from all blocks
-            for (const [blockId, block] of this.page.allBlocks) {
-                this.clearElementData(block);
-                console.log(`[RemoveModelFromPage] Cleared data from block: ${blockId}`);
-            }
-
-            // Remove data from all lines
-            for (const [lineId, line] of this.page.allLines) {
-                this.clearElementData(line);
-                console.log(`[RemoveModelFromPage] Cleared data from line: ${lineId}`);
-            }
-
-            console.log('[RemoveModelFromPage] Model removal completed successfully');
-        } catch (error) {
-            console.error('[RemoveModelFromPage] Error during model removal:', error);
-            throw new Error(`Failed to remove model: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Clear data from all lines
+        for (const [, line] of this.page.allLines) {
+            this.storageAdapter.clearElementData(line);
         }
     }
 

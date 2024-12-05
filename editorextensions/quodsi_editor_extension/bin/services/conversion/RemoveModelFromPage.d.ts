@@ -1,5 +1,5 @@
 import { PageProxy } from 'lucid-extension-sdk';
-import { StorageAdapter } from '../core/StorageAdapter';
+import { StorageAdapter } from '../../core/StorageAdapter';
 export declare class RemoveModelFromPage {
     private page;
     private storageAdapter;

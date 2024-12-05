@@ -1,5 +1,6 @@
-import { SelectionState } from './SelectionTypes';
+
 import { SimulationObjectType } from "./elements/SimulationObjectType";
+import { SelectionState } from "./SelectionState";
 
 import { ValidationResult } from './ValidationTypes';
 

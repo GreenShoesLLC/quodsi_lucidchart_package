@@ -1,6 +1,6 @@
 import React from 'react';
 import { SimulationObjectType } from "../../shared/types/elements/SimulationObjectType";
-import { SimComponentType } from "../../shared/types/simComponentTypes";
+import { SimComponentType } from "../../shared/types/simComponentType";
 import ActivityEditor from "../../components/ActivityEditor";
 import EntityEditor from "../../components/EntityEditor";
 import ConnectorEditor from "../../components/ConnectorEditor";
@@ -10,7 +10,8 @@ import ResourceEditor from "../../components/ResourceEditor";
 interface EditorHandlers {
   onSave: (data: any) => void;
   onCancel: () => void;
-  onTypeChange: (type: SimComponentType) => void;
+  onTypeChange: (type: SimComponentType, elementId: string) => void;
+  elementId: string; 
 }
 
 export const createEditorComponent = (

@@ -145,12 +145,44 @@ export class StorageAdapter {
      */
     public getElementData<T>(element: ElementProxy): T | null {
         try {
-            const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
-            if (!dataStr || typeof dataStr !== 'string') return null;
+            console.log('[StorageAdapter] Getting element data:', {
+                elementId: element.id,
+                elementType: typeof element,
+                contextInfo: 'Attempting to retrieve stored data'
+            });
 
-            return JSON.parse(dataStr) as T;
+            const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
+
+            console.log('[StorageAdapter] Raw data string:', {
+                exists: !!dataStr,
+                isString: typeof dataStr === 'string',
+                valueType: typeof dataStr,
+                preview: typeof dataStr === 'string' ?
+                    `${dataStr.slice(0, 100)}${dataStr.length > 100 ? '...' : ''}` :
+                    String(dataStr)
+            });
+
+            if (!dataStr || typeof dataStr !== 'string') {
+                console.log('[StorageAdapter] No valid data found for element:', element.id);
+                return null;
+            }
+
+            const parsedData = JSON.parse(dataStr) as T;
+
+            console.log('[StorageAdapter] Successfully parsed element data:', {
+                elementId: element.id,
+                parsedDataKeys: Object.keys(parsedData as object),
+                timestamp: new Date().toISOString()
+            });
+
+            return parsedData;
         } catch (error) {
-            console.error('[StorageAdapter] Error getting element data:', error);
+            console.error('[StorageAdapter] Error getting element data:', {
+                elementId: element.id,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                stack: error instanceof Error ? error.stack : undefined,
+                timestamp: new Date().toISOString()
+            });
             return null;
         }
     }

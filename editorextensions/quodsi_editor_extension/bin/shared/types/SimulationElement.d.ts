@@ -1,17 +1,9 @@
-import { SimulationObjectType } from './elements/SimulationObjectType';
+import { SimulationObject } from './elements/SimulationObject';
 import { ValidationResult } from './ValidationTypes';
 /**
  * Base interface for all simulation elements
  */
-export interface SimulationElement {
-    /**
-     * Unique identifier for the element
-     */
-    id: string;
-    /**
-     * Type of simulation element
-     */
-    type: SimulationObjectType;
+export interface SimulationElement extends SimulationObject {
     /**
      * Version string for tracking element schema changes
      */

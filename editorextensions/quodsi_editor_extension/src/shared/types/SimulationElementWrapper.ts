@@ -14,11 +14,13 @@ export class SimulationElementWrapper implements SimulationElement {
     public readonly id: string;
     public readonly type: SimulationObjectType;
     public readonly version: string;
+    public readonly name: string;
     public readonly data: BaseElement;
 
     constructor(data: BaseElement, version: string = '1.0.0') {
         this.id = data.id;
         this.type = data.type;
+        this.name = data.name;
         this.version = version;
         this.data = data;
     }

@@ -12,6 +12,7 @@ export declare class SimulationElementWrapper implements SimulationElement {
     readonly id: string;
     readonly type: SimulationObjectType;
     readonly version: string;
+    readonly name: string;
     readonly data: BaseElement;
     constructor(data: BaseElement, version?: string);
     validate(): ValidationResult;

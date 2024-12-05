@@ -1,4 +1,4 @@
-import { SimComponentType } from "../shared/types/simComponentTypes";
+import { SimComponentType } from "../shared/types/simComponentType";
 import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
 
 export const typeMappers = {
@@ -38,6 +38,8 @@ export const typeMappers = {
             case SimComponentType.RESOURCE:
                 return SimulationObjectType.Resource;
             case SimComponentType.MODEL:
+                return SimulationObjectType.Model;
+            case SimComponentType.NONE:
                 return SimulationObjectType.Model;
             default:
                 throw new Error(`Unknown component type: ${componentType}`);

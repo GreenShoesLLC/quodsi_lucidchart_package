@@ -2,6 +2,7 @@ import React from "react";
 import BaseEditor from "./BaseEditor";
 import { Connector } from "src/shared/types/elements/Connector";
 import { ConnectType } from "src/shared/types/elements/ConnectType";
+import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
 
 interface Props {
   connector: Connector;
@@ -12,7 +13,7 @@ interface Props {
 const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={connector}
+      data={{ ...connector, type: SimulationObjectType.Connector }}
       onSave={onSave}
       onCancel={onCancel}
       messageType="connectorSaved"

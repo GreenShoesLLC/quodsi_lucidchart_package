@@ -1,10 +1,9 @@
-// types/SelectionTypes.ts
-
 /**
  * Defines all possible selection types
  */
 export enum SelectionType {
     NONE = 'none',
+    UNCONVERTED_ELEMENT = 'unconverted_element',
     MULTIPLE = 'multiple',
     UNKNOWN_BLOCK = 'unknown_block',
     UNKNOWN_LINE = 'unknown_line',
@@ -14,18 +13,4 @@ export enum SelectionType {
     GENERATOR = 'generator',
     RESOURCE = 'resource',
     MODEL = 'model'
-}
-
-/**
- * Represents the current selection state
- */
-export interface SelectionState {
-    /** ID of the current page */
-    pageId: string;
-
-    /** Array of selected element IDs */
-    selectedIds: string[];
-
-    /** Type of the current selection */
-    selectionType: SelectionType;
 }

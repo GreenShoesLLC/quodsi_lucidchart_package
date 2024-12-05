@@ -1,5 +1,5 @@
-import { ValidationMessage } from "../../../shared/types/ValidationTypes";
-import { ModelState } from "../interfaces/ModelState";
+import { ValidationMessage } from "../../shared/types/ValidationTypes";
+import { ModelState } from "./ModelState";
 
 /**
  * Base class for validation rules

@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Activity } from "src/shared/types/elements/Activity";
 import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+
 import BaseEditor from "./BaseEditor";
+import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
+import { DurationType } from "src/shared/types/elements/DurationType";
 
 interface Props {
   activity: any;
@@ -73,6 +76,42 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
     onSave(activityToSave);
   };
 
+  const handleOperationStepChange = (
+    index: number,
+    field: string,
+    value: any
+  ) => {
+    setLocalActivity((prev) => ({
+      ...prev,
+      operationSteps: prev.operationSteps.map((step, i) =>
+        i === index ? { ...step, [field]: value } : step
+      ),
+    }));
+  };
+
+  const handleAddOperationStep = () => {
+    const newOperationStep = {
+      resourceSetRequest: null,
+      duration: {
+        durationLength: 0,
+        durationPeriodUnit: PeriodUnit.MINUTES,
+        durationType: DurationType.CONSTANT,
+        distribution: null,
+      },
+    };
+    setLocalActivity((prev) => ({
+      ...prev,
+      operationSteps: [...prev.operationSteps, newOperationStep],
+    }));
+  };
+
+  const handleRemoveOperationStep = (index: number) => {
+    setLocalActivity((prev) => ({
+      ...prev,
+      operationSteps: prev.operationSteps.filter((_, i) => i !== index),
+    }));
+  };
+
   // Validate the extracted data
   if (!localActivity?.id) {
     console.error("Invalid activity data received:", activity);
@@ -85,7 +124,7 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
 
   return (
     <BaseEditor
-      data={localActivity}
+      data={{ ...localActivity, type: SimulationObjectType.Activity }}
       onSave={handleSave}
       onCancel={onCancel}
       messageType="activitySaved"
@@ -165,6 +204,104 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
               min="0"
               max="999999"
             />
+          </div>
+
+          {/* Bringing back the Operation Steps section */}
+          <div className="form-field">
+            <label className="block text-sm font-medium">
+              Operation Steps:
+            </label>
+            <button
+              type="button"
+              className="lucid-styling tertiary mt-2"
+              onClick={handleAddOperationStep}
+            >
+              Add Operation Step
+            </button>
+            {localData.operationSteps.map((step, index) => (
+              <div
+                key={index}
+                className="editor-operation-step mt-4 p-2 border rounded-md"
+              >
+                <div className="form-field">
+                  <label
+                    htmlFor={`durationLength-${index}`}
+                    className="block text-sm font-medium"
+                  >
+                    Duration Length:
+                  </label>
+                  <input
+                    type="number"
+                    id={`durationLength-${index}`}
+                    className="lucid-styling w-full"
+                    value={step.duration.durationLength}
+                    onChange={(e) =>
+                      handleOperationStepChange(index, "duration", {
+                        ...step.duration,
+                        durationLength: parseFloat(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="form-field">
+                  <label
+                    htmlFor={`durationPeriodUnit-${index}`}
+                    className="block text-sm font-medium"
+                  >
+                    Duration Period Unit:
+                  </label>
+                  <select
+                    id={`durationPeriodUnit-${index}`}
+                    className="lucid-styling w-full"
+                    value={step.duration.durationPeriodUnit}
+                    onChange={(e) =>
+                      handleOperationStepChange(index, "duration", {
+                        ...step.duration,
+                        durationPeriodUnit: e.target.value as PeriodUnit,
+                      })
+                    }
+                  >
+                    {Object.values(PeriodUnit).map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label
+                    htmlFor={`durationType-${index}`}
+                    className="block text-sm font-medium"
+                  >
+                    Duration Type:
+                  </label>
+                  <select
+                    id={`durationType-${index}`}
+                    className="lucid-styling w-full"
+                    value={step.duration.durationType}
+                    onChange={(e) =>
+                      handleOperationStepChange(index, "duration", {
+                        ...step.duration,
+                        durationType: e.target.value as DurationType,
+                      })
+                    }
+                  >
+                    {Object.values(DurationType).map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  className="lucid-styling secondary mt-2"
+                  onClick={() => handleRemoveOperationStep(index)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
