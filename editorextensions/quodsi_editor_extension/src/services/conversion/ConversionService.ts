@@ -287,7 +287,12 @@ export class ConversionService {
             case SimulationObjectType.Activity:
                 return new Activity(block.id, name);
             case SimulationObjectType.Generator:
-                return new Generator(block.id, name);
+                return new Generator(
+                    block.id,
+                    name,
+                    "", // activityKeyId
+                    ModelDefaults.DEFAULT_ENTITY_ID // Set default entity ID
+                );
             case SimulationObjectType.Resource:
                 return new Resource(block.id, name);
             default:

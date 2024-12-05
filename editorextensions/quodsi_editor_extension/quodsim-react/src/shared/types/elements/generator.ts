@@ -1,6 +1,7 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { Duration } from "./Duration";
 import { SimulationObject } from "./SimulationObject";
+import { ModelDefaults } from "./ModelDefaults";
 
 
 export class Generator implements SimulationObject {
@@ -10,7 +11,7 @@ export class Generator implements SimulationObject {
     public id: string,
     public name: string,
     public activityKeyId: string = "",
-    public entityType: string = "All",
+    public entityId: string = ModelDefaults.DEFAULT_ENTITY_ID, // Changed from entityType
     public periodicOccurrences: number = Infinity,
     public periodIntervalDuration: Duration = new Duration(),
     public entitiesPerCreation: number = 1,

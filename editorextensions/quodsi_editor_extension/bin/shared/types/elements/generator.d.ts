@@ -5,12 +5,13 @@ export declare class Generator implements SimulationObject {
     id: string;
     name: string;
     activityKeyId: string;
-    entityType: string;
+    entityId: string;
     periodicOccurrences: number;
     periodIntervalDuration: Duration;
     entitiesPerCreation: number;
     periodicStartDuration: Duration;
     maxEntities: number;
     type: SimulationObjectType;
-    constructor(id: string, name: string, activityKeyId?: string, entityType?: string, periodicOccurrences?: number, periodIntervalDuration?: Duration, entitiesPerCreation?: number, periodicStartDuration?: Duration, maxEntities?: number);
+    constructor(id: string, name: string, activityKeyId?: string, entityId?: string, // Changed from entityType
+    periodicOccurrences?: number, periodIntervalDuration?: Duration, entitiesPerCreation?: number, periodicStartDuration?: Duration, maxEntities?: number);
 }

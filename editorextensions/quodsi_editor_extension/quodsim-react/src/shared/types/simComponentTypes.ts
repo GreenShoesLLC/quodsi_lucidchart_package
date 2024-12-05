@@ -9,6 +9,7 @@ import { DurationType } from "./elements/DurationType";
 import { SimulationObjectType } from "./elements/SimulationObjectType";
 import { ConnectType } from "./elements/ConnectType";
 import { SimComponentType } from "./simComponentType";
+import { ModelDefaults } from "./elements/ModelDefaults";
 
 
 export interface SimComponentTypeInfo {
@@ -57,7 +58,7 @@ export class SimComponentFactory {
             name: "New Generator",
             type: SimulationObjectType.Generator,
             activityKeyId: "",
-            entityType: "All",
+            entityId: ModelDefaults.DEFAULT_ENTITY_ID,
             periodicOccurrences: Infinity,
             periodIntervalDuration: SimComponentFactory.createEmptyDuration(),
             entitiesPerCreation: 1,

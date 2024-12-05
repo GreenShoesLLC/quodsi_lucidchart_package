@@ -1,4 +1,5 @@
 
+import { EditorReferenceData } from "./EditorReferenceData";
 import { SimulationObjectType } from "./elements/SimulationObjectType";
 import { SelectionState } from "./SelectionState";
 
@@ -93,6 +94,7 @@ export interface MessagePayloads {
         id: string;
         data: any;
         metadata: any;
+        referenceData: EditorReferenceData;
     };
 
     [MessageTypes.UPDATE_ELEMENT_DATA]: {

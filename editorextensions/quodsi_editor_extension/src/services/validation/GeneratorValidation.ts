@@ -1,44 +1,41 @@
-
-// GeneratorValidation.ts
 import { ValidationRule } from './ValidationRule';
 import { ValidationMessage } from '../../shared/types/ValidationTypes';
 import { ModelState } from './ModelState';
+import { Generator } from '../../shared/types/elements/Generator';
 
 export class GeneratorValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {
-        for (const generatorId of state.relationships.generators) {
-            const generator = state.elements.get(generatorId);
-            if (!generator) {
-                messages.push({
-                    type: 'error',
-                    message: `Generator ${generatorId} exists in relationships but not in elements`,
-                    elementId: generatorId
-                });
-                continue;
-            }
+        const generators = state.modelDefinition.generators.getAll();
 
-            // Check for outgoing connections
-            let hasOutgoing = false;
-            for (const connection of state.connections.values()) {
-                if (connection.sourceId === generatorId) {
-                    hasOutgoing = true;
-                    break;
-                }
-            }
+        generators.forEach(generator => {
+            this.validateGeneratorConnectivity(generator, state, messages);
+            this.validateGeneratorData(generator, state, messages);
+        });
+    }
 
-            if (!hasOutgoing) {
-                messages.push({
-                    type: 'error',
-                    message: `Generator ${generatorId} has no outgoing connections`,
-                    elementId: generatorId
-                });
-            }
+    private validateGeneratorConnectivity(
+        generator: Generator,
+        state: ModelState,
+        messages: ValidationMessage[]
+    ): void {
+        // Check for outgoing connections using the connections map
+        const hasOutgoingConnections = Array.from(state.connections.values())
+            .some(connection => connection.sourceId === generator.id);
 
-            this.validateGeneratorData(generator, messages);
+        if (!hasOutgoingConnections) {
+            messages.push({
+                type: 'error',
+                message: `Generator ${generator.id} has no outgoing connections`,
+                elementId: generator.id
+            });
         }
     }
 
-    private validateGeneratorData(generator: any, messages: ValidationMessage[]): void {
+    private validateGeneratorData(
+        generator: Generator,
+        state: ModelState,
+        messages: ValidationMessage[]
+    ): void {
         // Validate basic properties
         if (!generator.name || generator.name.trim().length === 0) {
             messages.push({
@@ -79,6 +76,18 @@ export class GeneratorValidation extends ValidationRule {
                 message: `Generator ${generator.id} has invalid maximum entities limit`,
                 elementId: generator.id
             });
+        }
+
+        // Validate activity key ID if specified
+        if (generator.activityKeyId) {
+            const activityExists = state.modelDefinition.activities.get(generator.activityKeyId);
+            if (!activityExists) {
+                messages.push({
+                    type: 'error',
+                    message: `Generator ${generator.id} references non-existent activity ${generator.activityKeyId}`,
+                    elementId: generator.id
+                });
+            }
         }
     }
 }

@@ -1,33 +1,64 @@
-import React from "react";
+import React, { useContext } from "react";
 
 import BaseEditor from "./BaseEditor";
 import DurationEditor from "./DurationEditor";
 import { Duration } from "src/shared/types/elements/Duration";
 import { Generator } from "src/shared/types/elements/Generator";
 import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { ModelDefinition } from "src/shared/types/elements/ModelDefinition";
+import { EditorReferenceData } from "src/shared/types/EditorReferenceData";
+
 interface Props {
   generator: Generator;
   onSave: (generator: Generator) => void;
   onCancel: () => void;
+  referenceData: EditorReferenceData;
 }
 
-const GeneratorEditor: React.FC<Props> = ({ generator, onSave, onCancel }) => {
-  console.log(
-    "GeneratorEditor received generator:",
-    JSON.stringify(generator, null, 2)
-  );
-  // Ensure we have valid data
+const styles = {
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  formGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  durationSection: {
+    border: "1px solid #e0e0e0",
+    borderRadius: "4px",
+    padding: "16px",
+    marginBottom: "8px",
+  },
+  sectionTitle: {
+    fontWeight: 500,
+    marginBottom: "12px",
+  },
+  generationControls: {
+    marginBottom: "16px",
+  },
+} as const;
+
+const GeneratorEditor: React.FC<Props> = ({
+  generator,
+  onSave,
+  onCancel,
+  referenceData,
+}) => {
+  const entities = referenceData.entities || [];
+
   if (!generator || !generator.id) {
     console.error("Invalid generator data received:", generator);
     return <div>Invalid generator data</div>;
   }
+
   const handleDurationChange = (name: string, updatedDuration: Duration) => {
     onSave({ ...generator, [name]: updatedDuration });
   };
 
   return (
-    // <div style={{ padding: '10px', margin: '10px' }}> {/* Debug border */}
-    //   <div>GeneratorEditor Debug</div> {/* Debug text */}
     <BaseEditor
       data={{ ...generator, type: SimulationObjectType.Generator }}
       onSave={onSave}
@@ -35,64 +66,67 @@ const GeneratorEditor: React.FC<Props> = ({ generator, onSave, onCancel }) => {
       messageType="generatorSaved"
     >
       {(localGenerator, handleChange) => (
-        console.log(
-          "GeneratorEditor render function with localGenerator:",
-          JSON.stringify(localGenerator, null, 2)
-        ),
-        (
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "16px" }}
-          >
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label htmlFor="activityKeyId">Generate at Activity:</label>
-              <input
-                type="text"
-                id="activityKeyId"
-                name="activityKeyId"
-                className="lucid-styling"
-                value={localGenerator.activityKeyId}
-                onChange={handleChange}
-              />
-            </div>
+        <div style={styles.container}>
+          <div style={styles.formGroup}>
+            <label htmlFor="activityKeyId">Generate at Activity:</label>
+            <input
+              type="text"
+              id="activityKeyId"
+              name="activityKeyId"
+              className="lucid-styling"
+              value={localGenerator.activityKeyId}
+              onChange={handleChange}
+            />
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label htmlFor="entityType">Entity Type to Generate:</label>
-              <input
-                type="text"
-                id="entityType"
-                name="entityType"
-                className="lucid-styling"
-                value={localGenerator.entityType}
-                onChange={handleChange}
-              />
-            </div>
+          <div style={styles.formGroup}>
+            <label htmlFor="entityId">Entity Type to Generate:</label>
+            <select
+              id="entityId"
+              name="entityId"
+              className="lucid-styling"
+              value={localGenerator.entityId}
+              onChange={handleChange}
+            >
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label htmlFor="entitiesPerCreation">
-                Entities Per Generation:
-              </label>
-              <input
-                type="number"
-                id="entitiesPerCreation"
-                name="entitiesPerCreation"
-                className="lucid-styling"
-                value={localGenerator.entitiesPerCreation}
-                onChange={handleChange}
-                min="1"
-              />
-            </div>
+          <div style={styles.durationSection}>
+            <div style={styles.sectionTitle}>Generation Interval</div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label htmlFor="periodicOccurrences">Generation Count:</label>
-              <input
-                type="number"
-                id="periodicOccurrences"
-                name="periodicOccurrences"
-                className="lucid-styling"
-                value={localGenerator.periodicOccurrences}
-                onChange={handleChange}
-                min="0"
-              />
+            <div style={styles.generationControls}>
+              <div style={styles.formGroup}>
+                <label htmlFor="entitiesPerCreation">
+                  Entities Per Generation:
+                </label>
+                <input
+                  type="number"
+                  id="entitiesPerCreation"
+                  name="entitiesPerCreation"
+                  className="lucid-styling"
+                  value={localGenerator.entitiesPerCreation}
+                  onChange={handleChange}
+                  min="1"
+                />
+              </div>
+
+              <div style={{ ...styles.formGroup, marginTop: "8px" }}>
+                <label htmlFor="periodicOccurrences">Generation Count:</label>
+                <input
+                  type="number"
+                  id="periodicOccurrences"
+                  name="periodicOccurrences"
+                  className="lucid-styling"
+                  value={localGenerator.periodicOccurrences}
+                  onChange={handleChange}
+                  min="0"
+                />
+              </div>
             </div>
 
             <DurationEditor
@@ -100,29 +134,38 @@ const GeneratorEditor: React.FC<Props> = ({ generator, onSave, onCancel }) => {
               onChange={(updatedDuration) =>
                 handleDurationChange("periodIntervalDuration", updatedDuration)
               }
+              lengthLabel="Interarrival Time"
+              periodUnitLabel="Time Unit"
+              durationTypeLabel="Time Type"
             />
+          </div>
 
+          <div style={styles.durationSection}>
+            <div style={styles.sectionTitle}>Start Delay</div>
             <DurationEditor
               duration={localGenerator.periodicStartDuration}
               onChange={(updatedDuration) =>
                 handleDurationChange("periodicStartDuration", updatedDuration)
               }
+              lengthLabel="Generate Start Time"
+              periodUnitLabel="Time Unit"
+              durationTypeLabel="Time Type"
             />
-
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <label htmlFor="maxEntities">Max Entities:</label>
-              <input
-                type="number"
-                id="maxEntities"
-                name="maxEntities"
-                className="lucid-styling"
-                value={localGenerator.maxEntities}
-                onChange={handleChange}
-                min="1"
-              />
-            </div>
           </div>
-        )
+
+          <div style={styles.formGroup}>
+            <label htmlFor="maxEntities">Max Entities:</label>
+            <input
+              type="number"
+              id="maxEntities"
+              name="maxEntities"
+              className="lucid-styling"
+              value={localGenerator.maxEntities}
+              onChange={handleChange}
+              min="1"
+            />
+          </div>
+        </div>
       )}
     </BaseEditor>
   );

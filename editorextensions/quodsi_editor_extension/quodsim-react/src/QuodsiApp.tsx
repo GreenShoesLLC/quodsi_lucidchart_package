@@ -59,66 +59,55 @@ const QuodsiApp: React.FC = () => {
     setState((prev) => ({ ...prev, editor: newEditor }));
   };
 
-  const handleMessage = useCallback((message: any) => {
-    if (!message || !message.messagetype) {
-      console.error("[QuodsiApp] Invalid message format:", message);
-      return;
-    }
-
-    const deps = {
-      setState,
-      setEditor,
-      setEditorForElement,
-      setError,
-      handleSave,
-      handleCancel,
-      handleComponentTypeChange,
-    };
-
-    try {
-      // Add more detailed logging for selection changes
-      if (message.messagetype === MessageTypes.SELECTION_CHANGED) {
-        console.log("[QuodsiApp] Received selection change:", {
-          selectionState: message.data?.selectionState,
-          elementData: message.data?.elementData,
-        });
+  const handleMessage = useCallback(
+    (message: any) => {
+      if (!message?.messagetype) {
+        console.error("[QuodsiApp] Invalid message format:", message);
+        return;
       }
 
-      switch (message.messagetype) {
-        case MessageTypes.INITIAL_STATE:
-          messageHandlers.handleInitialState(message.data, deps);
-          break;
-        case MessageTypes.MODEL_REMOVED:
-          messageHandlers.handleModelRemoved(deps);
-          break;
-        case MessageTypes.SELECTION_CHANGED:
-          // Ensure we have element data before handling selection change
-          if (message.data?.elementData) {
+      const deps = {
+        setState,
+        setEditor,
+        setEditorForElement,
+        setError,
+        handleSave,
+        handleCancel,
+        handleComponentTypeChange,
+      };
+
+      try {
+        switch (message.messagetype) {
+          case MessageTypes.INITIAL_STATE:
+            messageHandlers.handleInitialState(message.data, deps);
+            break;
+          case MessageTypes.SELECTION_CHANGED:
             messageHandlers.handleSelectionChanged(message.data, deps);
-          } else {
-            console.warn(
-              "[QuodsiApp] Selection changed but no element data provided"
-            );
-          }
-          break;
-        case MessageTypes.UPDATE_SUCCESS:
-          messageHandlers.handleUpdateSuccess(message.data, deps);
-          break;
-        case MessageTypes.ERROR:
-          messageHandlers.handleError(message.data, deps);
-          break;
-        case MessageTypes.CONVERSION_COMPLETE:
-          messageHandlers.handleConversionComplete(message.data, deps);
-          break;
-        case MessageTypes.ELEMENT_DATA:
-          messageHandlers.handleElementData(message.data, deps);
-          break;
+            break;
+          case MessageTypes.ELEMENT_DATA:
+            messageHandlers.handleElementData(message.data, deps);
+            break;
+          case MessageTypes.MODEL_REMOVED:
+            messageHandlers.handleModelRemoved(deps);
+            break;
+          case MessageTypes.UPDATE_SUCCESS:
+            messageHandlers.handleUpdateSuccess(message.data, deps);
+            break;
+          case MessageTypes.ERROR:
+            messageHandlers.handleError(message.data, deps);
+            break;
+          case MessageTypes.CONVERSION_COMPLETE:
+            messageHandlers.handleConversionComplete(message.data, deps);
+            break;
+        }
+      } catch (error) {
+        console.error("[QuodsiApp] Error handling message:", error);
+        setError(`Error handling message: ${error}`);
       }
-    } catch (error) {
-      console.error("[QuodsiApp] Error handling message:", error);
-      setError(`Error handling message: ${error}`);
-    }
-  }, []);
+    },
+    [state.isProcessing]
+  );
+
   useEffect(() => {
     const eventListener = (event: MessageEvent) => {
       console.log("[QuodsiApp] Received message:", event.data);
@@ -225,7 +214,7 @@ const QuodsiApp: React.FC = () => {
   };
 
   const setEditorForElement = (element: any) => {
-    if (!element?.id || !element?.metadata?.type) {
+    if (!element?.id || !element?.metadata?.type || !element?.referenceData) {
       console.error("[QuodsiApp] Invalid element data:", element);
       return;
     }
@@ -247,7 +236,8 @@ const QuodsiApp: React.FC = () => {
         onSave: handleSave,
         onCancel: handleCancel,
         onTypeChange: handleComponentTypeChange,
-        elementId: element.id, // Add this line to include the elementId
+        elementId: element.id,
+        referenceData: element.referenceData, // Pass reference data instead of modelDefinition
       },
       state.isProcessing
     );

@@ -6,12 +6,15 @@ import EntityEditor from "../../components/EntityEditor";
 import ConnectorEditor from "../../components/ConnectorEditor";
 import GeneratorEditor from "../../components/GeneratorEditor";
 import ResourceEditor from "../../components/ResourceEditor";
+import { ModelDefinition } from 'src/shared/types/elements/ModelDefinition';
+import { EditorReferenceData } from 'src/shared/types/EditorReferenceData';
 
 interface EditorHandlers {
   onSave: (data: any) => void;
   onCancel: () => void;
   onTypeChange: (type: SimComponentType, elementId: string) => void;
-  elementId: string; 
+  elementId: string;
+  referenceData: EditorReferenceData;  // Add this
 }
 
 export const createEditorComponent = (
@@ -20,7 +23,7 @@ export const createEditorComponent = (
   handlers: EditorHandlers,
   isProcessing: boolean
 ): React.ReactElement | null => {
-  const { onSave, onCancel } = handlers;
+  const { onSave, onCancel, referenceData } = handlers;
 
   switch (elementType) {
     case SimulationObjectType.Activity:
@@ -48,7 +51,8 @@ export const createEditorComponent = (
       return React.createElement(GeneratorEditor, {
         generator: elementData,
         onSave: onSave,
-        onCancel: onCancel
+        onCancel: onCancel,
+        referenceData: referenceData  // Pass reference data
       });
 
     case SimulationObjectType.Resource:

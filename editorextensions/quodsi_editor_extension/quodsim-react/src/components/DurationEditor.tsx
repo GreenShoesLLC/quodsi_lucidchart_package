@@ -6,9 +6,20 @@ import { Duration } from "src/shared/types/elements/Duration";
 interface Props {
   duration: Duration;
   onChange: (updatedDuration: Duration) => void;
+  // Add optional label props with defaults
+  lengthLabel?: string;
+  periodUnitLabel?: string;
+  durationTypeLabel?: string;
 }
 
-const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
+const DurationEditor: React.FC<Props> = ({
+  duration,
+  onChange,
+  // Default labels if not provided
+  lengthLabel = "Duration Length",
+  periodUnitLabel = "Duration Period Unit",
+  durationTypeLabel = "Duration Type",
+}) => {
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -31,7 +42,7 @@ const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationLength">Duration Length:</label>
+        <label htmlFor="durationLength">{lengthLabel}:</label>
         <input
           type="number"
           id="durationLength"
@@ -44,7 +55,7 @@ const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationPeriodUnit">Duration Period Unit:</label>
+        <label htmlFor="durationPeriodUnit">{periodUnitLabel}:</label>
         <select
           id="durationPeriodUnit"
           name="durationPeriodUnit"
@@ -61,7 +72,7 @@ const DurationEditor: React.FC<Props> = ({ duration, onChange }) => {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationType">Duration Type:</label>
+        <label htmlFor="durationType">{durationTypeLabel}:</label>
         <select
           id="durationType"
           name="durationType"

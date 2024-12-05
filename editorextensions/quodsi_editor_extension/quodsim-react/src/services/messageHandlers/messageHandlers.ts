@@ -1,4 +1,4 @@
-import React from "react"; 
+import React from "react";
 import { MessagePayloads, MessageTypes } from "../../shared/types/MessageTypes";
 import { QuodsiAppState } from "../../QuodsiApp";
 import ModelUtilities from "../../components/ModelUtilities";
@@ -9,6 +9,7 @@ import { typeMappers } from "src/utils/typeMappers";
 import { SelectionType } from "src/shared/types/SelectionType";
 import { createEditorComponent } from "../editors/editorFactory";
 import { SimComponentType } from "src/shared/types/simComponentType";
+import { ModelDefinition } from "src/shared/types/elements/ModelDefinition";
 
 
 export interface MessageHandlerDependencies {
@@ -19,7 +20,7 @@ export interface MessageHandlerDependencies {
     handleSave: (data: any) => void;
     handleCancel: () => void;
     handleComponentTypeChange: (newType: SimComponentType, elementId: string) => void;
-    currentElementId?: string; // Add this
+    currentElementId?: string;
 }
 
 export const messageHandlers = {
@@ -73,194 +74,72 @@ export const messageHandlers = {
         data: MessagePayloads[MessageTypes.SELECTION_CHANGED],
         deps: MessageHandlerDependencies
     ) => {
-        console.log("[MessageHandler] Handling selection changed:", data);
-        const { setEditorForElement, setEditor, setState } = deps;
+        if (!data.elementData?.[0]) return;
 
-        // Handle unconverted element case
-        if (data.selectionState?.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-            const elementId = data.selectionState?.selectedIds[0] || '';
-            console.log("[MessageHandler] Handling unconverted element:", elementId);
+        const element = data.elementData[0];
+        const { setState, setEditor } = deps;
 
+        if (element.metadata?.type) {
+            const componentType = typeMappers.mapSimulationTypeToComponentType(element.metadata.type);
             setState(prev => ({
                 ...prev,
-                currentComponentType: undefined,
-                currentLucidId: elementId
+                currentComponentType: componentType,
+                currentLucidId: element.id,
+                isProcessing: true
             }));
 
-            setEditor(
-                React.createElement(
-                    React.Fragment,
-                    null,
-                    React.createElement(SimulationComponentSelector, {
-                        currentType: undefined,
-                        elementId: elementId, // Add elementId here
-                        onTypeChange: (newType) => {
-                            console.log("[MessageHandler] Type change requested for unconverted element:", {
-                                elementId,
-                                newType
-                            });
-
-                            if (!elementId) {
-                                console.error("[MessageHandler] No element ID available for type change");
-                                return;
-                            }
-
-                            const simulationType = typeMappers.mapComponentTypeToSimulationType(newType);
-                            const emptyData = createEmptyData(simulationType, elementId);
-
-                            console.log("[MessageHandler] Sending update for unconverted element:", {
-                                elementId,
-                                type: simulationType,
-                                data: emptyData
-                            });
-
-                            window.parent.postMessage({
-                                messagetype: MessageTypes.UPDATE_ELEMENT_DATA,
-                                data: {
-                                    elementId,
-                                    type: simulationType,
-                                    data: emptyData
-                                }
-                            }, "*");
-                        },
-                        disabled: false
-                    })
-                )
-            );
-            return;
-        }
-
-        // Case 1: Single element selected
-        if (data.elementData && data.elementData.length === 1) {
-            const element = data.elementData[0];
-            const elementId = element.id;
-
-            console.log("[MessageHandler] Handling single element selection:", {
-                elementId,
-                type: element.metadata?.type
-            });
-
-            // If element has metadata (is converted)
-            if (element.metadata?.type) {
-                const componentType = typeMappers.mapSimulationTypeToComponentType(element.metadata.type);
-
-                // Update state with the component type
-                setState(prev => ({
-                    ...prev,
-                    currentComponentType: componentType,
-                    currentLucidId: elementId
-                }));
-
-                setEditor(
-                    React.createElement(
-                        React.Fragment,
-                        null,
-                        React.createElement(SimulationComponentSelector, {
-                            currentType: componentType,
-                            elementId: elementId, // Add elementId here
-                            onTypeChange: (newType) => {
-                                console.log("[MessageHandler] Type change requested for converted element:", {
-                                    elementId,
-                                    currentType: componentType,
-                                    newType
-                                });
-
-                                if (!elementId) {
-                                    console.error("[MessageHandler] No element ID available for type change");
-                                    return;
-                                }
-
-                                const simulationType = typeMappers.mapComponentTypeToSimulationType(newType);
-                                const emptyData = createEmptyData(simulationType, elementId);
-
-                                console.log("[MessageHandler] Sending update for converted element:", {
-                                    elementId,
-                                    type: simulationType,
-                                    data: emptyData
-                                });
-
-                                window.parent.postMessage({
-                                    messagetype: MessageTypes.UPDATE_ELEMENT_DATA,
-                                    data: {
-                                        elementId,
-                                        type: simulationType,
-                                        data: emptyData
-                                    }
-                                }, "*");
-                            },
-                            disabled: false
-                        })
-                    )
-                );
-            }
-
-            setEditorForElement(element);
-            return;
-        }
-
-        // Case 2: Nothing selected (page/model selected) and model exists
-        if (data.elementData && data.elementData.length === 0 && data.selectionState?.pageId) {
-            console.log("[MessageHandler] Handling model/page selection");
-
-            // Update state to clear component type
-            setState(prev => ({
-                ...prev,
-                currentComponentType: undefined,
-                currentLucidId: ''
-            }));
-
-            // Get the model data from the parent
+            // Request complete element data
             window.parent.postMessage({
                 messagetype: MessageTypes.GET_ELEMENT_DATA,
-                data: { elementId: data.selectionState.pageId }
+                data: { elementId: element.id }
             }, "*");
         }
     },
+
     handleElementData: (
         data: MessagePayloads[MessageTypes.ELEMENT_DATA],
         deps: MessageHandlerDependencies
     ) => {
-        const { setEditor, setState, handleSave, handleCancel, handleComponentTypeChange } = deps;
+        if (!data.metadata?.type || !data.data) return;
 
-        if (data.metadata?.type) {
-            const componentType = typeMappers.mapSimulationTypeToComponentType(data.metadata.type);
-            const elementId = data.id; // Get the elementId from the data
+        const { setEditor, handleSave, handleCancel, handleComponentTypeChange, setState } = deps;
+        const componentType = typeMappers.mapSimulationTypeToComponentType(data.metadata.type);
 
-            setState(prev => ({
-                ...prev,
-                currentComponentType: componentType,
-                currentLucidId: elementId
-            }));
+        setState(prev => ({
+            ...prev,
+            isProcessing: false,
+            currentComponentType: componentType,
+            currentLucidId: data.id
+        }));
 
-            const editor = createEditorComponent(
-                data.metadata.type,
-                data.data,
-                {
-                    onSave: handleSave,
-                    onCancel: handleCancel,
+        const editorComponent = createEditorComponent(
+            data.metadata.type,
+            data.data,
+            {
+                onSave: handleSave,
+                onCancel: handleCancel,
+                onTypeChange: handleComponentTypeChange,
+                elementId: data.id,
+                referenceData: data.referenceData || {}
+            },
+            false
+        );
+
+        setEditor(
+            React.createElement(
+                'div',
+                { className: 'editor-container' },
+                React.createElement(SimulationComponentSelector, {
+                    currentType: componentType,
+                    elementId: data.id,
                     onTypeChange: handleComponentTypeChange,
-                    elementId: elementId  // Add elementId to EditorHandlers
-                },
-                false
-            );
-
-            if (editor) {
-                setEditor(
-                    React.createElement(
-                        React.Fragment,
-                        null,
-                        React.createElement(SimulationComponentSelector, {
-                            currentType: componentType,
-                            elementId: elementId,  // Add elementId to SimulationComponentSelector
-                            onTypeChange: handleComponentTypeChange,
-                            disabled: false
-                        }),
-                        editor
-                    )
-                );
-            }
-        }
+                    disabled: false
+                }),
+                editorComponent
+            )
+        );
     },
+
     handleModelRemoved: (deps: MessageHandlerDependencies) => {
         deps.setEditor(React.createElement(ModelUtilities, {
             showConvertButton: true,

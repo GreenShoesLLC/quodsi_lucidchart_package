@@ -25,6 +25,7 @@ import { Connector } from '../shared/types/elements/Connector';
 import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
 import { SimulationElementFactory } from '../shared/types/SimulationElementFactory';
 import { SelectionState } from '../shared/types/SelectionState';
+import { EditorReferenceData } from '../shared/types/EditorReferenceData';
 
 
 /**
@@ -549,20 +550,38 @@ export class ModelPanel extends Panel {
      * Handles element data request
      */
     private handleGetElementData(elementId: string): void {
-        console.log('[ModelPanel] Handling get element data:', elementId);
-
         const element = this.findElementById(elementId);
-
         if (element) {
-            this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
-                id: elementId,
-                data: this.storageAdapter.getElementData(element),
-                metadata: this.storageAdapter.getMetadata(element)
-            });
-        } else {
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: `Element not found: ${elementId}`
-            });
+            try {
+                const elementData = this.storageAdapter.getElementData(element);
+                const metadata = this.storageAdapter.getMetadata(element);
+                const referenceData: EditorReferenceData = {};
+
+                // Build reference data based on element type
+                if (metadata?.type === SimulationObjectType.Generator) {
+                    // Include entities list for Generator editor
+                    const modelDef = this.modelManager.getModelDefinition();
+                    if (modelDef) {
+                        referenceData.entities = modelDef.entities.getAll().map(e => ({
+                            id: e.id,
+                            name: e.name
+                        }));
+                    }
+                }
+                // Add similar blocks for other editor types that need reference data
+
+                this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
+                    id: elementId,
+                    data: elementData,
+                    metadata: metadata,
+                    referenceData
+                });
+            } catch (error) {
+                console.error('[ModelPanel] Error getting element data:', error);
+                this.sendTypedMessage(MessageTypes.ERROR, {
+                    error: `Failed to get element data: ${error instanceof Error ? error.message : 'Unknown error'}`
+                });
+            }
         }
     }
 
