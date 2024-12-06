@@ -1,9 +1,7 @@
-
-import { EditorReferenceData } from "./EditorReferenceData";
-import { SimulationObjectType } from "./elements/SimulationObjectType";
-import { SelectionState } from "./SelectionState";
-
-import { ValidationResult } from './ValidationTypes';
+import { EditorReferenceData } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
+import { SelectionState } from "@quodsi/shared";
+import { ValidationResult } from '@quodsi/shared';
 
 export enum MessageTypes {
     // React App Lifecycle

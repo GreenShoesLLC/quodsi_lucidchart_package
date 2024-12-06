@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { SimComponentType } from "../shared/types/simComponentType";
+import { SimComponentType } from "@quodsi/shared";
 import { SimulationComponentSelector } from "./SimulationComponentSelector";
 
 interface SelectionContextProviderProps {

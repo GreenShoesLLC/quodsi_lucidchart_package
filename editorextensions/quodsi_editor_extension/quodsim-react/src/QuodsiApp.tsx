@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { SimComponentType } from "./shared/types/simComponentType";
+import { SimComponentType } from "@quodsi/shared";
 import {
   MessageTypes,
   MessagePayloads,
   createSerializableMessage,
-} from "./shared/types/MessageTypes";
-import { SimulationObjectType } from "./shared/types/elements/SimulationObjectType";
+} from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 import { SimulationComponentSelector } from "./components/SimulationComponentSelector";
 import { StatusMonitor } from "./components/StatusMonitor";

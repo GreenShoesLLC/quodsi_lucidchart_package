@@ -1,9 +1,9 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Model } from "src/shared/types/elements/Model";
-import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
-import { SimulationTimeType } from "src/shared/types/elements/SimulationTimeType";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { Model } from "@quodsi/shared";
+import { PeriodUnit } from "@quodsi/shared";
+import { SimulationTimeType } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   model: Model;

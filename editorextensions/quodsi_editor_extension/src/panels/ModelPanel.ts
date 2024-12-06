@@ -13,19 +13,19 @@ import {
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { MessagePayloads, MessageTypes, isValidMessage } from '../shared/types/MessageTypes';
+import { MessagePayloads, MessageTypes, isValidMessage } from '@quodsi/shared';
 
-import { SelectionType } from '../shared/types/SelectionType';
+import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
 import { RemoveModelFromPage } from '../services/conversion/RemoveModelFromPage';
 
-import { Model } from '../shared/types/elements/Model';
-import { Activity } from '../shared/types/elements/Activity';
-import { Connector } from '../shared/types/elements/Connector';
-import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
-import { SimulationElementFactory } from '../shared/types/SimulationElementFactory';
-import { SelectionState } from '../shared/types/SelectionState';
-import { EditorReferenceData } from '../shared/types/EditorReferenceData';
+import { Model } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { Connector } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationElementFactory } from '@quodsi/shared';
+import { SelectionState } from '@quodsi/shared';
+import { EditorReferenceData } from '@quodsi/shared';
 
 
 /**

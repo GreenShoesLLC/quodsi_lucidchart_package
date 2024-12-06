@@ -2,6 +2,18 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Watch Shared",
+      "type": "shell",
+      "command": "npm run build -w @quodsi/shared -- --watch",
+      "problemMatcher": ["$tsc-watch"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
       "label": "LucidPackage",
       "type": "shell",
       "command": "npx lucid-package@latest test-editor-extension quodsi_editor_extension",
@@ -44,13 +56,14 @@
       }
     },
     {
-    "label": "Run All",
-    "dependsOn": [
+      "label": "Run All",
+      "dependsOn": [
+        "Watch Shared",
         "LucidPackage",
         "ReactApp",
         "DataConnector"
-    ],
-    "problemMatcher": [],
+      ],
+      "problemMatcher": []
     }
   ]
 }

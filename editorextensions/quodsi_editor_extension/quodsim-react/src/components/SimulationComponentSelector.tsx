@@ -1,6 +1,6 @@
 import React from "react";
-import { SimComponentType } from "src/shared/types/simComponentType";
-import { SimComponentTypes,} from "src/shared/types/simComponentTypes";
+import { SimComponentType } from "@quodsi/shared";
+import { SimComponentTypes } from "@quodsi/shared";
 
 interface SimulationComponentSelectorProps {
   currentType?: SimComponentType;

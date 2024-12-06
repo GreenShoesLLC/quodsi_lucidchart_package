@@ -1,6 +1,6 @@
 import React from "react";
 import styles from "./ModelUtilities.module.css";
-import { createSerializableMessage, MessageTypes } from "src/shared/types/MessageTypes";
+import { createSerializableMessage, MessageTypes } from "@quodsi/shared";
 
 interface ModelUtilitiesProps {
   showConvertButton?: boolean;

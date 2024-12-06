@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Activity } from "src/shared/types/elements/Activity";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { Activity } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 import BaseEditor from "./BaseEditor";
-import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
-import { DurationType } from "src/shared/types/elements/DurationType";
+import { PeriodUnit } from "@quodsi/shared";
+import { DurationType } from "@quodsi/shared";
 
 interface Props {
   activity: any;

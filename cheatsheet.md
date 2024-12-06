@@ -22,6 +22,6 @@ npm run start
 
 
 
-
-
+npm install
+npm run build -w @quodsi/shared
 

@@ -1,5 +1,5 @@
 import { PageProxy } from 'lucid-extension-sdk';
-import { ConversionResult } from '../../shared/types/ConversionResult';
+import { ConversionResult } from '@quodsi/shared';
 import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 export declare class ConversionService {

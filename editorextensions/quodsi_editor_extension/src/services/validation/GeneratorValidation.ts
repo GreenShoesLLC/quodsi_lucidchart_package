@@ -1,7 +1,6 @@
 import { ValidationRule } from './ValidationRule';
-import { ValidationMessage } from '../../shared/types/ValidationTypes';
+import { ValidationMessage, Generator } from '@quodsi/shared';
 import { ModelState } from './ModelState';
-import { Generator } from '../../shared/types/elements/Generator';
 
 export class GeneratorValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {

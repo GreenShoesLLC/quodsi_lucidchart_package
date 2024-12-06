@@ -2,11 +2,11 @@ import React, { useContext } from "react";
 
 import BaseEditor from "./BaseEditor";
 import DurationEditor from "./DurationEditor";
-import { Duration } from "src/shared/types/elements/Duration";
-import { Generator } from "src/shared/types/elements/Generator";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
-import { ModelDefinition } from "src/shared/types/elements/ModelDefinition";
-import { EditorReferenceData } from "src/shared/types/EditorReferenceData";
+import { Duration } from "@quodsi/shared";
+import { Generator } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
+import { ModelDefinition } from "@quodsi/shared";
+import { EditorReferenceData } from "@quodsi/shared";
 
 interface Props {
   generator: Generator;

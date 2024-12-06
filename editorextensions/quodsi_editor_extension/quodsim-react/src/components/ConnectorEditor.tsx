@@ -1,8 +1,8 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Connector } from "src/shared/types/elements/Connector";
-import { ConnectType } from "src/shared/types/elements/ConnectType";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { Connector } from "@quodsi/shared";
+import { ConnectType } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   connector: Connector;

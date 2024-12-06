@@ -1,5 +1,5 @@
-import { ComponentListManager } from "./ComponentListManager";
-import { Connector } from "./Connector";
+import { ComponentListManager } from "@quodsi/shared";
+import { Connector } from "@quodsi/shared";
 
 
 export class ConnectorListManager extends ComponentListManager<Connector> {
@@ -11,8 +11,3 @@ export class ConnectorListManager extends ComponentListManager<Connector> {
         return this.getAll().filter(connector => connector.sourceId === activityId);
     }
 }
-
-
-
-
-

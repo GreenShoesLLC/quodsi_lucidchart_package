@@ -1,8 +1,8 @@
 // OperationStepEditor.tsx
 import React from "react";
-import { DurationType } from "src/shared/types/elements/DurationType";
-import { PeriodUnit } from "src/shared/types/elements/PeriodUnit";
-import { OperationStep } from "src/shared/types/elements/OperationStep";
+import { DurationType } from "@quodsi/shared";
+import { PeriodUnit } from "@quodsi/shared";
+import { OperationStep } from "@quodsi/shared";
 
 interface OperationStepEditorProps {
   operationSteps: OperationStep[];

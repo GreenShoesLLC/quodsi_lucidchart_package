@@ -1,15 +1,15 @@
 import React from "react";
-import { MessagePayloads, MessageTypes } from "../../shared/types/MessageTypes";
+import { MessagePayloads, MessageTypes } from "@quodsi/shared";
 import { QuodsiAppState } from "../../QuodsiApp";
 import ModelUtilities from "../../components/ModelUtilities";
 import { ModelTabs } from "../../components/ModelTabs";
 import { SimulationComponentSelector } from "src/components/SimulationComponentSelector";
 import { createEmptyData } from "src/utils/emptyDataCreator";
 import { typeMappers } from "src/utils/typeMappers";
-import { SelectionType } from "src/shared/types/SelectionType";
+import { SelectionType } from "@quodsi/shared";
 import { createEditorComponent } from "../editors/editorFactory";
-import { SimComponentType } from "src/shared/types/simComponentType";
-import { ModelDefinition } from "src/shared/types/elements/ModelDefinition";
+import { SimComponentType } from "@quodsi/shared";
+import { ModelDefinition } from "@quodsi/shared";
 
 
 export interface MessageHandlerDependencies {

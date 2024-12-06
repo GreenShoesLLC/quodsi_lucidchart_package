@@ -1,8 +1,8 @@
 // Update ResourceEditor.tsx
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Resource } from "src/shared/types/elements/Resource";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { Resource } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   resource: Resource;

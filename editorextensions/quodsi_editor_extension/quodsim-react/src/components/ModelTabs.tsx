@@ -3,8 +3,8 @@ import ModelEditor from "./ModelEditor";
 import ExperimentEditor from "./ExperimentEditor";
 import { OutputViewer } from "./OutputViewer";
 import ModelUtilities from "./ModelUtilities";
-import { Model } from "src/shared/types/elements/Model";
-import { ModelUtils } from "src/shared/types/elements/ModelUtils";
+import { Model } from "@quodsi/shared";
+import { ModelUtils } from "@quodsi/shared";
 
 type TabType = "model" | "experiments" | "output" | "utilities";
 

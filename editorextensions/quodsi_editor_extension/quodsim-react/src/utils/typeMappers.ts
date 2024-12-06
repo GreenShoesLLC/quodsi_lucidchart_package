@@ -1,5 +1,5 @@
-import { SimComponentType } from "../shared/types/simComponentType";
-import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { SimComponentType } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 export const typeMappers = {
     mapSimulationTypeToComponentType: (

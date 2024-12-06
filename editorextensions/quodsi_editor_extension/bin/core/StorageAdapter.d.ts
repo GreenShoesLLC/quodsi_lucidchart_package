@@ -1,5 +1,5 @@
 import { ElementProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType } from '../shared/types/elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 /**
  * Metadata structure for elements
  */

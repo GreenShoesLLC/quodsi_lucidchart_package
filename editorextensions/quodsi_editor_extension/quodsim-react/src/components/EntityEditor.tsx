@@ -1,7 +1,7 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Entity } from "src/shared/types/elements/Entity";
-import { SimulationObjectType } from "src/shared/types/elements/SimulationObjectType";
+import { Entity } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   entity: Entity;

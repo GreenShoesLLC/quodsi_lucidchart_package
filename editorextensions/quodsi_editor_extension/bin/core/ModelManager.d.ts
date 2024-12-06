@@ -1,8 +1,4 @@
-import { Model } from "../shared/types/elements/Model";
-import { ModelDefinition } from "../shared/types/elements/ModelDefinition";
-import { SimulationObject } from "../shared/types/elements/SimulationObject";
-import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
-import { ValidationResult } from "../shared/types/ValidationTypes";
+import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { ElementProxy, PageProxy } from "lucid-extension-sdk";
 export declare class ModelManager {

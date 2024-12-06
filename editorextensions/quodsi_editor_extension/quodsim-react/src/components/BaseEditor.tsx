@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { SimulationObjectType } from "@quodsi/shared";
 
 // Define the minimum interface that T must satisfy
 interface BaseSimulationElement {

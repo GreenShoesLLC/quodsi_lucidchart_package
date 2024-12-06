@@ -1,7 +1,6 @@
 import { ValidationRule } from "./ValidationRule";
-import { ValidationMessage } from "../../shared/types/ValidationTypes";
+import { ValidationMessage, Resource } from "@quodsi/shared";
 import { ModelState } from "./ModelState";
-import { Resource } from "../../shared/types/elements/Resource";
 
 export class ResourceValidation extends ValidationRule {
     validate(state: ModelState, messages: ValidationMessage[]): void {

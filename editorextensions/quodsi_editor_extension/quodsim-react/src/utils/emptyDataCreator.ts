@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
+import { SimulationObjectType } from "@quodsi/shared";
 
 export const createEmptyData = (type: SimulationObjectType, currentLucidId: string) => {
     switch (type) {

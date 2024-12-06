@@ -1,14 +1,17 @@
 import { ModelValidationService } from "../services/validation/ModelValidationService";
-import { Activity } from "../shared/types/elements/Activity";
-import { Connector } from "../shared/types/elements/Connector";
-import { Generator } from "../shared/types/elements/Generator";
-import { Entity } from "../shared/types/elements/Entity";
-import { Model } from "../shared/types/elements/Model";
-import { ModelDefinition } from "../shared/types/elements/ModelDefinition";
-import { Resource } from "../shared/types/elements/Resource";
-import { SimulationObject } from "../shared/types/elements/SimulationObject";
-import { SimulationObjectType } from "../shared/types/elements/SimulationObjectType";
-import { ValidationMessage, ValidationResult } from "../shared/types/ValidationTypes";
+import { 
+    Activity,
+    Connector,
+    Generator,
+    Entity,
+    Model,
+    ModelDefinition,
+    Resource,
+    SimulationObject,
+    SimulationObjectType,
+    ValidationMessage, 
+    ValidationResult 
+} from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { ElementProxy, PageProxy } from "lucid-extension-sdk";
 

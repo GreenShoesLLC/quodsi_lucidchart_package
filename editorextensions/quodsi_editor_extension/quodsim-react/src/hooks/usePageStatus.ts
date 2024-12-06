@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { PageStatus } from 'src/shared/types/pageStatus';
+import { PageStatus } from '@quodsi/shared';
 
 
 export const usePageStatus = (documentId: string, intervalSeconds: number = 30) => {

@@ -3,20 +3,23 @@ import {
     BlockProxy
 } from 'lucid-extension-sdk';
 
-import { ConversionResult } from '../../shared/types/ConversionResult';
+import { 
+    ConversionResult,
+    ProcessAnalysisResult,
+    BlockAnalysis,
+    SimulationObjectType,
+    Connector,
+    Model,
+    Activity,
+    Generator,
+    Resource,
+    ModelDefaults,
+    ConnectType,
+    SimulationObject
+} from '@quodsi/shared';
+
 import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
-import { ProcessAnalysisResult } from '../../shared/types/ProcessAnalysisResult';
-import { BlockAnalysis } from '../../shared/types/BlockAnalysis';
-import { SimulationObjectType } from '../../shared/types/elements/SimulationObjectType';
-import { Connector } from '../../shared/types/elements/Connector';
-import { Model } from '../../shared/types/elements/Model';
-import { Activity } from '../../shared/types/elements/Activity';
-import { Generator } from '../../shared/types/elements/Generator';
-import { Resource } from '../../shared/types/elements/Resource';
-import { ModelDefaults } from '../../shared/types/elements/ModelDefaults';
-import { ConnectType } from '../../shared/types/elements/ConnectType';
-import { SimulationObject } from '../../shared/types/elements/SimulationObject';
 
 export class ConversionService {
     constructor(

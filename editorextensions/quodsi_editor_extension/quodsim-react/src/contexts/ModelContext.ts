@@ -1,5 +1,5 @@
 import { createContext } from 'react';
-import { ModelDefinition } from '../shared/types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 
 interface ModelContextType {
     modelDefinition: ModelDefinition | null;

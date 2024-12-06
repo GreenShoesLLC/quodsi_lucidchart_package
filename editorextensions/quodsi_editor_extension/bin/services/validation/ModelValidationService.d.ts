@@ -1,5 +1,4 @@
-import { ModelDefinition } from "../../shared/types/elements/ModelDefinition";
-import { ValidationResult } from "../../shared/types/ValidationTypes";
+import { ModelDefinition, ValidationResult } from "@quodsi/shared";
 /**
  * Main validation service
  */

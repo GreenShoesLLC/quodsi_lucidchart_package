@@ -1,4 +1,4 @@
-import { ValidationMessage } from "../../shared/types/ValidationTypes";
+import { ValidationMessage } from "@quodsi/shared";
 import { ModelState } from "./ModelState";
 /**
  * Base class for validation rules

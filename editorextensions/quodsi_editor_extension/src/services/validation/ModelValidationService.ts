@@ -1,6 +1,9 @@
-import { ActivityRelationships } from "../../shared/types/ActivityRelationships";
-import { ModelDefinition } from "../../shared/types/elements/ModelDefinition";
-import { ValidationMessage, ValidationResult } from "../../shared/types/ValidationTypes";
+import { 
+    ActivityRelationships, 
+    ModelDefinition, 
+    ValidationMessage, 
+    ValidationResult 
+} from "@quodsi/shared";
 import { ModelState } from "./ModelState";
 import { ActivityValidation } from "./ActivityValidation";
 import { ConnectorValidation } from "./ConnectorValidation";

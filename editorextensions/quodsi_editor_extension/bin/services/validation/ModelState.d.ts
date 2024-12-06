@@ -1,6 +1,4 @@
-import { ActivityRelationships } from "../../shared/types/ActivityRelationships";
-import { Connector } from "../../shared/types/elements/Connector";
-import { ModelDefinition } from "../../shared/types/elements/ModelDefinition";
+import { ActivityRelationships, Connector, ModelDefinition } from "@quodsi/shared";
 /**
  * Interface defining what's needed for model validation
  */
