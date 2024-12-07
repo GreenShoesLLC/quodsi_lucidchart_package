@@ -1,4 +1,4 @@
-import { SimulationObjectType, Generator, Activity, Connector, Resource, Entity, SimulationObject } from "src";
+import { SimulationObjectType, Generator, Activity, Connector, Resource, Entity, SimulationObject } from "..";
 export declare namespace SimulationObjectTypeFactory {
     function createActivity(lucidId: string): Activity;
     function createConnector(lucidId: string): Connector;

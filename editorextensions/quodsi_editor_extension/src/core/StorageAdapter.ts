@@ -46,6 +46,7 @@ export class StorageAdapter {
         type: SimulationObjectType,
         options: Partial<Omit<MetaData, 'type' | 'lastModified'>> = {}
     ): void {
+        
         try {
             // Create clean metadata without any data fields
             const meta: MetaData = {

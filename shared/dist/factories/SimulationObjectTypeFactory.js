@@ -1,40 +1,40 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SimulationObjectTypeFactory = void 0;
-var src_1 = require("src");
+var __1 = require("..");
 var SimulationObjectTypeFactory;
 (function (SimulationObjectTypeFactory) {
     function createActivity(lucidId) {
-        return src_1.Activity.createDefault(lucidId);
+        return __1.Activity.createDefault(lucidId);
     }
     SimulationObjectTypeFactory.createActivity = createActivity;
     function createConnector(lucidId) {
-        return src_1.Connector.createDefault(lucidId);
+        return __1.Connector.createDefault(lucidId);
     }
     SimulationObjectTypeFactory.createConnector = createConnector;
     function createGenerator(lucidId) {
-        return src_1.Generator.createDefault(lucidId);
+        return __1.Generator.createDefault(lucidId);
     }
     SimulationObjectTypeFactory.createGenerator = createGenerator;
     function createResource(lucidId) {
-        return src_1.Resource.createDefault(lucidId);
+        return __1.Resource.createDefault(lucidId);
     }
     SimulationObjectTypeFactory.createResource = createResource;
     function createEntity(lucidId) {
-        return src_1.Entity.createDefault(lucidId);
+        return __1.Entity.createDefault(lucidId);
     }
     SimulationObjectTypeFactory.createEntity = createEntity;
     function createElement(type, lucidId) {
         switch (type) {
-            case src_1.SimulationObjectType.Activity:
+            case __1.SimulationObjectType.Activity:
                 return createActivity(lucidId);
-            case src_1.SimulationObjectType.Connector:
+            case __1.SimulationObjectType.Connector:
                 return createConnector(lucidId);
-            case src_1.SimulationObjectType.Generator:
+            case __1.SimulationObjectType.Generator:
                 return createGenerator(lucidId);
-            case src_1.SimulationObjectType.Resource:
+            case __1.SimulationObjectType.Resource:
                 return createResource(lucidId);
-            case src_1.SimulationObjectType.Entity:
+            case __1.SimulationObjectType.Entity:
                 return createEntity(lucidId);
             default:
                 return {

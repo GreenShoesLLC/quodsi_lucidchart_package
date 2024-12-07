@@ -20,6 +20,7 @@ import {
 
 import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
+import { SimulationObjectTypeFactory } from '@quodsi/shared';
 
 export class ConversionService {
     constructor(
@@ -49,18 +50,32 @@ export class ConversionService {
      */
     public async convertPage(page: PageProxy): Promise<ConversionResult> {
         console.log('[ConversionService] Starting page conversion');
+        console.log(`[ConversionService] Page ID: ${page.id}, Title: ${page.getTitle()}`);
+        console.log(`[ConversionService] Block count: ${page.allBlocks.size}, Line count: ${page.allLines.size}`);
 
         try {
             const analysis = this.analyzePage(page);
+            console.log('[ConversionService] Page analysis complete:', {
+                blockAnalysisCount: analysis.blockAnalysis.size,
+                analysisDetails: Array.from(analysis.blockAnalysis.entries()).map(([id, analysis]) => ({
+                    id,
+                    incomingCount: analysis.incomingCount,
+                    outgoingCount: analysis.outgoingCount,
+                    elementType: analysis.elementType
+                }))
+            });
+
             await this.initializeModel(page);
+            console.log('[ConversionService] Model initialized');
+
             const convertedBlocks = await this.convertBlocks(page, analysis);
+            console.log('[ConversionService] Blocks converted:', convertedBlocks);
+
             const convertedConnectors = await this.convertConnections(page, analysis);
+            console.log('[ConversionService] Connectors converted:', convertedConnectors);
 
             const validationResult = this.modelManager.validateModel();
-            if (!validationResult.isValid) {
-                console.warn('Model validation warnings after conversion:', validationResult.messages);
-                // throw new Error('Model validation failed after conversion');
-            }
+            console.log('[ConversionService] Validation result:', validationResult);
 
             return {
                 success: true,
@@ -83,13 +98,23 @@ export class ConversionService {
      */
     private analyzePage(page: PageProxy): ProcessAnalysisResult {
         console.log('[ConversionService] Analyzing page structure');
-
         const blockAnalysis = new Map<string, BlockAnalysis>();
+
+        // Log all blocks first
+        console.log('[ConversionService] All blocks:', Array.from(page.allBlocks.keys()));
+        console.log('[ConversionService] All lines:', Array.from(page.allLines.keys()));
 
         // Analyze connections
         for (const [lineId, line] of page.allLines) {
             const endpoint1 = line.getEndpoint1();
             const endpoint2 = line.getEndpoint2();
+
+            console.log(`[ConversionService] Analyzing line ${lineId}:`, {
+                hasEndpoint1Connection: !!endpoint1?.connection,
+                hasEndpoint2Connection: !!endpoint2?.connection,
+                endpoint1Id: endpoint1?.connection?.id,
+                endpoint2Id: endpoint2?.connection?.id
+            });
 
             if (endpoint1.connection && endpoint2.connection) {
                 const sourceId = endpoint1.connection.id;
@@ -101,8 +126,17 @@ export class ConversionService {
             }
         }
 
-        // Determine element types based on connection patterns
-        this.determineElementTypes(blockAnalysis);
+        console.log('[ConversionService] Pre-type determination analysis:',
+            Array.from(blockAnalysis.entries()).map(([id, analysis]) => ({
+                id,
+                incomingCount: analysis.incomingCount,
+                outgoingCount: analysis.outgoingCount,
+                currentType: analysis.elementType
+            }))
+        );
+
+        // Determine element types based on connection patterns and block types
+        this.determineElementTypes(blockAnalysis, page);
 
         return {
             blockAnalysis
@@ -143,7 +177,7 @@ export class ConversionService {
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<{ activities: number; generators: number; resources: number }> {
-        console.log('[ConversionService] Converting blocks');
+        console.log('[ConversionService] Starting block conversion');
 
         let activities = 0;
         let generators = 0;
@@ -151,12 +185,36 @@ export class ConversionService {
 
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
-            if (!blockAnalysis?.elementType) continue;
+            if (!blockAnalysis?.elementType) {
+                console.error(`[ConversionService] Missing element type for block ${blockId}`);
+                continue;
+            }
 
             try {
-                const element = this.createSimulationElement(block, blockAnalysis.elementType);
-                this.modelManager.registerElement(element, block);
+                console.log(`[ConversionService] Creating element for block ${blockId}:`, {
+                    type: blockAnalysis.elementType,
+                    blockClass: block.getClassName()
+                });
 
+                // Create element using factory
+                const element = SimulationObjectTypeFactory.createElement(blockAnalysis.elementType, blockId);
+                element.name = this.getBlockName(block);
+
+                // Store element data using StorageAdapter
+                this.storageAdapter.setElementData(
+                    block,                    // ElementProxy
+                    element,                  // data object with id
+                    blockAnalysis.elementType // SimulationObjectType
+                );
+
+                // Verify storage
+                const storedData = this.storageAdapter.getElementData(block);
+                console.log(`[ConversionService] Stored element data verification for ${blockId}:`, storedData);
+
+                // Register with model manager
+                await this.modelManager.registerElement(element, block);
+
+                // Update counts
                 switch (blockAnalysis.elementType) {
                     case SimulationObjectType.Activity:
                         activities++;
@@ -168,6 +226,13 @@ export class ConversionService {
                         resources++;
                         break;
                 }
+
+                console.log(`[ConversionService] Successfully converted block ${blockId}:`, {
+                    type: element.type,
+                    name: element.name,
+                    stored: !!storedData
+                });
+
             } catch (error) {
                 console.error(`[ConversionService] Failed to convert block ${blockId}:`, error);
                 throw error;
@@ -187,8 +252,29 @@ export class ConversionService {
         console.log('[ConversionService] Converting connections');
         let connectorCount = 0;
 
+        // First, calculate outgoing connections per block
+        const outgoingConnectionCounts = new Map<string, number>();
+        for (const [lineId, line] of page.allLines) {
+            const endpoint1 = line.getEndpoint1();
+            if (endpoint1?.connection) {
+                const sourceId = endpoint1.connection.id;
+                outgoingConnectionCounts.set(
+                    sourceId,
+                    (outgoingConnectionCounts.get(sourceId) || 0) + 1
+                );
+            }
+        }
+
+        console.log('[ConversionService] Outgoing connection counts:',
+            Array.from(outgoingConnectionCounts).reduce((obj, [key, value]) => {
+                obj[key] = value;
+                return obj;
+            }, {} as Record<string, number>));
+
+        // Now create connectors with calculated probabilities
         for (const [lineId, line] of page.allLines) {
             try {
+                console.log(`[ConversionService] Processing line ${lineId}`);
                 const endpoint1 = line.getEndpoint1();
                 const endpoint2 = line.getEndpoint2();
 
@@ -197,17 +283,41 @@ export class ConversionService {
                     continue;
                 }
 
-                const connector = new Connector(
-                    lineId,
-                    `Connector ${lineId}`,
-                    endpoint1.connection.id,
-                    endpoint2.connection.id,
-                    1.0,
-                    ConnectType.Probability,
-                    []
+                const sourceId = endpoint1.connection.id;
+                const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
+                const probability = 1.0 / outgoingCount;
+
+                // Create connector using factory
+                const connector = SimulationObjectTypeFactory.createElement(
+                    SimulationObjectType.Connector,
+                    lineId
+                ) as Connector;
+
+                // Set connector properties
+                connector.name = `Connector ${lineId}`;
+                connector.sourceId = sourceId;
+                connector.targetId = endpoint2.connection.id;
+                connector.probability = probability;
+                connector.connectType = ConnectType.Probability;
+
+                // Store connector data
+                this.storageAdapter.setElementData(
+                    line,
+                    connector,
+                    SimulationObjectType.Connector
                 );
 
-                this.modelManager.registerElement(connector, line);
+                // Verify storage
+                const storedData = this.storageAdapter.getElementData(line);
+                console.log(`[ConversionService] Stored connector data verification for ${lineId}:`, {
+                    sourceId: connector.sourceId,
+                    targetId: connector.targetId,
+                    probability: connector.probability,
+                    stored: !!storedData
+                });
+
+                // Register with model manager
+                await this.modelManager.registerElement(connector, line);
                 connectorCount++;
 
             } catch (error) {
@@ -216,9 +326,9 @@ export class ConversionService {
             }
         }
 
+        console.log(`[ConversionService] Converted ${connectorCount} connections`);
         return connectorCount;
     }
-
     /**
      * Updates block analysis with connection information
      */
@@ -247,17 +357,53 @@ export class ConversionService {
     /**
      * Determines element types based on connection patterns
      */
-    private determineElementTypes(blockAnalysis: Map<string, BlockAnalysis>): void {
-        let hasResource = false;
+    private determineElementTypes(blockAnalysis: Map<string, BlockAnalysis>, page: PageProxy): void {
+        console.log('[ConversionService] Starting element type determination');
 
-        // Identify obvious types
+        // First pass: Identify types based on block classes
+        for (const [blockId, block] of page.allBlocks) {
+            const analysis = blockAnalysis.get(blockId) || {
+                incomingCount: 0,
+                outgoingCount: 0,
+                elementType: undefined
+            };
+            blockAnalysis.set(blockId, analysis);
+
+            const blockClass = block.getClassName();
+
+            // Map specific block classes to simulation types
+            if (blockClass) {
+                if (blockClass === 'TerminatorBlockV2') {
+                    analysis.elementType = SimulationObjectType.Generator;
+                } else if (blockClass === 'ProcessBlock' ||
+                    blockClass === 'DecisionBlock' ||
+                    blockClass === 'ActionBlock') {
+                    analysis.elementType = SimulationObjectType.Activity;
+                }
+                // Don't set Resource type based on block class alone
+            }
+        }
+
+        // Second pass: Use connection patterns for remaining untyped blocks
         for (const [blockId, analysis] of blockAnalysis) {
             if (!analysis.elementType) {
-                analysis.elementType = this.determineElementTypeFromAnalysis(analysis, hasResource);
-                if (analysis.elementType === SimulationObjectType.Resource) {
-                    hasResource = true;
+                // Default to Activity for connected blocks
+                if (analysis.incomingCount > 0 || analysis.outgoingCount > 0) {
+                    analysis.elementType = SimulationObjectType.Activity;
+                } else {
+                    // For disconnected blocks, make them Resources
+                    analysis.elementType = SimulationObjectType.Resource;
                 }
             }
+        }
+
+        // Log final type determination
+        for (const [blockId, analysis] of blockAnalysis) {
+            console.log(`[ConversionService] Final type for block ${blockId}:`, {
+                elementType: analysis.elementType,
+                incomingCount: analysis.incomingCount,
+                outgoingCount: analysis.outgoingCount
+            });
         }
     }
 
@@ -265,18 +411,22 @@ export class ConversionService {
         analysis: BlockAnalysis,
         hasResourceBeenAssigned: boolean
     ): SimulationObjectType {
+        // If no connections, default to Activity unless we need a Resource
+        if (analysis.incomingCount === 0 && analysis.outgoingCount === 0) {
+            return hasResourceBeenAssigned ? SimulationObjectType.Activity : SimulationObjectType.Resource;
+        }
+
+        // Generator pattern: only outgoing connections
         if (analysis.incomingCount === 0 && analysis.outgoingCount > 0) {
             return SimulationObjectType.Generator;
         }
+
+        // Sink pattern: only incoming connections
         if (analysis.outgoingCount === 0 && analysis.incomingCount > 0) {
             return SimulationObjectType.Activity;
         }
-        if (analysis.incomingCount > 0 || analysis.outgoingCount > 0) {
-            return SimulationObjectType.Activity;
-        }
-        if (!hasResourceBeenAssigned) {
-            return SimulationObjectType.Resource;
-        }
+
+        // Default to Activity for anything with both incoming and outgoing
         return SimulationObjectType.Activity;
     }
 
@@ -284,22 +434,44 @@ export class ConversionService {
      * Creates a simulation element from a block
      */
     private createSimulationElement(block: BlockProxy, elementType: SimulationObjectType): SimulationObject {
-        const name = this.getBlockName(block);
+        console.log(`[ConversionService] Creating simulation element for block ${block.id}`, {
+            elementType,
+            blockClass: block.getClassName(),
+            hasTextAreas: block.textAreas?.size > 0
+        });
 
-        switch (elementType) {
-            case SimulationObjectType.Activity:
-                return new Activity(block.id, name);
-            case SimulationObjectType.Generator:
-                return new Generator(
-                    block.id,
-                    name,
-                    "", // activityKeyId
-                    ModelDefaults.DEFAULT_ENTITY_ID // Set default entity ID
-                );
-            case SimulationObjectType.Resource:
-                return new Resource(block.id, name);
-            default:
-                throw new Error(`Unsupported element type: ${elementType}`);
+        try {
+            const element = SimulationObjectTypeFactory.createElement(elementType, block.id);
+
+            // Log the created element details
+            console.log(`[ConversionService] Element created from factory:`, {
+                id: element.id,
+                type: element.type,
+                initialName: element.name
+            });
+
+            const name = this.getBlockName(block);
+            element.name = name;
+
+            // Special handling for Generator
+            if (elementType === SimulationObjectType.Generator && element instanceof Generator) {
+                element.entityId = ModelDefaults.DEFAULT_ENTITY_ID;
+                console.log(`[ConversionService] Generator configured with default entity ID: ${element.entityId}`);
+            }
+
+            console.log(`[ConversionService] Final element configuration:`, {
+                id: element.id,
+                type: element.type,
+                name: element.name,
+                isGenerator: element instanceof Generator,
+                isActivity: element instanceof Activity,
+                isResource: element instanceof Resource
+            });
+
+            return element;
+        } catch (error) {
+            console.error(`[ConversionService] Failed to create element for block ${block.id}:`, error);
+            throw error;
         }
     }
 

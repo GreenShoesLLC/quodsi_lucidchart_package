@@ -6,7 +6,7 @@ import {
     Resource,
     Entity,
     SimulationObject
-} from "src";
+} from "..";
 
 export namespace SimulationObjectTypeFactory {
     export function createActivity(lucidId: string): Activity {
