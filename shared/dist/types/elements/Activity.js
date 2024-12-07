@@ -18,6 +18,14 @@ var Activity = /** @class */ (function () {
         this.connectors = connectors;
         this.type = SimulationObjectType_1.SimulationObjectType.Activity;
     }
+    Activity.createDefault = function (id) {
+        return new Activity(id, 'New Activity', 1, // capacity
+        Infinity, // inputBufferCapacity
+        Infinity, // outputBufferCapacity
+        [], // operationSteps
+        [] // connectors
+        );
+    };
     return Activity;
 }());
 exports.Activity = Activity;

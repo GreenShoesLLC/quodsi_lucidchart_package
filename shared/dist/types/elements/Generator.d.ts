@@ -12,7 +12,7 @@ export declare class Generator implements SimulationObject {
     periodicStartDuration: Duration;
     maxEntities: number;
     type: SimulationObjectType;
-    constructor(id: string, name: string, activityKeyId?: string, entityId?: string, // Changed from entityType
-    periodicOccurrences?: number, periodIntervalDuration?: Duration, entitiesPerCreation?: number, periodicStartDuration?: Duration, maxEntities?: number);
+    static createDefault(id: string): Generator;
+    constructor(id: string, name: string, activityKeyId?: string, entityId?: string, periodicOccurrences?: number, periodIntervalDuration?: Duration, entitiesPerCreation?: number, periodicStartDuration?: Duration, maxEntities?: number);
 }
 //# sourceMappingURL=Generator.d.ts.map

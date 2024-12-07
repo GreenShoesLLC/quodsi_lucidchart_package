@@ -5,6 +5,7 @@ export declare class Resource implements SimulationObject {
     name: string;
     capacity: number;
     type: SimulationObjectType;
+    static createDefault(id: string): Resource;
     constructor(id: string, name: string, capacity?: number);
 }
 //# sourceMappingURL=Resource.d.ts.map

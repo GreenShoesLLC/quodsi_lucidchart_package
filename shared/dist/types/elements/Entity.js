@@ -8,6 +8,9 @@ var Entity = /** @class */ (function () {
         this.name = name;
         this.type = SimulationObjectType_1.SimulationObjectType.Entity;
     }
+    Entity.createDefault = function (id) {
+        return new Entity(id, 'New Entity');
+    };
     return Entity;
 }());
 exports.Entity = Entity;

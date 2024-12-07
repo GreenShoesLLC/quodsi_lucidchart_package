@@ -17,6 +17,14 @@ var Connector = /** @class */ (function () {
         this.operationSteps = operationSteps;
         this.type = SimulationObjectType_1.SimulationObjectType.Connector;
     }
+    Connector.createDefault = function (id) {
+        return new Connector(id, 'New Connector', '', // sourceId
+        '', // targetId
+        1.0, // probability
+        ConnectType_1.ConnectType.Probability, // connectType
+        [] // operationSteps
+        );
+    };
     return Connector;
 }());
 exports.Connector = Connector;

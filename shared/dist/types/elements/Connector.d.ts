@@ -11,6 +11,7 @@ export declare class Connector implements SimulationObject {
     connectType: ConnectType;
     operationSteps: OperationStep[];
     type: SimulationObjectType;
+    static createDefault(id: string): Connector;
     constructor(id: string, name: string, sourceId: string, targetId: string, probability?: number, connectType?: ConnectType, operationSteps?: OperationStep[]);
 }
 //# sourceMappingURL=Connector.d.ts.map

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { SelectionType, SimComponentType } from "@quodsi/shared";
+import { SelectionType, SimComponentType, SimulationObjectTypeFactory } from "@quodsi/shared";
 import {
   MessageTypes,
   MessagePayloads,
@@ -12,7 +12,7 @@ import { ErrorDisplay } from "./components/ui/ErrorDisplay";
 import { ProcessingIndicator } from "./components/ui/ProcessingIndicator";
 import { messageHandlers } from "./services/messageHandlers/messageHandlers";
 import { typeMappers } from "./utils/typeMappers";
-import { createEmptyData } from "./utils/emptyDataCreator";
+
 import { createEditorComponent } from "./services/editors/editorFactory";
 import { SelectionContextProvider } from "./components/SelectionContextProvider";
 
@@ -169,7 +169,12 @@ const QuodsiApp: React.FC = () => {
 
     const simulationType =
       typeMappers.mapComponentTypeToSimulationType(newType);
-    const emptyData = createEmptyData(simulationType, elementId);
+
+
+    const emptyData = SimulationObjectTypeFactory.createElement(
+      simulationType,
+      elementId
+    );
 
     const elementData = {
       elementId,

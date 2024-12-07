@@ -5,8 +5,7 @@ var SimulationObjectType_1 = require("./SimulationObjectType");
 var Duration_1 = require("./Duration");
 var ModelDefaults_1 = require("./ModelDefaults");
 var Generator = /** @class */ (function () {
-    function Generator(id, name, activityKeyId, entityId, // Changed from entityType
-    periodicOccurrences, periodIntervalDuration, entitiesPerCreation, periodicStartDuration, maxEntities) {
+    function Generator(id, name, activityKeyId, entityId, periodicOccurrences, periodIntervalDuration, entitiesPerCreation, periodicStartDuration, maxEntities) {
         if (activityKeyId === void 0) { activityKeyId = ""; }
         if (entityId === void 0) { entityId = ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID; }
         if (periodicOccurrences === void 0) { periodicOccurrences = Infinity; }
@@ -25,6 +24,15 @@ var Generator = /** @class */ (function () {
         this.maxEntities = maxEntities;
         this.type = SimulationObjectType_1.SimulationObjectType.Generator;
     }
+    Generator.createDefault = function (id) {
+        return new Generator(id, 'New Generator', '', // activityKeyId
+        ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, Infinity, // periodicOccurrences
+        new Duration_1.Duration(), // periodIntervalDuration
+        1, // entitiesPerCreation
+        new Duration_1.Duration(), // periodicStartDuration
+        Infinity // maxEntities
+        );
+    };
     return Generator;
 }());
 exports.Generator = Generator;

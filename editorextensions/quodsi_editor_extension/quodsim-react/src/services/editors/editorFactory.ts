@@ -6,7 +6,6 @@ import EntityEditor from "../../components/EntityEditor";
 import ConnectorEditor from "../../components/ConnectorEditor";
 import GeneratorEditor from "../../components/GeneratorEditor";
 import ResourceEditor from "../../components/ResourceEditor";
-import { ModelDefinition } from '@quodsi/shared';
 import { EditorReferenceData } from '@quodsi/shared';
 
 interface EditorHandlers {

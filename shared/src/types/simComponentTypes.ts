@@ -1,4 +1,3 @@
-// import { Activity } from "./elements/Activity";
 import { Activity } from "./elements/Activity"
 import { Duration } from "./elements/Duration";
 import { Generator } from "./elements/Generator";

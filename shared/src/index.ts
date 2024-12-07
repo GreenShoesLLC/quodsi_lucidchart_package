@@ -44,3 +44,6 @@ export * from './types/elements/Scenario';
 export * from './types/elements/SimulationObject';
 export * from './types/elements/SimulationObjectType';
 export * from './types/elements/SimulationTimeType';
+
+export * from './factories/SimulationObjectTypeFactory';
+

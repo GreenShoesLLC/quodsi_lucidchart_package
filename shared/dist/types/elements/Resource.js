@@ -10,6 +10,10 @@ var Resource = /** @class */ (function () {
         this.capacity = capacity;
         this.type = SimulationObjectType_1.SimulationObjectType.Resource;
     }
+    Resource.createDefault = function (id) {
+        return new Resource(id, 'New Resource', 1 // capacity
+        );
+    };
     return Resource;
 }());
 exports.Resource = Resource;
