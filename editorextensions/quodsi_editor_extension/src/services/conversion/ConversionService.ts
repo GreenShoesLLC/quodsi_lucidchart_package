@@ -353,7 +353,24 @@ export class ConversionService {
             blockInfo.outgoingCount++;
         }
     }
+    /**
+     * Determines element types based on connection patterns
+     */
+    private blockSpecificLogic(block: BlockProxy, analysis: BlockAnalysis): void {
+        const blockClass = block.getClassName();
 
+        // Map specific block classes to simulation types
+        if (blockClass) {
+            if (blockClass === 'TerminatorBlockV2') {
+                analysis.elementType = SimulationObjectType.Generator;
+            } else if (blockClass === 'ProcessBlock' ||
+                blockClass === 'DecisionBlock' ||
+                blockClass === 'ActionBlock') {
+                analysis.elementType = SimulationObjectType.Activity;
+            }
+            // Don't set Resource type based on block class alone
+        }
+    }
     /**
      * Determines element types based on connection patterns
      */
@@ -369,30 +386,20 @@ export class ConversionService {
             };
             blockAnalysis.set(blockId, analysis);
 
-            const blockClass = block.getClassName();
-
-            // Map specific block classes to simulation types
-            if (blockClass) {
-                if (blockClass === 'TerminatorBlockV2') {
-                    analysis.elementType = SimulationObjectType.Generator;
-                } else if (blockClass === 'ProcessBlock' ||
-                    blockClass === 'DecisionBlock' ||
-                    blockClass === 'ActionBlock') {
-                    analysis.elementType = SimulationObjectType.Activity;
-                }
-                // Don't set Resource type based on block class alone
-            }
+            //this.blockSpecificLogic(block, analysis)
         }
 
         // Second pass: Use connection patterns for remaining untyped blocks
         for (const [blockId, analysis] of blockAnalysis) {
             if (!analysis.elementType) {
                 // Default to Activity for connected blocks
-                if (analysis.incomingCount > 0 || analysis.outgoingCount > 0) {
+                if (analysis.incomingCount === 0 && analysis.outgoingCount > 0) {
+                    analysis.elementType = SimulationObjectType.Generator;
+                } else if (analysis.incomingCount > 0) {
                     analysis.elementType = SimulationObjectType.Activity;
                 } else {
                     // For disconnected blocks, make them Resources
-                    analysis.elementType = SimulationObjectType.Resource;
+                    // analysis.elementType = SimulationObjectType.Resource;
                 }
             }
         }
@@ -404,74 +411,6 @@ export class ConversionService {
                 incomingCount: analysis.incomingCount,
                 outgoingCount: analysis.outgoingCount
             });
-        }
-    }
-
-    private determineElementTypeFromAnalysis(
-        analysis: BlockAnalysis,
-        hasResourceBeenAssigned: boolean
-    ): SimulationObjectType {
-        // If no connections, default to Activity unless we need a Resource
-        if (analysis.incomingCount === 0 && analysis.outgoingCount === 0) {
-            return hasResourceBeenAssigned ? SimulationObjectType.Activity : SimulationObjectType.Resource;
-        }
-
-        // Generator pattern: only outgoing connections
-        if (analysis.incomingCount === 0 && analysis.outgoingCount > 0) {
-            return SimulationObjectType.Generator;
-        }
-
-        // Sink pattern: only incoming connections
-        if (analysis.outgoingCount === 0 && analysis.incomingCount > 0) {
-            return SimulationObjectType.Activity;
-        }
-
-        // Default to Activity for anything with both incoming and outgoing
-        return SimulationObjectType.Activity;
-    }
-
-    /**
-     * Creates a simulation element from a block
-     */
-    private createSimulationElement(block: BlockProxy, elementType: SimulationObjectType): SimulationObject {
-        console.log(`[ConversionService] Creating simulation element for block ${block.id}`, {
-            elementType,
-            blockClass: block.getClassName(),
-            hasTextAreas: block.textAreas?.size > 0
-        });
-
-        try {
-            const element = SimulationObjectTypeFactory.createElement(elementType, block.id);
-
-            // Log the created element details
-            console.log(`[ConversionService] Element created from factory:`, {
-                id: element.id,
-                type: element.type,
-                initialName: element.name
-            });
-
-            const name = this.getBlockName(block);
-            element.name = name;
-
-            // Special handling for Generator
-            if (elementType === SimulationObjectType.Generator && element instanceof Generator) {
-                element.entityId = ModelDefaults.DEFAULT_ENTITY_ID;
-                console.log(`[ConversionService] Generator configured with default entity ID: ${element.entityId}`);
-            }
-
-            console.log(`[ConversionService] Final element configuration:`, {
-                id: element.id,
-                type: element.type,
-                name: element.name,
-                isGenerator: element instanceof Generator,
-                isActivity: element instanceof Activity,
-                isResource: element instanceof Resource
-            });
-
-            return element;
-        } catch (error) {
-            console.error(`[ConversionService] Failed to create element for block ${block.id}:`, error);
-            throw error;
         }
     }
 

@@ -37,12 +37,11 @@ export declare class ConversionService {
     /**
      * Determines element types based on connection patterns
      */
-    private determineElementTypes;
-    private determineElementTypeFromAnalysis;
+    private blockSpecificLogic;
     /**
-     * Creates a simulation element from a block
+     * Determines element types based on connection patterns
      */
-    private createSimulationElement;
+    private determineElementTypes;
     /**
      * Gets a suitable name for a block
      */
