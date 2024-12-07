@@ -153,7 +153,7 @@ const QuodsiApp: React.FC = () => {
       // Send a message to clear the element's Quodsi data
       const elementData = {
         elementId,
-        type: SimulationObjectType.NONE, // or undefined, depending on what your extension expects
+        type: SimulationObjectType.None, // or undefined, depending on what your extension expects
         data: {},
       };
 

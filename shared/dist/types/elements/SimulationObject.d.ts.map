@@ -1,0 +1,1 @@
+{"version":3,"file":"SimulationObject.d.ts","sourceRoot":"","sources":["../../../src/types/elements/SimulationObject.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,wBAAwB,CAAC;AAE9D,MAAM,WAAW,gBAAgB;IAC/B,EAAE,EAAE,MAAM,CAAC;IACX,IAAI,EAAE,MAAM,CAAC;IACb,IAAI,EAAE,oBAAoB,CAAC;CAC5B"}

@@ -20,3 +20,4 @@ export declare class ModelUtils {
     static validate(model: Model): Model;
     static isComplete(model: Partial<Model>): model is Model;
 }
+//# sourceMappingURL=ModelUtils.d.ts.map

@@ -11,3 +11,4 @@ export declare namespace ModelDefaults {
     const DEFAULT_ENTITY_ID = "00000000-0000-0000-0000-000000000000";
     const DEFAULT_ENTITY_NAME = "Default Entity";
 }
+//# sourceMappingURL=ModelDefaults.d.ts.map

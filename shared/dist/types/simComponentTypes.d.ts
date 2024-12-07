@@ -11,3 +11,4 @@ export declare class SimComponentFactory {
     static createEmpty<T>(type: SimComponentType, id: string): T;
 }
 export declare const SimComponentTypes: SimComponentTypeInfo[];
+//# sourceMappingURL=simComponentTypes.d.ts.map

@@ -132,3 +132,4 @@ export declare function isValidMessage(message: any): message is {
  * Helper to extract payload type from message type
  */
 export type PayloadType<T extends MessageTypes> = MessagePayloads[T];
+//# sourceMappingURL=MessageTypes.d.ts.map

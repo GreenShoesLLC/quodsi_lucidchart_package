@@ -1,0 +1,1 @@
+{"version":3,"file":"Experiment.d.ts","sourceRoot":"","sources":["../../../src/types/elements/Experiment.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,wBAAwB,CAAC;AAC9D,OAAO,EAAE,QAAQ,EAAE,MAAM,YAAY,CAAC;AACtC,OAAO,EAAE,gBAAgB,EAAE,MAAM,oBAAoB,CAAC;AAEtD,MAAM,WAAW,UAAW,SAAQ,gBAAgB;IAChD,SAAS,EAAE,QAAQ,EAAE,CAAC;IACtB,IAAI,EAAE,oBAAoB,CAAC,UAAU,CAAC;CACzC"}

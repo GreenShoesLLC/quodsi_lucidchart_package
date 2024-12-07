@@ -11,4 +11,5 @@ var SimulationObjectType;
     SimulationObjectType["Scenario"] = "Scenario";
     SimulationObjectType["Experiment"] = "Experiment";
     SimulationObjectType["Model"] = "Model";
+    SimulationObjectType["None"] = "None";
 })(SimulationObjectType = exports.SimulationObjectType || (exports.SimulationObjectType = {}));

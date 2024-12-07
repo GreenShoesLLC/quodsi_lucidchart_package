@@ -11,3 +11,4 @@ export interface ConversionResult {
         connectors: number;
     };
 }
+//# sourceMappingURL=ConversionResult.d.ts.map

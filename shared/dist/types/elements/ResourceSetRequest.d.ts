@@ -6,3 +6,4 @@ export declare class ResourceSetRequest {
     requests: Array<ResourceRequest | ResourceSetRequest>;
     constructor(name?: string, requestType?: RequestSetType, requests?: Array<ResourceRequest | ResourceSetRequest>);
 }
+//# sourceMappingURL=ResourceSetRequest.d.ts.map

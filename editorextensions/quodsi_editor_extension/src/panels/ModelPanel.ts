@@ -616,7 +616,7 @@ export class ModelPanel extends Panel {
             });
 
             // Special handling for NONE type
-            if (updateData.type === SimulationObjectType.NONE) {
+            if (updateData.type === SimulationObjectType.None) {
                 console.log('[ModelPanel] Handling NONE type - clearing element data');
 
                 // Remove from model manager if it exists

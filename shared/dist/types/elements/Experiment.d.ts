@@ -5,3 +5,4 @@ export interface Experiment extends SimulationObject {
     scenarios: Scenario[];
     type: SimulationObjectType.Experiment;
 }
+//# sourceMappingURL=Experiment.d.ts.map

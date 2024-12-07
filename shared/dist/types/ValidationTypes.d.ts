@@ -17,3 +17,4 @@ export interface ValidationResult {
     isValid: boolean;
     messages: ValidationMessage[];
 }
+//# sourceMappingURL=ValidationTypes.d.ts.map

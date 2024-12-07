@@ -104,3 +104,4 @@ export declare class Distribution {
     description: string;
     constructor(distributionType: DistributionType, parameters: DistributionParameters, description?: string);
 }
+//# sourceMappingURL=Distribution.d.ts.map

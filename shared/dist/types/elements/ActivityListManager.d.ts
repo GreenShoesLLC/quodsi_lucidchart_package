@@ -3,3 +3,4 @@ import { ComponentListManager } from "./ComponentListManager";
 export declare class ActivityListManager extends ComponentListManager<Activity> {
     getByCapacityThreshold(minCapacity: number): Activity[];
 }
+//# sourceMappingURL=ActivityListManager.d.ts.map

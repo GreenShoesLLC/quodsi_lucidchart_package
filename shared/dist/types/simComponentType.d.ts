@@ -7,3 +7,4 @@ export declare enum SimComponentType {
     RESOURCE = "resource",
     NONE = "none"
 }
+//# sourceMappingURL=simComponentType.d.ts.map

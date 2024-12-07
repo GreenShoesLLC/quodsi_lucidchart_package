@@ -6,3 +6,4 @@ export interface Scenario extends SimulationObject {
     runState: 'not run' | 'running' | 'ran with errors' | 'ran successfully';
     type: SimulationObjectType.Scenario;
 }
+//# sourceMappingURL=Scenario.d.ts.map

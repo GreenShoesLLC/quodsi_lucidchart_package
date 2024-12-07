@@ -8,3 +8,4 @@ export declare class Duration {
     distribution: Distribution | null;
     constructor(durationLength?: number, durationPeriodUnit?: PeriodUnit, durationType?: DurationType, distribution?: Distribution | null);
 }
+//# sourceMappingURL=Duration.d.ts.map

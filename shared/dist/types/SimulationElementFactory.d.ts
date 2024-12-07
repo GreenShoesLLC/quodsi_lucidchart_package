@@ -17,3 +17,4 @@ export declare const SimulationElementFactory: {
     readonly createGenerator: (data: any) => Generator;
     readonly createEntity: (data: any) => Entity;
 };
+//# sourceMappingURL=SimulationElementFactory.d.ts.map

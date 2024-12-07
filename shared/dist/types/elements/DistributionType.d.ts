@@ -31,3 +31,4 @@ export declare enum DistributionType {
     WALD = "wald",
     ZIPF = "zipf"
 }
+//# sourceMappingURL=DistributionType.d.ts.map

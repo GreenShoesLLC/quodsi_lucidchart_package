@@ -1,0 +1,1 @@
+{"version":3,"file":"BlockAnalysis.d.ts","sourceRoot":"","sources":["../../src/types/BlockAnalysis.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,oBAAoB,EAAE,MAAM,iCAAiC,CAAC;AACvE;;GAEG;AACH,MAAM,WAAW,aAAa;IAC1B,aAAa,EAAE,MAAM,CAAC;IACtB,aAAa,EAAE,MAAM,CAAC;IACtB,WAAW,CAAC,EAAE,oBAAoB,CAAC;CACtC"}

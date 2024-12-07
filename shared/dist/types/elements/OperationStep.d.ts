@@ -5,3 +5,4 @@ export declare class OperationStep {
     duration: Duration;
     constructor(resourceSetRequest?: ResourceSetRequest | null, duration?: Duration);
 }
+//# sourceMappingURL=OperationStep.d.ts.map

@@ -10,3 +10,4 @@ export interface SelectionState {
     /** Type of the current selection */
     selectionType: SelectionType;
 }
+//# sourceMappingURL=SelectionState.d.ts.map

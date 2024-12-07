@@ -13,3 +13,4 @@ export declare class Connector implements SimulationObject {
     type: SimulationObjectType;
     constructor(id: string, name: string, sourceId: string, targetId: string, probability?: number, connectType?: ConnectType, operationSteps?: OperationStep[]);
 }
+//# sourceMappingURL=Connector.d.ts.map

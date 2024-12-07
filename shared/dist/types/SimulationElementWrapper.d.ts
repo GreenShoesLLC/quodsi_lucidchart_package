@@ -26,3 +26,4 @@ export declare class SimulationElementWrapper implements SimulationElement {
     private validateEntity;
 }
 export {};
+//# sourceMappingURL=SimulationElementWrapper.d.ts.map

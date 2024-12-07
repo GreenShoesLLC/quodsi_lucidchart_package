@@ -5,3 +5,4 @@ export declare class ResourceRequest {
     quantity: number;
     constructor(keepResource?: boolean, resource?: Resource | null, quantity?: number);
 }
+//# sourceMappingURL=ResourceRequest.d.ts.map

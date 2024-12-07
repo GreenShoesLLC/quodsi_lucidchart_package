@@ -14,3 +14,4 @@ export declare enum SelectionType {
     RESOURCE = "resource",
     MODEL = "model"
 }
+//# sourceMappingURL=SelectionType.d.ts.map

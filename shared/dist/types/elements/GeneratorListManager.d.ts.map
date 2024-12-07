@@ -1,0 +1,1 @@
+{"version":3,"file":"GeneratorListManager.d.ts","sourceRoot":"","sources":["../../../src/types/elements/GeneratorListManager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,wBAAwB,CAAC;AAC9D,OAAO,EAAE,SAAS,EAAE,MAAM,aAAa,CAAC;AAExC,qBAAa,oBAAqB,SAAQ,oBAAoB,CAAC,SAAS,CAAC;IACrE,aAAa,CAAC,QAAQ,EAAE,MAAM,GAAG,SAAS,EAAE;CAG/C"}

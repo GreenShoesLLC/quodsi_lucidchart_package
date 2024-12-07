@@ -7,5 +7,6 @@ export declare enum SimulationObjectType {
     Scenario = "Scenario",
     Experiment = "Experiment",
     Model = "Model",
-    NONE = "None"
+    None = "None"
 }
+//# sourceMappingURL=SimulationObjectType.d.ts.map

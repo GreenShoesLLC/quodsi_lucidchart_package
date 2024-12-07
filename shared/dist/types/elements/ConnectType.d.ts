@@ -5,3 +5,4 @@ export declare enum ConnectType {
 export declare class ConnectTypeUtils {
     static stringToConnectRule(inputStr: string): ConnectType;
 }
+//# sourceMappingURL=ConnectType.d.ts.map

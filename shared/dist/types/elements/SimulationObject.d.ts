@@ -4,3 +4,4 @@ export interface SimulationObject {
     name: string;
     type: SimulationObjectType;
 }
+//# sourceMappingURL=SimulationObject.d.ts.map

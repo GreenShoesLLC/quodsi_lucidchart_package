@@ -9,3 +9,4 @@ export declare abstract class ComponentListManager<T extends SimulationObject> {
     clear(): void;
     size(): number;
 }
+//# sourceMappingURL=ComponentListManager.d.ts.map

@@ -13,3 +13,4 @@ export declare class Activity implements SimulationObject {
     type: SimulationObjectType;
     constructor(id: string, name: string, capacity?: number, inputBufferCapacity?: number, outputBufferCapacity?: number, operationSteps?: OperationStep[], connectors?: Connector[]);
 }
+//# sourceMappingURL=Activity.d.ts.map

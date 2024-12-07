@@ -6,3 +6,4 @@ export interface ActivityRelationships {
     outgoingConnectors: Set<string>;
     assignedResources: Set<string>;
 }
+//# sourceMappingURL=ActivityRelationships.d.ts.map

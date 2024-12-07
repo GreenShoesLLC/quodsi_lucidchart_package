@@ -3,9 +3,13 @@
     "target": "es5",
     "module": "commonjs",
     "declaration": true,
+    "declarationMap": true, // Add declaration maps for better navigation
     "outDir": "./dist",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".", // Set the base URL for module resolution
+    "rootDir": "./src", // Explicitly specify the root directory
+    "composite": true // Enable project references
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

@@ -15,3 +15,4 @@ export declare class ModelDefinition {
     get id(): string;
     get name(): string;
 }
+//# sourceMappingURL=ModelDefinition.d.ts.map

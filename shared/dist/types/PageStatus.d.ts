@@ -4,3 +4,4 @@ export interface PageStatus {
     scenarios: Scenario[];
     statusDateTime: string;
 }
+//# sourceMappingURL=PageStatus.d.ts.map

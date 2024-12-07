@@ -25,3 +25,4 @@ export interface SimulationElement extends SimulationObject {
      */
     fromStorage(data: object): SimulationElement;
 }
+//# sourceMappingURL=SimulationElement.d.ts.map

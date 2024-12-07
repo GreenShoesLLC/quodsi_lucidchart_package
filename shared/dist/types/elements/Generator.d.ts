@@ -15,3 +15,4 @@ export declare class Generator implements SimulationObject {
     constructor(id: string, name: string, activityKeyId?: string, entityId?: string, // Changed from entityType
     periodicOccurrences?: number, periodIntervalDuration?: Duration, entitiesPerCreation?: number, periodicStartDuration?: Duration, maxEntities?: number);
 }
+//# sourceMappingURL=Generator.d.ts.map

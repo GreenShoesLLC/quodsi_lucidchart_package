@@ -6,3 +6,4 @@ export declare class Entity implements SimulationObject {
     type: SimulationObjectType;
     constructor(id: string, name: string);
 }
+//# sourceMappingURL=Entity.d.ts.map

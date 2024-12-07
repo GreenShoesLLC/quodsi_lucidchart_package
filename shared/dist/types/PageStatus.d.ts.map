@@ -1,0 +1,1 @@
+{"version":3,"file":"PageStatus.d.ts","sourceRoot":"","sources":["../../src/types/PageStatus.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,QAAQ,EAAE,MAAM,qBAAqB,CAAC;AAG/C,MAAM,WAAW,UAAU;IACvB,YAAY,EAAE,OAAO,CAAC;IACtB,SAAS,EAAE,QAAQ,EAAE,CAAC;IACtB,cAAc,EAAE,MAAM,CAAC;CAC1B"}

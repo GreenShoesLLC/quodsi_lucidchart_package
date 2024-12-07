@@ -4,3 +4,4 @@ export declare enum PeriodUnit {
     HOURS = "HOURS",
     DAYS = "DAYS"
 }
+//# sourceMappingURL=PeriodUnit.d.ts.map

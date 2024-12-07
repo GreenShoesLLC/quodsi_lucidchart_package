@@ -7,3 +7,4 @@ export interface BlockAnalysis {
     outgoingCount: number;
     elementType?: SimulationObjectType;
 }
+//# sourceMappingURL=BlockAnalysis.d.ts.map

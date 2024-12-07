@@ -12,3 +12,4 @@ export interface EditorReferenceData {
         name: string;
     }>;
 }
+//# sourceMappingURL=EditorReferenceData.d.ts.map

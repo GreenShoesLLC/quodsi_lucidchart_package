@@ -1,0 +1,1 @@
+{"version":3,"file":"ConnectType.d.ts","sourceRoot":"","sources":["../../../src/types/elements/ConnectType.ts"],"names":[],"mappings":"AACA,oBAAY,WAAW;IACnB,WAAW,gBAAgB;IAC3B,cAAc,mBAAmB;CACpC;AAED,qBAAa,gBAAgB;IACzB,MAAM,CAAC,mBAAmB,CAAC,QAAQ,EAAE,MAAM,GAAG,WAAW;CAkB5D"}
