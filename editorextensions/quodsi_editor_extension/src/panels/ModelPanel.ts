@@ -206,12 +206,41 @@ export class ModelPanel extends Panel {
 
         // Only send updates if React app is ready
         if (this.reactAppReady) {
-            // Get full element data for selected items
-            const elementData = items.map(item => ({
-                id: item.id,
-                data: this.storageAdapter.getElementData(item),
-                metadata: this.storageAdapter.getMetadata(item)
-            }));
+            interface ElementData {
+                id: string;
+                data: any;
+                metadata?: {
+                    type: SimulationObjectType;
+                    version: string;
+                } | null;
+            }
+
+            let elementData: ElementData[] = [];
+
+            if (items.length === 0) {
+                // Check if the page is a Quodsi model
+                if (this.storageAdapter.isQuodsiModel(currentPage)) {
+                    // When nothing is selected and page is a model, get the page's model data
+                    const modelData = this.storageAdapter.getElementData(currentPage);
+                    console.log('[ModelPanel] Page model data:', modelData);
+
+                    elementData = [{
+                        id: currentPage.id,
+                        data: modelData,
+                        metadata: {
+                            type: SimulationObjectType.Model,
+                            version: this.storageAdapter.CURRENT_VERSION
+                        }
+                    }];
+                }
+            } else {
+                // Get full element data for selected items
+                elementData = items.map(item => ({
+                    id: item.id,
+                    data: this.storageAdapter.getElementData(item),
+                    metadata: this.storageAdapter.getMetadata(item)
+                }));
+            }
 
             // Send selection update with element data
             this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {

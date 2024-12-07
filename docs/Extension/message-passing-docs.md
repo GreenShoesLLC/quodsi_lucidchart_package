@@ -2,12 +2,9 @@
 
 ## Overview
 
-The extension implements a bidirectional message passing system between the Lucidchart extension and React components through two main channels:
+The extension implements a bidirectional message passing system between the Lucidchart extension and React components using a strongly-typed TypeScript messaging architecture. The system provides type safety, payload validation, and clear message categorization.
 
-1. Extension-to-React communication
-2. React-to-Extension communication
-
-## Message Flow Architecture
+## Message Architecture
 
 ```
 Lucidchart Extension <-> PostMessage API <-> React Components
@@ -17,222 +14,221 @@ Lucidchart Extension <-> PostMessage API <-> React Components
    Classes                                   Components
 ```
 
-## Message Types
+## Core Message Structure
 
-### Core Message Interface
+### Base Message Format
+Messages follow a simple, consistent structure:
 ```typescript
-interface LucidChartMessage {
-    messagetype: string;
-    simtype?: string;
-    version: string;
-    instancedata: string;
-    documentId: string;
-    lucidId: string;
+{
+    messagetype: MessageTypes;  // Enum value defining the message type
+    data: PayloadType<T> | null;  // Strongly typed payload data
 }
 ```
 
-### Primary Message Types
-
-1. **Component Communication**
-   - `reactAppReady`: React app initialization complete
-   - `lucidchartdata`: Data transfer from extension to React
-   - `componentTypeChanged`: Component type updates
-   - `componentTypeUpdateComplete`: Update confirmation
-
-2. **Model Operations**
-   - `modelSaved`: Model data persistence
-   - `ConvertPageToModel`: Page conversion request
-   - `ValidateModel`: Model validation request
-   - `RemoveModel`: Model deletion request
-   - `SimulateModel`: Simulation execution request
-
-3. **Editor Operations**
-   - `activitySaved`: Activity data updates
-   - `resourceSaved`: Resource data updates
-   - `entitySaved`: Entity data updates
-   - `connectorSaved`: Connector data updates
-   - `generatorSaved`: Generator data updates
-
-4. **Status Updates**
-   - `updatePageStatus`: Page status changes
-   - `statusUpdateComplete`: Status update confirmation
-
-## Implementation Details
-
-### Extension Side (TypeScript)
-
-1. **Panel Classes**
+### Type-Safe Message System
 ```typescript
-class RightPanel extends Panel {
-    protected messageFromFrame(message: any): void {
-        // Handle incoming messages
-    }
-
-    public sendMessageToReact(): void {
-        // Send messages to React
-    }
+// Message type enumeration
+enum MessageTypes {
+    REACT_APP_READY = 'reactAppReady',
+    INITIAL_STATE = 'initialState',
+    // ... other message types
 }
-```
 
-2. **Message Handling**
-```typescript
-// Example from RightPanel
-if (message.messagetype === 'componentTypeChanged') {
-    this.handleComponentTypeChange(message);
-} else if (message.messagetype === 'updatePageStatus') {
-    this.updatePageStatus(message.data);
-}
-```
-
-### React Side (TypeScript/React)
-
-1. **Message Reception**
-```typescript
-useEffect(() => {
-    const eventListener = (event: MessageEvent) => {
-        handleMessage(event.data as LucidChartMessage);
+// Payload type definitions
+interface MessagePayloads {
+    [MessageTypes.REACT_APP_READY]: undefined;
+    [MessageTypes.INITIAL_STATE]: {
+        isModel: boolean;
+        pageId: string;
+        documentId: string;
+        canConvert: boolean;
+        modelData: any | null;
+        selectionState: SelectionState;
     };
-
-    window.addEventListener("message", eventListener);
-    return () => window.removeEventListener("message", eventListener);
-}, []);
-```
-
-2. **Message Sending**
-```typescript
-window.parent.postMessage({
-    messagetype: 'activitySaved',
-    data: savedActivity
-}, '*');
-```
-
-## Key Implementation Patterns
-
-1. **Initialization Handshake**
-```typescript
-// React side
-window.parent.postMessage({
-    messagetype: 'reactAppReady'
-}, '*');
-
-// Extension side
-if (message.messagetype === 'reactAppReady') {
-    this.reactAppReady = true;
-    this.sendInitialData();
+    // ... other payload definitions
 }
 ```
 
-2. **Data Synchronization**
+## Message Categories
+
+### 1. React App Lifecycle
+- `REACT_APP_READY`: React application initialization
+- `INITIAL_STATE`: Initial state transfer
+- `ERROR`: Error notification
+
+### 2. Selection Management
+- `SELECTION_CHANGED`: User selection updates
 ```typescript
-// Extension -> React
-sendMessageToReact(): void {
-    const message = LucidChartMessageClass.createMessage(
-        'lucidchartdata',
-        instancedata,
-        documentId,
-        lucidId,
-        objectType,
-        "1"
-    );
-    this.sendMessage(message.toObject());
-}
-
-// React -> Extension
-const handleSave = () => {
-    window.parent.postMessage({
-        messagetype: 'activitySaved',
-        data: localActivity
-    }, '*');
-};
-```
-
-3. **Status Management**
-```typescript
-private updatePageStatus(newStatus: PageStatus): void {
-    try {
-        // Update status in shape data
-        activePage.shapeData.set(
-            RightPanel.CURRENT_STATUS_KEY,
-            JSON.stringify(newStatus)
-        );
-
-        // Confirm update to React
-        this.sendMessage({
-            messagetype: 'statusUpdateComplete',
-            success: true
-        });
-    } catch (error) {
-        this.sendMessage({
-            messagetype: 'statusUpdateComplete',
-            success: false,
-            error: 'Failed to update page status'
-        });
-    }
+{
+    selectionState: SelectionState;
+    elementData?: any[];
 }
 ```
 
-## Error Handling
-
-1. **Type Safety**
+### 3. Model Conversion
+- `CONVERT_PAGE`: Start conversion
+- `CONVERSION_STARTED`: Conversion initiated
+- `CONVERSION_COMPLETE`: Conversion finished
+- `CONVERSION_ERROR`: Conversion failed
 ```typescript
-protected messageFromFrame(message: any): void {
-    try {
-        if (!message || !message.messagetype) {
-            throw new Error('Invalid message format');
-        }
-        // Process message
-    } catch (error) {
-        console.error('Error processing message:', error);
-    }
+// Conversion complete payload
+{
+    success: boolean;
+    modelId: string;
+    elementCount: {
+        activities: number;
+        generators: number;
+        resources: number;
+        connectors: number;
+    };
 }
 ```
 
-2. **State Validation**
+### 4. Element Data Operations
+- `GET_ELEMENT_DATA`: Request element data
+- `ELEMENT_DATA`: Element data response
+- `UPDATE_ELEMENT_DATA`: Update request
+- `UPDATE_SUCCESS`: Update confirmation
 ```typescript
-public sendMessageToReact(): void {
-    if (!this.reactAppReady) {
-        console.log("React app not ready yet, waiting...");
+// Element data payload
+{
+    id: string;
+    data: any;
+    metadata: any;
+    referenceData: EditorReferenceData;
+}
+```
+
+### 5. Model Operations
+- `MODEL_SAVED`: Model persistence
+- `MODEL_LOADED`: Model loading
+- `REMOVE_MODEL`: Model deletion request
+- `MODEL_REMOVED`: Deletion confirmation
+- `SIMULATE_MODEL`: Simulation execution
+
+### 6. Component Operations
+- `ACTIVITY_SAVED`: Activity updates
+- `CONNECTOR_SAVED`: Connector updates
+- `ENTITY_SAVED`: Entity updates
+- `GENERATOR_SAVED`: Generator updates
+- `RESOURCE_SAVED`: Resource updates
+```typescript
+// Component save payload
+{
+    elementId: string;
+    data: any;
+}
+```
+
+## Implementation Utilities
+
+### Message Creation
+```typescript
+function createSerializableMessage<T extends MessageTypes>(
+    type: T,
+    payload?: MessagePayloads[T]
+): { [key: string]: any } {
+    return {
+        messagetype: type,
+        data: payload ?? null
+    };
+}
+```
+
+### Message Validation
+```typescript
+function isValidMessage(
+    message: any
+): message is { messagetype: MessageTypes; data: any } {
+    return message
+        && typeof message === 'object'
+        && 'messagetype' in message
+        && Object.values(MessageTypes).includes(message.messagetype);
+}
+```
+
+### Type Helpers
+```typescript
+type PayloadType<T extends MessageTypes> = MessagePayloads[T];
+```
+
+## Usage Examples
+
+### 1. Sending Messages
+```typescript
+// React to Extension
+window.parent.postMessage(
+    createSerializableMessage(MessageTypes.REACT_APP_READY),
+    '*'
+);
+
+// With payload
+window.parent.postMessage(
+    createSerializableMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+        elementId: 'activity1',
+        data: activityData,
+        type: SimulationObjectType.ACTIVITY
+    }),
+    '*'
+);
+```
+
+### 2. Receiving Messages
+```typescript
+window.addEventListener('message', (event) => {
+    if (!isValidMessage(event.data)) {
         return;
     }
-    // Send message
-}
+
+    switch (event.data.messagetype) {
+        case MessageTypes.INITIAL_STATE:
+            const { isModel, pageId, modelData } = event.data.data;
+            // Handle initial state
+            break;
+            
+        case MessageTypes.VALIDATION_RESULT:
+            const validationResult = event.data.data;
+            // Handle validation result
+            break;
+    }
+});
 ```
 
 ## Best Practices
 
-1. **Message Logging**
-- All message operations are logged for debugging
-- Include timestamps and relevant context
-- Log both success and failure cases
+1. **Type Safety**
+   - Always use `createSerializableMessage` for message creation
+   - Validate incoming messages with `isValidMessage`
+   - Use type assertions sparingly
+
+2. **Message Handling**
+   - Implement proper error handling
+   - Handle all relevant message types
+   - Validate message payloads
+
+3. **State Management**
+   - Maintain consistent state between components
+   - Handle race conditions
+   - Implement proper error recovery
+
+4. **Performance**
+   - Keep payloads minimal
+   - Batch updates when possible
+   - Avoid unnecessary messages
+
+## Common Pitfalls
+
+1. **Type Issues**
+   - Not using type-safe message creators
+   - Missing type guards
+   - Incorrect payload types
 
 2. **State Management**
-- Track application readiness state
-- Maintain message queue if needed
-- Handle component lifecycle appropriately
+   - Race conditions
+   - Missing error states
+   - Inconsistent state updates
 
-3. **Error Recovery**
-- Implement timeout mechanisms
-- Provide fallback behaviors
-- Clean up resources properly
-
-4. **Type Safety**
-- Use TypeScript interfaces for message types
-- Validate message structure
-- Handle edge cases and null values
-
-## Common Pitfalls to Avoid
-
-1. **Timing Issues**
-- Don't assume immediate React app readiness
-- Handle race conditions in message processing
-- Implement proper initialization sequence
-
-2. **Memory Management**
-- Clean up event listeners
-- Handle component unmounting
-- Prevent message leaks
-
-3. **State Synchronization**
-- Maintain consistent state between extension and React
-- Handle concurrent updates
-- Implement proper locking mechanisms if needed
+3. **Error Handling**
+   - Unhandled message types
+   - Missing validation
+   - Incomplete error reporting

@@ -77,6 +77,48 @@ export const messageHandlers = {
         const element = data.elementData[0];
         const { setState, setEditor } = deps;
 
+        // Handle page selection (nothing selected)
+        if (data.selectionState?.selectionType === SelectionType.NONE) {
+            console.log("[MessageHandler] Handling page selection");
+
+            // If we have model data, show the model editor
+            if (element.data) {
+                setState(prev => ({
+                    ...prev,
+                    currentComponentType: undefined,
+                    currentLucidId: element.id,
+                    isProcessing: false
+                }));
+
+                setEditor(
+                    React.createElement('div',
+                        { className: "flex flex-col h-full" },
+                        React.createElement(ModelTabs, {
+                            initialModel: element.data
+                        }),
+                        React.createElement('div',
+                            { className: "mt-4 border-t pt-4" },
+                            React.createElement(ModelUtilities, {
+                                showConvertButton: false,
+                                showValidateButton: true,
+                                showRemoveButton: true,
+                                showSimulateButton: true
+                            })
+                        )
+                    )
+                );
+            } else {
+                // If no model data, show the conversion utility
+                setEditor(React.createElement(ModelUtilities, {
+                    showConvertButton: true,
+                    showValidateButton: false,
+                    showRemoveButton: false,
+                    showSimulateButton: false
+                }));
+            }
+            return;
+        }
+
         // Check if this is an unconverted element
         if (data.selectionState?.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
             console.log("[MessageHandler] Handling unconverted element:", element.id);
@@ -102,6 +144,7 @@ export const messageHandlers = {
             );
             return;
         }
+
         // Handle converted elements 
         if (element.metadata?.type) {
             const componentType = typeMappers.mapSimulationTypeToComponentType(element.metadata.type);
