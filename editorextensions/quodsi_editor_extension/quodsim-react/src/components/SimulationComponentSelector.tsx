@@ -4,7 +4,7 @@ import { SimComponentTypes } from "@quodsi/shared";
 
 interface SimulationComponentSelectorProps {
   currentType?: SimComponentType;
-  elementId: string; // Add this
+  elementId: string;
   onTypeChange: (newType: SimComponentType, elementId: string) => void;
   disabled?: boolean;
 }

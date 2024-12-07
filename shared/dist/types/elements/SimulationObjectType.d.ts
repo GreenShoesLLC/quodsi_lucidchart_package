@@ -6,5 +6,6 @@ export declare enum SimulationObjectType {
     Resource = "Resource",
     Scenario = "Scenario",
     Experiment = "Experiment",
-    Model = "Model"
+    Model = "Model",
+    NONE = "None"
 }

@@ -18,6 +18,8 @@ export const typeMappers = {
                 return SimComponentType.RESOURCE;
             case SimulationObjectType.Model:
                 return SimComponentType.MODEL;
+            case SimulationObjectType.NONE:
+                return SimComponentType.NONE;
             default:
                 throw new Error(`Unknown simulation type: ${type}`);
         }
@@ -40,7 +42,7 @@ export const typeMappers = {
             case SimComponentType.MODEL:
                 return SimulationObjectType.Model;
             case SimComponentType.NONE:
-                return SimulationObjectType.Model;
+                return SimulationObjectType.NONE;
             default:
                 throw new Error(`Unknown component type: ${componentType}`);
         }

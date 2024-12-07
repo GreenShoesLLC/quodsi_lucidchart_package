@@ -615,6 +615,33 @@ export class ModelPanel extends Panel {
                 type: element instanceof BlockProxy ? 'Block' : 'Line'
             });
 
+            // Special handling for NONE type
+            if (updateData.type === SimulationObjectType.NONE) {
+                console.log('[ModelPanel] Handling NONE type - clearing element data');
+
+                // Remove from model manager if it exists
+                const existingElement = this.modelManager.getElementById(updateData.elementId);
+                if (existingElement) {
+                    this.modelManager.removeElement(updateData.elementId);
+                }
+
+                // Clear storage data
+                this.storageAdapter.clearElementData(element);
+
+                // Send success message
+                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
+                    elementId: updateData.elementId
+                });
+
+                // Force a selection update with the new state
+                const viewport = new Viewport(this.client);
+                const selectedItems = viewport.getSelectedItems();
+                this.handleSelectionChange(selectedItems);  // This will update the React app with the new selection state
+
+                return;
+            }
+
+            // Regular handling for other types continues below
             // First, ensure model manager is initialized
             if (!this.modelManager.getModel()) {
                 console.log('[ModelPanel] Initializing model manager');

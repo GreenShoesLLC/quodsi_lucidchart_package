@@ -12,20 +12,26 @@ interface SelectionContextProviderProps {
 export const SelectionContextProvider: React.FC<SelectionContextProviderProps> =
   React.memo(({ elementId, currentType, onTypeChange, disabled }) => {
     const handleTypeChange = useCallback(
-      (newType: SimComponentType, elementId: string) => {
+      (newType: SimComponentType | "NONE", elementId: string) => {
         console.log("[SelectionContext] Type change requested:", {
           elementId,
           from: currentType,
           to: newType,
         });
-        onTypeChange(newType, elementId);
+
+        if (newType === "NONE") {
+          // Handle "NONE" selection by using SimComponentType.NONE
+          onTypeChange(SimComponentType.NONE, elementId);
+        } else {
+          onTypeChange(newType, elementId);
+        }
       },
       [onTypeChange, currentType]
     );
 
     return React.createElement(SimulationComponentSelector, {
       currentType,
-      elementId, // Pass the elementId here
+      elementId,
       onTypeChange: handleTypeChange,
       disabled,
     });

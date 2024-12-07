@@ -1,15 +1,13 @@
 import React from "react";
-import { MessagePayloads, MessageTypes } from "@quodsi/shared";
+import { MessagePayloads, MessageTypes, SelectionType } from "@quodsi/shared";
 import { QuodsiAppState } from "../../QuodsiApp";
 import ModelUtilities from "../../components/ModelUtilities";
 import { ModelTabs } from "../../components/ModelTabs";
 import { SimulationComponentSelector } from "src/components/SimulationComponentSelector";
-import { createEmptyData } from "src/utils/emptyDataCreator";
 import { typeMappers } from "src/utils/typeMappers";
-import { SelectionType } from "@quodsi/shared";
 import { createEditorComponent } from "../editors/editorFactory";
 import { SimComponentType } from "@quodsi/shared";
-import { ModelDefinition } from "@quodsi/shared";
+
 
 
 export interface MessageHandlerDependencies {
@@ -79,6 +77,32 @@ export const messageHandlers = {
         const element = data.elementData[0];
         const { setState, setEditor } = deps;
 
+        // Check if this is an unconverted element
+        if (data.selectionState?.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
+            console.log("[MessageHandler] Handling unconverted element:", element.id);
+            setState(prev => ({
+                ...prev,
+                currentComponentType: undefined,
+                currentLucidId: element.id,
+                isProcessing: false
+            }));
+
+            // For unconverted elements, just show the selector
+            setEditor(
+                React.createElement(
+                    'div',
+                    { className: 'editor-container' },
+                    React.createElement(SimulationComponentSelector, {
+                        currentType: undefined,
+                        elementId: element.id,
+                        onTypeChange: deps.handleComponentTypeChange,
+                        disabled: false
+                    })
+                )
+            );
+            return;
+        }
+        // Handle converted elements 
         if (element.metadata?.type) {
             const componentType = typeMappers.mapSimulationTypeToComponentType(element.metadata.type);
             setState(prev => ({

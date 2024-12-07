@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { SimComponentType } from "@quodsi/shared";
+import { SelectionType, SimComponentType } from "@quodsi/shared";
 import {
   MessageTypes,
   MessagePayloads,
@@ -7,7 +7,6 @@ import {
 } from "@quodsi/shared";
 import { SimulationObjectType } from "@quodsi/shared";
 
-import { SimulationComponentSelector } from "./components/SimulationComponentSelector";
 import { StatusMonitor } from "./components/StatusMonitor";
 import { ErrorDisplay } from "./components/ui/ErrorDisplay";
 import { ProcessingIndicator } from "./components/ui/ProcessingIndicator";
@@ -24,6 +23,7 @@ export interface QuodsiAppState {
   isProcessing: boolean;
   currentLucidId: string;
   error: string | null;
+  selectionType?: SelectionType;
 }
 
 const QuodsiApp: React.FC = () => {
@@ -34,6 +34,7 @@ const QuodsiApp: React.FC = () => {
     isProcessing: false,
     currentLucidId: "",
     error: null,
+    selectionType: undefined,
   });
 
   const sendToParent = useCallback(
@@ -144,8 +145,27 @@ const QuodsiApp: React.FC = () => {
     setState((prev) => ({
       ...prev,
       isProcessing: true,
-      currentComponentType: newType,
+      currentComponentType:
+        newType === SimComponentType.NONE ? undefined : newType,
     }));
+
+    if (newType === SimComponentType.NONE) {
+      // Send a message to clear the element's Quodsi data
+      const elementData = {
+        elementId,
+        type: SimulationObjectType.NONE, // or undefined, depending on what your extension expects
+        data: {},
+      };
+
+      try {
+        sendToParent(MessageTypes.UPDATE_ELEMENT_DATA, elementData);
+        console.log("[QuodsiApp] Clear data message sent");
+      } catch (error) {
+        console.error("[QuodsiApp] Error sending clear data message:", error);
+        setState((prev) => ({ ...prev, isProcessing: false }));
+      }
+      return;
+    }
 
     const simulationType =
       typeMappers.mapComponentTypeToSimulationType(newType);
@@ -214,6 +234,27 @@ const QuodsiApp: React.FC = () => {
   };
 
   const setEditorForElement = (element: any) => {
+    // Special handling for unconverted elements
+    if (!element?.metadata?.type || element?.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
+      setState((prev) => ({
+        ...prev,
+        currentLucidId: element.id,
+        currentComponentType: undefined,
+        selectionType: SelectionType.UNCONVERTED_ELEMENT,
+      }));
+
+      setEditor(
+        React.createElement(SelectionContextProvider, {
+          elementId: element.id,
+          currentType: undefined,
+          onTypeChange: handleComponentTypeChange,
+          disabled: state.isProcessing,
+        })
+      );
+      return;
+    }
+
+    // Regular element handling
     if (!element?.id || !element?.metadata?.type || !element?.referenceData) {
       console.error("[QuodsiApp] Invalid element data:", element);
       return;
@@ -227,6 +268,7 @@ const QuodsiApp: React.FC = () => {
       ...prev,
       currentLucidId: element.id,
       currentComponentType: componentType,
+      selectionType: element.selectionType,
     }));
 
     const editorComponent = createEditorComponent(
@@ -237,7 +279,7 @@ const QuodsiApp: React.FC = () => {
         onCancel: handleCancel,
         onTypeChange: handleComponentTypeChange,
         elementId: element.id,
-        referenceData: element.referenceData, // Pass reference data instead of modelDefinition
+        referenceData: element.referenceData,
       },
       state.isProcessing
     );
