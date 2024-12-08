@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { SimulationObjectType } from "@quodsi/shared";
 
-// Define the minimum interface that T must satisfy
 interface BaseSimulationElement {
   id: string;
   type: SimulationObjectType;
@@ -27,7 +26,6 @@ const BaseEditor = <T extends BaseSimulationElement>({
   children,
   messageType,
 }: BaseEditorProps<T>) => {
-  // Ensure we keep the full data including type
   const [localData, setLocalData] = useState<T>(data);
 
   useEffect(() => {
@@ -50,10 +48,8 @@ const BaseEditor = <T extends BaseSimulationElement>({
 
   const handleSave = () => {
     console.log("BaseEditor handleSave:", localData);
-    // Preserve all data including type when saving
     onSave({
       ...localData,
-      // Ensure type is preserved from original data if not in localData
       type: localData.type || data.type,
     });
   };
@@ -64,16 +60,16 @@ const BaseEditor = <T extends BaseSimulationElement>({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="editor-form">
+    <form onSubmit={handleSubmit} className="quodsi-form">
       {children(localData, handleChange)}
-      <div className="editor-buttons">
-        <button type="submit" className="lucid-styling primary">
+      <div className="quodsi-button-group">
+        <button type="submit" className="quodsi-button quodsi-button-primary">
           Save
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="lucid-styling secondary"
+          className="quodsi-button quodsi-button-secondary"
         >
           Cancel
         </button>

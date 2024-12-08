@@ -1,7 +1,6 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Entity } from "@quodsi/shared";
-import { SimulationObjectType } from "@quodsi/shared";
+import { Entity, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   entity: Entity;
@@ -14,21 +13,23 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
     <BaseEditor
       data={{
         ...entity,
-        type: SimulationObjectType.Entity, // Explicitly include type
+        type: SimulationObjectType.Entity,
       }}
       onSave={onSave}
       onCancel={onCancel}
       messageType="entitySaved"
     >
       {(localEntity, handleChange) => (
-        <div className="editor-container">
-          <div className="editor-field">
-            <label htmlFor="name">Entity Name:</label>
+        <div>
+          <div className="quodsi-field">
+            <label htmlFor="name" className="quodsi-label">
+              Entity Name
+            </label>
             <input
               type="text"
               id="name"
               name="name"
-              className="lucid-styling"
+              className="quodsi-input"
               value={localEntity.name}
               onChange={handleChange}
             />

@@ -1,9 +1,6 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Model } from "@quodsi/shared";
-import { PeriodUnit } from "@quodsi/shared";
-import { SimulationTimeType } from "@quodsi/shared";
-import { SimulationObjectType } from "@quodsi/shared";
+import { Model, PeriodUnit, SimulationTimeType, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   model: Model;
@@ -20,186 +17,167 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
       messageType="modelSaved"
     >
       {(localModel, handleChange) => (
-        <div className="form-container">
-          <div className="form-group">
-            <label htmlFor="name">Name:</label>
+        <div>
+          <div className="quodsi-field">
+            <label htmlFor="name" className="quodsi-label">Name</label>
             <input
               type="text"
-              name="name"
               id="name"
-              className="lucid-styling"
+              name="name"
+              className="quodsi-input"
               value={localModel.name}
               onChange={handleChange}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="reps">Reps:</label>
+          <div className="quodsi-field">
+            <label htmlFor="reps" className="quodsi-label">Reps</label>
             <input
               type="number"
-              name="reps"
               id="reps"
-              className="lucid-styling"
+              name="reps"
+              className="quodsi-input"
               value={localModel.reps}
               onChange={handleChange}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="simulationTimeType">Simulation Time Type:</label>
+          <div className="quodsi-field">
+            <label htmlFor="simulationTimeType" className="quodsi-label">Simulation Time Type</label>
             <select
-              name="simulationTimeType"
               id="simulationTimeType"
-              className="lucid-styling"
+              name="simulationTimeType"
+              className="quodsi-select"
               value={localModel.simulationTimeType}
               onChange={handleChange}
             >
               {Object.values(SimulationTimeType).map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
+                <option key={type} value={type}>{type}</option>
               ))}
             </select>
           </div>
 
           {localModel.simulationTimeType === SimulationTimeType.Clock && (
-            <>
-              <div className="form-group">
-                <label htmlFor="runClockPeriod">Run Clock Period:</label>
+            <div className="quodsi-operation-step">
+              <div className="quodsi-field">
+                <label htmlFor="runClockPeriod" className="quodsi-label">Run Clock Period</label>
                 <input
                   type="number"
-                  name="runClockPeriod"
                   id="runClockPeriod"
-                  className="lucid-styling"
+                  name="runClockPeriod"
+                  className="quodsi-input"
                   value={localModel.runClockPeriod}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="runClockPeriodUnit">
-                  Run Clock Period Unit:
-                </label>
+              <div className="quodsi-field">
+                <label htmlFor="runClockPeriodUnit" className="quodsi-label">Run Clock Period Unit</label>
                 <select
-                  name="runClockPeriodUnit"
                   id="runClockPeriodUnit"
-                  className="lucid-styling"
+                  name="runClockPeriodUnit"
+                  className="quodsi-select"
                   value={localModel.runClockPeriodUnit}
                   onChange={handleChange}
                 >
                   {Object.values(PeriodUnit).map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
+                    <option key={unit} value={unit}>{unit}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="warmupClockPeriod">Warmup Clock Period:</label>
+              <div className="quodsi-field">
+                <label htmlFor="warmupClockPeriod" className="quodsi-label">Warmup Clock Period</label>
                 <input
                   type="number"
-                  name="warmupClockPeriod"
                   id="warmupClockPeriod"
-                  className="lucid-styling"
+                  name="warmupClockPeriod"
+                  className="quodsi-input"
                   value={localModel.warmupClockPeriod}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="warmupClockPeriodUnit">
-                  Warmup Clock Period Unit:
-                </label>
+              <div className="quodsi-field">
+                <label htmlFor="warmupClockPeriodUnit" className="quodsi-label">Warmup Clock Period Unit</label>
                 <select
-                  name="warmupClockPeriodUnit"
                   id="warmupClockPeriodUnit"
-                  className="lucid-styling"
+                  name="warmupClockPeriodUnit"
+                  className="quodsi-select"
                   value={localModel.warmupClockPeriodUnit}
                   onChange={handleChange}
                 >
                   {Object.values(PeriodUnit).map((unit) => (
-                    <option key={unit} value={unit}>
-                      {unit}
-                    </option>
+                    <option key={unit} value={unit}>{unit}</option>
                   ))}
                 </select>
               </div>
-            </>
+            </div>
           )}
 
-          {localModel.simulationTimeType ===
-            SimulationTimeType.CalendarDate && (
-            <>
-              <div className="form-group">
-                <label htmlFor="warmupDateTime">Warmup Date Time:</label>
+          {localModel.simulationTimeType === SimulationTimeType.CalendarDate && (
+            <div className="quodsi-operation-step">
+              <div className="quodsi-field">
+                <label htmlFor="warmupDateTime" className="quodsi-label">Warmup Date Time</label>
                 <input
                   type="datetime-local"
-                  name="warmupDateTime"
                   id="warmupDateTime"
-                  className="lucid-styling"
-                  value={
-                    localModel.warmupDateTime?.toISOString().slice(0, 16) || ""
-                  }
+                  name="warmupDateTime"
+                  className="quodsi-input"
+                  value={localModel.warmupDateTime?.toISOString().slice(0, 16) || ""}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="startDateTime">Start Date Time:</label>
+              <div className="quodsi-field">
+                <label htmlFor="startDateTime" className="quodsi-label">Start Date Time</label>
                 <input
                   type="datetime-local"
-                  name="startDateTime"
                   id="startDateTime"
-                  className="lucid-styling"
-                  value={
-                    localModel.startDateTime?.toISOString().slice(0, 16) || ""
-                  }
+                  name="startDateTime"
+                  className="quodsi-input"
+                  value={localModel.startDateTime?.toISOString().slice(0, 16) || ""}
                   onChange={handleChange}
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="finishDateTime">Finish Date Time:</label>
+              <div className="quodsi-field">
+                <label htmlFor="finishDateTime" className="quodsi-label">Finish Date Time</label>
                 <input
                   type="datetime-local"
-                  name="finishDateTime"
                   id="finishDateTime"
-                  className="lucid-styling"
-                  value={
-                    localModel.finishDateTime?.toISOString().slice(0, 16) || ""
-                  }
+                  name="finishDateTime"
+                  className="quodsi-input"
+                  value={localModel.finishDateTime?.toISOString().slice(0, 16) || ""}
                   onChange={handleChange}
                 />
               </div>
-            </>
+            </div>
           )}
 
-          <div className="form-group">
-            <label htmlFor="seed">Seed:</label>
+          <div className="quodsi-field">
+            <label htmlFor="seed" className="quodsi-label">Seed</label>
             <input
               type="number"
-              name="seed"
               id="seed"
-              className="lucid-styling"
+              name="seed"
+              className="quodsi-input"
               value={localModel.seed}
               onChange={handleChange}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="oneClockUnit">One Clock Unit:</label>
+          <div className="quodsi-field">
+            <label htmlFor="oneClockUnit" className="quodsi-label">One Clock Unit</label>
             <select
-              name="oneClockUnit"
               id="oneClockUnit"
-              className="lucid-styling"
+              name="oneClockUnit"
+              className="quodsi-select"
               value={localModel.oneClockUnit}
               onChange={handleChange}
             >
               {Object.values(PeriodUnit).map((unit) => (
-                <option key={unit} value={unit}>
-                  {unit}
-                </option>
+                <option key={unit} value={unit}>{unit}</option>
               ))}
             </select>
           </div>

@@ -1,8 +1,6 @@
-// Update ResourceEditor.tsx
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Resource } from "@quodsi/shared";
-import { SimulationObjectType } from "@quodsi/shared";
+import { Resource, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   resource: Resource;
@@ -19,26 +17,30 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
       messageType="resourceSaved"
     >
       {(localResource, handleChange) => (
-        <div className="editor-container">
-          <div className="editor-field">
-            <label htmlFor="name">Name:</label>
+        <div>
+          <div className="quodsi-field">
+            <label htmlFor="name" className="quodsi-label">
+              Name
+            </label>
             <input
               type="text"
               id="name"
               name="name"
-              className="lucid-styling"
+              className="quodsi-input"
               value={localResource.name}
               onChange={handleChange}
             />
           </div>
 
-          <div className="editor-field">
-            <label htmlFor="capacity">Capacity:</label>
+          <div className="quodsi-field">
+            <label htmlFor="capacity" className="quodsi-label">
+              Capacity
+            </label>
             <input
               type="number"
               id="capacity"
               name="capacity"
-              className="lucid-styling"
+              className="quodsi-input"
               value={localResource.capacity}
               onChange={handleChange}
             />

@@ -130,48 +130,47 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
       messageType="activitySaved"
     >
       {(localData, handleChange) => (
-        <div className="space-y-4">
-          <div className="form-field">
-            <label htmlFor="name" className="block text-sm font-medium">
-              Name:
+        <div className="quodsi-form">
+          <div className="quodsi-field">
+            <label htmlFor="name" className="quodsi-label">
+              Name
             </label>
             <input
               type="text"
               id="name"
               name="name"
-              className="lucid-styling w-full"
+              className="quodsi-input"
               value={localData.name}
               onChange={handleChange}
+              placeholder="Enter activity name"
             />
           </div>
 
-          <div className="form-field">
-            <label htmlFor="capacity" className="block text-sm font-medium">
-              Capacity:
+          <div className="quodsi-field">
+            <label htmlFor="capacity" className="quodsi-label">
+              Capacity
             </label>
             <input
               type="number"
               id="capacity"
               name="capacity"
-              className="lucid-styling w-full"
+              className="quodsi-input"
               value={localData.capacity}
               onChange={handleChange}
               min="1"
+              placeholder="Enter capacity"
             />
           </div>
 
-          <div className="form-field">
-            <label
-              htmlFor="inputBufferCapacity"
-              className="block text-sm font-medium"
-            >
-              Input Buffer Capacity:
+          <div className="quodsi-field">
+            <label htmlFor="inputBufferCapacity" className="quodsi-label">
+              Input Buffer Capacity
             </label>
             <input
               type="number"
               id="inputBufferCapacity"
               name="inputBufferCapacity"
-              className="lucid-styling w-full"
+              className="quodsi-input"
               value={
                 localData.inputBufferCapacity === Infinity
                   ? 999999
@@ -180,21 +179,19 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
               onChange={handleChange}
               min="0"
               max="999999"
+              placeholder="Enter input buffer capacity"
             />
           </div>
 
-          <div className="form-field">
-            <label
-              htmlFor="outputBufferCapacity"
-              className="block text-sm font-medium"
-            >
-              Output Buffer Capacity:
+          <div className="quodsi-field">
+            <label htmlFor="outputBufferCapacity" className="quodsi-label">
+              Output Buffer Capacity
             </label>
             <input
               type="number"
               id="outputBufferCapacity"
               name="outputBufferCapacity"
-              className="lucid-styling w-full"
+              className="quodsi-input"
               value={
                 localData.outputBufferCapacity === Infinity
                   ? 999999
@@ -203,37 +200,35 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
               onChange={handleChange}
               min="0"
               max="999999"
+              placeholder="Enter output buffer capacity"
             />
           </div>
 
-          {/* Bringing back the Operation Steps section */}
-          <div className="form-field">
-            <label className="block text-sm font-medium">
-              Operation Steps:
-            </label>
-            <button
-              type="button"
-              className="lucid-styling tertiary mt-2"
-              onClick={handleAddOperationStep}
-            >
-              Add Operation Step
-            </button>
-            {localData.operationSteps.map((step, index) => (
-              <div
-                key={index}
-                className="editor-operation-step mt-4 p-2 border rounded-md"
+          <div className="quodsi-field">
+            <div className="quodsi-operation-step-header">
+              <label className="quodsi-label">Operation Steps</label>
+              <button
+                type="button"
+                className="quodsi-button quodsi-button-primary"
+                onClick={handleAddOperationStep}
               >
-                <div className="form-field">
+                Add Operation Step
+              </button>
+            </div>
+
+            {localData.operationSteps.map((step, index) => (
+              <div key={index} className="quodsi-operation-step">
+                <div className="quodsi-field">
                   <label
                     htmlFor={`durationLength-${index}`}
-                    className="block text-sm font-medium"
+                    className="quodsi-label"
                   >
-                    Duration Length:
+                    Duration Length
                   </label>
                   <input
                     type="number"
                     id={`durationLength-${index}`}
-                    className="lucid-styling w-full"
+                    className="quodsi-input"
                     value={step.duration.durationLength}
                     onChange={(e) =>
                       handleOperationStepChange(index, "duration", {
@@ -241,18 +236,20 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
                         durationLength: parseFloat(e.target.value),
                       })
                     }
+                    placeholder="Enter duration length"
                   />
                 </div>
-                <div className="form-field">
+
+                <div className="quodsi-field">
                   <label
                     htmlFor={`durationPeriodUnit-${index}`}
-                    className="block text-sm font-medium"
+                    className="quodsi-label"
                   >
-                    Duration Period Unit:
+                    Duration Period Unit
                   </label>
                   <select
                     id={`durationPeriodUnit-${index}`}
-                    className="lucid-styling w-full"
+                    className="quodsi-select"
                     value={step.duration.durationPeriodUnit}
                     onChange={(e) =>
                       handleOperationStepChange(index, "duration", {
@@ -268,16 +265,17 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
                     ))}
                   </select>
                 </div>
-                <div className="form-field">
+
+                <div className="quodsi-field">
                   <label
                     htmlFor={`durationType-${index}`}
-                    className="block text-sm font-medium"
+                    className="quodsi-label"
                   >
-                    Duration Type:
+                    Duration Type
                   </label>
                   <select
                     id={`durationType-${index}`}
-                    className="lucid-styling w-full"
+                    className="quodsi-select"
                     value={step.duration.durationType}
                     onChange={(e) =>
                       handleOperationStepChange(index, "duration", {
@@ -293,12 +291,13 @@ const ActivityEditor: React.FC<Props> = ({ activity, onSave, onCancel }) => {
                     ))}
                   </select>
                 </div>
+
                 <button
                   type="button"
-                  className="lucid-styling secondary mt-2"
+                  className="quodsi-button quodsi-button-danger"
                   onClick={() => handleRemoveOperationStep(index)}
                 >
-                  Remove
+                  Remove Step
                 </button>
               </div>
             ))}

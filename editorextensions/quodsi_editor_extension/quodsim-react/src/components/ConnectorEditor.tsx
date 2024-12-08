@@ -1,8 +1,6 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import { Connector } from "@quodsi/shared";
-import { ConnectType } from "@quodsi/shared";
-import { SimulationObjectType } from "@quodsi/shared";
+import { Connector, ConnectType, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   connector: Connector;
@@ -19,26 +17,30 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
       messageType="connectorSaved"
     >
       {(localConnector, handleChange) => (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label htmlFor="name">Name:</label>
+        <div>
+          <div className="quodsi-field">
+            <label htmlFor="name" className="quodsi-label">
+              Name
+            </label>
             <input
               type="text"
               id="name"
               name="name"
-              className="lucid-styling"
+              className="quodsi-input"
               value={localConnector.name}
               onChange={handleChange}
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label htmlFor="probability">Probability:</label>
+          <div className="quodsi-field">
+            <label htmlFor="probability" className="quodsi-label">
+              Probability
+            </label>
             <input
               type="number"
               id="probability"
               name="probability"
-              className="lucid-styling"
+              className="quodsi-input"
               value={localConnector.probability}
               onChange={handleChange}
               step="0.01"
@@ -47,12 +49,14 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
             />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label htmlFor="connectType">Connect Type:</label>
+          <div className="quodsi-field">
+            <label htmlFor="connectType" className="quodsi-label">
+              Connect Type
+            </label>
             <select
               id="connectType"
               name="connectType"
-              className="lucid-styling"
+              className="quodsi-select"
               value={localConnector.connectType}
               onChange={handleChange}
             >

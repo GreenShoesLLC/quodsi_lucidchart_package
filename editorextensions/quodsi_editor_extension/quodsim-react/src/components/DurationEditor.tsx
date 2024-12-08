@@ -1,12 +1,9 @@
 import React from "react";
-import { DurationType } from "@quodsi/shared";
-import { PeriodUnit } from "@quodsi/shared";
-import { Duration } from "@quodsi/shared";
+import { DurationType, PeriodUnit, Duration } from "@quodsi/shared";
 
 interface Props {
   duration: Duration;
   onChange: (updatedDuration: Duration) => void;
-  // Add optional label props with defaults
   lengthLabel?: string;
   periodUnitLabel?: string;
   durationTypeLabel?: string;
@@ -15,7 +12,6 @@ interface Props {
 const DurationEditor: React.FC<Props> = ({
   duration,
   onChange,
-  // Default labels if not provided
   lengthLabel = "Duration Length",
   periodUnitLabel = "Duration Period Unit",
   durationTypeLabel = "Duration Type",
@@ -40,26 +36,30 @@ const DurationEditor: React.FC<Props> = ({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationLength">{lengthLabel}:</label>
+    <div className="quodsi-field">
+      <div className="quodsi-field">
+        <label htmlFor="durationLength" className="quodsi-label">
+          {lengthLabel}
+        </label>
         <input
           type="number"
           id="durationLength"
           name="durationLength"
-          className="lucid-styling"
+          className="quodsi-input"
           value={duration.durationLength}
           onChange={handleChange}
           min="0"
         />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationPeriodUnit">{periodUnitLabel}:</label>
+      <div className="quodsi-field">
+        <label htmlFor="durationPeriodUnit" className="quodsi-label">
+          {periodUnitLabel}
+        </label>
         <select
           id="durationPeriodUnit"
           name="durationPeriodUnit"
-          className="lucid-styling"
+          className="quodsi-select"
           value={duration.durationPeriodUnit}
           onChange={handleChange}
         >
@@ -71,12 +71,14 @@ const DurationEditor: React.FC<Props> = ({
         </select>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <label htmlFor="durationType">{durationTypeLabel}:</label>
+      <div className="quodsi-field">
+        <label htmlFor="durationType" className="quodsi-label">
+          {durationTypeLabel}
+        </label>
         <select
           id="durationType"
           name="durationType"
-          className="lucid-styling"
+          className="quodsi-select"
           value={duration.durationType}
           onChange={handleChange}
         >

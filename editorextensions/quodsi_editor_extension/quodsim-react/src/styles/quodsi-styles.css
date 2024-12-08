@@ -1,0 +1,138 @@
+/* Base form styling */
+.quodsi-form {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+/* Form field container */
+.quodsi-field {
+  margin-bottom: 1rem;
+}
+
+/* Labels */
+.quodsi-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+}
+
+/* Inputs and Selects */
+.quodsi-input,
+.quodsi-select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #111827;
+  background-color: white;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.quodsi-input:focus,
+.quodsi-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Number inputs */
+.quodsi-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.quodsi-input[type="number"]::-webkit-outer-spin-button,
+.quodsi-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Buttons */
+.quodsi-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.quodsi-button-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+}
+
+.quodsi-button-primary:hover {
+  background-color: #2563eb;
+}
+
+.quodsi-button-secondary {
+  background-color: white;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+
+.quodsi-button-secondary:hover {
+  background-color: #f3f4f6;
+}
+
+.quodsi-button-danger {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.quodsi-button-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Operation Steps */
+.quodsi-operation-step {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.quodsi-operation-step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+/* Button groups */
+.quodsi-button-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Invalid state */
+.quodsi-input-invalid {
+  border-color: #ef4444;
+}
+
+.quodsi-error-message {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Loading state */
+.quodsi-input-loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

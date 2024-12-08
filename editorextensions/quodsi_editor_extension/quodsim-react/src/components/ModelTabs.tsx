@@ -3,8 +3,7 @@ import ModelEditor from "./ModelEditor";
 import ExperimentEditor from "./ExperimentEditor";
 import { OutputViewer } from "./OutputViewer";
 import ModelUtilities from "./ModelUtilities";
-import { Model } from "@quodsi/shared";
-import { ModelUtils } from "@quodsi/shared";
+import { Model, ModelUtils } from "@quodsi/shared";
 
 type TabType = "model" | "experiments" | "output" | "utilities";
 
@@ -21,9 +20,6 @@ export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
   const handleModelSave = (updatedModel: Model) => {
     const validatedModel = ModelUtils.validate(updatedModel);
     setModel(validatedModel);
-    console.log("Model saved:", validatedModel);
-
-    // Send the saved model data to the parent iframe
     window.parent.postMessage(
       {
         messagetype: "modelSaved",
@@ -34,7 +30,6 @@ export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
   };
 
   const handleModelCancel = () => {
-    // Handle cancellation, e.g., reset the model to its original state
     console.log("Model editing cancelled");
   };
 
@@ -67,36 +62,36 @@ export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
   };
 
   return (
-    <div>
-      <div>
+    <div className="quodsi-form">
+      <div className="quodsi-button-group">
         <button
           onClick={() => setActiveTab("model")}
-          style={{ fontWeight: activeTab === "model" ? "bold" : "normal" }}
+          className={`quodsi-button ${activeTab === "model" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
         >
           Model
         </button>
         <button
           onClick={() => setActiveTab("experiments")}
-          style={{
-            fontWeight: activeTab === "experiments" ? "bold" : "normal",
-          }}
+          className={`quodsi-button ${activeTab === "experiments" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
         >
           Experiments
         </button>
         <button
           onClick={() => setActiveTab("output")}
-          style={{ fontWeight: activeTab === "output" ? "bold" : "normal" }}
+          className={`quodsi-button ${activeTab === "output" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
         >
           Output
         </button>
         <button
           onClick={() => setActiveTab("utilities")}
-          style={{ fontWeight: activeTab === "utilities" ? "bold" : "normal" }}
+          className={`quodsi-button ${activeTab === "utilities" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
         >
           Utilities
         </button>
       </div>
-      <div>{renderTabContent()}</div>
+      <div className="quodsi-field">
+        {renderTabContent()}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './styles/quodsi-styles.css';  
 import reportWebVitals from './reportWebVitals';
 import QuodsiApp from './QuodsiApp';
 

@@ -1,8 +1,5 @@
-// OperationStepEditor.tsx
 import React from "react";
-import { DurationType } from "@quodsi/shared";
-import { PeriodUnit } from "@quodsi/shared";
-import { OperationStep } from "@quodsi/shared";
+import { DurationType, PeriodUnit, OperationStep } from "@quodsi/shared";
 
 interface OperationStepEditorProps {
   operationSteps: OperationStep[];
@@ -39,22 +36,28 @@ const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   };
 
   return (
-    <div className="operation-steps-container">
-      <button
-        type="button"
-        className="lucid-styling tertiary"
-        onClick={handleAddStep}
-      >
-        Add Operation Step
-      </button>
+    <div className="quodsi-field">
+      <div className="quodsi-operation-step-header">
+        <h3 className="quodsi-label">Operation Steps</h3>
+        <button
+          type="button"
+          className="quodsi-button quodsi-button-primary"
+          onClick={handleAddStep}
+        >
+          Add Operation Step
+        </button>
+      </div>
+      
       {operationSteps.map((step, index) => (
-        <div key={index} className="editor-operation-step">
-          <div className="editor-field">
-            <label htmlFor={`durationLength-${index}`}>Duration Length:</label>
+        <div key={index} className="quodsi-operation-step">
+          <div className="quodsi-field">
+            <label htmlFor={`durationLength-${index}`} className="quodsi-label">
+              Duration Length
+            </label>
             <input
               type="number"
               id={`durationLength-${index}`}
-              className="lucid-styling"
+              className="quodsi-input"
               value={step.duration.durationLength}
               onChange={(e) =>
                 handleStepChange(index, "duration", {
@@ -64,13 +67,14 @@ const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
               }
             />
           </div>
-          <div className="editor-field">
-            <label htmlFor={`durationPeriodUnit-${index}`}>
-              Duration Period Unit:
+
+          <div className="quodsi-field">
+            <label htmlFor={`durationPeriodUnit-${index}`} className="quodsi-label">
+              Duration Period Unit
             </label>
             <select
               id={`durationPeriodUnit-${index}`}
-              className="lucid-styling"
+              className="quodsi-select"
               value={step.duration.durationPeriodUnit}
               onChange={(e) =>
                 handleStepChange(index, "duration", {
@@ -86,11 +90,14 @@ const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
               ))}
             </select>
           </div>
-          <div className="editor-field">
-            <label htmlFor={`durationType-${index}`}>Duration Type:</label>
+
+          <div className="quodsi-field">
+            <label htmlFor={`durationType-${index}`} className="quodsi-label">
+              Duration Type
+            </label>
             <select
               id={`durationType-${index}`}
-              className="lucid-styling"
+              className="quodsi-select"
               value={step.duration.durationType}
               onChange={(e) =>
                 handleStepChange(index, "duration", {
@@ -106,12 +113,13 @@ const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
               ))}
             </select>
           </div>
+
           <button
             type="button"
-            className="lucid-styling secondary"
+            className="quodsi-button quodsi-button-danger"
             onClick={() => handleRemoveStep(index)}
           >
-            Remove
+            Remove Step
           </button>
         </div>
       ))}
