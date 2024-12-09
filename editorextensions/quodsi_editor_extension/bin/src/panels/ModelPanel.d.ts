@@ -5,8 +5,30 @@ export declare class ModelPanel extends Panel {
     private reactAppReady;
     private storageAdapter;
     private conversionService;
+    private expandedNodes;
+    private currentModelStructure?;
     private currentSelection;
     constructor(client: EditorClient, modelManager: ModelManager);
+    /**
+     * Updates the model structure based on current model data
+     */
+    private updateModelStructure;
+    /**
+     * Handles tree node expansion state changes
+     */
+    private handleTreeNodeToggle;
+    /**
+     * Handles bulk tree state updates
+     */
+    private handleTreeStateUpdate;
+    /**
+     * Expands the path to a specific node
+     */
+    private handleExpandPath;
+    /**
+     * Sends current tree state to React app
+     */
+    private sendTreeStateUpdate;
     private initializeModelManager;
     /**
      * Shows the panel

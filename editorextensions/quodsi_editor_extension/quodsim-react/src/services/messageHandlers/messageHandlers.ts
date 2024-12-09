@@ -1,17 +1,18 @@
 import React from "react";
 import { MessagePayloads, MessageTypes, SelectionType } from "@quodsi/shared";
-import { QuodsiAppState } from "../../QuodsiApp";
+import { AppState } from "../../QuodsiApp";
 import ModelUtilities from "../../components/ModelUtilities";
 import { ModelTabs } from "../../components/ModelTabs";
 import { SimulationComponentSelector } from "src/components/SimulationComponentSelector";
 import { typeMappers } from "src/utils/typeMappers";
 import { createEditorComponent } from "../editors/editorFactory";
 import { SimComponentType } from "@quodsi/shared";
+import { QuodsiAppStateV1 } from "src/QuodsiAppV1";
 
 
 
 export interface MessageHandlerDependencies {
-    setState: React.Dispatch<React.SetStateAction<QuodsiAppState>>;
+    setState: React.Dispatch<React.SetStateAction<QuodsiAppStateV1>>;
     setEditor: (editor: JSX.Element | null) => void;
     setEditorForElement: (element: any) => void;
     setError: (error: string | null) => void;

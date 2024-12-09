@@ -22,6 +22,7 @@ export interface StorageFormat<T = any> {
 export class StorageAdapter {
     private static readonly DATA_KEY = 'q_data';
     private static readonly META_KEY = 'q_meta';
+    private static readonly EXPANDED_NODES_KEY = 'q_expanded_nodes';
     private static readonly CURRENT_VERSION = '1.0.0';
 
     /**
@@ -37,6 +38,48 @@ export class StorageAdapter {
         }
     }
 
+    /**
+  * Gets the expanded nodes state for a page
+  */
+    public getExpandedNodes(page: ElementProxy): string[] {
+        try {
+            const expandedNodesStr = page.shapeData.get(StorageAdapter.EXPANDED_NODES_KEY);
+            if (!expandedNodesStr || typeof expandedNodesStr !== 'string') {
+                return [];
+            }
+            return JSON.parse(expandedNodesStr);
+        } catch (error) {
+            console.error('[StorageAdapter] Error getting expanded nodes:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Sets the expanded nodes state for a page
+     */
+    public setExpandedNodes(page: ElementProxy, nodeIds: string[]): void {
+        try {
+            const serializedNodes = JSON.stringify(nodeIds);
+            page.shapeData.set(StorageAdapter.EXPANDED_NODES_KEY, serializedNodes);
+            console.log('[StorageAdapter] Successfully set expanded nodes:', nodeIds);
+        } catch (error) {
+            console.error('[StorageAdapter] Error setting expanded nodes:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Clears the expanded nodes state for a page
+     */
+    public clearExpandedNodes(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.EXPANDED_NODES_KEY);
+            console.log('[StorageAdapter] Successfully cleared expanded nodes');
+        } catch (error) {
+            console.error('[StorageAdapter] Error clearing expanded nodes:', error);
+            throw error;
+        }
+    }
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */

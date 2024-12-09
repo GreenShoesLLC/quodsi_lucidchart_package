@@ -47,3 +47,8 @@ export * from './types/elements/SimulationTimeType';
 
 export * from './factories/SimulationObjectTypeFactory';
 
+export * from './types/accordion/ModelElement';
+export * from './types/accordion/ModelStructure';
+export * from './types/accordion/ValidationState';
+export * from './types/accordion/AccordionState';
+

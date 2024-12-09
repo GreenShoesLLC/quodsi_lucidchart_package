@@ -44,4 +44,8 @@ export * from './types/elements/SimulationObject';
 export * from './types/elements/SimulationObjectType';
 export * from './types/elements/SimulationTimeType';
 export * from './factories/SimulationObjectTypeFactory';
+export * from './types/accordion/ModelElement';
+export * from './types/accordion/ModelStructure';
+export * from './types/accordion/ValidationState';
+export * from './types/accordion/AccordionState';
 //# sourceMappingURL=index.d.ts.map

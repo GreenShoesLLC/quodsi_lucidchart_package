@@ -35,6 +35,11 @@ var MessageTypes;
     MessageTypes["ENTITY_SAVED"] = "entitySaved";
     MessageTypes["GENERATOR_SAVED"] = "generatorSaved";
     MessageTypes["RESOURCE_SAVED"] = "resourceSaved";
+    // Tree View State Management
+    MessageTypes["TREE_STATE_UPDATE"] = "treeStateUpdate";
+    MessageTypes["TREE_NODE_TOGGLE"] = "treeNodeToggle";
+    MessageTypes["TREE_NODE_EXPAND_PATH"] = "treeNodeExpandPath";
+    MessageTypes["TREE_STATE_SYNC"] = "treeStateSync";
 })(MessageTypes = exports.MessageTypes || (exports.MessageTypes = {}));
 /**
  * Type-safe message creator function

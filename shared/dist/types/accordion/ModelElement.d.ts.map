@@ -1,0 +1,1 @@
+{"version":3,"file":"ModelElement.d.ts","sourceRoot":"","sources":["../../../src/types/accordion/ModelElement.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,kCAAkC,CAAC;AAExE,MAAM,WAAW,YAAY;IACzB,EAAE,EAAE,MAAM,CAAC;IACX,IAAI,EAAE,MAAM,CAAC;IACb,IAAI,EAAE,oBAAoB,CAAC;IAC3B,WAAW,EAAE,OAAO,CAAC;IACrB,QAAQ,CAAC,EAAE,YAAY,EAAE,CAAC;CAC7B"}

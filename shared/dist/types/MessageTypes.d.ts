@@ -2,6 +2,7 @@ import { EditorReferenceData } from './EditorReferenceData';
 import { SimulationObjectType } from './elements/SimulationObjectType';
 import { SelectionState } from './SelectionState';
 import { ValidationResult } from './ValidationTypes';
+import { ModelStructure } from './accordion/ModelStructure';
 export declare enum MessageTypes {
     REACT_APP_READY = "reactAppReady",
     INITIAL_STATE = "initialState",
@@ -26,7 +27,11 @@ export declare enum MessageTypes {
     CONNECTOR_SAVED = "connectorSaved",
     ENTITY_SAVED = "entitySaved",
     GENERATOR_SAVED = "generatorSaved",
-    RESOURCE_SAVED = "resourceSaved"
+    RESOURCE_SAVED = "resourceSaved",
+    TREE_STATE_UPDATE = "treeStateUpdate",
+    TREE_NODE_TOGGLE = "treeNodeToggle",
+    TREE_NODE_EXPAND_PATH = "treeNodeExpandPath",
+    TREE_STATE_SYNC = "treeStateSync"
 }
 /**
  * Message payload type definitions
@@ -40,10 +45,14 @@ export interface MessagePayloads {
         canConvert: boolean;
         modelData: any | null;
         selectionState: SelectionState;
+        modelStructure?: ModelStructure;
+        expandedNodes?: string[];
     };
     [MessageTypes.SELECTION_CHANGED]: {
         selectionState: SelectionState;
         elementData?: any[];
+        modelStructure?: ModelStructure;
+        expandedNodes?: string[];
     };
     [MessageTypes.CONVERT_PAGE]: undefined;
     [MessageTypes.CONVERSION_STARTED]: undefined;
@@ -113,6 +122,23 @@ export interface MessagePayloads {
     [MessageTypes.RESOURCE_SAVED]: {
         elementId: string;
         data: any;
+    };
+    [MessageTypes.TREE_STATE_UPDATE]: {
+        expandedNodes: string[];
+        pageId: string;
+    };
+    [MessageTypes.TREE_NODE_TOGGLE]: {
+        nodeId: string;
+        expanded: boolean;
+        pageId: string;
+    };
+    [MessageTypes.TREE_NODE_EXPAND_PATH]: {
+        nodeId: string;
+        pageId: string;
+    };
+    [MessageTypes.TREE_STATE_SYNC]: {
+        expandedNodes: string[];
+        pageId: string;
     };
 }
 /**

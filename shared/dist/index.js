@@ -60,3 +60,7 @@ __exportStar(require("./types/elements/SimulationObject"), exports);
 __exportStar(require("./types/elements/SimulationObjectType"), exports);
 __exportStar(require("./types/elements/SimulationTimeType"), exports);
 __exportStar(require("./factories/SimulationObjectTypeFactory"), exports);
+__exportStar(require("./types/accordion/ModelElement"), exports);
+__exportStar(require("./types/accordion/ModelStructure"), exports);
+__exportStar(require("./types/accordion/ValidationState"), exports);
+__exportStar(require("./types/accordion/AccordionState"), exports);

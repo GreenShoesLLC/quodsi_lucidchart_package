@@ -13,7 +13,7 @@ import {
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { MessagePayloads, MessageTypes, isValidMessage } from '@quodsi/shared';
+import { MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
 
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
@@ -26,6 +26,7 @@ import { SimulationObjectType } from '@quodsi/shared';
 import { SimulationElementFactory } from '@quodsi/shared';
 import { SelectionState } from '@quodsi/shared';
 import { EditorReferenceData } from '@quodsi/shared';
+import { ModelStructureBuilder } from '../services/accordion/ModelStructureBuilder';
 
 
 /**
@@ -45,6 +46,8 @@ export class ModelPanel extends Panel {
     private reactAppReady: boolean = false;
     private storageAdapter: StorageAdapter;
     private conversionService: ConversionService;
+    private expandedNodes: Set<string> = new Set();
+    private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
         pageId: '',
         selectedIds: [],
@@ -63,16 +66,91 @@ export class ModelPanel extends Panel {
             width: 300
         });
 
-        // Initialize storage adapter first
         this.storageAdapter = new StorageAdapter();
-
-        // Create ConversionService with both required dependencies
         this.conversionService = new ConversionService(this.modelManager, this.storageAdapter);
-
         this.initializeModelManager();
 
         console.log('[ModelPanel] Initialized');
     }
+
+    /**
+     * Updates the model structure based on current model data
+     */
+    private updateModelStructure(): void {
+        const modelData = this.modelManager.getModelDefinition();
+        if (modelData) {
+            this.currentModelStructure = ModelStructureBuilder.buildModelStructure(modelData);
+            console.log('[ModelPanel] Model structure updated:', this.currentModelStructure);
+        } else {
+            this.currentModelStructure = undefined;
+        }
+    }
+
+    /**
+     * Handles tree node expansion state changes
+     */
+    private handleTreeNodeToggle(nodeId: string, expanded: boolean): void {
+        if (expanded) {
+            this.expandedNodes.add(nodeId);
+        } else {
+            this.expandedNodes.delete(nodeId);
+        }
+
+        this.sendTreeStateUpdate();
+    }
+
+    /**
+     * Handles bulk tree state updates
+     */
+    private handleTreeStateUpdate(expandedNodes: string[]): void {
+        this.expandedNodes = new Set(expandedNodes);
+        this.sendTreeStateUpdate();
+    }
+
+    /**
+     * Expands the path to a specific node
+     */
+    private handleExpandPath(nodeId: string): void {
+        if (!this.currentModelStructure) return;
+
+        const findPathToNode = (elements: ModelElement[], targetId: string, path: Set<string>): boolean => {
+            for (const element of elements) {
+                if (element.id === targetId) {
+                    return true;
+                }
+                if (element.children?.length) {
+                    if (findPathToNode(element.children, targetId, path)) {
+                        path.add(element.id);
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        const pathNodes = new Set<string>();
+        findPathToNode(this.currentModelStructure.elements, nodeId, pathNodes);
+
+        // Add all nodes in path to expanded set
+        pathNodes.forEach(id => this.expandedNodes.add(id));
+        this.sendTreeStateUpdate();
+    }
+
+    /**
+     * Sends current tree state to React app
+     */
+    private sendTreeStateUpdate(): void {
+        const viewport = new Viewport(this.client);
+        const currentPage = viewport.getCurrentPage();
+        if (!currentPage) return;
+
+        this.sendTypedMessage(MessageTypes.TREE_STATE_SYNC, {
+            expandedNodes: Array.from(this.expandedNodes),
+            pageId: currentPage.id
+        });
+    }
+
+
 
     private initializeModelManager(): void {
         const viewport = new Viewport(this.client);
@@ -201,6 +279,7 @@ export class ModelPanel extends Panel {
             return;
         }
 
+        this.updateModelStructure();
         // Update current selection state
         this.updateSelectionState(currentPage, items);
 
@@ -245,7 +324,9 @@ export class ModelPanel extends Panel {
             // Send selection update with element data
             this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
                 selectionState: this.currentSelection,
-                elementData: elementData
+                elementData: elementData,
+                modelStructure: this.currentModelStructure,
+                expandedNodes: Array.from(this.expandedNodes)
             });
 
             console.log('[ModelPanel] Selection update sent:', {
@@ -379,7 +460,18 @@ export class ModelPanel extends Panel {
                 case MessageTypes.MODEL_SAVED:
                     this.handleModelSaved(message.data);
                     break;
+                case MessageTypes.TREE_NODE_TOGGLE:
+                    const { nodeId, expanded } = message.data;
+                    this.handleTreeNodeToggle(nodeId, expanded);
+                    break;
 
+                case MessageTypes.TREE_STATE_UPDATE:
+                    this.handleTreeStateUpdate(message.data.expandedNodes);
+                    break;
+
+                case MessageTypes.TREE_NODE_EXPAND_PATH:
+                    this.handleExpandPath(message.data.nodeId);
+                    break;
                 case MessageTypes.ACTIVITY_SAVED:
                 case MessageTypes.CONNECTOR_SAVED:
                 case MessageTypes.ENTITY_SAVED:
@@ -503,6 +595,13 @@ export class ModelPanel extends Panel {
             canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
             hasModelData: isModel ? 'yes' : 'no'
         });
+        this.updateModelStructure();
+
+        // Load saved expanded nodes from storage if available
+        const savedExpandedNodes = this.storageAdapter.getExpandedNodes(page);
+        if (savedExpandedNodes?.length) {
+            this.expandedNodes = new Set(savedExpandedNodes);
+        }
 
         this.sendTypedMessage(MessageTypes.INITIAL_STATE, {
             isModel,
@@ -510,7 +609,9 @@ export class ModelPanel extends Panel {
             documentId,
             canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
             modelData: isModel ? this.storageAdapter.getElementData(page) : null,
-            selectionState: this.currentSelection
+            selectionState: this.currentSelection,
+            modelStructure: this.currentModelStructure,
+            expandedNodes: Array.from(this.expandedNodes)
         });
     }
 

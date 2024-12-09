@@ -19,11 +19,24 @@ export interface StorageFormat<T = any> {
 export declare class StorageAdapter {
     private static readonly DATA_KEY;
     private static readonly META_KEY;
+    private static readonly EXPANDED_NODES_KEY;
     private static readonly CURRENT_VERSION;
     /**
      * Checks if an element has been converted to a Quodsi model element
      */
     isQuodsiModel(element: ElementProxy): boolean;
+    /**
+  * Gets the expanded nodes state for a page
+  */
+    getExpandedNodes(page: ElementProxy): string[];
+    /**
+     * Sets the expanded nodes state for a page
+     */
+    setExpandedNodes(page: ElementProxy, nodeIds: string[]): void;
+    /**
+     * Clears the expanded nodes state for a page
+     */
+    clearExpandedNodes(page: ElementProxy): void;
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */
