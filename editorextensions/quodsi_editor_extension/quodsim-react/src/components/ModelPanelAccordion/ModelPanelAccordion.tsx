@@ -7,8 +7,9 @@ import {
   ModelStructure,
   ValidationState,
   AccordionState,
+  EditorReferenceData,
 } from "@quodsi/shared";
-import { ElementEditor } from "./ElementEditor";
+import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
 
 interface ModelPanelAccordionProps {
@@ -26,6 +27,7 @@ interface ModelPanelAccordionProps {
   onTreeNodeToggle: (nodeId: string, expanded: boolean) => void;
   onTreeStateUpdate: (nodes: string[]) => void;
   onExpandPath: (nodeId: string) => void;
+  referenceData: EditorReferenceData;
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -40,6 +42,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onTreeNodeToggle,
   onTreeStateUpdate,
   onExpandPath,
+  referenceData
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
@@ -59,7 +62,9 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
-
+  const handleEditorCancel = () => {
+    toggleSection("elementEditor");
+  };
   const filterModelElements = (elements: ModelStructure["elements"]) => {
     if (!searchTerm) return elements;
 
@@ -127,9 +132,11 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
         <ElementEditor
           elementData={currentElement?.data}
           elementType={currentElement?.metadata?.type}
+          onSave={(data) => onUpdate(currentElement?.data?.id, data)}
+          onCancel={() => toggleSection("elementEditor")}
+          referenceData={referenceData}
           isExpanded={expandedSections.elementEditor}
           onToggle={() => toggleSection("elementEditor")}
-          onUpdate={onUpdate}
         />
         <ValidationMessages
           validationState={validationState}

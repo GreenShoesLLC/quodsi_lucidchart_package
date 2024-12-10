@@ -1,25 +1,12 @@
 import React from "react";
 import { MessagePayloads, MessageTypes, SelectionType } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
-import ModelUtilities from "../../components/ModelUtilities";
-import { ModelTabs } from "../../components/ModelTabs";
-import { SimulationComponentSelector } from "src/components/SimulationComponentSelector";
-import { typeMappers } from "src/utils/typeMappers";
-import { createEditorComponent } from "../editors/editorFactory";
-import { SimComponentType } from "@quodsi/shared";
-import { QuodsiAppStateV1 } from "src/QuodsiAppV1";
-
-
+import { ModelPanelAccordion } from "../../components/ModelPanelAccordion/ModelPanelAccordion";
 
 export interface MessageHandlerDependencies {
-    setState: React.Dispatch<React.SetStateAction<QuodsiAppStateV1>>;
-    setEditor: (editor: JSX.Element | null) => void;
-    setEditorForElement: (element: any) => void;
+    setState: React.Dispatch<React.SetStateAction<AppState>>;
     setError: (error: string | null) => void;
-    handleSave: (data: any) => void;
-    handleCancel: () => void;
-    handleComponentTypeChange: (newType: SimComponentType, elementId: string) => void;
-    currentElementId?: string;
+    sendMessage: (type: MessageTypes, payload?: any) => void;
 }
 
 export const messageHandlers = {
@@ -27,140 +14,32 @@ export const messageHandlers = {
         data: MessagePayloads[MessageTypes.INITIAL_STATE],
         deps: MessageHandlerDependencies
     ) => {
-        const { setState, setEditor, setError } = deps;
-
-        if (!data.pageId) {
-            console.error("[MessageHandler] Invalid pageId received:", data.pageId);
-            setError("Invalid page ID received");
-            return;
-        }
-
-        setState((prev) => ({
+        const { setState } = deps;
+        setState(prev => ({
             ...prev,
-            documentId: data.pageId,
-            error: null,
+            modelStructure: data.modelStructure || { elements: [], hierarchy: {} },
+            modelName: data.modelData?.name || "New Model",
+            documentId: data.documentId,
+            expandedNodes: new Set<string>(data.expandedNodes || []),
         }));
-
-        if (!data.isModel) {
-            setEditor(React.createElement(ModelUtilities, {
-                showConvertButton: true,
-                showValidateButton: false,
-                showRemoveButton: false,
-                showSimulateButton: false
-            }));
-        } else {
-            setEditor(
-                React.createElement('div',
-                    { className: "flex flex-col h-full" },
-                    React.createElement(ModelTabs, {
-                        initialModel: data.modelData
-                    }),
-                    React.createElement('div',
-                        { className: "mt-4 border-t pt-4" },
-                        React.createElement(ModelUtilities, {
-                            showConvertButton: false,
-                            showValidateButton: true,
-                            showRemoveButton: true,
-                            showSimulateButton: true
-                        })
-                    )
-                )
-            );
-        }
     },
 
     handleSelectionChanged: (
         data: MessagePayloads[MessageTypes.SELECTION_CHANGED],
         deps: MessageHandlerDependencies
     ) => {
-        if (!data.elementData?.[0]) return;
+        const { setState, sendMessage } = deps;
+        setState(prev => ({
+            ...prev,
+            currentElement: data.elementData?.[0] || null,
+            modelStructure: data.modelStructure || prev.modelStructure,
+            expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
+        }));
 
-        const element = data.elementData[0];
-        const { setState, setEditor } = deps;
-
-        // Handle page selection (nothing selected)
-        if (data.selectionState?.selectionType === SelectionType.NONE) {
-            console.log("[MessageHandler] Handling page selection");
-
-            // If we have model data, show the model editor
-            if (element.data) {
-                setState(prev => ({
-                    ...prev,
-                    currentComponentType: undefined,
-                    currentLucidId: element.id,
-                    isProcessing: false
-                }));
-
-                setEditor(
-                    React.createElement('div',
-                        { className: "flex flex-col h-full" },
-                        React.createElement(ModelTabs, {
-                            initialModel: element.data
-                        }),
-                        React.createElement('div',
-                            { className: "mt-4 border-t pt-4" },
-                            React.createElement(ModelUtilities, {
-                                showConvertButton: false,
-                                showValidateButton: true,
-                                showRemoveButton: true,
-                                showSimulateButton: true
-                            })
-                        )
-                    )
-                );
-            } else {
-                // If no model data, show the conversion utility
-                setEditor(React.createElement(ModelUtilities, {
-                    showConvertButton: true,
-                    showValidateButton: false,
-                    showRemoveButton: false,
-                    showSimulateButton: false
-                }));
-            }
-            return;
-        }
-
-        // Check if this is an unconverted element
-        if (data.selectionState?.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-            console.log("[MessageHandler] Handling unconverted element:", element.id);
-            setState(prev => ({
-                ...prev,
-                currentComponentType: undefined,
-                currentLucidId: element.id,
-                isProcessing: false
-            }));
-
-            // For unconverted elements, just show the selector
-            setEditor(
-                React.createElement(
-                    'div',
-                    { className: 'editor-container' },
-                    React.createElement(SimulationComponentSelector, {
-                        currentType: undefined,
-                        elementId: element.id,
-                        onTypeChange: deps.handleComponentTypeChange,
-                        disabled: false
-                    })
-                )
-            );
-            return;
-        }
-
-        // Handle converted elements 
-        if (element.metadata?.type) {
-            const componentType = typeMappers.mapSimulationTypeToComponentType(element.metadata.type);
-            setState(prev => ({
-                ...prev,
-                currentComponentType: componentType,
-                currentLucidId: element.id,
-                isProcessing: true
-            }));
-
-            // Request complete element data
-            window.parent.postMessage({
-                messagetype: MessageTypes.GET_ELEMENT_DATA,
-                data: { elementId: element.id }
-            }, "*");
+        if (data.elementData?.[0]?.id) {
+            sendMessage(MessageTypes.GET_ELEMENT_DATA, {
+                elementId: data.elementData[0].id,
+            });
         }
     },
 
@@ -168,52 +47,14 @@ export const messageHandlers = {
         data: MessagePayloads[MessageTypes.ELEMENT_DATA],
         deps: MessageHandlerDependencies
     ) => {
-        if (!data.metadata?.type || !data.data) return;
-
-        const { setEditor, handleSave, handleCancel, handleComponentTypeChange, setState } = deps;
-        const componentType = typeMappers.mapSimulationTypeToComponentType(data.metadata.type);
-
+        const { setState } = deps;
         setState(prev => ({
             ...prev,
-            isProcessing: false,
-            currentComponentType: componentType,
-            currentLucidId: data.id
-        }));
-
-        const editorComponent = createEditorComponent(
-            data.metadata.type,
-            data.data,
-            {
-                onSave: handleSave,
-                onCancel: handleCancel,
-                onTypeChange: handleComponentTypeChange,
-                elementId: data.id,
-                referenceData: data.referenceData || {}
+            currentElement: {
+                data: data.data,
+                metadata: data.metadata,
             },
-            false
-        );
-
-        setEditor(
-            React.createElement(
-                'div',
-                { className: 'editor-container' },
-                React.createElement(SimulationComponentSelector, {
-                    currentType: componentType,
-                    elementId: data.id,
-                    onTypeChange: handleComponentTypeChange,
-                    disabled: false
-                }),
-                editorComponent
-            )
-        );
-    },
-
-    handleModelRemoved: (deps: MessageHandlerDependencies) => {
-        deps.setEditor(React.createElement(ModelUtilities, {
-            showConvertButton: true,
-            showValidateButton: false,
-            showRemoveButton: false,
-            showSimulateButton: false
+            referenceData: data.referenceData || {},
         }));
     },
 
@@ -221,30 +62,33 @@ export const messageHandlers = {
         data: MessagePayloads[MessageTypes.UPDATE_SUCCESS],
         deps: MessageHandlerDependencies
     ) => {
-        const { setState, setEditorForElement } = deps;
+        const { setState } = deps;
+        setState(prev => ({ ...prev, isProcessing: false }));
+    },
 
-        setState((prev) => ({ ...prev, isProcessing: false }));
-
-        // Request fresh element data to update the editor
-        window.parent.postMessage({
-            messagetype: MessageTypes.GET_ELEMENT_DATA,
-            data: { elementId: data.elementId }
-        }, "*");
+    handleValidationResult: (
+        data: MessagePayloads[MessageTypes.VALIDATION_RESULT],
+        deps: MessageHandlerDependencies
+    ) => {
+        const { setState } = deps;
+        setState(prev => ({
+            ...prev,
+            validationState: {
+                summary: {
+                    errorCount: data.messages.filter(m => m.type === "error").length,
+                    warningCount: data.messages.filter(m => m.type === "warning").length,
+                },
+                messages: data.messages,
+            },
+        }));
     },
 
     handleError: (
         data: MessagePayloads[MessageTypes.ERROR],
         deps: MessageHandlerDependencies
     ) => {
-        console.error("[MessageHandler] Error received:", data);
-        deps.setError(data.error);
+        const { setState, setError } = deps;
+        setState(prev => ({ ...prev, isProcessing: false }));
+        setError(data.error);
     },
-
-    handleConversionComplete: (
-        data: MessagePayloads[MessageTypes.CONVERSION_COMPLETE],
-        deps: MessageHandlerDependencies
-    ) => {
-        console.log("[MessageHandler] Conversion complete:", data);
-        deps.setState((prev) => ({ ...prev, isProcessing: false }));
-    }
 };

@@ -7,6 +7,7 @@ import {
   ValidationState,
   ValidationMessage,
   SimulationObjectType,
+  EditorReferenceData,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -25,6 +26,7 @@ export interface AppState {
   error: string | null;
   documentId: string | null;
   expandedNodes: Set<string>;
+  referenceData: EditorReferenceData;
 }
 
 const QuodsiApp: React.FC = () => {
@@ -39,6 +41,11 @@ const QuodsiApp: React.FC = () => {
     error: null,
     documentId: null,
     expandedNodes: new Set<string>(),
+    referenceData: {
+      entities: [],
+      resources: [],
+      // other reference data properties
+    },
   });
 
   const sendMessage = useCallback(
@@ -254,6 +261,7 @@ const QuodsiApp: React.FC = () => {
           onTreeNodeToggle={handleTreeNodeToggle}
           onTreeStateUpdate={handleTreeStateUpdate}
           onExpandPath={handleExpandPath}
+          referenceData={state.referenceData}
         />
       </div>
     </div>

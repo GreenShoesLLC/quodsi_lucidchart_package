@@ -1,133 +1,120 @@
-import React from 'react';
+import React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { SimulationObjectType } from "@quodsi/shared";
+import { SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
+import ActivityEditor from "../ActivityEditor";
+import GeneratorEditor from "../GeneratorEditor";
+import ResourceEditor from "../ResourceEditor";
+import EntityEditor from "../EntityEditor";
+import ConnectorEditor from "../ConnectorEditor";
+import ModelEditor from "../ModelEditor";
 
 interface ElementEditorProps {
-    elementData: any;
-    elementType: SimulationObjectType;
-    isExpanded: boolean;
-    onToggle: () => void;
-    onUpdate: (elementId: string, data: any) => void;
+  elementType: SimulationObjectType | "Model";
+  elementData: any;
+  onSave: (data: any) => void;
+  onCancel: () => void;
+  referenceData: EditorReferenceData;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
-export const ElementEditor: React.FC<ElementEditorProps> = ({
-    elementData,
-    elementType,
-    isExpanded,
-    onToggle,
-    onUpdate,
+const ElementEditor: React.FC<ElementEditorProps> = ({
+  elementType,
+  elementData,
+  onSave,
+  onCancel,
+  referenceData,
+  isExpanded,
+  onToggle,
 }) => {
-    const handleInputChange = (key: string, value: any) => {
-        onUpdate(elementData.id, {
-            ...elementData,
-            [key]: value
-        });
-    };
+  const getElementTypeDisplay = () => {
+    return elementType === "Model"
+      ? "Model Properties"
+      : elementType
+      ? `Edit ${elementType}`
+      : "Element Editor";
+  };
 
-    return (
-        <div className="border-b">
-            <button
-                onClick={onToggle}
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
-            >
-                <span className="font-medium text-sm">
-                    {elementData ? `Edit ${elementType}` : 'Element Editor'}
-                </span>
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
-            
-            {isExpanded && elementData && (
-                <div className="p-3 border-t">
-                    <div className="space-y-3">
-                        {/* Common fields for all element types */}
-                        <div>
-                            <label className="block text-xs text-gray-500 mb-1">
-                                Name
-                            </label>
-                            <input
-                                type="text"
-                                value={elementData.name || ''}
-                                onChange={(e) => handleInputChange('name', e.target.value)}
-                                className="w-full p-1 text-sm border rounded"
-                            />
-                        </div>
+  const renderEditor = () => {
+    if (elementType === "Model") {
+      return (
+        <ModelEditor model={elementData} onSave={onSave} onCancel={onCancel} />
+      );
+    }
 
-                        {/* Element type specific fields */}
-                        {elementType === SimulationObjectType.Activity && (
-                            <>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">
-                                        Capacity
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={elementData.capacity || 1}
-                                        onChange={(e) => handleInputChange('capacity', parseInt(e.target.value))}
-                                        className="w-full p-1 text-sm border rounded"
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">
-                                        Input Buffer Capacity
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={elementData.inputBufferCapacity || 0}
-                                        onChange={(e) => handleInputChange('inputBufferCapacity', parseInt(e.target.value))}
-                                        className="w-full p-1 text-sm border rounded"
-                                        min="0"
-                                    />
-                                </div>
-                            </>
-                        )}
+    if (!elementData?.id && elementType) {
+      return (
+        <div className="p-4 text-red-600">Invalid element data received</div>
+      );
+    }
 
-                        {elementType === SimulationObjectType.Resource && (
-                            <div>
-                                <label className="block text-xs text-gray-500 mb-1">
-                                    Resource Capacity
-                                </label>
-                                <input
-                                    type="number"
-                                    value={elementData.capacity || 1}
-                                    onChange={(e) => handleInputChange('capacity', parseInt(e.target.value))}
-                                    className="w-full p-1 text-sm border rounded"
-                                    min="1"
-                                />
-                            </div>
-                        )}
+    switch (elementType) {
+      case SimulationObjectType.Activity:
+        return (
+          <ActivityEditor
+            activity={elementData}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        );
+      case SimulationObjectType.Generator:
+        return (
+          <GeneratorEditor
+            generator={elementData}
+            onSave={onSave}
+            onCancel={onCancel}
+            referenceData={referenceData}
+          />
+        );
+      case SimulationObjectType.Resource:
+        return (
+          <ResourceEditor
+            resource={elementData}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        );
+      case SimulationObjectType.Entity:
+        return (
+          <EntityEditor
+            entity={elementData}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        );
+      case SimulationObjectType.Connector:
+        return (
+          <ConnectorEditor
+            connector={elementData}
+            onSave={onSave}
+            onCancel={onCancel}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
-                        {elementType === SimulationObjectType.Generator && (
-                            <>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">
-                                        Entities Per Creation
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={elementData.entitiesPerCreation || 1}
-                                        onChange={(e) => handleInputChange('entitiesPerCreation', parseInt(e.target.value))}
-                                        className="w-full p-1 text-sm border rounded"
-                                        min="1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-gray-500 mb-1">
-                                        Maximum Entities
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={elementData.maxEntities || Infinity}
-                                        onChange={(e) => handleInputChange('maxEntities', parseInt(e.target.value))}
-                                        className="w-full p-1 text-sm border rounded"
-                                        min="1"
-                                    />
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+  const editorContent = renderEditor();
+  if (!editorContent) return null;
+
+  return (
+    <div className="border-b">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
+      >
+        <span className="font-medium text-sm">{getElementTypeDisplay()}</span>
+        {isExpanded ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+
+      {isExpanded && <div className="p-3 border-t">{editorContent}</div>}
+    </div>
+  );
 };
+
+export default ElementEditor;
