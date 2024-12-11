@@ -1,34 +1,42 @@
-import React from "react";
-import { MessagePayloads, MessageTypes, SelectionType } from "@quodsi/shared";
+import {
+    MessagePayloads,
+    MessageTypes,
+    ModelData,
+    ValidationMessage,
+    ExtensionMessaging
+} from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
-import { ModelPanelAccordion } from "../../components/ModelPanelAccordion/ModelPanelAccordion";
 
 export interface MessageHandlerDependencies {
     setState: React.Dispatch<React.SetStateAction<AppState>>;
     setError: (error: string | null) => void;
-    sendMessage: (type: MessageTypes, payload?: any) => void;
+    sendMessage: <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => void;
 }
 
-export const messageHandlers = {
-    handleInitialState: (
-        data: MessagePayloads[MessageTypes.INITIAL_STATE],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState } = deps;
+// Type-safe message handler type
+export type MessageHandler<T extends MessageTypes> = (
+    payload: MessagePayloads[T],
+    deps: MessageHandlerDependencies
+) => void;
+
+// Type-safe message handlers map
+export const messageHandlers: Partial<{
+    [T in MessageTypes]: MessageHandler<T>;
+}> = {
+    [MessageTypes.INITIAL_STATE]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing INITIAL_STATE:", data);
         setState(prev => ({
             ...prev,
             modelStructure: data.modelStructure || { elements: [], hierarchy: {} },
-            modelName: data.modelData?.name || "New Model",
+            modelName: (data.modelData as ModelData)?.name || "New Model",
             documentId: data.documentId,
             expandedNodes: new Set<string>(data.expandedNodes || []),
+            isReady: true
         }));
     },
 
-    handleSelectionChanged: (
-        data: MessagePayloads[MessageTypes.SELECTION_CHANGED],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState, sendMessage } = deps;
+    [MessageTypes.SELECTION_CHANGED]: (data, { setState, sendMessage }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED:", data);
         setState(prev => ({
             ...prev,
             currentElement: data.elementData?.[0] || null,
@@ -43,52 +51,89 @@ export const messageHandlers = {
         }
     },
 
-    handleElementData: (
-        data: MessagePayloads[MessageTypes.ELEMENT_DATA],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState } = deps;
+    [MessageTypes.TREE_STATE_SYNC]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing TREE_STATE_SYNC:", data);
+        setState(prev => ({
+            ...prev,
+            expandedNodes: new Set<string>(data.expandedNodes)
+        }));
+    },
+
+    [MessageTypes.ELEMENT_DATA]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing ELEMENT_DATA:", data);
         setState(prev => ({
             ...prev,
             currentElement: {
                 data: data.data,
                 metadata: data.metadata,
             },
-            referenceData: data.referenceData || {},
+            referenceData: data.referenceData || {}
         }));
     },
 
-    handleUpdateSuccess: (
-        data: MessagePayloads[MessageTypes.UPDATE_SUCCESS],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState } = deps;
-        setState(prev => ({ ...prev, isProcessing: false }));
-    },
-
-    handleValidationResult: (
-        data: MessagePayloads[MessageTypes.VALIDATION_RESULT],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState } = deps;
+    [MessageTypes.VALIDATION_RESULT]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing VALIDATION_RESULT:", data);
         setState(prev => ({
             ...prev,
             validationState: {
                 summary: {
-                    errorCount: data.messages.filter(m => m.type === "error").length,
-                    warningCount: data.messages.filter(m => m.type === "warning").length,
+                    errorCount: data.messages.filter(
+                        (m: ValidationMessage) => m.type === "error"
+                    ).length,
+                    warningCount: data.messages.filter(
+                        (m: ValidationMessage) => m.type === "warning"
+                    ).length,
                 },
                 messages: data.messages,
             },
         }));
     },
 
-    handleError: (
-        data: MessagePayloads[MessageTypes.ERROR],
-        deps: MessageHandlerDependencies
-    ) => {
-        const { setState, setError } = deps;
-        setState(prev => ({ ...prev, isProcessing: false }));
+    [MessageTypes.UPDATE_SUCCESS]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing UPDATE_SUCCESS:", data);
+        setState(prev => ({
+            ...prev,
+            isProcessing: false
+        }));
+    },
+
+    [MessageTypes.ERROR]: (data, { setState, setError }) => {
+        console.error("[MessageHandlers] Received ERROR:", data);
+        setState(prev => ({
+            ...prev,
+            isProcessing: false
+        }));
         setError(data.error);
     },
-};
+
+    [MessageTypes.REACT_APP_READY]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing REACT_APP_READY");
+        setState(prev => ({
+            ...prev,
+            isReady: true
+        }));
+    }
+} as const;
+
+// Helper function for type-safe handler registration
+export function registerHandler<T extends MessageTypes>(
+    messaging: ExtensionMessaging,
+    type: T,
+    handler: MessageHandler<T>,
+    deps: MessageHandlerDependencies
+): void {
+    messaging.onMessage(type, (payload: MessagePayloads[T]) => {
+        handler(payload, deps);
+    });
+}
+
+// Helper function to register all handlers
+export function registerMessageHandlers(
+    messaging: ExtensionMessaging,
+    deps: MessageHandlerDependencies
+): void {
+    (Object.entries(messageHandlers) as [MessageTypes, MessageHandler<MessageTypes>][])
+        .forEach(([type, handler]) => {
+            registerHandler(messaging, type, handler, deps);
+        });
+}

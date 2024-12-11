@@ -1,6 +1,5 @@
 // panels/ModelPanel.ts
 import {
-    Panel,
     PanelLocation,
     EditorClient,
     ItemProxy,
@@ -9,12 +8,13 @@ import {
     BlockProxy,
     LineProxy,
     DocumentProxy,
-    ElementProxy
+    ElementProxy,
+    JsonObject as LucidJsonObject
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
-
+import { ElementData, ExtensionMessaging, MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
+import { JsonObject as SharedJsonObject } from '@quodsi/shared';
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
 import { RemoveModelFromPage } from '../services/conversion/RemoveModelFromPage';
@@ -27,6 +27,7 @@ import { SimulationElementFactory } from '@quodsi/shared';
 import { SelectionState } from '@quodsi/shared';
 import { EditorReferenceData } from '@quodsi/shared';
 import { ModelStructureBuilder } from '../services/accordion/ModelStructureBuilder';
+import { BasePanel } from './BasePanel';
 
 
 /**
@@ -42,8 +43,8 @@ function createSerializableMessage<T extends MessageTypes>(
     };
 }
 
-export class ModelPanel extends Panel {
-    private reactAppReady: boolean = false;
+export class ModelPanel extends BasePanel {
+    private modelManager: ModelManager;
     private storageAdapter: StorageAdapter;
     private conversionService: ConversionService;
     private expandedNodes: Set<string> = new Set();
@@ -54,10 +55,7 @@ export class ModelPanel extends Panel {
         selectionType: SelectionType.NONE
     };
 
-    constructor(
-        client: EditorClient,
-        private modelManager: ModelManager
-    ) {
+    constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
             title: 'Quodsi Model',
             url: 'quodsim-react/index.html',
@@ -65,12 +63,72 @@ export class ModelPanel extends Panel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
-
+        this.modelManager = modelManager;
         this.storageAdapter = new StorageAdapter();
         this.conversionService = new ConversionService(this.modelManager, this.storageAdapter);
         this.initializeModelManager();
+        this.setupModelMessageHandlers();
 
         console.log('[ModelPanel] Initialized');
+    }
+
+    private setupModelMessageHandlers(): void {
+        // React App Ready - already handled by BasePanel
+        // We can add additional React ready handling if needed
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
+            if (!this.reactAppReady) {
+                console.log('[ModelPanel] Handling additional React ready setup');
+                this.handleModelSpecificReactReady();
+            }
+        });
+
+        // Model Operations
+        this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
+        this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
+        this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
+        this.messaging.onMessage(MessageTypes.MODEL_SAVED, (data) => this.handleModelSaved(data));
+
+        // Element Operations
+        this.messaging.onMessage(MessageTypes.GET_ELEMENT_DATA, (data) =>
+            this.handleGetElementData(data.elementId));
+        this.messaging.onMessage(MessageTypes.UPDATE_ELEMENT_DATA, (data) =>
+            this.handleUpdateElementData(data));
+
+        // Tree State Management
+        this.messaging.onMessage(MessageTypes.TREE_NODE_TOGGLE, (data) =>
+            this.handleTreeNodeToggle(data.nodeId, data.expanded));
+        this.messaging.onMessage(MessageTypes.TREE_STATE_UPDATE, (data) =>
+            this.handleTreeStateUpdate(data.expandedNodes));
+        this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
+            this.handleExpandPath(data.nodeId));
+
+        // Element-specific save events
+        [
+            MessageTypes.ACTIVITY_SAVED,
+            MessageTypes.CONNECTOR_SAVED,
+            MessageTypes.ENTITY_SAVED,
+            MessageTypes.GENERATOR_SAVED,
+            MessageTypes.RESOURCE_SAVED
+        ].forEach(messageType => {
+            this.messaging.onMessage(messageType, (data) => this.handleElementSaved(data));
+        });
+    }
+    private handleModelSpecificReactReady(): void {
+        const viewport = new Viewport(this.client);
+        const currentPage = viewport.getCurrentPage();
+        const document = new DocumentProxy(this.client);
+
+        if (!currentPage) {
+            console.error('[ModelPanel] No active page found during React ready');
+            return;
+        }
+
+        const isModel = this.storageAdapter.isQuodsiModel(currentPage);
+        this.sendInitialState(currentPage, isModel, document.id);
+
+        if (this.currentSelection.selectedIds.length > 0) {
+            this.sendSelectionUpdate();
+        }
     }
 
     /**
@@ -285,40 +343,45 @@ export class ModelPanel extends Panel {
 
         // Only send updates if React app is ready
         if (this.reactAppReady) {
-            interface ElementData {
-                id: string;
-                data: any;
-                metadata?: {
-                    type: SimulationObjectType;
-                    version: string;
-                } | null;
-            }
-
             let elementData: ElementData[] = [];
 
             if (items.length === 0) {
-                // Check if the page is a Quodsi model
                 if (this.storageAdapter.isQuodsiModel(currentPage)) {
-                    // When nothing is selected and page is a model, get the page's model data
-                    const modelData = this.storageAdapter.getElementData(currentPage);
-                    console.log('[ModelPanel] Page model data:', modelData);
+                    const rawModelData = this.storageAdapter.getElementData(currentPage);
+                    if (typeof rawModelData === 'object' && rawModelData !== null) {
+                        const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
+                        console.log('[ModelPanel] Page model data:', modelData);
 
-                    elementData = [{
-                        id: currentPage.id,
-                        data: modelData,
-                        metadata: {
-                            type: SimulationObjectType.Model,
-                            version: this.storageAdapter.CURRENT_VERSION
-                        }
-                    }];
+                        elementData = [{
+                            id: currentPage.id,
+                            data: modelData,
+                            metadata: {
+                                type: SimulationObjectType.Model,
+                                version: this.storageAdapter.CURRENT_VERSION
+                            },
+                            name: currentPage.getTitle() || null
+                        }];
+                    }
                 }
             } else {
-                // Get full element data for selected items
-                elementData = items.map(item => ({
-                    id: item.id,
-                    data: this.storageAdapter.getElementData(item),
-                    metadata: this.storageAdapter.getMetadata(item)
-                }));
+                elementData = items.map(item => {
+                    const rawData = this.storageAdapter.getElementData(item);
+                    // Convert SDK JsonObject to our SharedJsonObject type
+                    const data = (typeof rawData === 'object' && rawData !== null) ?
+                        JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
+
+                    const metadata = this.storageAdapter.getMetadata(item);
+                    // Convert metadata in the same way if needed
+                    const convertedMetadata = metadata ?
+                        JSON.parse(JSON.stringify(metadata)) : null;
+
+                    return {
+                        id: item.id,
+                        data: data,
+                        metadata: convertedMetadata,
+                        name: 'TBD'
+                    };
+                });
             }
 
             // Send selection update with element data
@@ -336,15 +399,13 @@ export class ModelPanel extends Panel {
         }
     }
 
-    /**
-         * Sends a typed message ensuring it's serializable
-         */
-    private sendTypedMessage<T extends MessageTypes>(
-        type: T,
-        payload?: MessagePayloads[T]
-    ): void {
-        this.sendMessage(createSerializableMessage(type, payload));
-    }
+
+    // private sendTypedMessage<T extends MessageTypes>(
+    //     type: T,
+    //     payload?: MessagePayloads[T]
+    // ): void {
+    //     this.sendMessage(createSerializableMessage(type, payload));
+    // }
 
     /**
      * Updates the current selection state
@@ -414,86 +475,6 @@ export class ModelPanel extends Panel {
                 return SelectionType.UNKNOWN_BLOCK;
         }
     }
-    /**
-     * Handles messages from the React app
-     */
-    protected messageFromFrame(message: any): void {
-        console.log('[ModelPanel] Message received:', message);
-
-        if (!isValidMessage(message)) {
-            console.error('[ModelPanel] Invalid message format:', message);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: 'Invalid message format'
-            });
-            return;
-        }
-
-        try {
-            switch (message.messagetype) {
-                case MessageTypes.REACT_APP_READY:
-                    if (this.reactAppReady) {
-                        console.log('[ModelPanel] Ignoring duplicate reactAppReady message');
-                    }
-                    else {
-                        this.handleReactReady();
-                    }
-                    break;
-                case MessageTypes.REMOVE_MODEL:
-                    this.handleRemoveModel();
-                    break;
-                case MessageTypes.CONVERT_PAGE:
-                    this.handleConvertRequest();
-                    break;
-
-                case MessageTypes.GET_ELEMENT_DATA:
-                    this.handleGetElementData(message.data?.elementId);
-                    break;
-
-                case MessageTypes.UPDATE_ELEMENT_DATA:
-                    this.handleUpdateElementData(message.data);
-                    break;
-
-                case MessageTypes.VALIDATE_MODEL:
-                    this.handleValidateModel();
-                    break;
-
-                case MessageTypes.MODEL_SAVED:
-                    this.handleModelSaved(message.data);
-                    break;
-                case MessageTypes.TREE_NODE_TOGGLE:
-                    const { nodeId, expanded } = message.data;
-                    this.handleTreeNodeToggle(nodeId, expanded);
-                    break;
-
-                case MessageTypes.TREE_STATE_UPDATE:
-                    this.handleTreeStateUpdate(message.data.expandedNodes);
-                    break;
-
-                case MessageTypes.TREE_NODE_EXPAND_PATH:
-                    this.handleExpandPath(message.data.nodeId);
-                    break;
-                case MessageTypes.ACTIVITY_SAVED:
-                case MessageTypes.CONNECTOR_SAVED:
-                case MessageTypes.ENTITY_SAVED:
-                case MessageTypes.GENERATOR_SAVED:
-                case MessageTypes.RESOURCE_SAVED:
-                    this.handleElementSaved(message.data);
-                    break;
-
-                default:
-                    console.warn('[ModelPanel] Unknown message type:', message.messagetype);
-                    this.sendTypedMessage(MessageTypes.ERROR, {
-                        error: `Unknown message type: ${message.messagetype}`
-                    });
-            }
-        } catch (error) {
-            console.error('[ModelPanel] Error handling message:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error',
-                details: { messageType: message.messagetype }
-            });
-        }
-    }
 
     /**
      * Handles model removal request
@@ -536,53 +517,24 @@ export class ModelPanel extends Panel {
         }
     }
 
-    /**
-     * Handles React app ready signal
-     */
-    private handleReactReady(): void {
-        console.log('[ModelPanel] Handling React ready signal');
-        this.reactAppReady = true;
-
+    // Override the hook for additional React ready handling
+    protected handleAdditionalReactReady(): void {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         const document = new DocumentProxy(this.client);
 
-        console.log('[ModelPanel] Current page:', currentPage);
-        console.log('[ModelPanel] Document:', document);
-
         if (!currentPage) {
-            console.error('[ModelPanel] No active page found');
+            console.error('[ModelPanel] No active page found during React ready');
             return;
         }
 
-        // Get the current page details
-        const pageId = currentPage.id;
-        const documentId = document.id;
-        const pageTitle = currentPage.getTitle();
-
-        console.log('[ModelPanel] Debug page details:', {
-            pageId,
-            documentId,
-            pageTitle,
-            pageProperties: Object.keys(currentPage),
-            viewportSelection: viewport.getSelectedItems()
-        });
-
         const isModel = this.storageAdapter.isQuodsiModel(currentPage);
-
-        console.log('[ModelPanel] Sending initial state with:', {
-            isModel,
-            pageId,
-            documentId
-        });
-
-        this.sendInitialState(currentPage, isModel, documentId);
+        this.sendInitialState(currentPage, isModel, document.id);
 
         if (this.currentSelection.selectedIds.length > 0) {
             this.sendSelectionUpdate();
         }
     }
-
     /**
      * Sends initial state to React app
      */
@@ -683,13 +635,20 @@ export class ModelPanel extends Panel {
         const element = this.findElementById(elementId);
         if (element) {
             try {
-                const elementData = this.storageAdapter.getElementData(element);
-                const metadata = this.storageAdapter.getMetadata(element);
+                const rawElementData = this.storageAdapter.getElementData(element);
+                const rawMetadata = this.storageAdapter.getMetadata(element);
                 const referenceData: EditorReferenceData = {};
 
+                // Convert raw data to SharedJsonObject
+                const elementData = typeof rawElementData === 'object' && rawElementData !== null ?
+                    JSON.parse(JSON.stringify(rawElementData)) as SharedJsonObject : {};
+
+                // Convert metadata to SharedJsonObject
+                const metadata = rawMetadata ?
+                    JSON.parse(JSON.stringify(rawMetadata)) as SharedJsonObject : null;
+
                 // Build reference data based on element type
-                if (metadata?.type === SimulationObjectType.Generator) {
-                    // Include entities list for Generator editor
+                if (rawMetadata?.type === SimulationObjectType.Generator) {
                     const modelDef = this.modelManager.getModelDefinition();
                     if (modelDef) {
                         referenceData.entities = modelDef.entities.getAll().map(e => ({
@@ -698,7 +657,6 @@ export class ModelPanel extends Panel {
                         }));
                     }
                 }
-                // Add similar blocks for other editor types that need reference data
 
                 this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
                     id: elementId,
@@ -784,34 +742,43 @@ export class ModelPanel extends Panel {
             }
 
             // Then register the element with the model manager
-            const elementData = {
-                id: updateData.elementId,
-                type: updateData.type,
-                ...updateData.data
-            };
-            this.modelManager.registerElement(elementData, element);
-            console.log('[ModelPanel] Element registered with model manager');
-
-            // Update storage
-            this.storageAdapter.setElementData(
-                element,
-                updateData.data,
-                updateData.type,
-                {
+            if (typeof updateData.data === 'object' && updateData.data !== null) {
+                const elementData = {
                     id: updateData.elementId,
-                    version: this.storageAdapter.CURRENT_VERSION
+                    type: updateData.type,
+                    ...updateData.data as SharedJsonObject,
+                    name: 'tbd'
+                };
+                this.modelManager.registerElement(elementData, element);
+                console.log('[ModelPanel] Element registered with model manager');
+
+                // Update storage
+                const storageData = {
+                    id: updateData.elementId,  // Add the id to the data
+                    ...updateData.data as SharedJsonObject
+                };
+                this.storageAdapter.setElementData(
+                    element,
+                    storageData,
+                    updateData.type,
+                    {
+                        id: updateData.elementId,
+                        version: this.storageAdapter.CURRENT_VERSION
+                    }
+                );
+                console.log('[ModelPanel] Storage update successful');
+
+                // Send success message
+                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
+                    elementId: updateData.elementId
+                });
+
+                // Refresh selection state if needed
+                if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
+                    this.sendSelectionUpdate();
                 }
-            );
-            console.log('[ModelPanel] Storage update successful');
-
-            // Send success message
-            this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                elementId: updateData.elementId
-            });
-
-            // Refresh selection state if needed
-            if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
-                this.sendSelectionUpdate();
+            } else {
+                throw new Error('Invalid update data: data must be an object');
             }
 
         } catch (error) {

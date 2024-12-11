@@ -1,3 +1,9 @@
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonArray = JsonSerializable[];
+export type JsonObject = {
+    [key: string]: JsonSerializable;
+};
+export type JsonSerializable = JsonPrimitive | JsonObject | JsonArray;
 import { EditorReferenceData } from './EditorReferenceData';
 import { SimulationObjectType } from './elements/SimulationObjectType';
 import { SelectionState } from './SelectionState';
@@ -33,8 +39,20 @@ export declare enum MessageTypes {
     TREE_NODE_EXPAND_PATH = "treeNodeExpandPath",
     TREE_STATE_SYNC = "treeStateSync"
 }
+export interface ElementData {
+    id: string;
+    data: JsonObject;
+    metadata: {
+        type: SimulationObjectType;
+        version: string;
+    };
+    name: string | null;
+}
+export interface ModelData extends JsonObject {
+    name: string;
+}
 /**
- * Message payload type definitions
+ * Message payload type definitions - All payloads must be JSON-serializable
  */
 export interface MessagePayloads {
     [MessageTypes.REACT_APP_READY]: undefined;
@@ -43,14 +61,14 @@ export interface MessagePayloads {
         pageId: string;
         documentId: string;
         canConvert: boolean;
-        modelData: any | null;
+        modelData: JsonSerializable | null;
         selectionState: SelectionState;
         modelStructure?: ModelStructure;
         expandedNodes?: string[];
     };
     [MessageTypes.SELECTION_CHANGED]: {
         selectionState: SelectionState;
-        elementData?: any[];
+        elementData?: ElementData[];
         modelStructure?: ModelStructure;
         expandedNodes?: string[];
     };
@@ -74,13 +92,13 @@ export interface MessagePayloads {
     };
     [MessageTypes.ELEMENT_DATA]: {
         id: string;
-        data: any;
-        metadata: any;
+        data: JsonSerializable;
+        metadata: JsonSerializable;
         referenceData: EditorReferenceData;
     };
     [MessageTypes.UPDATE_ELEMENT_DATA]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
         type: SimulationObjectType;
     };
     [MessageTypes.UPDATE_SUCCESS]: {
@@ -93,35 +111,35 @@ export interface MessagePayloads {
     [MessageTypes.VALIDATION_RESULT]: ValidationResult;
     [MessageTypes.ERROR]: {
         error: string;
-        details?: any;
+        details?: JsonSerializable;
     };
     [MessageTypes.MODEL_SAVED]: {
         modelId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.MODEL_LOADED]: {
         modelId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.ACTIVITY_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.CONNECTOR_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.ENTITY_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.GENERATOR_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.RESOURCE_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
     [MessageTypes.TREE_STATE_UPDATE]: {
         expandedNodes: string[];
@@ -142,20 +160,19 @@ export interface MessagePayloads {
     };
 }
 /**
- * Type-safe message creator function
+ * Creates a serializable message. At runtime, enums will serialize to their string values.
  */
-export declare function createSerializableMessage<T extends MessageTypes>(type: T, payload?: MessagePayloads[T]): {
-    [key: string]: any;
-};
+export declare function createSerializableMessage<T extends MessageTypes>(type: T, payload?: MessagePayloads[T]): JsonObject;
 /**
  * Type guard to check if a message is valid
  */
 export declare function isValidMessage(message: any): message is {
     messagetype: MessageTypes;
-    data: any;
+    data: JsonSerializable;
 };
 /**
  * Helper to extract payload type from message type
  */
 export type PayloadType<T extends MessageTypes> = MessagePayloads[T];
+export {};
 //# sourceMappingURL=MessageTypes.d.ts.map

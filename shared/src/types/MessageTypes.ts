@@ -1,3 +1,9 @@
+// First define our own JSON serializable types
+type JsonPrimitive = string | number | boolean | null;
+type JsonArray = JsonSerializable[];
+type JsonObject = { [key: string]: JsonSerializable };
+export type JsonSerializable = JsonPrimitive | JsonObject | JsonArray;
+
 import { EditorReferenceData } from './EditorReferenceData';
 import { SimulationObjectType } from './elements/SimulationObjectType';
 import { SelectionState } from './SelectionState';
@@ -51,9 +57,23 @@ export enum MessageTypes {
     TREE_NODE_EXPAND_PATH = 'treeNodeExpandPath',
     TREE_STATE_SYNC = 'treeStateSync'
 }
+export interface ElementData {
+    id: string;
+    data: JsonObject;
+    metadata: {      // Remove the optional marker and null union
+        type: SimulationObjectType;
+        version: string;
+    };
+    name: string | null;  // Use null instead of undefined
+}
+
+export interface ModelData extends JsonObject {
+    name: string;
+    // ... other model data properties
+}
 
 /**
- * Message payload type definitions
+ * Message payload type definitions - All payloads must be JSON-serializable
  */
 export interface MessagePayloads {
     [MessageTypes.REACT_APP_READY]: undefined;
@@ -63,7 +83,7 @@ export interface MessagePayloads {
         pageId: string;
         documentId: string;
         canConvert: boolean;
-        modelData: any | null;
+        modelData: JsonSerializable | null;
         selectionState: SelectionState;
         modelStructure?: ModelStructure;
         expandedNodes?: string[];
@@ -71,7 +91,7 @@ export interface MessagePayloads {
 
     [MessageTypes.SELECTION_CHANGED]: {
         selectionState: SelectionState;
-        elementData?: any[];
+        elementData?: ElementData[];
         modelStructure?: ModelStructure;
         expandedNodes?: string[];
     };
@@ -101,14 +121,14 @@ export interface MessagePayloads {
 
     [MessageTypes.ELEMENT_DATA]: {
         id: string;
-        data: any;
-        metadata: any;
+        data: JsonSerializable;
+        metadata: JsonSerializable;
         referenceData: EditorReferenceData;
     };
 
     [MessageTypes.UPDATE_ELEMENT_DATA]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
         type: SimulationObjectType;
     };
 
@@ -125,45 +145,44 @@ export interface MessagePayloads {
 
     [MessageTypes.ERROR]: {
         error: string;
-        details?: any;
+        details?: JsonSerializable;
     };
 
     [MessageTypes.MODEL_SAVED]: {
         modelId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.MODEL_LOADED]: {
         modelId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.ACTIVITY_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.CONNECTOR_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.ENTITY_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.GENERATOR_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
     [MessageTypes.RESOURCE_SAVED]: {
         elementId: string;
-        data: any;
+        data: JsonSerializable;
     };
 
-    // Tree View State Management Payloads
     [MessageTypes.TREE_STATE_UPDATE]: {
         expandedNodes: string[];
         pageId: string;
@@ -187,22 +206,22 @@ export interface MessagePayloads {
 }
 
 /**
- * Type-safe message creator function
+ * Creates a serializable message. At runtime, enums will serialize to their string values.
  */
 export function createSerializableMessage<T extends MessageTypes>(
     type: T,
     payload?: MessagePayloads[T]
-): { [key: string]: any } {
+): JsonObject {
     return {
         messagetype: type,
         data: payload ?? null
-    };
+    } as JsonObject;
 }
 
 /**
  * Type guard to check if a message is valid
  */
-export function isValidMessage(message: any): message is { messagetype: MessageTypes; data: any } {
+export function isValidMessage(message: any): message is { messagetype: MessageTypes; data: JsonSerializable } {
     return message
         && typeof message === 'object'
         && 'messagetype' in message

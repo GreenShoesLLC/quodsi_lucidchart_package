@@ -42,7 +42,7 @@ var MessageTypes;
     MessageTypes["TREE_STATE_SYNC"] = "treeStateSync";
 })(MessageTypes = exports.MessageTypes || (exports.MessageTypes = {}));
 /**
- * Type-safe message creator function
+ * Creates a serializable message. At runtime, enums will serialize to their string values.
  */
 function createSerializableMessage(type, payload) {
     return {
