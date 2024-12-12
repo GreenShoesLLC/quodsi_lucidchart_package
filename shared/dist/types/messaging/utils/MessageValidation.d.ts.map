@@ -1,0 +1,1 @@
+{"version":3,"file":"MessageValidation.d.ts","sourceRoot":"","sources":["../../../../src/types/messaging/utils/MessageValidation.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,iBAAiB,CAAC;AAC/C,OAAO,EAAE,gBAAgB,EAAE,MAAM,cAAc,CAAC;AAEhD;;GAEG;AACH,wBAAgB,cAAc,CAAC,OAAO,EAAE,GAAG,GAAG,OAAO,IAAI;IAAE,WAAW,EAAE,YAAY,CAAC;IAAC,IAAI,EAAE,gBAAgB,CAAA;CAAE,CAK7G"}

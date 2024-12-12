@@ -12,10 +12,10 @@ export class ModelMessageBuilder {
             documentId: data.documentId,
             isModel: data.isModel,
             canConvert: data.canConvert,
-            modelData: {
+            modelData: data.modelData ? JSON.parse(JSON.stringify({
                 elements: this.buildModelStructure(data.modelData).elements,
                 hierarchy: this.buildModelStructure(data.modelData).hierarchy
-            },
+            })) : null,
             selectionState: data.selectionState
         };
     }

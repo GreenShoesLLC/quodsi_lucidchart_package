@@ -6,7 +6,7 @@ import { Resource } from './elements/Resource';
 import { Generator } from './elements/Generator';
 import { Entity } from './elements/Entity';
 import { SimulationObjectType } from './elements/SimulationObjectType';
-import { ValidationResult } from './ValidationTypes';
+import { ValidationResult } from './validation/ValidationTypes';
 type BaseElement = Model | Activity | Connector | Resource | Generator | Entity;
 export declare class SimulationElementWrapper implements SimulationElement {
     readonly id: string;

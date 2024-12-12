@@ -1,4 +1,4 @@
-import { ExtensionMessaging, MessagePayloads, MessageTypes, isValidMessage, JsonSerializable } from '@quodsi/shared';
+import { MessagePayloads, MessageTypes, isValidMessage, JsonSerializable, ExtensionMessaging } from '@quodsi/shared';
 import { Panel, EditorClient } from 'lucid-extension-sdk';
 
 export abstract class BasePanel extends Panel {

@@ -1,6 +1,5 @@
-import { MessagePayloads, MessageTypes } from "src/types/MessageTypes";
+import { MessagePayloads, MessageTypes } from "../MessageTypes";
 
-// shared/src/messaging/ExtensionMessaging.ts
 export class ExtensionMessaging {
     private static instance: ExtensionMessaging;
     private handlers: Map<MessageTypes, Set<(payload: any) => void>> = new Map();

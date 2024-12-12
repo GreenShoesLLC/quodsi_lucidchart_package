@@ -2,7 +2,7 @@ export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
-export * from './types/MessageTypes';
+export * from './types/messaging';  // This exports JsonTypes, MessageTypes, and utils
 export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';
@@ -12,7 +12,7 @@ export * from './types/simComponentTypes';
 export * from './types/SimulationElement';
 export * from './types/SimulationElementFactory';
 export * from './types/SimulationElementWrapper';
-export * from './types/ValidationTypes';
+export * from './types/validation';
 
 export * from './types/elements/Activity';
 export * from './types/elements/ActivityListManager';
@@ -51,4 +51,3 @@ export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 export * from './types/accordion/AccordionState';
-export * from './messaging/ExtensionMessaging';

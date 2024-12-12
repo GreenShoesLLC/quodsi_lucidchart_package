@@ -1,14 +1,16 @@
-import { Panel, EditorClient, ItemProxy } from 'lucid-extension-sdk';
+import { EditorClient, ItemProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
-export declare class ModelPanel extends Panel {
+import { BasePanel } from './BasePanel';
+export declare class ModelPanel extends BasePanel {
     private modelManager;
-    private reactAppReady;
     private storageAdapter;
     private conversionService;
     private expandedNodes;
     private currentModelStructure?;
     private currentSelection;
     constructor(client: EditorClient, modelManager: ModelManager);
+    private setupModelMessageHandlers;
+    private handleModelSpecificReactReady;
     /**
      * Updates the model structure based on current model data
      */
@@ -43,10 +45,6 @@ export declare class ModelPanel extends Panel {
      */
     handleSelectionChange(items: ItemProxy[]): void;
     /**
-         * Sends a typed message ensuring it's serializable
-         */
-    private sendTypedMessage;
-    /**
      * Updates the current selection state
      */
     private updateSelectionState;
@@ -59,17 +57,10 @@ export declare class ModelPanel extends Panel {
          */
     private mapElementTypeToSelectionType;
     /**
-     * Handles messages from the React app
-     */
-    protected messageFromFrame(message: any): void;
-    /**
      * Handles model removal request
      */
     private handleRemoveModel;
-    /**
-     * Handles React app ready signal
-     */
-    private handleReactReady;
+    protected handleAdditionalReactReady(): void;
     /**
      * Sends initial state to React app
      */

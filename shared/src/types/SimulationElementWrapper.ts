@@ -6,7 +6,8 @@ import { Resource } from './elements/Resource';
 import { Generator } from './elements/Generator';
 import { Entity } from './elements/Entity';
 import { SimulationObjectType } from './elements/SimulationObjectType';
-import { ValidationResult, ValidationMessage } from './ValidationTypes';
+import { ValidationMessage, ValidationResult } from './validation/ValidationTypes';
+
 
 type BaseElement = Model | Activity | Connector | Resource | Generator | Entity;
 

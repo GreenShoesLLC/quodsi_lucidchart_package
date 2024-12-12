@@ -1,4 +1,4 @@
-import { ValidationMessage } from '../ValidationTypes';
+import { ValidationMessage } from "../validation/ValidationTypes";
 export interface ValidationState {
     summary: {
         errorCount: number;

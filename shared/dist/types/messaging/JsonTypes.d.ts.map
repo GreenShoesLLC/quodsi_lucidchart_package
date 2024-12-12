@@ -1,0 +1,1 @@
+{"version":3,"file":"JsonTypes.d.ts","sourceRoot":"","sources":["../../../src/types/messaging/JsonTypes.ts"],"names":[],"mappings":"AACA,MAAM,MAAM,aAAa,GAAG,MAAM,GAAG,MAAM,GAAG,OAAO,GAAG,IAAI,CAAC;AAC7D,MAAM,MAAM,SAAS,GAAG,gBAAgB,EAAE,CAAC;AAC3C,MAAM,MAAM,UAAU,GAAG;IAAE,CAAC,GAAG,EAAE,MAAM,GAAG,gBAAgB,CAAA;CAAE,CAAC;AAC7D,MAAM,MAAM,gBAAgB,GAAG,aAAa,GAAG,UAAU,GAAG,SAAS,CAAC"}

@@ -1,5 +1,6 @@
 import { SimulationObject } from './elements/SimulationObject';
-import { ValidationResult } from './ValidationTypes';
+import { ValidationResult } from './validation';
+
 
 
 /**

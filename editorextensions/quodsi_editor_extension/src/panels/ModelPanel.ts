@@ -13,7 +13,7 @@ import {
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { ElementData, ExtensionMessaging, MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
+import { ElementData, ExtensionMessaging, JsonSerializable, MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
 import { JsonObject as SharedJsonObject } from '@quodsi/shared';
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
@@ -30,18 +30,12 @@ import { ModelStructureBuilder } from '../services/accordion/ModelStructureBuild
 import { BasePanel } from './BasePanel';
 
 
-/**
- * Helper function to create a serializable message
- */
-function createSerializableMessage<T extends MessageTypes>(
-    type: T,
-    data?: any
-): { [key: string]: any } {
-    return {
-        messagetype: type,
-        data: data ?? null
-    };
-}
+type ComponentOperation = {
+    type: MessageTypes.ACTIVITY_SAVED | MessageTypes.CONNECTOR_SAVED |
+    MessageTypes.ENTITY_SAVED | MessageTypes.GENERATOR_SAVED |
+    MessageTypes.RESOURCE_SAVED;
+    objectType: SimulationObjectType;
+};
 
 export class ModelPanel extends BasePanel {
     private modelManager: ModelManager;
@@ -71,6 +65,7 @@ export class ModelPanel extends BasePanel {
 
         console.log('[ModelPanel] Initialized');
     }
+
 
     private setupModelMessageHandlers(): void {
         // React App Ready - already handled by BasePanel
@@ -102,17 +97,26 @@ export class ModelPanel extends BasePanel {
         this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
             this.handleExpandPath(data.nodeId));
 
-        // Element-specific save events
-        [
-            MessageTypes.ACTIVITY_SAVED,
-            MessageTypes.CONNECTOR_SAVED,
-            MessageTypes.ENTITY_SAVED,
-            MessageTypes.GENERATOR_SAVED,
-            MessageTypes.RESOURCE_SAVED
-        ].forEach(messageType => {
-            this.messaging.onMessage(messageType, (data) => this.handleElementSaved(data));
+        // Component Operations with type safety
+        const componentOperations: ComponentOperation[] = [
+            { type: MessageTypes.ACTIVITY_SAVED, objectType: SimulationObjectType.Activity },
+            { type: MessageTypes.CONNECTOR_SAVED, objectType: SimulationObjectType.Connector },
+            { type: MessageTypes.ENTITY_SAVED, objectType: SimulationObjectType.Entity },
+            { type: MessageTypes.GENERATOR_SAVED, objectType: SimulationObjectType.Generator },
+            { type: MessageTypes.RESOURCE_SAVED, objectType: SimulationObjectType.Resource }
+        ];
+
+        componentOperations.forEach(({ type, objectType }) => {
+            this.messaging.onMessage(type, (payload: { elementId: string; data: JsonSerializable }) => {
+                this.handleUpdateElementData({
+                    elementId: payload.elementId,
+                    data: payload.data,
+                    type: objectType
+                });
+            });
         });
     }
+
     private handleModelSpecificReactReady(): void {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();

@@ -10,12 +10,8 @@ import {
     SimulationObjectType,
     Connector,
     Model,
-    Activity,
-    Generator,
-    Resource,
     ModelDefaults,
     ConnectType,
-    SimulationObject
 } from '@quodsi/shared';
 
 import { StorageAdapter } from '../../core/StorageAdapter';

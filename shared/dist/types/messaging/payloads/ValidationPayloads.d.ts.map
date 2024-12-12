@@ -1,0 +1,1 @@
+{"version":3,"file":"ValidationPayloads.d.ts","sourceRoot":"","sources":["../../../../src/types/messaging/payloads/ValidationPayloads.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,iBAAiB,CAAC;AAC/C,OAAO,EAAE,gBAAgB,EAAE,MAAM,kCAAkC,CAAC;AAEpE,MAAM,WAAW,kBAAkB;IAC/B,CAAC,YAAY,CAAC,cAAc,CAAC,EAAE,SAAS,CAAC;IACzC,CAAC,YAAY,CAAC,iBAAiB,CAAC,EAAE,gBAAgB,CAAC;CACtD"}

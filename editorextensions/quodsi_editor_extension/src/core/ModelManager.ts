@@ -9,7 +9,6 @@ import {
     Resource,
     SimulationObject,
     SimulationObjectType,
-    ValidationMessage, 
     ValidationResult 
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
