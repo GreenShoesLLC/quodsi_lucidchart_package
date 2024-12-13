@@ -4,6 +4,7 @@ import { EditorReferenceData } from '../../EditorReferenceData';
 import { SimulationObjectType } from '../../elements/SimulationObjectType';
 import { SelectionState } from '../../SelectionState';
 import { ModelStructure } from '../../accordion/ModelStructure';
+import { ValidationResult } from '../../validation/ValidationTypes';
 export interface ElementData {
     id: string;
     data: JsonObject;
@@ -19,6 +20,7 @@ export interface ElementPayloads {
         elementData?: ElementData[];
         modelStructure?: ModelStructure;
         expandedNodes?: string[];
+        validationResult?: ValidationResult;
     };
     [MessageTypes.GET_ELEMENT_DATA]: {
         elementId: string;

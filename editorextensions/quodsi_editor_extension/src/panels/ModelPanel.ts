@@ -214,7 +214,7 @@ export class ModelPanel extends BasePanel {
 
 
 
-    private initializeModelManager(): void {
+    private async initializeModelManager(): Promise<void> {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
 
@@ -296,7 +296,7 @@ export class ModelPanel extends BasePanel {
                     });
                 }
             }
-
+            await this.modelManager.validateModel();
             console.log('[ModelPanel] Model initialization complete');
         } catch (error) {
             console.error('[ModelPanel] Error initializing model:', error);
@@ -324,6 +324,12 @@ export class ModelPanel extends BasePanel {
         super.hide();
     }
 
+    async handleValidateRequest(): Promise<void> {
+        const validationResult = await this.modelManager.validateModel();
+
+        // Send separate validation result message for explicit validation requests
+        this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
+    }
     /**
      * Handles selection changes in the editor
      */
@@ -342,6 +348,7 @@ export class ModelPanel extends BasePanel {
         }
 
         this.updateModelStructure();
+        const validationResult = this.modelManager.getCurrentValidation();
         // Update current selection state
         this.updateSelectionState(currentPage, items);
 
@@ -393,8 +400,10 @@ export class ModelPanel extends BasePanel {
                 selectionState: this.currentSelection,
                 elementData: elementData,
                 modelStructure: this.currentModelStructure,
-                expandedNodes: Array.from(this.expandedNodes)
+                expandedNodes: Array.from(this.expandedNodes),
+                validationResult: validationResult ?? undefined  // Convert null to undefined
             });
+
 
             console.log('[ModelPanel] Selection update sent:', {
                 selectionState: this.currentSelection,
@@ -680,7 +689,8 @@ export class ModelPanel extends BasePanel {
     /**
      * Handles element data update
      */
-    private handleUpdateElementData(updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]): void {
+    private async handleUpdateElementData(updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]): Promise<void> {
+    // ... existing code ...
         console.log('[ModelPanel] Received element update data:', {
             updateData,
             selectedItems: new Viewport(this.client).getSelectedItems().map(item => item.id)
@@ -726,6 +736,7 @@ export class ModelPanel extends BasePanel {
                 });
 
                 // Force a selection update with the new state
+                await this.modelManager.validateModel();
                 const viewport = new Viewport(this.client);
                 const selectedItems = viewport.getSelectedItems();
                 this.handleSelectionChange(selectedItems);  // This will update the React app with the new selection state
@@ -795,14 +806,14 @@ export class ModelPanel extends BasePanel {
     /**
      * Handles model validation request
      */
-    private handleValidateModel(): void {
+    private async handleValidateModel(): Promise<void> {
         console.log('[ModelPanel] Handling validate model');
 
-        const validationResult = this.modelManager.validateModel();
+        const validationResult = await this.modelManager.validateModel();
 
+        // Send separate validation result message for explicit validation requests
         this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
     }
-
     /**
      * Handles model saved message
      */

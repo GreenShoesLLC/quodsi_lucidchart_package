@@ -43,9 +43,28 @@ export class ModelValidationService {
             for (const rule of this.rules) {
                 rule.validate(state, messages);
             }
-
-            const isValid = !messages.some(m => m.type === 'error');
-            return { isValid, messages };
+            if (messages.length === 0) {
+                messages.push({
+                    type: 'info',
+                    message: 'Model validation passed successfully'
+                });
+            }
+            // Count errors and warnings
+            const errorCount = messages.filter(m => m.type === 'error').length;
+            const warningCount = messages.filter(m => m.type === 'warning').length;
+            console.log('[ModelValidation] Validation results:', {
+                isValid: errorCount === 0,
+                errorCount,
+                warningCount,
+                messageCount: messages.length,
+                messages: messages
+            });
+            return { 
+                isValid: errorCount === 0,
+                errorCount,
+                warningCount,
+                messages 
+            };
 
         } catch (error) {
             console.error('[ModelValidation] Validation error:', error);
@@ -53,7 +72,12 @@ export class ModelValidationService {
                 type: 'error',
                 message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
-            return { isValid: false, messages };
+            return { 
+                isValid: false, 
+                errorCount: 1,
+                warningCount: 0,
+                messages 
+            };
         }
     }
 

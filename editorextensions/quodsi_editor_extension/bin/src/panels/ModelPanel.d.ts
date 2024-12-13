@@ -40,6 +40,7 @@ export declare class ModelPanel extends BasePanel {
      * Hides the panel
      */
     hide(): void;
+    handleValidateRequest(): Promise<void>;
     /**
      * Handles selection changes in the editor
      */

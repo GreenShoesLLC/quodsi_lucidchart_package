@@ -44,8 +44,12 @@ var SimulationElementWrapper = /** @class */ (function () {
                 this.validateEntity(this.data, messages);
                 break;
         }
+        var errorCount = messages.filter(function (m) { return m.type === 'error'; }).length;
+        var warningCount = messages.filter(function (m) { return m.type === 'warning'; }).length;
         return {
-            isValid: !messages.some(function (m) { return m.type === 'error'; }),
+            isValid: errorCount === 0,
+            errorCount: errorCount,
+            warningCount: warningCount,
             messages: messages
         };
     };

@@ -50,8 +50,13 @@ export class SimulationElementWrapper implements SimulationElement {
                 break;
         }
 
+        const errorCount = messages.filter(m => m.type === 'error').length;
+        const warningCount = messages.filter(m => m.type === 'warning').length;
+
         return {
-            isValid: !messages.some(m => m.type === 'error'),
+            isValid: errorCount === 0,
+            errorCount,
+            warningCount,
             messages
         };
     }

@@ -18,15 +18,18 @@ export class ModelManager {
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private elementProxies: Map<string, ElementProxy> = new Map();
+    private currentValidationResult: ValidationResult | null = null;
+    private validationService: ModelValidationService;
 
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
+        this.validationService = new ModelValidationService();
     }
 
     /**
      * Initializes a new model definition with data from storage
      */
-    public initializeModel(modelData: Model, pageProxy: PageProxy): void {
+    public async initializeModel(modelData: Model, pageProxy: PageProxy): Promise<void> {
         this.modelDefinition = new ModelDefinition(modelData);
 
         // Store the model data using the page proxy
@@ -35,12 +38,15 @@ export class ModelManager {
             modelData,
             SimulationObjectType.Model
         );
+
+        // Perform initial validation
+        await this.validateModel();
     }
 
     /**
       * Registers a simulation element with the appropriate list manager and storage
       */
-    public registerElement(element: SimulationObject, elementProxy: ElementProxy): void {
+    public async registerElement(element: SimulationObject, elementProxy: ElementProxy): Promise<void> {
         // Store the element proxy for future use
         this.elementProxies.set(element.id, elementProxy);
 
@@ -80,8 +86,8 @@ export class ModelManager {
                 throw new Error(`Unknown element type: ${element.type}`);
         }
 
-        // Skip storage update during initialization
-        // Storage updates should only happen in response to user actions
+        // Validate after registration
+        await this.validateModel();
     }
 
     /**
@@ -122,7 +128,7 @@ export class ModelManager {
     /**
      * Updates an existing element in both memory and storage
      */
-    public updateElement(element: SimulationObject): void {
+    public async updateElement(element: SimulationObject): Promise<void> {
         if (!this.modelDefinition) {
             throw new Error('Model not initialized');
         }
@@ -157,6 +163,9 @@ export class ModelManager {
             elementProxy,
             element
         );
+
+        // Validate after update
+        await this.validateModel();
     }
 
     /**
@@ -174,9 +183,16 @@ export class ModelManager {
     }
 
     /**
+     * Gets the current validation result
+     */
+    public getCurrentValidation(): ValidationResult | null {
+        return this.currentValidationResult;
+    }
+
+    /**
      * Removes an element from both memory and storage
      */
-    public removeElement(elementId: string): void {
+    public async removeElement(elementId: string): Promise<void> {
         if (!this.modelDefinition) return;
 
         // Get the element proxy before removal
@@ -198,24 +214,41 @@ export class ModelManager {
 
         // Remove from proxy map
         this.elementProxies.delete(elementId);
+
+        // Validate after removal
+        await this.validateModel();
     }
 
     /**
      * Validates the model using the validation service
      */
-    public validateModel(): ValidationResult {
+    public async validateModel(): Promise<ValidationResult> {
         if (!this.modelDefinition) {
-            return {
+            this.currentValidationResult = {
                 isValid: false,
+                errorCount: 1,
+                warningCount: 0,
                 messages: [{
                     type: 'error',
                     message: 'No model initialized'
                 }]
             };
+            return this.currentValidationResult;
         }
 
-        const validationService = new ModelValidationService();
-        return validationService.validate(this.modelDefinition);
+        const result = await this.validationService.validate(this.modelDefinition);
+
+        // Calculate error and warning counts
+        const errorCount = result.messages.filter(m => m.type === 'error').length;
+        const warningCount = result.messages.filter(m => m.type === 'warning').length;
+
+        this.currentValidationResult = {
+            ...result,
+            errorCount,
+            warningCount
+        };
+
+        return this.currentValidationResult;
     }
 
     /**
@@ -231,5 +264,6 @@ export class ModelManager {
 
         this.modelDefinition = null;
         this.elementProxies.clear();
+        this.currentValidationResult = null;
     }
 }
