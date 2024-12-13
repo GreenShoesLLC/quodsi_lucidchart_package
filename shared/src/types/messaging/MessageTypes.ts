@@ -24,6 +24,7 @@ export enum MessageTypes {
     ELEMENT_DATA = 'elementData',
     UPDATE_ELEMENT_DATA = 'updateElementData',
     UPDATE_SUCCESS = 'updateSuccess',
+    CONVERT_ELEMENT = 'convertElement',  
 
     // Model Validation
     VALIDATE_MODEL = 'validateModel',
@@ -50,7 +51,7 @@ export enum MessageTypes {
     TREE_STATE_UPDATE = 'treeStateUpdate',
     TREE_NODE_TOGGLE = 'treeNodeToggle',
     TREE_NODE_EXPAND_PATH = 'treeNodeExpandPath',
-    TREE_STATE_SYNC = 'treeStateSync'
+    TREE_STATE_SYNC = 'treeStateSync',
 }
 
 export interface MessagePayloads extends 

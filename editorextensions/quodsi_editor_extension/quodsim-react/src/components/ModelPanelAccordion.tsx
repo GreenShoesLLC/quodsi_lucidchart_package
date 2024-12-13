@@ -5,21 +5,19 @@ import {
   ValidationState,
   ValidationResult,
   EditorReferenceData,
-  SimulationObjectType,
 } from "@quodsi/shared";
 import TreeNode from "./TreeNode";
 
 import { ValidationSection } from "./ValidationSection/ValidationSection";
 import ElementEditor from "./ModelPanelAccordion/ElementEditor";
+import { SimulationComponentSelector } from "./SimulationComponentSelector";
+import { CurrentElement } from "src/types/CurrentElement";
 
 interface ModelPanelAccordionProps {
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: {
-    data: any;
-    metadata: any;
-  } | null;
+  currentElement: CurrentElement| null;
   expandedNodes: Set<string>;
   referenceData: EditorReferenceData;
   onElementSelect: (elementId: string) => void;
@@ -111,15 +109,39 @@ const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
         </button>
         {openSections.includes("editor") && currentElement && (
           <div className="p-4">
-            <ElementEditor
-              elementType={currentElement.metadata.type || "Model"}
-              elementData={currentElement.data}
-              onSave={(data) => onUpdate(currentElement.data.id, data)}
-              onCancel={() => toggleSection("editor")}
-              referenceData={referenceData}
-              isExpanded={true}
-              onToggle={() => toggleSection("editor")}
-            />
+            {(() => {
+              console.log(
+                "ModelPanelAccordion currentElement:",
+                currentElement
+              );
+              console.log(
+                "ModelPanelAccordion metadata:",
+                currentElement.metadata
+              );
+              console.log(
+                "ModelPanelAccordion isUnconverted:",
+                currentElement.metadata?.isUnconverted
+              );
+              return null;
+            })()}
+            {currentElement.metadata?.isUnconverted ? (
+              <SimulationComponentSelector
+                elementId={currentElement.data.id}
+                onTypeChange={(newType, elementId) => {
+                  onUpdate(elementId, { type: newType });
+                }}
+              />
+            ) : (
+              <ElementEditor
+                elementType={currentElement.metadata?.type || "Model"}
+                elementData={currentElement.data}
+                onSave={(data) => onUpdate(currentElement.data.id, data)}
+                onCancel={() => toggleSection("editor")}
+                referenceData={referenceData}
+                isExpanded={true}
+                onToggle={() => toggleSection("editor")}
+              />
+            )}
           </div>
         )}
       </div>

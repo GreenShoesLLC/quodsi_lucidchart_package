@@ -5,16 +5,9 @@ import { SimulationObjectType } from '../../elements/SimulationObjectType';
 import { SelectionState } from '../../SelectionState';
 import { ModelStructure } from '../../accordion/ModelStructure';
 import { ValidationResult } from '../../validation/ValidationTypes';
+import { MetaData } from 'src/types/MetaData';
+import { ElementData } from './ElementData';
 
-export interface ElementData {
-    id: string;
-    data: JsonObject;
-    metadata: {
-        type: SimulationObjectType;
-        version: string;
-    };
-    name: string | null;
-}
 
 export interface ElementPayloads {
     [MessageTypes.SELECTION_CHANGED]: {
@@ -24,7 +17,10 @@ export interface ElementPayloads {
         expandedNodes?: string[];
         validationResult?: ValidationResult;  // Added validation results
     };
-
+    [MessageTypes.CONVERT_ELEMENT]: {
+        elementId: string;
+        type: SimulationObjectType;
+    };
     [MessageTypes.GET_ELEMENT_DATA]: {
         elementId: string;
     };
@@ -32,7 +28,7 @@ export interface ElementPayloads {
     [MessageTypes.ELEMENT_DATA]: {
         id: string;
         data: JsonSerializable;
-        metadata: JsonSerializable;
+        metadata: MetaData;
         referenceData: EditorReferenceData;
     };
 

@@ -3,7 +3,8 @@ import {
     MessageTypes,
     ModelData,
     ValidationMessage,
-    ExtensionMessaging
+    ExtensionMessaging,
+    ElementData
 } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
 
@@ -37,40 +38,56 @@ export const messageHandlers: Partial<{
 
     [MessageTypes.SELECTION_CHANGED]: (data, { setState, sendMessage }) => {
         console.log("[MessageHandlers] Processing SELECTION_CHANGED:", data);
-        setState(prev => ({
-            ...prev,
-            currentElement: data.elementData?.[0] || null,
-            modelStructure: data.modelStructure || prev.modelStructure,
-            expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
-        }));
 
-        if (data.elementData?.[0]?.id) {
+        setState(prev => {
+            // Early return if no element data
+            const elementData = data?.elementData?.[0];
+            if (!elementData) {
+                return {
+                    ...prev,
+                    currentElement: null,
+                    modelStructure: data?.modelStructure || prev.modelStructure,
+                    expandedNodes: new Set<string>(data?.expandedNodes || Array.from(prev.expandedNodes)),
+                };
+            }
+
+            // If we already have this element selected with the same state, no need to update
+            if (prev.currentElement?.data?.id === elementData.id &&
+                prev.currentElement?.metadata?.isUnconverted === elementData.metadata?.isUnconverted) {
+                return prev;
+            }
+
+  
+            const currentElement: ElementData = {
+                data: {
+                    ...elementData.data,
+                    id: elementData.id
+                },
+                metadata: elementData.metadata,
+                isUnconverted: elementData.metadata?.isUnconverted,
+                id: elementData.id,
+                name: "TBD"
+            };
+
+            return {
+                ...prev,
+                currentElement,
+                modelStructure: data.modelStructure || prev.modelStructure,
+                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
+            };
+        });
+
+        // Only request element data if we have a new element that needs data
+        const elementData = data?.elementData?.[0];
+        if (elementData?.id &&
+            !elementData.metadata?.isUnconverted &&
+            !elementData.data) {
+            console.log("[MessageHandlers] Requesting element data for:", elementData.id);
             sendMessage(MessageTypes.GET_ELEMENT_DATA, {
-                elementId: data.elementData[0].id,
+                elementId: elementData.id,
             });
         }
     },
-
-    [MessageTypes.TREE_STATE_SYNC]: (data, { setState }) => {
-        console.log("[MessageHandlers] Processing TREE_STATE_SYNC:", data);
-        setState(prev => ({
-            ...prev,
-            expandedNodes: new Set<string>(data.expandedNodes)
-        }));
-    },
-
-    [MessageTypes.ELEMENT_DATA]: (data, { setState }) => {
-        console.log("[MessageHandlers] Processing ELEMENT_DATA:", data);
-        setState(prev => ({
-            ...prev,
-            currentElement: {
-                data: data.data,
-                metadata: data.metadata,
-            },
-            referenceData: data.referenceData || {}
-        }));
-    },
-
     [MessageTypes.VALIDATION_RESULT]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing VALIDATION_RESULT:", data);
         setState(prev => ({

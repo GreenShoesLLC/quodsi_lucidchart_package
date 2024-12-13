@@ -15,6 +15,7 @@ export declare enum MessageTypes {
     ELEMENT_DATA = "elementData",
     UPDATE_ELEMENT_DATA = "updateElementData",
     UPDATE_SUCCESS = "updateSuccess",
+    CONVERT_ELEMENT = "convertElement",
     VALIDATE_MODEL = "validateModel",
     VALIDATION_RESULT = "validationResult",
     ERROR = "error",

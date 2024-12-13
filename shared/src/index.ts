@@ -13,6 +13,7 @@ export * from './types/SimulationElement';
 export * from './types/SimulationElementFactory';
 export * from './types/SimulationElementWrapper';
 export * from './types/validation';
+export * from './types/MetaData';
 
 export * from './types/elements/Activity';
 export * from './types/elements/ActivityListManager';

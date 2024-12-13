@@ -9,6 +9,7 @@ import {
   EditorReferenceData,
   ExtensionMessaging,
   isValidMessage,
+  ElementData,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -16,14 +17,12 @@ import { ErrorDisplay } from "./components/ui/ErrorDisplay";
 import { ProcessingIndicator } from "./components/ui/ProcessingIndicator";
 import { MessageHandler, messageHandlers, registerHandler } from "./services/messageHandlers/messageHandlers";
 
+
 export interface AppState {
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: {
-    data: any;
-    metadata: any;
-  } | null;
+  currentElement: ElementData | null;
   isProcessing: boolean;
   error: string | null;
   documentId: string | null;
@@ -140,14 +139,25 @@ useEffect(() => {
     (elementId: string, data: any) => {
       console.log("[QuodsiApp] Update requested:", { elementId, data });
       setState((prev) => ({ ...prev, isProcessing: true }));
-      sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-        elementId,
-        type: state.currentElement?.metadata?.type || SimulationObjectType.None,
-        data: {
-          ...data,
-          id: elementId,
-        },
-      });
+
+      // If this is a type conversion (data contains only type)
+      if (data.type && Object.keys(data).length === 1) {
+        sendMessage(MessageTypes.CONVERT_ELEMENT, {
+          elementId,
+          type: data.type,
+        });
+      } else {
+        // Regular update
+        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+          elementId,
+          type:
+            state.currentElement?.metadata?.type || SimulationObjectType.None,
+          data: {
+            ...data,
+            id: elementId,
+          },
+        });
+      }
     },
     [sendMessage, state.currentElement?.metadata?.type]
   );

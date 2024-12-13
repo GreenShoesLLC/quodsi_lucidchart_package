@@ -1,14 +1,6 @@
 import { ElementProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType } from '@quodsi/shared';
-/**
- * Metadata structure for elements
- */
-export interface MetaData {
-    type: SimulationObjectType;
-    version: string;
-    lastModified: string;
-    id: string;
-}
+import { MetaData } from '@quodsi/shared';
 /**
  * Shape data storage format
  */

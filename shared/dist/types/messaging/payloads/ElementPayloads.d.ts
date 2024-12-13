@@ -1,19 +1,12 @@
-import { JsonSerializable, JsonObject } from '../JsonTypes';
+import { JsonSerializable } from '../JsonTypes';
 import { MessageTypes } from '../MessageTypes';
 import { EditorReferenceData } from '../../EditorReferenceData';
 import { SimulationObjectType } from '../../elements/SimulationObjectType';
 import { SelectionState } from '../../SelectionState';
 import { ModelStructure } from '../../accordion/ModelStructure';
 import { ValidationResult } from '../../validation/ValidationTypes';
-export interface ElementData {
-    id: string;
-    data: JsonObject;
-    metadata: {
-        type: SimulationObjectType;
-        version: string;
-    };
-    name: string | null;
-}
+import { MetaData } from 'src/types/MetaData';
+import { ElementData } from './ElementData';
 export interface ElementPayloads {
     [MessageTypes.SELECTION_CHANGED]: {
         selectionState: SelectionState;
@@ -22,13 +15,17 @@ export interface ElementPayloads {
         expandedNodes?: string[];
         validationResult?: ValidationResult;
     };
+    [MessageTypes.CONVERT_ELEMENT]: {
+        elementId: string;
+        type: SimulationObjectType;
+    };
     [MessageTypes.GET_ELEMENT_DATA]: {
         elementId: string;
     };
     [MessageTypes.ELEMENT_DATA]: {
         id: string;
         data: JsonSerializable;
-        metadata: JsonSerializable;
+        metadata: MetaData;
         referenceData: EditorReferenceData;
     };
     [MessageTypes.UPDATE_ELEMENT_DATA]: {

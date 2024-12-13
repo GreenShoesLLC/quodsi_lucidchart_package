@@ -9,6 +9,7 @@ export declare class ModelPanel extends BasePanel {
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
+    private unconvertedElements;
     constructor(client: EditorClient, modelManager: ModelManager);
     private setupModelMessageHandlers;
     private handleModelSpecificReactReady;
@@ -45,10 +46,8 @@ export declare class ModelPanel extends BasePanel {
     /**
      * Handles selection changes in the editor
      */
-    /**
-     * Handles selection changes in the editor
-     */
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
+    private determineSelectionState;
     /**
      * Updates the current selection state
      */

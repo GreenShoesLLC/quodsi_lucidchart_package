@@ -13,7 +13,7 @@ import {
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { ElementData, ExtensionMessaging, JsonSerializable, MessagePayloads, MessageTypes, ModelElement, ModelStructure, isValidMessage } from '@quodsi/shared';
+import { ElementData, JsonSerializable, MessagePayloads, MessageTypes, MetaData, ModelElement, ModelStructure } from '@quodsi/shared';
 import { JsonObject as SharedJsonObject } from '@quodsi/shared';
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
@@ -49,6 +49,7 @@ export class ModelPanel extends BasePanel {
         selectionType: SelectionType.NONE
     };
     private isHandlingSelectionChange: boolean = false;
+    private unconvertedElements: Set<string> = new Set();
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -342,9 +343,7 @@ export class ModelPanel extends BasePanel {
         // Send separate validation result message for explicit validation requests
         this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
     }
-    /**
-     * Handles selection changes in the editor
-     */
+
     /**
      * Handles selection changes in the editor
      */
@@ -366,8 +365,16 @@ export class ModelPanel extends BasePanel {
 
             await this.updateModelStructure();
 
-            // Update current selection state
-            this.updateSelectionState(currentPage, items);
+            // First determine the selection state so we can use it for metadata
+            const selectionState = await this.determineSelectionState(currentPage, items);
+            this.currentSelection = selectionState;
+
+            // Update unconverted elements tracking
+            if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
+                items.forEach(item => this.unconvertedElements.add(item.id));
+            } else {
+                items.forEach(item => this.unconvertedElements.delete(item.id));
+            }
 
             // Only send updates if React app is ready
             if (this.reactAppReady) {
@@ -392,24 +399,30 @@ export class ModelPanel extends BasePanel {
                         }
                     }
                 } else {
-                    elementData = items.map(item => {
+                    // Process all items concurrently
+                    elementData = await Promise.all(items.map(async item => {
                         const rawData = this.storageAdapter.getElementData(item);
-                        // Convert SDK JsonObject to our SharedJsonObject type
                         const data = (typeof rawData === 'object' && rawData !== null) ?
                             JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
 
-                        const metadata = this.storageAdapter.getMetadata(item);
-                        // Convert metadata in the same way if needed
-                        const convertedMetadata = metadata ?
-                            JSON.parse(JSON.stringify(metadata)) : null;
+                        const metadata = await this.storageAdapter.getMetadata(item) || {};
+                        const convertedMetadata = JSON.parse(JSON.stringify(metadata));
+
+                        // Add isUnconverted flag based on the determined selection type
+                        if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
+                            convertedMetadata.isUnconverted = true;
+                        }
 
                         return {
                             id: item.id,
-                            data: data,
+                            data: {
+                                ...data,
+                                id: item.id
+                            },
                             metadata: convertedMetadata,
-                            name: 'TBD'
+                            name: 'Unnamed Element' // Use item text if available
                         };
-                    });
+                    }));
                 }
 
                 // Get the validation result from modelManager
@@ -421,7 +434,7 @@ export class ModelPanel extends BasePanel {
                     elementData: elementData,
                     modelStructure: this.currentModelStructure,
                     expandedNodes: Array.from(this.expandedNodes),
-                    validationResult: validationResult ?? undefined  // Convert null to undefined
+                    validationResult: validationResult ?? undefined
                 });
 
                 console.log('[ModelPanel] Selection update sent:', {
@@ -439,54 +452,50 @@ export class ModelPanel extends BasePanel {
             this.isHandlingSelectionChange = false;
         }
     }
-        
+
+    // Add this helper method if not already present
+    private async determineSelectionState(currentPage: ElementProxy, items: ItemProxy[]): Promise<SelectionState> {
+        const type = await this.determineSelectionType(items);
+        return {
+            pageId: currentPage.id,
+            selectedIds: items.map(item => item.id),
+            selectionType: type
+        };
+    }
+
 
     /**
      * Updates the current selection state
      */
-    private updateSelectionState(page: PageProxy, items: ItemProxy[]): void {
+    private async updateSelectionState(page: PageProxy, items: ItemProxy[]): Promise<SelectionState> {
+        const selectionType = await this.determineSelectionType(items);
         const newState: SelectionState = {
             pageId: page.id,
             selectedIds: items.map(item => item.id),
-            selectionType: this.determineSelectionType(items)
+            selectionType: selectionType
         };
 
         this.currentSelection = newState;
         console.log('[ModelPanel] Selection state updated:', this.currentSelection);
+        return newState;
     }
 
     /**
      * Determines the type of the current selection
      */
-    private determineSelectionType(items: ItemProxy[]): SelectionType {
+    private async determineSelectionType(items: ItemProxy[]): Promise<SelectionType> {
         if (items.length === 0) return SelectionType.NONE;
         if (items.length > 1) return SelectionType.MULTIPLE;
 
         const item = items[0];
+        const metadata = await this.storageAdapter.getMetadata(item);
 
-        // Check if item has Quodsi data
-        const hasQuodsiData = this.storageAdapter.validateStorage(item);
-
-        // If it's a single item without Quodsi data, return UNCONVERTED_ELEMENT
-        if (!hasQuodsiData && (item instanceof BlockProxy || item instanceof LineProxy)) {
+        // If we can't get metadata or there's no valid data, treat as unconverted
+        if (!metadata?.type || metadata.type === SimulationObjectType.None) {
             return SelectionType.UNCONVERTED_ELEMENT;
         }
 
-        // Rest of existing logic for items with Quodsi data
-        if (item instanceof BlockProxy) {
-            const meta = this.storageAdapter.getMetadata(item);
-            return meta?.type
-                ? this.mapElementTypeToSelectionType(meta.type)
-                : SelectionType.UNKNOWN_BLOCK;
-        }
-        if (item instanceof LineProxy) {
-            const meta = this.storageAdapter.getMetadata(item);
-            return meta?.type
-                ? this.mapElementTypeToSelectionType(meta.type)
-                : SelectionType.UNKNOWN_LINE;
-        }
-
-        return SelectionType.UNKNOWN_BLOCK;
+        return this.mapElementTypeToSelectionType(metadata.type);
     }
     /**
          * Maps SimulationObjectType to SelectionType
@@ -666,45 +675,38 @@ export class ModelPanel extends BasePanel {
      * Handles element data request
      */
     private handleGetElementData(elementId: string): void {
-        const element = this.findElementById(elementId);
-        if (element) {
-            try {
-                const rawElementData = this.storageAdapter.getElementData(element);
-                const rawMetadata = this.storageAdapter.getMetadata(element);
-                const referenceData: EditorReferenceData = {};
+        const element = this.client.getElementProxy(elementId);  // or whatever method you currently use
 
-                // Convert raw data to SharedJsonObject
-                const elementData = typeof rawElementData === 'object' && rawElementData !== null ?
-                    JSON.parse(JSON.stringify(rawElementData)) as SharedJsonObject : {};
+        if (!element) {
+            console.error('[ModelPanel] Element not found:', elementId);
+            return;
+        }
 
-                // Convert metadata to SharedJsonObject
-                const metadata = rawMetadata ?
-                    JSON.parse(JSON.stringify(rawMetadata)) as SharedJsonObject : null;
+        const rawData = this.storageAdapter.getElementData(element);
+        const metadata = this.storageAdapter.getMetadata(element) || {} as MetaData;
 
-                // Build reference data based on element type
-                if (rawMetadata?.type === SimulationObjectType.Generator) {
-                    const modelDef = this.modelManager.getModelDefinition();
-                    if (modelDef) {
-                        referenceData.entities = modelDef.entities.getAll().map(e => ({
-                            id: e.id,
-                            name: e.name
-                        }));
-                    }
-                }
-
-                this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
-                    id: elementId,
-                    data: elementData,
-                    metadata: metadata,
-                    referenceData
-                });
-            } catch (error) {
-                console.error('[ModelPanel] Error getting element data:', error);
-                this.sendTypedMessage(MessageTypes.ERROR, {
-                    error: `Failed to get element data: ${error instanceof Error ? error.message : 'Unknown error'}`
-                });
+        // Add isUnconverted flag if this element is in our unconverted set
+        if (this.unconvertedElements.has(elementId)) {
+            metadata.isUnconverted = true;
+        }
+        const referenceData: EditorReferenceData = {};
+        // Build reference data based on element type
+        if (metadata?.type === SimulationObjectType.Generator) {
+            const modelDef = this.modelManager.getModelDefinition();
+            if (modelDef) {
+                referenceData.entities = modelDef.entities.getAll().map(e => ({
+                    id: e.id,
+                    name: e.name
+                }));
             }
         }
+        // Use your existing message sending code but include the updated metadata
+        this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
+            id: elementId,
+            data: rawData as JsonSerializable,
+            metadata: metadata,
+            referenceData: referenceData  
+        });
     }
 
     /**
