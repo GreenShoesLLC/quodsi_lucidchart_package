@@ -3,7 +3,7 @@ import { ActivityRelationships, Connector, ModelDefinition } from "@quodsi/share
 /**
  * Interface defining what's needed for model validation
  */
-export interface ModelState {
+export interface ModelDefinitionState {
     modelDefinition: ModelDefinition;
     connections: Map<string, Connector>;
     activityRelationships: Map<string, ActivityRelationships>;

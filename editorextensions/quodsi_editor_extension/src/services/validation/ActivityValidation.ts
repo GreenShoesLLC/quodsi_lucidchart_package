@@ -1,9 +1,9 @@
 import { ValidationRule } from "./ValidationRule";
 import { ValidationMessage, Activity } from "@quodsi/shared";
-import { ModelState } from "./ModelState";
+import { ModelDefinitionState } from "./ModelDefinitionState";
 
 export class ActivityValidation extends ValidationRule {
-    validate(state: ModelState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const activities = state.modelDefinition.activities.getAll();
 
         activities.forEach(activity => {
@@ -14,7 +14,7 @@ export class ActivityValidation extends ValidationRule {
 
     private validateActivityConnectivity(
         activityId: string,
-        state: ModelState,
+        state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
         const relationships = state.activityRelationships.get(activityId);

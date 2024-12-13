@@ -8,12 +8,13 @@ export declare class ModelPanel extends BasePanel {
     private expandedNodes;
     private currentModelStructure?;
     private currentSelection;
+    private isHandlingSelectionChange;
     constructor(client: EditorClient, modelManager: ModelManager);
     private setupModelMessageHandlers;
     private handleModelSpecificReactReady;
     /**
-     * Updates the model structure based on current model data
-     */
+         * Updates the model structure based on current model data and validates the model
+         */
     private updateModelStructure;
     /**
      * Handles tree node expansion state changes
@@ -44,7 +45,10 @@ export declare class ModelPanel extends BasePanel {
     /**
      * Handles selection changes in the editor
      */
-    handleSelectionChange(items: ItemProxy[]): void;
+    /**
+     * Handles selection changes in the editor
+     */
+    handleSelectionChange(items: ItemProxy[]): Promise<void>;
     /**
      * Updates the current selection state
      */

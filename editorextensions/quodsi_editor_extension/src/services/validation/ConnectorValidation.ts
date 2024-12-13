@@ -1,9 +1,9 @@
 import { ValidationRule } from './ValidationRule';
 import { ValidationMessage } from '@quodsi/shared';
-import { ModelState } from './ModelState';
+import { ModelDefinitionState } from './ModelDefinitionState';
 
 export class ConnectorValidation extends ValidationRule {
-    validate(state: ModelState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const connectors = state.modelDefinition.connectors.getAll();
 
         connectors.forEach(connector => {
@@ -52,7 +52,7 @@ export class ConnectorValidation extends ValidationRule {
         }
     }
 
-    private validateProbabilityDistributions(state: ModelState, messages: ValidationMessage[]): void {
+    private validateProbabilityDistributions(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         // Group connections by source
         const connectionsBySource = new Map<string, Array<{ id: string, probability: number }>>();
 

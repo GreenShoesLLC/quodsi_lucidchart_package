@@ -1,9 +1,9 @@
 import { ValidationRule } from './ValidationRule';
 import { ValidationMessage, Generator } from '@quodsi/shared';
-import { ModelState } from './ModelState';
+import { ModelDefinitionState } from './ModelDefinitionState';
 
 export class GeneratorValidation extends ValidationRule {
-    validate(state: ModelState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const generators = state.modelDefinition.generators.getAll();
 
         generators.forEach(generator => {
@@ -14,7 +14,7 @@ export class GeneratorValidation extends ValidationRule {
 
     private validateGeneratorConnectivity(
         generator: Generator,
-        state: ModelState,
+        state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
         // Check for outgoing connections using the connections map
@@ -32,7 +32,7 @@ export class GeneratorValidation extends ValidationRule {
 
     private validateGeneratorData(
         generator: Generator,
-        state: ModelState,
+        state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
         // Validate basic properties

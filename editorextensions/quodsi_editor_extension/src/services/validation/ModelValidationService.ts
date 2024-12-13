@@ -1,10 +1,10 @@
-import { 
-    ActivityRelationships, 
-    ModelDefinition, 
-    ValidationMessage, 
-    ValidationResult 
+import {
+    ActivityRelationships,
+    ModelDefinition,
+    ValidationMessage,
+    ValidationResult
 } from "@quodsi/shared";
-import { ModelState } from "./ModelState";
+import { ModelDefinitionState } from "./ModelDefinitionState";
 import { ActivityValidation } from "./ActivityValidation";
 import { ConnectorValidation } from "./ConnectorValidation";
 import { ElementCountsValidation } from "./ElementCountsValidation";
@@ -33,7 +33,7 @@ export class ModelValidationService {
 
         try {
             // Create ModelState from ModelDefinition
-            const state: ModelState = {
+            const state: ModelDefinitionState = {
                 modelDefinition,
                 connections: new Map(modelDefinition.connectors.getAll().map(c => [c.id, c])),
                 activityRelationships: this.buildActivityRelationships(modelDefinition)
@@ -59,11 +59,11 @@ export class ModelValidationService {
                 messageCount: messages.length,
                 messages: messages
             });
-            return { 
+            return {
                 isValid: errorCount === 0,
                 errorCount,
                 warningCount,
-                messages 
+                messages
             };
 
         } catch (error) {
@@ -72,11 +72,11 @@ export class ModelValidationService {
                 type: 'error',
                 message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
             });
-            return { 
-                isValid: false, 
+            return {
+                isValid: false,
                 errorCount: 1,
                 warningCount: 0,
-                messages 
+                messages
             };
         }
     }

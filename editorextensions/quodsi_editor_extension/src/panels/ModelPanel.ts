@@ -48,6 +48,7 @@ export class ModelPanel extends BasePanel {
         selectedIds: [],
         selectionType: SelectionType.NONE
     };
+    private isHandlingSelectionChange: boolean = false;
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -136,13 +137,24 @@ export class ModelPanel extends BasePanel {
     }
 
     /**
-     * Updates the model structure based on current model data
-     */
-    private updateModelStructure(): void {
+         * Updates the model structure based on current model data and validates the model
+         */
+    private async updateModelStructure(): Promise<void> {
         const modelData = this.modelManager.getModelDefinition();
         if (modelData) {
+            // Update model structure
             this.currentModelStructure = ModelStructureBuilder.buildModelStructure(modelData);
             console.log('[ModelPanel] Model structure updated:', this.currentModelStructure);
+
+            // Validate model
+            const validationResult = await this.modelManager.validateModel();
+            console.log('[ModelPanel] Model validation result:', validationResult);
+
+            // If we're in a selection change context, this validation result will be used
+            // Otherwise, notify the React app of the validation update
+            if (!this.isHandlingSelectionChange) {
+                this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
+            }
         } else {
             this.currentModelStructure = undefined;
         }
@@ -333,92 +345,101 @@ export class ModelPanel extends BasePanel {
     /**
      * Handles selection changes in the editor
      */
-    public handleSelectionChange(items: ItemProxy[]): void {
-        console.log('[ModelPanel] Selection changed:', {
-            count: items.length,
-            ids: items.map(item => item.id)
-        });
+    /**
+     * Handles selection changes in the editor
+     */
+    public async handleSelectionChange(items: ItemProxy[]): Promise<void> {
+        this.isHandlingSelectionChange = true;
+        try {
+            console.log('[ModelPanel] Selection changed:', {
+                count: items.length,
+                ids: items.map(item => item.id)
+            });
 
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
 
-        if (!currentPage) {
-            console.error('[ModelPanel] No active page found');
-            return;
-        }
-
-        this.updateModelStructure();
-        const validationResult = this.modelManager.getCurrentValidation();
-        // Update current selection state
-        this.updateSelectionState(currentPage, items);
-
-        // Only send updates if React app is ready
-        if (this.reactAppReady) {
-            let elementData: ElementData[] = [];
-
-            if (items.length === 0) {
-                if (this.storageAdapter.isQuodsiModel(currentPage)) {
-                    const rawModelData = this.storageAdapter.getElementData(currentPage);
-                    if (typeof rawModelData === 'object' && rawModelData !== null) {
-                        const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
-                        console.log('[ModelPanel] Page model data:', modelData);
-
-                        elementData = [{
-                            id: currentPage.id,
-                            data: modelData,
-                            metadata: {
-                                type: SimulationObjectType.Model,
-                                version: this.storageAdapter.CURRENT_VERSION
-                            },
-                            name: currentPage.getTitle() || null
-                        }];
-                    }
-                }
-            } else {
-                elementData = items.map(item => {
-                    const rawData = this.storageAdapter.getElementData(item);
-                    // Convert SDK JsonObject to our SharedJsonObject type
-                    const data = (typeof rawData === 'object' && rawData !== null) ?
-                        JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
-
-                    const metadata = this.storageAdapter.getMetadata(item);
-                    // Convert metadata in the same way if needed
-                    const convertedMetadata = metadata ?
-                        JSON.parse(JSON.stringify(metadata)) : null;
-
-                    return {
-                        id: item.id,
-                        data: data,
-                        metadata: convertedMetadata,
-                        name: 'TBD'
-                    };
-                });
+            if (!currentPage) {
+                console.error('[ModelPanel] No active page found');
+                return;
             }
 
-            // Send selection update with element data
-            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
-                selectionState: this.currentSelection,
-                elementData: elementData,
-                modelStructure: this.currentModelStructure,
-                expandedNodes: Array.from(this.expandedNodes),
-                validationResult: validationResult ?? undefined  // Convert null to undefined
-            });
+            await this.updateModelStructure();
 
+            // Update current selection state
+            this.updateSelectionState(currentPage, items);
 
-            console.log('[ModelPanel] Selection update sent:', {
-                selectionState: this.currentSelection,
-                elementData: elementData
+            // Only send updates if React app is ready
+            if (this.reactAppReady) {
+                let elementData: ElementData[] = [];
+
+                if (items.length === 0) {
+                    if (this.storageAdapter.isQuodsiModel(currentPage)) {
+                        const rawModelData = this.storageAdapter.getElementData(currentPage);
+                        if (typeof rawModelData === 'object' && rawModelData !== null) {
+                            const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
+                            console.log('[ModelPanel] Page model data:', modelData);
+
+                            elementData = [{
+                                id: currentPage.id,
+                                data: modelData,
+                                metadata: {
+                                    type: SimulationObjectType.Model,
+                                    version: this.storageAdapter.CURRENT_VERSION
+                                },
+                                name: currentPage.getTitle() || null
+                            }];
+                        }
+                    }
+                } else {
+                    elementData = items.map(item => {
+                        const rawData = this.storageAdapter.getElementData(item);
+                        // Convert SDK JsonObject to our SharedJsonObject type
+                        const data = (typeof rawData === 'object' && rawData !== null) ?
+                            JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
+
+                        const metadata = this.storageAdapter.getMetadata(item);
+                        // Convert metadata in the same way if needed
+                        const convertedMetadata = metadata ?
+                            JSON.parse(JSON.stringify(metadata)) : null;
+
+                        return {
+                            id: item.id,
+                            data: data,
+                            metadata: convertedMetadata,
+                            name: 'TBD'
+                        };
+                    });
+                }
+
+                // Get the validation result from modelManager
+                const validationResult = this.modelManager.getCurrentValidation();
+
+                // Send selection update with element data, model structure, and validation result
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+                    selectionState: this.currentSelection,
+                    elementData: elementData,
+                    modelStructure: this.currentModelStructure,
+                    expandedNodes: Array.from(this.expandedNodes),
+                    validationResult: validationResult ?? undefined  // Convert null to undefined
+                });
+
+                console.log('[ModelPanel] Selection update sent:', {
+                    selectionState: this.currentSelection,
+                    elementData: elementData,
+                    validationState: validationResult
+                });
+            }
+        } catch (error) {
+            console.error('[ModelPanel] Error handling selection change:', error);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
+        } finally {
+            this.isHandlingSelectionChange = false;
         }
     }
-
-
-    // private sendTypedMessage<T extends MessageTypes>(
-    //     type: T,
-    //     payload?: MessagePayloads[T]
-    // ): void {
-    //     this.sendMessage(createSerializableMessage(type, payload));
-    // }
+        
 
     /**
      * Updates the current selection state

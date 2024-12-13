@@ -1,9 +1,9 @@
 import { ValidationRule } from "./ValidationRule";
 import { ValidationMessage, Resource } from "@quodsi/shared";
-import { ModelState } from "./ModelState";
+import { ModelDefinitionState } from "./ModelDefinitionState";
 
 export class ResourceValidation extends ValidationRule {
-    validate(state: ModelState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const resources = state.modelDefinition.resources.getAll();
 
         // First validate each resource's data
@@ -53,7 +53,7 @@ export class ResourceValidation extends ValidationRule {
         }
     }
 
-    private validateResourceUsage(state: ModelState, messages: ValidationMessage[]): void {
+    private validateResourceUsage(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const resources = state.modelDefinition.resources.getAll();
         const activities = state.modelDefinition.activities.getAll();
         const resourceUsage = new Map<string, Set<string>>(); // Resource ID -> Set of Activity IDs
@@ -140,7 +140,7 @@ export class ResourceValidation extends ValidationRule {
     }
 
     private checkResourceConflicts(
-        state: ModelState,
+        state: ModelDefinitionState,
         resourceUsage: Map<string, Set<string>>,
         messages: ValidationMessage[]
     ): void {
@@ -161,7 +161,7 @@ export class ResourceValidation extends ValidationRule {
     }
 
     private validateConcurrentResourceUsage(
-        state: ModelState,
+        state: ModelDefinitionState,
         resource: Resource,
         activityIds: string[],
         messages: ValidationMessage[]

@@ -1,12 +1,12 @@
 import { ValidationMessage } from "@quodsi/shared";
-import { ModelState } from "./ModelState";
+import { ModelDefinitionState } from "./ModelDefinitionState";
 import { ValidationRule } from "./ValidationRule";
 
 /**
  * Validates basic element counts and requirements
  */
 export class ElementCountsValidation extends ValidationRule {
-    validate(state: ModelState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         const { modelDefinition } = state;
 
         if (modelDefinition.generators.size() === 0) {
