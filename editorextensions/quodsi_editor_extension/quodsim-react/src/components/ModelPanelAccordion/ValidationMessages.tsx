@@ -1,68 +1,108 @@
-import React from 'react';
-import { ChevronDown, ChevronRight, AlertCircle } from 'lucide-react';
-import { ValidationMessage } from '@quodsi/shared';
-import { ValidationMessageList } from './ValidationMessageList';
+import React, { useEffect } from "react";
+
+import { ValidationMessageList } from "./ValidationMessageList";
+import { ValidationState } from "@quodsi/shared";
 
 interface ValidationMessagesProps {
-    validationState: {
-        summary: {
-            errorCount: number;
-            warningCount: number;
-        };
-        messages: ValidationMessage[];
-    } | null;
-    currentElementId?: string;
-    isExpanded: boolean;
-    onToggle: () => void;
+  validationState: ValidationState | null;
+  currentElementId: string | undefined;
+  isExpanded: boolean;
+  onToggle: () => void;
 }
 
 export const ValidationMessages: React.FC<ValidationMessagesProps> = ({
-    validationState,
-    currentElementId,
-    isExpanded,
-    onToggle
+  validationState,
+  currentElementId,
+  isExpanded,
+  onToggle,
 }) => {
-    const errorCount = validationState?.summary?.errorCount ?? 0;
-    const warningCount = validationState?.summary?.warningCount ?? 0;
+  // Log component render
+  console.group("ValidationMessages Render");
+  console.log("Props Received:", {
+    validationState: validationState
+      ? {
+          messageCount: validationState.messages?.length,
+          hasMessages: !!validationState.messages?.length,
+          firstMessage: validationState.messages?.[0],
+        }
+      : "null",
+    currentElementId: currentElementId || "undefined",
+    isExpanded,
+  });
 
-    return (
-        <div className="border-b">
-            <button
-                onClick={onToggle}
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
-            >
-                <div className="flex items-center space-x-2">
-                    <span className="font-medium text-sm">Validation</span>
-                    {errorCount > 0 && (
-                        <span className="flex items-center px-2 py-0.5 text-xs bg-red-100 text-red-800 rounded-full">
-                            <AlertCircle size={12} className="mr-1" />
-                            {errorCount} errors
-                        </span>
-                    )}
-                    {warningCount > 0 && (
-                        <span className="flex items-center px-2 py-0.5 text-xs bg-yellow-100 text-yellow-800 rounded-full ml-2">
-                            <AlertCircle size={12} className="mr-1" />
-                            {warningCount} warnings
-                        </span>
-                    )}
-                </div>
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-            </button>
-            
-            {isExpanded && validationState && (
-                <div className="p-3 border-t">
-                    {validationState.messages.length === 0 ? (
-                        <div className="text-sm text-gray-500 italic">
-                            No validation issues found
-                        </div>
-                    ) : (
-                        <ValidationMessageList
-                            messages={validationState.messages}
-                            currentElementId={currentElementId}
-                        />
-                    )}
-                </div>
-            )}
-        </div>
-    );
+  // Track prop changes
+  useEffect(() => {
+    console.log("ValidationState Changed:", {
+      timestamp: new Date().toISOString(),
+      hasValidationState: !!validationState,
+      messageCount: validationState?.messages?.length,
+    });
+  }, [validationState]);
+
+  useEffect(() => {
+    console.log("CurrentElementId Changed:", {
+      timestamp: new Date().toISOString(),
+      oldId: currentElementId,
+      isElementSelected: !!currentElementId,
+    });
+  }, [currentElementId]);
+
+  useEffect(() => {
+    console.log("Expanded State Changed:", {
+      timestamp: new Date().toISOString(),
+      isExpanded,
+    });
+  }, [isExpanded, validationState?.messages]);
+
+  // Performance tracking
+  const renderStartTime = performance.now();
+  useEffect(() => {
+    const renderTime = performance.now() - renderStartTime;
+    console.log(`Render Performance: ${renderTime.toFixed(2)}ms`);
+  });
+
+  const messages = validationState?.messages || [];
+  // Log render decision
+  console.log("Render Decision:", {
+    willRenderMessageList: isExpanded,
+    hasMessages: messages.length > 0,
+    currentElementId: currentElementId || "none",
+  });
+
+  // Track toggle interactions
+  const handleToggle = () => {
+    console.log("Toggle Clicked:", {
+      timestamp: new Date().toISOString(),
+      previousState: isExpanded,
+      newState: !isExpanded,
+      hasMessages: messages.length > 0,
+    });
+    onToggle();
+  };
+
+  const result = (
+    <div className="validation-messages">
+      <div className="validation-header" onClick={handleToggle}>
+        <span>{isExpanded ? "▼" : "▶"} Validation</span>
+      </div>
+      {isExpanded && (
+        <ValidationMessageList
+          messages={messages}
+          selectedElementId={currentElementId || null}
+          showSelectedOnly={true}
+        />
+      )}
+    </div>
+  );
+
+  // Log final render output structure
+  console.log("Final Render Output:", {
+    hasValidationHeader: true,
+    isMessageListRendered: isExpanded,
+    totalMessagesPassedToList: messages.length,
+  });
+
+  console.groupEnd();
+
+  return result;
 };

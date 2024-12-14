@@ -1,42 +1,111 @@
-import React from 'react';
-import { ValidationMessage, ValidationMessageType } from "@quodsi/shared";
+import React, { useEffect } from 'react';
+import { ValidationMessage } from "@quodsi/shared";
+import ValidationMessageItem from './ValidationMessageItem';
 
 interface ValidationMessageListProps {
-    messages: ValidationMessage[];
-    currentElementId?: string;
+  messages: ValidationMessage[];
+  selectedElementId: string | null;
+  showSelectedOnly: boolean;
 }
 
-export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({ 
-    messages, 
-    currentElementId 
+export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
+  messages,
+  selectedElementId,
+  showSelectedOnly,
 }) => {
-    const getMessageStyle = (type: ValidationMessageType) => {
-        switch(type) {
-            case 'error':
-                return 'bg-red-50 text-red-700';
-            case 'warning':
-                return 'bg-yellow-50 text-yellow-700';
-            case 'info':
-                return 'bg-blue-50 text-blue-700';
-            default:
-                return 'bg-gray-50 text-gray-700';
-        }
-    };
+  // Performance tracking
+  const renderStartTime = performance.now();
 
-    const filteredMessages = currentElementId
-        ? messages.filter(m => m.elementId === currentElementId)
+  useEffect(() => {
+    const renderTime = performance.now() - renderStartTime;
+    console.log(`ValidationMessageList render time: ${renderTime.toFixed(2)}ms`);
+  });
+
+  // Log component mount and updates
+  useEffect(() => {
+    console.group('ValidationMessageList Mount/Update');
+    console.log('Props received:', {
+      totalMessages: messages.length,
+      selectedElementId: selectedElementId || 'none',
+      showSelectedOnly,
+      messageTypes: messages.reduce((acc, m) => {
+        acc[m.type] = (acc[m.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>)
+    });
+    console.groupEnd();
+  }, [messages, selectedElementId, showSelectedOnly]);
+
+  // Log when selectedElementId changes
+  useEffect(() => {
+    console.log('Selected Element Changed:', {
+      newSelectedId: selectedElementId,
+      timestamp: new Date().toISOString(),
+      relevantMessages: messages.filter(m => m.elementId === selectedElementId).length
+    });
+  }, [selectedElementId, messages]);
+
+  console.group('ValidationMessageList Render');
+  
+  // Filter messages based on selectedElementId if showSelectedOnly is true
+    const filteredMessages =
+    showSelectedOnly && selectedElementId && selectedElementId !== "0_0"
+        ? messages.filter((message) => message.elementId === selectedElementId)
         : messages;
 
-    return (
-        <div className="space-y-2">
-            {filteredMessages.map((message, idx) => (
-                <div
-                    key={idx}
-                    className={`p-2 rounded text-sm ${getMessageStyle(message.type)}`}
-                >
-                    {message.message}
-                </div>
+  // Log filtering results
+  console.log('Message Filtering:', {
+    originalCount: messages.length,
+    filteredCount: filteredMessages.length,
+    filteringActive: showSelectedOnly && selectedElementId,
+    selectedElementId: selectedElementId || 'none',
+    removedMessages: messages.length - filteredMessages.length,
+    filterReason: showSelectedOnly 
+      ? (selectedElementId ? 'Showing selected element only' : 'No element selected') 
+      : 'Showing all messages'
+  });
+
+  // Log detailed message analysis
+  console.log('Message Analysis:', {
+    errorCount: filteredMessages.filter(m => m.type === 'error').length,
+    warningCount: filteredMessages.filter(m => m.type === 'warning').length,
+    messagesByType: filteredMessages.reduce((acc, m) => {
+      acc[m.type] = (acc[m.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  });
+
+  const result = (
+    <div className="validation-message-list">
+      {filteredMessages.map((message, index) => {
+        // Log individual message rendering
+        console.log(`Rendering message ${index}:`, {
+          type: message.type,
+          elementId: message.elementId,
+          messagePreview: message.message.substring(0, 50) + (message.message.length > 50 ? '...' : '')
+        });
+
+        return (
+          <div className="bg-white rounded-md shadow-sm">
+            {filteredMessages.map((message, index) => (
+              <ValidationMessageItem
+                key={`${message.elementId}-${index}`}
+                message={message}
+              />
             ))}
-        </div>
-    );
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  console.log('Final Render Output:', {
+    renderedMessageCount: filteredMessages.length,
+    hasMessages: filteredMessages.length > 0,
+    timestamp: new Date().toISOString()
+  });
+
+  console.groupEnd();
+
+  return result;
 };

@@ -1,7 +1,6 @@
 import { ValidationMessage } from "@quodsi/shared";
 import React from "react";
 
-
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
   selectedElementId: string | null;
@@ -13,34 +12,51 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   selectedElementId,
   showSelectedOnly,
 }) => {
+  console.group("ValidationMessageList Render");
+  console.log({
+    receivedMessages: messages,
+    messageCount: messages?.length,
+    messageTypes: messages?.map((m) => m.type),
+    hasValidStructure: messages?.every(
+      (m) => typeof m.type === "string" && typeof m.message === "string"
+    ),
+  });
+
+  React.useEffect(() => {
+    console.log("ValidationMessageList messages changed:", {
+      newMessageCount: messages?.length,
+      messageContent: messages?.map((m) => ({
+        type: m.type,
+        message: m.message.substring(0, 50) + "...", // Truncate long messages
+      })),
+    });
+  }, [messages]);
+
+  // Performance monitoring
+  const renderStart = performance.now();
+  React.useEffect(() => {
+    const renderTime = performance.now() - renderStart;
+    console.log(
+      `ValidationMessageList render time: ${renderTime.toFixed(2)}ms`
+    );
+  });
+
+  console.groupEnd();
+  // Filter messages based on selectedElementId if showSelectedOnly is true
   const filteredMessages =
     showSelectedOnly && selectedElementId
-      ? messages.filter((msg) => msg.elementId === selectedElementId)
+      ? messages.filter((message) => message.elementId === selectedElementId)
       : messages;
-
   return (
-    <div className="h-48 overflow-y-auto border rounded-md p-4">
-      {filteredMessages.length === 0 ? (
-        <p className="text-gray-500 text-sm">No messages to display</p>
-      ) : (
-        <div className="space-y-2">
-          {filteredMessages.map((message, index) => (
-            <div
-              key={index}
-              className={`p-2 rounded border ${
-                message.type === "error"
-                  ? "bg-red-50 text-red-800 border-red-200"
-                  : "bg-yellow-50 text-yellow-800 border-yellow-200"
-              }`}
-            >
-              <div className="font-medium">{message.message}</div>
-              <div className="text-sm opacity-80">
-                Element: {message.elementId}
-              </div>
-            </div>
-          ))}
+    <div className="validation-message-list">
+      {filteredMessages.map((message, index) => (
+        <div
+          key={`${message.type}-${index}`}
+          className={`validation-message ${message.type}`}
+        >
+          {message.message}
         </div>
-      )}
+      ))}
     </div>
   );
 };
