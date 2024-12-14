@@ -17,9 +17,5 @@ export declare class RemoveModelFromPage {
      * Clears legacy data properties (q_objecttype and q_data)
      */
     private clearLegacyData;
-    /**
-     * Verifies status-related properties were removed
-     */
-    private verifyStatusRemoval;
 }
 //# sourceMappingURL=RemoveModelFromPage.d.ts.map

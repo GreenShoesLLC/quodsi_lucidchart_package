@@ -1,43 +1,51 @@
 {
-    "compilerOptions": {
-      "declaration": true,
-      "declarationMap": true, // Allows navigation to .ts files from .d.ts files
-      "composite": true, // Required for project references
-      "emitDecoratorMetadata": true,
-      "experimentalDecorators": true,
-      "forceConsistentCasingInFileNames": true,
-      "module": "commonjs",
-      "moduleResolution": "node",
-      "newLine": "lf",
-      "noEmitOnError": false,
-      "noImplicitAny": true,
-      "noImplicitReturns": true,
-      "noImplicitThis": true,
-      "noUnusedLocals": false,
-      "pretty": true,
-      "removeComments": false,
-      "skipLibCheck": true,
-      "sourceMap": false,
-      "strictBindCallApply": true,
-      "strictFunctionTypes": true,
-      "strictNullChecks": true,
-      "strictPropertyInitialization": true,
-      "target": "ES2017",
-      "types": [],
-      "lib": [
-        "es5",
-        "es6",
-        "ES2016.Array.Include",
-        "ES2017.String",
-        "ES2018.Promise",
-        "ES2017.Object",
-        "esnext.asynciterable",
-        "ES2015",
-        "DOM",
-        "DOM.Iterable"
-      ],
-      "outDir": "bin"
-    },
-    "files": ["resources/resource.d.ts"],
-    "include": ["src/**/*"]
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "newLine": "lf",
+    "noEmitOnError": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": false,
+    "pretty": true,
+    "removeComments": false,
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "target": "ES2017",
+    "types": [],
+    "lib": [
+      "es5",
+      "es6",
+      "ES2016.Array.Include",
+      "ES2017.String",
+      "ES2018.Promise",
+      "ES2017.Object",
+      "esnext.asynciterable",
+      "ES2015",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "outDir": "bin",
+    "paths": {
+      "@quodsi/shared": ["../../shared/dist"]
+    }
+  },
+  "files": ["resources/resource.d.ts"],
+  "include": ["src/**/*"],
+  "references": [
+    {
+      "path": "../../shared"
+    }
+  ]
 }

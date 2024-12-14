@@ -16,7 +16,7 @@
     {
       "label": "LucidPackage",
       "type": "shell",
-      "command": "npx lucid-package@latest test-editor-extension quodsi_editor_extension",
+      "command": "npx lucid-package@latest test-editor-extension quodsi_editor_extension --watch",
       "problemMatcher": [],
       "group": "build",
       "presentation": {

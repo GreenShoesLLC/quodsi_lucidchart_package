@@ -97,7 +97,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           onClick={() => toggleSection("modelTree")}
           className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
         >
-          <span className="font-medium text-sm">Model Structure</span>
+          <span className="font-medium text-sm">Model Definition</span>
           {expandedSections.modelTree ? (
             <ChevronDown className="h-4 w-4" />
           ) : (

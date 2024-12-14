@@ -19,11 +19,11 @@ import { ModelManager } from '../../core/ModelManager';
 import { SimulationObjectTypeFactory } from '@quodsi/shared';
 
 export class ConversionService {
-    constructor(
-        private modelManager: ModelManager,
-        private storageAdapter: StorageAdapter
-    ) { }
-
+    private storageAdapter: StorageAdapter;
+    constructor(private modelManager: ModelManager) {
+        // Get storageAdapter from modelManager if needed
+        this.storageAdapter = modelManager.getStorageAdapter();
+    }
     /**
      * Checks if a page can be converted to a model
      */

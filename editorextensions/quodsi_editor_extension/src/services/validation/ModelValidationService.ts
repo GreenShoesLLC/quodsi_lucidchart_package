@@ -1,6 +1,7 @@
 import {
     ActivityRelationships,
     ModelDefinition,
+    ModelDefinitionLogger,
     ValidationMessage,
     ValidationResult
 } from "@quodsi/shared";
@@ -32,7 +33,7 @@ export class ModelValidationService {
 
     public validate(modelDefinition: ModelDefinition): ValidationResult {
         const messages: ValidationMessage[] = [];
-
+        // ModelDefinitionLogger.log(modelDefinition)
         try {
             // Generate a hash of the model definition for cache comparison
             const currentHash = this.generateModelHash(modelDefinition);
@@ -64,6 +65,20 @@ export class ModelValidationService {
                 warningCount: 0,
                 messages: [ValidationMessages.validationError(error)]
             };
+        }
+    }
+    /**
+     * Enable or disable logging for a specific validation rule by its class name.
+     * @param ruleName - The class name of the validation rule.
+     * @param enabled - True to enable logging, false to disable.
+     */
+    public setRuleLogging(ruleName: string, enabled: boolean): void {
+        const rule = this.rules.find(r => r.constructor.name === ruleName);
+        if (rule) {
+            rule.setLogging(enabled);
+            console.log(`[ModelValidationService] Logging for ${ruleName} set to ${enabled}`);
+        } else {
+            console.warn(`[ModelValidationService] Validation rule ${ruleName} not found.`);
         }
     }
 
@@ -98,7 +113,12 @@ export class ModelValidationService {
     }
 
     private batchValidate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
-        // Run all validation rules in parallel if possible
+        // Log the details of the model definition activities
+        console.log("[ModelValidation] Starting batch validation.");
+
+        ModelDefinitionLogger.log(state.modelDefinition)
+
+        // Validate all rules
         const validationPromises = this.rules.map(rule => {
             return new Promise<void>((resolve) => {
                 rule.validate(state, messages);
@@ -107,8 +127,11 @@ export class ModelValidationService {
         });
 
         // Wait for all validations to complete
-        Promise.all(validationPromises);
+        Promise.all(validationPromises).then(() => {
+            console.log("[ModelValidation] Batch validation completed.");
+        });
     }
+
 
     private calculateValidationMetrics(messages: ValidationMessage[]): ValidationResult {
         const errorCount = messages.filter(m => m.type === 'error').length;

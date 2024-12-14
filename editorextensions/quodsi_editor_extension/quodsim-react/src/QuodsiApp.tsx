@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   MessageTypes,
   MessagePayloads,
-  createSerializableMessage,
   ModelStructure,
   ValidationState,
   SimulationObjectType,
@@ -15,8 +14,11 @@ import {
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
 import { ErrorDisplay } from "./components/ui/ErrorDisplay";
 import { ProcessingIndicator } from "./components/ui/ProcessingIndicator";
-import { MessageHandler, messageHandlers, registerHandler } from "./services/messageHandlers/messageHandlers";
-
+import {
+  MessageHandler,
+  messageHandlers,
+  registerHandler,
+} from "./services/messageHandlers/messageHandlers";
 
 export interface AppState {
   modelStructure: ModelStructure | null;
@@ -48,19 +50,15 @@ const initialState: AppState = {
 };
 
 const QuodsiApp: React.FC = () => {
-  console.log("[QuodsiApp] Component mounting");
+  console.log("[QuodsiApp] Component mounting 2");
   const [state, setState] = useState<AppState>(initialState);
   const messaging = ExtensionMessaging.getInstance();
 
   // Create a type-safe message sender that uses window.postMessage
   const sendMessage = useCallback(
     <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => {
-      console.log("[QuodsiApp] Sending message:", { type, payload });
       try {
-        window.parent.postMessage(
-          createSerializableMessage(type, payload),
-          "*"
-        );
+        ExtensionMessaging.getInstance().sendMessage(type, payload);
       } catch (error) {
         console.error("[QuodsiApp] Failed to send message:", error);
         setState((prev) => ({
@@ -73,42 +71,42 @@ const QuodsiApp: React.FC = () => {
   );
 
   // Set up message handling
-useEffect(() => {
-  console.log("[QuodsiApp] Setting up ExtensionMessaging");
+  useEffect(() => {
+    console.log("[QuodsiApp] Setting up ExtensionMessaging");
 
-  const deps = {
-    setState,
-    setError: (error: string | null) =>
-      setState((prev) => ({ ...prev, error })),
-    sendMessage,
-  };
+    const deps = {
+      setState,
+      setError: (error: string | null) =>
+        setState((prev) => ({ ...prev, error })),
+      sendMessage,
+    };
 
-  // Register handlers in a type-safe way
-  (
-    Object.entries(messageHandlers) as [
-      MessageTypes,
-      MessageHandler<MessageTypes>
-    ][]
-  ).forEach(([type, handler]) => {
-    registerHandler(messaging, type, handler, deps);
-  });
+    // Register handlers in a type-safe way
+    (
+      Object.entries(messageHandlers) as [
+        MessageTypes,
+        MessageHandler<MessageTypes>
+      ][]
+    ).forEach(([type, handler]) => {
+      registerHandler(messaging, type, handler, deps);
+    });
 
-  const handleWindowMessage = (event: MessageEvent) => {
-    const message = event.data;
-    if (!isValidMessage(message)) {
-      console.error("[QuodsiApp] Invalid message format:", message);
-      return;
-    }
-    messaging.handleIncomingMessage(message);
-  };
+    const handleWindowMessage = (event: MessageEvent) => {
+      const message = event.data;
+      if (!isValidMessage(message)) {
+        console.error("[QuodsiApp] Invalid message format:", message);
+        return;
+      }
+      messaging.handleIncomingMessage(message);
+    };
 
-  window.addEventListener("message", handleWindowMessage);
-  sendMessage(MessageTypes.REACT_APP_READY);
+    window.addEventListener("message", handleWindowMessage);
+    sendMessage(MessageTypes.REACT_APP_READY);
 
-  return () => {
-    window.removeEventListener("message", handleWindowMessage);
-  };
-}, [messaging, sendMessage]);
+    return () => {
+      window.removeEventListener("message", handleWindowMessage);
+    };
+  }, [messaging, sendMessage]);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -135,32 +133,33 @@ useEffect(() => {
     sendMessage(MessageTypes.VALIDATE_MODEL);
   }, [sendMessage]);
 
-const handleUpdate = useCallback(
-  (elementId: string, data: any) => {
-    console.log("[QuodsiApp] Update requested:", { elementId, data });
-    setState((prev) => ({ ...prev, isProcessing: true }));
+  const handleUpdate = useCallback(
+    (elementId: string, data: any) => {
+      console.log("[QuodsiApp] Update requested:", { elementId, data });
+      setState((prev) => ({ ...prev, isProcessing: true }));
 
-    // Handle type conversion
-    if (data.type && Object.keys(data).length === 1) {
-      sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-        elementId,
-        type: data.type,
-        data: {}, // Empty data for type conversion
-      });
-    } else {
-      // Regular update
-      sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-        elementId,
-        type: state.currentElement?.metadata?.type || SimulationObjectType.None,
-        data: {
-          ...data,
-          id: elementId,
-        },
-      });
-    }
-  },
-  [sendMessage, state.currentElement?.metadata?.type]
-);
+      // Handle type conversion
+      if (data.type && Object.keys(data).length === 1) {
+        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+          elementId,
+          type: data.type,
+          data: {}, // Empty data for type conversion
+        });
+      } else {
+        // Regular update
+        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+          elementId,
+          type:
+            state.currentElement?.metadata?.type || SimulationObjectType.None,
+          data: {
+            ...data,
+            id: elementId,
+          },
+        });
+      }
+    },
+    [sendMessage, state.currentElement?.metadata?.type]
+  );
 
   const handleTreeNodeToggle = useCallback(
     (nodeId: string, expanded: boolean) => {
@@ -193,7 +192,6 @@ const handleUpdate = useCallback(
     },
     [sendMessage, state.documentId]
   );
-
 
   useEffect(() => {
     console.log("[QuodsiApp] expandedNodes state changed:", {

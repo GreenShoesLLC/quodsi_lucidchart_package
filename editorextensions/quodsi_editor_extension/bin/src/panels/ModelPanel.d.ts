@@ -3,7 +3,6 @@ import { ModelManager } from '../core/ModelManager';
 import { BasePanel } from './BasePanel';
 export declare class ModelPanel extends BasePanel {
     private modelManager;
-    private storageAdapter;
     private conversionService;
     private expandedNodes;
     private currentModelStructure?;
@@ -11,8 +10,8 @@ export declare class ModelPanel extends BasePanel {
     private isHandlingSelectionChange;
     private unconvertedElements;
     constructor(client: EditorClient, modelManager: ModelManager);
+    private static readonly logger;
     private setupModelMessageHandlers;
-    private handleModelSpecificReactReady;
     /**
          * Updates the model structure based on current model data and validates the model
          */
@@ -64,7 +63,7 @@ export declare class ModelPanel extends BasePanel {
      * Handles model removal request
      */
     private handleRemoveModel;
-    protected handleAdditionalReactReady(): void;
+    private handleReactReady;
     /**
      * Sends initial state to React app
      */

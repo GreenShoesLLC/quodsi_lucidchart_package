@@ -13,20 +13,23 @@ export class ConnectorValidation extends ValidationRule {
         const connectors = state.modelDefinition.connectors.getAll();
         const connectorsBySource = this.groupConnectorsBySource(connectors);
 
-        // Validate individual connectors
+        this.log("Starting validation of individual connectors.");
+
         connectors.forEach(connector => {
             this.validateConnectorEndpoints(connector, state, messages);
             this.validateConnectorData(connector, messages);
             this.validateConnectorType(connector, messages);
         });
 
-        // Validate probability distributions for each source
+        this.log("Validating probability distributions for connector groups.");
         connectorsBySource.forEach((sourceConnectors, sourceId) => {
             this.validateProbabilityGroup(sourceId, sourceConnectors, messages);
         });
 
-        // Check for circular references
+        this.log("Detecting circular references in connectors.");
         this.detectCircularReferences(state, messages);
+
+        this.log("Completed validation of connectors.");
     }
 
     private groupConnectorsBySource(connectors: Connector[]): Map<string, Connector[]> {
@@ -44,9 +47,15 @@ export class ConnectorValidation extends ValidationRule {
         state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
-        // Validate source exists
+        /**
+         * Validates that the endpoints of a connector (source and target) are valid.
+         */
+
+        this.log(`Validating endpoints for Connector ID: ${connector.id}`);
+
         const sourceActivity = state.modelDefinition.activities.get(connector.sourceId);
         if (!sourceActivity) {
+            this.log(`Connector ID ${connector.id} has an invalid source ID: ${connector.sourceId}`);
             messages.push(ValidationMessages.invalidConnection(
                 connector.id,
                 'source',
@@ -54,9 +63,9 @@ export class ConnectorValidation extends ValidationRule {
             ));
         }
 
-        // Validate target exists
         const targetActivity = state.modelDefinition.activities.get(connector.targetId);
         if (!targetActivity) {
+            this.log(`Connector ID ${connector.id} has an invalid target ID: ${connector.targetId}`);
             messages.push(ValidationMessages.invalidConnection(
                 connector.id,
                 'target',
@@ -64,22 +73,28 @@ export class ConnectorValidation extends ValidationRule {
             ));
         }
 
-        // Validate self-connections
         if (connector.sourceId === connector.targetId) {
+            this.log(`Connector ID ${connector.id} is self-referencing.`);
             messages.push(ValidationMessages.isolatedElement('Connector', connector.id));
         }
     }
 
     private validateConnectorData(connector: Connector, messages: ValidationMessage[]): void {
-        // Validate name
+        /**
+         * Validates the data properties of a connector, including name, probability, and operation steps.
+         */
+
+        this.log(`Validating data for Connector ID: ${connector.id}`);
+
         if (!connector.name || connector.name.trim().length === 0) {
+            this.log(`Connector ID ${connector.id} has a missing name.`);
             messages.push(ValidationMessages.missingName('Connector', connector.id));
         }
 
-        // Validate probability
         if (typeof connector.probability !== 'number' ||
             connector.probability < 0 ||
             connector.probability > 1) {
+            this.log(`Connector ID ${connector.id} has an invalid probability: ${connector.probability}`);
             messages.push({
                 type: 'error',
                 message: `Connector ${connector.id} has invalid probability (must be between 0 and 1)`,
@@ -87,10 +102,10 @@ export class ConnectorValidation extends ValidationRule {
             });
         }
 
-        // Validate operation steps if present
         if (connector.operationSteps && connector.operationSteps.length > 0) {
             connector.operationSteps.forEach((step, index) => {
                 if (!step.duration) {
+                    this.log(`Connector ID ${connector.id} operation step ${index + 1} has no duration.`);
                     messages.push({
                         type: 'error',
                         message: `Connector ${connector.id} operation step ${index + 1} has no duration specified`,
@@ -102,7 +117,14 @@ export class ConnectorValidation extends ValidationRule {
     }
 
     private validateConnectorType(connector: Connector, messages: ValidationMessage[]): void {
+        /**
+         * Validates the type of the connector to ensure it is a valid `ConnectType`.
+         */
+
+        this.log(`Validating type for Connector ID: ${connector.id}`);
+
         if (!Object.values(ConnectType).includes(connector.connectType)) {
+            this.log(`Connector ID ${connector.id} has an invalid connect type: ${connector.connectType}`);
             messages.push({
                 type: 'error',
                 message: `Connector ${connector.id} has invalid connect type: ${connector.connectType}`,
@@ -116,6 +138,12 @@ export class ConnectorValidation extends ValidationRule {
         connectors: Connector[],
         messages: ValidationMessage[]
     ): void {
+        /**
+         * Validates the probability distribution of connectors originating from the same source.
+         */
+
+        this.log(`Validating probability group for Source ID: ${sourceId}`);
+
         const probabilityConnectors = connectors.filter(
             c => c.connectType === ConnectType.Probability
         );
@@ -127,6 +155,7 @@ export class ConnectorValidation extends ValidationRule {
             );
 
             if (Math.abs(totalProbability - 1.0) > ConnectorValidation.PROBABILITY_TOLERANCE) {
+                this.log(`Probability sum for Source ID ${sourceId} is invalid: ${totalProbability.toFixed(4)}`);
                 messages.push({
                     type: 'error',
                     message: `Outgoing connection probabilities from activity ${sourceId} sum to ${totalProbability.toFixed(4)} (should be 1.0)`,
@@ -136,6 +165,7 @@ export class ConnectorValidation extends ValidationRule {
         }
 
         if (connectors.length > ConnectorValidation.MAX_OUTGOING_CONNECTIONS) {
+            this.log(`Source ID ${sourceId} has too many outgoing connections: ${connectors.length}`);
             messages.push({
                 type: 'warning',
                 message: `Activity ${sourceId} has unusually high number of outgoing connections (${connectors.length})`,
@@ -148,11 +178,18 @@ export class ConnectorValidation extends ValidationRule {
         state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
+        /**
+         * Detects circular references in the graph of connectors.
+         */
+
+        this.log("Detecting circular references in connectors.");
+
         const visited = new Set<string>();
         const stack = new Set<string>();
 
         const detectCycle = (nodeId: string, path: string[] = []): boolean => {
             if (stack.has(nodeId)) {
+                this.log(`Circular reference detected: ${[...path, nodeId].join(' -> ')}`);
                 messages.push({
                     type: 'warning',
                     message: `Circular reference detected: ${[...path, nodeId].join(' -> ')}`,

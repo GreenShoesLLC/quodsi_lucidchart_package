@@ -75,19 +75,4 @@ export class RemoveModelFromPage {
             }
         }
     }
-
-    /**
-     * Verifies status-related properties were removed
-     */
-    private verifyStatusRemoval(element: ElementProxy): boolean {
-        const statusKeys = ['q_status_current', 'q_status_prior'];
-        for (const key of statusKeys) {
-            const value = element.shapeData.get(key);
-            if (value !== undefined && value !== '') {
-                console.warn(`[RemoveModelFromPage] Status property '${key}' still exists on element ${element.id}`);
-                return false;
-            }
-        }
-        return true;
-    }
 }

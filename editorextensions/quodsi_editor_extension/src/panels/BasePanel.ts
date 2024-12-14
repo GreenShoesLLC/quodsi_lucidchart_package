@@ -12,14 +12,15 @@ export abstract class BasePanel extends Panel {
     }
 
     protected setupBaseMessageHandlers(): void {
-        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            if (!this.reactAppReady) {
-                this.reactAppReady = true;
-                this.onReactReady();
-                // Allow derived classes to handle additional setup
-                this.handleAdditionalReactReady();
-            }
-        });
+        // this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
+        //     if (!this.reactAppReady) {
+        //         this.reactAppReady = true;
+        //         this.onReactReady();
+        //         console.error('[BasePanel] About to call handleAdditionalReactReady');
+        //         // Allow derived classes to handle additional setup
+        //         this.handleAdditionalReactReady();
+        //     }
+        // });
 
         this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
             console.error('[BasePanel] Error received:', payload);
@@ -40,7 +41,8 @@ export abstract class BasePanel extends Panel {
 
     protected messageFromFrame(message: any): void {
         console.log('[BasePanel] Message received:', message);
-
+        console.error('[BasePanel] Message from frame:', message);
+        
         if (!isValidMessage(message)) {
             console.error('[BasePanel] Invalid message format:', message);
             this.sendTypedMessage(MessageTypes.ERROR, {

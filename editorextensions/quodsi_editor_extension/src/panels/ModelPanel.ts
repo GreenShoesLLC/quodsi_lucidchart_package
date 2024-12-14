@@ -17,10 +17,9 @@ import { ElementData, JsonSerializable, MessagePayloads, MessageTypes, MetaData,
 import { JsonObject as SharedJsonObject } from '@quodsi/shared';
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
-import { RemoveModelFromPage } from '../services/conversion/RemoveModelFromPage';
+
 
 import { Model } from '@quodsi/shared';
-import { Activity } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { SimulationObjectType } from '@quodsi/shared';
 import { SimulationElementFactory } from '@quodsi/shared';
@@ -38,8 +37,8 @@ type ComponentOperation = {
 };
 
 export class ModelPanel extends BasePanel {
+
     private modelManager: ModelManager;
-    private storageAdapter: StorageAdapter;
     private conversionService: ConversionService;
     private expandedNodes: Set<string> = new Set();
     private currentModelStructure?: ModelStructure = undefined;
@@ -59,27 +58,29 @@ export class ModelPanel extends BasePanel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
+        console.error('[ModelPanel] Constructor called');
         this.modelManager = modelManager;
-        this.storageAdapter = new StorageAdapter();
-        this.conversionService = new ConversionService(this.modelManager, this.storageAdapter);
+
+        this.conversionService = new ConversionService(this.modelManager);
         this.initializeModelManager();
         this.setupModelMessageHandlers();
 
         console.log('[ModelPanel] Initialized');
     }
 
-
+    private static readonly logger = (() => {
+        console.error('[ModelPanel] Class definition loaded');
+        return true;
+    })();
     private setupModelMessageHandlers(): void {
+        console.error('[ModelPanel] Setting up message handlers START');
         // React App Ready - already handled by BasePanel
-        // We can add additional React ready handling if needed
-        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            if (!this.reactAppReady) {
-                console.log('[ModelPanel] Handling additional React ready setup');
-                this.handleModelSpecificReactReady();
-            }
-        });
 
         // Model Operations
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
+            console.error('[ModelPanel] REACT_APP_READY message received in handler');
+            this.handleReactReady();
+        });
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
         this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
@@ -117,34 +118,20 @@ export class ModelPanel extends BasePanel {
                 });
             });
         });
+
+        console.error('[ModelPanel] Setting up message handlers END');
     }
 
-    private handleModelSpecificReactReady(): void {
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        const document = new DocumentProxy(this.client);
-
-        if (!currentPage) {
-            console.error('[ModelPanel] No active page found during React ready');
-            return;
-        }
-
-        const isModel = this.storageAdapter.isQuodsiModel(currentPage);
-        this.sendInitialState(currentPage, isModel, document.id);
-
-        if (this.currentSelection.selectedIds.length > 0) {
-            this.sendSelectionUpdate();
-        }
-    }
 
     /**
          * Updates the model structure based on current model data and validates the model
          */
     private async updateModelStructure(): Promise<void> {
-        const modelData = this.modelManager.getModelDefinition();
-        if (modelData) {
+
+        const modelDef = await this.modelManager.getModelDefinition();
+        if (modelDef) {
             // Update model structure
-            this.currentModelStructure = ModelStructureBuilder.buildModelStructure(modelData);
+            this.currentModelStructure = ModelStructureBuilder.buildModelStructure(modelDef);
             console.log('[ModelPanel] Model structure updated:', this.currentModelStructure);
 
             // Validate model
@@ -177,7 +164,7 @@ export class ModelPanel extends BasePanel {
         const currentPage = viewport.getCurrentPage();
         if (currentPage) {
             console.log('[ModelPanel] Saving expanded nodes to storage:', Array.from(this.expandedNodes));
-            this.storageAdapter.setExpandedNodes(currentPage, Array.from(this.expandedNodes));
+            this.modelManager.setExpandedNodes(currentPage, Array.from(this.expandedNodes));
         }
 
         this.sendTreeStateUpdate();
@@ -195,7 +182,7 @@ export class ModelPanel extends BasePanel {
         const currentPage = viewport.getCurrentPage();
         if (currentPage) {
             console.log('[ModelPanel] Saving expanded nodes to storage:', expandedNodes);
-            this.storageAdapter.setExpandedNodes(currentPage, expandedNodes);
+            this.modelManager.setExpandedNodes(currentPage, expandedNodes);
         }
 
         this.sendTreeStateUpdate();
@@ -207,26 +194,12 @@ export class ModelPanel extends BasePanel {
     private handleExpandPath(nodeId: string): void {
         if (!this.currentModelStructure) return;
 
-        const findPathToNode = (elements: ModelElement[], targetId: string, path: Set<string>): boolean => {
-            for (const element of elements) {
-                if (element.id === targetId) {
-                    return true;
-                }
-                if (element.children?.length) {
-                    if (findPathToNode(element.children, targetId, path)) {
-                        path.add(element.id);
-                        return true;
-                    }
-                }
-            }
-            return false;
-        };
-
-        const pathNodes = new Set<string>();
-        findPathToNode(this.currentModelStructure.elements, nodeId, pathNodes);
+        // Get path nodes from ModelManager
+        const pathNodes = this.modelManager.findPathToNode(this.currentModelStructure, nodeId);
 
         // Add all nodes in path to expanded set
         pathNodes.forEach(id => this.expandedNodes.add(id));
+
         this.sendTreeStateUpdate();
     }
 
@@ -250,7 +223,7 @@ export class ModelPanel extends BasePanel {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
 
-        if (!currentPage || !this.storageAdapter.isQuodsiModel(currentPage)) {
+        if (!currentPage || !this.modelManager.isQuodsiModel(currentPage)) {
             console.log('[ModelPanel] Page is not a Quodsi model, skipping initialization');
             return;
         }
@@ -260,7 +233,7 @@ export class ModelPanel extends BasePanel {
 
         try {
             // Load page/model data
-            const modelData = this.storageAdapter.getElementData<Model>(currentPage);
+            const modelData = this.modelManager.getElementData<Model>(currentPage)
             if (modelData) {
                 console.log('[ModelPanel] Creating model element with:', {
                     metadataType: SimulationObjectType.Model,
@@ -293,13 +266,13 @@ export class ModelPanel extends BasePanel {
 
             // Load blocks (activities, resources, generators, entities)
             for (const [blockId, block] of currentPage.allBlocks) {
-                const metadata = this.storageAdapter.getMetadata(block);
+                const metadata = this.modelManager.getMetadata(block);
                 if (!metadata) {
                     console.log('[ModelPanel] No metadata found for block:', block.id);
                     continue;
                 }
 
-                const blockData = this.storageAdapter.getElementData<Activity>(block);
+                const blockData = this.modelManager.getElementData(block);
                 if (blockData) {
                     const element = SimulationElementFactory.createElement(metadata, blockData);
                     this.modelManager.registerElement(element, block);
@@ -312,13 +285,13 @@ export class ModelPanel extends BasePanel {
 
             // Load lines (connectors)
             for (const [lineId, line] of currentPage.allLines) {
-                const metadata = this.storageAdapter.getMetadata(line);
+                const metadata = this.modelManager.getMetadata(line);
                 if (!metadata) {
                     console.log('[ModelPanel] No metadata found for line:', line.id);
                     continue;
                 }
 
-                const lineData = this.storageAdapter.getElementData<Connector>(line);
+                const lineData = this.modelManager.getElementData<Connector>(line);
                 if (lineData) {
                     const element = SimulationElementFactory.createElement(metadata, lineData);
                     this.modelManager.registerElement(element, line);
@@ -406,8 +379,8 @@ export class ModelPanel extends BasePanel {
                 let elementData: ElementData[] = [];
 
                 if (items.length === 0) {
-                    if (this.storageAdapter.isQuodsiModel(currentPage)) {
-                        const rawModelData = this.storageAdapter.getElementData(currentPage);
+                    if (this.modelManager.isQuodsiModel(currentPage)) {
+                        const rawModelData = this.modelManager.getElementData(currentPage);
                         if (typeof rawModelData === 'object' && rawModelData !== null) {
                             const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
                             console.log('[ModelPanel] Page model data:', modelData);
@@ -417,7 +390,9 @@ export class ModelPanel extends BasePanel {
                                 data: modelData,
                                 metadata: {
                                     type: SimulationObjectType.Model,
-                                    version: this.storageAdapter.CURRENT_VERSION
+                                    version: this.modelManager.CURRENT_VERSION,
+                                    id: currentPage.id,
+                                    lastModified: new Date().toISOString(),
                                 },
                                 name: currentPage.getTitle() || 'Untitled Model'
                             }];
@@ -426,11 +401,11 @@ export class ModelPanel extends BasePanel {
                 } else {
                     // Process all items concurrently
                     elementData = await Promise.all(items.map(async item => {
-                        const rawData = this.storageAdapter.getElementData(item);
+                        const rawData = this.modelManager.getElementData(item);
                         const data = (typeof rawData === 'object' && rawData !== null) ?
                             JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
 
-                        const metadata = await this.storageAdapter.getMetadata(item) || {};
+                        const metadata = await this.modelManager.getMetadata(item) || {};
                         const convertedMetadata = JSON.parse(JSON.stringify(metadata));
 
                         // Add isUnconverted flag and handle metadata for unconverted elements
@@ -528,7 +503,7 @@ export class ModelPanel extends BasePanel {
         if (items.length > 1) return SelectionType.MULTIPLE;
 
         const item = items[0];
-        const metadata = await this.storageAdapter.getMetadata(item);
+        const metadata = await this.modelManager.getMetadata(item);
 
         // If we can't get metadata or there's no valid data, treat as unconverted
         if (!metadata?.type || metadata.type === SimulationObjectType.None) {
@@ -577,14 +552,8 @@ export class ModelPanel extends BasePanel {
         }
 
         try {
-            // Create instance of RemoveModelFromPage
-            const remover = new RemoveModelFromPage(currentPage, this.storageAdapter);
-
-            // Remove the model
-            remover.removeModel();
-
-            // Clear model manager state
-            this.modelManager = new ModelManager(this.storageAdapter);
+            // Use ModelManager to remove the model
+            this.modelManager.removeModelFromPage(currentPage);
 
             // Notify React app of successful removal
             this.sendTypedMessage(MessageTypes.MODEL_REMOVED);
@@ -601,7 +570,15 @@ export class ModelPanel extends BasePanel {
     }
 
     // Override the hook for additional React ready handling
-    protected handleAdditionalReactReady(): void {
+    private handleReactReady(): void {
+        if (this.reactAppReady) {
+            console.error('[ModelPanel] React app already ready, skipping initialization');
+            return;
+        }
+
+        console.error('[ModelPanel] handleReactReady');
+        this.reactAppReady = true;  // Add this line
+
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         const document = new DocumentProxy(this.client);
@@ -611,7 +588,7 @@ export class ModelPanel extends BasePanel {
             return;
         }
 
-        const isModel = this.storageAdapter.isQuodsiModel(currentPage);
+        const isModel = this.modelManager.isQuodsiModel(currentPage);
         this.sendInitialState(currentPage, isModel, document.id);
 
         if (this.currentSelection.selectedIds.length > 0) {
@@ -633,7 +610,7 @@ export class ModelPanel extends BasePanel {
         this.updateModelStructure();
 
         // Load saved expanded nodes from storage
-        const savedExpandedNodes = this.storageAdapter.getExpandedNodes(page);
+        const savedExpandedNodes = this.modelManager.getExpandedNodes(page);
         console.log('[ModelPanel] Loaded expanded nodes from storage:', savedExpandedNodes);
         if (savedExpandedNodes?.length) {
             this.expandedNodes = new Set(savedExpandedNodes);
@@ -644,7 +621,7 @@ export class ModelPanel extends BasePanel {
             pageId: page.id,
             documentId,
             canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
-            modelData: isModel ? this.storageAdapter.getElementData(page) : null,
+            modelData: isModel ? this.modelManager.getElementData(page) : null,
             selectionState: this.currentSelection,
             modelStructure: this.currentModelStructure,
             expandedNodes: Array.from(this.expandedNodes)
@@ -672,8 +649,8 @@ export class ModelPanel extends BasePanel {
 
         return selectedItems.map(item => ({
             id: item.id,
-            data: this.storageAdapter.getElementData(item),
-            metadata: this.storageAdapter.getMetadata(item)
+            data: this.modelManager.getElementData(item),
+            metadata: this.modelManager.getMetadata(item)
         }));
     }
 
@@ -715,7 +692,7 @@ export class ModelPanel extends BasePanel {
     /**
      * Handles element data request
      */
-    private handleGetElementData(elementId: string): void {
+    private async handleGetElementData(elementId: string): Promise<void> {
         const element = this.client.getElementProxy(elementId);  // or whatever method you currently use
 
         if (!element) {
@@ -723,8 +700,8 @@ export class ModelPanel extends BasePanel {
             return;
         }
 
-        const rawData = this.storageAdapter.getElementData(element);
-        const metadata = this.storageAdapter.getMetadata(element) || {} as MetaData;
+        const rawData = this.modelManager.getElementData(element);
+        const metadata = this.modelManager.getMetadata(element) || {} as MetaData;
 
         // Add isUnconverted flag if this element is in our unconverted set
         if (this.unconvertedElements.has(elementId)) {
@@ -733,7 +710,7 @@ export class ModelPanel extends BasePanel {
         const referenceData: EditorReferenceData = {};
         // Build reference data based on element type
         if (metadata?.type === SimulationObjectType.Generator) {
-            const modelDef = this.modelManager.getModelDefinition();
+            const modelDef = await this.modelManager.getModelDefinition();
             if (modelDef) {
                 referenceData.entities = modelDef.entities.getAll().map(e => ({
                     id: e.id,
@@ -746,7 +723,7 @@ export class ModelPanel extends BasePanel {
             id: elementId,
             data: rawData as JsonSerializable,
             metadata: metadata,
-            referenceData: referenceData  
+            referenceData: referenceData
         });
     }
 
@@ -754,7 +731,7 @@ export class ModelPanel extends BasePanel {
      * Handles element data update
      */
     private async handleUpdateElementData(updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]): Promise<void> {
-    // ... existing code ...
+        // ... existing code ...
         console.log('[ModelPanel] Received element update data:', {
             updateData,
             selectedItems: new Viewport(this.client).getSelectedItems().map(item => item.id)
@@ -792,7 +769,7 @@ export class ModelPanel extends BasePanel {
                 }
 
                 // Clear storage data
-                this.storageAdapter.clearElementData(element);
+                this.modelManager.clearElementData(element);
 
                 // Send success message
                 this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
@@ -837,13 +814,13 @@ export class ModelPanel extends BasePanel {
                 this.modelManager.registerElement(convertedData, element);
 
                 // Update storage
-                this.storageAdapter.setElementData(
+                this.modelManager.setElementData(
                     element,
                     convertedData,
                     updateData.type,
                     {
                         id: updateData.elementId,
-                        version: this.storageAdapter.CURRENT_VERSION
+                        version: this.modelManager.CURRENT_VERSION
                     }
                 );
 
@@ -892,13 +869,13 @@ export class ModelPanel extends BasePanel {
                 console.log('[ModelPanel] Element registered with model manager');
 
                 // Update storage with consistent data
-                this.storageAdapter.setElementData(
+                this.modelManager.setElementData(
                     element,
                     elementData,
                     updateData.type,
                     {
                         id: updateData.elementId,
-                        version: this.storageAdapter.CURRENT_VERSION
+                        version: this.modelManager.CURRENT_VERSION
                     }
                 );
                 console.log('[ModelPanel] Storage update successful');
@@ -945,7 +922,7 @@ export class ModelPanel extends BasePanel {
 
         if (currentPage) {
             try {
-                this.storageAdapter.setElementData(
+                this.modelManager.setElementData(
                     currentPage,
                     data,
                     SimulationObjectType.Model

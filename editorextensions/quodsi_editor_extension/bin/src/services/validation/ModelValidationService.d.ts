@@ -5,6 +5,12 @@ export declare class ModelValidationService {
     private lastModelDefinitionHash;
     constructor();
     validate(modelDefinition: ModelDefinition): ValidationResult;
+    /**
+     * Enable or disable logging for a specific validation rule by its class name.
+     * @param ruleName - The class name of the validation rule.
+     * @param enabled - True to enable logging, false to disable.
+     */
+    setRuleLogging(ruleName: string, enabled: boolean): void;
     private generateModelHash;
     private getModelState;
     private batchValidate;

@@ -1,11 +1,10 @@
 import { PageProxy } from 'lucid-extension-sdk';
 import { ConversionResult } from '@quodsi/shared';
-import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 export declare class ConversionService {
     private modelManager;
     private storageAdapter;
-    constructor(modelManager: ModelManager, storageAdapter: StorageAdapter);
+    constructor(modelManager: ModelManager);
     /**
      * Checks if a page can be converted to a model
      */

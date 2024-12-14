@@ -12,8 +12,6 @@ export declare class ActivityValidation extends ValidationRule {
     private validateOperationSteps;
     private validateOperationStep;
     private validateResourceRequests;
-    private validateCycleTimeAndThroughput;
-    private analyzeCycleTime;
     private validateBufferConstraints;
     private validateActivityInteractions;
     private detectCycles;

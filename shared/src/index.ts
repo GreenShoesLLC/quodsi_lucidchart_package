@@ -52,3 +52,4 @@ export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 export * from './types/accordion/AccordionState';
+export * from './types/elements/ModelDefinitionLogger';
