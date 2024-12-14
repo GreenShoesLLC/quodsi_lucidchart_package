@@ -66,10 +66,6 @@ export declare class StorageAdapter {
      */
     validateStorage(element: ElementProxy): boolean;
     /**
-     * Generates a unique ID for new elements
-     */
-    private generateId;
-    /**
      * Gets the current version number used by the storage adapter
      */
     get CURRENT_VERSION(): string;

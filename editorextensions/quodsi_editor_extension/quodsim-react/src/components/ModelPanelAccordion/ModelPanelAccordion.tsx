@@ -3,27 +3,33 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { Header } from "./Header";
 import { ModelTreeView } from "./ModelTreeView";
 import { ValidationMessageList } from "./ValidationMessageList";
+
+import { typeMappers } from '../../utils/typeMappers';
+
 import {
   ModelStructure,
   ValidationState,
   AccordionState,
   EditorReferenceData,
+  SelectionType,
+  SimComponentType,
+  ElementData,
+  JsonObject,
+  MetaData,
 } from "@quodsi/shared";
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
+import { SimulationComponentSelector } from "../SimulationComponentSelector";
 
 interface ModelPanelAccordionProps {
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: {
-    data: any;
-    metadata: any;
-  } | null;
+  currentElement: ElementData | null;
   expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
   onValidate: () => void;
-  onUpdate: (elementId: string, data: any) => void;
+  onUpdate: (elementId: string, data: JsonObject) => void;
   onTreeNodeToggle: (nodeId: string, expanded: boolean) => void;
   onTreeStateUpdate: (nodes: string[]) => void;
   onExpandPath: (nodeId: string) => void;
@@ -42,12 +48,13 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onTreeNodeToggle,
   onTreeStateUpdate,
   onExpandPath,
-  referenceData
+  referenceData,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
     elementEditor: !!currentElement,
     validation: !!validationState?.summary?.errorCount,
+    conversion: currentElement?.isUnconverted ?? false,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -62,19 +69,27 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
+
   const handleEditorCancel = () => {
     toggleSection("elementEditor");
   };
-  const filterModelElements = (elements: ModelStructure["elements"]) => {
-    if (!searchTerm) return elements;
 
-    return elements.filter((element) =>
-      element.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const handleTypeChange = (newType: SimComponentType, elementId: string) => {
+    console.log("[ModelPanelAccordion] Type change requested:", {
+      elementId,
+      newType,
+    });
+    onUpdate(elementId, { type: newType });
   };
 
   const ModelTreeSection = () => {
     const rootElement = modelStructure?.elements.find((e) => e.id === "0_0");
+
+    console.log("[ModelPanelAccordion] Rendering tree section:", {
+      expandedNodes: Array.from(expandedNodes),
+      modelTreeExpanded: expandedSections.modelTree,
+      rootElement,
+    });
 
     return (
       <div className="border-b">
@@ -92,28 +107,56 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
 
         {expandedSections.modelTree && modelStructure && rootElement && (
           <div className="p-3 border-t">
-            <div className="mb-2">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={handleSearch}
-                placeholder="Search elements..."
-                className="w-full p-1 text-sm border rounded"
-              />
-            </div>
-            <div className="max-h-60 overflow-y-auto">
-              <ModelTreeView
-                element={rootElement}
-                modelStructure={modelStructure}
-                selectedId={currentElement?.data?.id || null}
-                onSelect={onElementSelect}
-                expanded={expandedNodes}
-                onToggleExpand={(nodeId) =>
-                  onTreeNodeToggle(nodeId, !expandedNodes.has(nodeId))
-                }
-                level={0}
-              />
-            </div>
+            <ModelTreeView
+              element={rootElement}
+              modelStructure={modelStructure}
+              selectedId={currentElement?.id || null}
+              onSelect={(id) => {
+                console.log("[ModelPanelAccordion] Tree node selected:", id);
+                onElementSelect(id);
+              }}
+              expanded={expandedNodes}
+              onToggleExpand={(nodeId, expanded) => {
+                console.log("[ModelPanelAccordion] Tree node toggle:", {
+                  nodeId,
+                  expanded,
+                });
+                onTreeNodeToggle(nodeId, expanded);
+              }}
+              level={0}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ConversionSection = () => {
+    if (!currentElement?.isUnconverted) return null;
+
+    return (
+      <div className="border-b">
+        <button
+          onClick={() => toggleSection("conversion")}
+          className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
+        >
+          <span className="font-medium text-sm">Convert Element</span>
+          {expandedSections.conversion ? (
+            <ChevronDown className="h-4 w-4" />
+          ) : (
+            <ChevronRight className="h-4 w-4" />
+          )}
+        </button>
+
+        {expandedSections.conversion && currentElement && (
+          <div className="p-3 border-t">
+            <SimulationComponentSelector
+              elementId={currentElement.id}
+              onTypeChange={handleTypeChange}
+              currentType={typeMappers.mapSimulationTypeToComponentType(
+                currentElement.metadata.type
+              )}
+            />
           </div>
         )}
       </div>
@@ -126,21 +169,25 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
         modelName={modelName || "New Model"}
         validationState={validationState}
         onValidate={onValidate}
+        currentElement={currentElement}
       />
       <div className="flex-1 overflow-y-auto">
+        <ConversionSection />
+        {!currentElement?.isUnconverted && currentElement && (
+          <ElementEditor
+            elementData={currentElement.data}
+            elementType={currentElement.metadata.type}
+            onSave={(data) => onUpdate(currentElement.id, data)}
+            onCancel={handleEditorCancel}
+            referenceData={referenceData}
+            isExpanded={expandedSections.elementEditor}
+            onToggle={() => toggleSection("elementEditor")}
+          />
+        )}
         <ModelTreeSection />
-        <ElementEditor
-          elementData={currentElement?.data}
-          elementType={currentElement?.metadata?.type}
-          onSave={(data) => onUpdate(currentElement?.data?.id, data)}
-          onCancel={() => toggleSection("elementEditor")}
-          referenceData={referenceData}
-          isExpanded={expandedSections.elementEditor}
-          onToggle={() => toggleSection("elementEditor")}
-        />
         <ValidationMessages
           validationState={validationState}
-          currentElementId={currentElement?.data?.id}
+          currentElementId={currentElement?.id}
           isExpanded={expandedSections.validation}
           onToggle={() => toggleSection("validation")}
         />

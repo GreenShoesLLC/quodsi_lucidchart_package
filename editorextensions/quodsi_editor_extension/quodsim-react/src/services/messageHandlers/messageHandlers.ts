@@ -66,7 +66,7 @@ export const messageHandlers: Partial<{
                 metadata: elementData.metadata,
                 isUnconverted: elementData.metadata?.isUnconverted,
                 id: elementData.id,
-                name: "TBD"
+                name: elementData.name
             };
 
             return {

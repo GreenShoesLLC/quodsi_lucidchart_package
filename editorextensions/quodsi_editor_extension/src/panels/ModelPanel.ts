@@ -165,10 +165,19 @@ export class ModelPanel extends BasePanel {
      * Handles tree node expansion state changes
      */
     private handleTreeNodeToggle(nodeId: string, expanded: boolean): void {
+        console.log('[ModelPanel] Tree node toggle:', { nodeId, expanded, currentNodes: this.expandedNodes });
         if (expanded) {
             this.expandedNodes.add(nodeId);
         } else {
             this.expandedNodes.delete(nodeId);
+        }
+
+        // Get current page and save to storage
+        const viewport = new Viewport(this.client);
+        const currentPage = viewport.getCurrentPage();
+        if (currentPage) {
+            console.log('[ModelPanel] Saving expanded nodes to storage:', Array.from(this.expandedNodes));
+            this.storageAdapter.setExpandedNodes(currentPage, Array.from(this.expandedNodes));
         }
 
         this.sendTreeStateUpdate();
@@ -178,7 +187,17 @@ export class ModelPanel extends BasePanel {
      * Handles bulk tree state updates
      */
     private handleTreeStateUpdate(expandedNodes: string[]): void {
+        console.log('[ModelPanel] Tree state update:', { expandedNodes });
         this.expandedNodes = new Set(expandedNodes);
+
+        // Get current page and save to storage
+        const viewport = new Viewport(this.client);
+        const currentPage = viewport.getCurrentPage();
+        if (currentPage) {
+            console.log('[ModelPanel] Saving expanded nodes to storage:', expandedNodes);
+            this.storageAdapter.setExpandedNodes(currentPage, expandedNodes);
+        }
+
         this.sendTreeStateUpdate();
     }
 
@@ -371,9 +390,15 @@ export class ModelPanel extends BasePanel {
 
             // Update unconverted elements tracking
             if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-                items.forEach(item => this.unconvertedElements.add(item.id));
+                items.forEach(item => {
+                    this.unconvertedElements.add(item.id);
+                    console.log('[ModelPanel] Added unconverted element:', item.id);
+                });
             } else {
-                items.forEach(item => this.unconvertedElements.delete(item.id));
+                items.forEach(item => {
+                    this.unconvertedElements.delete(item.id);
+                    console.log('[ModelPanel] Removed from unconverted elements:', item.id);
+                });
             }
 
             // Only send updates if React app is ready
@@ -394,7 +419,7 @@ export class ModelPanel extends BasePanel {
                                     type: SimulationObjectType.Model,
                                     version: this.storageAdapter.CURRENT_VERSION
                                 },
-                                name: currentPage.getTitle() || null
+                                name: currentPage.getTitle() || 'Untitled Model'
                             }];
                         }
                     }
@@ -408,19 +433,29 @@ export class ModelPanel extends BasePanel {
                         const metadata = await this.storageAdapter.getMetadata(item) || {};
                         const convertedMetadata = JSON.parse(JSON.stringify(metadata));
 
-                        // Add isUnconverted flag based on the determined selection type
+                        // Add isUnconverted flag and handle metadata for unconverted elements
                         if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
                             convertedMetadata.isUnconverted = true;
+                            convertedMetadata.originalType = item instanceof BlockProxy ? 'block' : 'line';
+                        }
+
+                        // Get element name based on type
+                        let elementName = 'Unnamed Element';
+                        if (item instanceof BlockProxy) {
+                            elementName = 'Unnamed Block';
+                        } else if (item instanceof LineProxy) {
+                            elementName = 'Unnamed Connector';
                         }
 
                         return {
                             id: item.id,
                             data: {
                                 ...data,
-                                id: item.id
+                                id: item.id,
+                                name: elementName // Include name in data for consistency
                             },
                             metadata: convertedMetadata,
-                            name: 'Unnamed Element' // Use item text if available
+                            name: elementName
                         };
                     }));
                 }
@@ -439,7 +474,12 @@ export class ModelPanel extends BasePanel {
 
                 console.log('[ModelPanel] Selection update sent:', {
                     selectionState: this.currentSelection,
-                    elementData: elementData,
+                    elementData: elementData.map(e => ({
+                        id: e.id,
+                        name: e.name,
+                        type: e.metadata?.type,
+                        isUnconverted: e.metadata?.isUnconverted
+                    })),
                     validationState: validationResult
                 });
             }
@@ -592,8 +632,9 @@ export class ModelPanel extends BasePanel {
         });
         this.updateModelStructure();
 
-        // Load saved expanded nodes from storage if available
+        // Load saved expanded nodes from storage
         const savedExpandedNodes = this.storageAdapter.getExpandedNodes(page);
+        console.log('[ModelPanel] Loaded expanded nodes from storage:', savedExpandedNodes);
         if (savedExpandedNodes?.length) {
             this.expandedNodes = new Set(savedExpandedNodes);
         }
@@ -760,44 +801,100 @@ export class ModelPanel extends BasePanel {
 
                 // Force a selection update with the new state
                 await this.modelManager.validateModel();
-                const viewport = new Viewport(this.client);
-                const selectedItems = viewport.getSelectedItems();
-                this.handleSelectionChange(selectedItems);  // This will update the React app with the new selection state
-
+                this.handleSelectionChange(viewport.getSelectedItems());
                 return;
             }
 
-            // Regular handling for other types continues below
-            // First, ensure model manager is initialized
-            if (!this.modelManager.getModel()) {
-                console.log('[ModelPanel] Initializing model manager');
-                const model = {
-                    id: currentPage.id,
-                    name: currentPage.getTitle() || 'New Model',
-                    type: SimulationObjectType.Model
+            // Handle type conversion (when data is empty and type is provided)
+            if (updateData.type && (!updateData.data || Object.keys(updateData.data).length === 0)) {
+                console.log('[ModelPanel] Handling type conversion:', {
+                    elementId: updateData.elementId,
+                    newType: updateData.type
+                });
+
+                // Ensure model manager is initialized
+                if (!this.modelManager.getModel()) {
+                    const model = {
+                        id: currentPage.id,
+                        name: currentPage.getTitle() || 'New Model',
+                        type: SimulationObjectType.Model
+                    };
+                    this.modelManager.initializeModel(model as Model, currentPage);
+                }
+
+                // Create initial data for the converted element
+                const elementName = element instanceof BlockProxy ?
+                    (element.id || 'Unnamed Block') :
+                    'Unnamed Connector';
+
+                const convertedData = {
+                    id: updateData.elementId,
+                    type: updateData.type,
+                    name: elementName
                 };
-                this.modelManager.initializeModel(model as Model, currentPage);
+
+                // Register with model manager
+                this.modelManager.registerElement(convertedData, element);
+
+                // Update storage
+                this.storageAdapter.setElementData(
+                    element,
+                    convertedData,
+                    updateData.type,
+                    {
+                        id: updateData.elementId,
+                        version: this.storageAdapter.CURRENT_VERSION
+                    }
+                );
+
+                // Remove from unconverted tracking
+                this.unconvertedElements.delete(updateData.elementId);
+
+                // Send success message
+                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
+                    elementId: updateData.elementId
+                });
+
+                // Trigger revalidation and selection update
+                await this.modelManager.validateModel();
+                await this.handleSelectionChange(selectedItems);
+                return;
             }
 
-            // Then register the element with the model manager
+            // Regular update handling
             if (typeof updateData.data === 'object' && updateData.data !== null) {
+                // Ensure model manager is initialized
+                if (!this.modelManager.getModel()) {
+                    const model = {
+                        id: currentPage.id,
+                        name: currentPage.getTitle() || 'New Model',
+                        type: SimulationObjectType.Model
+                    };
+                    this.modelManager.initializeModel(model as Model, currentPage);
+                }
+
+                // Preserve or set element name
+                const elementName = element instanceof BlockProxy ?
+                    (element.id || 'Unnamed Block') :
+                    'Unnamed Connector';
+
                 const elementData = {
                     id: updateData.elementId,
                     type: updateData.type,
                     ...updateData.data as SharedJsonObject,
-                    name: 'tbd'
+                    name: (updateData.data && typeof updateData.data === 'object' && !Array.isArray(updateData.data) && 'name' in updateData.data)
+                        ? (updateData.data as { name?: string }).name || elementName
+                        : elementName
                 };
+
+                // Register with model manager
                 this.modelManager.registerElement(elementData, element);
                 console.log('[ModelPanel] Element registered with model manager');
 
-                // Update storage
-                const storageData = {
-                    id: updateData.elementId,  // Add the id to the data
-                    ...updateData.data as SharedJsonObject
-                };
+                // Update storage with consistent data
                 this.storageAdapter.setElementData(
                     element,
-                    storageData,
+                    elementData,
                     updateData.type,
                     {
                         id: updateData.elementId,

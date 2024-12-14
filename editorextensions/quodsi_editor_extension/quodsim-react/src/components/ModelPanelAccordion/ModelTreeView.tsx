@@ -4,16 +4,20 @@ import { ModelElement } from "@quodsi/shared";
 
 interface ModelTreeViewProps {
   element: ModelElement;
-  modelStructure: { elements: ModelElement[] };
+  modelStructure: { 
+    elements: ModelElement[];
+    hierarchy: Record<string, string[]>;
+  };
   selectedId: string | null;
   onSelect: (id: string) => void;
   level?: number;
-  expanded?: Set<string>;
-  onToggleExpand?: (id: string) => void;
+  expanded: Set<string>;
+  onToggleExpand: (id: string, expanded: boolean) => void;
+  onTreeStateUpdate?: (nodes: string[]) => void;
+  onExpandPath?: (nodeId: string) => void;
 }
 
 interface ModelTreeNodeProps extends ModelTreeViewProps {
-  isExpanded: boolean;
   isLastChild?: boolean;
 }
 
@@ -23,46 +27,64 @@ const ModelTreeNode: React.FC<ModelTreeNodeProps> = ({
   selectedId,
   onSelect,
   level = 0,
-  isExpanded,
   onToggleExpand,
+  onTreeStateUpdate,
+  onExpandPath,
   expanded,
   isLastChild = false,
 }) => {
-  const childElements =
-    element.id === "0_0"
-      ? modelStructure.elements.filter((e) => e.id.match(/^0_0_[a-z]+$/))
-      : element.id.endsWith("_activities")
-      ? modelStructure.elements.filter(
-          (e) => e.type === "Activity" && !e.id.includes("_")
-        )
-      : element.id.endsWith("_connectors")
-      ? modelStructure.elements.filter(
-          (e) => e.type === "Connector" && !e.id.includes("_")
-        )
-      : element.id.endsWith("_resources")
-      ? modelStructure.elements.filter(
-          (e) => e.type === "Resource" && !e.id.includes("_")
-        )
-      : element.id.endsWith("_generators")
-      ? modelStructure.elements.filter(
-          (e) => e.type === "Generator" && !e.id.includes("_")
-        )
-      : element.id.endsWith("_entities")
-      ? modelStructure.elements.filter(
-          (e) => e.type === "Entity" && !e.id.includes("_")
-        )
-      : modelStructure.elements.filter((e) =>
-          e.id.startsWith(`${element.id}_`)
-        );
+  const isNodeExpanded = expanded.has(element.id);
+  console.log("[ModelTreeNode] Node state:", { 
+    id: element.id, 
+    isExpanded: isNodeExpanded,
+    expandedSize: expanded.size,
+    expandedNodes: Array.from(expanded)
+  });
 
+  const getChildElements = () => {
+    // Get child IDs from the hierarchy
+    const childIds = modelStructure.hierarchy[element.id] || [];
+    
+    if (!childIds.length) return [];
+
+    if (element.id === "0_0") {
+      // For root node, create category folders
+      return childIds.map(id => {
+        const lastPart = id.split('_').pop();
+        const name = lastPart 
+          ? lastPart.charAt(0).toUpperCase() + lastPart.slice(1) 
+          : 'Unknown';
+          
+        return {
+          id,
+          name,
+          type: "Folder" as any,
+          hasChildren: true,
+          children: []
+        };
+      });
+    }
+
+    // For category folders and other nodes, return actual elements
+    return childIds
+      .map(id => modelStructure.elements.find(e => e.id === id))
+      .filter((e): e is ModelElement => e !== undefined);
+  };
+
+  const childElements = getChildElements();
   const hasVisibleChildren = childElements.length > 0;
 
   const handleExpandClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onToggleExpand?.(element.id);
+      console.log("[ModelTreeNode] Expand clicked:", {
+        id: element.id,
+        currentExpanded: isNodeExpanded,
+        willBe: !isNodeExpanded
+      });
+      onToggleExpand(element.id, !isNodeExpanded);
     },
-    [element.id, onToggleExpand]
+    [element.id, isNodeExpanded, onToggleExpand]
   );
 
   return (
@@ -102,16 +124,16 @@ const ModelTreeNode: React.FC<ModelTreeNodeProps> = ({
           `}
           style={{ paddingLeft: `${level * 20}px` }}
           role="treeitem"
-          aria-expanded={hasVisibleChildren ? isExpanded : undefined}
+          aria-expanded={hasVisibleChildren ? isNodeExpanded : undefined}
           aria-selected={selectedId === element.id}
         >
           {hasVisibleChildren ? (
             <button
               onClick={handleExpandClick}
               className="p-0.5 hover:bg-blue-200 rounded-sm mr-1"
-              aria-label={isExpanded ? "Collapse" : "Expand"}
+              aria-label={isNodeExpanded ? "Collapse" : "Expand"}
             >
-              {isExpanded ? (
+              {isNodeExpanded ? (
                 <ChevronDown size={14} className="flex-shrink-0" />
               ) : (
                 <ChevronRight size={14} className="flex-shrink-0" />
@@ -122,7 +144,12 @@ const ModelTreeNode: React.FC<ModelTreeNodeProps> = ({
           )}
 
           <button
-            onClick={() => onSelect(element.id)}
+            onClick={() => {
+              onSelect(element.id);
+              if (onExpandPath) {
+                onExpandPath(element.id);
+              }
+            }}
             className="flex-grow text-left px-1 py-0.5 rounded hover:bg-blue-100/50"
           >
             <span className="truncate">{element.name}</span>
@@ -130,7 +157,7 @@ const ModelTreeNode: React.FC<ModelTreeNodeProps> = ({
         </div>
       </div>
 
-      {isExpanded && hasVisibleChildren && (
+      {isNodeExpanded && hasVisibleChildren && (
         <div role="group" className="transition-all duration-200">
           {childElements.map((child, index) => (
             <ModelTreeNode
@@ -140,8 +167,9 @@ const ModelTreeNode: React.FC<ModelTreeNodeProps> = ({
               selectedId={selectedId}
               onSelect={onSelect}
               level={level + 1}
-              isExpanded={expanded?.has(child.id) ?? false}
               onToggleExpand={onToggleExpand}
+              onTreeStateUpdate={onTreeStateUpdate}
+              onExpandPath={onExpandPath}
               expanded={expanded}
               isLastChild={index === childElements.length - 1}
             />
@@ -158,32 +186,15 @@ export const ModelTreeView: React.FC<ModelTreeViewProps> = ({
   selectedId,
   onSelect,
   level = 0,
-  expanded: externalExpanded,
-  onToggleExpand: externalOnToggleExpand,
+  expanded,
+  onToggleExpand,
+  onTreeStateUpdate,
+  onExpandPath,
 }) => {
-  const [internalExpanded, setInternalExpanded] = useState<Set<string>>(
-    new Set()
-  );
-
-  const expanded = externalExpanded ?? internalExpanded;
-  const onToggleExpand = useCallback(
-    (id: string) => {
-      if (externalOnToggleExpand) {
-        externalOnToggleExpand(id);
-      } else {
-        setInternalExpanded((prev) => {
-          const next = new Set(prev);
-          if (next.has(id)) {
-            next.delete(id);
-          } else {
-            next.add(id);
-          }
-          return next;
-        });
-      }
-    },
-    [externalOnToggleExpand]
-  );
+  console.log("[ModelTreeView] Rendering tree:", {
+    rootId: element.id,
+    expandedNodes: Array.from(expanded)
+  });
 
   return (
     <div role="tree" className="w-full">
@@ -193,8 +204,9 @@ export const ModelTreeView: React.FC<ModelTreeViewProps> = ({
         selectedId={selectedId}
         onSelect={onSelect}
         level={level}
-        isExpanded={expanded.has(element.id)}
         onToggleExpand={onToggleExpand}
+        onTreeStateUpdate={onTreeStateUpdate}
+        onExpandPath={onExpandPath}
         expanded={expanded}
       />
     </div>

@@ -135,36 +135,56 @@ useEffect(() => {
     sendMessage(MessageTypes.VALIDATE_MODEL);
   }, [sendMessage]);
 
-  const handleUpdate = useCallback(
-    (elementId: string, data: any) => {
-      console.log("[QuodsiApp] Update requested:", { elementId, data });
-      setState((prev) => ({ ...prev, isProcessing: true }));
+const handleUpdate = useCallback(
+  (elementId: string, data: any) => {
+    console.log("[QuodsiApp] Update requested:", { elementId, data });
+    setState((prev) => ({ ...prev, isProcessing: true }));
 
-      // If this is a type conversion (data contains only type)
-      if (data.type && Object.keys(data).length === 1) {
-        sendMessage(MessageTypes.CONVERT_ELEMENT, {
-          elementId,
-          type: data.type,
-        });
-      } else {
-        // Regular update
-        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-          elementId,
-          type:
-            state.currentElement?.metadata?.type || SimulationObjectType.None,
-          data: {
-            ...data,
-            id: elementId,
-          },
-        });
-      }
-    },
-    [sendMessage, state.currentElement?.metadata?.type]
-  );
+    // Handle type conversion
+    if (data.type && Object.keys(data).length === 1) {
+      sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+        elementId,
+        type: data.type,
+        data: {}, // Empty data for type conversion
+      });
+    } else {
+      // Regular update
+      sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
+        elementId,
+        type: state.currentElement?.metadata?.type || SimulationObjectType.None,
+        data: {
+          ...data,
+          id: elementId,
+        },
+      });
+    }
+  },
+  [sendMessage, state.currentElement?.metadata?.type]
+);
 
   const handleTreeNodeToggle = useCallback(
     (nodeId: string, expanded: boolean) => {
-      console.log("[QuodsiApp] Tree node toggle:", { nodeId, expanded });
+      console.log("[QuodsiApp] handleTreeNodeToggle called:", {
+        nodeId,
+        expanded,
+        currentExpandedNodes: Array.from(state.expandedNodes),
+      });
+
+      // We need to update local state immediately
+      setState((prev) => {
+        const newExpandedNodes = new Set(prev.expandedNodes);
+        if (expanded) {
+          newExpandedNodes.add(nodeId);
+        } else {
+          newExpandedNodes.delete(nodeId);
+        }
+        return {
+          ...prev,
+          expandedNodes: newExpandedNodes,
+        };
+      });
+
+      // Then send the message
       sendMessage(MessageTypes.TREE_NODE_TOGGLE, {
         nodeId,
         expanded,
@@ -173,6 +193,13 @@ useEffect(() => {
     },
     [sendMessage, state.documentId]
   );
+
+
+  useEffect(() => {
+    console.log("[QuodsiApp] expandedNodes state changed:", {
+      expandedNodes: Array.from(state.expandedNodes),
+    });
+  }, [state.expandedNodes]);
 
   const handleTreeStateUpdate = useCallback(
     (expandedNodes: string[]) => {

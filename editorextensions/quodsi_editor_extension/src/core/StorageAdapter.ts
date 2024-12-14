@@ -33,11 +33,15 @@ export class StorageAdapter {
   */
     public getExpandedNodes(page: ElementProxy): string[] {
         try {
+            console.log('[StorageAdapter] Getting expanded nodes for page:', page.id);
             const expandedNodesStr = page.shapeData.get(StorageAdapter.EXPANDED_NODES_KEY);
             if (!expandedNodesStr || typeof expandedNodesStr !== 'string') {
+                console.log('[StorageAdapter] No expanded nodes found');
                 return [];
             }
-            return JSON.parse(expandedNodesStr);
+            const nodes = JSON.parse(expandedNodesStr);
+            console.log('[StorageAdapter] Retrieved expanded nodes:', nodes);
+            return nodes;
         } catch (error) {
             console.error('[StorageAdapter] Error getting expanded nodes:', error);
             return [];
@@ -49,9 +53,13 @@ export class StorageAdapter {
      */
     public setExpandedNodes(page: ElementProxy, nodeIds: string[]): void {
         try {
+            console.log('[StorageAdapter] Setting expanded nodes for page:', {
+                pageId: page.id,
+                nodes: nodeIds
+            });
             const serializedNodes = JSON.stringify(nodeIds);
             page.shapeData.set(StorageAdapter.EXPANDED_NODES_KEY, serializedNodes);
-            console.log('[StorageAdapter] Successfully set expanded nodes:', nodeIds);
+            console.log('[StorageAdapter] Successfully set expanded nodes');
         } catch (error) {
             console.error('[StorageAdapter] Error setting expanded nodes:', error);
             throw error;
@@ -279,18 +287,6 @@ export class StorageAdapter {
             return false;
         }
     }
-
-    /**
-     * Generates a unique ID for new elements
-     */
-    private generateId(): string {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-            const r = Math.random() * 16 | 0;
-            const v = c === 'x' ? r : (r & 0x3 | 0x8);
-            return v.toString(16);
-        });
-    }
-
     /**
      * Gets the current version number used by the storage adapter
      */
