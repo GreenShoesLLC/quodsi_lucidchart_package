@@ -1,6 +1,7 @@
 import { ElementProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
+
 /**
  * Shape data storage format
  */
@@ -14,6 +15,33 @@ export class StorageAdapter {
     private static readonly META_KEY = 'q_meta';
     private static readonly EXPANDED_NODES_KEY = 'q_expanded_nodes';
     private static readonly CURRENT_VERSION = '1.0.0';
+    private static readonly LOG_PREFIX = '[StorageAdapter]';
+    private loggingEnabled: boolean = false;
+
+    constructor() {
+        this.log('StorageAdapter initialized');
+    }
+
+    public setLogging(enabled: boolean): void {
+        this.loggingEnabled = enabled;
+        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    private isLoggingEnabled(): boolean {
+        return this.loggingEnabled;
+    }
+
+    private log(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.log(`${StorageAdapter.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
+
+    private logError(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.error(`${StorageAdapter.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
 
     /**
      * Checks if an element has been converted to a Quodsi model element
@@ -23,27 +51,27 @@ export class StorageAdapter {
             const meta = this.getMetadata(element);
             return meta !== null && meta.type === SimulationObjectType.Model;
         } catch (error) {
-            console.error('[StorageAdapter] Error checking model status:', error);
+            this.logError('Error checking model status:', error);
             return false;
         }
     }
 
     /**
-  * Gets the expanded nodes state for a page
-  */
+     * Gets the expanded nodes state for a page
+     */
     public getExpandedNodes(page: ElementProxy): string[] {
         try {
-            console.log('[StorageAdapter] Getting expanded nodes for page:', page.id);
+            this.log('Getting expanded nodes for page:', page.id);
             const expandedNodesStr = page.shapeData.get(StorageAdapter.EXPANDED_NODES_KEY);
             if (!expandedNodesStr || typeof expandedNodesStr !== 'string') {
-                console.log('[StorageAdapter] No expanded nodes found');
+                this.log('No expanded nodes found');
                 return [];
             }
             const nodes = JSON.parse(expandedNodesStr);
-            console.log('[StorageAdapter] Retrieved expanded nodes:', nodes);
+            this.log('Retrieved expanded nodes:', nodes);
             return nodes;
         } catch (error) {
-            console.error('[StorageAdapter] Error getting expanded nodes:', error);
+            this.logError('Error getting expanded nodes:', error);
             return [];
         }
     }
@@ -53,15 +81,15 @@ export class StorageAdapter {
      */
     public setExpandedNodes(page: ElementProxy, nodeIds: string[]): void {
         try {
-            console.log('[StorageAdapter] Setting expanded nodes for page:', {
+            this.log('Setting expanded nodes for page:', {
                 pageId: page.id,
                 nodes: nodeIds
             });
             const serializedNodes = JSON.stringify(nodeIds);
             page.shapeData.set(StorageAdapter.EXPANDED_NODES_KEY, serializedNodes);
-            console.log('[StorageAdapter] Successfully set expanded nodes');
+            this.log('Successfully set expanded nodes');
         } catch (error) {
-            console.error('[StorageAdapter] Error setting expanded nodes:', error);
+            this.logError('Error setting expanded nodes:', error);
             throw error;
         }
     }
@@ -72,12 +100,13 @@ export class StorageAdapter {
     public clearExpandedNodes(page: ElementProxy): void {
         try {
             page.shapeData.delete(StorageAdapter.EXPANDED_NODES_KEY);
-            console.log('[StorageAdapter] Successfully cleared expanded nodes');
+            this.log('Successfully cleared expanded nodes');
         } catch (error) {
-            console.error('[StorageAdapter] Error clearing expanded nodes:', error);
+            this.logError('Error clearing expanded nodes:', error);
             throw error;
         }
     }
+
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */
@@ -87,7 +116,6 @@ export class StorageAdapter {
         type: SimulationObjectType,
         options: Partial<Omit<MetaData, 'type' | 'lastModified'>> = {}
     ): void {
-        
         try {
             // Create clean metadata without any data fields
             const meta: MetaData = {
@@ -108,13 +136,13 @@ export class StorageAdapter {
             element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
             element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
-            console.log('[StorageAdapter] Successfully set element data:', {
+            this.log('Successfully set element data:', {
                 elementId: data.id,
                 type: type,
                 dataKeys: Object.keys(cleanData)
             });
         } catch (error) {
-            console.error('[StorageAdapter] Error setting element data:', error);
+            this.logError('Error setting element data:', error);
             throw error;
         }
     }
@@ -142,12 +170,12 @@ export class StorageAdapter {
 
             element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
-            console.log('[StorageAdapter] Successfully updated element data:', {
+            this.log('Successfully updated element data:', {
                 elementId: data.id,
                 type: existingMeta.type
             });
         } catch (error) {
-            console.error('[StorageAdapter] Error updating element data:', error);
+            this.logError('Error updating element data:', error);
             throw new Error(`Failed to update element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -177,7 +205,7 @@ export class StorageAdapter {
 
             return JSON.parse(metaStr) as MetaData;
         } catch (error) {
-            console.error('[StorageAdapter] Error getting metadata:', error);
+            this.logError('Error getting metadata:', error);
             return null;
         }
     }
@@ -187,7 +215,7 @@ export class StorageAdapter {
      */
     public getElementData<T>(element: ElementProxy): T | null {
         try {
-            console.log('[StorageAdapter] Getting element data:', {
+            this.log('Getting element data:', {
                 elementId: element.id,
                 elementType: typeof element,
                 contextInfo: 'Attempting to retrieve stored data'
@@ -195,7 +223,7 @@ export class StorageAdapter {
 
             const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
 
-            console.log('[StorageAdapter] Raw data string:', {
+            this.log('Raw data string:', {
                 exists: !!dataStr,
                 isString: typeof dataStr === 'string',
                 valueType: typeof dataStr,
@@ -205,13 +233,13 @@ export class StorageAdapter {
             });
 
             if (!dataStr || typeof dataStr !== 'string') {
-                console.log('[StorageAdapter] No valid data found for element:', element.id);
+                this.log('No valid data found for element:', element.id);
                 return null;
             }
 
             const parsedData = JSON.parse(dataStr) as T;
 
-            console.log('[StorageAdapter] Successfully parsed element data:', {
+            this.log('Successfully parsed element data:', {
                 elementId: element.id,
                 parsedDataKeys: Object.keys(parsedData as object),
                 timestamp: new Date().toISOString()
@@ -219,7 +247,7 @@ export class StorageAdapter {
 
             return parsedData;
         } catch (error) {
-            console.error('[StorageAdapter] Error getting element data:', {
+            this.logError('Error getting element data:', {
                 elementId: element.id,
                 error: error instanceof Error ? error.message : 'Unknown error',
                 stack: error instanceof Error ? error.stack : undefined,
@@ -228,6 +256,7 @@ export class StorageAdapter {
             return null;
         }
     }
+
     /**
      * Gets both data and metadata as a complete storage format
      */
@@ -240,7 +269,7 @@ export class StorageAdapter {
 
             return { data, meta };
         } catch (error) {
-            console.error('[StorageAdapter] Error getting complete storage:', error);
+            this.logError('Error getting complete storage:', error);
             return null;
         }
     }
@@ -262,13 +291,13 @@ export class StorageAdapter {
                         // If delete fails, try setting to empty string as fallback
                         element.shapeData.set(key, '');
                     }
-                    console.log(`[StorageAdapter] Cleared ${key} from element:`, element.id);
+                    this.log(`Cleared ${key} from element:`, element.id);
                 } else {
-                    console.log(`[StorageAdapter] No ${key} found on element:`, element.id);
+                    this.log(`No ${key} found on element:`, element.id);
                 }
             }
         } catch (error) {
-            console.error('[StorageAdapter] Error clearing element data:', error);
+            this.logError('Error clearing element data:', error);
             throw new Error(`Failed to clear element data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -283,10 +312,11 @@ export class StorageAdapter {
 
             return typeof dataStr === 'string' && typeof metaStr === 'string';
         } catch (error) {
-            console.error('[StorageAdapter] Error validating storage:', error);
+            this.logError('Error validating storage:', error);
             return false;
         }
     }
+
     /**
      * Gets the current version number used by the storage adapter
      */

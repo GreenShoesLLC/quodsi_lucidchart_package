@@ -16,7 +16,7 @@ import {
     ModelElement
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { ElementProxy, PageProxy } from "lucid-extension-sdk";
+import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { RemoveModelFromPage } from "../services/conversion/RemoveModelFromPage";
 
@@ -400,8 +400,8 @@ export class ModelManager {
         return this.storageAdapter.getExpandedNodes(page);
     }
     /**
- * Removes the model from the specified page and clears manager state
- */
+     * Removes the model from the specified page and clears manager state
+     */
     public removeModelFromPage(page: PageProxy): void {
         if (!page) {
             throw new Error('No page provided for model removal');
@@ -443,5 +443,127 @@ export class ModelManager {
             }
         }
         return false;
+    }
+    public isUnconvertedElement(element: ElementProxy): boolean {
+        return this.getElementData(element) === null;
+    }
+
+    /**
+     * Handles saving simulation element data and metadata
+     */
+    public async saveElementData(
+        element: ElementProxy,
+        data: any,
+        type: SimulationObjectType,
+        page: PageProxy
+    ): Promise<void> {
+        // Handle conversion to NONE type (removing simulation data)
+        if (type === SimulationObjectType.None) {
+            const existingElement = this.getElementById(element.id);
+            if (existingElement) {
+                this.removeElement(element.id);
+            }
+            return;
+        }
+
+        // Handle type conversion with no data
+        if (type && (!data || Object.keys(data).length === 0)) {
+            await this.handleTypeConversion(element, type, page);
+            return;
+        }
+
+        // Handle regular data update
+        await this.handleDataUpdate(element, data, type, page);
+    }
+
+    /**
+     * Handles converting an element to a new simulation type
+     */
+    private async handleTypeConversion(
+        element: ElementProxy,
+        newType: SimulationObjectType,
+        page: PageProxy
+    ): Promise<void> {
+        // Ensure model exists
+        if (!this.getModel()) {
+            const model = {
+                id: page.id,
+                name: page.getTitle() || 'New Model',
+                type: SimulationObjectType.Model
+            };
+            await this.initializeModel(model as Model, page);
+        }
+
+        // Create initial data
+        const elementName = this.getDefaultElementName(element);
+        const convertedData = {
+            id: element.id,
+            type: newType,
+            name: elementName
+        };
+
+        // Register and save
+        this.registerElement(convertedData, element);
+        this.setElementData(
+            element,
+            convertedData,
+            newType,
+            {
+                id: element.id,
+                version: this.CURRENT_VERSION
+            }
+        );
+    }
+
+    /**
+     * Handles updating element data
+     */
+    private async handleDataUpdate(
+        element: ElementProxy,
+        updateData: any,
+        type: SimulationObjectType,
+        page: PageProxy
+    ): Promise<void> {
+        // Ensure model exists
+        if (!this.getModel()) {
+            const model = {
+                id: page.id,
+                name: page.getTitle() || 'New Model',
+                type: SimulationObjectType.Model
+            };
+            await this.initializeModel(model as Model, page);
+        }
+
+        // Preserve or set element name
+        const elementName = this.getDefaultElementName(element);
+        const elementData = {
+            id: element.id,
+            type: type,
+            ...updateData,
+            name: (updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData)
+                ? (updateData as { name?: string }).name || elementName
+                : elementName
+        };
+
+        // Register and save
+        this.registerElement(elementData, element);
+        this.setElementData(
+            element,
+            elementData,
+            type,
+            {
+                id: element.id,
+                version: this.CURRENT_VERSION
+            }
+        );
+    }
+
+    /**
+     * Gets default name for an element based on its type
+     */
+    private getDefaultElementName(element: ElementProxy): string {
+        return element instanceof BlockProxy ?
+            (element.id || 'Unnamed Block') :
+            'Unnamed Connector';
     }
 }

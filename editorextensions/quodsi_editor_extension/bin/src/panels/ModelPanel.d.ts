@@ -1,14 +1,17 @@
-import { EditorClient, ItemProxy } from 'lucid-extension-sdk';
+import { EditorClient, ItemProxy, Panel } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
-import { BasePanel } from './BasePanel';
-export declare class ModelPanel extends BasePanel {
+import { MessagePayloads, MessageTypes } from '@quodsi/shared';
+export declare class ModelPanel extends Panel {
+    private selectionManager;
+    private treeStateManager;
+    private messaging;
+    private reactAppReady;
     private modelManager;
     private conversionService;
     private expandedNodes;
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
-    private unconvertedElements;
     constructor(client: EditorClient, modelManager: ModelManager);
     private static readonly logger;
     private setupModelMessageHandlers;
@@ -46,19 +49,11 @@ export declare class ModelPanel extends BasePanel {
      * Handles selection changes in the editor
      */
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
-    private determineSelectionState;
-    /**
-     * Updates the current selection state
-     */
-    private updateSelectionState;
-    /**
-     * Determines the type of the current selection
-     */
-    private determineSelectionType;
-    /**
-         * Maps SimulationObjectType to SelectionType
-         */
-    private mapElementTypeToSelectionType;
+    private sendSelectionUpdateToReact;
+    private buildElementData;
+    private handleError;
+    private buildModelElementData;
+    private buildSelectedElementsData;
     /**
      * Handles model removal request
      */
@@ -71,11 +66,9 @@ export declare class ModelPanel extends BasePanel {
     /**
      * Sends selection update to React app
      */
-    private sendSelectionUpdate;
     /**
      * Gets data for selected elements
      */
-    private getSelectedElementsData;
     /**
      * Handles page conversion request
      */
@@ -104,5 +97,7 @@ export declare class ModelPanel extends BasePanel {
      * Finds an element by ID
      */
     private findElementById;
+    protected sendTypedMessage<T extends MessageTypes>(type: T, payload?: MessagePayloads[T]): void;
+    protected messageFromFrame(message: any): void;
 }
 //# sourceMappingURL=ModelPanel.d.ts.map

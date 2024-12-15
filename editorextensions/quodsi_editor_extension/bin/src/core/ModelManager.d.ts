@@ -72,11 +72,28 @@ export declare class ModelManager {
     setExpandedNodes(page: PageProxy, nodes: string[]): void;
     getExpandedNodes(page: PageProxy): string[];
     /**
- * Removes the model from the specified page and clears manager state
- */
+     * Removes the model from the specified page and clears manager state
+     */
     removeModelFromPage(page: PageProxy): void;
     getStorageAdapter(): StorageAdapter;
     findPathToNode(modelStructure: ModelStructure, nodeId: string): Set<string>;
     private findPathToNodeRecursive;
+    isUnconvertedElement(element: ElementProxy): boolean;
+    /**
+     * Handles saving simulation element data and metadata
+     */
+    saveElementData(element: ElementProxy, data: any, type: SimulationObjectType, page: PageProxy): Promise<void>;
+    /**
+     * Handles converting an element to a new simulation type
+     */
+    private handleTypeConversion;
+    /**
+     * Handles updating element data
+     */
+    private handleDataUpdate;
+    /**
+     * Gets default name for an element based on its type
+     */
+    private getDefaultElementName;
 }
 //# sourceMappingURL=ModelManager.d.ts.map

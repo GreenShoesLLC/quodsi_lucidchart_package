@@ -9,25 +9,22 @@ import {
     LineProxy,
     DocumentProxy,
     ElementProxy,
-    JsonObject as LucidJsonObject
+    JsonObject as LucidJsonObject,
+    Panel
 } from 'lucid-extension-sdk';
 import { ModelManager } from '../core/ModelManager';
-import { StorageAdapter } from '../core/StorageAdapter';
-import { ElementData, JsonSerializable, MessagePayloads, MessageTypes, MetaData, ModelElement, ModelStructure } from '@quodsi/shared';
+import { ElementData, ExtensionMessaging, isValidMessage, JsonSerializable, MessagePayloads, MessageTypes, MetaData, ModelElement, ModelStructure } from '@quodsi/shared';
 import { JsonObject as SharedJsonObject } from '@quodsi/shared';
 import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
 
 
 import { Model } from '@quodsi/shared';
-import { Connector } from '@quodsi/shared';
 import { SimulationObjectType } from '@quodsi/shared';
-import { SimulationElementFactory } from '@quodsi/shared';
 import { SelectionState } from '@quodsi/shared';
 import { EditorReferenceData } from '@quodsi/shared';
 import { ModelStructureBuilder } from '../services/accordion/ModelStructureBuilder';
-import { BasePanel } from './BasePanel';
-
+import { SelectionManager, TreeStateManager } from '../managers';
 
 type ComponentOperation = {
     type: MessageTypes.ACTIVITY_SAVED | MessageTypes.CONNECTOR_SAVED |
@@ -36,8 +33,11 @@ type ComponentOperation = {
     objectType: SimulationObjectType;
 };
 
-export class ModelPanel extends BasePanel {
-
+export class ModelPanel extends Panel {
+    private selectionManager: SelectionManager;
+    private treeStateManager: TreeStateManager;
+    private messaging: ExtensionMessaging;
+    private reactAppReady: boolean = false;
     private modelManager: ModelManager;
     private conversionService: ConversionService;
     private expandedNodes: Set<string> = new Set();
@@ -48,9 +48,9 @@ export class ModelPanel extends BasePanel {
         selectionType: SelectionType.NONE
     };
     private isHandlingSelectionChange: boolean = false;
-    private unconvertedElements: Set<string> = new Set();
 
     constructor(client: EditorClient, modelManager: ModelManager) {
+        // Replace super() with direct Panel construction
         super(client, {
             title: 'Quodsi Model',
             url: 'quodsim-react/index.html',
@@ -58,9 +58,14 @@ export class ModelPanel extends BasePanel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
+
+        // Initialize messaging
+        this.messaging = ExtensionMessaging.getInstance();
+
         console.error('[ModelPanel] Constructor called');
         this.modelManager = modelManager;
-
+        this.selectionManager = new SelectionManager(modelManager);
+        this.treeStateManager = new TreeStateManager(modelManager);
         this.conversionService = new ConversionService(this.modelManager);
         this.initializeModelManager();
         this.setupModelMessageHandlers();
@@ -72,6 +77,7 @@ export class ModelPanel extends BasePanel {
         console.error('[ModelPanel] Class definition loaded');
         return true;
     })();
+
     private setupModelMessageHandlers(): void {
         console.error('[ModelPanel] Setting up message handlers START');
         // React App Ready - already handled by BasePanel
@@ -81,6 +87,11 @@ export class ModelPanel extends BasePanel {
             console.error('[ModelPanel] REACT_APP_READY message received in handler');
             this.handleReactReady();
         });
+        // Setup error handler
+        this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
+            console.error('[ModelPanel] Error received:', payload);
+        });
+
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
         this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
@@ -152,21 +163,11 @@ export class ModelPanel extends BasePanel {
      * Handles tree node expansion state changes
      */
     private handleTreeNodeToggle(nodeId: string, expanded: boolean): void {
-        console.log('[ModelPanel] Tree node toggle:', { nodeId, expanded, currentNodes: this.expandedNodes });
-        if (expanded) {
-            this.expandedNodes.add(nodeId);
-        } else {
-            this.expandedNodes.delete(nodeId);
-        }
-
-        // Get current page and save to storage
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
-        if (currentPage) {
-            console.log('[ModelPanel] Saving expanded nodes to storage:', Array.from(this.expandedNodes));
-            this.modelManager.setExpandedNodes(currentPage, Array.from(this.expandedNodes));
-        }
+        if (!currentPage) return;
 
+        this.treeStateManager.handleNodeToggle(nodeId, expanded, currentPage);
         this.sendTreeStateUpdate();
     }
 
@@ -216,9 +217,6 @@ export class ModelPanel extends BasePanel {
             pageId: currentPage.id
         });
     }
-
-
-
     private async initializeModelManager(): Promise<void> {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -227,82 +225,13 @@ export class ModelPanel extends BasePanel {
             console.log('[ModelPanel] Page is not a Quodsi model, skipping initialization');
             return;
         }
-        else {
-            console.log('[ModelPanel] Page is a Quodsi model, starting initialization');
-        }
 
         try {
-            // Load page/model data
-            const modelData = this.modelManager.getElementData<Model>(currentPage)
+            const modelData = this.modelManager.getElementData<Model>(currentPage);
             if (modelData) {
-                console.log('[ModelPanel] Creating model element with:', {
-                    metadataType: SimulationObjectType.Model,
-                    modelData: modelData
-                });
-
-                try {
-                    const modelElement = SimulationElementFactory.createElement(
-                        { type: SimulationObjectType.Model },
-                        modelData
-                    );
-
-                    console.log('[ModelPanel] Created model element:', {
-                        elementType: modelElement.type,
-                        elementId: modelElement.id,
-                        elementStructure: modelElement
-                    });
-
-                    this.modelManager.registerElement(modelElement, currentPage);
-                    console.log('[ModelPanel] Successfully registered model element');
-                } catch (createError) {
-                    console.error('[ModelPanel] Error creating model element:', {
-                        error: createError,
-                        modelData: modelData,
-                        stack: createError instanceof Error ? createError.stack : undefined
-                    });
-                    throw createError;
-                }
+                await this.modelManager.initializeModel(modelData, currentPage);
+                console.log('[ModelPanel] Model initialization complete');
             }
-
-            // Load blocks (activities, resources, generators, entities)
-            for (const [blockId, block] of currentPage.allBlocks) {
-                const metadata = this.modelManager.getMetadata(block);
-                if (!metadata) {
-                    console.log('[ModelPanel] No metadata found for block:', block.id);
-                    continue;
-                }
-
-                const blockData = this.modelManager.getElementData(block);
-                if (blockData) {
-                    const element = SimulationElementFactory.createElement(metadata, blockData);
-                    this.modelManager.registerElement(element, block);
-                    console.log('[ModelPanel] Registered block element:', {
-                        id: element.id,
-                        type: element.type
-                    });
-                }
-            }
-
-            // Load lines (connectors)
-            for (const [lineId, line] of currentPage.allLines) {
-                const metadata = this.modelManager.getMetadata(line);
-                if (!metadata) {
-                    console.log('[ModelPanel] No metadata found for line:', line.id);
-                    continue;
-                }
-
-                const lineData = this.modelManager.getElementData<Connector>(line);
-                if (lineData) {
-                    const element = SimulationElementFactory.createElement(metadata, lineData);
-                    this.modelManager.registerElement(element, line);
-                    console.log('[ModelPanel] Registered connector element:', {
-                        id: element.id,
-                        type: element.type
-                    });
-                }
-            }
-            await this.modelManager.validateModel();
-            console.log('[ModelPanel] Model initialization complete');
         } catch (error) {
             console.error('[ModelPanel] Error initializing model:', error);
             throw new Error(`Failed to initialize model: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -342,198 +271,109 @@ export class ModelPanel extends BasePanel {
     public async handleSelectionChange(items: ItemProxy[]): Promise<void> {
         this.isHandlingSelectionChange = true;
         try {
-            console.log('[ModelPanel] Selection changed:', {
-                count: items.length,
-                ids: items.map(item => item.id)
-            });
-
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
-
-            if (!currentPage) {
-                console.error('[ModelPanel] No active page found');
-                return;
-            }
+            if (!currentPage) return;
 
             await this.updateModelStructure();
+            const selectionState = await this.selectionManager.determineSelectionState(currentPage, items);
+            this.selectionManager.setCurrentSelection(selectionState);
 
-            // First determine the selection state so we can use it for metadata
-            const selectionState = await this.determineSelectionState(currentPage, items);
-            this.currentSelection = selectionState;
-
-            // Update unconverted elements tracking
-            if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-                items.forEach(item => {
-                    this.unconvertedElements.add(item.id);
-                    console.log('[ModelPanel] Added unconverted element:', item.id);
-                });
-            } else {
-                items.forEach(item => {
-                    this.unconvertedElements.delete(item.id);
-                    console.log('[ModelPanel] Removed from unconverted elements:', item.id);
-                });
-            }
-
-            // Only send updates if React app is ready
             if (this.reactAppReady) {
-                let elementData: ElementData[] = [];
-
-                if (items.length === 0) {
-                    if (this.modelManager.isQuodsiModel(currentPage)) {
-                        const rawModelData = this.modelManager.getElementData(currentPage);
-                        if (typeof rawModelData === 'object' && rawModelData !== null) {
-                            const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
-                            console.log('[ModelPanel] Page model data:', modelData);
-
-                            elementData = [{
-                                id: currentPage.id,
-                                data: modelData,
-                                metadata: {
-                                    type: SimulationObjectType.Model,
-                                    version: this.modelManager.CURRENT_VERSION,
-                                    id: currentPage.id,
-                                    lastModified: new Date().toISOString(),
-                                },
-                                name: currentPage.getTitle() || 'Untitled Model'
-                            }];
-                        }
-                    }
-                } else {
-                    // Process all items concurrently
-                    elementData = await Promise.all(items.map(async item => {
-                        const rawData = this.modelManager.getElementData(item);
-                        const data = (typeof rawData === 'object' && rawData !== null) ?
-                            JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
-
-                        const metadata = await this.modelManager.getMetadata(item) || {};
-                        const convertedMetadata = JSON.parse(JSON.stringify(metadata));
-
-                        // Add isUnconverted flag and handle metadata for unconverted elements
-                        if (selectionState.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-                            convertedMetadata.isUnconverted = true;
-                            convertedMetadata.originalType = item instanceof BlockProxy ? 'block' : 'line';
-                        }
-
-                        // Get element name based on type
-                        let elementName = 'Unnamed Element';
-                        if (item instanceof BlockProxy) {
-                            elementName = 'Unnamed Block';
-                        } else if (item instanceof LineProxy) {
-                            elementName = 'Unnamed Connector';
-                        }
-
-                        return {
-                            id: item.id,
-                            data: {
-                                ...data,
-                                id: item.id,
-                                name: elementName // Include name in data for consistency
-                            },
-                            metadata: convertedMetadata,
-                            name: elementName
-                        };
-                    }));
-                }
-
-                // Get the validation result from modelManager
-                const validationResult = this.modelManager.getCurrentValidation();
-
-                // Send selection update with element data, model structure, and validation result
-                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
-                    selectionState: this.currentSelection,
-                    elementData: elementData,
-                    modelStructure: this.currentModelStructure,
-                    expandedNodes: Array.from(this.expandedNodes),
-                    validationResult: validationResult ?? undefined
-                });
-
-                console.log('[ModelPanel] Selection update sent:', {
-                    selectionState: this.currentSelection,
-                    elementData: elementData.map(e => ({
-                        id: e.id,
-                        name: e.name,
-                        type: e.metadata?.type,
-                        isUnconverted: e.metadata?.isUnconverted
-                    })),
-                    validationState: validationResult
-                });
+                await this.sendSelectionUpdateToReact(items, currentPage);
             }
         } catch (error) {
-            console.error('[ModelPanel] Error handling selection change:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
+            this.handleError('Error handling selection change:', error);
         } finally {
             this.isHandlingSelectionChange = false;
         }
     }
+    private async sendSelectionUpdateToReact(items: ItemProxy[], currentPage: PageProxy): Promise<void> {
+        const elementData = await this.buildElementData(items, currentPage);
+        const validationResult = this.modelManager.getCurrentValidation();
 
-    // Add this helper method if not already present
-    private async determineSelectionState(currentPage: ElementProxy, items: ItemProxy[]): Promise<SelectionState> {
-        const type = await this.determineSelectionType(items);
-        return {
-            pageId: currentPage.id,
-            selectedIds: items.map(item => item.id),
-            selectionType: type
-        };
+        this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+            selectionState: this.selectionManager.getCurrentSelection(),
+            elementData: elementData,
+            modelStructure: this.currentModelStructure,
+            expandedNodes: this.treeStateManager.getExpandedNodes(),
+            validationResult: validationResult ?? undefined
+        });
     }
-
-
-    /**
-     * Updates the current selection state
-     */
-    private async updateSelectionState(page: PageProxy, items: ItemProxy[]): Promise<SelectionState> {
-        const selectionType = await this.determineSelectionType(items);
-        const newState: SelectionState = {
-            pageId: page.id,
-            selectedIds: items.map(item => item.id),
-            selectionType: selectionType
-        };
-
-        this.currentSelection = newState;
-        console.log('[ModelPanel] Selection state updated:', this.currentSelection);
-        return newState;
+    private async buildElementData(items: ItemProxy[], currentPage: PageProxy): Promise<ElementData[]> {
+        if (items.length === 0) {
+            return this.buildModelElementData(currentPage);
+        }
+        return this.buildSelectedElementsData(items);
     }
+    private handleError(message: string, error: any): void {
+        console.error(`[ModelPanel] ${message}`, error);
+        this.sendTypedMessage(MessageTypes.ERROR, {
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+    // Add these methods to the ModelPanel class
 
-    /**
-     * Determines the type of the current selection
-     */
-    private async determineSelectionType(items: ItemProxy[]): Promise<SelectionType> {
-        if (items.length === 0) return SelectionType.NONE;
-        if (items.length > 1) return SelectionType.MULTIPLE;
-
-        const item = items[0];
-        const metadata = await this.modelManager.getMetadata(item);
-
-        // If we can't get metadata or there's no valid data, treat as unconverted
-        if (!metadata?.type || metadata.type === SimulationObjectType.None) {
-            return SelectionType.UNCONVERTED_ELEMENT;
+    private async buildModelElementData(currentPage: PageProxy): Promise<ElementData[]> {
+        if (!this.modelManager.isQuodsiModel(currentPage)) {
+            return [];
         }
 
-        return this.mapElementTypeToSelectionType(metadata.type);
-    }
-    /**
-         * Maps SimulationObjectType to SelectionType
-         */
-    private mapElementTypeToSelectionType(elementType: SimulationObjectType): SelectionType {
-        switch (elementType) {
-            case SimulationObjectType.Activity:
-                return SelectionType.ACTIVITY;
-            case SimulationObjectType.Connector:
-                return SelectionType.CONNECTOR;
-            case SimulationObjectType.Entity:
-                return SelectionType.ENTITY;
-            case SimulationObjectType.Generator:
-                return SelectionType.GENERATOR;
-            case SimulationObjectType.Resource:
-                return SelectionType.RESOURCE;
-            case SimulationObjectType.Model:
-                return SelectionType.MODEL;
-            default:
-                return SelectionType.UNKNOWN_BLOCK;
+        const rawModelData = this.modelManager.getElementData(currentPage);
+        if (typeof rawModelData !== 'object' || rawModelData === null) {
+            return [];
         }
+
+        const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
+
+        return [{
+            id: currentPage.id,
+            data: modelData,
+            metadata: {
+                type: SimulationObjectType.Model,
+                version: this.modelManager.CURRENT_VERSION,
+                id: currentPage.id,
+                lastModified: new Date().toISOString(),
+            },
+            name: currentPage.getTitle() || 'Untitled Model'
+        }];
     }
 
+    private async buildSelectedElementsData(items: ItemProxy[]): Promise<ElementData[]> {
+        return Promise.all(items.map(async item => {
+            const rawData = this.modelManager.getElementData(item);
+            const data = (typeof rawData === 'object' && rawData !== null) ?
+                JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
+
+            const metadata = await this.modelManager.getMetadata(item) || {};
+            const convertedMetadata = JSON.parse(JSON.stringify(metadata));
+
+            // Add isUnconverted flag for unconverted elements
+            if (this.selectionManager.getCurrentSelection().selectionType === SelectionType.UNCONVERTED_ELEMENT) {
+                convertedMetadata.isUnconverted = true;
+                convertedMetadata.originalType = item instanceof BlockProxy ? 'block' : 'line';
+            }
+
+            // Get element name based on type
+            let elementName = 'Unnamed Element';
+            if (item instanceof BlockProxy) {
+                elementName = 'Unnamed Block';
+            } else if (item instanceof LineProxy) {
+                elementName = 'Unnamed Connector';
+            }
+
+            return {
+                id: item.id,
+                data: {
+                    ...data,
+                    id: item.id,
+                    name: elementName // Include name in data for consistency
+                },
+                metadata: convertedMetadata,
+                name: elementName
+            };
+        }));
+    }
     /**
      * Handles model removal request
      */
@@ -577,7 +417,7 @@ export class ModelPanel extends BasePanel {
         }
 
         console.error('[ModelPanel] handleReactReady');
-        this.reactAppReady = true;  // Add this line
+        this.reactAppReady = true;
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -591,8 +431,12 @@ export class ModelPanel extends BasePanel {
         const isModel = this.modelManager.isQuodsiModel(currentPage);
         this.sendInitialState(currentPage, isModel, document.id);
 
+        // Update this section to use sendSelectionUpdateToReact instead
         if (this.currentSelection.selectedIds.length > 0) {
-            this.sendSelectionUpdate();
+            const selectedItems = viewport.getSelectedItems();
+            this.sendSelectionUpdateToReact(selectedItems, currentPage).catch(error =>
+                this.handleError('Error sending selection update:', error)
+            );
         }
     }
     /**
@@ -631,28 +475,28 @@ export class ModelPanel extends BasePanel {
     /**
      * Sends selection update to React app
      */
-    private sendSelectionUpdate(): void {
-        console.log('[ModelPanel] Sending selection update');
+    // private sendSelectionUpdate(): void {
+    //     console.log('[ModelPanel] Sending selection update');
 
-        this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
-            selectionState: this.currentSelection,
-            elementData: this.getSelectedElementsData()
-        });
-    }
+    //     this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+    //         selectionState: this.currentSelection,
+    //         elementData: this.buildSelectedElementsData()
+    //     });
+    // }
 
     /**
      * Gets data for selected elements
      */
-    private getSelectedElementsData(): any {
-        const viewport = new Viewport(this.client);
-        const selectedItems = viewport.getSelectedItems();
+    // private getSelectedElementsData(): any {
+    //     const viewport = new Viewport(this.client);
+    //     const selectedItems = viewport.getSelectedItems();
 
-        return selectedItems.map(item => ({
-            id: item.id,
-            data: this.modelManager.getElementData(item),
-            metadata: this.modelManager.getMetadata(item)
-        }));
-    }
+    //     return selectedItems.map(item => ({
+    //         id: item.id,
+    //         data: this.modelManager.getElementData(item),
+    //         metadata: this.modelManager.getMetadata(item)
+    //     }));
+    // }
 
     /**
      * Handles page conversion request
@@ -704,7 +548,8 @@ export class ModelPanel extends BasePanel {
         const metadata = this.modelManager.getMetadata(element) || {} as MetaData;
 
         // Add isUnconverted flag if this element is in our unconverted set
-        if (this.unconvertedElements.has(elementId)) {
+        // Check if element is unconverted
+        if (this.modelManager.isUnconvertedElement(element)) {
             metadata.isUnconverted = true;
         }
         const referenceData: EditorReferenceData = {};
@@ -730,12 +575,10 @@ export class ModelPanel extends BasePanel {
     /**
      * Handles element data update
      */
-    private async handleUpdateElementData(updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]): Promise<void> {
-        // ... existing code ...
-        console.log('[ModelPanel] Received element update data:', {
-            updateData,
-            selectedItems: new Viewport(this.client).getSelectedItems().map(item => item.id)
-        });
+    private async handleUpdateElementData(
+        updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]
+    ): Promise<void> {
+        console.log('[ModelPanel] Received element update data:', updateData);
 
         try {
             const viewport = new Viewport(this.client);
@@ -744,153 +587,32 @@ export class ModelPanel extends BasePanel {
                 throw new Error('No active page found');
             }
 
-            // Get the currently selected item from viewport
+            // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
-            console.log('[ModelPanel] Selected items:', selectedItems.map(item => item.id));
-
             const element = selectedItems.find(item => item.id === updateData.elementId);
             if (!element) {
                 throw new Error(`Element not found in selection: ${updateData.elementId}`);
             }
 
-            console.log('[ModelPanel] Found element:', {
-                id: element.id,
-                type: element instanceof BlockProxy ? 'Block' : 'Line'
+            // Save element data using ModelManager
+            await this.modelManager.saveElementData(
+                element,
+                updateData.data,
+                updateData.type,
+                currentPage
+            );
+
+            // Send success message
+            this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
+                elementId: updateData.elementId
             });
 
-            // Special handling for NONE type
-            if (updateData.type === SimulationObjectType.None) {
-                console.log('[ModelPanel] Handling NONE type - clearing element data');
+            // Update validation and selection state
+            await this.modelManager.validateModel();
 
-                // Remove from model manager if it exists
-                const existingElement = this.modelManager.getElementById(updateData.elementId);
-                if (existingElement) {
-                    this.modelManager.removeElement(updateData.elementId);
-                }
-
-                // Clear storage data
-                this.modelManager.clearElementData(element);
-
-                // Send success message
-                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                    elementId: updateData.elementId
-                });
-
-                // Force a selection update with the new state
-                await this.modelManager.validateModel();
-                this.handleSelectionChange(viewport.getSelectedItems());
-                return;
-            }
-
-            // Handle type conversion (when data is empty and type is provided)
-            if (updateData.type && (!updateData.data || Object.keys(updateData.data).length === 0)) {
-                console.log('[ModelPanel] Handling type conversion:', {
-                    elementId: updateData.elementId,
-                    newType: updateData.type
-                });
-
-                // Ensure model manager is initialized
-                if (!this.modelManager.getModel()) {
-                    const model = {
-                        id: currentPage.id,
-                        name: currentPage.getTitle() || 'New Model',
-                        type: SimulationObjectType.Model
-                    };
-                    this.modelManager.initializeModel(model as Model, currentPage);
-                }
-
-                // Create initial data for the converted element
-                const elementName = element instanceof BlockProxy ?
-                    (element.id || 'Unnamed Block') :
-                    'Unnamed Connector';
-
-                const convertedData = {
-                    id: updateData.elementId,
-                    type: updateData.type,
-                    name: elementName
-                };
-
-                // Register with model manager
-                this.modelManager.registerElement(convertedData, element);
-
-                // Update storage
-                this.modelManager.setElementData(
-                    element,
-                    convertedData,
-                    updateData.type,
-                    {
-                        id: updateData.elementId,
-                        version: this.modelManager.CURRENT_VERSION
-                    }
-                );
-
-                // Remove from unconverted tracking
-                this.unconvertedElements.delete(updateData.elementId);
-
-                // Send success message
-                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                    elementId: updateData.elementId
-                });
-
-                // Trigger revalidation and selection update
-                await this.modelManager.validateModel();
+            // Only update selection if this element is selected
+            if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
                 await this.handleSelectionChange(selectedItems);
-                return;
-            }
-
-            // Regular update handling
-            if (typeof updateData.data === 'object' && updateData.data !== null) {
-                // Ensure model manager is initialized
-                if (!this.modelManager.getModel()) {
-                    const model = {
-                        id: currentPage.id,
-                        name: currentPage.getTitle() || 'New Model',
-                        type: SimulationObjectType.Model
-                    };
-                    this.modelManager.initializeModel(model as Model, currentPage);
-                }
-
-                // Preserve or set element name
-                const elementName = element instanceof BlockProxy ?
-                    (element.id || 'Unnamed Block') :
-                    'Unnamed Connector';
-
-                const elementData = {
-                    id: updateData.elementId,
-                    type: updateData.type,
-                    ...updateData.data as SharedJsonObject,
-                    name: (updateData.data && typeof updateData.data === 'object' && !Array.isArray(updateData.data) && 'name' in updateData.data)
-                        ? (updateData.data as { name?: string }).name || elementName
-                        : elementName
-                };
-
-                // Register with model manager
-                this.modelManager.registerElement(elementData, element);
-                console.log('[ModelPanel] Element registered with model manager');
-
-                // Update storage with consistent data
-                this.modelManager.setElementData(
-                    element,
-                    elementData,
-                    updateData.type,
-                    {
-                        id: updateData.elementId,
-                        version: this.modelManager.CURRENT_VERSION
-                    }
-                );
-                console.log('[ModelPanel] Storage update successful');
-
-                // Send success message
-                this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                    elementId: updateData.elementId
-                });
-
-                // Refresh selection state if needed
-                if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
-                    this.sendSelectionUpdate();
-                }
-            } else {
-                throw new Error('Invalid update data: data must be an object');
             }
 
         } catch (error) {
@@ -1004,5 +726,29 @@ export class ModelPanel extends BasePanel {
         });
 
         return null;
+    }
+    protected sendTypedMessage<T extends MessageTypes>(
+        type: T,
+        payload?: MessagePayloads[T]
+    ): void {
+        const message = {
+            messagetype: type,
+            data: payload ?? null
+        } as JsonSerializable;
+
+        this.sendMessage(message);
+    }
+
+    // Message frame handling
+    protected messageFromFrame(message: any): void {
+        if (!isValidMessage(message)) {
+            console.error('[ModelPanel] Invalid message format:', message);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: 'Invalid message format'
+            });
+            return;
+        }
+
+        this.messaging.handleIncomingMessage(message);
     }
 }

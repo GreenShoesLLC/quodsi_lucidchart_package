@@ -18,9 +18,7 @@ const storageAdapter = new StorageAdapter();
 const modelManager = new ModelManager(storageAdapter);
 
 // Initialize panel with model manager instance
-console.error('[extension] About to create ModelPanel');
 console.info('[extension] About to create ModelPanel');
-console.debug('[extension] About to create ModelPanel');
 const modelPanel = new ModelPanel(client, modelManager);
 console.info('[extension] Created ModelPanel2');
 

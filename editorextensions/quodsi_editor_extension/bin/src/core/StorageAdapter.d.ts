@@ -13,13 +13,20 @@ export declare class StorageAdapter {
     private static readonly META_KEY;
     private static readonly EXPANDED_NODES_KEY;
     private static readonly CURRENT_VERSION;
+    private static readonly LOG_PREFIX;
+    private loggingEnabled;
+    constructor();
+    setLogging(enabled: boolean): void;
+    private isLoggingEnabled;
+    private log;
+    private logError;
     /**
      * Checks if an element has been converted to a Quodsi model element
      */
     isQuodsiModel(element: ElementProxy): boolean;
     /**
-  * Gets the expanded nodes state for a page
-  */
+     * Gets the expanded nodes state for a page
+     */
     getExpandedNodes(page: ElementProxy): string[];
     /**
      * Sets the expanded nodes state for a page
