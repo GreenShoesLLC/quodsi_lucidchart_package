@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import ModelEditor from "./ModelEditor";
 import ExperimentEditor from "./ExperimentEditor";
 import { OutputViewer } from "./OutputViewer";
-import ModelUtilities from "./ModelUtilities";
 import { Model, ModelUtils } from "@quodsi/shared";
 
 type TabType = "model" | "experiments" | "output" | "utilities";
@@ -47,15 +46,6 @@ export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
         return <ExperimentEditor />;
       case "output":
         return <OutputViewer />;
-      case "utilities":
-        return (
-          <ModelUtilities
-            showConvertButton={false}
-            showValidateButton={true}
-            showRemoveButton={true}
-            showSimulateButton={true}
-          />
-        );
       default:
         return null;
     }

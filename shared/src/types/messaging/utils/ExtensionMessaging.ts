@@ -1,6 +1,5 @@
+import { JsonObject } from '../JsonTypes';
 import { MessagePayloads, MessageTypes } from "../MessageTypes";
-import { createSerializableMessage } from "./MessageCreator";
-// import { createSerializableMessage } from "@quodsi/shared";
 
 export class ExtensionMessaging {
     private static instance: ExtensionMessaging;
@@ -11,6 +10,19 @@ export class ExtensionMessaging {
             ExtensionMessaging.instance = new ExtensionMessaging();
         }
         return ExtensionMessaging.instance;
+    }
+
+    /**
+     * Creates a serializable message. At runtime, enums will serialize to their string values.
+     */
+    private createSerializableMessage<T extends MessageTypes>(
+        type: T,
+        payload?: MessagePayloads[T]
+    ): JsonObject {
+        return {
+            messagetype: type,
+            data: payload ?? null
+        } as JsonObject;
     }
 
     public handleIncomingMessage(message: any): void {
@@ -58,7 +70,7 @@ export class ExtensionMessaging {
             }
 
             // Then, send to parent window
-            const message = createSerializableMessage(type, payload);
+            const message = this.createSerializableMessage(type, payload);
             window.parent.postMessage(message, "*");
             console.log('[ExtensionMessaging] Message posted to parent window');
         } catch (error) {
