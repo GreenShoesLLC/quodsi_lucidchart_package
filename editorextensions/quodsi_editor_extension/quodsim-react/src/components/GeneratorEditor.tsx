@@ -1,7 +1,14 @@
 import React from "react";
 import BaseEditor from "./BaseEditor";
-import DurationEditor from "./DurationEditor";
-import { Duration, Generator, SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
+import {
+  Duration,
+  Generator,
+  SimulationObjectType,
+  EditorReferenceData,
+
+} from "@quodsi/shared";
+import { Clock, Users, Timer, PlayCircle } from "lucide-react";
+import { CompactDurationEditor } from "./CompactDurationEditor";
 
 interface Props {
   generator: Generator;
@@ -18,9 +25,8 @@ const GeneratorEditor: React.FC<Props> = ({
 }) => {
   const entities = referenceData.entities || [];
 
-  if (!generator || !generator.id) {
-    console.error("Invalid generator data received:", generator);
-    return <div className="quodsi-error-message">Invalid generator data</div>;
+  if (!generator?.id) {
+    return <div className="text-red-500 text-sm">Invalid generator data</div>;
   }
 
   const handleDurationChange = (name: string, updatedDuration: Duration) => {
@@ -35,29 +41,34 @@ const GeneratorEditor: React.FC<Props> = ({
       messageType="generatorSaved"
     >
       {(localGenerator, handleChange) => (
-        <div>
-          <div className="quodsi-field">
-            <label htmlFor="activityKeyId" className="quodsi-label">
-              Generate at Activity
-            </label>
+        <div className="space-y-3 p-2">
+          {/* Basic Settings */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <PlayCircle className="w-4 h-4 text-blue-500" />
+              <label className="text-xs font-medium text-gray-700">
+                Generate at Activity
+              </label>
+            </div>
             <input
               type="text"
-              id="activityKeyId"
               name="activityKeyId"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-sm border rounded"
               value={localGenerator.activityKeyId}
               onChange={handleChange}
             />
           </div>
 
-          <div className="quodsi-field">
-            <label htmlFor="entityId" className="quodsi-label">
-              Entity Type to Generate
-            </label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Users className="w-4 h-4 text-blue-500" />
+              <label className="text-xs font-medium text-gray-700">
+                Entity Type
+              </label>
+            </div>
             <select
-              id="entityId"
               name="entityId"
-              className="quodsi-select"
+              className="w-full px-2 py-1 text-sm border rounded"
               value={localGenerator.entityId}
               onChange={handleChange}
             >
@@ -69,71 +80,71 @@ const GeneratorEditor: React.FC<Props> = ({
             </select>
           </div>
 
-          <div className="quodsi-operation-step">
-            <h3 className="quodsi-label">Generation Interval</h3>
-            <div className="quodsi-field">
-              <label htmlFor="entitiesPerCreation" className="quodsi-label">
-                Entities Per Generation
-              </label>
+          {/* Generation Settings */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Timer className="w-4 h-4 text-blue-500" />
+                <label className="text-xs font-medium text-gray-700">
+                  Per Generation
+                </label>
+              </div>
               <input
                 type="number"
-                id="entitiesPerCreation"
                 name="entitiesPerCreation"
-                className="quodsi-input"
+                className="w-full px-2 py-1 text-sm border rounded"
                 value={localGenerator.entitiesPerCreation}
                 onChange={handleChange}
                 min="1"
               />
             </div>
 
-            <div className="quodsi-field">
-              <label htmlFor="periodicOccurrences" className="quodsi-label">
-                Generation Count
-              </label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4 text-blue-500" />
+                <label className="text-xs font-medium text-gray-700">
+                  Count
+                </label>
+              </div>
               <input
                 type="number"
-                id="periodicOccurrences"
                 name="periodicOccurrences"
-                className="quodsi-input"
+                className="w-full px-2 py-1 text-sm border rounded"
                 value={localGenerator.periodicOccurrences}
                 onChange={handleChange}
                 min="0"
               />
             </div>
+          </div>
 
-            <DurationEditor
+          {/* Timing Settings */}
+          <div className="space-y-3 pt-1">
+            <CompactDurationEditor
               duration={localGenerator.periodIntervalDuration}
               onChange={(updatedDuration) =>
                 handleDurationChange("periodIntervalDuration", updatedDuration)
               }
               lengthLabel="Interarrival Time"
-              periodUnitLabel="Time Unit"
-              durationTypeLabel="Time Type"
             />
-          </div>
 
-          <div className="quodsi-operation-step">
-            <h3 className="quodsi-label">Start Delay</h3>
-            <DurationEditor
+            <CompactDurationEditor
               duration={localGenerator.periodicStartDuration}
               onChange={(updatedDuration) =>
                 handleDurationChange("periodicStartDuration", updatedDuration)
               }
-              lengthLabel="Generate Start Time"
-              periodUnitLabel="Time Unit"
-              durationTypeLabel="Time Type"
+              lengthLabel="Start Delay"
             />
           </div>
 
-          <div className="quodsi-field">
-            <label htmlFor="maxEntities" className="quodsi-label">
+          {/* Max Entities */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-gray-700">
               Max Entities
             </label>
             <input
               type="number"
-              id="maxEntities"
               name="maxEntities"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-sm border rounded"
               value={localGenerator.maxEntities}
               onChange={handleChange}
               min="1"

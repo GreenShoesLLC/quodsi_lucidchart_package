@@ -1,6 +1,15 @@
 import React from "react";
+import {
+  Model,
+  PeriodUnit,
+  SimulationTimeType,
+  SimulationObjectType,
+  Duration,
+  DurationType,
+} from "@quodsi/shared";
+import { Settings, Clock, Calendar, Hash } from "lucide-react";
+import { CompactDurationEditor } from "./CompactDurationEditor";
 import BaseEditor from "./BaseEditor";
-import { Model, PeriodUnit, SimulationTimeType, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
   model: Model;
@@ -9,6 +18,22 @@ interface Props {
 }
 
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
+  const createSyntheticEvent = (
+    name: string,
+    value: any
+  ): React.ChangeEvent<HTMLInputElement | HTMLSelectElement> => {
+    return {
+      target: {
+        name,
+        value,
+      },
+      currentTarget: {
+        name,
+        value,
+      },
+    } as React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+  };
+
   return (
     <BaseEditor
       data={{ ...model, type: SimulationObjectType.Model }}
@@ -17,169 +42,186 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
       messageType="modelSaved"
     >
       {(localModel, handleChange) => (
-        <div>
-          <div className="quodsi-field">
-            <label htmlFor="name" className="quodsi-label">Name</label>
+        <div className="space-y-4 p-3">
+          {/* Basic Settings */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Settings className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium">Basic Settings</span>
+            </div>
             <input
               type="text"
-              id="name"
               name="name"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-sm border rounded"
               value={localModel.name}
+              placeholder="Model Name"
               onChange={handleChange}
             />
-          </div>
-
-          <div className="quodsi-field">
-            <label htmlFor="reps" className="quodsi-label">Reps</label>
-            <input
-              type="number"
-              id="reps"
-              name="reps"
-              className="quodsi-input"
-              value={localModel.reps}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="quodsi-field">
-            <label htmlFor="simulationTimeType" className="quodsi-label">Simulation Time Type</label>
-            <select
-              id="simulationTimeType"
-              name="simulationTimeType"
-              className="quodsi-select"
-              value={localModel.simulationTimeType}
-              onChange={handleChange}
-            >
-              {Object.values(SimulationTimeType).map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
-          </div>
-
-          {localModel.simulationTimeType === SimulationTimeType.Clock && (
-            <div className="quodsi-operation-step">
-              <div className="quodsi-field">
-                <label htmlFor="runClockPeriod" className="quodsi-label">Run Clock Period</label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Reps</label>
                 <input
                   type="number"
-                  id="runClockPeriod"
-                  name="runClockPeriod"
-                  className="quodsi-input"
-                  value={localModel.runClockPeriod}
+                  name="reps"
+                  className="w-full px-2 py-1 text-sm border rounded"
+                  value={localModel.reps}
                   onChange={handleChange}
+                  min="1"
                 />
               </div>
-
-              <div className="quodsi-field">
-                <label htmlFor="runClockPeriodUnit" className="quodsi-label">Run Clock Period Unit</label>
-                <select
-                  id="runClockPeriodUnit"
-                  name="runClockPeriodUnit"
-                  className="quodsi-select"
-                  value={localModel.runClockPeriodUnit}
-                  onChange={handleChange}
-                >
-                  {Object.values(PeriodUnit).map((unit) => (
-                    <option key={unit} value={unit}>{unit}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="quodsi-field">
-                <label htmlFor="warmupClockPeriod" className="quodsi-label">Warmup Clock Period</label>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Seed</label>
                 <input
                   type="number"
-                  id="warmupClockPeriod"
-                  name="warmupClockPeriod"
-                  className="quodsi-input"
-                  value={localModel.warmupClockPeriod}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="quodsi-field">
-                <label htmlFor="warmupClockPeriodUnit" className="quodsi-label">Warmup Clock Period Unit</label>
-                <select
-                  id="warmupClockPeriodUnit"
-                  name="warmupClockPeriodUnit"
-                  className="quodsi-select"
-                  value={localModel.warmupClockPeriodUnit}
-                  onChange={handleChange}
-                >
-                  {Object.values(PeriodUnit).map((unit) => (
-                    <option key={unit} value={unit}>{unit}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          {localModel.simulationTimeType === SimulationTimeType.CalendarDate && (
-            <div className="quodsi-operation-step">
-              <div className="quodsi-field">
-                <label htmlFor="warmupDateTime" className="quodsi-label">Warmup Date Time</label>
-                <input
-                  type="datetime-local"
-                  id="warmupDateTime"
-                  name="warmupDateTime"
-                  className="quodsi-input"
-                  value={localModel.warmupDateTime?.toISOString().slice(0, 16) || ""}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="quodsi-field">
-                <label htmlFor="startDateTime" className="quodsi-label">Start Date Time</label>
-                <input
-                  type="datetime-local"
-                  id="startDateTime"
-                  name="startDateTime"
-                  className="quodsi-input"
-                  value={localModel.startDateTime?.toISOString().slice(0, 16) || ""}
-                  onChange={handleChange}
-                />
-              </div>
-
-              <div className="quodsi-field">
-                <label htmlFor="finishDateTime" className="quodsi-label">Finish Date Time</label>
-                <input
-                  type="datetime-local"
-                  id="finishDateTime"
-                  name="finishDateTime"
-                  className="quodsi-input"
-                  value={localModel.finishDateTime?.toISOString().slice(0, 16) || ""}
+                  name="seed"
+                  className="w-full px-2 py-1 text-sm border rounded"
+                  value={localModel.seed}
                   onChange={handleChange}
                 />
               </div>
             </div>
-          )}
-
-          <div className="quodsi-field">
-            <label htmlFor="seed" className="quodsi-label">Seed</label>
-            <input
-              type="number"
-              id="seed"
-              name="seed"
-              className="quodsi-input"
-              value={localModel.seed}
-              onChange={handleChange}
-            />
           </div>
 
-          <div className="quodsi-field">
-            <label htmlFor="oneClockUnit" className="quodsi-label">One Clock Unit</label>
-            <select
-              id="oneClockUnit"
-              name="oneClockUnit"
-              className="quodsi-select"
-              value={localModel.oneClockUnit}
-              onChange={handleChange}
-            >
-              {Object.values(PeriodUnit).map((unit) => (
-                <option key={unit} value={unit}>{unit}</option>
-              ))}
-            </select>
+          {/* Time Settings */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-medium">Time Settings</span>
+            </div>
+
+            <div className="space-y-2">
+              <select
+                name="simulationTimeType"
+                className="w-full px-2 py-1 text-sm border rounded"
+                value={localModel.simulationTimeType}
+                onChange={handleChange}
+              >
+                {Object.values(SimulationTimeType).map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                name="oneClockUnit"
+                className="w-full px-2 py-1 text-sm border rounded"
+                value={localModel.oneClockUnit}
+                onChange={handleChange}
+              >
+                {Object.values(PeriodUnit).map((unit) => (
+                  <option key={unit} value={unit}>
+                    {unit}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {localModel.simulationTimeType === SimulationTimeType.Clock && (
+              <div className="space-y-2 pt-2">
+                <div className="space-y-2">
+                  <CompactDurationEditor
+                    duration={
+                      new Duration(
+                        localModel.runClockPeriod || 0,
+                        localModel.runClockPeriodUnit || PeriodUnit.MINUTES,
+                        DurationType.CONSTANT
+                      )
+                    }
+                    onChange={(duration) => {
+                      handleChange(
+                        createSyntheticEvent(
+                          "runClockPeriod",
+                          duration.durationLength
+                        )
+                      );
+                      handleChange(
+                        createSyntheticEvent(
+                          "runClockPeriodUnit",
+                          duration.durationPeriodUnit
+                        )
+                      );
+                    }}
+                    lengthLabel="Run Time"
+                  />
+
+                  <CompactDurationEditor
+                    duration={
+                      new Duration(
+                        localModel.warmupClockPeriod || 0,
+                        localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
+                        DurationType.CONSTANT
+                      )
+                    }
+                    onChange={(duration) => {
+                      handleChange(
+                        createSyntheticEvent(
+                          "warmupClockPeriod",
+                          duration.durationLength
+                        )
+                      );
+                      handleChange(
+                        createSyntheticEvent(
+                          "warmupClockPeriodUnit",
+                          duration.durationPeriodUnit
+                        )
+                      );
+                    }}
+                    lengthLabel="Warmup Time"
+                  />
+                </div>
+              </div>
+            )}
+
+            {localModel.simulationTimeType ===
+              SimulationTimeType.CalendarDate && (
+              <div className="space-y-2 pt-2">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="startDateTime"
+                    className="w-full px-2 py-1 text-sm border rounded"
+                    value={
+                      localModel.startDateTime?.toISOString().slice(0, 16) || ""
+                    }
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Finish Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="finishDateTime"
+                    className="w-full px-2 py-1 text-sm border rounded"
+                    value={
+                      localModel.finishDateTime?.toISOString().slice(0, 16) ||
+                      ""
+                    }
+                    onChange={handleChange}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Warmup Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="warmupDateTime"
+                    className="w-full px-2 py-1 text-sm border rounded"
+                    value={
+                      localModel.warmupDateTime?.toISOString().slice(0, 16) ||
+                      ""
+                    }
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
