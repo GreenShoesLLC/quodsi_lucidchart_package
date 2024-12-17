@@ -1,4 +1,4 @@
-import { ElementProxy } from 'lucid-extension-sdk';
+import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 /**
@@ -9,6 +9,7 @@ export interface StorageFormat<T = any> {
     meta: MetaData;
 }
 export declare class StorageAdapter {
+    private static readonly LEGACY_KEYS;
     private static readonly DATA_KEY;
     private static readonly META_KEY;
     private static readonly EXPANDED_NODES_KEY;
@@ -76,5 +77,7 @@ export declare class StorageAdapter {
      * Gets the current version number used by the storage adapter
      */
     get CURRENT_VERSION(): string;
+    private clearLegacyData;
+    clearAllModelData(page: PageProxy): void;
 }
 //# sourceMappingURL=StorageAdapter.d.ts.map

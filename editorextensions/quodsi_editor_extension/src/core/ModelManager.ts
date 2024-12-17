@@ -19,7 +19,6 @@ import {
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
-import { RemoveModelFromPage } from "../services/conversion/RemoveModelFromPage";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 
 interface ChangeTracker {
@@ -456,12 +455,7 @@ export class ModelManager {
         }
 
         try {
-            // Create instance of RemoveModelFromPage
-            const remover = new RemoveModelFromPage(page, this.storageAdapter);
-
-            // Remove the model
-            remover.removeModel();
-
+            this.storageAdapter.clearAllModelData(page)
             // Clear all internal state
             this.clear();
         } catch (error) {

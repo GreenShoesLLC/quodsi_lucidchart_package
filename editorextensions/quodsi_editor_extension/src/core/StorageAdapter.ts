@@ -1,4 +1,4 @@
-import { ElementProxy } from 'lucid-extension-sdk';
+import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
 import { SimulationObjectType } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 
@@ -11,6 +11,12 @@ export interface StorageFormat<T = any> {
 }
 
 export class StorageAdapter {
+    private static readonly LEGACY_KEYS = [
+        'q_objecttype',
+        'q_data',
+        'q_status_current',
+        'q_status_prior'
+    ];
     private static readonly DATA_KEY = 'q_data';
     private static readonly META_KEY = 'q_meta';
     private static readonly EXPANDED_NODES_KEY = 'q_expanded_nodes';
@@ -322,5 +328,45 @@ export class StorageAdapter {
      */
     public get CURRENT_VERSION(): string {
         return StorageAdapter.CURRENT_VERSION;
+    }
+    private clearLegacyData(element: ElementProxy): void {
+        for (const key of StorageAdapter.LEGACY_KEYS) {
+            try {
+                const value = element.shapeData.get(key);
+                if (value !== undefined) {
+                    try {
+                        element.shapeData.delete(key);
+                        this.log(`Successfully deleted legacy key '${key}' from element ${element.id}`);
+                    } catch {
+                        element.shapeData.set(key, '');
+                        this.log(`Set legacy key '${key}' to empty on element ${element.id} (delete failed)`);
+                    }
+                }
+            } catch (error) {
+                this.logError(`Error handling legacy key '${key}' for element ${element.id}:`, error);
+            }
+        }
+    }
+    public clearAllModelData(page: PageProxy): void {
+        try {
+            // Clear model data from page
+            this.clearExpandedNodes(page);
+            this.clearElementData(page);
+
+            // Clear data from all blocks
+            for (const [, block] of page.allBlocks) {
+                this.clearElementData(block);
+                this.clearLegacyData(block);
+            }
+
+            // Clear data from all lines
+            for (const [, line] of page.allLines) {
+                this.clearElementData(line);
+                this.clearLegacyData(line);
+            }
+        } catch (error) {
+            this.logError('Error clearing model data:', error);
+            throw error;
+        }
     }
 }
