@@ -17,6 +17,5 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./JsonTypes"), exports);
 __exportStar(require("./MessageTypes"), exports);
 __exportStar(require("./payloads"), exports);
-__exportStar(require("./utils/MessageCreator"), exports);
 __exportStar(require("./utils/MessageValidation"), exports);
 __exportStar(require("./utils/ExtensionMessaging"), exports);

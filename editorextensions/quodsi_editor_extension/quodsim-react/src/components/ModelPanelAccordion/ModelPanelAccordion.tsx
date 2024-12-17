@@ -4,7 +4,7 @@ import { Header } from "./Header";
 import { ModelTreeView } from "./ModelTreeView";
 import { ValidationMessageList } from "./ValidationMessageList";
 
-import { typeMappers } from '../../utils/typeMappers';
+import { typeMappers } from "../../utils/typeMappers";
 
 import {
   ModelStructure,
@@ -13,7 +13,7 @@ import {
   EditorReferenceData,
   SelectionType,
   SimComponentType,
-  ElementData,
+  ModelItemData,
   JsonObject,
   MetaData,
 } from "@quodsi/shared";
@@ -25,7 +25,7 @@ interface ModelPanelAccordionProps {
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: ElementData | null;
+  currentElement: ModelItemData | null;
   expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
   onValidate: () => void;

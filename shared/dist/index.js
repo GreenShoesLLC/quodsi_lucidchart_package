@@ -14,6 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(require("./core/logging/QuodsiLogger"), exports);
 __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);
 __exportStar(require("./types/ConversionResult"), exports);
@@ -30,6 +31,7 @@ __exportStar(require("./types/SimulationElementFactory"), exports);
 __exportStar(require("./types/SimulationElementWrapper"), exports);
 __exportStar(require("./types/validation"), exports);
 __exportStar(require("./types/MetaData"), exports);
+__exportStar(require("./types/DiagramElementType"), exports);
 __exportStar(require("./types/elements/Activity"), exports);
 __exportStar(require("./types/elements/ActivityListManager"), exports);
 __exportStar(require("./types/elements/ComponentListManager"), exports);

@@ -20,6 +20,7 @@ const modelManager = new ModelManager(storageAdapter);
 // Initialize panel with model manager instance
 console.info('[extension] About to create ModelPanel');
 const modelPanel = new ModelPanel(client, modelManager);
+modelPanel.setLogging(true);
 console.info('[extension] Created ModelPanel2');
 
 // Hook selection changes

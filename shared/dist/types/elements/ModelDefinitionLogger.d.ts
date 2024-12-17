@@ -1,16 +1,19 @@
 import { ModelDefinition } from "./ModelDefinition";
-export declare class ModelDefinitionLogger {
-    static log(modelDefinition: ModelDefinition): void;
-    static logActivities(modelDefinition: ModelDefinition): void;
-    static logConnectors(modelDefinition: ModelDefinition): void;
-    static logResources(modelDefinition: ModelDefinition): void;
-    static logGenerators(modelDefinition: ModelDefinition): void;
-    static logEntities(modelDefinition: ModelDefinition): void;
-    private static safeExecute;
-    private static logActivity;
-    private static logConnector;
-    private static logResource;
-    private static logGenerator;
-    private static logEntity;
+import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
+export declare class ModelDefinitionLogger extends QuodsiLogger {
+    protected readonly LOG_PREFIX = "[ModelDefinitionLogger]";
+    static logModelDefinition(modelDefinition: ModelDefinition): void;
+    private logDefinition;
+    private logActivities;
+    private logConnectors;
+    private logResources;
+    private logGenerators;
+    private logEntities;
+    private safeExecute;
+    private logActivity;
+    private logConnector;
+    private logResource;
+    private logGenerator;
+    private logEntity;
 }
 //# sourceMappingURL=ModelDefinitionLogger.d.ts.map

@@ -1,7 +1,9 @@
 import { EditorClient, ItemProxy, Panel } from 'lucid-extension-sdk';
-import { ModelManager } from '../core/ModelManager';
 import { MessagePayloads, MessageTypes } from '@quodsi/shared';
+import { ModelManager } from '../core/ModelManager';
 export declare class ModelPanel extends Panel {
+    private static readonly LOG_PREFIX;
+    private loggingEnabled;
     private selectionManager;
     private treeStateManager;
     private messaging;
@@ -13,11 +15,11 @@ export declare class ModelPanel extends Panel {
     private currentSelection;
     private isHandlingSelectionChange;
     constructor(client: EditorClient, modelManager: ModelManager);
-    private static readonly logger;
+    setLogging(enabled: boolean): void;
+    private isLoggingEnabled;
+    private log;
+    private logError;
     private setupModelMessageHandlers;
-    /**
-         * Updates the model structure based on current model data and validates the model
-         */
     private updateModelStructure;
     /**
      * Handles tree node expansion state changes
@@ -45,15 +47,11 @@ export declare class ModelPanel extends Panel {
      */
     hide(): void;
     handleValidateRequest(): Promise<void>;
-    /**
-     * Handles selection changes in the editor
-     */
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
-    private sendSelectionUpdateToReact;
-    private buildElementData;
+    private sendSelectionBasedMessage;
     private handleError;
-    private buildModelElementData;
-    private buildSelectedElementsData;
+    private buildModelItemData;
+    private buildModelItemDataArray;
     /**
      * Handles model removal request
      */
@@ -63,12 +61,6 @@ export declare class ModelPanel extends Panel {
      * Sends initial state to React app
      */
     private sendInitialState;
-    /**
-     * Sends selection update to React app
-     */
-    /**
-     * Gets data for selected elements
-     */
     /**
      * Handles page conversion request
      */
@@ -89,14 +81,6 @@ export declare class ModelPanel extends Panel {
      * Handles model saved message
      */
     private handleModelSaved;
-    /**
-     * Handles element saved message
-     */
-    private handleElementSaved;
-    /**
-     * Finds an element by ID
-     */
-    private findElementById;
     protected sendTypedMessage<T extends MessageTypes>(type: T, payload?: MessagePayloads[T]): void;
     protected messageFromFrame(message: any): void;
 }

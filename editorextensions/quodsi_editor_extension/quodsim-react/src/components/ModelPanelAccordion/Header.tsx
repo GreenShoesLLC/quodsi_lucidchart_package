@@ -2,7 +2,7 @@ import React from "react";
 import { AlertCircle } from "lucide-react";
 import {
   ValidationState,
-  ElementData,
+  ModelItemData,
   SimulationObjectType,
   MessageTypes,
   SimComponentType,
@@ -15,7 +15,7 @@ interface HeaderProps {
   modelName: string;
   validationState: ValidationState | null;
   onValidate: () => void;
-  currentElement: ElementData | null;
+  currentElement: ModelItemData | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({

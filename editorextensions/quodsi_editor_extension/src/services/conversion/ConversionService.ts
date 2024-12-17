@@ -3,7 +3,7 @@ import {
     BlockProxy
 } from 'lucid-extension-sdk';
 
-import { 
+import {
     ConversionResult,
     ProcessAnalysisResult,
     BlockAnalysis,
@@ -12,17 +12,21 @@ import {
     Model,
     ModelDefaults,
     ConnectType,
+    QuodsiLogger,
 } from '@quodsi/shared';
 
 import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 import { SimulationObjectTypeFactory } from '@quodsi/shared';
 
-export class ConversionService {
+export class ConversionService extends QuodsiLogger {
+    protected readonly LOG_PREFIX = '[ConversionService]';
     private storageAdapter: StorageAdapter;
     constructor(private modelManager: ModelManager) {
+        super();
         // Get storageAdapter from modelManager if needed
         this.storageAdapter = modelManager.getStorageAdapter();
+        this.setLogging(false);
     }
     /**
      * Checks if a page can be converted to a model
@@ -45,33 +49,59 @@ export class ConversionService {
      * Converts a LucidChart page to a Quodsi simulation model
      */
     public async convertPage(page: PageProxy): Promise<ConversionResult> {
-        console.log('[ConversionService] Starting page conversion');
-        console.log(`[ConversionService] Page ID: ${page.id}, Title: ${page.getTitle()}`);
-        console.log(`[ConversionService] Block count: ${page.allBlocks.size}, Line count: ${page.allLines.size}`);
+        this.log('[ConversionService] Starting page conversion');
 
         try {
-            const analysis = this.analyzePage(page);
-            console.log('[ConversionService] Page analysis complete:', {
-                blockAnalysisCount: analysis.blockAnalysis.size,
-                analysisDetails: Array.from(analysis.blockAnalysis.entries()).map(([id, analysis]) => ({
-                    id,
-                    incomingCount: analysis.incomingCount,
-                    outgoingCount: analysis.outgoingCount,
-                    elementType: analysis.elementType
-                }))
-            });
+            // First, remove any existing model data
+            if (this.storageAdapter.isQuodsiModel(page)) {
+                this.log('[ConversionService] Removing existing model data');
+                this.modelManager.removeModelFromPage(page);
+            }
 
-            await this.initializeModel(page);
-            console.log('[ConversionService] Model initialized');
+            // Initialize the model BEFORE doing anything else
+            const model = new Model(
+                page.id,
+                page.getTitle() || 'New Model',
+                ModelDefaults.DEFAULT_REPS,
+                ModelDefaults.DEFAULT_FORECAST_DAYS,
+                ModelDefaults.DEFAULT_SEED,
+                ModelDefaults.DEFAULT_CLOCK_UNIT,
+                ModelDefaults.DEFAULT_SIMULATION_TIME_TYPE,
+                ModelDefaults.DEFAULT_WARMUP_PERIOD,
+                ModelDefaults.DEFAULT_CLOCK_UNIT,
+                ModelDefaults.DEFAULT_RUN_PERIOD,
+                ModelDefaults.DEFAULT_CLOCK_UNIT,
+                null,
+                null,
+                null
+            );
+
+            // Store the model data first
+            this.storageAdapter.setElementData(
+                page,
+                model,
+                SimulationObjectType.Model
+            );
+
+            // Then initialize in the model manager
+            await this.modelManager.initializeModel(model, page);
+
+            // Verify model was initialized
+            if (!this.storageAdapter.isQuodsiModel(page)) {
+                throw new Error('Failed to initialize model on page');
+            }
+
+            // Now do the analysis and conversion
+            const analysis = this.analyzePage(page);
 
             const convertedBlocks = await this.convertBlocks(page, analysis);
-            console.log('[ConversionService] Blocks converted:', convertedBlocks);
+            this.log('[ConversionService] Blocks converted:', convertedBlocks);
 
             const convertedConnectors = await this.convertConnections(page, analysis);
-            console.log('[ConversionService] Connectors converted:', convertedConnectors);
+            this.log('[ConversionService] Connectors converted:', convertedConnectors);
 
-            const validationResult = this.modelManager.validateModel();
-            console.log('[ConversionService] Validation result:', validationResult);
+            const validationResult = await this.modelManager.validateModel();
+            this.log('[ConversionService] Validation result:', validationResult);
 
             return {
                 success: true,
@@ -84,7 +114,7 @@ export class ConversionService {
                 }
             };
         } catch (error) {
-            console.error('[ConversionService] Conversion failed:', error);
+            this.logError('[ConversionService] Conversion failed:', error);
             throw error;
         }
     }
@@ -93,19 +123,19 @@ export class ConversionService {
      * Analyzes the page structure
      */
     private analyzePage(page: PageProxy): ProcessAnalysisResult {
-        console.log('[ConversionService] Analyzing page structure');
+        this.log('Analyzing page structure');
         const blockAnalysis = new Map<string, BlockAnalysis>();
 
         // Log all blocks first
-        console.log('[ConversionService] All blocks:', Array.from(page.allBlocks.keys()));
-        console.log('[ConversionService] All lines:', Array.from(page.allLines.keys()));
+        this.log('All blocks:', Array.from(page.allBlocks.keys()));
+        this.log('All lines:', Array.from(page.allLines.keys()));
 
         // Analyze connections
         for (const [lineId, line] of page.allLines) {
             const endpoint1 = line.getEndpoint1();
             const endpoint2 = line.getEndpoint2();
 
-            console.log(`[ConversionService] Analyzing line ${lineId}:`, {
+            this.log(`Analyzing line ${lineId}:`, {
                 hasEndpoint1Connection: !!endpoint1?.connection,
                 hasEndpoint2Connection: !!endpoint2?.connection,
                 endpoint1Id: endpoint1?.connection?.id,
@@ -122,7 +152,7 @@ export class ConversionService {
             }
         }
 
-        console.log('[ConversionService] Pre-type determination analysis:',
+        this.log('Pre-type determination analysis:',
             Array.from(blockAnalysis.entries()).map(([id, analysis]) => ({
                 id,
                 incomingCount: analysis.incomingCount,
@@ -143,7 +173,7 @@ export class ConversionService {
      * Initializes the model data on the page
      */
     private async initializeModel(page: PageProxy): Promise<void> {
-        console.log('[ConversionService] Initializing model');
+        this.log('Initializing model');
 
         const model = new Model(
             page.id,
@@ -173,7 +203,7 @@ export class ConversionService {
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<{ activities: number; generators: number; resources: number }> {
-        console.log('[ConversionService] Starting block conversion');
+        this.log('Starting block conversion');
 
         let activities = 0;
         let generators = 0;
@@ -182,12 +212,12 @@ export class ConversionService {
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
             if (!blockAnalysis?.elementType) {
-                console.error(`[ConversionService] Missing element type for block ${blockId}`);
+                this.logError(`Missing element type for block ${blockId}`);
                 continue;
             }
 
             try {
-                console.log(`[ConversionService] Creating element for block ${blockId}:`, {
+                this.log(`Creating element for block ${blockId}:`, {
                     type: blockAnalysis.elementType,
                     blockClass: block.getClassName()
                 });
@@ -205,7 +235,7 @@ export class ConversionService {
 
                 // Verify storage
                 const storedData = this.storageAdapter.getElementData(block);
-                console.log(`[ConversionService] Stored element data verification for ${blockId}:`, storedData);
+                this.log(`Stored element data verification for ${blockId}:`, storedData);
 
                 // Register with model manager
                 await this.modelManager.registerElement(element, block);
@@ -223,14 +253,14 @@ export class ConversionService {
                         break;
                 }
 
-                console.log(`[ConversionService] Successfully converted block ${blockId}:`, {
+                this.log(`Successfully converted block ${blockId}:`, {
                     type: element.type,
                     name: element.name,
                     stored: !!storedData
                 });
 
             } catch (error) {
-                console.error(`[ConversionService] Failed to convert block ${blockId}:`, error);
+                this.logError(`Failed to convert block ${blockId}:`, error);
                 throw error;
             }
         }
@@ -245,7 +275,7 @@ export class ConversionService {
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<number> {
-        console.log('[ConversionService] Converting connections');
+        this.log('Converting connections');
         let connectorCount = 0;
 
         // First, calculate outgoing connections per block
@@ -261,7 +291,7 @@ export class ConversionService {
             }
         }
 
-        console.log('[ConversionService] Outgoing connection counts:',
+        this.log('Outgoing connection counts:',
             Array.from(outgoingConnectionCounts).reduce((obj, [key, value]) => {
                 obj[key] = value;
                 return obj;
@@ -270,12 +300,12 @@ export class ConversionService {
         // Now create connectors with calculated probabilities
         for (const [lineId, line] of page.allLines) {
             try {
-                console.log(`[ConversionService] Processing line ${lineId}`);
+                this.log(`Processing line ${lineId}`);
                 const endpoint1 = line.getEndpoint1();
                 const endpoint2 = line.getEndpoint2();
 
                 if (!endpoint1?.connection || !endpoint2?.connection) {
-                    console.warn(`[ConversionService] Line ${lineId} has invalid endpoints`);
+                    console.warn(`Line ${lineId} has invalid endpoints`);
                     continue;
                 }
 
@@ -305,7 +335,7 @@ export class ConversionService {
 
                 // Verify storage
                 const storedData = this.storageAdapter.getElementData(line);
-                console.log(`[ConversionService] Stored connector data verification for ${lineId}:`, {
+                this.log(`Stored connector data verification for ${lineId}:`, {
                     sourceId: connector.sourceId,
                     targetId: connector.targetId,
                     probability: connector.probability,
@@ -317,12 +347,12 @@ export class ConversionService {
                 connectorCount++;
 
             } catch (error) {
-                console.error(`[ConversionService] Failed to convert connection ${lineId}:`, error);
+                this.logError(`Failed to convert connection ${lineId}:`, error);
                 throw error;
             }
         }
 
-        console.log(`[ConversionService] Converted ${connectorCount} connections`);
+        this.log(`Converted ${connectorCount} connections`);
         return connectorCount;
     }
     /**
@@ -371,7 +401,7 @@ export class ConversionService {
      * Determines element types based on connection patterns
      */
     private determineElementTypes(blockAnalysis: Map<string, BlockAnalysis>, page: PageProxy): void {
-        console.log('[ConversionService] Starting element type determination');
+        this.log('Starting element type determination');
 
         // First pass: Identify types based on block classes
         for (const [blockId, block] of page.allBlocks) {
@@ -402,7 +432,7 @@ export class ConversionService {
 
         // Log final type determination
         for (const [blockId, analysis] of blockAnalysis) {
-            console.log(`[ConversionService] Final type for block ${blockId}:`, {
+            this.log(`Final type for block ${blockId}:`, {
                 elementType: analysis.elementType,
                 incomingCount: analysis.incomingCount,
                 outgoingCount: analysis.outgoingCount

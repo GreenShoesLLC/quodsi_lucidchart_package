@@ -6,17 +6,10 @@ import { SelectionState } from '../../SelectionState';
 import { ModelStructure } from '../../accordion/ModelStructure';
 import { ValidationResult } from '../../validation/ValidationTypes';
 import { MetaData } from 'src/types/MetaData';
-import { ElementData } from './ElementData';
+import { ModelItemData } from './ModelItemData';
 
 
-export interface ElementPayloads {
-    [MessageTypes.SELECTION_CHANGED]: {
-        selectionState: SelectionState;
-        elementData?: ElementData[];
-        modelStructure?: ModelStructure;
-        expandedNodes?: string[];
-        validationResult?: ValidationResult;  // Added validation results
-    };
+export interface ModelItemPayloads {
     [MessageTypes.CONVERT_ELEMENT]: {
         elementId: string;
         type: SimulationObjectType;

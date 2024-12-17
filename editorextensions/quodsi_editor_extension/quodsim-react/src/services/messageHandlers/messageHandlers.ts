@@ -4,7 +4,7 @@ import {
     ModelData,
     ValidationMessage,
     ExtensionMessaging,
-    ElementData
+    ModelItemData
 } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
 
@@ -14,13 +14,11 @@ export interface MessageHandlerDependencies {
     sendMessage: <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => void;
 }
 
-// Type-safe message handler type
 export type MessageHandler<T extends MessageTypes> = (
     payload: MessagePayloads[T],
     deps: MessageHandlerDependencies
 ) => void;
 
-// Type-safe message handlers map
 export const messageHandlers: Partial<{
     [T in MessageTypes]: MessageHandler<T>;
 }> = {
@@ -35,7 +33,13 @@ export const messageHandlers: Partial<{
             isReady: true
         }));
     },
-
+    [MessageTypes.REACT_APP_READY]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing REACT_APP_READY");
+        setState(prev => ({
+            ...prev,
+            isReady: true
+        }));
+    },
     [MessageTypes.SELECTION_CHANGED]: (data, { setState, sendMessage }) => {
         console.log("[MessageHandlers] Processing SELECTION_CHANGED:", data);
 
@@ -57,8 +61,7 @@ export const messageHandlers: Partial<{
                 return prev;
             }
 
-  
-            const currentElement: ElementData = {
+            const currentElement: ModelItemData = {
                 data: {
                     ...elementData.data,
                     id: elementData.id
@@ -88,6 +91,102 @@ export const messageHandlers: Partial<{
             });
         }
     },
+
+        [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
+            console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
+            setState(prev => ({
+                ...prev,
+                currentElement: null,
+                modelStructure: null,
+                modelName: "New Model",
+                validationState: null,
+                expandedNodes: new Set<string>(),
+                showConvertButton: true  // Add this to AppState
+            }));
+        },
+
+        [MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL]: (data, { setState }) => {
+            console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_WITH_MODEL:", data);
+            setState(prev => {
+                // Transform ValidationResult to ValidationState if it exists
+                const validationState = data.validationResult ? {
+                    summary: {
+                        errorCount: data.validationResult.errorCount,
+                        warningCount: data.validationResult.warningCount
+                    },
+                    messages: data.validationResult.messages
+                } : null;
+
+                return {
+                    ...prev,
+                    currentElement: null,
+                    modelStructure: data.modelStructure,
+                    expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
+                    validationState,
+                    modelName: data.modelItemData?.name || "Untitled Model"
+                };
+            });
+        },
+
+    [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (data, { setState, sendMessage }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", data);
+
+        setState(prev => {
+            // If we already have this element selected with the same state, no need to update
+            if (prev.currentElement?.data?.id === data.modelItemData.id) {
+                return prev;
+            }
+
+            const currentElement: ModelItemData = {
+                ...data.modelItemData,
+                isUnconverted: false
+            };
+
+            return {
+                ...prev,
+                currentElement,
+                modelStructure: data.modelStructure,
+                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes))
+            };
+        });
+
+        // Request detailed element data if not already present
+        if (!data.modelItemData.data) {
+            console.log("[MessageHandlers] Requesting element data for:", data.modelItemData.id);
+            sendMessage(MessageTypes.GET_ELEMENT_DATA, {
+                elementId: data.modelItemData.id,
+            });
+        }
+    },
+
+    [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", data);
+        setState(prev => ({
+            ...prev,
+            currentElement: null,
+            modelStructure: data.modelStructure || prev.modelStructure,
+            expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes))
+        }));
+    },
+
+    [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_UNCONVERTED:", data);
+
+        setState(prev => {
+            const currentElement: ModelItemData = {
+                ...data.modelItemData,
+                isUnconverted: true
+            };
+
+            return {
+                ...prev,
+                currentElement,
+                modelStructure: data.modelStructure || prev.modelStructure,
+                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes))
+            };
+        });
+    },
+
     [MessageTypes.VALIDATION_RESULT]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing VALIDATION_RESULT:", data);
         setState(prev => ({
@@ -121,18 +220,11 @@ export const messageHandlers: Partial<{
             isProcessing: false
         }));
         setError(data.error);
-    },
-
-    [MessageTypes.REACT_APP_READY]: (data, { setState }) => {
-        console.log("[MessageHandlers] Processing REACT_APP_READY");
-        setState(prev => ({
-            ...prev,
-            isReady: true
-        }));
     }
+
+
 } as const;
 
-// Helper function for type-safe handler registration
 export function registerHandler<T extends MessageTypes>(
     messaging: ExtensionMessaging,
     type: T,
@@ -144,7 +236,6 @@ export function registerHandler<T extends MessageTypes>(
     });
 }
 
-// Helper function to register all handlers
 export function registerMessageHandlers(
     messaging: ExtensionMessaging,
     deps: MessageHandlerDependencies

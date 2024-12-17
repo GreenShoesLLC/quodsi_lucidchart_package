@@ -116,7 +116,7 @@ export class ModelValidationService {
         // Log the details of the model definition activities
         console.log("[ModelValidation] Starting batch validation.");
 
-        ModelDefinitionLogger.log(state.modelDefinition)
+        // ModelDefinitionLogger.logModelDefinition(state.modelDefinition)
 
         // Validate all rules
         const validationPromises = this.rules.map(rule => {

@@ -1,3 +1,4 @@
+export * from './core/logging/QuodsiLogger';
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/ConversionResult';
@@ -14,6 +15,7 @@ export * from './types/SimulationElementFactory';
 export * from './types/SimulationElementWrapper';
 export * from './types/validation';
 export * from './types/MetaData';
+export * from './types/DiagramElementType';
 export * from './types/elements/Activity';
 export * from './types/elements/ActivityListManager';
 export * from './types/elements/ComponentListManager';

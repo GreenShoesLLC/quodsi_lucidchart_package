@@ -10,15 +10,17 @@ import {
     SimulationObject,
     SimulationObjectType,
     ValidationResult,
-    ModelDefinitionLogger,
     MetaData,
     ModelStructure,
-    ModelElement
+    ModelElement,
+    ModelDefinitionLogger,
+    ActivityListManager
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { RemoveModelFromPage } from "../services/conversion/RemoveModelFromPage";
+import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 
 interface ChangeTracker {
     modelDefinitionDirty: boolean;        // Tracks if we need to rebuild ModelDefinition
@@ -29,6 +31,8 @@ interface ChangeTracker {
 }
 
 export class ModelManager {
+    private static readonly LOG_PREFIX = '[ModelManager]';
+    private loggingEnabled: boolean = false;
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
@@ -51,8 +55,28 @@ export class ModelManager {
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
         this.validationService = new ModelValidationService();
+        this.log('ModelManager initialized');
+    }
+    public setLogging(enabled: boolean): void {
+        this.loggingEnabled = enabled;
+        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
     }
 
+    private isLoggingEnabled(): boolean {
+        return this.loggingEnabled;
+    }
+
+    private log(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.log(`${ModelManager.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
+
+    private logError(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.error(`${ModelManager.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
     /**
      * Marks the model as needing rebuild and validation
      */
@@ -88,18 +112,42 @@ export class ModelManager {
         this.checkCacheTimeouts();
 
         if (this.changeTracker.modelDefinitionDirty && this.currentPage) {
-            console.log('Rebuilding ModelDefinition due to pending changes:',
+            this.log('Rebuilding ModelDefinition due to pending changes:',
                 Array.from(this.changeTracker.pendingChanges));
 
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter);
-            const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);
+            try {
+                const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);
+                
+                if (!newModelDefinition) {
+                    throw new Error('Builder returned null ModelDefinition');
+                }
 
-            if (newModelDefinition) {
+                if (!(newModelDefinition instanceof ModelDefinition)) {
+                    throw new Error(`Invalid ModelDefinition type: ${typeof newModelDefinition}`);
+                }
+
+                // Verify activities manager
+                if (!newModelDefinition.activities) {
+                    throw new Error('activities property is undefined');
+                }
+                if (!(newModelDefinition.activities instanceof ActivityListManager)) {
+                    throw new Error(`activities is not an ActivityListManager: ${typeof newModelDefinition.activities}`);
+                }
+                if (typeof newModelDefinition.activities.add !== 'function') {
+                    throw new Error(`activities.add is not a function: ${typeof newModelDefinition.activities.add}`);
+                }
+                // ModelDefinitionLogger.logModelDefinition(newModelDefinition)
                 this.modelDefinition = newModelDefinition;
                 this.changeTracker.modelDefinitionDirty = false;
                 this.changeTracker.lastModelDefinitionUpdate = Date.now();
                 this.changeTracker.pendingChanges.clear();
-                ModelDefinitionLogger.log(this.modelDefinition);
+
+                return this.modelDefinition;
+
+            } catch (error) {
+                this.logError('Error ensuring ModelDefinition:', error);
+                throw error;
             }
         }
 
@@ -417,7 +465,7 @@ export class ModelManager {
             // Clear all internal state
             this.clear();
         } catch (error) {
-            console.error('[ModelManager] Error removing model:', error);
+            this.logError('[ModelManager] Error removing model:', error);
             throw new Error(`Failed to remove model: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -565,5 +613,13 @@ export class ModelManager {
         return element instanceof BlockProxy ?
             (element.id || 'Unnamed Block') :
             'Unnamed Connector';
+    }
+
+    public async getModelStructure(): Promise<ModelStructure | undefined> {
+        const modelDef = await this.getModelDefinition();
+        if (modelDef) {
+            return ModelStructureBuilder.buildModelStructure(modelDef);
+        }
+        return undefined;
     }
 }

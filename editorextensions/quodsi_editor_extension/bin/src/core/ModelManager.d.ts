@@ -2,6 +2,8 @@ import { Model, ModelDefinition, SimulationObject, SimulationObjectType, Validat
 import { StorageAdapter } from "./StorageAdapter";
 import { ElementProxy, PageProxy } from "lucid-extension-sdk";
 export declare class ModelManager {
+    private static readonly LOG_PREFIX;
+    private loggingEnabled;
     private modelDefinition;
     private storageAdapter;
     private currentPage;
@@ -11,6 +13,10 @@ export declare class ModelManager {
     private static readonly VALIDATION_CACHE_TIMEOUT;
     private static readonly MODEL_DEF_CACHE_TIMEOUT;
     constructor(storageAdapter: StorageAdapter);
+    setLogging(enabled: boolean): void;
+    private isLoggingEnabled;
+    private log;
+    private logError;
     /**
      * Marks the model as needing rebuild and validation
      */
@@ -95,5 +101,6 @@ export declare class ModelManager {
      * Gets default name for an element based on its type
      */
     private getDefaultElementName;
+    getModelStructure(): Promise<ModelStructure | undefined>;
 }
 //# sourceMappingURL=ModelManager.d.ts.map

@@ -1,18 +1,28 @@
+// shared/src/types/elements/ModelDefinitionLogger.ts
 import { ModelDefinition } from "./ModelDefinition";
 import { Activity } from "./Activity";
 import { Connector } from "./Connector";
 import { Resource } from "./Resource";
 import { Generator } from "./Generator";
 import { Entity } from "./Entity";
+import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
 
-export class ModelDefinitionLogger {
-    static log(modelDefinition: ModelDefinition): void {
-        console.log("\n[ModelDefinitionLogger] Logging Model Definition:");
+export class ModelDefinitionLogger extends QuodsiLogger {
+    protected readonly LOG_PREFIX = '[ModelDefinitionLogger]';
+
+    public static logModelDefinition(modelDefinition: ModelDefinition): void {
+        const logger = new ModelDefinitionLogger();
+        logger.setLogging(false);
+        logger.logDefinition(modelDefinition);
+    }
+
+    private logDefinition(modelDefinition: ModelDefinition): void {
+        this.log("\nLogging Model Definition:");
 
         try {
             // Log basic model details
-            console.log(`Model ID: ${modelDefinition.id}`);
-            console.log(`Model Name: ${modelDefinition.name}`);
+            this.log(`Model ID: ${modelDefinition.id}`);
+            this.log(`Model Name: ${modelDefinition.name}`);
 
             this.logActivities(modelDefinition);
             this.logConnectors(modelDefinition);
@@ -20,121 +30,119 @@ export class ModelDefinitionLogger {
             this.logGenerators(modelDefinition);
             this.logEntities(modelDefinition);
         } catch (error) {
-            console.error("[ModelDefinitionLogger] An error occurred while logging the model definition:", error);
+            this.logError("An error occurred while logging the model definition:", error);
         }
     }
 
-    static logActivities(modelDefinition: ModelDefinition): void {
-        console.log("\nActivities:");
+    private logActivities(modelDefinition: ModelDefinition): void {
+        this.log("\nActivities:");
         const activities = modelDefinition.activities.getAll();
         activities.forEach(activity => this.safeExecute(() => this.logActivity(activity), `Activity ID: ${activity?.id}`));
     }
 
-    static logConnectors(modelDefinition: ModelDefinition): void {
-        console.log("\nConnectors:");
+    private logConnectors(modelDefinition: ModelDefinition): void {
+        this.log("\nConnectors:");
         const connectors = modelDefinition.connectors.getAll();
         connectors.forEach(connector => this.safeExecute(() => this.logConnector(connector), `Connector ID: ${connector?.id}`));
     }
 
-    static logResources(modelDefinition: ModelDefinition): void {
-        console.log("\nResources:");
+    private logResources(modelDefinition: ModelDefinition): void {
+        this.log("\nResources:");
         const resources = modelDefinition.resources.getAll();
         resources.forEach(resource => this.safeExecute(() => this.logResource(resource), `Resource ID: ${resource?.id}`));
     }
 
-    static logGenerators(modelDefinition: ModelDefinition): void {
-        console.log("\nGenerators:");
+    private logGenerators(modelDefinition: ModelDefinition): void {
+        this.log("\nGenerators:");
         const generators = modelDefinition.generators.getAll();
         generators.forEach(generator => this.safeExecute(() => this.logGenerator(generator), `Generator ID: ${generator?.id}`));
     }
 
-    static logEntities(modelDefinition: ModelDefinition): void {
-        console.log("\nEntities:");
+    private logEntities(modelDefinition: ModelDefinition): void {
+        this.log("\nEntities:");
         const entities = modelDefinition.entities.getAll();
         entities.forEach(entity => this.safeExecute(() => this.logEntity(entity), `Entity ID: ${entity?.id}`));
     }
 
-    private static safeExecute(action: () => void, context: string): void {
+    private safeExecute(action: () => void, context: string): void {
         try {
             action();
         } catch (error) {
-            console.error(`[ModelDefinitionLogger] Failed to log ${context}:`, error);
+            this.logError(`Failed to log ${context}:`, error);
         }
     }
 
-    private static logActivity(activity: Activity): void {
-        console.log(`  Activity ID: ${activity.id}`);
-        console.log(`    Name: ${activity.name}`);
-        console.log(`    Capacity: ${activity.capacity}`);
-        console.log(`    Input Buffer Capacity: ${activity.inputBufferCapacity}`);
-        console.log(`    Output Buffer Capacity: ${activity.outputBufferCapacity}`);
-        console.log(`    Number of Operation Steps: ${activity.operationSteps?.length || 0}`);
+    private logActivity(activity: Activity): void {
+        this.log(`  Activity ID: ${activity.id}`);
+        this.log(`    Name: ${activity.name}`);
+        this.log(`    Capacity: ${activity.capacity}`);
+        this.log(`    Input Buffer Capacity: ${activity.inputBufferCapacity}`);
+        this.log(`    Output Buffer Capacity: ${activity.outputBufferCapacity}`);
+        this.log(`    Number of Operation Steps: ${activity.operationSteps?.length || 0}`);
         activity.operationSteps?.forEach((step, index) => {
-            console.log(`      Operation Step ${index + 1}:`);
-            console.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
+            this.log(`      Operation Step ${index + 1}:`);
+            this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
             if (step.resourceSetRequest?.requests) {
-                console.log("        Resource Requests:");
+                this.log("        Resource Requests:");
                 step.resourceSetRequest.requests.forEach(request => {
                     if ('resource' in request && request.resource) {
-                        console.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
+                        this.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
                     }
                 });
             }
         });
     }
 
-    private static logConnector(connector: Connector): void {
-        console.log(`  Connector ID: ${connector.id}`);
-        console.log(`    Name: ${connector.name || "Unnamed"}`);
-        console.log(`    Source ID: ${connector.sourceId || "Not defined"}`);
-        console.log(`    Target ID: ${connector.targetId || "Not defined"}`);
-        console.log(`    Probability: ${connector.probability !== undefined ? connector.probability : "Not defined"}`);
-        console.log(`    Connection Type: ${connector.connectType || "Not defined"}`);
+    private logConnector(connector: Connector): void {
+        this.log(`  Connector ID: ${connector.id}`);
+        this.log(`    Name: ${connector.name || "Unnamed"}`);
+        this.log(`    Source ID: ${connector.sourceId || "Not defined"}`);
+        this.log(`    Target ID: ${connector.targetId || "Not defined"}`);
+        this.log(`    Probability: ${connector.probability !== undefined ? connector.probability : "Not defined"}`);
+        this.log(`    Connection Type: ${connector.connectType || "Not defined"}`);
 
         const operationSteps = connector.operationSteps;
-        console.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);
+        this.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);
         operationSteps?.forEach((step, index) => {
-            console.log(`      Operation Step ${index + 1}:`);
-            console.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
+            this.log(`      Operation Step ${index + 1}:`);
+            this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
             if (step.resourceSetRequest?.requests) {
-                console.log("        Resource Requests:");
+                this.log("        Resource Requests:");
                 step.resourceSetRequest.requests.forEach(request => {
                     if ('resource' in request && request.resource) {
-                        console.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
+                        this.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
                     }
                 });
             }
         });
     }
 
-
-    private static logResource(resource: Resource): void {
-        console.log(`  Resource ID: ${resource.id}`);
-        console.log(`    Name: ${resource.name}`);
-        console.log(`    Capacity: ${resource.capacity}`);
+    private logResource(resource: Resource): void {
+        this.log(`  Resource ID: ${resource.id}`);
+        this.log(`    Name: ${resource.name}`);
+        this.log(`    Capacity: ${resource.capacity}`);
     }
 
-    private static logGenerator(generator: Generator): void {
-        console.log(`  Generator ID: ${generator.id}`);
-        console.log(`    Name: ${generator.name || "Unnamed"}`);
-        console.log(`    Activity Key ID: ${generator.activityKeyId || "Not defined"}`);
-        console.log(`    Entity ID: ${generator.entityId || "Not defined"}`);
-        console.log(`    Periodic Occurrences: ${generator.periodicOccurrences || "Not defined"}`);
+    private logGenerator(generator: Generator): void {
+        this.log(`  Generator ID: ${generator.id}`);
+        this.log(`    Name: ${generator.name || "Unnamed"}`);
+        this.log(`    Activity Key ID: ${generator.activityKeyId || "Not defined"}`);
+        this.log(`    Entity ID: ${generator.entityId || "Not defined"}`);
+        this.log(`    Periodic Occurrences: ${generator.periodicOccurrences || "Not defined"}`);
 
         const periodIntervalDuration = generator.periodIntervalDuration?.durationLength;
-        console.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
+        this.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
 
-        console.log(`    Entities Per Creation: ${generator.entitiesPerCreation || "Not defined"}`);
+        this.log(`    Entities Per Creation: ${generator.entitiesPerCreation || "Not defined"}`);
 
         const periodicStartDuration = generator.periodicStartDuration?.durationLength;
-        console.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
+        this.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
 
-        console.log(`    Max Entities: ${generator.maxEntities || "Not defined"}`);
+        this.log(`    Max Entities: ${generator.maxEntities || "Not defined"}`);
     }
 
-
-    private static logEntity(entity: Entity): void {
-        console.log(`  Entity ID: ${entity.id}`);
-        console.log(`    Name: ${entity.name}`);
+    private logEntity(entity: Entity): void {
+        this.log(`  Entity ID: ${entity.id}`);
+        this.log(`    Name: ${entity.name}`);
     }
 }

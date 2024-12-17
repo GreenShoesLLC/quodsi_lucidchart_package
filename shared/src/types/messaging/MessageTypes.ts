@@ -1,9 +1,9 @@
-import { JsonSerializable } from './JsonTypes';
 import { AppLifecyclePayloads } from './payloads/AppLifecyclePayloads';
 import { ModelPayloads } from './payloads/ModelPayloads';
-import { ElementPayloads } from './payloads/ElementPayloads';
+import { ModelItemPayloads } from './payloads/ModelItemPayloads';
 import { ValidationPayloads } from './payloads/ValidationPayloads';
-import { TreePayloads } from './payloads/TreePayloads';
+import { ModelTreePayloads } from './payloads/ModelTreePayloads';
+import { SelectionPayloads } from './payloads';
 
 export enum MessageTypes {
     // React App Lifecycle
@@ -12,6 +12,11 @@ export enum MessageTypes {
 
     // Selection Management
     SELECTION_CHANGED = 'selectionChanged',
+    SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
+    SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
+    SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected
+    SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
+    SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
     // Model Conversion
     CONVERT_PAGE = 'convertPage',
@@ -24,7 +29,7 @@ export enum MessageTypes {
     ELEMENT_DATA = 'elementData',
     UPDATE_ELEMENT_DATA = 'updateElementData',
     UPDATE_SUCCESS = 'updateSuccess',
-    CONVERT_ELEMENT = 'convertElement',  
+    CONVERT_ELEMENT = 'convertElement',
 
     // Model Validation
     VALIDATE_MODEL = 'validateModel',
@@ -54,12 +59,13 @@ export enum MessageTypes {
     TREE_STATE_SYNC = 'treeStateSync',
 }
 
-export interface MessagePayloads extends 
+export interface MessagePayloads extends
     AppLifecyclePayloads,
+    SelectionPayloads,
     ModelPayloads,
-    ElementPayloads,
+    ModelItemPayloads,
     ValidationPayloads,
-    TreePayloads {}
+    ModelTreePayloads { }
 
 export type Message<T extends MessageTypes> = {
     messagetype: T;

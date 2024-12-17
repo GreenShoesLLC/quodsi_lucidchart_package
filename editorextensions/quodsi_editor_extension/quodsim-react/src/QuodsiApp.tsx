@@ -8,7 +8,7 @@ import {
   EditorReferenceData,
   ExtensionMessaging,
   isValidMessage,
-  ElementData,
+  ModelItemData,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -24,7 +24,7 @@ export interface AppState {
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: ElementData | null;
+  currentElement: ModelItemData | null;
   isProcessing: boolean;
   error: string | null;
   documentId: string | null;

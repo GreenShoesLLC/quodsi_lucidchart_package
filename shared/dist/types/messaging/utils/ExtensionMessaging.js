@@ -1,8 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExtensionMessaging = void 0;
-var MessageCreator_1 = require("./MessageCreator");
-// import { createSerializableMessage } from "@quodsi/shared";
 var ExtensionMessaging = /** @class */ (function () {
     function ExtensionMessaging() {
         this.handlers = new Map();
@@ -12,6 +10,15 @@ var ExtensionMessaging = /** @class */ (function () {
             ExtensionMessaging.instance = new ExtensionMessaging();
         }
         return ExtensionMessaging.instance;
+    };
+    /**
+     * Creates a serializable message. At runtime, enums will serialize to their string values.
+     */
+    ExtensionMessaging.prototype.createSerializableMessage = function (type, payload) {
+        return {
+            messagetype: type,
+            data: payload !== null && payload !== void 0 ? payload : null
+        };
     };
     ExtensionMessaging.prototype.handleIncomingMessage = function (message) {
         console.log('[ExtensionMessaging] Received incoming message:', message);
@@ -49,7 +56,7 @@ var ExtensionMessaging = /** @class */ (function () {
                 handlers.forEach(function (handler) { return handler(payload); });
             }
             // Then, send to parent window
-            var message = (0, MessageCreator_1.createSerializableMessage)(type, payload);
+            var message = this.createSerializableMessage(type, payload);
             window.parent.postMessage(message, "*");
             console.log('[ExtensionMessaging] Message posted to parent window');
         }

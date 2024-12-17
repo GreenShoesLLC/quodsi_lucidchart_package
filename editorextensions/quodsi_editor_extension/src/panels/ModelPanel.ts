@@ -6,25 +6,35 @@ import {
     PageProxy,
     Viewport,
     BlockProxy,
-    LineProxy,
     DocumentProxy,
     ElementProxy,
     JsonObject as LucidJsonObject,
     Panel
 } from 'lucid-extension-sdk';
+import {
+    ModelItemData,
+    ExtensionMessaging,
+    isValidMessage,
+    JsonSerializable,
+    MessagePayloads,
+    MessageTypes,
+    MetaData,
+    ModelStructure,
+    UnconvertedSelectionState,
+    SimulationObjectSelectionState,
+    JsonObject as SharedJsonObject,
+    SelectionType,
+    Model,
+    SimulationObjectType,
+    SelectionState,
+    EditorReferenceData,
+    DiagramElementType,
+
+} from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
-import { ElementData, ExtensionMessaging, isValidMessage, JsonSerializable, MessagePayloads, MessageTypes, MetaData, ModelElement, ModelStructure } from '@quodsi/shared';
-import { JsonObject as SharedJsonObject } from '@quodsi/shared';
-import { SelectionType } from '@quodsi/shared';
 import { ConversionService } from '../services/conversion/ConversionService';
-
-
-import { Model } from '@quodsi/shared';
-import { SimulationObjectType } from '@quodsi/shared';
-import { SelectionState } from '@quodsi/shared';
-import { EditorReferenceData } from '@quodsi/shared';
-import { ModelStructureBuilder } from '../services/accordion/ModelStructureBuilder';
 import { SelectionManager, TreeStateManager } from '../managers';
+
 
 type ComponentOperation = {
     type: MessageTypes.ACTIVITY_SAVED | MessageTypes.CONNECTOR_SAVED |
@@ -34,6 +44,8 @@ type ComponentOperation = {
 };
 
 export class ModelPanel extends Panel {
+    private static readonly LOG_PREFIX = '[ModelPanel]';
+    private loggingEnabled: boolean = false;
     private selectionManager: SelectionManager;
     private treeStateManager: TreeStateManager;
     private messaging: ExtensionMessaging;
@@ -50,7 +62,6 @@ export class ModelPanel extends Panel {
     private isHandlingSelectionChange: boolean = false;
 
     constructor(client: EditorClient, modelManager: ModelManager) {
-        // Replace super() with direct Panel construction
         super(client, {
             title: 'Quodsi Model',
             url: 'quodsim-react/index.html',
@@ -59,37 +70,56 @@ export class ModelPanel extends Panel {
             width: 300
         });
 
-        // Initialize messaging
+        // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
-
-        console.error('[ModelPanel] Constructor called');
         this.modelManager = modelManager;
         this.selectionManager = new SelectionManager(modelManager);
         this.treeStateManager = new TreeStateManager(modelManager);
         this.conversionService = new ConversionService(this.modelManager);
-        this.initializeModelManager();
+
+        // Set up event handlers
         this.setupModelMessageHandlers();
 
-        console.log('[ModelPanel] Initialized');
+        // Wait for React app ready message before doing any model operations
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
+            this.handleReactReady();
+        });
+
+        this.log('Model Panel initialized');
+    }
+    public setLogging(enabled: boolean): void {
+        this.loggingEnabled = enabled;
+        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
     }
 
-    private static readonly logger = (() => {
-        console.error('[ModelPanel] Class definition loaded');
-        return true;
-    })();
+    private isLoggingEnabled(): boolean {
+        return this.loggingEnabled;
+    }
+
+    private log(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.log(`${ModelPanel.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
+
+    private logError(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.error(`${ModelPanel.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
 
     private setupModelMessageHandlers(): void {
-        console.error('[ModelPanel] Setting up message handlers START');
+        this.logError('Setting up message handlers START');
         // React App Ready - already handled by BasePanel
 
         // Model Operations
         this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            console.error('[ModelPanel] REACT_APP_READY message received in handler');
+            this.logError('REACT_APP_READY message received in handler');
             this.handleReactReady();
         });
         // Setup error handler
         this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
-            console.error('[ModelPanel] Error received:', payload);
+            this.logError('Error received:', payload);
         });
 
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
@@ -130,32 +160,21 @@ export class ModelPanel extends Panel {
             });
         });
 
-        console.error('[ModelPanel] Setting up message handlers END');
+        this.logError('Setting up message handlers END');
     }
 
-
-    /**
-         * Updates the model structure based on current model data and validates the model
-         */
     private async updateModelStructure(): Promise<void> {
+        // Get model structure from ModelManager
+        this.currentModelStructure = await this.modelManager.getModelStructure();
+        this.log('Model structure updated:', this.currentModelStructure);
 
-        const modelDef = await this.modelManager.getModelDefinition();
-        if (modelDef) {
-            // Update model structure
-            this.currentModelStructure = ModelStructureBuilder.buildModelStructure(modelDef);
-            console.log('[ModelPanel] Model structure updated:', this.currentModelStructure);
+        // Validate model
+        const validationResult = await this.modelManager.validateModel();
+        this.log('Model validation result:', validationResult);
 
-            // Validate model
-            const validationResult = await this.modelManager.validateModel();
-            console.log('[ModelPanel] Model validation result:', validationResult);
-
-            // If we're in a selection change context, this validation result will be used
-            // Otherwise, notify the React app of the validation update
-            if (!this.isHandlingSelectionChange) {
-                this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
-            }
-        } else {
-            this.currentModelStructure = undefined;
+        // If we're not in a selection change context, notify the React app of the validation update
+        if (!this.isHandlingSelectionChange) {
+            this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
         }
     }
 
@@ -175,14 +194,14 @@ export class ModelPanel extends Panel {
      * Handles bulk tree state updates
      */
     private handleTreeStateUpdate(expandedNodes: string[]): void {
-        console.log('[ModelPanel] Tree state update:', { expandedNodes });
+        this.log('Tree state update:', { expandedNodes });
         this.expandedNodes = new Set(expandedNodes);
 
         // Get current page and save to storage
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         if (currentPage) {
-            console.log('[ModelPanel] Saving expanded nodes to storage:', expandedNodes);
+            this.log('Saving expanded nodes to storage:', expandedNodes);
             this.modelManager.setExpandedNodes(currentPage, expandedNodes);
         }
 
@@ -222,7 +241,7 @@ export class ModelPanel extends Panel {
         const currentPage = viewport.getCurrentPage();
 
         if (!currentPage || !this.modelManager.isQuodsiModel(currentPage)) {
-            console.log('[ModelPanel] Page is not a Quodsi model, skipping initialization');
+            this.log('Page is not a Quodsi model, skipping initialization');
             return;
         }
 
@@ -230,10 +249,10 @@ export class ModelPanel extends Panel {
             const modelData = this.modelManager.getElementData<Model>(currentPage);
             if (modelData) {
                 await this.modelManager.initializeModel(modelData, currentPage);
-                console.log('[ModelPanel] Model initialization complete');
+                this.log('Model initialization complete');
             }
         } catch (error) {
-            console.error('[ModelPanel] Error initializing model:', error);
+            this.logError('Error initializing model:', error);
             throw new Error(`Failed to initialize model: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
@@ -241,10 +260,10 @@ export class ModelPanel extends Panel {
      * Shows the panel
      */
     public show(): void {
-        console.log('[ModelPanel] Show called');
+        this.log('Show called');
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
-        console.log('[ModelPanel] Current page at show:', currentPage);
+        this.log('Current page at show:', currentPage);
 
         this.initializeModelManager(); // Re-initialize when panel is shown
         super.show();
@@ -254,7 +273,7 @@ export class ModelPanel extends Panel {
      * Hides the panel
      */
     public hide(): void {
-        console.log('[ModelPanel] Hide called');
+        this.log('Hide called');
         super.hide();
     }
 
@@ -265,9 +284,6 @@ export class ModelPanel extends Panel {
         this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
     }
 
-    /**
-     * Handles selection changes in the editor
-     */
     public async handleSelectionChange(items: ItemProxy[]): Promise<void> {
         this.isHandlingSelectionChange = true;
         try {
@@ -280,7 +296,7 @@ export class ModelPanel extends Panel {
             this.selectionManager.setCurrentSelection(selectionState);
 
             if (this.reactAppReady) {
-                await this.sendSelectionUpdateToReact(items, currentPage);
+                await this.sendSelectionBasedMessage(selectionState, items, currentPage);
             }
         } catch (error) {
             this.handleError('Error handling selection change:', error);
@@ -288,97 +304,191 @@ export class ModelPanel extends Panel {
             this.isHandlingSelectionChange = false;
         }
     }
-    private async sendSelectionUpdateToReact(items: ItemProxy[], currentPage: PageProxy): Promise<void> {
-        const elementData = await this.buildElementData(items, currentPage);
-        const validationResult = this.modelManager.getCurrentValidation();
 
-        this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
-            selectionState: this.selectionManager.getCurrentSelection(),
-            elementData: elementData,
-            modelStructure: this.currentModelStructure,
-            expandedNodes: this.treeStateManager.getExpandedNodes(),
-            validationResult: validationResult ?? undefined
-        });
-    }
-    private async buildElementData(items: ItemProxy[], currentPage: PageProxy): Promise<ElementData[]> {
-        if (items.length === 0) {
-            return this.buildModelElementData(currentPage);
+    private async sendSelectionBasedMessage(selectionState: SelectionState, items: ItemProxy[], currentPage: ElementProxy): Promise<void> {
+
+        // Convert ElementProxy to PageProxy if needed
+        const page = new PageProxy(currentPage.id, this.client);
+
+        // Early check - if page is not a model, always send PAGE_NO_MODEL
+        if (!this.modelManager.isQuodsiModel(page)) {
+            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
+                pageId: page.id
+            });
+            return;
         }
-        return this.buildSelectedElementsData(items);
+        const modelStructure = this.currentModelStructure || { elements: [], hierarchy: {} };
+        const expandedNodes = this.treeStateManager.getExpandedNodes();
+        const validationResult = await this.modelManager.validateModel();
+
+        const basePayload = {
+            selectionState,
+            modelStructure,
+            expandedNodes,
+            validationResult
+        };
+
+        switch (selectionState.selectionType) {
+            case SelectionType.NONE: {
+                // Build model item data for the page since it's a model
+                const modelItemData = await this.buildModelItemData(page);
+
+                const payload = {
+                    ...basePayload,
+                    pageSelection: {
+                        pageId: currentPage.id
+                    },
+                    modelStructure,  // Already in basePayload
+                    modelItemData    // Add the page's model data
+                };
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL, payload);
+                break;
+            }
+
+            case SelectionType.MULTIPLE: {
+                const modelItemData = await Promise.all(
+                    items.map(item => this.buildModelItemData(item))
+                );
+
+                const payload = {
+                    ...basePayload,
+                    multipleSelection: {
+                        pageId: currentPage.id,
+                        selectedIds: items.map(item => item.id)
+                    },
+                    modelItemData
+                };
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_MULTIPLE, payload);
+                break;
+            }
+
+            case SelectionType.UNCONVERTED_ELEMENT: {
+                if (items.length === 1) {
+                    const item = items[0];
+                    const modelItemData = await this.buildModelItemData(item);
+                    modelItemData.isUnconverted = true;
+
+                    const unconvertedSelection: UnconvertedSelectionState = {
+                        pageId: currentPage.id,
+                        selectedId: item.id,
+                        elementType: item instanceof BlockProxy ? DiagramElementType.BLOCK : DiagramElementType.LINE
+                    };
+
+                    const payload = {
+                        ...basePayload,
+                        unconvertedSelection,
+                        modelItemData
+                    };
+                    this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_UNCONVERTED, payload);
+                }
+                break;
+            }
+
+            case SelectionType.ACTIVITY:
+            case SelectionType.CONNECTOR:
+            case SelectionType.ENTITY:
+            case SelectionType.GENERATOR:
+            case SelectionType.RESOURCE:
+            case SelectionType.MODEL: {
+                if (items.length === 1) {
+                    const item = items[0];
+                    const metadata = this.modelManager.getMetadata(item);
+
+                    if (metadata) {
+                        const modelItemData = await this.buildModelItemData(item);
+                        const simulationSelection: SimulationObjectSelectionState = {
+                            pageId: currentPage.id,
+                            selectedId: item.id,
+                            objectType: metadata.type
+                        };
+
+                        const payload = {
+                            ...basePayload,
+                            simulationSelection,
+                            modelItemData,
+                            modelStructure
+                        };
+                        this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT, payload);
+                    }
+                }
+                break;
+            }
+
+            default: {
+                // Fallback to legacy selection changed message
+                const elementData = await Promise.all(
+                    items.map(item => this.buildModelItemData(item))
+                );
+
+                const payload = {
+                    selectionState,
+                    elementData,
+                    modelStructure,
+                    expandedNodes,
+                    validationResult
+                };
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, payload);
+                break;
+            }
+        }
     }
+
     private handleError(message: string, error: any): void {
-        console.error(`[ModelPanel] ${message}`, error);
+        this.logError(`${message}`, error);
         this.sendTypedMessage(MessageTypes.ERROR, {
             error: error instanceof Error ? error.message : 'Unknown error'
         });
     }
-    // Add these methods to the ModelPanel class
+    // Keep this as the primary builder
+    private async buildModelItemData(item: ItemProxy | PageProxy): Promise<ModelItemData> {
+        const rawData = this.modelManager.getElementData(item);
+        const metadata = this.modelManager.getMetadata(item);
 
-    private async buildModelElementData(currentPage: PageProxy): Promise<ElementData[]> {
-        if (!this.modelManager.isQuodsiModel(currentPage)) {
-            return [];
+        // Determine name based on item type
+        let name: string;
+        if (item instanceof PageProxy) {
+            name = item.getTitle() || 'Untitled Model';
+        } else if (item instanceof BlockProxy) {
+            name = item.id || 'Unnamed Block';
+        } else {
+            name = 'Unnamed Connector';
         }
 
-        const rawModelData = this.modelManager.getElementData(currentPage);
-        if (typeof rawModelData !== 'object' || rawModelData === null) {
-            return [];
+        // Ensure metadata has all required fields
+        const defaultMetadata: MetaData = {
+            type: item instanceof PageProxy ? SimulationObjectType.Model : SimulationObjectType.None,
+            version: this.modelManager.CURRENT_VERSION,
+            lastModified: new Date().toISOString(),
+            id: item.id,
+            ...(metadata || {})
+        };
+
+        // Handle unconverted elements
+        if (item instanceof ItemProxy && this.modelManager.isUnconvertedElement(item)) {
+            defaultMetadata.isUnconverted = true;
         }
 
-        const modelData = JSON.parse(JSON.stringify(rawModelData)) as SharedJsonObject;
+        // Convert Lucid JsonObject to shared JsonObject type
+        const convertedData = rawData ? JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
 
-        return [{
-            id: currentPage.id,
-            data: modelData,
-            metadata: {
-                type: SimulationObjectType.Model,
-                version: this.modelManager.CURRENT_VERSION,
-                id: currentPage.id,
-                lastModified: new Date().toISOString(),
-            },
-            name: currentPage.getTitle() || 'Untitled Model'
-        }];
+        return {
+            id: item.id,
+            data: convertedData,
+            metadata: defaultMetadata,
+            name
+        };
     }
 
-    private async buildSelectedElementsData(items: ItemProxy[]): Promise<ElementData[]> {
-        return Promise.all(items.map(async item => {
-            const rawData = this.modelManager.getElementData(item);
-            const data = (typeof rawData === 'object' && rawData !== null) ?
-                JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
-
-            const metadata = await this.modelManager.getMetadata(item) || {};
-            const convertedMetadata = JSON.parse(JSON.stringify(metadata));
-
-            // Add isUnconverted flag for unconverted elements
-            if (this.selectionManager.getCurrentSelection().selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-                convertedMetadata.isUnconverted = true;
-                convertedMetadata.originalType = item instanceof BlockProxy ? 'block' : 'line';
-            }
-
-            // Get element name based on type
-            let elementName = 'Unnamed Element';
-            if (item instanceof BlockProxy) {
-                elementName = 'Unnamed Block';
-            } else if (item instanceof LineProxy) {
-                elementName = 'Unnamed Connector';
-            }
-
-            return {
-                id: item.id,
-                data: {
-                    ...data,
-                    id: item.id,
-                    name: elementName // Include name in data for consistency
-                },
-                metadata: convertedMetadata,
-                name: elementName
-            };
-        }));
+    // Helper method for building multiple items
+    private async buildModelItemDataArray(items: (ItemProxy | PageProxy)[]): Promise<ModelItemData[]> {
+        return Promise.all(items.map(item => this.buildModelItemData(item)));
     }
+
     /**
      * Handles model removal request
      */
     private handleRemoveModel(): void {
-        console.log('[ModelPanel] Handling remove model request');
+        this.log('Handling remove model request');
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -402,21 +512,21 @@ export class ModelPanel extends Panel {
             this.sendInitialState(currentPage, false, document.id);
 
         } catch (error) {
-            console.error('[ModelPanel] Model removal error:', error);
+            this.logError('Model removal error:', error);
             this.sendTypedMessage(MessageTypes.ERROR, {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
     }
 
-    // Override the hook for additional React ready handling
+
     private handleReactReady(): void {
         if (this.reactAppReady) {
-            console.error('[ModelPanel] React app already ready, skipping initialization');
+            this.logError('React app already ready, skipping initialization');
             return;
         }
 
-        console.error('[ModelPanel] handleReactReady');
+        this.logError('handleReactReady');
         this.reactAppReady = true;
 
         const viewport = new Viewport(this.client);
@@ -424,26 +534,39 @@ export class ModelPanel extends Panel {
         const document = new DocumentProxy(this.client);
 
         if (!currentPage) {
-            console.error('[ModelPanel] No active page found during React ready');
+            this.logError('No active page found during React ready');
             return;
         }
 
-        const isModel = this.modelManager.isQuodsiModel(currentPage);
-        this.sendInitialState(currentPage, isModel, document.id);
+        // Now initialize the model in response to a user-triggered event
+        this.initializeModelManager().then(() => {
+            const isModel = this.modelManager.isQuodsiModel(currentPage);
 
-        // Update this section to use sendSelectionUpdateToReact instead
-        if (this.currentSelection.selectedIds.length > 0) {
-            const selectedItems = viewport.getSelectedItems();
-            this.sendSelectionUpdateToReact(selectedItems, currentPage).catch(error =>
-                this.handleError('Error sending selection update:', error)
-            );
-        }
+            // If not a model, send appropriate message
+            if (!isModel) {
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
+                    pageId: currentPage.id
+                });
+                return;
+            }
+
+            // Only send initial state and handle selection if it is a model
+            this.sendInitialState(currentPage, true, document.id);
+
+            // Update selection using new pattern
+            if (this.currentSelection.selectedIds.length > 0) {
+                const selectedItems = viewport.getSelectedItems();
+                this.handleSelectionChange(selectedItems).catch(error =>
+                    this.handleError('Error sending selection update:', error)
+                );
+            }
+        });
     }
     /**
      * Sends initial state to React app
      */
     private sendInitialState(page: PageProxy, isModel: boolean, documentId: string): void {
-        console.log('[ModelPanel] Sending initial state with full details:', {
+        this.log('Sending initial state with full details:', {
             isModel,
             pageId: page.id,
             documentId,
@@ -455,7 +578,7 @@ export class ModelPanel extends Panel {
 
         // Load saved expanded nodes from storage
         const savedExpandedNodes = this.modelManager.getExpandedNodes(page);
-        console.log('[ModelPanel] Loaded expanded nodes from storage:', savedExpandedNodes);
+        this.log('Loaded expanded nodes from storage:', savedExpandedNodes);
         if (savedExpandedNodes?.length) {
             this.expandedNodes = new Set(savedExpandedNodes);
         }
@@ -471,43 +594,15 @@ export class ModelPanel extends Panel {
             expandedNodes: Array.from(this.expandedNodes)
         });
     }
-
-    /**
-     * Sends selection update to React app
-     */
-    // private sendSelectionUpdate(): void {
-    //     console.log('[ModelPanel] Sending selection update');
-
-    //     this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
-    //         selectionState: this.currentSelection,
-    //         elementData: this.buildSelectedElementsData()
-    //     });
-    // }
-
-    /**
-     * Gets data for selected elements
-     */
-    // private getSelectedElementsData(): any {
-    //     const viewport = new Viewport(this.client);
-    //     const selectedItems = viewport.getSelectedItems();
-
-    //     return selectedItems.map(item => ({
-    //         id: item.id,
-    //         data: this.modelManager.getElementData(item),
-    //         metadata: this.modelManager.getMetadata(item)
-    //     }));
-    // }
-
     /**
      * Handles page conversion request
      */
     private async handleConvertRequest(): Promise<void> {
-        console.log('[ModelPanel] Handling convert request');
+        this.log('Handling convert request');
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         const document = new DocumentProxy(this.client);
-        const documentId = document.id;
 
         if (!currentPage) {
             this.sendTypedMessage(MessageTypes.CONVERSION_ERROR, {
@@ -517,16 +612,16 @@ export class ModelPanel extends Panel {
         }
 
         try {
-            this.sendTypedMessage(MessageTypes.CONVERSION_STARTED);
-
+            
+            // this.sendTypedMessage(MessageTypes.CONVERSION_STARTED); --Not implemented in QuodsiApp yet
             const result = await this.conversionService.convertPage(currentPage);
+            // this.sendTypedMessage(MessageTypes.CONVERSION_COMPLETE, result);--Not implemented in QuodsiApp yet
 
-            this.sendTypedMessage(MessageTypes.CONVERSION_COMPLETE, result);
+            const selectedItems = viewport.getSelectedItems();
+            await this.handleSelectionChange(selectedItems);
 
-            // Refresh the panel state after conversion
-            this.sendInitialState(currentPage, true, documentId);
         } catch (error) {
-            console.error('[ModelPanel] Conversion error:', error);
+            this.logError('Conversion error:', error);
             this.sendTypedMessage(MessageTypes.CONVERSION_ERROR, {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
@@ -540,7 +635,7 @@ export class ModelPanel extends Panel {
         const element = this.client.getElementProxy(elementId);  // or whatever method you currently use
 
         if (!element) {
-            console.error('[ModelPanel] Element not found:', elementId);
+            this.logError('Element not found:', elementId);
             return;
         }
 
@@ -578,7 +673,7 @@ export class ModelPanel extends Panel {
     private async handleUpdateElementData(
         updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]
     ): Promise<void> {
-        console.log('[ModelPanel] Received element update data:', updateData);
+        this.log('Received element update data:', updateData);
 
         try {
             const viewport = new Viewport(this.client);
@@ -616,7 +711,7 @@ export class ModelPanel extends Panel {
             }
 
         } catch (error) {
-            console.error('[ModelPanel] Error updating element:', error);
+            this.logError('Error updating element:', error);
             this.sendTypedMessage(MessageTypes.ERROR, {
                 error: `Failed to update element: ${error instanceof Error ? error.message : String(error)}`
             });
@@ -626,7 +721,7 @@ export class ModelPanel extends Panel {
      * Handles model validation request
      */
     private async handleValidateModel(): Promise<void> {
-        console.log('[ModelPanel] Handling validate model');
+        this.log('Handling validate model');
 
         const validationResult = await this.modelManager.validateModel();
 
@@ -637,7 +732,7 @@ export class ModelPanel extends Panel {
      * Handles model saved message
      */
     private handleModelSaved(data: any): void {
-        console.log('[ModelPanel] Handling model saved');
+        this.log('Handling model saved');
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -667,66 +762,6 @@ export class ModelPanel extends Panel {
         }
     }
 
-    /**
-     * Handles element saved message
-     */
-    private handleElementSaved(data: {
-        elementId: string,
-        data: any,
-        type: SimulationObjectType
-    }): void {
-        console.log('[ModelPanel] Handling element saved:', data);
-        // Reuse the update logic since it's essentially the same operation
-        this.handleUpdateElementData({
-            elementId: data.elementId,
-            data: data.data,
-            type: data.type
-        });
-    }
-
-    /**
-     * Finds an element by ID
-     */
-    private findElementById(id: string): ElementProxy | PageProxy | null {
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        if (!currentPage) return null;
-
-        // First check if the ID matches the page itself
-        if (id === currentPage.id) {
-            return currentPage;
-        }
-        // Log available elements for debugging
-        console.log('[ModelPanel] Looking for element:', id);
-        console.log('[ModelPanel] Available blocks:', Array.from(currentPage.allBlocks.keys()));
-        console.log('[ModelPanel] Available lines:', Array.from(currentPage.allLines.keys()));
-
-        // Check blocks first
-        for (const [blockId, block] of currentPage.allBlocks) {
-            if (blockId === id) {
-                console.log('[ModelPanel] Found element in blocks:', blockId);
-                return block;
-            }
-        }
-
-        // Check lines next
-        for (const [lineId, line] of currentPage.allLines) {
-            if (lineId === id) {
-                console.log('[ModelPanel] Found element in lines:', lineId);
-                return line;
-            }
-        }
-
-        // If element not found, log more details
-        console.warn('[ModelPanel] Element not found:', {
-            searchId: id,
-            pageId: currentPage.id,
-            blockCount: currentPage.allBlocks.size,
-            lineCount: currentPage.allLines.size
-        });
-
-        return null;
-    }
     protected sendTypedMessage<T extends MessageTypes>(
         type: T,
         payload?: MessagePayloads[T]
@@ -742,7 +777,7 @@ export class ModelPanel extends Panel {
     // Message frame handling
     protected messageFromFrame(message: any): void {
         if (!isValidMessage(message)) {
-            console.error('[ModelPanel] Invalid message format:', message);
+            this.logError('Invalid message format:', message);
             this.sendTypedMessage(MessageTypes.ERROR, {
                 error: 'Invalid message format'
             });

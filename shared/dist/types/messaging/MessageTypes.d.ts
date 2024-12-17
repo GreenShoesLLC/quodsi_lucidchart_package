@@ -1,12 +1,18 @@
 import { AppLifecyclePayloads } from './payloads/AppLifecyclePayloads';
 import { ModelPayloads } from './payloads/ModelPayloads';
-import { ElementPayloads } from './payloads/ElementPayloads';
+import { ModelItemPayloads } from './payloads/ModelItemPayloads';
 import { ValidationPayloads } from './payloads/ValidationPayloads';
-import { TreePayloads } from './payloads/TreePayloads';
+import { ModelTreePayloads } from './payloads/ModelTreePayloads';
+import { SelectionPayloads } from './payloads';
 export declare enum MessageTypes {
     REACT_APP_READY = "reactAppReady",
     INITIAL_STATE = "initialState",
     SELECTION_CHANGED = "selectionChanged",
+    SELECTION_CHANGED_PAGE_NO_MODEL = "selectionPageNoModel",
+    SELECTION_CHANGED_PAGE_WITH_MODEL = "selectionPageWithModel",
+    SELECTION_CHANGED_SIMULATION_OBJECT = "selectionSimObject",
+    SELECTION_CHANGED_MULTIPLE = "selectionMultiple",
+    SELECTION_CHANGED_UNCONVERTED = "selectionUnconverted",
     CONVERT_PAGE = "convertPage",
     CONVERSION_STARTED = "conversionStarted",
     CONVERSION_COMPLETE = "conversionComplete",
@@ -34,7 +40,7 @@ export declare enum MessageTypes {
     TREE_NODE_EXPAND_PATH = "treeNodeExpandPath",
     TREE_STATE_SYNC = "treeStateSync"
 }
-export interface MessagePayloads extends AppLifecyclePayloads, ModelPayloads, ElementPayloads, ValidationPayloads, TreePayloads {
+export interface MessagePayloads extends AppLifecyclePayloads, SelectionPayloads, ModelPayloads, ModelItemPayloads, ValidationPayloads, ModelTreePayloads {
 }
 export type Message<T extends MessageTypes> = {
     messagetype: T;

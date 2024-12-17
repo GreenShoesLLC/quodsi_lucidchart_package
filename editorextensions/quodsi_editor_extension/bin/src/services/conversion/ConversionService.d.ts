@@ -1,8 +1,9 @@
 import { PageProxy } from 'lucid-extension-sdk';
-import { ConversionResult } from '@quodsi/shared';
+import { ConversionResult, QuodsiLogger } from '@quodsi/shared';
 import { ModelManager } from '../../core/ModelManager';
-export declare class ConversionService {
+export declare class ConversionService extends QuodsiLogger {
     private modelManager;
+    protected readonly LOG_PREFIX = "[ConversionService]";
     private storageAdapter;
     constructor(modelManager: ModelManager);
     /**

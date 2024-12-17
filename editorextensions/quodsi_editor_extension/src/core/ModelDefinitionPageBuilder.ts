@@ -58,7 +58,27 @@ export class ModelDefinitionPageBuilder {
 
             // Create initial ModelDefinition
             const modelDefinition = new ModelDefinition(modelData);
-            this.log('Created new ModelDefinition instance');
+            // Verify the critical functions exist
+            if (!modelDefinition.activities || typeof modelDefinition.activities.add !== 'function') {
+                this.log('ModelDefinition activities not properly initialized', 'error');
+                return null;
+            }
+            if (!modelDefinition.connectors || typeof modelDefinition.connectors.add !== 'function') {
+                this.log('ModelDefinition connectors not properly initialized', 'error');
+                return null;
+            }
+            if (!modelDefinition.resources || typeof modelDefinition.resources.add !== 'function') {
+                this.log('ModelDefinition resources not properly initialized', 'error');
+                return null;
+            }
+            if (!modelDefinition.generators || typeof modelDefinition.generators.add !== 'function') {
+                this.log('ModelDefinition generators not properly initialized', 'error');
+                return null;
+            }
+            if (!modelDefinition.entities || typeof modelDefinition.entities.add !== 'function') {
+                this.log('ModelDefinition entities not properly initialized', 'error');
+                return null;
+            }
 
             // Process all blocks (shapes)
             this.log(`Processing ${page.allBlocks.size} blocks`);

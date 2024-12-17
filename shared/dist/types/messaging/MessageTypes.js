@@ -8,6 +8,11 @@ var MessageTypes;
     MessageTypes["INITIAL_STATE"] = "initialState";
     // Selection Management
     MessageTypes["SELECTION_CHANGED"] = "selectionChanged";
+    MessageTypes["SELECTION_CHANGED_PAGE_NO_MODEL"] = "selectionPageNoModel";
+    MessageTypes["SELECTION_CHANGED_PAGE_WITH_MODEL"] = "selectionPageWithModel";
+    MessageTypes["SELECTION_CHANGED_SIMULATION_OBJECT"] = "selectionSimObject";
+    MessageTypes["SELECTION_CHANGED_MULTIPLE"] = "selectionMultiple";
+    MessageTypes["SELECTION_CHANGED_UNCONVERTED"] = "selectionUnconverted";
     // Model Conversion
     MessageTypes["CONVERT_PAGE"] = "convertPage";
     MessageTypes["CONVERSION_STARTED"] = "conversionStarted";
