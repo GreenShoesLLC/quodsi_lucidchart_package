@@ -1,5 +1,6 @@
-import { ModelDefinition, ValidationResult } from "@quodsi/shared";
-export declare class ModelValidationService {
+import { ModelDefinition, QuodsiLogger, ValidationResult } from "@quodsi/shared";
+export declare class ModelValidationService extends QuodsiLogger {
+    protected readonly LOG_PREFIX = "[ModelValidation]";
     private rules;
     private cachedState;
     private lastModelDefinitionHash;

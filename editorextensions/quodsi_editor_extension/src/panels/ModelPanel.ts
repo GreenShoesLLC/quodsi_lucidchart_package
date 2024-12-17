@@ -487,38 +487,25 @@ export class ModelPanel extends Panel {
     /**
      * Handles model removal request
      */
-    private handleRemoveModel(): void {
-        this.log('Handling remove model request');
-
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        const document = new DocumentProxy(this.client);
-
-        if (!currentPage) {
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: 'No active page found'
-            });
-            return;
-        }
-
+    private async handleRemoveModel(): Promise<void> {
         try {
-            // Use ModelManager to remove the model
-            this.modelManager.removeModelFromPage(currentPage);
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
+            if (!currentPage) return;
 
-            // Notify React app of successful removal
-            this.sendTypedMessage(MessageTypes.MODEL_REMOVED);
+            // Remove the model data from the page
+            await this.modelManager.removeModelFromPage(currentPage);
 
-            // Refresh the panel state after removal
-            this.sendInitialState(currentPage, false, document.id);
+            // Since the model was just removed, we know this is now a non-model page
+            // Directly send PAGE_NO_MODEL state - no need for modelRemoved message
+            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
+                pageId: currentPage.id
+            });
 
         } catch (error) {
-            this.logError('Model removal error:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error'
-            });
+            this.handleError('Error removing model:', error);
         }
     }
-
 
     private handleReactReady(): void {
         if (this.reactAppReady) {
@@ -612,7 +599,7 @@ export class ModelPanel extends Panel {
         }
 
         try {
-            
+
             // this.sendTypedMessage(MessageTypes.CONVERSION_STARTED); --Not implemented in QuodsiApp yet
             const result = await this.conversionService.convertPage(currentPage);
             // this.sendTypedMessage(MessageTypes.CONVERSION_COMPLETE, result);--Not implemented in QuodsiApp yet

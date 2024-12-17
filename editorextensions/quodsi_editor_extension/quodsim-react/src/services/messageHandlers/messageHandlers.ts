@@ -4,7 +4,8 @@ import {
     ModelData,
     ValidationMessage,
     ExtensionMessaging,
-    ModelItemData
+    ModelItemData,
+    SimulationObjectType
 } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
 
@@ -92,23 +93,22 @@ export const messageHandlers: Partial<{
         }
     },
 
-        [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
-            setState(prev => ({
-                ...prev,
-                currentElement: null,
-                modelStructure: null,
-                modelName: "New Model",
-                validationState: null,
-                expandedNodes: new Set<string>(),
-                showConvertButton: true  // Add this to AppState
-            }));
-        },
+    [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
+        setState(prev => ({
+            ...prev,
+            currentElement: null,
+            modelStructure: null,
+            modelName: "New Model",
+            validationState: null,
+            expandedNodes: new Set<string>(),
+            showConvertButton: true  // Add this to AppState
+        }));
+    },
 
         [MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL]: (data, { setState }) => {
             console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_WITH_MODEL:", data);
             setState(prev => {
-                // Transform ValidationResult to ValidationState if it exists
                 const validationState = data.validationResult ? {
                     summary: {
                         errorCount: data.validationResult.errorCount,
@@ -117,13 +117,26 @@ export const messageHandlers: Partial<{
                     messages: data.validationResult.messages
                 } : null;
 
+                // Ensure the modelItemData has the correct metadata.type
+                const modelItemData = {
+                    ...data.modelItemData,
+                    metadata: {
+                        ...data.modelItemData.metadata,
+                        type: SimulationObjectType.Model
+                    }
+                };
+
                 return {
                     ...prev,
-                    currentElement: null,
+                    currentElement: modelItemData,
                     modelStructure: data.modelStructure,
                     expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
                     validationState,
-                    modelName: data.modelItemData?.name || "Untitled Model"
+                    modelName: modelItemData.name || "Untitled Model",
+                    showConvertButton: false,
+                    isProcessing: false,
+                    error: null,
+                    documentId: data.selectionState.pageId || prev.documentId
                 };
             });
         },

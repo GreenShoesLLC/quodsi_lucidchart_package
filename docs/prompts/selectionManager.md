@@ -192,18 +192,16 @@ QuodsiApp receives the SELECTION_CHANGED_PAGE_WITH_MODEL and handles it through 
             });
         },
 
-This next part is not working.  QuodsiApp.tsx uses the ModelPanelAccordion component found here:
+QuodsiApp.tsx uses the ModelPanelAccordion component found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
 ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the components can be found as files in this folder:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
 
 
-Within Header.tsx, since nothing was selected in LucidChart so the event sent was SELECTION_CHANGED_PAGE_WITH_MODEL, the element is a Model so please show simulate, remove and validate buttons
+Within Header.tsx, since nothing was selected in LucidChart the event sent was SELECTION_CHANGED_PAGE_WITH_MODEL, the element is a Model so the Headers.tsx properly shows the "Remove Model" button.
 
-The ElementEditor should show the ModelEditor.
-ValidationMessages should show all the messages for the entire model
-ModelTreeSection should show the tree.
+The user hits the "Remove Model" button and all the custom shape data from quodsi is removed properly.  The expectation is that quodsi_editor_extension, after handling the remove model request, would reevaluate selection state, see that nothing is selected and that the page is not a model and then send SELECTION_CHANGED_PAGE_NO_MODEL.
 
 why is the current design not working?
 

@@ -21,6 +21,7 @@ export class RemoveModelFromPage {
      */
     public removeModel(): void {
         // Clear model data from page
+        this.storageAdapter.clearExpandedNodes(this.page);
         this.storageAdapter.clearElementData(this.page);
 
         // Clear data from all blocks

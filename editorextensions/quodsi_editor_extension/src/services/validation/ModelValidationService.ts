@@ -2,6 +2,7 @@ import {
     ActivityRelationships,
     ModelDefinition,
     ModelDefinitionLogger,
+    QuodsiLogger,
     ValidationMessage,
     ValidationResult
 } from "@quodsi/shared";
@@ -15,12 +16,14 @@ import { ValidationRule } from "./ValidationRule";
 import { ValidationMessages } from "./ValidationMessages";
 import { EntityValidation } from "./EntityValidation";
 
-export class ModelValidationService {
+export class ModelValidationService extends QuodsiLogger {
+    protected readonly LOG_PREFIX = "[ModelValidation]";
     private rules: ValidationRule[];
     private cachedState: ModelDefinitionState | null = null;
     private lastModelDefinitionHash: string | null = null;
 
     constructor() {
+        super();
         this.rules = [
             new ElementCountsValidation(),
             new ActivityValidation(),
@@ -29,6 +32,7 @@ export class ModelValidationService {
             new ResourceValidation(),
             new EntityValidation()
         ];
+        this.setLogging(false);
     }
 
     public validate(modelDefinition: ModelDefinition): ValidationResult {
@@ -58,7 +62,7 @@ export class ModelValidationService {
             return result;
 
         } catch (error) {
-            console.error('[ModelValidation] Validation error:', error);
+            this.logError('[ModelValidation] Validation error:', error);
             return {
                 isValid: false,
                 errorCount: 1,
@@ -76,7 +80,7 @@ export class ModelValidationService {
         const rule = this.rules.find(r => r.constructor.name === ruleName);
         if (rule) {
             rule.setLogging(enabled);
-            console.log(`[ModelValidationService] Logging for ${ruleName} set to ${enabled}`);
+            this.log(`[ModelValidationService] Logging for ${ruleName} set to ${enabled}`);
         } else {
             console.warn(`[ModelValidationService] Validation rule ${ruleName} not found.`);
         }
@@ -114,7 +118,7 @@ export class ModelValidationService {
 
     private batchValidate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         // Log the details of the model definition activities
-        console.log("[ModelValidation] Starting batch validation.");
+        this.log("[ModelValidation] Starting batch validation.");
 
         // ModelDefinitionLogger.logModelDefinition(state.modelDefinition)
 
@@ -128,7 +132,7 @@ export class ModelValidationService {
 
         // Wait for all validations to complete
         Promise.all(validationPromises).then(() => {
-            console.log("[ModelValidation] Batch validation completed.");
+            this.log("[ModelValidation] Batch validation completed.");
         });
     }
 
@@ -146,7 +150,7 @@ export class ModelValidationService {
     }
 
     private logValidationResults(result: ValidationResult): void {
-        console.log('[ModelValidation] Validation results:', {
+        this.log('[ModelValidation] Validation results:', {
             isValid: result.isValid,
             errorCount: result.errorCount,
             warningCount: result.warningCount,
