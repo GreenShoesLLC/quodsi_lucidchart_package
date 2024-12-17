@@ -35,7 +35,6 @@ interface ModelPanelAccordionProps {
   onTreeStateUpdate: (nodes: string[]) => void;
   onExpandPath: (nodeId: string) => void;
   referenceData: EditorReferenceData;
-  // Add new props for visibility
   showModelName?: boolean;
   showModelItemName?: boolean;
   visibleSections: {
@@ -44,6 +43,9 @@ interface ModelPanelAccordionProps {
     editor: boolean;
     modelTree: boolean;
   };
+  onSimulate?: () => void;
+  onRemoveModel?: () => void;
+  onConvertPage?: () => void;
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -62,6 +64,9 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   showModelName = true,
   showModelItemName = true,
   visibleSections,
+  onSimulate,
+  onRemoveModel,
+  onConvertPage,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
@@ -186,6 +191,11 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           modelItemData={currentElement}
           showModelName={showModelName}
           showModelItemName={showModelItemName}
+          onSimulate={onSimulate}
+          onRemoveModel={onRemoveModel}
+          onConvertPage={onConvertPage}
+          onTypeChange={handleTypeChange}
+          elementType={currentElement?.metadata?.type}
         />
       )}
       <div className="flex-1 overflow-y-auto">
@@ -211,6 +221,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             onToggle={() => toggleSection("validation")}
           />
         )}
+        <ConversionSection />
       </div>
     </div>
   );

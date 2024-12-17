@@ -178,7 +178,21 @@ const QuodsiApp: React.FC = () => {
     },
     [sendMessage, state.currentElement?.metadata?.type]
   );
+  const handleSimulate = useCallback(() => {
+    console.log("[QuodsiApp] Simulate requested");
+    sendMessage(MessageTypes.SIMULATE_MODEL);
+  }, [sendMessage]);
 
+  const handleRemoveModel = useCallback(() => {
+    console.log("[QuodsiApp] Remove model requested");
+    sendMessage(MessageTypes.REMOVE_MODEL);
+  }, [sendMessage]);
+
+  const handleConvertPage = useCallback(() => {
+    console.log("[QuodsiApp] Convert page requested");
+    sendMessage(MessageTypes.CONVERT_PAGE);
+  }, [sendMessage]);
+  
   const handleTreeNodeToggle = useCallback(
     (nodeId: string, expanded: boolean) => {
       console.log("[QuodsiApp] handleTreeNodeToggle called:", {
@@ -260,6 +274,9 @@ const QuodsiApp: React.FC = () => {
           showModelName={state.showModelName}
           showModelItemName={state.showModelItemName}
           visibleSections={state.visibleSections}
+          onSimulate={handleSimulate}
+          onRemoveModel={handleRemoveModel}
+          onConvertPage={handleConvertPage}
         />
       </div>
     </div>

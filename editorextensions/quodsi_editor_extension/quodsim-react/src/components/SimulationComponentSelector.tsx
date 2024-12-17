@@ -1,6 +1,7 @@
 import React from "react";
 import { SimComponentType } from "@quodsi/shared";
 import { SimComponentTypes } from "@quodsi/shared";
+import { Settings } from "lucide-react";
 
 interface SimulationComponentSelectorProps {
   currentType?: SimComponentType;
@@ -9,38 +10,32 @@ interface SimulationComponentSelectorProps {
   disabled?: boolean;
 }
 
-export const SimulationComponentSelector: React.FC<SimulationComponentSelectorProps> = ({ 
-  currentType, 
-  elementId, 
-  onTypeChange, 
-  disabled = false 
-}) => {
+export const SimulationComponentSelector: React.FC<
+  SimulationComponentSelectorProps
+> = ({ currentType, elementId, onTypeChange, disabled = false }) => {
   return (
-    <div className="quodsi-form">
-      <div className="quodsi-field">
-        <label className="quodsi-label">
+    <div className="space-y-2 p-2">
+      <div className="flex items-center gap-1 mb-1">
+        <Settings className="w-4 h-4 text-blue-500" />
+        <span className="text-xs font-medium text-gray-700">
           Component Type
-        </label>
-        <select
-          value={currentType || ""}
-          onChange={(e) => onTypeChange(e.target.value as SimComponentType, elementId)}
-          disabled={disabled}
-          className={`quodsi-select ${disabled ? 'quodsi-input-loading' : ''}`}
-        >
-          <option value="" disabled>
-            Select Component Type
-          </option>
-          {SimComponentTypes.map(({ type, displayName, description }) => (
-            <option 
-              key={type} 
-              value={type} 
-              title={description}
-            >
-              {displayName}
-            </option>
-          ))}
-        </select>
+        </span>
       </div>
+      <select
+        value={currentType || ""}
+        onChange={(e) =>
+          onTypeChange(e.target.value as SimComponentType, elementId)
+        }
+        disabled={disabled}
+        className="w-full px-2 py-1 text-sm border rounded"
+      >
+        {/* <option value="">None</option> */}
+        {SimComponentTypes.map(({ type, displayName, description }) => (
+          <option key={type} value={type} title={description}>
+            {displayName}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };
