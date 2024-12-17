@@ -31,6 +31,15 @@ export interface AppState {
   expandedNodes: Set<string>;
   referenceData: EditorReferenceData;
   isReady: boolean;
+  // Add new visibility controls
+  showModelName: boolean;
+  showModelItemName: boolean;
+  visibleSections: {
+    header: boolean;
+    validation: boolean;
+    editor: boolean;
+    modelTree: boolean;
+  };
 }
 
 const initialState: AppState = {
@@ -47,6 +56,15 @@ const initialState: AppState = {
     resources: [],
   },
   isReady: false,
+  // Initialize new visibility controls
+  showModelName: true,
+  showModelItemName: true,
+  visibleSections: {
+    header: true,
+    validation: true,
+    editor: true,
+    modelTree: true,
+  },
 };
 
 const QuodsiApp: React.FC = () => {
@@ -239,6 +257,9 @@ const QuodsiApp: React.FC = () => {
           onTreeStateUpdate={handleTreeStateUpdate}
           onExpandPath={handleExpandPath}
           referenceData={state.referenceData}
+          showModelName={state.showModelName}
+          showModelItemName={state.showModelItemName}
+          visibleSections={state.visibleSections}
         />
       </div>
     </div>

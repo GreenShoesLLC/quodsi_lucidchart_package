@@ -1,3 +1,4 @@
+# Overview
 The entry point into quodsi_editor_extension is extension.ts which is found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts
 
@@ -26,7 +27,7 @@ Here is ModelPanel's handleSelectionChange:
             this.selectionManager.setCurrentSelection(selectionState);
 
             if (this.reactAppReady) {
-                await this.sendSelectionUpdateToReact(items, currentPage);
+                await this.sendSelectionBasedMessage(selectionState, items, currentPage);
             }
         } catch (error) {
             this.handleError('Error handling selection change:', error);
@@ -35,7 +36,7 @@ Here is ModelPanel's handleSelectionChange:
         }
     }
 
-quodsi_editor_extension and quodsim-react are exchanging messages through the user use of Quodsi in Lucidchart.
+quodsi_editor_extension and quodsim-react are exchanging messages whenever the user changes selection in LucidChart or interacts with the React user interface.
 
 When ModelPanel is instantiated, it triggers quodsim-react to fire up index.tsx found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\index.tsx
@@ -44,7 +45,6 @@ index.tsx loads up QuodsiApp component found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\QuodsiApp.tsx
 
 QuodsiApp has this code:
-
 sendMessage(MessageTypes.REACT_APP_READY)
 
 which uses ExtensionMessaging to send REACT_APP_READY to the parent quodsi_editor_extension app.
@@ -65,16 +65,12 @@ export interface MessagePayloads extends
     ValidationPayloads,
     ModelTreePayloads { }
 
-Please check out all the files in this folder:
+Please check out all the files in this folder to see what each payload per message type consists of.
 C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads
 
 ModelPanel receives the REACT_APP_READY message and executes handleReactReady
 
 The primary result of quodsi_editor_extension and quodsim-react exchanging messages is changing how React components are rendered in the ModelPanel iframe.
-
-The focus of this chat is to fine tuning the code that handles changing the React view whenever a selection change occurs.
-
-Many messages between quodsi_editor_extension and quodsim-react occur within a static selection state.
 
 ModelPanel leverages SelectionManager which can be found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\managers\SelectionManager.ts
@@ -93,73 +89,90 @@ quodsi_editor_extension is sending the following new messages to QuodsiApp.
     SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
     SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
-QuodsiApp's message handlers have been preliminarily setup to handle the new specific messages.  I need to make sure they are surfacing the correct components.
-QuodsiApp references messageHandlers found here:
+QuodsiApp's messageHandlers have been preliminarily setup to handle the new specific messages. messageHandlers found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
 
-Lets focus on the following workflow. 
+Here is an example workflow to start our discussion:
 
 User launches LucidChart and opens up a document that has not been converted yet.  NOTHING IS SELECTED!!
 Extension.ts executes which instantiates ModelPanel.  
 Within LucidChart, the user clicks on the icon associated with the ModelPanel.  ModelPanic loads up the React app through Index.tsx.
-QuodsiApp.tsx is mounted.  REACT_APP_READY message is sent to quodsi_editor_extension.  ModelPanel's handleReactReady method handles the REACT_APP_READY
-
-    private handleReactReady(): void {
-        if (this.reactAppReady) {
-            this.logError('React app already ready, skipping initialization');
-            return;
-        }
-
-        this.logError('handleReactReady');
-        this.reactAppReady = true;
-
-        ...
-
-        // Now initialize the model in response to a user-triggered event
-        this.initializeModelManager().then(() => {
-            const isModel = this.modelManager.isQuodsiModel(currentPage);
-
-            // If not a model, send appropriate message
-            if (!isModel) {
-                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
-                    pageId: currentPage.id
-                });
-                return;
-            }
-
-            // Only send initial state and handle selection if it is a model
-            this.sendInitialState(currentPage, true, document.id);
-
-            // Update selection using new pattern
-            if (this.currentSelection.selectedIds.length > 0) {
-                const selectedItems = viewport.getSelectedItems();
-                this.handleSelectionChange(selectedItems).catch(error =>
-                    this.handleError('Error sending selection update:', error)
-                );
-            }
-        });
-    }
+QuodsiApp.tsx is mounted.  REACT_APP_READY message is sent to quodsi_editor_extension from quodsim-react.  ModelPanel's handleReactReady method handles the REACT_APP_READY from quodsim-react.
 
 Since the page is not a model yet, quodsi_editor_extension sends SELECTION_CHANGED_PAGE_NO_MODEL to QuodsiApp.
 
+QuodsiApp receives the message and handles it through messageHandlers.
 
-QuodsiApp receives the mesaagen and handles it through messageHandlers with this:
+    [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
+        setState(prev => ({
+            ...prev,
+            currentElement: null,
+            modelStructure: null,
+            modelName: "New Model",
+            validationState: null,
+            expandedNodes: new Set<string>(),
+            showConvertButton: true  // Add this to AppState
+        }));
+    },
 
-        [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
-            setState(prev => ({
-                ...prev,
-                currentElement: null,
-                modelStructure: null,
-                modelName: "New Model",
-                validationState: null,
-                expandedNodes: new Set<string>(),
-                showConvertButton: true  // Add this to AppState
-            }));
-        },
+QuodsiApp.tsx uses the ModelPanelAccordion component found here:
+C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
-The showConvertButton is shown which is part of the Header react component found here:
+ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the components can be found as files in this folder:
+C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
+
+The ModelPanelAccordion contains 4 different sections where each section is controlled by an accordian widget.  The 4 sections are:
+Header
+Validation
+Editor		
+Model Tree
+
+In the current design, SELECTION_CHANGED_PAGE_NO_MODEL shows the following screenshot.  Notice the Convert button.  This is located in Headers.tsx
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
+Headers.tsx can be configured to show different buttons, etc based upon the received event by QuodsiApp
+
+For each selection message types, I would like configure which sections of the ModelPanelAccordion are rendered as well as what is shown when the section accordion is visible.
+
+# SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
+
+Header:  Visible. Show Convert button only.  Do not show ModelName or showModelItemName
+Validation: Hide
+Editor: Hide
+Model Tree: Hide
+
+# SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
+
+Header:  Visible. Show Simulate, Remove and Validate button.  Show Model Name.
+Validation: Visible
+Editor: Visible
+Model Tree: Visible
+
+# SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected
+
+Header:  Visible: SimulationComponentSelector.  Show Model Name and showModelItemName
+Validation: Visible
+Editor: Visible
+Model Tree: Visible
+
+# SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
+
+Header:  Visible: SimulationComponentSelector. Show Model Name
+Validation: Hide
+Editor: Hide
+Model Tree: Hide
+
+I think it was important that you are aware of the bigger plan but I want to go slowly.
+
+I want to start with SELECTION_CHANGED_PAGE_NO_MODEL event. Help me make the changes so that the message SELECTION_CHANGED_PAGE_NO_MODEL
+does:
+Header:  Visible. Show Convert button only.  Do not show ModelName or showModelItemName
+Validation: Hide
+Editor: Hide
+Model Tree: Hide
+
+
+
 The user hits the showConvertButon and MessageTypes.CONVERT_PAGE is sent to quodsi_editor_extension
 
 quodsi_editor_extension through ModelPanel.handleConvertRequest handles the request.  Assuming the conversion is successful, then:

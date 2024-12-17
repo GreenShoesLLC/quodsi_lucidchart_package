@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { Header } from "./Header";
+
 import { ModelTreeView } from "./ModelTreeView";
 import { ValidationMessageList } from "./ValidationMessageList";
 
@@ -20,6 +20,7 @@ import {
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
+import { Header } from "./Header";
 
 interface ModelPanelAccordionProps {
   modelStructure: ModelStructure | null;
@@ -34,6 +35,15 @@ interface ModelPanelAccordionProps {
   onTreeStateUpdate: (nodes: string[]) => void;
   onExpandPath: (nodeId: string) => void;
   referenceData: EditorReferenceData;
+  // Add new props for visibility
+  showModelName?: boolean;
+  showModelItemName?: boolean;
+  visibleSections: {
+    header: boolean;
+    validation: boolean;
+    editor: boolean;
+    modelTree: boolean;
+  };
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -49,6 +59,9 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onTreeStateUpdate,
   onExpandPath,
   referenceData,
+  showModelName = true,
+  showModelItemName = true,
+  visibleSections,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
@@ -165,32 +178,39 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-white">
-      <Header
-        modelName={modelName || "New Model"}
-        validationState={validationState}
-        onValidate={onValidate}
-        currentElement={currentElement}
-      />
+      {visibleSections.header && (
+        <Header
+          modelName={modelName}
+          validationState={validationState}
+          onValidate={onValidate}
+          modelItemData={currentElement}
+          showModelName={showModelName}
+          showModelItemName={showModelItemName}
+        />
+      )}
       <div className="flex-1 overflow-y-auto">
-        <ConversionSection />
-        {!currentElement?.isUnconverted && currentElement && (
-          <ElementEditor
-            elementData={currentElement.data}
-            elementType={currentElement.metadata.type}
-            onSave={(data) => onUpdate(currentElement.id, data)}
-            onCancel={handleEditorCancel}
-            referenceData={referenceData}
-            isExpanded={expandedSections.elementEditor}
-            onToggle={() => toggleSection("elementEditor")}
+        {visibleSections.editor &&
+          !currentElement?.isUnconverted &&
+          currentElement && (
+            <ElementEditor
+              elementData={currentElement.data}
+              elementType={currentElement.metadata.type}
+              onSave={(data) => onUpdate(currentElement.id, data)}
+              onCancel={handleEditorCancel}
+              referenceData={referenceData}
+              isExpanded={expandedSections.elementEditor}
+              onToggle={() => toggleSection("elementEditor")}
+            />
+          )}
+        {visibleSections.modelTree && <ModelTreeSection />}
+        {visibleSections.validation && (
+          <ValidationMessages
+            validationState={validationState}
+            currentElementId={currentElement?.id}
+            isExpanded={expandedSections.validation}
+            onToggle={() => toggleSection("validation")}
           />
         )}
-        <ModelTreeSection />
-        <ValidationMessages
-          validationState={validationState}
-          currentElementId={currentElement?.id}
-          isExpanded={expandedSections.validation}
-          onToggle={() => toggleSection("validation")}
-        />
       </div>
     </div>
   );
