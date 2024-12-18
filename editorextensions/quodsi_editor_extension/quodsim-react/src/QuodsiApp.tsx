@@ -31,7 +31,6 @@ export interface AppState {
   expandedNodes: Set<string>;
   referenceData: EditorReferenceData;
   isReady: boolean;
-  // Add new visibility controls
   showModelName: boolean;
   showModelItemName: boolean;
   visibleSections: {
@@ -146,12 +145,28 @@ const QuodsiApp: React.FC = () => {
     [sendMessage]
   );
 
+  const handleElementTypeChange = useCallback(
+    (elementId: string, newType: SimulationObjectType) => {
+      console.log("[QuodsiApp] Type conversion requested:", {
+        elementId,
+        newType,
+      });
+      setState((prev) => ({ ...prev, isProcessing: true }));
+
+      sendMessage(MessageTypes.CONVERT_ELEMENT, {
+        elementId,
+        type: newType,
+      });
+    },
+    [sendMessage]
+  );
+
   const handleValidate = useCallback(() => {
     console.log("[QuodsiApp] Validate requested");
     sendMessage(MessageTypes.VALIDATE_MODEL);
   }, [sendMessage]);
 
-  const handleUpdate = useCallback(
+  const handleElementUpdate = useCallback(
     (elementId: string, data: any) => {
       console.log("[QuodsiApp] Update requested:", { elementId, data });
       setState((prev) => ({ ...prev, isProcessing: true }));
@@ -161,7 +176,7 @@ const QuodsiApp: React.FC = () => {
         sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
           elementId,
           type: data.type,
-          data: {}, // Empty data for type conversion
+        data: {}, // Empty data for type conversion
         });
       } else {
         // Regular update
@@ -178,6 +193,7 @@ const QuodsiApp: React.FC = () => {
     },
     [sendMessage, state.currentElement?.metadata?.type]
   );
+
   const handleSimulate = useCallback(() => {
     console.log("[QuodsiApp] Simulate requested");
     sendMessage(MessageTypes.SIMULATE_MODEL);
@@ -192,7 +208,7 @@ const QuodsiApp: React.FC = () => {
     console.log("[QuodsiApp] Convert page requested");
     sendMessage(MessageTypes.CONVERT_PAGE);
   }, [sendMessage]);
-  
+
   const handleTreeNodeToggle = useCallback(
     (nodeId: string, expanded: boolean) => {
       console.log("[QuodsiApp] handleTreeNodeToggle called:", {
@@ -266,7 +282,7 @@ const QuodsiApp: React.FC = () => {
           expandedNodes={state.expandedNodes}
           onElementSelect={handleElementSelect}
           onValidate={handleValidate}
-          onUpdate={handleUpdate}
+          onElementUpdate={handleElementUpdate}
           onTreeNodeToggle={handleTreeNodeToggle}
           onTreeStateUpdate={handleTreeStateUpdate}
           onExpandPath={handleExpandPath}
@@ -277,6 +293,7 @@ const QuodsiApp: React.FC = () => {
           onSimulate={handleSimulate}
           onRemoveModel={handleRemoveModel}
           onConvertPage={handleConvertPage}
+          onElementTypeChange={handleElementTypeChange}
         />
       </div>
     </div>

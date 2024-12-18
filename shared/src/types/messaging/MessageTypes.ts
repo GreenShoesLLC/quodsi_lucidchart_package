@@ -30,6 +30,8 @@ export enum MessageTypes {
     UPDATE_ELEMENT_DATA = 'updateElementData',
     UPDATE_SUCCESS = 'updateSuccess',
     CONVERT_ELEMENT = 'convertElement',
+    // ELEMENT_TYPE_CONVERTED = 'elementTypeConverted',
+    
 
     // Model Validation
     VALIDATE_MODEL = 'validateModel',

@@ -24,6 +24,7 @@ var MessageTypes;
     MessageTypes["UPDATE_ELEMENT_DATA"] = "updateElementData";
     MessageTypes["UPDATE_SUCCESS"] = "updateSuccess";
     MessageTypes["CONVERT_ELEMENT"] = "convertElement";
+    // ELEMENT_TYPE_CONVERTED = 'elementTypeConverted',
     // Model Validation
     MessageTypes["VALIDATE_MODEL"] = "validateModel";
     MessageTypes["VALIDATION_RESULT"] = "validationResult";

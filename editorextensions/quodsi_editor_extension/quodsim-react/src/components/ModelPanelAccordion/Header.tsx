@@ -14,7 +14,7 @@ interface HeaderProps {
   showModelName: boolean;
   showModelItemName: boolean;
   elementType?: SimulationObjectType;
-  onTypeChange?: (newType: SimComponentType, elementId: string) => void;
+  onTypeChange: (elementId: string, newType: SimulationObjectType) => void;
   onRemoveComponent?: (elementId: string) => void;
   onSimulate?: () => void;
   onRemoveModel?: () => void;
@@ -23,8 +23,9 @@ interface HeaderProps {
 
 export class Header extends React.Component<HeaderProps> {
   handleTypeChange = (newType: SimComponentType, elementId: string) => {
+    const simulationType = typeMappers.mapComponentTypeToSimulationType(newType);
     if (this.props.onTypeChange) {
-      this.props.onTypeChange(newType, elementId);
+      this.props.onTypeChange(elementId, simulationType);
     }
   };
 
@@ -72,7 +73,7 @@ export class Header extends React.Component<HeaderProps> {
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={onConvertPage}
           >
-            Convert
+            Initialize Quodsi Model
           </button>
         )
       );

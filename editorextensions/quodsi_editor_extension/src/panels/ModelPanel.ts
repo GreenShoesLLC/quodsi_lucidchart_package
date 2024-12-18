@@ -29,6 +29,8 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
+    SimComponentFactory,
+    SimulationObjectTypeFactory,
 
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
@@ -122,6 +124,8 @@ export class ModelPanel extends Panel {
             this.logError('Error received:', payload);
         });
 
+        this.messaging.onMessage(MessageTypes.CONVERT_ELEMENT, (data) =>
+            this.handleConvertElement(data));
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
         this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
@@ -177,6 +181,73 @@ export class ModelPanel extends Panel {
             this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
         }
     }
+
+    private async handleConvertElement(
+        data: MessagePayloads[MessageTypes.CONVERT_ELEMENT]
+    ): Promise<void> {
+        try {
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
+            if (!currentPage) {
+                throw new Error('No active page found');
+            }
+
+            // Get the element from viewport
+            const selectedItems = viewport.getSelectedItems();
+            const element = selectedItems.find(item => item.id === data.elementId);
+            if (!element) {
+                throw new Error(`Element not found in selection: ${data.elementId}`);
+            }
+
+            const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.elementId);
+
+            // Save element data using ModelManager
+            await this.modelManager.saveElementData(
+                element,
+                defaultData,
+                data.type,
+                currentPage
+            );
+
+            // Send simulation object selection state
+            const simulationSelection: SimulationObjectSelectionState = {
+                pageId: currentPage.id,
+                selectedId: data.elementId,
+                objectType: data.type
+            };
+
+            await this.updateModelStructure();
+
+            if (!this.currentModelStructure) {
+                throw new Error('Failed to update model structure after conversion');
+            }
+
+            const expandedNodes = this.treeStateManager.getExpandedNodes();
+            const validationResult = await this.modelManager.validateModel();
+            const modelItemData = await this.buildModelItemData(element);
+
+            // Send SELECTION_CHANGED_SIMULATION_OBJECT
+            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT, {
+                selectionState: {
+                    pageId: currentPage.id,
+                    selectedIds: [data.elementId],
+                    selectionType: SelectionType.ACTIVITY // This should be mapped from data.type
+                },
+                simulationSelection,
+                modelItemData,
+                modelStructure: this.currentModelStructure,
+                expandedNodes,
+                validationResult
+            });
+
+        } catch (error) {
+            this.logError('Error converting element:', error);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: `Failed to convert element: ${error instanceof Error ? error.message : String(error)}`
+            });
+        }
+    }
+
 
     /**
      * Handles tree node expansion state changes

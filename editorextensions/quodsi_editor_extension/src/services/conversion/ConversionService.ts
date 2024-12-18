@@ -59,22 +59,7 @@ export class ConversionService extends QuodsiLogger {
             }
 
             // Initialize the model BEFORE doing anything else
-            const model = new Model(
-                page.id,
-                page.getTitle() || 'New Model',
-                ModelDefaults.DEFAULT_REPS,
-                ModelDefaults.DEFAULT_FORECAST_DAYS,
-                ModelDefaults.DEFAULT_SEED,
-                ModelDefaults.DEFAULT_CLOCK_UNIT,
-                ModelDefaults.DEFAULT_SIMULATION_TIME_TYPE,
-                ModelDefaults.DEFAULT_WARMUP_PERIOD,
-                ModelDefaults.DEFAULT_CLOCK_UNIT,
-                ModelDefaults.DEFAULT_RUN_PERIOD,
-                ModelDefaults.DEFAULT_CLOCK_UNIT,
-                null,
-                null,
-                null
-            );
+            const model = Model.createDefault(page.id);
 
             // Store the model data first
             this.storageAdapter.setElementData(

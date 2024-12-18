@@ -1,25 +1,18 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-
-import { ModelTreeView } from "./ModelTreeView";
-import { ValidationMessageList } from "./ValidationMessageList";
-
-import { typeMappers } from "../../utils/typeMappers";
-
 import {
   ModelStructure,
   ValidationState,
-  AccordionState,
   EditorReferenceData,
-  SelectionType,
   SimComponentType,
   ModelItemData,
   JsonObject,
-  MetaData,
+  SimulationObjectType,
 } from "@quodsi/shared";
+import { ModelTreeView } from "./ModelTreeView";
+import { ValidationMessageList } from "./ValidationMessageList";
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
-import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { Header } from "./Header";
 
 interface ModelPanelAccordionProps {
@@ -30,7 +23,7 @@ interface ModelPanelAccordionProps {
   expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
   onValidate: () => void;
-  onUpdate: (elementId: string, data: JsonObject) => void;
+  onElementUpdate: (elementId: string, data: JsonObject) => void;
   onTreeNodeToggle: (nodeId: string, expanded: boolean) => void;
   onTreeStateUpdate: (nodes: string[]) => void;
   onExpandPath: (nodeId: string) => void;
@@ -46,6 +39,10 @@ interface ModelPanelAccordionProps {
   onSimulate?: () => void;
   onRemoveModel?: () => void;
   onConvertPage?: () => void;
+  onElementTypeChange: (
+    elementId: string,
+    newType: SimulationObjectType
+  ) => void;
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -56,7 +53,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   expandedNodes,
   onElementSelect,
   onValidate,
-  onUpdate,
+  onElementUpdate,
   onTreeNodeToggle,
   onTreeStateUpdate,
   onExpandPath,
@@ -67,12 +64,12 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onSimulate,
   onRemoveModel,
   onConvertPage,
+  onElementTypeChange,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
     elementEditor: !!currentElement,
     validation: !!validationState?.summary?.errorCount,
-    conversion: currentElement?.isUnconverted ?? false,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,12 +89,8 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     toggleSection("elementEditor");
   };
 
-  const handleTypeChange = (newType: SimComponentType, elementId: string) => {
-    console.log("[ModelPanelAccordion] Type change requested:", {
-      elementId,
-      newType,
-    });
-    onUpdate(elementId, { type: newType });
+  const handleTypeChange = (elementId: string, newType: SimulationObjectType) => {
+    onElementTypeChange(elementId, newType);
   };
 
   const ModelTreeSection = () => {
@@ -115,7 +108,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           onClick={() => toggleSection("modelTree")}
           className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
         >
-          <span className="font-medium text-sm">Model Definition</span>
+          <span className="font-medium text-sm">Object Explorer</span>
           {expandedSections.modelTree ? (
             <ChevronDown className="h-4 w-4" />
           ) : (
@@ -149,38 +142,6 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     );
   };
 
-  const ConversionSection = () => {
-    if (!currentElement?.isUnconverted) return null;
-
-    return (
-      <div className="border-b">
-        <button
-          onClick={() => toggleSection("conversion")}
-          className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
-        >
-          <span className="font-medium text-sm">Convert Element</span>
-          {expandedSections.conversion ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </button>
-
-        {expandedSections.conversion && currentElement && (
-          <div className="p-3 border-t">
-            <SimulationComponentSelector
-              elementId={currentElement.id}
-              onTypeChange={handleTypeChange}
-              currentType={typeMappers.mapSimulationTypeToComponentType(
-                currentElement.metadata.type
-              )}
-            />
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="flex flex-col h-full bg-white">
       {visibleSections.header && (
@@ -205,7 +166,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             <ElementEditor
               elementData={currentElement.data}
               elementType={currentElement.metadata.type}
-              onSave={(data) => onUpdate(currentElement.id, data)}
+              onSave={(data) => onElementUpdate(currentElement.id, data)}
               onCancel={handleEditorCancel}
               referenceData={referenceData}
               isExpanded={expandedSections.elementEditor}
@@ -221,7 +182,6 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             onToggle={() => toggleSection("validation")}
           />
         )}
-        <ConversionSection />
       </div>
     </div>
   );

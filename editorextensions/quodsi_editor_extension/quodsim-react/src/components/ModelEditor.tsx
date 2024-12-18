@@ -123,31 +123,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                   <CompactDurationEditor
                     duration={
                       new Duration(
-                        localModel.runClockPeriod || 0,
-                        localModel.runClockPeriodUnit || PeriodUnit.MINUTES,
-                        DurationType.CONSTANT
-                      )
-                    }
-                    onChange={(duration) => {
-                      handleChange(
-                        createSyntheticEvent(
-                          "runClockPeriod",
-                          duration.durationLength
-                        )
-                      );
-                      handleChange(
-                        createSyntheticEvent(
-                          "runClockPeriodUnit",
-                          duration.durationPeriodUnit
-                        )
-                      );
-                    }}
-                    lengthLabel="Run Time"
-                  />
-
-                  <CompactDurationEditor
-                    duration={
-                      new Duration(
                         localModel.warmupClockPeriod || 0,
                         localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
                         DurationType.CONSTANT
@@ -168,6 +143,30 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                       );
                     }}
                     lengthLabel="Warmup Time"
+                  />
+                  <CompactDurationEditor
+                    duration={
+                      new Duration(
+                        localModel.runClockPeriod || 0,
+                        localModel.runClockPeriodUnit || PeriodUnit.MINUTES,
+                        DurationType.CONSTANT
+                      )
+                    }
+                    onChange={(duration) => {
+                      handleChange(
+                        createSyntheticEvent(
+                          "runClockPeriod",
+                          duration.durationLength
+                        )
+                      );
+                      handleChange(
+                        createSyntheticEvent(
+                          "runClockPeriodUnit",
+                          duration.durationPeriodUnit
+                        )
+                      );
+                    }}
+                    lengthLabel="Run Time"
                   />
                 </div>
               </div>

@@ -26,7 +26,7 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
     }
     ModelDefinitionLogger.logModelDefinition = function (modelDefinition) {
         var logger = new ModelDefinitionLogger();
-        logger.setLogging(true);
+        logger.setLogging(false);
         logger.logDefinition(modelDefinition);
     };
     ModelDefinitionLogger.prototype.logDefinition = function (modelDefinition) {

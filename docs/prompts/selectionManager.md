@@ -80,21 +80,20 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\SelectionType.t
 C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\SelectionState.ts
 C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads\SelectionPayloads.ts
 
+quodsi_editor_extension is sending the following messages to QuodsiApp whenever the user changes selection in LucidChart.
 
-quodsi_editor_extension is sending the following new messages to QuodsiApp.
-
-    SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
+    SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // no model exists
     SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
     SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected
     SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
     SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
-QuodsiApp's messageHandlers have been preliminarily setup to handle the new specific messages. messageHandlers found here:
+QuodsiApp's messageHandlers have been setup to handle the new specific messages. messageHandlers found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
 
 Here is an example workflow to start our discussion:
 
-User launches LucidChart and opens up a document that has not been converted yet.  NOTHING IS SELECTED!!
+User launches LucidChart and creates a new, empty document. The user drags and drops a new Process shape onto the LucidChart page.
 Extension.ts executes which instantiates ModelPanel.  
 Within LucidChart, the user clicks on the icon associated with the ModelPanel.  ModelPanic loads up the React app through Index.tsx.
 QuodsiApp.tsx is mounted.  REACT_APP_READY message is sent to quodsi_editor_extension from quodsim-react.  ModelPanel's handleReactReady method handles the REACT_APP_READY from quodsim-react.
@@ -112,14 +111,22 @@ QuodsiApp receives the message and handles it through messageHandlers.
             modelName: "New Model",
             validationState: null,
             expandedNodes: new Set<string>(),
-            showConvertButton: true  // Add this to AppState
+            // Set visibility states
+            showModelName: false,
+            showModelItemName: false,
+            visibleSections: {
+                header: true,      // Only header is visible
+                validation: false,
+                editor: false,
+                modelTree: false
+            }
         }));
     },
 
 QuodsiApp.tsx uses the ModelPanelAccordion component found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
-ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the components can be found as files in this folder:
+ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the React components can be found as files in this folder:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
 
 The ModelPanelAccordion contains 4 different sections where each section is controlled by an accordian widget.  The 4 sections are:
@@ -128,18 +135,30 @@ Validation
 Editor		
 Model Tree
 
-In the current design, SELECTION_CHANGED_PAGE_NO_MODEL shows the following screenshot.  Notice the Convert button.  This is located in Headers.tsx
+In the current design, SELECTION_CHANGED_PAGE_NO_MODEL shows the "Initialize Quodsi Model" button.  This is located in Headers.tsx file located here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
 Headers.tsx can be configured to show different buttons, etc based upon the received event by QuodsiApp
 
-For each selection message types, I would like configure which sections of the ModelPanelAccordion are rendered as well as what is shown when the section accordion is visible.
+# SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // no model exists
 
-# SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
-
-Header:  Visible. Show Convert button only.  Do not show ModelName or showModelItemName
+Header:  Visible. Show "Initialize Quodsi Model" button only.  
 Validation: Hide
 Editor: Hide
 Model Tree: Hide
+
+User hits the "Initialize Quodsi Model" button which sends MessageTypes.CONVERT_PAGE to quodsi_editor_extension.  In quodsi_editor_extension, ModelPanel handles CONVERT_PAGE in the handleConvertRequest method which converts the Page to a Quodsi Model and calls ModelPanel.handleSelectionChange.  
+
+The active selection is the process block the user initially added to the Page.  handleSelectionChange sends the SELECTION_CHANGED_UNCONVERTED back to QuodsiApp.
+
+# SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
+
+Header:  Visible: SimulationComponentSelector. Show Model Name
+Validation: Hide
+Editor: Hide
+Model Tree: Hide
+
+My focus for this chat is the Header.tsx for SELECTION_CHANGED_UNCONVERTED, specifically SimulationComponentSelector properly working.
+
 
 # SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
 

@@ -2,10 +2,29 @@ import { SimulationObjectType } from './SimulationObjectType';
 import { PeriodUnit } from './PeriodUnit';
 import { SimulationTimeType } from './SimulationTimeType';
 import { SimulationObject } from './SimulationObject';
+import { ModelDefaults } from './ModelDefaults';
 
 export class Model implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Model;
 
+    static createDefault(id: string): Model {
+        return new Model(
+            id, //id
+            'New Model', //name
+            ModelDefaults.DEFAULT_REPS, //reps
+            ModelDefaults.DEFAULT_FORECAST_DAYS, //forecast
+            ModelDefaults.DEFAULT_SEED, //seed
+            ModelDefaults.DEFAULT_CLOCK_UNIT, //oneClockUnit
+            SimulationTimeType.Clock, //oneClockUnit
+            0, //simulationTimeType
+            PeriodUnit.HOURS, //warmupClockPeriod
+            24, //runClockPeriod
+            PeriodUnit.HOURS, //runClockPeriodUnit
+            null,  // warmupDateTime
+            null,  // startDateTime
+            null   // finishDateTime
+        );
+    }
     constructor(
         public id: string,
         public name: string,
