@@ -156,44 +156,34 @@ export const messageHandlers: Partial<{
         });
     },
 
-    [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (data, { setState, sendMessage }) => {
-        console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", data);
+        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (data, { setState, sendMessage }) => {
+            console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", data);
+            setState(prev => {
+                const currentElement: ModelItemData = {
+                    ...data.modelItemData,
+                    isUnconverted: false
+                };
 
-        setState(prev => {
-            // If we already have this element selected with the same state, no need to update
-            if (prev.currentElement?.data?.id === data.modelItemData.id) {
-                return prev;
-            }
-
-            const currentElement: ModelItemData = {
-                ...data.modelItemData,
-                isUnconverted: false
-            };
-
-            return {
-                ...prev,
-                currentElement,
-                modelStructure: data.modelStructure,
-                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
-                showModelName: true,          // Show model name
-                showModelItemName: true,      // Show model item name
-                visibleSections: {            // All sections visible
-                    header: true,
-                    validation: true,
-                    editor: true,
-                    modelTree: true
-                }
-            };
-        });
-
-        // Request detailed element data if not already present
-        if (!data.modelItemData.data) {
-            console.log("[MessageHandlers] Requesting element data for:", data.modelItemData.id);
-            sendMessage(MessageTypes.GET_ELEMENT_DATA, {
-                elementId: data.modelItemData.id,
+                return {
+                    ...prev,
+                    currentElement,
+                    modelStructure: data.modelStructure,
+                    expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
+                    referenceData: data.referenceData || {  // Use provided data or empty default
+                        entities: [],
+                        resources: []
+                    },
+                    showModelName: true,
+                    showModelItemName: true,
+                    visibleSections: {
+                        header: true,
+                        validation: true,
+                        editor: true,
+                        modelTree: true
+                    }
+                };
             });
-        }
-    },
+        },
 
         [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (data, deps) => {
             console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", data);

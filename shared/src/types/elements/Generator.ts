@@ -2,21 +2,23 @@ import { SimulationObjectType } from "./SimulationObjectType";
 import { Duration } from "./Duration";
 import { SimulationObject } from "./SimulationObject";
 import { ModelDefaults } from "./ModelDefaults";
+import { PeriodUnit } from "./PeriodUnit";
+import { DurationType } from "./DurationType";
 
 export class Generator implements SimulationObject {
   type: SimulationObjectType = SimulationObjectType.Generator;
 
   static createDefault(id: string): Generator {
     return new Generator(
-      id,
-      'New Generator',
-      '', // activityKeyId
+      id, //id
+      'New Generator', //name
+      '{SomeActivityName}', // activityKeyId
       ModelDefaults.DEFAULT_ENTITY_ID,
       Infinity, // periodicOccurrences
-      new Duration(), // periodIntervalDuration
+      new Duration(1,PeriodUnit.HOURS,DurationType.CONSTANT), // periodIntervalDuration
       1, // entitiesPerCreation
-      new Duration(), // periodicStartDuration
-      Infinity // maxEntities
+      new Duration(0, PeriodUnit.HOURS, DurationType.CONSTANT), // periodicStartDuration
+      999 // maxEntities
     );
   }
 

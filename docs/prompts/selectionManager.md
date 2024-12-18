@@ -157,7 +157,33 @@ Validation: Hide
 Editor: Hide
 Model Tree: Hide
 
-My focus for this chat is the Header.tsx for SELECTION_CHANGED_UNCONVERTED, specifically SimulationComponentSelector properly working.
+QuodsiApp shows the SimulationComponentSelector.  The user chooses "Generator" resulting in QuodsiApp.handleElementTypeChange method sending MessageTypes.CONVERT_ELEMENT to quodsi_editor_extension.  quodsi_editor_extension's ModelPanel's handleConvertElement method handles the CONVERT_ELEMENT.
+Within handleConvertElement, an instance of the type selected is created from SimulationObjectTypeFactory
+const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.elementId);
+
+C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\factories\SimulationObjectTypeFactory.ts
+
+
+handleConvertElement will then send MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT back to QuodsiApp.tsx.
+
+# SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected
+
+Header:  Visible: SimulationComponentSelector.  Show Model Name and showModelItemName
+Validation: Visible
+Editor: Visible
+Model Tree: Visible
+
+The focus of this chat is understanding how QuodsiApp handles the SELECTION_CHANGED_SIMULATION_OBJECT.  If the selected LucidChart element has been mapped to a Generator, how does QuodsiApp know to show GeneratorEditor?
+
+
+
+
+
+
+
+
+
+------------------------------------------------------
 
 
 # SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model

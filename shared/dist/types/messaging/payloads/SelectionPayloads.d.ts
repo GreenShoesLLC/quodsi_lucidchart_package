@@ -5,6 +5,7 @@ import { ValidationResult } from '../../validation/ValidationTypes';
 import { ModelItemData } from './ModelItemData';
 import { SimulationObjectType } from 'src/types/elements/SimulationObjectType';
 import { DiagramElementType } from 'src/types/DiagramElementType';
+import { EditorReferenceData } from 'src/types/EditorReferenceData';
 interface BaseSelectionPayload {
     selectionState: SelectionState;
     modelStructure?: ModelStructure;
@@ -52,6 +53,7 @@ export interface SelectionPayloads {
         simulationSelection: SimulationObjectSelectionState;
         modelItemData: ModelItemData;
         modelStructure: ModelStructure;
+        referenceData?: EditorReferenceData;
     };
     [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: BaseSelectionPayload & {
         unconvertedSelection: UnconvertedSelectionState;

@@ -12,7 +12,7 @@ import {
 import { StorageAdapter } from '../core/StorageAdapter';
 
 export class ModelDefinitionPageBuilder {
-    private loggingEnabled: boolean = false;
+    private loggingEnabled: boolean = true;
 
     constructor(private storageAdapter: StorageAdapter) { }
 

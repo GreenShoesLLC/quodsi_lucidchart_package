@@ -182,6 +182,64 @@ export class ModelPanel extends Panel {
         }
     }
 
+    private async createSimulationObjectPayload(
+        page: ElementProxy,  // Keep this as PageProxy for the actual page
+        item: ItemProxy,  // Change this to ItemProxy to accept both ElementProxy and PageProxy
+        basePayload: any
+    ): Promise<MessagePayloads[MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]> {
+        const metadata = this.modelManager.getMetadata(item);
+        if (!metadata) {
+            throw new Error('No metadata found for item');
+        }
+
+        const modelItemData = await this.buildModelItemData(item);
+        const simulationSelection: SimulationObjectSelectionState = {
+            pageId: page.id,  // Use the page parameter here
+            selectedId: item.id,
+            objectType: metadata.type
+        };
+
+        // Create referenceData if it's a Generator
+        this.log("DEBUG - Before Generator check:", {
+            itemId: item.id,
+            metadata,
+            type: metadata?.type,
+            isGenerator: metadata?.type === SimulationObjectType.Generator
+        });
+
+        let referenceData: EditorReferenceData = {};
+        if (metadata.type === SimulationObjectType.Generator) {
+            this.log("Building referenceData for Generator");
+            const modelDef = await this.modelManager.getModelDefinition();
+            this.log("ModelDefinition retrieved:", {
+                hasModelDef: !!modelDef,
+                entityCount: modelDef?.entities?.size(),
+                entities: modelDef?.entities?.getAll()
+            });
+
+            if (modelDef) {
+                const allEntities = modelDef.entities.getAll();
+                this.log("All entities before mapping:", allEntities);
+                referenceData.entities = allEntities.map(e => {
+                    this.log("Mapping entity:", e);
+                    return {
+                        id: e.id,
+                        name: e.name
+                    };
+                });
+                this.log("Final referenceData.entities:", referenceData.entities);
+            }
+        }
+
+        return {
+            ...basePayload,
+            simulationSelection,
+            modelItemData,
+            modelStructure: this.currentModelStructure,
+            referenceData
+        };
+    }
+
     private async handleConvertElement(
         data: MessagePayloads[MessageTypes.CONVERT_ELEMENT]
     ): Promise<void> {
@@ -209,36 +267,24 @@ export class ModelPanel extends Panel {
                 currentPage
             );
 
-            // Send simulation object selection state
-            const simulationSelection: SimulationObjectSelectionState = {
-                pageId: currentPage.id,
-                selectedId: data.elementId,
-                objectType: data.type
-            };
-
             await this.updateModelStructure();
 
             if (!this.currentModelStructure) {
                 throw new Error('Failed to update model structure after conversion');
             }
 
-            const expandedNodes = this.treeStateManager.getExpandedNodes();
-            const validationResult = await this.modelManager.validateModel();
-            const modelItemData = await this.buildModelItemData(element);
-
-            // Send SELECTION_CHANGED_SIMULATION_OBJECT
-            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT, {
-                selectionState: {
-                    pageId: currentPage.id,
-                    selectedIds: [data.elementId],
-                    selectionType: SelectionType.ACTIVITY // This should be mapped from data.type
-                },
-                simulationSelection,
-                modelItemData,
-                modelStructure: this.currentModelStructure,
-                expandedNodes,
-                validationResult
-            });
+            const payload = await this.createSimulationObjectPayload(
+                currentPage,
+                element,
+                {
+                    selectionState: {
+                        pageId: currentPage.id,
+                        selectedIds: [data.elementId],
+                        selectionType: SelectionType.ACTIVITY
+                    }
+                }
+            );
+            this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT, payload);
 
         } catch (error) {
             this.logError('Error converting element:', error);
@@ -377,7 +423,11 @@ export class ModelPanel extends Panel {
     }
 
     private async sendSelectionBasedMessage(selectionState: SelectionState, items: ItemProxy[], currentPage: ElementProxy): Promise<void> {
-
+        this.log("DEBUG - sendSelectionBasedMessage START - Selection Type:", selectionState.selectionType);
+        if (items.length === 1) {
+            const item = items[0];
+            this.log("DEBUG - Item metadata:", this.modelManager.getMetadata(item));
+        }
         // Convert ElementProxy to PageProxy if needed
         const page = new PageProxy(currentPage.id, this.client);
 
@@ -464,21 +514,12 @@ export class ModelPanel extends Panel {
                 if (items.length === 1) {
                     const item = items[0];
                     const metadata = this.modelManager.getMetadata(item);
-
                     if (metadata) {
-                        const modelItemData = await this.buildModelItemData(item);
-                        const simulationSelection: SimulationObjectSelectionState = {
-                            pageId: currentPage.id,
-                            selectedId: item.id,
-                            objectType: metadata.type
-                        };
-
-                        const payload = {
-                            ...basePayload,
-                            simulationSelection,
-                            modelItemData,
-                            modelStructure
-                        };
+                        const payload = await this.createSimulationObjectPayload(
+                            currentPage,  // Pass the page
+                            item,        // Pass the selected item
+                            basePayload
+                        );
                         this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT, payload);
                     }
                 }

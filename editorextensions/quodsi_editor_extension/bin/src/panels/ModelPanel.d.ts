@@ -21,6 +21,7 @@ export declare class ModelPanel extends Panel {
     private logError;
     private setupModelMessageHandlers;
     private updateModelStructure;
+    private createSimulationObjectPayload;
     private handleConvertElement;
     /**
      * Handles tree node expansion state changes
