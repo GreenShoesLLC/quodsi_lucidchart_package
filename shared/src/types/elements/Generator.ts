@@ -14,8 +14,8 @@ export class Generator implements SimulationObject {
       'New Generator', //name
       '{SomeActivityName}', // activityKeyId
       ModelDefaults.DEFAULT_ENTITY_ID,
-      Infinity, // periodicOccurrences
-      new Duration(1,PeriodUnit.HOURS,DurationType.CONSTANT), // periodIntervalDuration
+      10, // periodicOccurrences
+      new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT), // periodIntervalDuration
       1, // entitiesPerCreation
       new Duration(0, PeriodUnit.HOURS, DurationType.CONSTANT), // periodicStartDuration
       999 // maxEntities

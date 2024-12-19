@@ -619,7 +619,7 @@ export class ModelPanel extends Panel {
         }
     }
 
-    private handleReactReady(): void {
+    private async handleReactReady(): Promise<void> {
         if (this.reactAppReady) {
             this.logError('React app already ready, skipping initialization');
             return;
@@ -637,29 +637,16 @@ export class ModelPanel extends Panel {
             return;
         }
 
-        // Now initialize the model in response to a user-triggered event
-        this.initializeModelManager().then(() => {
-            const isModel = this.modelManager.isQuodsiModel(currentPage);
+        try {
+            // Now initialize the model in response to a user-triggered event
+            await this.initializeModelManager();
 
-            // If not a model, send appropriate message
-            if (!isModel) {
-                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
-                    pageId: currentPage.id
-                });
-                return;
-            }
-
-            // Only send initial state and handle selection if it is a model
-            this.sendInitialState(currentPage, true, document.id);
-
-            // Update selection using new pattern
-            if (this.currentSelection.selectedIds.length > 0) {
-                const selectedItems = viewport.getSelectedItems();
-                this.handleSelectionChange(selectedItems).catch(error =>
-                    this.handleError('Error sending selection update:', error)
-                );
-            }
-        });
+            // Get current selection state and send appropriate message
+            const selectedItems = viewport.getSelectedItems();
+            await this.handleSelectionChange(selectedItems);
+        } catch (error) {
+            this.handleError('Error during React ready initialization:', error);
+        }
     }
     /**
      * Sends initial state to React app

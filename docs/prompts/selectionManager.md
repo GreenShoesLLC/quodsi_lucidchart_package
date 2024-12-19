@@ -88,8 +88,23 @@ quodsi_editor_extension is sending the following messages to QuodsiApp whenever 
     SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
     SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
-QuodsiApp's messageHandlers have been setup to handle the new specific messages. messageHandlers found here:
+QuodsiApp's messageHandlers have been setup to handle the specific messages. messageHandlers.ts found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
+
+
+
+
+
+User launches LucidChart and open a document where the Page has been converted to a Model already.
+
+Since nothing is selected
+
+Extension.ts executes which instantiates ModelPanel.  
+Within LucidChart, the user clicks on the icon associated with the ModelPanel.  ModelPanic loads up the React app through Index.tsx.
+QuodsiApp.tsx is mounted.  REACT_APP_READY message is sent to quodsi_editor_extension from quodsim-react.  ModelPanel's handleReactReady method handles the REACT_APP_READY from quodsim-react.
+
+
+
 
 Here is an example workflow to start our discussion:
 

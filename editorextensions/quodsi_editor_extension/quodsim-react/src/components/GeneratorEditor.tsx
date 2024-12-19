@@ -63,7 +63,7 @@ const GeneratorEditor: React.FC<Props> = ({
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4 text-blue-500" />
               <label className="text-xs font-medium text-gray-700">
-                Entity Type
+                Entity to Generate
               </label>
             </div>
             <select
@@ -86,7 +86,7 @@ const GeneratorEditor: React.FC<Props> = ({
               <div className="flex items-center gap-1">
                 <Timer className="w-4 h-4 text-blue-500" />
                 <label className="text-xs font-medium text-gray-700">
-                  Per Generation
+                  Entity Qty
                 </label>
               </div>
               <input
@@ -103,7 +103,7 @@ const GeneratorEditor: React.FC<Props> = ({
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4 text-blue-500" />
                 <label className="text-xs font-medium text-gray-700">
-                  Count
+                  Occurrences
                 </label>
               </div>
               <input

@@ -30,7 +30,7 @@ var Generator = /** @class */ (function () {
         return new Generator(id, //id
         'New Generator', //name
         '{SomeActivityName}', // activityKeyId
-        ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, Infinity, // periodicOccurrences
+        ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, 10, // periodicOccurrences
         new Duration_1.Duration(1, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodIntervalDuration
         1, // entitiesPerCreation
         new Duration_1.Duration(0, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodicStartDuration
