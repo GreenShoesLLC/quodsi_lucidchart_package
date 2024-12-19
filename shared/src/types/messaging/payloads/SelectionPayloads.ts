@@ -40,15 +40,6 @@ export interface MultipleSelectionState {
 
 
 export interface SelectionPayloads {
-    // Keep legacy format
-    [MessageTypes.SELECTION_CHANGED]: {
-        selectionState: SelectionState;  // Old type
-        elementData?: ModelItemData[];
-        modelStructure?: ModelStructure;
-        expandedNodes?: string[];
-        validationResult?: ValidationResult;
-    };
-
     [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: {
         pageId: string;  // Just keep the page ID for reference
     };

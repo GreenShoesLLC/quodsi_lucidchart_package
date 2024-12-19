@@ -1,5 +1,7 @@
-import { ValidationMessage } from "@quodsi/shared";
 import React from "react";
+import { ValidationMessage } from "@quodsi/shared";
+import ValidationMessageItem from "../ModelPanelAccordion/ValidationMessageItem";
+
 
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
@@ -12,51 +14,47 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   selectedElementId,
   showSelectedOnly,
 }) => {
-  console.group("ValidationMessageList Render");
-  console.log({
-    receivedMessages: messages,
-    messageCount: messages?.length,
-    messageTypes: messages?.map((m) => m.type),
-    hasValidStructure: messages?.every(
-      (m) => typeof m.type === "string" && typeof m.message === "string"
-    ),
-  });
+  // Severity ranking for sorting (lower number = higher priority)
+  const getSeverityRank = (type: string): number => {
+    switch (type.toLowerCase()) {
+      case "error":
+        return 0;
+      case "warning":
+        return 1;
+      default:
+        return 2;
+    }
+  };
 
-  React.useEffect(() => {
-    console.log("ValidationMessageList messages changed:", {
-      newMessageCount: messages?.length,
-      messageContent: messages?.map((m) => ({
-        type: m.type,
-        message: m.message.substring(0, 50) + "...", // Truncate long messages
-      })),
+  // Filter and sort messages
+  const processedMessages = React.useMemo(() => {
+    // First filter messages if needed
+    const filtered =
+      showSelectedOnly && selectedElementId && selectedElementId !== "0_0"
+        ? messages.filter((message) => message.elementId === selectedElementId)
+        : messages;
+
+    // Then sort by severity
+    return [...filtered].sort((a, b) => {
+      const severityA = getSeverityRank(a.type);
+      const severityB = getSeverityRank(b.type);
+      return severityA - severityB;
     });
-  }, [messages]);
+  }, [messages, selectedElementId, showSelectedOnly]);
 
-  // Performance monitoring
-  const renderStart = performance.now();
-  React.useEffect(() => {
-    const renderTime = performance.now() - renderStart;
-    console.log(
-      `ValidationMessageList render time: ${renderTime.toFixed(2)}ms`
-    );
-  });
-
-  console.groupEnd();
-  // Filter messages based on selectedElementId if showSelectedOnly is true
-  const filteredMessages =
-    showSelectedOnly && selectedElementId
-      ? messages.filter((message) => message.elementId === selectedElementId)
-      : messages;
   return (
-    <div className="validation-message-list">
-      {filteredMessages.map((message, index) => (
-        <div
-          key={`${message.type}-${index}`}
-          className={`validation-message ${message.type}`}
-        >
-          {message.message}
-        </div>
+    <div className="space-y-2 p-4">
+      {processedMessages.map((message, index) => (
+        <ValidationMessageItem
+          key={`${message.elementId}-${index}`}
+          message={message}
+        />
       ))}
+      {processedMessages.length === 0 && (
+        <div className="text-gray-500 text-sm py-2 text-center">
+          No validation messages to display
+        </div>
+      )}
     </div>
   );
 };

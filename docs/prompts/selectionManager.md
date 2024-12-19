@@ -88,7 +88,7 @@ quodsi_editor_extension is sending the following messages to QuodsiApp whenever 
     SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
     SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
-QuodsiApp's messageHandlers have been setup to handle the specific messages. messageHandlers.ts found here:
+QuodsiApp's messageHandlers have been setup to handle the specific messages. The React based messageHandlers.ts found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
 
 

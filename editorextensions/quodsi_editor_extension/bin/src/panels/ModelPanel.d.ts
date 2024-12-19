@@ -60,10 +60,6 @@ export declare class ModelPanel extends Panel {
     private handleRemoveModel;
     private handleReactReady;
     /**
-     * Sends initial state to React app
-     */
-    private sendInitialState;
-    /**
      * Handles page conversion request
      */
     private handleConvertRequest;

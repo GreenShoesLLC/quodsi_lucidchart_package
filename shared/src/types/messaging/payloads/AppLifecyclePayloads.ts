@@ -7,18 +7,6 @@ import { ModelData } from './ModelData';
 export interface AppLifecyclePayloads {
     [MessageTypes.REACT_APP_READY]: undefined;
 
-    [MessageTypes.INITIAL_STATE]: {
-        isModel: boolean;
-        pageId: string;
-        documentId: string;
-        canConvert: boolean;
-        // modelData: JsonSerializable | null;
-        modelData: ModelData | null;
-        selectionState: SelectionState;
-        modelStructure?: ModelStructure;
-        expandedNodes?: string[];
-    };
-
     [MessageTypes.ERROR]: {
         error: string;
         details?: JsonSerializable;

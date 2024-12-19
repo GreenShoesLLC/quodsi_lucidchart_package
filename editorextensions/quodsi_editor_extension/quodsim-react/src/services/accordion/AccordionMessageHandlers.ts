@@ -5,31 +5,6 @@ export const createAccordionMessageHandlers = (
     setState: React.Dispatch<React.SetStateAction<AccordionState>>,
     sendMessage: (type: MessageTypes, payload?: any) => void
 ) => ({
-    handleInitialState: (data: MessagePayloads[MessageTypes.INITIAL_STATE]) => {
-        setState({
-            modelStructure: data.modelStructure ?? null,
-            validationState: {
-                summary: { errorCount: 0, warningCount: 0 },
-                messages: []
-            },
-            currentElement: null,
-            selectionState: data.selectionState
-        });
-    },
-
-    handleSelectionChanged: (data: MessagePayloads[MessageTypes.SELECTION_CHANGED]) => {
-        setState(prev => ({
-            ...prev,
-            selectionState: data.selectionState,
-            currentElement: data.elementData?.[0] || null
-        }));
-
-        if (data.elementData?.[0]?.id) {
-            sendMessage(MessageTypes.GET_ELEMENT_DATA, {
-                elementId: data.elementData[0].id
-            });
-        }
-    },
 
     handleElementData: (data: MessagePayloads[MessageTypes.ELEMENT_DATA]) => {
         setState(prev => ({

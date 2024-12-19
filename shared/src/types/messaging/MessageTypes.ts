@@ -8,10 +8,8 @@ import { SelectionPayloads } from './payloads';
 export enum MessageTypes {
     // React App Lifecycle
     REACT_APP_READY = 'reactAppReady',
-    INITIAL_STATE = 'initialState',
 
     // Selection Management
-    SELECTION_CHANGED = 'selectionChanged',
     SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
     SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
     SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected

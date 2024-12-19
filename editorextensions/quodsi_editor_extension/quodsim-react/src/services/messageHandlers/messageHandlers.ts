@@ -23,17 +23,6 @@ export type MessageHandler<T extends MessageTypes> = (
 export const messageHandlers: Partial<{
     [T in MessageTypes]: MessageHandler<T>;
 }> = {
-    [MessageTypes.INITIAL_STATE]: (data, { setState }) => {
-        console.log("[MessageHandlers] Processing INITIAL_STATE:", data);
-        setState(prev => ({
-            ...prev,
-            modelStructure: data.modelStructure || { elements: [], hierarchy: {} },
-            modelName: (data.modelData as ModelData)?.name || "New Model",
-            documentId: data.documentId,
-            expandedNodes: new Set<string>(data.expandedNodes || []),
-            isReady: true
-        }));
-    },
     [MessageTypes.REACT_APP_READY]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing REACT_APP_READY");
         setState(prev => ({
@@ -41,58 +30,6 @@ export const messageHandlers: Partial<{
             isReady: true
         }));
     },
-    [MessageTypes.SELECTION_CHANGED]: (data, { setState, sendMessage }) => {
-        console.log("[MessageHandlers] Processing SELECTION_CHANGED:", data);
-
-        setState(prev => {
-            // Early return if no element data
-            const elementData = data?.elementData?.[0];
-            if (!elementData) {
-                return {
-                    ...prev,
-                    currentElement: null,
-                    modelStructure: data?.modelStructure || prev.modelStructure,
-                    expandedNodes: new Set<string>(data?.expandedNodes || Array.from(prev.expandedNodes)),
-                };
-            }
-
-            // If we already have this element selected with the same state, no need to update
-            if (prev.currentElement?.data?.id === elementData.id &&
-                prev.currentElement?.metadata?.isUnconverted === elementData.metadata?.isUnconverted) {
-                return prev;
-            }
-
-            const currentElement: ModelItemData = {
-                data: {
-                    ...elementData.data,
-                    id: elementData.id
-                },
-                metadata: elementData.metadata,
-                isUnconverted: elementData.metadata?.isUnconverted,
-                id: elementData.id,
-                name: elementData.name
-            };
-
-            return {
-                ...prev,
-                currentElement,
-                modelStructure: data.modelStructure || prev.modelStructure,
-                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
-            };
-        });
-
-        // Only request element data if we have a new element that needs data
-        const elementData = data?.elementData?.[0];
-        if (elementData?.id &&
-            !elementData.metadata?.isUnconverted &&
-            !elementData.data) {
-            console.log("[MessageHandlers] Requesting element data for:", elementData.id);
-            sendMessage(MessageTypes.GET_ELEMENT_DATA, {
-                elementId: elementData.id,
-            });
-        }
-    },
-
     [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_NO_MODEL:", data);
         setState(prev => ({

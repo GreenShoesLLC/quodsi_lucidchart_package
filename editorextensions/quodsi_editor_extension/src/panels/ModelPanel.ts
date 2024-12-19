@@ -527,19 +527,18 @@ export class ModelPanel extends Panel {
             }
 
             default: {
-                // Fallback to legacy selection changed message
-                const elementData = await Promise.all(
-                    items.map(item => this.buildModelItemData(item))
-                );
+                // Build model item data for the page since it's a model
+                const modelItemData = await this.buildModelItemData(page);
 
                 const payload = {
-                    selectionState,
-                    elementData,
-                    modelStructure,
-                    expandedNodes,
-                    validationResult
+                    ...basePayload,
+                    pageSelection: {
+                        pageId: currentPage.id
+                    },
+                    modelStructure,  // Already in basePayload
+                    modelItemData    // Add the page's model data
                 };
-                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, payload);
+                this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL, payload);
                 break;
             }
         }
@@ -649,38 +648,6 @@ export class ModelPanel extends Panel {
         }
     }
     /**
-     * Sends initial state to React app
-     */
-    private sendInitialState(page: PageProxy, isModel: boolean, documentId: string): void {
-        this.log('Sending initial state with full details:', {
-            isModel,
-            pageId: page.id,
-            documentId,
-            pageTitle: page.getTitle(),
-            canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
-            hasModelData: isModel ? 'yes' : 'no'
-        });
-        this.updateModelStructure();
-
-        // Load saved expanded nodes from storage
-        const savedExpandedNodes = this.modelManager.getExpandedNodes(page);
-        this.log('Loaded expanded nodes from storage:', savedExpandedNodes);
-        if (savedExpandedNodes?.length) {
-            this.expandedNodes = new Set(savedExpandedNodes);
-        }
-
-        this.sendTypedMessage(MessageTypes.INITIAL_STATE, {
-            isModel,
-            pageId: page.id,
-            documentId,
-            canConvert: this.conversionService ? this.conversionService.canConvertPage(page) : false,
-            modelData: isModel ? this.modelManager.getElementData(page) : null,
-            selectionState: this.currentSelection,
-            modelStructure: this.currentModelStructure,
-            expandedNodes: Array.from(this.expandedNodes)
-        });
-    }
-    /**
      * Handles page conversion request
      */
     private async handleConvertRequest(): Promise<void> {
@@ -698,11 +665,7 @@ export class ModelPanel extends Panel {
         }
 
         try {
-
-            // this.sendTypedMessage(MessageTypes.CONVERSION_STARTED); --Not implemented in QuodsiApp yet
             const result = await this.conversionService.convertPage(currentPage);
-            // this.sendTypedMessage(MessageTypes.CONVERSION_COMPLETE, result);--Not implemented in QuodsiApp yet
-
             const selectedItems = viewport.getSelectedItems();
             await this.handleSelectionChange(selectedItems);
 
