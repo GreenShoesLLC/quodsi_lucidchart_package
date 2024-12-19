@@ -272,7 +272,7 @@ const QuodsiApp: React.FC = () => {
   return (
     <div className="flex flex-col h-screen">
       {state.error && <ErrorDisplay error={state.error} />}
-      {state.isProcessing && <ProcessingIndicator />}
+      {/* {state.isProcessing && <ProcessingIndicator />} */}
       <div className="flex-grow overflow-auto">
         <ModelPanelAccordion
           modelStructure={state.modelStructure}
