@@ -9,7 +9,6 @@ export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';
 export * from './types/SelectionType';
 export * from './types/simComponentType';
-export * from './types/simComponentTypes';
 export * from './types/SimulationElement';
 export * from './types/SimulationElementFactory';
 export * from './types/SimulationElementWrapper';

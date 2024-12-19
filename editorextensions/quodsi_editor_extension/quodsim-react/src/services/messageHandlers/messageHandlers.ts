@@ -93,20 +93,21 @@ export const messageHandlers: Partial<{
         });
     },
 
-        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (data, { setState, sendMessage }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", data);
+        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState, sendMessage }) => {
+            console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", payload);
             setState(prev => {
                 const currentElement: ModelItemData = {
-                    ...data.modelItemData,
-                    isUnconverted: false
+                    ...payload.modelItemData,
+                    isUnconverted: false,
                 };
 
                 return {
                     ...prev,
+                    diagramElementType: payload.simulationSelection.diagramElementType,
                     currentElement,
-                    modelStructure: data.modelStructure,
-                    expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
-                    referenceData: data.referenceData || {  // Use provided data or empty default
+                    modelStructure: payload.modelStructure,
+                    expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
+                    referenceData: payload.referenceData || {  // Use provided data or empty default
                         entities: [],
                         resources: []
                     },
@@ -179,20 +180,21 @@ export const messageHandlers: Partial<{
             }
         },
 
-        [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: (data, { setState }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_UNCONVERTED:", data);
+        [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: (payload, { setState }) => {
+            console.log("[MessageHandlers] Processing SELECTION_CHANGED_UNCONVERTED:", payload);
 
             setState(prev => {
                 const currentElement: ModelItemData = {
-                    ...data.modelItemData,
+                    ...payload.modelItemData,
                     isUnconverted: true
                 };
 
                 return {
                     ...prev,
+                    diagramElementType: payload.unconvertedSelection.diagramElementType,
                     currentElement,
-                    modelStructure: data.modelStructure || prev.modelStructure,
-                    expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
+                    modelStructure: payload.modelStructure || prev.modelStructure,
+                    expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
                     showModelName: true,           // Show model name
                     showModelItemName: false,      // Don't show model item name
                     visibleSections: {             // Only show header

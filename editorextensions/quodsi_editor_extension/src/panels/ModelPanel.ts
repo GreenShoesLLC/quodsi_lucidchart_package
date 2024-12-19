@@ -29,7 +29,6 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
-    SimComponentFactory,
     SimulationObjectTypeFactory,
 
 } from '@quodsi/shared';
@@ -38,12 +37,6 @@ import { ConversionService } from '../services/conversion/ConversionService';
 import { SelectionManager, TreeStateManager } from '../managers';
 
 
-type ComponentOperation = {
-    type: MessageTypes.ACTIVITY_SAVED | MessageTypes.CONNECTOR_SAVED |
-    MessageTypes.ENTITY_SAVED | MessageTypes.GENERATOR_SAVED |
-    MessageTypes.RESOURCE_SAVED;
-    objectType: SimulationObjectType;
-};
 
 export class ModelPanel extends Panel {
     private static readonly LOG_PREFIX = '[ModelPanel]';
@@ -129,11 +122,8 @@ export class ModelPanel extends Panel {
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
         this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
-        this.messaging.onMessage(MessageTypes.MODEL_SAVED, (data) => this.handleModelSaved(data));
 
         // Element Operations
-        this.messaging.onMessage(MessageTypes.GET_ELEMENT_DATA, (data) =>
-            this.handleGetElementData(data.elementId));
         this.messaging.onMessage(MessageTypes.UPDATE_ELEMENT_DATA, (data) =>
             this.handleUpdateElementData(data));
 
@@ -144,25 +134,6 @@ export class ModelPanel extends Panel {
             this.handleTreeStateUpdate(data.expandedNodes));
         this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
             this.handleExpandPath(data.nodeId));
-
-        // Component Operations with type safety
-        const componentOperations: ComponentOperation[] = [
-            { type: MessageTypes.ACTIVITY_SAVED, objectType: SimulationObjectType.Activity },
-            { type: MessageTypes.CONNECTOR_SAVED, objectType: SimulationObjectType.Connector },
-            { type: MessageTypes.ENTITY_SAVED, objectType: SimulationObjectType.Entity },
-            { type: MessageTypes.GENERATOR_SAVED, objectType: SimulationObjectType.Generator },
-            { type: MessageTypes.RESOURCE_SAVED, objectType: SimulationObjectType.Resource }
-        ];
-
-        componentOperations.forEach(({ type, objectType }) => {
-            this.messaging.onMessage(type, (payload: { elementId: string; data: JsonSerializable }) => {
-                this.handleUpdateElementData({
-                    elementId: payload.elementId,
-                    data: payload.data,
-                    type: objectType
-                });
-            });
-        });
 
         this.logError('Setting up message handlers END');
     }
@@ -196,7 +167,8 @@ export class ModelPanel extends Panel {
         const simulationSelection: SimulationObjectSelectionState = {
             pageId: page.id,  // Use the page parameter here
             selectedId: item.id,
-            objectType: metadata.type
+            objectType: metadata.type,
+            diagramElementType: item instanceof BlockProxy ? DiagramElementType.BLOCK : DiagramElementType.LINE
         };
 
         // Create referenceData if it's a Generator
@@ -492,7 +464,7 @@ export class ModelPanel extends Panel {
                     const unconvertedSelection: UnconvertedSelectionState = {
                         pageId: currentPage.id,
                         selectedId: item.id,
-                        elementType: item instanceof BlockProxy ? DiagramElementType.BLOCK : DiagramElementType.LINE
+                        diagramElementType: item instanceof BlockProxy ? DiagramElementType.BLOCK : DiagramElementType.LINE
                     };
 
                     const payload = {
@@ -675,45 +647,6 @@ export class ModelPanel extends Panel {
                 error: error instanceof Error ? error.message : 'Unknown error'
             });
         }
-    }
-
-    /**
-     * Handles element data request
-     */
-    private async handleGetElementData(elementId: string): Promise<void> {
-        const element = this.client.getElementProxy(elementId);  // or whatever method you currently use
-
-        if (!element) {
-            this.logError('Element not found:', elementId);
-            return;
-        }
-
-        const rawData = this.modelManager.getElementData(element);
-        const metadata = this.modelManager.getMetadata(element) || {} as MetaData;
-
-        // Add isUnconverted flag if this element is in our unconverted set
-        // Check if element is unconverted
-        if (this.modelManager.isUnconvertedElement(element)) {
-            metadata.isUnconverted = true;
-        }
-        const referenceData: EditorReferenceData = {};
-        // Build reference data based on element type
-        if (metadata?.type === SimulationObjectType.Generator) {
-            const modelDef = await this.modelManager.getModelDefinition();
-            if (modelDef) {
-                referenceData.entities = modelDef.entities.getAll().map(e => ({
-                    id: e.id,
-                    name: e.name
-                }));
-            }
-        }
-        // Use your existing message sending code but include the updated metadata
-        this.sendTypedMessage(MessageTypes.ELEMENT_DATA, {
-            id: elementId,
-            data: rawData as JsonSerializable,
-            metadata: metadata,
-            referenceData: referenceData
-        });
     }
 
     /**

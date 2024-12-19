@@ -17,15 +17,16 @@ interface BaseSelectionPayload {
 
 export interface UnconvertedSelectionState {
     pageId: string;
-    selectedId: string;  // Single ID since it's a single selection
-    elementType: DiagramElementType;
+    selectedId: string;  
+    diagramElementType: DiagramElementType;
 }
 
 
 export interface SimulationObjectSelectionState {
     pageId: string;
-    selectedId: string;  // Single ID since it's a single selection
-    objectType: SimulationObjectType;  // Direct use instead of mapping
+    selectedId: string;  
+    objectType: SimulationObjectType;  
+    diagramElementType: DiagramElementType;
 }
 
 export interface PageSelectionState {

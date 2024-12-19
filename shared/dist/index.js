@@ -25,7 +25,6 @@ __exportStar(require("./types/ProcessAnalysisResult"), exports);
 __exportStar(require("./types/SelectionState"), exports);
 __exportStar(require("./types/SelectionType"), exports);
 __exportStar(require("./types/simComponentType"), exports);
-__exportStar(require("./types/simComponentTypes"), exports);
 __exportStar(require("./types/SimulationElement"), exports);
 __exportStar(require("./types/SimulationElementFactory"), exports);
 __exportStar(require("./types/SimulationElementWrapper"), exports);

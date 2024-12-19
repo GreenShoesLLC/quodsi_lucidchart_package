@@ -8,6 +8,7 @@ import {
   ModelItemData,
   JsonObject,
   SimulationObjectType,
+  DiagramElementType,
 } from "@quodsi/shared";
 import { ModelTreeView } from "./ModelTreeView";
 import { ValidationMessageList } from "./ValidationMessageList";
@@ -20,6 +21,7 @@ interface ModelPanelAccordionProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
+  diagramElementType?: DiagramElementType;
   expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
   onValidate: () => void;
@@ -50,6 +52,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   modelName,
   validationState,
   currentElement,
+  diagramElementType,
   expandedNodes,
   onElementSelect,
   onValidate,
@@ -157,6 +160,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           onConvertPage={onConvertPage}
           onTypeChange={handleTypeChange}
           elementType={currentElement?.metadata?.type}
+          diagramElementType={diagramElementType}
         />
       )}
       <div className="flex-1 overflow-y-auto">

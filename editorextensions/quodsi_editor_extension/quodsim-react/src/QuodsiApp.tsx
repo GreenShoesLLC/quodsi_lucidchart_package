@@ -9,6 +9,7 @@ import {
   ExtensionMessaging,
   isValidMessage,
   ModelItemData,
+  DiagramElementType,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -28,6 +29,7 @@ export interface AppState {
   isProcessing: boolean;
   error: string | null;
   documentId: string | null;
+  diagramElementType?: DiagramElementType;
   expandedNodes: Set<string>;
   referenceData: EditorReferenceData;
   isReady: boolean;
@@ -49,6 +51,7 @@ const initialState: AppState = {
   isProcessing: false,
   error: null,
   documentId: null,
+  // diagramElementType: null,
   expandedNodes: new Set<string>(),
   referenceData: {
     entities: [],
@@ -279,6 +282,7 @@ const QuodsiApp: React.FC = () => {
           modelName={state.modelName}
           validationState={state.validationState}
           currentElement={state.currentElement}
+          diagramElementType={state.diagramElementType }
           expandedNodes={state.expandedNodes}
           onElementSelect={handleElementSelect}
           onValidate={handleValidate}

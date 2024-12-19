@@ -18,18 +18,14 @@ export enum MessageTypes {
 
     // Model Conversion
     CONVERT_PAGE = 'convertPage',
-    CONVERSION_STARTED = 'conversionStarted',
-    CONVERSION_COMPLETE = 'conversionComplete',
+
     CONVERSION_ERROR = 'conversionError',
 
     // Element Data Operations
     GET_ELEMENT_DATA = 'getElementData',
-    ELEMENT_DATA = 'elementData',
-    UPDATE_ELEMENT_DATA = 'updateElementData',
+    UPDATE_ELEMENT_DATA = 'updateElementData', //used in quodsi editors
     UPDATE_SUCCESS = 'updateSuccess',
     CONVERT_ELEMENT = 'convertElement',
-    // ELEMENT_TYPE_CONVERTED = 'elementTypeConverted',
-    
 
     // Model Validation
     VALIDATE_MODEL = 'validateModel',
@@ -39,18 +35,9 @@ export enum MessageTypes {
     ERROR = 'error',
 
     // Model Operations
-    MODEL_SAVED = 'modelSaved',
-    MODEL_LOADED = 'modelLoaded',
     REMOVE_MODEL = 'removeModel',
     MODEL_REMOVED = 'modelRemoved',
     SIMULATE_MODEL = 'simulateModel',
-
-    // Component Operations
-    ACTIVITY_SAVED = 'activitySaved',
-    CONNECTOR_SAVED = 'connectorSaved',
-    ENTITY_SAVED = 'entitySaved',
-    GENERATOR_SAVED = 'generatorSaved',
-    RESOURCE_SAVED = 'resourceSaved',
 
     // Tree View State Management
     TREE_STATE_UPDATE = 'treeStateUpdate',

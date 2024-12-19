@@ -1,9 +1,8 @@
 import React from "react";
-import { SimComponentType, SimulationObjectType } from "@quodsi/shared";
+import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
 import { ValidationState } from "@quodsi/shared/dist/types/accordion/ValidationState";
 import { ModelItemData } from "@quodsi/shared/dist/types/messaging/payloads/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
-import { typeMappers } from "src/utils/typeMappers";
 import { Trash2 } from "lucide-react";
 
 interface HeaderProps {
@@ -14,6 +13,7 @@ interface HeaderProps {
   showModelName: boolean;
   showModelItemName: boolean;
   elementType?: SimulationObjectType;
+  diagramElementType?: DiagramElementType;
   onTypeChange: (elementId: string, newType: SimulationObjectType) => void;
   onRemoveComponent?: (elementId: string) => void;
   onSimulate?: () => void;
@@ -22,10 +22,9 @@ interface HeaderProps {
 }
 
 export class Header extends React.Component<HeaderProps> {
-  handleTypeChange = (newType: SimComponentType, elementId: string) => {
-    const simulationType = typeMappers.mapComponentTypeToSimulationType(newType);
+  handleTypeChange = (newType: SimulationObjectType, elementId: string) => {
     if (this.props.onTypeChange) {
-      this.props.onTypeChange(elementId, simulationType);
+      this.props.onTypeChange(elementId, newType);
     }
   };
 
@@ -63,6 +62,7 @@ export class Header extends React.Component<HeaderProps> {
       onRemoveModel,
       onConvertPage,
       elementType: propsElementType,
+      diagramElementType,
     } = this.props;
 
     // Handle case when no modelItemData exists (Convert button)
@@ -81,7 +81,8 @@ export class Header extends React.Component<HeaderProps> {
 
     const elementType =
       (modelItemData.metadata?.type as SimulationObjectType) ||
-      propsElementType;
+      propsElementType ||
+      SimulationObjectType.None;
 
     // Handle Model type buttons (Simulate, Remove Model, Validate)
     if (elementType === SimulationObjectType.Model) {
@@ -117,29 +118,23 @@ export class Header extends React.Component<HeaderProps> {
 
     // Handle unconverted items (Component Selector)
     if (modelItemData.isUnconverted) {
-      const currentComponentType = elementType
-        ? typeMappers.mapSimulationTypeToComponentType(elementType)
-        : SimComponentType.NONE;
-
       return (
         <SimulationComponentSelector
           elementId={modelItemData.id}
-          currentType={currentComponentType}
+          selectedType={elementType}
+          diagramElementType={diagramElementType}
           onTypeChange={this.handleTypeChange}
         />
       );
     }
 
     // Handle converted items (Component Selector and Remove button)
-    const currentComponentType = elementType
-      ? typeMappers.mapSimulationTypeToComponentType(elementType)
-      : SimComponentType.NONE;
-
     return (
       <div className="flex items-center gap-2">
         <SimulationComponentSelector
           elementId={modelItemData.id}
-          currentType={currentComponentType}
+          selectedType={elementType}
+          diagramElementType={diagramElementType}
           onTypeChange={this.handleTypeChange}
         />
         {!modelItemData.isUnconverted && this.props.onRemoveComponent && (

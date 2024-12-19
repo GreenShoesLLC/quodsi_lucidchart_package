@@ -64,10 +64,6 @@ export declare class ModelPanel extends Panel {
      */
     private handleConvertRequest;
     /**
-     * Handles element data request
-     */
-    private handleGetElementData;
-    /**
      * Handles element data update
      */
     private handleUpdateElementData;

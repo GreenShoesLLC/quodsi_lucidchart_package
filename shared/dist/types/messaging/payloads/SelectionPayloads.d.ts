@@ -15,12 +15,13 @@ interface BaseSelectionPayload {
 export interface UnconvertedSelectionState {
     pageId: string;
     selectedId: string;
-    elementType: DiagramElementType;
+    diagramElementType: DiagramElementType;
 }
 export interface SimulationObjectSelectionState {
     pageId: string;
     selectedId: string;
     objectType: SimulationObjectType;
+    diagramElementType: DiagramElementType;
 }
 export interface PageSelectionState {
     pageId: string;
@@ -30,13 +31,6 @@ export interface MultipleSelectionState {
     selectedIds: string[];
 }
 export interface SelectionPayloads {
-    [MessageTypes.SELECTION_CHANGED]: {
-        selectionState: SelectionState;
-        elementData?: ModelItemData[];
-        modelStructure?: ModelStructure;
-        expandedNodes?: string[];
-        validationResult?: ValidationResult;
-    };
     [MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]: {
         pageId: string;
     };
