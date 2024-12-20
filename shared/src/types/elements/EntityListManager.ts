@@ -1,6 +1,9 @@
-import { Entity } from "./Entity";
 import { ComponentListManager } from "./ComponentListManager";
+import { Entity } from "./Entity";
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export class EntityListManager extends ComponentListManager<Entity> {
-    // Entity-specific methods if needed
+    constructor() {
+        super(SimulationObjectType.Entity);
+    }
 }

@@ -1,7 +1,8 @@
 import React from "react";
 import { ValidationMessage } from "@quodsi/shared";
-import ValidationMessageItem from "../ModelPanelAccordion/ValidationMessageItem";
 
+import _ from "lodash";
+import ValidationMessageItem from "../ModelPanelAccordion/ValidationMessageItem";
 
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
@@ -14,7 +15,12 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   selectedElementId,
   showSelectedOnly,
 }) => {
-  // Severity ranking for sorting (lower number = higher priority)
+  // Create a unique key for messages that captures all relevant properties
+  const getMessageKey = (message: ValidationMessage): string => {
+    return `${message.type}_${message.elementId || ""}_${message.message}`;
+  };
+
+  // Get severity rank for sorting
   const getSeverityRank = (type: string): number => {
     switch (type.toLowerCase()) {
       case "error":
@@ -26,29 +32,44 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
     }
   };
 
-  // Filter and sort messages
+  // Process messages
   const processedMessages = React.useMemo(() => {
-    // First filter messages if needed
+    // First deduplicate messages using a more thorough comparison
+    const uniqueMessages = _.uniqWith(
+      messages,
+      (a, b) =>
+        a.type === b.type &&
+        a.message === b.message &&
+        a.elementId === b.elementId
+    );
+
+    // Then filter if needed
     const filtered =
       showSelectedOnly && selectedElementId && selectedElementId !== "0_0"
-        ? messages.filter((message) => message.elementId === selectedElementId)
-        : messages;
+        ? uniqueMessages.filter(
+            (message) => message.elementId === selectedElementId
+          )
+        : uniqueMessages;
 
-    // Then sort by severity
+    // Sort by severity (errors first, then warnings, then others)
     return [...filtered].sort((a, b) => {
-      const severityA = getSeverityRank(a.type);
-      const severityB = getSeverityRank(b.type);
-      return severityA - severityB;
+      return getSeverityRank(a.type) - getSeverityRank(b.type);
     });
   }, [messages, selectedElementId, showSelectedOnly]);
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log("ValidationMessageList processing:", {
+      originalCount: messages.length,
+      afterDeduplication: processedMessages.length,
+      selectedElementId,
+    });
+  }, [messages, processedMessages.length, selectedElementId]);
+
   return (
     <div className="space-y-2 p-4">
-      {processedMessages.map((message, index) => (
-        <ValidationMessageItem
-          key={`${message.elementId}-${index}`}
-          message={message}
-        />
+      {processedMessages.map((message) => (
+        <ValidationMessageItem key={getMessageKey(message)} message={message} />
       ))}
       {processedMessages.length === 0 && (
         <div className="text-gray-500 text-sm py-2 text-center">

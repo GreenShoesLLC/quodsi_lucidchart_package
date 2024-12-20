@@ -1,6 +1,6 @@
-import { Activity } from "./Activity";
 import { ComponentListManager } from "./ComponentListManager";
+import { Activity } from "./Activity";
 export declare class ActivityListManager extends ComponentListManager<Activity> {
-    getByCapacityThreshold(minCapacity: number): Activity[];
+    constructor();
 }
 //# sourceMappingURL=ActivityListManager.d.ts.map

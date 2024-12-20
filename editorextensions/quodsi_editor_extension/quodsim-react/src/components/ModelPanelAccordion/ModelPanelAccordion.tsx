@@ -177,7 +177,6 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
               onToggle={() => toggleSection("elementEditor")}
             />
           )}
-        {visibleSections.modelTree && <ModelTreeSection />}
         {visibleSections.validation && (
           <ValidationMessages
             validationState={validationState}
@@ -186,6 +185,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             onToggle={() => toggleSection("validation")}
           />
         )}
+        {visibleSections.modelTree && <ModelTreeSection />}
       </div>
     </div>
   );

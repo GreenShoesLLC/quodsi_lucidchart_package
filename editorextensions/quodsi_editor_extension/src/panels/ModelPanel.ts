@@ -229,7 +229,37 @@ export class ModelPanel extends Panel {
                 throw new Error(`Element not found in selection: ${data.elementId}`);
             }
 
+            // Get model definition from model manager
+            const modelDef = await this.modelManager.getModelDefinition();
+            if (!modelDef) {
+                throw new Error('Model definition not found');
+            }
+
+            // Get the appropriate list manager to get the next name
+            let nextName: string;
+            switch (data.type) {
+                case SimulationObjectType.Activity:
+                    nextName = modelDef.activities.getNextName();
+                    break;
+                case SimulationObjectType.Connector:
+                    nextName = modelDef.connectors.getNextName();
+                    break;
+                case SimulationObjectType.Generator:
+                    nextName = modelDef.generators.getNextName();
+                    break;
+                case SimulationObjectType.Resource:
+                    nextName = modelDef.resources.getNextName();
+                    break;
+                case SimulationObjectType.Entity:
+                    nextName = modelDef.entities.getNextName();
+                    break;
+                default:
+                    nextName = `New ${data.type}`;
+            }
+
+            // Create element with the next name
             const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.elementId);
+            defaultData.name = nextName;
 
             // Save element data using ModelManager
             await this.modelManager.saveElementData(

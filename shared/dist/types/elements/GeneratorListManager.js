@@ -17,14 +17,12 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GeneratorListManager = void 0;
 var ComponentListManager_1 = require("./ComponentListManager");
+var SimulationObjectType_1 = require("./SimulationObjectType");
 var GeneratorListManager = /** @class */ (function (_super) {
     __extends(GeneratorListManager, _super);
     function GeneratorListManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        return _super.call(this, SimulationObjectType_1.SimulationObjectType.Generator) || this;
     }
-    GeneratorListManager.prototype.getByEntityId = function (entityId) {
-        return this.getAll().filter(function (generator) { return generator.entityId === entityId; });
-    };
     return GeneratorListManager;
 }(ComponentListManager_1.ComponentListManager));
 exports.GeneratorListManager = GeneratorListManager;

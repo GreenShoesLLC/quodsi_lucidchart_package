@@ -27,10 +27,7 @@ var Generator = /** @class */ (function () {
         this.type = SimulationObjectType_1.SimulationObjectType.Generator;
     }
     Generator.createDefault = function (id) {
-        return new Generator(id, //id
-        'New Generator', //name
-        '{SomeActivityName}', // activityKeyId
-        ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, 10, // periodicOccurrences
+        return new Generator(id, 'New Generator', '{SomeActivityName}', ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, 10, // periodicOccurrences
         new Duration_1.Duration(1, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodIntervalDuration
         1, // entitiesPerCreation
         new Duration_1.Duration(0, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodicStartDuration

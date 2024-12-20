@@ -1,10 +1,17 @@
 import { SimulationObject } from "./SimulationObject";
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export abstract class ComponentListManager<T extends SimulationObject> {
     protected items: Map<string, T>;
+    private readonly type: SimulationObjectType;
 
-    constructor() {
+    constructor(type: SimulationObjectType) {
         this.items = new Map<string, T>();
+        this.type = type;
+    }
+
+    public getNextName(): string {
+        return `${this.type} ${this.items.size + 1}`;
     }
 
     add(item: T): void {

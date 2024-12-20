@@ -39,7 +39,7 @@ var SimulationObjectTypeFactory;
             default:
                 return {
                     id: lucidId,
-                    name: 'New Element',
+                    name: "New ".concat(type),
                     type: type
                 };
         }

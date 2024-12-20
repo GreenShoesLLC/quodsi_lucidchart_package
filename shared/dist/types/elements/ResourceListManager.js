@@ -17,14 +17,12 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ResourceListManager = void 0;
 var ComponentListManager_1 = require("./ComponentListManager");
+var SimulationObjectType_1 = require("./SimulationObjectType");
 var ResourceListManager = /** @class */ (function (_super) {
     __extends(ResourceListManager, _super);
     function ResourceListManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        return _super.call(this, SimulationObjectType_1.SimulationObjectType.Resource) || this;
     }
-    ResourceListManager.prototype.getByCapacity = function (capacity) {
-        return this.getAll().filter(function (resource) { return resource.capacity === capacity; });
-    };
     return ResourceListManager;
 }(ComponentListManager_1.ComponentListManager));
 exports.ResourceListManager = ResourceListManager;

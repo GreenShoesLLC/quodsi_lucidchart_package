@@ -17,17 +17,12 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConnectorListManager = void 0;
 var ComponentListManager_1 = require("./ComponentListManager");
+var SimulationObjectType_1 = require("./SimulationObjectType");
 var ConnectorListManager = /** @class */ (function (_super) {
     __extends(ConnectorListManager, _super);
     function ConnectorListManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        return _super.call(this, SimulationObjectType_1.SimulationObjectType.Connector) || this;
     }
-    ConnectorListManager.prototype.getIncomingConnectors = function (activityId) {
-        return this.getAll().filter(function (connector) { return connector.targetId === activityId; });
-    };
-    ConnectorListManager.prototype.getOutgoingConnectors = function (activityId) {
-        return this.getAll().filter(function (connector) { return connector.sourceId === activityId; });
-    };
     return ConnectorListManager;
 }(ComponentListManager_1.ComponentListManager));
 exports.ConnectorListManager = ConnectorListManager;

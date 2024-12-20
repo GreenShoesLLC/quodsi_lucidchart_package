@@ -17,14 +17,12 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ActivityListManager = void 0;
 var ComponentListManager_1 = require("./ComponentListManager");
+var SimulationObjectType_1 = require("./SimulationObjectType");
 var ActivityListManager = /** @class */ (function (_super) {
     __extends(ActivityListManager, _super);
     function ActivityListManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        return _super.call(this, SimulationObjectType_1.SimulationObjectType.Activity) || this;
     }
-    ActivityListManager.prototype.getByCapacityThreshold = function (minCapacity) {
-        return this.getAll().filter(function (activity) { return activity.capacity >= minCapacity; });
-    };
     return ActivityListManager;
 }(ComponentListManager_1.ComponentListManager));
 exports.ActivityListManager = ActivityListManager;

@@ -49,7 +49,7 @@ export namespace SimulationObjectTypeFactory {
             default:
                 return {
                     id: lucidId,
-                    name: 'New Element',
+                    name: `New ${type}`,
                     type: type
                 };
         }

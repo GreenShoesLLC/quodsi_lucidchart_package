@@ -178,7 +178,6 @@ const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.el
 
 C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\factories\SimulationObjectTypeFactory.ts
 
-
 handleConvertElement will then send MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT back to QuodsiApp.tsx.
 
 # SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected

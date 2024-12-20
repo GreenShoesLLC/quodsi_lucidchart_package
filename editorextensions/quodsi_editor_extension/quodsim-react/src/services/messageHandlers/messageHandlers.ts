@@ -93,35 +93,61 @@ export const messageHandlers: Partial<{
         });
     },
 
-        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState, sendMessage }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", payload);
-            setState(prev => {
-                const currentElement: ModelItemData = {
-                    ...payload.modelItemData,
-                    isUnconverted: false,
-                };
+    [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState, sendMessage }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT:", {
+            timestamp: new Date().toISOString(),
+            hasValidationResult: !!payload.validationResult,
+            validationMessagesCount: payload.validationResult?.messages?.length ?? 0
+        });
 
-                return {
-                    ...prev,
-                    diagramElementType: payload.simulationSelection.diagramElementType,
-                    currentElement,
-                    modelStructure: payload.modelStructure,
-                    expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
-                    referenceData: payload.referenceData || {  // Use provided data or empty default
-                        entities: [],
-                        resources: []
-                    },
-                    showModelName: true,
-                    showModelItemName: true,
-                    visibleSections: {
-                        header: true,
-                        validation: true,
-                        editor: true,
-                        modelTree: true
-                    }
-                };
+
+        setState(prev => {
+            console.log("[MessageHandlers] Previous state info:", {
+                hasValidationState: !!prev.validationState,
+                prevMessagesCount: prev.validationState?.messages?.length ?? 0
             });
-        },
+            const currentElement: ModelItemData = {
+                ...payload.modelItemData,
+                isUnconverted: false,
+            };
+            // Create a fresh validation state from the incoming message
+            const validationState = payload.validationResult ? {
+                messages: [...(payload.validationResult.messages || [])],
+                summary: {
+                    errorCount: payload.validationResult.errorCount,
+                    warningCount: payload.validationResult.warningCount
+                },
+                isValid: payload.validationResult.isValid,
+                errorCount: payload.validationResult.errorCount,
+                warningCount: payload.validationResult.warningCount
+            } : null;
+
+            console.log("[MessageHandlers] New validation state:", {
+                hasValidationState: !!validationState,
+                messagesCount: validationState?.messages?.length ?? 0
+            });
+            return {
+                ...prev,
+                diagramElementType: payload.simulationSelection.diagramElementType,
+                currentElement,
+                modelStructure: payload.modelStructure,
+                expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
+                referenceData: payload.referenceData || {  // Use provided data or empty default
+                    entities: [],
+                    resources: []
+                },
+                validationState,
+                showModelName: true,
+                showModelItemName: true,
+                visibleSections: {
+                    header: true,
+                    validation: true,
+                    editor: true,
+                    modelTree: true
+                }
+            };
+        });
+    },
 
         [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (data, deps) => {
             console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", data);
@@ -251,11 +277,40 @@ export function registerHandler<T extends MessageTypes>(
     handler: MessageHandler<T>,
     deps: MessageHandlerDependencies
 ): void {
+    // Keep track of last message timestamp and payload for each type
+    const lastProcessed = {
+        time: 0,
+        payload: ''
+    };
+
     messaging.onMessage(type, (payload: MessagePayloads[T]) => {
+        const currentTime = Date.now();
+        const currentPayload = JSON.stringify(payload);
+
+        // For selection change messages, implement deduplication
+        if (type === MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT) {
+            // Ignore duplicate messages within 200ms window
+            if (currentTime - lastProcessed.time < 200 &&
+                lastProcessed.payload === currentPayload) {
+                console.log(`[MessageHandlers] Skipping duplicate ${type} message at ${new Date().toISOString()}`, {
+                    timeSinceLastMessage: currentTime - lastProcessed.time,
+                    messageType: type
+                });
+                return;
+            }
+        }
+
+        // Update tracking
+        lastProcessed.time = currentTime;
+        lastProcessed.payload = currentPayload;
+
+        // Add debug logging (safely)
+        console.log(`[MessageHandlers] Processing message ${type} at ${new Date().toISOString()}`);
+
+        // Process the message
         handler(payload, deps);
     });
 }
-
 export function registerMessageHandlers(
     messaging: ExtensionMessaging,
     deps: MessageHandlerDependencies

@@ -1,6 +1,6 @@
-import { Resource } from "./Resource";
 import { ComponentListManager } from "./ComponentListManager";
+import { Resource } from "./Resource";
 export declare class ResourceListManager extends ComponentListManager<Resource> {
-    getByCapacity(capacity: number): Resource[];
+    constructor();
 }
 //# sourceMappingURL=ResourceListManager.d.ts.map

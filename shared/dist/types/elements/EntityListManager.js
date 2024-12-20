@@ -17,10 +17,11 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EntityListManager = void 0;
 var ComponentListManager_1 = require("./ComponentListManager");
+var SimulationObjectType_1 = require("./SimulationObjectType");
 var EntityListManager = /** @class */ (function (_super) {
     __extends(EntityListManager, _super);
     function EntityListManager() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        return _super.call(this, SimulationObjectType_1.SimulationObjectType.Entity) || this;
     }
     return EntityListManager;
 }(ComponentListManager_1.ComponentListManager));

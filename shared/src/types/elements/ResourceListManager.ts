@@ -1,8 +1,9 @@
-import { Resource } from "./Resource";
 import { ComponentListManager } from "./ComponentListManager";
+import { Resource } from "./Resource";
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export class ResourceListManager extends ComponentListManager<Resource> {
-    getByCapacity(capacity: number): Resource[] {
-        return this.getAll().filter(resource => resource.capacity === capacity);
+    constructor() {
+        super(SimulationObjectType.Resource);
     }
 }

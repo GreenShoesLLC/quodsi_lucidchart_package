@@ -2,9 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ComponentListManager = void 0;
 var ComponentListManager = /** @class */ (function () {
-    function ComponentListManager() {
+    function ComponentListManager(type) {
         this.items = new Map();
+        this.type = type;
     }
+    ComponentListManager.prototype.getNextName = function () {
+        return "".concat(this.type, " ").concat(this.items.size + 1);
+    };
     ComponentListManager.prototype.add = function (item) {
         this.items.set(item.id, item);
     };

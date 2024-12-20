@@ -188,21 +188,39 @@ export class ModelManager {
             throw new Error('Model not initialized');
         }
 
-        // Register with appropriate list manager
+        // Get default name format
+        const defaultName = `New ${element.type}`;
+
+        // Register with appropriate list manager and update name if needed
         switch (element.type) {
             case SimulationObjectType.Activity:
+                if (element.name === defaultName) {
+                    element.name = modelDef.activities.getNextName();
+                }
                 modelDef.activities.add(element as Activity);
                 break;
             case SimulationObjectType.Connector:
+                if (element.name === defaultName) {
+                    element.name = modelDef.connectors.getNextName();
+                }
                 modelDef.connectors.add(element as Connector);
                 break;
             case SimulationObjectType.Generator:
+                if (element.name === defaultName) {
+                    element.name = modelDef.generators.getNextName();
+                }
                 modelDef.generators.add(element as Generator);
                 break;
             case SimulationObjectType.Resource:
+                if (element.name === defaultName) {
+                    element.name = modelDef.resources.getNextName();
+                }
                 modelDef.resources.add(element as Resource);
                 break;
             case SimulationObjectType.Entity:
+                if (element.name === defaultName) {
+                    element.name = modelDef.entities.getNextName();
+                }
                 modelDef.entities.add(element as Entity);
                 break;
             default:

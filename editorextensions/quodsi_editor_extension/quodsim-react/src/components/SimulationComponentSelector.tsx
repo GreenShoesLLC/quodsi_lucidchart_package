@@ -87,12 +87,12 @@ export const SimulationComponentSelector: React.FC<
 
   return (
     <div className="space-y-2 p-2">
-      <div className="flex items-center gap-1 mb-1">
+      {/* <div className="flex items-center gap-1 mb-1">
         <Settings className="w-4 h-4 text-blue-500" />
         <span className="text-xs font-medium text-gray-700">
           Component Type
         </span>
-      </div>
+      </div> */}
       <select
         value={selectedType}
         onChange={(e) =>

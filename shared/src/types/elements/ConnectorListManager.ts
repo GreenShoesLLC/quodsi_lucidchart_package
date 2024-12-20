@@ -1,13 +1,9 @@
 import { ComponentListManager } from "./ComponentListManager";
 import { Connector } from "./Connector";
-
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export class ConnectorListManager extends ComponentListManager<Connector> {
-    getIncomingConnectors(activityId: string): Connector[] {
-        return this.getAll().filter(connector => connector.targetId === activityId);
-    }
-
-    getOutgoingConnectors(activityId: string): Connector[] {
-        return this.getAll().filter(connector => connector.sourceId === activityId);
+    constructor() {
+        super(SimulationObjectType.Connector);
     }
 }

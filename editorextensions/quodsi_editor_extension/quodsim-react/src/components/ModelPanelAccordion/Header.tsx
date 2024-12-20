@@ -35,6 +35,21 @@ export class Header extends React.Component<HeaderProps> {
     }
   };
 
+  getDisplayName = (modelItemData: ModelItemData | null): string => {
+    if (!modelItemData) return "No Selection";
+
+    // Try to get name from the data object first (SimulationObject data)
+    const simulationObjectName = (modelItemData.data as { name?: string })
+      ?.name;
+    if (simulationObjectName) return simulationObjectName;
+
+    // Fall back to ModelItemData.name if data.name isn't available
+    if (modelItemData.name) return modelItemData.name;
+
+    // Final fallback to id
+    return `Item ${modelItemData.id}`;
+  };
+
   renderModelName() {
     const { modelName, modelItemData, showModelName, showModelItemName } =
       this.props;
@@ -47,7 +62,7 @@ export class Header extends React.Component<HeaderProps> {
         )}
         {showModelItemName && modelItemData && (
           <span className="text-xs text-gray-500">
-            Page {modelItemData.name}
+            Item {this.getDisplayName(modelItemData)}
           </span>
         )}
       </div>

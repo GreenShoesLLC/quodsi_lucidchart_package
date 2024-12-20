@@ -1,8 +1,9 @@
 import { ComponentListManager } from "./ComponentListManager";
 import { Generator } from "./Generator";
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export class GeneratorListManager extends ComponentListManager<Generator> {
-    getByEntityId(entityId: string): Generator[] {
-        return this.getAll().filter(generator => generator.entityId === entityId);
+    constructor() {
+        super(SimulationObjectType.Generator);
     }
 }
