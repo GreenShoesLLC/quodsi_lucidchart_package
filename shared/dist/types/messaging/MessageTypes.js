@@ -28,6 +28,10 @@ var MessageTypes;
     MessageTypes["REMOVE_MODEL"] = "removeModel";
     MessageTypes["MODEL_REMOVED"] = "modelRemoved";
     MessageTypes["SIMULATE_MODEL"] = "simulateModel";
+    MessageTypes["SIMULATION_STARTED"] = "SIMULATION_STARTED";
+    MessageTypes["SIMULATION_STATUS_UPDATE"] = "SIMULATION_STATUS_UPDATE";
+    MessageTypes["SIMULATION_STATUS_CHECK"] = "SIMULATION_STATUS_CHECK";
+    MessageTypes["SIMULATION_STATUS_ERROR"] = "SIMULATION_STATUS_ERROR";
     // Tree View State Management
     MessageTypes["TREE_STATE_UPDATE"] = "treeStateUpdate";
     MessageTypes["TREE_NODE_TOGGLE"] = "treeNodeToggle";

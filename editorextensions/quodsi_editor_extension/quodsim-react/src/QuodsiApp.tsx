@@ -10,6 +10,7 @@ import {
   isValidMessage,
   ModelItemData,
   DiagramElementType,
+  PageStatus,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -20,6 +21,7 @@ import {
   messageHandlers,
   registerHandler,
 } from "./services/messageHandlers/messageHandlers";
+import { useSimulationStatus } from "./hooks/useSimulationStatus";
 
 export interface AppState {
   modelStructure: ModelStructure | null;
@@ -40,6 +42,12 @@ export interface AppState {
     validation: boolean;
     editor: boolean;
     modelTree: boolean;
+  };
+  simulationStatus: {
+    currentStatus: PageStatus | null;
+    isChecking: boolean;
+    error: string | null;
+    lastChecked: string | null;
   };
 }
 
@@ -67,6 +75,12 @@ const initialState: AppState = {
     editor: true,
     modelTree: true,
   },
+  simulationStatus: {
+    currentStatus: null,
+    isChecking: false,
+    error: null,
+    lastChecked: null
+  },
 };
 
 const QuodsiApp: React.FC = () => {
@@ -90,6 +104,9 @@ const QuodsiApp: React.FC = () => {
     []
   );
 
+
+  useSimulationStatus(state.documentId || "", 30);
+  
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
@@ -298,6 +315,7 @@ const QuodsiApp: React.FC = () => {
           onRemoveModel={handleRemoveModel}
           onConvertPage={handleConvertPage}
           onElementTypeChange={handleElementTypeChange}
+          simulationStatus={state.simulationStatus}
         />
       </div>
     </div>

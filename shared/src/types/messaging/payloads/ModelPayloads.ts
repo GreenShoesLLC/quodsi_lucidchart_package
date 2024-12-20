@@ -1,3 +1,4 @@
+import { PageStatus } from 'src/types/PageStatus';
 import { MessageTypes } from '../MessageTypes';
 
 export interface ModelPayloads {
@@ -10,4 +11,16 @@ export interface ModelPayloads {
     [MessageTypes.REMOVE_MODEL]: undefined;
     [MessageTypes.MODEL_REMOVED]: undefined;
     [MessageTypes.SIMULATE_MODEL]: undefined;
+    [MessageTypes.SIMULATION_STATUS_UPDATE]: {
+        status: PageStatus;
+    };
+    [MessageTypes.SIMULATION_STATUS_CHECK]: {
+        documentId: string;
+    };
+    [MessageTypes.SIMULATION_STATUS_ERROR]: {
+        error: string;
+    };
+    [MessageTypes.SIMULATION_STARTED]: {
+        documentId: string;
+    };
 }

@@ -4,14 +4,13 @@ import {
   ModelStructure,
   ValidationState,
   EditorReferenceData,
-  SimComponentType,
   ModelItemData,
   JsonObject,
   SimulationObjectType,
   DiagramElementType,
+  PageStatus,
 } from "@quodsi/shared";
 import { ModelTreeView } from "./ModelTreeView";
-import { ValidationMessageList } from "./ValidationMessageList";
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
 import { Header } from "./Header";
@@ -45,6 +44,12 @@ interface ModelPanelAccordionProps {
     elementId: string,
     newType: SimulationObjectType
   ) => void;
+    simulationStatus: {
+      currentStatus: PageStatus | null;
+      isChecking: boolean;
+      error: string | null;
+      lastChecked: string | null;
+    };
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -68,6 +73,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onRemoveModel,
   onConvertPage,
   onElementTypeChange,
+  simulationStatus,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
@@ -92,7 +98,10 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     toggleSection("elementEditor");
   };
 
-  const handleTypeChange = (elementId: string, newType: SimulationObjectType) => {
+  const handleTypeChange = (
+    elementId: string,
+    newType: SimulationObjectType
+  ) => {
     onElementTypeChange(elementId, newType);
   };
 
@@ -161,6 +170,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           onTypeChange={handleTypeChange}
           elementType={currentElement?.metadata?.type}
           diagramElementType={diagramElementType}
+          simulationStatus={simulationStatus}
         />
       )}
       <div className="flex-1 overflow-y-auto">

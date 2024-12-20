@@ -20,6 +20,7 @@ export declare class ModelPanel extends Panel {
     private log;
     private logError;
     private setupModelMessageHandlers;
+    private handleSimulationStatusUpdate;
     private updateModelStructure;
     private createSimulationObjectPayload;
     private handleConvertElement;
@@ -67,6 +68,7 @@ export declare class ModelPanel extends Panel {
      * Handles element data update
      */
     private handleUpdateElementData;
+    private handleSimulateModel;
     /**
      * Handles model validation request
      */

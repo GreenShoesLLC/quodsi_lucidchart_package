@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 /**
  * Shape data storage format
@@ -13,6 +13,7 @@ export declare class StorageAdapter {
     private static readonly DATA_KEY;
     private static readonly META_KEY;
     private static readonly EXPANDED_NODES_KEY;
+    private static readonly SIMULATION_STATUS_KEY;
     private static readonly CURRENT_VERSION;
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -33,6 +34,18 @@ export declare class StorageAdapter {
      * Sets the expanded nodes state for a page
      */
     setExpandedNodes(page: ElementProxy, nodeIds: string[]): void;
+    /**
+     * Sets the simulation status for a page
+     */
+    setSimulationStatus(page: ElementProxy, status: PageStatus): void;
+    /**
+     * Gets the simulation status for a page
+     */
+    getSimulationStatus(page: ElementProxy): PageStatus | null;
+    /**
+     * Clears the simulation status for a page
+     */
+    clearSimulationStatus(page: ElementProxy): void;
     /**
      * Clears the expanded nodes state for a page
      */

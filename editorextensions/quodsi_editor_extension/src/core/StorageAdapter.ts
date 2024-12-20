@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { SimulationObjectType } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 
 /**
@@ -20,6 +20,7 @@ export class StorageAdapter {
     private static readonly DATA_KEY = 'q_data';
     private static readonly META_KEY = 'q_meta';
     private static readonly EXPANDED_NODES_KEY = 'q_expanded_nodes';
+    private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
@@ -100,6 +101,55 @@ export class StorageAdapter {
         }
     }
 
+    /**
+     * Sets the simulation status for a page
+     */
+    public setSimulationStatus(page: ElementProxy, status: PageStatus): void {
+        try {
+            this.log('Setting simulation status for page:', {
+                pageId: page.id,
+                status
+            });
+            const serializedStatus = JSON.stringify(status);
+            page.shapeData.set(StorageAdapter.SIMULATION_STATUS_KEY, serializedStatus);
+            this.log('Successfully set simulation status');
+        } catch (error) {
+            this.logError('Error setting simulation status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the simulation status for a page
+     */
+    public getSimulationStatus(page: ElementProxy): PageStatus | null {
+        try {
+            this.log('Getting simulation status for page:', page.id);
+            const statusStr = page.shapeData.get(StorageAdapter.SIMULATION_STATUS_KEY);
+            if (!statusStr || typeof statusStr !== 'string') {
+                this.log('No simulation status found');
+                return null;
+            }
+            const status = JSON.parse(statusStr) as PageStatus;
+            this.log('Retrieved simulation status:', status);
+            return status;
+        } catch (error) {
+            this.logError('Error getting simulation status:', error);
+            return null;
+        }
+    }
+    /**
+     * Clears the simulation status for a page
+     */
+    public clearSimulationStatus(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.SIMULATION_STATUS_KEY);
+            this.log('Successfully cleared simulation status');
+        } catch (error) {
+            this.logError('Error clearing simulation status:', error);
+            throw error;
+        }
+    }
     /**
      * Clears the expanded nodes state for a page
      */
@@ -352,6 +402,7 @@ export class StorageAdapter {
             // Clear model data from page
             this.clearExpandedNodes(page);
             this.clearElementData(page);
+            this.clearSimulationStatus(page); 
 
             // Clear data from all blocks
             for (const [, block] of page.allBlocks) {

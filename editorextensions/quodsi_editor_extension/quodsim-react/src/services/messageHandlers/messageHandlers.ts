@@ -266,6 +266,34 @@ export const messageHandlers: Partial<{
             isProcessing: false
         }));
         setError(data.error);
+    },
+    [MessageTypes.SIMULATION_STATUS_UPDATE]: (
+        message: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE],
+        { setState }: MessageHandlerDependencies
+    ) => {
+        setState(prev => ({
+            ...prev,
+            simulationStatus: {
+                ...prev.simulationStatus,
+                currentStatus: message.status,
+                isChecking: false,
+                lastChecked: new Date().toISOString()
+            }
+        }));
+    },
+
+    [MessageTypes.SIMULATION_STATUS_ERROR]: (
+        message: MessagePayloads[MessageTypes.SIMULATION_STATUS_ERROR],
+        { setState }: MessageHandlerDependencies
+    ) => {
+        setState(prev => ({
+            ...prev,
+            simulationStatus: {
+                ...prev.simulationStatus,
+                error: message.error,
+                isChecking: false
+            }
+        }));
     }
 
 

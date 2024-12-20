@@ -112,6 +112,12 @@ export class ModelPanel extends Panel {
             this.logError('REACT_APP_READY message received in handler');
             this.handleReactReady();
         });
+        this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, () =>
+            this.handleSimulateModel()
+        );
+        this.messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, (data) =>
+            this.handleSimulationStatusUpdate(data)
+        );
         // Setup error handler
         this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
             this.logError('Error received:', payload);
@@ -137,7 +143,31 @@ export class ModelPanel extends Panel {
 
         this.logError('Setting up message handlers END');
     }
+    private async handleSimulationStatusUpdate(
+        data: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE]
+    ): Promise<void> {
+        try {
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
 
+            if (!currentPage) {
+                throw new Error('No active page found');
+            }
+
+            // Update the simulation status using StorageAdapter
+            this.modelManager.getStorageAdapter().setSimulationStatus(currentPage, data.status);
+
+            // Send a success message back to React
+            this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
+                elementId: currentPage.id
+            });
+        } catch (error) {
+            this.logError('Failed to update page status:', error);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: `Failed to update simulation status: ${error instanceof Error ? error.message : String(error)}`
+            });
+        }
+    }
     private async updateModelStructure(): Promise<void> {
         // Get model structure from ModelManager
         this.currentModelStructure = await this.modelManager.getModelStructure();
@@ -729,6 +759,37 @@ export class ModelPanel extends Panel {
             });
         }
     }
+
+    private async handleSimulateModel(): Promise<void> {
+        this.log('Handling simulate model request');
+
+        try {
+            // Get the document ID using DocumentProxy
+            const document = new DocumentProxy(this.client);
+            const docId = document.id;
+            this.log('Extension: docId=', docId);
+
+            // Trigger simulation using the data connector
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'Simulate',
+                actionData: { docId },
+                asynchronous: true
+            });
+
+            // Send success message back to React app
+            this.sendTypedMessage(MessageTypes.SIMULATION_STARTED, {
+                documentId: docId
+            });
+
+        } catch (error) {
+            this.logError('Error starting simulation:', error);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`
+            });
+        }
+    }
+
     /**
      * Handles model validation request
      */

@@ -38,6 +38,10 @@ export enum MessageTypes {
     REMOVE_MODEL = 'removeModel',
     MODEL_REMOVED = 'modelRemoved',
     SIMULATE_MODEL = 'simulateModel',
+    SIMULATION_STARTED = 'SIMULATION_STARTED',
+    SIMULATION_STATUS_UPDATE = 'SIMULATION_STATUS_UPDATE',
+    SIMULATION_STATUS_CHECK = 'SIMULATION_STATUS_CHECK',
+    SIMULATION_STATUS_ERROR = 'SIMULATION_STATUS_ERROR',
 
     // Tree View State Management
     TREE_STATE_UPDATE = 'treeStateUpdate',

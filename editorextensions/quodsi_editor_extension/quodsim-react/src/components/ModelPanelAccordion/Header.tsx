@@ -1,8 +1,13 @@
 import React from "react";
-import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
+import {
+  DiagramElementType,
+  PageStatus,
+  SimulationObjectType,
+} from "@quodsi/shared";
 import { ValidationState } from "@quodsi/shared/dist/types/accordion/ValidationState";
 import { ModelItemData } from "@quodsi/shared/dist/types/messaging/payloads/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
+import { SimulationStatusMonitor } from "../SimulationStatusMonitor";
 import { Trash2 } from "lucide-react";
 
 interface HeaderProps {
@@ -19,6 +24,12 @@ interface HeaderProps {
   onSimulate?: () => void;
   onRemoveModel?: () => void;
   onConvertPage?: () => void;
+  simulationStatus: {
+    currentStatus: PageStatus | null;
+    isChecking: boolean;
+    error: string | null;
+    lastChecked: string | null;
+  };
 }
 
 export class Header extends React.Component<HeaderProps> {
@@ -78,6 +89,7 @@ export class Header extends React.Component<HeaderProps> {
       onConvertPage,
       elementType: propsElementType,
       diagramElementType,
+      simulationStatus,
     } = this.props;
 
     // Handle case when no modelItemData exists (Convert button)
@@ -105,10 +117,15 @@ export class Header extends React.Component<HeaderProps> {
         <div className="flex items-center gap-2">
           {onSimulate && (
             <button
-              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+              className={`px-2 py-1 text-xs ${
+                simulationStatus.isChecking
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600"
+              } text-white rounded`}
               onClick={onSimulate}
+              disabled={simulationStatus.isChecking}
             >
-              Simulate
+              {simulationStatus.isChecking ? "Simulating..." : "Simulate"}
             </button>
           )}
           {onRemoveModel && (
@@ -166,10 +183,28 @@ export class Header extends React.Component<HeaderProps> {
   }
 
   render() {
+    const { modelItemData, simulationStatus } = this.props;
+    const isModel =
+      modelItemData?.metadata?.type === SimulationObjectType.Model;
+
     return (
       <div className="p-2 space-y-2 border-b">
         {this.renderModelName()}
-        {this.renderButtons()}
+        <div className="flex flex-col space-y-2">
+          {this.renderButtons()}
+
+          {/* Show SimulationStatusMonitor only when viewing a model */}
+          {isModel && (
+            <>
+              <div className="border-t my-2" />
+              <SimulationStatusMonitor
+                status={simulationStatus.currentStatus}
+                isChecking={simulationStatus.isChecking}
+                error={simulationStatus.error}
+              />
+            </>
+          )}
+        </div>
       </div>
     );
   }
