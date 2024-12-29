@@ -15,7 +15,8 @@
         "DOWNLOAD",
         "SHOW_MODAL",
         "CUSTOM_UI",
-        "NETWORK"
+        "NETWORK",
+        "USER_INFO"
       ]
     }
   ],

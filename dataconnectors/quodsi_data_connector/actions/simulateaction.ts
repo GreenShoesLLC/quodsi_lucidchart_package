@@ -5,16 +5,20 @@ export const simulateAction: (action: DataConnectorAsynchronousAction) => Promis
 ) => {
     try {
         // Type assertion to ensure action.data has the expected structure
-        const data = action.data as { docId: string };
+        const data = action.data as { documentId: string, pageId: string, userId: string };
 
         // Extract document ID from action data
-        const documentId = data.docId;
+        const documentId = data.documentId;
+        const pageId = data.pageId;
+        const userId = data.userId;
 
         // Log the document ID for debugging purposes
         console.log(`Simulate action triggered for document ID: ${documentId}`);
 
         // Define the API endpoint
-        const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}`;
+        // const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}`;
+
+        const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}?pageId=${pageId}&userId=${userId}`;
         // const apiUrl = `${action.context.callbackBaseUrl}/Scenario/simulate/${documentId}`;
 
 

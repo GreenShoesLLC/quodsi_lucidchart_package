@@ -9,7 +9,8 @@ import {
     DocumentProxy,
     ElementProxy,
     JsonObject as LucidJsonObject,
-    Panel
+    Panel,
+    UserProxy
 } from 'lucid-extension-sdk';
 import {
     ModelItemData,
@@ -767,13 +768,34 @@ export class ModelPanel extends Panel {
             // Get the document ID using DocumentProxy
             const document = new DocumentProxy(this.client);
             const docId = document.id;
-            this.log('Extension: docId=', docId);
+            const viewport = new Viewport(this.client);
+            const user: UserProxy = new UserProxy(this.client);
+            // const activePageProxy = viewport.getCurrentPage();
+            const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
+
+            let pageId: string = 'undefined';
+            let userId: string = 'undefined';
+            if (user)
+            {
+                userId = user.id;
+            }
+
+            if (activePageProxy) {
+                pageId = activePageProxy.id;
+            }
+            if (activePageProxy) {
+                this.log(`Active page ID: ${activePageProxy.id}`);
+            } else {
+                this.log('No active page found');
+            }
+
+            this.log(`Extension: docId=${docId}, pageId=${pageId}, userId=${userId}`);
 
             // Trigger simulation using the data connector
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'Simulate',
-                actionData: { docId },
+                actionData: { 'documentId': docId, 'pageId': pageId, 'userId': userId },
                 asynchronous: true
             });
 

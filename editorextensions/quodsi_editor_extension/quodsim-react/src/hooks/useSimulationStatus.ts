@@ -8,7 +8,7 @@ export const useSimulationStatus = (
     intervalSeconds: number = 30
 ) => {
     const messaging = ExtensionMessaging.getInstance();
-
+    const disabled = process.env.REACT_APP_DISABLE_SIMULATION_STATUS === 'true';
     const checkStatus = useCallback(async () => {
         try {
             const response = await axios.get(
@@ -32,6 +32,7 @@ export const useSimulationStatus = (
     }, [documentId, messaging]);
 
     useEffect(() => {
+        if (disabled) return; // Early return if disabled
         const intervalId = setInterval(checkStatus, intervalSeconds * 1000);
         checkStatus(); // Initial check
 
