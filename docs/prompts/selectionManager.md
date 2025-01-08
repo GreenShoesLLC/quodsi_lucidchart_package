@@ -142,7 +142,7 @@ QuodsiApp.tsx uses the ModelPanelAccordion component found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
 ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the React components can be found as files in this folder:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
+C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\
 
 The ModelPanelAccordion contains 4 different sections where each section is controlled by an accordian widget.  The 4 sections are:
 Header

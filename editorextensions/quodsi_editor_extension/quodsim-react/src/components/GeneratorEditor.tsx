@@ -43,7 +43,7 @@ const GeneratorEditor: React.FC<Props> = ({
       {(localGenerator, handleChange) => (
         <div className="space-y-3 p-2">
           {/* Basic Settings */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <div className="flex items-center gap-1">
               <PlayCircle className="w-4 h-4 text-blue-500" />
               <label className="text-xs font-medium text-gray-700">
@@ -57,7 +57,7 @@ const GeneratorEditor: React.FC<Props> = ({
               value={localGenerator.activityKeyId}
               onChange={handleChange}
             />
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <div className="flex items-center gap-1">

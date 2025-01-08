@@ -727,6 +727,13 @@ export class ModelPanel extends Panel {
 
             // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
+            // Update current selection first
+            this.currentSelection = {
+                pageId: currentPage.id,
+                selectedIds: selectedItems.map(item => item.id),
+                selectionType: this.currentSelection.selectionType
+            };
+
             const element = selectedItems.find(item => item.id === updateData.elementId);
             if (!element) {
                 throw new Error(`Element not found in selection: ${updateData.elementId}`);
@@ -744,7 +751,13 @@ export class ModelPanel extends Panel {
             this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
                 elementId: updateData.elementId
             });
-
+            // Debug logging
+            this.log('Debug - Selection state:', {
+                currentSelectionIds: this.currentSelection.selectedIds,
+                updatedElementId: updateData.elementId,
+                isElementInSelection: this.currentSelection.selectedIds.includes(updateData.elementId),
+                selectedItems: selectedItems.map(item => item.id)
+            });
             // Update validation and selection state
             await this.modelManager.validateModel();
 
