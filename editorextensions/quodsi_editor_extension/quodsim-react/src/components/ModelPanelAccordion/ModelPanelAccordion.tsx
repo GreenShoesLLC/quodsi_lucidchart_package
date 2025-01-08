@@ -20,6 +20,7 @@ interface ModelPanelAccordionProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
+  lastElementUpdate: string | null; // Add this line
   diagramElementType?: DiagramElementType;
   expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
@@ -44,12 +45,12 @@ interface ModelPanelAccordionProps {
     elementId: string,
     newType: SimulationObjectType
   ) => void;
-    simulationStatus: {
-      currentStatus: PageStatus | null;
-      isChecking: boolean;
-      error: string | null;
-      lastChecked: string | null;
-    };
+  simulationStatus: {
+    currentStatus: PageStatus | null;
+    isChecking: boolean;
+    error: string | null;
+    lastChecked: string | null;
+  };
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -57,6 +58,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   modelName,
   validationState,
   currentElement,
+  lastElementUpdate,
   diagramElementType,
   expandedNodes,
   onElementSelect,
@@ -178,6 +180,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           !currentElement?.isUnconverted &&
           currentElement && (
             <ElementEditor
+              key={`${currentElement.id}-${lastElementUpdate}`}
               elementData={currentElement.data}
               elementType={currentElement.metadata.type}
               onSave={(data) => onElementUpdate(currentElement.id, data)}

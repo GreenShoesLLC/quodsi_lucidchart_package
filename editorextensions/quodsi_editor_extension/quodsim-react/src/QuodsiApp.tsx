@@ -28,6 +28,7 @@ export interface AppState {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
+  lastElementUpdate: string | null; // Add this line
   isProcessing: boolean;
   error: string | null;
   documentId: string | null;
@@ -56,6 +57,7 @@ const initialState: AppState = {
   modelName: "New Model",
   validationState: null,
   currentElement: null,
+  lastElementUpdate: null, // Add this line
   isProcessing: false,
   error: null,
   documentId: null,
@@ -79,7 +81,7 @@ const initialState: AppState = {
     currentStatus: null,
     isChecking: false,
     error: null,
-    lastChecked: null
+    lastChecked: null,
   },
 };
 
@@ -299,7 +301,8 @@ const QuodsiApp: React.FC = () => {
           modelName={state.modelName}
           validationState={state.validationState}
           currentElement={state.currentElement}
-          diagramElementType={state.diagramElementType }
+          lastElementUpdate={state.lastElementUpdate} // Add this line
+          diagramElementType={state.diagramElementType}
           expandedNodes={state.expandedNodes}
           onElementSelect={handleElementSelect}
           onValidate={handleValidate}

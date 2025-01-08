@@ -93,56 +93,42 @@ export const messageHandlers: Partial<{
         });
     },
 
-        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState, sendMessage }) => {
+        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState }) => {
             console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT - Initial payload:", {
                 modelItemData: payload.modelItemData,
-                data: payload.modelItemData?.data,  // This should contain maxEntities
-                timestamp: new Date().toISOString(),
-                hasValidationResult: !!payload.validationResult,
-                validationMessagesCount: payload.validationResult?.messages?.length ?? 0
+                data: payload.modelItemData?.data,
+                timestamp: new Date().toISOString()
             });
 
             setState(prev => {
-                console.log("[MessageHandlers] Previous state info:", {
-                    prevCurrentElement: prev.currentElement,
-                    prevCurrentElementData: prev.currentElement?.data,
-                    hasValidationState: !!prev.validationState,
-                    prevMessagesCount: prev.validationState?.messages?.length ?? 0
-                });
-
-                const currentElement: ModelItemData = {
+                // Create currentElement without modifying the type
+                const currentElement = {
                     ...payload.modelItemData,
-                    isUnconverted: false,
+                    isUnconverted: false
                 };
-
-                console.log("[MessageHandlers] New currentElement being set:", {
-                    currentElement,
-                    data: currentElement.data,  // This should show maxEntities value
-                });
-
-                // Create a fresh validation state from the incoming message
-                const validationState = payload.validationResult ? {
-                    messages: [...(payload.validationResult.messages || [])],
-                    summary: {
-                        errorCount: payload.validationResult.errorCount,
-                        warningCount: payload.validationResult.warningCount
-                    },
-                    isValid: payload.validationResult.isValid,
-                    errorCount: payload.validationResult.errorCount,
-                    warningCount: payload.validationResult.warningCount
-                } : null;
 
                 const newState = {
                     ...prev,
                     diagramElementType: payload.simulationSelection.diagramElementType,
                     currentElement,
+                    // Add a separate lastElementUpdate field
+                    lastElementUpdate: new Date().toISOString(),
                     modelStructure: payload.modelStructure,
                     expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
                     referenceData: payload.referenceData || {
                         entities: [],
                         resources: []
                     },
-                    validationState,
+                    validationState: payload.validationResult ? {
+                        messages: [...(payload.validationResult.messages || [])],
+                        summary: {
+                            errorCount: payload.validationResult.errorCount,
+                            warningCount: payload.validationResult.warningCount
+                        },
+                        isValid: payload.validationResult.isValid,
+                        errorCount: payload.validationResult.errorCount,
+                        warningCount: payload.validationResult.warningCount
+                    } : null,
                     showModelName: true,
                     showModelItemName: true,
                     visibleSections: {
@@ -153,15 +139,16 @@ export const messageHandlers: Partial<{
                     }
                 };
 
-                console.log("[MessageHandlers] Final state being set:", {
-                    newCurrentElement: newState.currentElement,
-                    newCurrentElementData: newState.currentElement?.data
+                console.log("[MessageHandlers] State update - Current vs New:", {
+                    previousId: prev.currentElement?.id,
+                    newId: currentElement.id,
+                    hasDataChanged: JSON.stringify(prev.currentElement?.data) !== JSON.stringify(currentElement.data),
+                    lastUpdate: newState.lastElementUpdate
                 });
 
                 return newState;
             });
         },
-
         [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (data, deps) => {
             console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", data);
 
