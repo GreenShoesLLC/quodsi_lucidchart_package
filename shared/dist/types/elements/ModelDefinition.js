@@ -8,12 +8,14 @@ var EntityListManager_1 = require("./EntityListManager");
 var GeneratorListManager_1 = require("./GeneratorListManager");
 var ModelDefaults_1 = require("./ModelDefaults");
 var ResourceListManager_1 = require("./ResourceListManager");
+var ResourceRequirementListManager_1 = require("./ResourceRequirementListManager");
 var ModelDefinition = /** @class */ (function () {
     function ModelDefinition(model) {
         this.model = model;
         this.activities = new ActivityListManager_1.ActivityListManager();
         this.connectors = new ConnectorListManager_1.ConnectorListManager();
         this.resources = new ResourceListManager_1.ResourceListManager();
+        this.resourceRequirements = new ResourceRequirementListManager_1.ResourceRequirementListManager();
         this.generators = new GeneratorListManager_1.GeneratorListManager();
         this.entities = new EntityListManager_1.EntityListManager();
         // Add default entity

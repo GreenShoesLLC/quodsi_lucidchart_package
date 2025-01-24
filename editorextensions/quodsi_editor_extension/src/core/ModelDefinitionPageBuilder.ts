@@ -7,7 +7,8 @@ import {
     Generator,
     Resource,
     Connector,
-    Entity
+    Entity,
+    ResourceRequirement
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 
@@ -71,6 +72,10 @@ export class ModelDefinitionPageBuilder {
                 this.log('ModelDefinition resources not properly initialized', 'error');
                 return null;
             }
+            if (!modelDefinition.resourceRequirements || typeof modelDefinition.resourceRequirements.add !== 'function') {
+                this.log('ModelDefinition resourceRequirements not properly initialized', 'error');
+                return null;
+            }
             if (!modelDefinition.generators || typeof modelDefinition.generators.add !== 'function') {
                 this.log('ModelDefinition generators not properly initialized', 'error');
                 return null;
@@ -79,7 +84,7 @@ export class ModelDefinitionPageBuilder {
                 this.log('ModelDefinition entities not properly initialized', 'error');
                 return null;
             }
-
+ 
             // Process all blocks (shapes)
             this.log(`Processing ${page.allBlocks.size} blocks`);
             for (const [blockId, block] of page.allBlocks) {
@@ -105,8 +110,12 @@ export class ModelDefinitionPageBuilder {
                             this.log(`Added generator ${blockId}`);
                             break;
                         case SimulationObjectType.Resource:
-                            modelDefinition.resources.add(elementData as Resource);
-                            this.log(`Added resource ${blockId}`);
+                            const resource = elementData as Resource;
+                            modelDefinition.resources.add(resource);
+                            const requirement = ResourceRequirement.createForSingleResource(resource);
+                            this.log(`requirement name ${requirement.name}`)
+                            modelDefinition.resourceRequirements.add(requirement);
+                            this.log(`Added resource ${blockId} for resource ${resource.name}`);
                             break;
                         case SimulationObjectType.Entity:
                             modelDefinition.entities.add(elementData as Entity);
@@ -168,6 +177,7 @@ export class ModelDefinitionPageBuilder {
         this.log(`- Activities: ${modelDefinition.activities.size()}`);
         this.log(`- Generators: ${modelDefinition.generators.size()}`);
         this.log(`- Resources: ${modelDefinition.resources.size()}`);
+        this.log(`- Requirements: ${modelDefinition.resourceRequirements.size()}`);
         this.log(`- Entities: ${modelDefinition.entities.size()}`);
         this.log(`- Connectors: ${modelDefinition.connectors.size()}`);
     }

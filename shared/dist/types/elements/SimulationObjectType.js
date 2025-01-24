@@ -8,6 +8,7 @@ var SimulationObjectType;
     SimulationObjectType["Connector"] = "Connector";
     SimulationObjectType["Generator"] = "Generator";
     SimulationObjectType["Resource"] = "Resource";
+    SimulationObjectType["ResourceRequirement"] = "ResourceRequirement";
     SimulationObjectType["Scenario"] = "Scenario";
     SimulationObjectType["Experiment"] = "Experiment";
     SimulationObjectType["Model"] = "Model";

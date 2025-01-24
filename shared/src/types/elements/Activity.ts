@@ -1,5 +1,5 @@
 import { SimulationObjectType } from "./SimulationObjectType";
-import { OperationStep } from "./OperationStep";
+import { createOperationStep, OperationStep } from "./OperationStep";
 import { SimulationObject } from "./SimulationObject";
 import { Connector } from "./Connector";
 import { Duration } from "./Duration";
@@ -11,7 +11,7 @@ export class Activity implements SimulationObject {
 
     static createDefault(id: string): Activity {
         const defaultDuration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
-        const defaultOperationStep = new OperationStep(null, defaultDuration);
+        const defaultOperationStep = createOperationStep(defaultDuration);
 
         return new Activity(
             id,
@@ -20,7 +20,6 @@ export class Activity implements SimulationObject {
             1, // inputBufferCapacity
             1, // outputBufferCapacity
             [defaultOperationStep], // operationSteps
-            [] // connectors
         );
     }
 
@@ -31,6 +30,5 @@ export class Activity implements SimulationObject {
         public inputBufferCapacity: number = 1,
         public outputBufferCapacity: number = 1,
         public operationSteps: OperationStep[] = [],
-        public connectors: Connector[] = []
     ) { }
 }

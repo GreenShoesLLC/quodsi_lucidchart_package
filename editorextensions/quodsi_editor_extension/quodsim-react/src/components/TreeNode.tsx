@@ -21,6 +21,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ node, level = 0 }) => {
       [SimulationObjectType.Activity]: "bg-blue-100 text-blue-800",
       [SimulationObjectType.Connector]: "bg-green-100 text-green-800",
       [SimulationObjectType.Resource]: "bg-purple-100 text-purple-800",
+      [SimulationObjectType.ResourceRequirement]: "bg-purple-100 text-purple-800",
       [SimulationObjectType.Generator]: "bg-yellow-100 text-yellow-800",
       [SimulationObjectType.Entity]: "bg-red-100 text-red-800",
       [SimulationObjectType.Model]: "bg-gray-100 text-gray-800",

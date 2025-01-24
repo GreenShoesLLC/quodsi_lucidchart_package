@@ -1,10 +1,18 @@
 import { Duration } from "./Duration";
-import { ResourceSetRequest } from "./ResourceSetRequest";
 
+export interface OperationStep {
+    requirementId: string | null;
+    quantity: number;
+    duration: Duration;
+}
 
-export class OperationStep {
-    constructor(
-        public resourceSetRequest: ResourceSetRequest | null = null,
-        public duration: Duration = new Duration()
-    ) { }
+export function createOperationStep(
+    duration: Duration,  // duration required parameter
+    options: Partial<Omit<OperationStep, 'duration'>> = {}
+): OperationStep {
+    return {
+        requirementId: options.requirementId ?? null,
+        quantity: options.quantity ?? 1,
+        duration
+    };
 }

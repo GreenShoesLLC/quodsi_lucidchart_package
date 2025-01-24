@@ -48,10 +48,18 @@ const BaseEditor = <T extends BaseSimulationElement>({
 
   const handleSave = () => {
     console.log("BaseEditor handleSave:", localData);
-    onSave({
-      ...localData,
-      type: localData.type || data.type,
-    });
+    if (localData.type === SimulationObjectType.Activity) {
+      onSave({
+        ...localData,
+        type: localData.type || data.type,
+        operationSteps: (localData as any).operationSteps, // Explicitly pass operationSteps
+      });
+    } else {
+      onSave({
+        ...localData,
+        type: localData.type || data.type,
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

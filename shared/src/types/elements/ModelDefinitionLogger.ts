@@ -6,6 +6,7 @@ import { Resource } from "./Resource";
 import { Generator } from "./Generator";
 import { Entity } from "./Entity";
 import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
+import { ResourceRequirement } from "./ResourceRequirement";
 
 export class ModelDefinitionLogger extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[ModelDefinitionLogger]';
@@ -52,6 +53,12 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         resources.forEach(resource => this.safeExecute(() => this.logResource(resource), `Resource ID: ${resource?.id}`));
     }
 
+    private logResourceRequirements(modelDefinition: ModelDefinition): void {
+        this.log("\ResourceRequirement:");
+        const requirements = modelDefinition.resourceRequirements.getAll();
+        requirements.forEach(requirement => this.safeExecute(() => this.logResourceRequirement(requirement), `Resource ID: ${requirement?.id}`));
+    }
+
     private logGenerators(modelDefinition: ModelDefinition): void {
         this.log("\nGenerators:");
         const generators = modelDefinition.generators.getAll();
@@ -79,16 +86,31 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Input Buffer Capacity: ${activity.inputBufferCapacity}`);
         this.log(`    Output Buffer Capacity: ${activity.outputBufferCapacity}`);
         this.log(`    Number of Operation Steps: ${activity.operationSteps?.length || 0}`);
+
         activity.operationSteps?.forEach((step, index) => {
             this.log(`      Operation Step ${index + 1}:`);
             this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
-            if (step.resourceSetRequest?.requests) {
-                this.log("        Resource Requests:");
-                step.resourceSetRequest.requests.forEach(request => {
-                    if ('resource' in request && request.resource) {
-                        this.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
-                    }
-                });
+
+            if (step.requirementId) {
+                this.log(`        Resource Requirement ID: ${step.requirementId}`);
+                this.log(`        Quantity: ${step.quantity}`);
+
+                // If you need to log the actual resource requests, you'll need to pass
+                // the ResourceRequirement data to this method or have a way to look it up
+
+                /* Example if you had access to requirements:
+                const requirement = this.getRequirement(step.requirementId);
+                if (requirement) {
+                    this.log(`        Requirement Mode: ${requirement.mode}`);
+                    this.log("        Resource Requests:");
+                    requirement.requests.forEach(request => {
+                        this.log(`          Resource ID: ${request.resourceId}, ` + 
+                                `Quantity: ${request.quantity}, ` +
+                                `Priority: ${request.priority}, ` +
+                                `Keep Resource: ${request.keepResource}`);
+                    });
+                }
+                */
             }
         });
     }
@@ -106,13 +128,9 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         operationSteps?.forEach((step, index) => {
             this.log(`      Operation Step ${index + 1}:`);
             this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
-            if (step.resourceSetRequest?.requests) {
-                this.log("        Resource Requests:");
-                step.resourceSetRequest.requests.forEach(request => {
-                    if ('resource' in request && request.resource) {
-                        this.log(`          Resource ID: ${request.resource.id}, Quantity: ${request.quantity || "Not defined"}`);
-                    }
-                });
+            if (step.requirementId) {
+                this.log(`        Resource Requirement ID: ${step.requirementId}`);
+                this.log(`        Quantity: ${step.quantity}`);
             }
         });
     }
@@ -123,6 +141,12 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Capacity: ${resource.capacity}`);
     }
 
+    private logResourceRequirement(resourceRequirement: ResourceRequirement): void {
+        this.log(`  Resource ID: ${resourceRequirement.id}`);
+        this.log(`    Name: ${resourceRequirement.name}`);
+        // this.log(`    Mode: ${resourceRequirement.mode}`);
+    }
+    
     private logGenerator(generator: Generator): void {
         this.log(`  Generator ID: ${generator.id}`);
         this.log(`    Name: ${generator.name || "Unnamed"}`);

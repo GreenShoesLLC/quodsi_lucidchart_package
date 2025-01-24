@@ -14,7 +14,8 @@ import {
     ModelStructure,
     ModelElement,
     ModelDefinitionLogger,
-    ActivityListManager
+    ActivityListManager,
+    ResourceRequirement
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
@@ -215,7 +216,10 @@ export class ModelManager {
                 if (element.name === defaultName) {
                     element.name = modelDef.resources.getNextName();
                 }
-                modelDef.resources.add(element as Resource);
+                const resource = element as Resource
+                modelDef.resources.add(resource);
+                const requirement = ResourceRequirement.createForSingleResource(resource)
+                modelDef.resourceRequirements.add(requirement)
                 break;
             case SimulationObjectType.Entity:
                 if (element.name === defaultName) {
@@ -257,7 +261,10 @@ export class ModelManager {
                 modelDef.generators.add(element as Generator);
                 break;
             case SimulationObjectType.Resource:
-                modelDef.resources.add(element as Resource);
+                const resource = element as Resource
+                const requirement = ResourceRequirement.createForSingleResource(resource)
+                modelDef.resources.add(resource);
+                modelDef.resourceRequirements.add(requirement)
                 break;
             case SimulationObjectType.Entity:
                 modelDef.entities.add(element as Entity);
@@ -290,6 +297,7 @@ export class ModelManager {
         modelDef.generators.remove(elementId);
         modelDef.resources.remove(elementId);
         modelDef.entities.remove(elementId);
+        modelDef.resourceRequirements.remove(elementId);
 
         // Remove from storage
         this.storageAdapter.clearElementData(elementProxy);
@@ -375,6 +383,7 @@ export class ModelManager {
             this.modelDefinition.connectors.get(id) ||
             this.modelDefinition.generators.get(id) ||
             this.modelDefinition.resources.get(id) ||
+            this.modelDefinition.resourceRequirements.get(id) ||
             this.modelDefinition.entities.get(id);
     }
 
@@ -393,6 +402,8 @@ export class ModelManager {
                 return this.modelDefinition.generators.getAll();
             case SimulationObjectType.Resource:
                 return this.modelDefinition.resources.getAll();
+            case SimulationObjectType.ResourceRequirement:
+                return this.modelDefinition.resourceRequirements.getAll();
             case SimulationObjectType.Entity:
                 return this.modelDefinition.entities.getAll();
             default:

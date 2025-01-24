@@ -1,14 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OperationStep = void 0;
-var Duration_1 = require("./Duration");
-var OperationStep = /** @class */ (function () {
-    function OperationStep(resourceSetRequest, duration) {
-        if (resourceSetRequest === void 0) { resourceSetRequest = null; }
-        if (duration === void 0) { duration = new Duration_1.Duration(); }
-        this.resourceSetRequest = resourceSetRequest;
-        this.duration = duration;
-    }
-    return OperationStep;
-}());
-exports.OperationStep = OperationStep;
+exports.createOperationStep = void 0;
+function createOperationStep(duration, // duration required parameter
+options) {
+    var _a, _b;
+    if (options === void 0) { options = {}; }
+    return {
+        requirementId: (_a = options.requirementId) !== null && _a !== void 0 ? _a : null,
+        quantity: (_b = options.quantity) !== null && _b !== void 0 ? _b : 1,
+        duration: duration
+    };
+}
+exports.createOperationStep = createOperationStep;

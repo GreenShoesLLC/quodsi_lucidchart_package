@@ -159,8 +159,16 @@ export class ModelValidationService extends QuodsiLogger {
         });
     }
 
-    private buildActivityRelationships(modelDefinition: ModelDefinition): Map<string, ActivityRelationships> {
+    private buildActivityRelationships(
+        modelDefinition: ModelDefinition
+    ): Map<string, ActivityRelationships> {
         const relationships = new Map<string, ActivityRelationships>();
+
+        // Get resources and their requirements for lookup
+        const resourceRequirements = modelDefinition.resourceRequirements?.getAll() || [];
+        const requirementMap = new Map(
+            resourceRequirements.map(req => [req.id, req])
+        );
 
         // Initialize relationships map for better performance
         const activities = modelDefinition.activities.getAll();
@@ -189,18 +197,17 @@ export class ModelValidationService extends QuodsiLogger {
             const activityRel = relationships.get(activity.id);
             if (!activityRel || !activity.operationSteps) return;
 
-            // Process resource requests using reduce instead of flatMap
-            const resourceRequests = activity.operationSteps.reduce((requests: any[], step) => {
-                if (step.resourceSetRequest?.requests) {
-                    requests.push(...step.resourceSetRequest.requests);
-                }
-                return requests;
-            }, []);
-
-            // Batch process resource assignments
-            resourceRequests.forEach(request => {
-                if ('resource' in request && request.resource) {
-                    activityRel.assignedResources.add(request.resource.id);
+            // Process resource requirements for each operation step
+            activity.operationSteps.forEach(step => {
+                if (step.requirementId) {
+                    const requirement = requirementMap.get(step.requirementId);
+                    if (requirement) {
+                        requirement.rootClauses.forEach(clause => {
+                            clause.requests.forEach(request => {
+                                activityRel.assignedResources.add(request.resourceId);
+                            });
+                        })
+                    }
                 }
             });
         });

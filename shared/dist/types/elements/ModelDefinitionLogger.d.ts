@@ -7,12 +7,14 @@ export declare class ModelDefinitionLogger extends QuodsiLogger {
     private logActivities;
     private logConnectors;
     private logResources;
+    private logResourceRequirements;
     private logGenerators;
     private logEntities;
     private safeExecute;
     private logActivity;
     private logConnector;
     private logResource;
+    private logResourceRequirement;
     private logGenerator;
     private logEntity;
 }

@@ -29,6 +29,4 @@ which uses ExtensionMessaging to send REACT_APP_READY to the parent extension ap
 ExtensionMessaging found here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\utils\ExtensionMessaging.ts
 
-ModelPanel derives from BasePanel which handles the REACT_APP_READY message
-
 ModelPanel receives the REACT_APP_READY message and executes handleModelSpecificReactReady

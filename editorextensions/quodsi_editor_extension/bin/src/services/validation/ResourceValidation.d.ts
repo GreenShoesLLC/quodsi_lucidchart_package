@@ -5,6 +5,8 @@ export declare class ResourceValidation extends ValidationRule {
     validate(state: ModelDefinitionState, messages: ValidationMessage[]): void;
     private validateResourceData;
     private validateResourceUsage;
+    private processResourceRequirement;
+    private addResourceUsage;
     private processResourceRequests;
     private checkResourceConflicts;
     private validateConcurrentResourceUsage;

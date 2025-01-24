@@ -55,6 +55,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
             activity={elementData}
             onSave={onSave}
             onCancel={onCancel}
+            referenceData={referenceData}
           />
         );
       case SimulationObjectType.Generator:

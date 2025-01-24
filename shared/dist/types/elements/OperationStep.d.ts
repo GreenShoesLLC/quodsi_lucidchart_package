@@ -1,8 +1,9 @@
 import { Duration } from "./Duration";
-import { ResourceSetRequest } from "./ResourceSetRequest";
-export declare class OperationStep {
-    resourceSetRequest: ResourceSetRequest | null;
+export interface OperationStep {
+    requirementId: string | null;
+    quantity: number;
     duration: Duration;
-    constructor(resourceSetRequest?: ResourceSetRequest | null, duration?: Duration);
 }
+export declare function createOperationStep(duration: Duration, // duration required parameter
+options?: Partial<Omit<OperationStep, 'duration'>>): OperationStep;
 //# sourceMappingURL=OperationStep.d.ts.map

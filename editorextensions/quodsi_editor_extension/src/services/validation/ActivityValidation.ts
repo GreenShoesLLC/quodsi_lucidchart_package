@@ -137,12 +137,9 @@ export class ActivityValidation extends ValidationRule {
         index: number,
         messages: ValidationMessage[]
     ): void {
-        /**
-         * Validates a single operation step within an activity.
-         */
-
         this.log(`Validating operation step ${index + 1} for Activity ID: ${activityId}`);
 
+        // Validate duration
         if (!step.duration?.durationLength) {
             this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an invalid duration.`);
             messages.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
@@ -154,39 +151,67 @@ export class ActivityValidation extends ValidationRule {
             }
         }
 
-        if (step.resourceSetRequest?.requests) {
-            this.validateResourceRequests(activityId, step.resourceSetRequest.requests, index, messages);
+        // Validate resource requirement
+        if (step.requirementId) {
+            this.validateResourceRequirement(
+                activityId,
+                step.requirementId,
+                step.quantity,
+                index,
+                messages
+            );
         }
     }
 
-    private validateResourceRequests(
+    private validateResourceRequirement(
         activityId: string,
-        requests: any[],
+        requirementId: string,
+        quantity: number,
         stepIndex: number,
         messages: ValidationMessage[]
     ): void {
-        /**
-         * Validates resource requests within an operation step for potential issues.
-         */
+        // You might want to pass ModelDefinitionState to this method to look up requirements
+        if (quantity < 1) {
+            messages.push({
+                type: 'error',
+                message: `Operation step ${stepIndex + 1} has invalid quantity: ${quantity}`,
+                elementId: activityId
+            });
+        }
+    }
 
-        this.log(`Validating resource requests for step ${stepIndex + 1} of Activity ID: ${activityId}`);
+    private validateOperationSequence(
+        activity: Activity,
+        state: ModelDefinitionState,
+        messages: ValidationMessage[]
+    ): void {
+        this.log(`Validating operation sequence for Activity ID: ${activity.id}`);
 
-        const seenResources = new Set<string>();
+        if (!activity.operationSteps?.length) return;
 
-        requests.forEach(request => {
-            if (request.resource?.id) {
-                if (seenResources.has(request.resource.id)) {
-                    this.log(`Duplicate resource request detected for step ${stepIndex + 1} of Activity ID ${activityId}`);
-                    messages.push(ValidationMessages.duplicateResourceRequest(activityId, stepIndex + 1));
-                }
-                seenResources.add(request.resource.id);
+        const resourceRequirements = state.modelDefinition.resourceRequirements?.getAll() || [];
+        const requirementMap = new Map(
+            resourceRequirements.map(req => [req.id, req])
+        );
 
-                if (typeof request.quantity !== "number" || request.quantity < 1) {
-                    this.log(`Invalid resource quantity for step ${stepIndex + 1} of Activity ID ${activityId}`);
-                    messages.push(ValidationMessages.invalidResourceQuantity(activityId, stepIndex + 1));
-                }
+        let hasResourceRequest = false;
+
+        activity.operationSteps.forEach((step) => {
+            if (step.requirementId) {
+                const requirement = requirementMap.get(step.requirementId);
+                requirement?.rootClauses.forEach(clause=>{
+                    if (clause && clause.requests.length > 0) {
+                        hasResourceRequest = true;
+                    }
+                })
+
             }
         });
+
+        if (hasResourceRequest) {
+            this.log(`Resource requests detected but no release logic for Activity ID: ${activity.id}`);
+            messages.push(ValidationMessages.resourceLeak(activity.id));
+        }
     }
 
     private validateBufferConstraints(
@@ -274,30 +299,5 @@ export class ActivityValidation extends ValidationRule {
         stack.delete(activityId);
     }
 
-    private validateOperationSequence(
-        activity: Activity,
-        state: ModelDefinitionState,
-        messages: ValidationMessage[]
-    ): void {
-        /**
-         * Validates the sequence of operations within an activity to ensure logical consistency.
-         */
 
-        this.log(`Validating operation sequence for Activity ID: ${activity.id}`);
-
-        if (!activity.operationSteps?.length) return;
-
-        let hasResourceRequest = false;
-
-        activity.operationSteps.forEach((step, index) => {
-            if (step.resourceSetRequest?.requests?.length) {
-                hasResourceRequest = true;
-            }
-        });
-
-        if (hasResourceRequest) {
-            this.log(`Resource requests detected but no release logic for Activity ID: ${activity.id}`);
-            messages.push(ValidationMessages.resourceLeak(activity.id));
-        }
-    }
 }

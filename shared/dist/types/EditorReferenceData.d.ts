@@ -1,3 +1,4 @@
+import { ResourceRequirement } from "./elements/ResourceRequirement";
 export interface EditorReferenceData {
     entities?: Array<{
         id: string;
@@ -11,5 +12,6 @@ export interface EditorReferenceData {
         id: string;
         name: string;
     }>;
+    resourceRequirements?: ResourceRequirement[];
 }
 //# sourceMappingURL=EditorReferenceData.d.ts.map

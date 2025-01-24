@@ -11,10 +11,10 @@ export declare class ActivityValidation extends ValidationRule {
     private validateBufferCapacities;
     private validateOperationSteps;
     private validateOperationStep;
-    private validateResourceRequests;
+    private validateResourceRequirement;
+    private validateOperationSequence;
     private validateBufferConstraints;
     private validateActivityInteractions;
     private detectCycles;
-    private validateOperationSequence;
 }
 //# sourceMappingURL=ActivityValidation.d.ts.map

@@ -27,13 +27,13 @@ export class ElementCountsValidation extends ValidationRule {
             });
         }
 
-        if (modelDefinition.resources.size() === 0) {
-            this.log("Validation warning: Model has no resources defined.");
-            messages.push({
-                type: 'warning',
-                message: 'Model has no resources defined'
-            });
-        }
+        // if (modelDefinition.resources.size() === 0) {
+        //     this.log("Validation warning: Model has no resources defined.");
+        //     messages.push({
+        //         type: 'warning',
+        //         message: 'Model has no resources defined'
+        //     });
+        // }
 
         if (modelDefinition.entities.size() === 0) {
             this.log("Validation failed: Model has no entities.");

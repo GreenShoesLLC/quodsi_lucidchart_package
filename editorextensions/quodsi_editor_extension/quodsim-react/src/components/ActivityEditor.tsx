@@ -6,8 +6,10 @@ import {
   PeriodUnit,
   DurationType,
   SimulationObjectType,
+  createOperationStep,
+  EditorReferenceData,
 } from "@quodsi/shared";
-import { Settings, Clock, Layout, Plus, X, Layers } from "lucide-react";
+import { Settings, Layout, Plus, Layers } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 
@@ -17,12 +19,14 @@ interface ActivityEditorProps {
   activity: any;
   onSave: (activity: Activity) => void;
   onCancel: () => void;
+  referenceData?: EditorReferenceData;
 }
 
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
   onSave,
   onCancel,
+  referenceData,
 }) => {
   // Helper functions
   const bufferToDisplay = (value: number | null | undefined): number =>
@@ -41,7 +45,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       inputBufferCapacity: bufferToDisplay(data.inputBufferCapacity),
       outputBufferCapacity: bufferToDisplay(data.outputBufferCapacity),
       operationSteps: data.operationSteps || [],
-      connectors: [],
     };
   };
 
@@ -52,6 +55,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   // Handlers
   const handleSave = (updatedActivity: Activity) => {
+      console.log("ActivityEditor - Before Save:", {
+        updatedActivity,
+        operationSteps: updatedActivity.operationSteps,
+      });
+
     const activityToSave: Activity = {
       ...updatedActivity,
       type: SimulationObjectType.Activity,
@@ -60,6 +68,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         updatedActivity.outputBufferCapacity
       ),
     };
+
+    console.log("ActivityEditor - After Save Transform:", {
+      activityToSave,
+      operationSteps: activityToSave.operationSteps,
+    });
+
     onSave(activityToSave);
   };
 
@@ -76,8 +90,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   };
 
   const handleAddOperationStep = () => {
-    const newStep = new OperationStep(
-      null,
+    const newStep = createOperationStep(
       new Duration(0, PeriodUnit.MINUTES, DurationType.CONSTANT)
     );
     setLocalActivity((prev) => ({
@@ -86,12 +99,27 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     }));
   };
 
-  const handleRemoveOperationStep = (index: number) => {
-    setLocalActivity((prev) => ({
-      ...prev,
-      operationSteps: prev.operationSteps.filter((_, i) => i !== index),
-    }));
-  };
+  const handleOperationStepDelete = React.useCallback(
+    (
+      index: number,
+      localData: Activity,
+      handleChange: (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+      ) => void
+    ) => {
+      const newOperationSteps = localData.operationSteps.filter(
+        (_, i) => i !== index
+      );
+      handleChange({
+        target: {
+          name: "operationSteps",
+          value: newOperationSteps,
+        },
+      } as any);
+    },
+    []
+  );
+
 
   if (!localActivity?.id) {
     return (
@@ -218,7 +246,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   onChange={(updatedStep) =>
                     handleOperationStepChange(index, updatedStep)
                   }
-                  onDelete={() => handleRemoveOperationStep(index)}
+                  onDelete={() =>
+                    handleOperationStepDelete(index, localData, handleChange)
+                  }
+                  resourceRequirements={referenceData?.resourceRequirements}
                 />
               ))}
             </div>

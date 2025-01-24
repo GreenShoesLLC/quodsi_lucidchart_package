@@ -212,17 +212,10 @@ export class ModelPanel extends Panel {
 
         let referenceData: EditorReferenceData = {};
         if (metadata.type === SimulationObjectType.Generator) {
-            this.log("Building referenceData for Generator");
             const modelDef = await this.modelManager.getModelDefinition();
-            this.log("ModelDefinition retrieved:", {
-                hasModelDef: !!modelDef,
-                entityCount: modelDef?.entities?.size(),
-                entities: modelDef?.entities?.getAll()
-            });
-
             if (modelDef) {
                 const allEntities = modelDef.entities.getAll();
-                this.log("All entities before mapping:", allEntities);
+
                 referenceData.entities = allEntities.map(e => {
                     this.log("Mapping entity:", e);
                     return {
@@ -230,7 +223,13 @@ export class ModelPanel extends Panel {
                         name: e.name
                     };
                 });
-                this.log("Final referenceData.entities:", referenceData.entities);
+            }
+        }
+        if (metadata.type === SimulationObjectType.Activity || metadata.type === SimulationObjectType.Connector) {
+            const modelDef = await this.modelManager.getModelDefinition();
+            if (modelDef) {
+                const requirements = modelDef.resourceRequirements.getAll();
+                referenceData.resourceRequirements = requirements
             }
         }
 
@@ -280,6 +279,9 @@ export class ModelPanel extends Panel {
                     break;
                 case SimulationObjectType.Resource:
                     nextName = modelDef.resources.getNextName();
+                    break;
+                case SimulationObjectType.ResourceRequirement:
+                    nextName = modelDef.resourceRequirements.getNextName();
                     break;
                 case SimulationObjectType.Entity:
                     nextName = modelDef.entities.getNextName();

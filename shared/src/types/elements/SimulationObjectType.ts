@@ -6,6 +6,7 @@ export enum SimulationObjectType {
   Connector = "Connector",
   Generator = "Generator",
   Resource = "Resource",
+  ResourceRequirement = "ResourceRequirement",
   Scenario = "Scenario",
   Experiment = "Experiment",
   Model = "Model",

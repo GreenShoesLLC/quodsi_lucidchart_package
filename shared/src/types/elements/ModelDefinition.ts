@@ -6,6 +6,7 @@ import { GeneratorListManager } from "./GeneratorListManager";
 import { Model } from "./Model";
 import { ModelDefaults } from "./ModelDefaults";
 import { ResourceListManager } from "./ResourceListManager";
+import { ResourceRequirementListManager } from "./ResourceRequirementListManager";
 
 export class ModelDefinition {
     public readonly activities: ActivityListManager;
@@ -13,6 +14,7 @@ export class ModelDefinition {
     public readonly resources: ResourceListManager;
     public readonly generators: GeneratorListManager;
     public readonly entities: EntityListManager;
+    public readonly resourceRequirements: ResourceRequirementListManager;
 
     constructor(
         public readonly model: Model
@@ -20,8 +22,10 @@ export class ModelDefinition {
         this.activities = new ActivityListManager();
         this.connectors = new ConnectorListManager();
         this.resources = new ResourceListManager();
+        this.resourceRequirements = new ResourceRequirementListManager()
         this.generators = new GeneratorListManager();
         this.entities = new EntityListManager();
+
         // Add default entity
         const defaultEntity = new Entity(
             ModelDefaults.DEFAULT_ENTITY_ID,

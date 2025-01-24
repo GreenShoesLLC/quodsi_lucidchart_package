@@ -1,5 +1,5 @@
 import { ValidationRule } from "./ValidationRule";
-import { ValidationMessage, Resource } from "@quodsi/shared";
+import { ValidationMessage, Resource, ResourceRequirement, Activity, RequirementMode } from "@quodsi/shared";
 import { ModelDefinitionState } from "./ModelDefinitionState";
 
 export class ResourceValidation extends ValidationRule {
@@ -64,35 +64,49 @@ export class ResourceValidation extends ValidationRule {
     }
 
     private validateResourceUsage(state: ModelDefinitionState, messages: ValidationMessage[]): void {
-        /**
-         * Validates how resources are used across activities, ensuring no conflicts or underutilization.
-         */
-
         this.log("Validating resource usage across activities.");
 
         const resources = state.modelDefinition.resources.getAll();
         const activities = state.modelDefinition.activities.getAll();
-        const resourceUsage = new Map<string, Set<string>>(); // Resource ID -> Set of Activity IDs
+        const resourceRequirements = state.modelDefinition.resourceRequirements?.getAll() || [];
+        const requirementMap = new Map(
+            resourceRequirements.map(req => [req.id, req])
+        );
 
+        // Resource ID -> Set of Activity IDs
+        const resourceUsage = new Map<string, Set<string>>();
+
+        // Initialize resource usage map
         resources.forEach(resource => {
             resourceUsage.set(resource.id, new Set<string>());
         });
 
+        // Process activities and their resource requirements
         activities.forEach(activity => {
             if (activity.operationSteps) {
                 activity.operationSteps.forEach(step => {
-                    if (step.resourceSetRequest?.requests) {
-                        this.processResourceRequests(
-                            step.resourceSetRequest.requests,
-                            activity,
-                            resourceUsage,
-                            messages
-                        );
+                    if (step.requirementId) {
+                        const requirement = requirementMap.get(step.requirementId);
+                        if (requirement) {
+                            this.processResourceRequirement(
+                                requirement,
+                                activity,
+                                resourceUsage,
+                                messages
+                            );
+                        } else {
+                            messages.push({
+                                type: 'error',
+                                message: `Invalid resource requirement reference: ${step.requirementId}`,
+                                elementId: activity.id
+                            });
+                        }
                     }
                 });
             }
         });
 
+        // Check for unused resources
         resourceUsage.forEach((usedByActivities, resourceId) => {
             if (usedByActivities.size === 0) {
                 this.log(`Resource ID ${resourceId} is not used by any activity.`);
@@ -105,6 +119,44 @@ export class ResourceValidation extends ValidationRule {
         });
 
         this.checkResourceConflicts(state, resourceUsage, messages);
+    }
+
+    private processResourceRequirement(
+        requirement: ResourceRequirement,
+        activity: Activity,
+        resourceUsage: Map<string, Set<string>>,
+        messages: ValidationMessage[]
+    ): void {
+        requirement.rootClauses.forEach(clause=>{
+            // Process based on requirement mode
+            if (clause.mode === RequirementMode.REQUIRE_ALL) {
+                // All resources must be available
+                clause.requests.forEach(request => {
+                    this.addResourceUsage(request.resourceId, activity, resourceUsage);
+                });
+            } else if (clause.mode === RequirementMode.REQUIRE_ANY) {
+                // At least one resource must be available
+                // Just mark all as potentially used, detailed conflict resolution 
+                // will be handled in checkResourceConflicts
+                clause.requests.forEach(request => {
+                    this.addResourceUsage(request.resourceId, activity, resourceUsage);
+                });
+            }
+        })
+
+    }
+
+    private addResourceUsage(
+        resourceId: string,
+        activity: Activity,
+        resourceUsage: Map<string, Set<string>>
+    ): void {
+        const usageSet = resourceUsage.get(resourceId);
+        if (usageSet) {
+            usageSet.add(activity.id);
+        } else {
+            this.log(`Warning: Reference to non-existent resource ID: ${resourceId}`);
+        }
     }
 
     private processResourceRequests(

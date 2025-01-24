@@ -63,6 +63,12 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         var resources = modelDefinition.resources.getAll();
         resources.forEach(function (resource) { return _this.safeExecute(function () { return _this.logResource(resource); }, "Resource ID: ".concat(resource === null || resource === void 0 ? void 0 : resource.id)); });
     };
+    ModelDefinitionLogger.prototype.logResourceRequirements = function (modelDefinition) {
+        var _this = this;
+        this.log("\ResourceRequirement:");
+        var requirements = modelDefinition.resourceRequirements.getAll();
+        requirements.forEach(function (requirement) { return _this.safeExecute(function () { return _this.logResourceRequirement(requirement); }, "Resource ID: ".concat(requirement === null || requirement === void 0 ? void 0 : requirement.id)); });
+    };
     ModelDefinitionLogger.prototype.logGenerators = function (modelDefinition) {
         var _this = this;
         this.log("\nGenerators:");
@@ -93,16 +99,27 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         this.log("    Output Buffer Capacity: ".concat(activity.outputBufferCapacity));
         this.log("    Number of Operation Steps: ".concat(((_a = activity.operationSteps) === null || _a === void 0 ? void 0 : _a.length) || 0));
         (_b = activity.operationSteps) === null || _b === void 0 ? void 0 : _b.forEach(function (step, index) {
-            var _a, _b;
+            var _a;
             _this.log("      Operation Step ".concat(index + 1, ":"));
             _this.log("        Duration: ".concat(((_a = step.duration) === null || _a === void 0 ? void 0 : _a.durationLength) || "Not defined"));
-            if ((_b = step.resourceSetRequest) === null || _b === void 0 ? void 0 : _b.requests) {
-                _this.log("        Resource Requests:");
-                step.resourceSetRequest.requests.forEach(function (request) {
-                    if ('resource' in request && request.resource) {
-                        _this.log("          Resource ID: ".concat(request.resource.id, ", Quantity: ").concat(request.quantity || "Not defined"));
-                    }
-                });
+            if (step.requirementId) {
+                _this.log("        Resource Requirement ID: ".concat(step.requirementId));
+                _this.log("        Quantity: ".concat(step.quantity));
+                // If you need to log the actual resource requests, you'll need to pass
+                // the ResourceRequirement data to this method or have a way to look it up
+                /* Example if you had access to requirements:
+                const requirement = this.getRequirement(step.requirementId);
+                if (requirement) {
+                    this.log(`        Requirement Mode: ${requirement.mode}`);
+                    this.log("        Resource Requests:");
+                    requirement.requests.forEach(request => {
+                        this.log(`          Resource ID: ${request.resourceId}, ` +
+                                `Quantity: ${request.quantity}, ` +
+                                `Priority: ${request.priority}, ` +
+                                `Keep Resource: ${request.keepResource}`);
+                    });
+                }
+                */
             }
         });
     };
@@ -117,16 +134,12 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         var operationSteps = connector.operationSteps;
         this.log("    Number of Operation Steps: ".concat((operationSteps === null || operationSteps === void 0 ? void 0 : operationSteps.length) || 0));
         operationSteps === null || operationSteps === void 0 ? void 0 : operationSteps.forEach(function (step, index) {
-            var _a, _b;
+            var _a;
             _this.log("      Operation Step ".concat(index + 1, ":"));
             _this.log("        Duration: ".concat(((_a = step.duration) === null || _a === void 0 ? void 0 : _a.durationLength) || "Not defined"));
-            if ((_b = step.resourceSetRequest) === null || _b === void 0 ? void 0 : _b.requests) {
-                _this.log("        Resource Requests:");
-                step.resourceSetRequest.requests.forEach(function (request) {
-                    if ('resource' in request && request.resource) {
-                        _this.log("          Resource ID: ".concat(request.resource.id, ", Quantity: ").concat(request.quantity || "Not defined"));
-                    }
-                });
+            if (step.requirementId) {
+                _this.log("        Resource Requirement ID: ".concat(step.requirementId));
+                _this.log("        Quantity: ".concat(step.quantity));
             }
         });
     };
@@ -134,6 +147,11 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         this.log("  Resource ID: ".concat(resource.id));
         this.log("    Name: ".concat(resource.name));
         this.log("    Capacity: ".concat(resource.capacity));
+    };
+    ModelDefinitionLogger.prototype.logResourceRequirement = function (resourceRequirement) {
+        this.log("  Resource ID: ".concat(resourceRequirement.id));
+        this.log("    Name: ".concat(resourceRequirement.name));
+        // this.log(`    Mode: ${resourceRequirement.mode}`);
     };
     ModelDefinitionLogger.prototype.logGenerator = function (generator) {
         var _a, _b;

@@ -30,7 +30,8 @@ export class ModelStructureBuilder {
             { id: 'connectors', name: 'Connectors', type: SimulationObjectType.Connector, items: modelData.connectors },
             { id: 'resources', name: 'Resources', type: SimulationObjectType.Resource, items: modelData.resources },
             { id: 'generators', name: 'Generators', type: SimulationObjectType.Generator, items: modelData.generators },
-            { id: 'entities', name: 'Entities', type: SimulationObjectType.Entity, items: modelData.entities }
+            { id: 'entities', name: 'Entities', type: SimulationObjectType.Entity, items: modelData.entities },
+            { id: 'requirements', name: 'Requirements', type: SimulationObjectType.ResourceRequirement, items: modelData.resourceRequirements }
         ];
 
         // Add manager nodes and their items
