@@ -8,12 +8,12 @@ import {
   JsonObject,
   SimulationObjectType,
   DiagramElementType,
-  PageStatus,
 } from "@quodsi/shared";
 import { ModelTreeView } from "./ModelTreeView";
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
 import { Header } from "./Header";
+import { SimulationStatus } from "src/types/SimulationStatus";
 
 interface ModelPanelAccordionProps {
   modelStructure: ModelStructure | null;
@@ -45,12 +45,7 @@ interface ModelPanelAccordionProps {
     elementId: string,
     newType: SimulationObjectType
   ) => void;
-  simulationStatus: {
-    currentStatus: PageStatus | null;
-    isChecking: boolean;
-    error: string | null;
-    lastChecked: string | null;
-  };
+  simulationStatus: SimulationStatus;
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({

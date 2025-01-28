@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Model,
   PeriodUnit,
@@ -7,9 +7,10 @@ import {
   Duration,
   DurationType,
 } from "@quodsi/shared";
-import { Settings, Clock, Calendar, Hash } from "lucide-react";
+import { Settings, Clock } from "lucide-react";
 import { CompactDurationEditor } from "./CompactDurationEditor";
 import BaseEditor from "./BaseEditor";
+import OutputForm from "./OutputForm";
 
 interface Props {
   model: Model;
@@ -17,24 +18,22 @@ interface Props {
   onCancel: () => void;
 }
 
+type EditorTab = "model" | "output";
+
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
+  const [activeTab, setActiveTab] = useState<EditorTab>("model");
+
   const createSyntheticEvent = (
     name: string,
     value: any
   ): React.ChangeEvent<HTMLInputElement | HTMLSelectElement> => {
     return {
-      target: {
-        name,
-        value,
-      },
-      currentTarget: {
-        name,
-        value,
-      },
+      target: { name, value },
+      currentTarget: { name, value },
     } as React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
   };
 
-  return (
+  const ModelForm = () => (
     <BaseEditor
       data={{ ...model, type: SimulationObjectType.Model }}
       onSave={onSave}
@@ -225,6 +224,37 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
         </div>
       )}
     </BaseEditor>
+  );
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="border-b">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab("model")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === "model"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Model
+          </button>
+          <button
+            onClick={() => setActiveTab("output")}
+            className={`px-4 py-2 text-sm font-medium border-b-2 ${
+              activeTab === "output"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Output Page
+          </button>
+        </div>
+      </div>
+
+      {activeTab === "model" ? <ModelForm /> : <OutputForm />}
+    </div>
   );
 };
 

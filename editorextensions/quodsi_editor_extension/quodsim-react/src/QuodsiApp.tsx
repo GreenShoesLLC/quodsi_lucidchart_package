@@ -10,7 +10,6 @@ import {
   isValidMessage,
   ModelItemData,
   DiagramElementType,
-  PageStatus,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -22,6 +21,7 @@ import {
   registerHandler,
 } from "./services/messageHandlers/messageHandlers";
 import { useSimulationStatus } from "./hooks/useSimulationStatus";
+import { SimulationStatus } from "./types/SimulationStatus";
 
 export interface AppState {
   modelStructure: ModelStructure | null;
@@ -44,13 +44,14 @@ export interface AppState {
     editor: boolean;
     modelTree: boolean;
   };
-  simulationStatus: {
-    currentStatus: PageStatus | null;
-    isChecking: boolean;
-    error: string | null;
-    lastChecked: string | null;
-  };
+  simulationStatus: SimulationStatus;
 }
+export const initialSimulationStatus: SimulationStatus = {
+  pageStatus: null,
+  isPollingSimState: false,
+  errorMessage: null,
+  lastChecked: null,
+} as const;
 
 const initialState: AppState = {
   modelStructure: null,
@@ -77,12 +78,7 @@ const initialState: AppState = {
     editor: true,
     modelTree: true,
   },
-  simulationStatus: {
-    currentStatus: null,
-    isChecking: false,
-    error: null,
-    lastChecked: null,
-  },
+  simulationStatus: initialSimulationStatus,
 };
 
 const QuodsiApp: React.FC = () => {
@@ -105,10 +101,14 @@ const QuodsiApp: React.FC = () => {
     },
     []
   );
+  const documentId = state.documentId;
+  useEffect(() => {
+    console.log("[QuodsiApp] Component mounted");
+    return () => console.log("[QuodsiApp] Component unmounted");
+  }, []);
+  console.log("[QuodsiApp] documentId", documentId);
+  useSimulationStatus(documentId || "", 30);
 
-
-  useSimulationStatus(state.documentId || "", 30);
-  
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
@@ -198,7 +198,7 @@ const QuodsiApp: React.FC = () => {
         sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
           elementId,
           type: data.type,
-        data: {}, // Empty data for type conversion
+          data: {}, // Empty data for type conversion
         });
       } else {
         // Regular update

@@ -9,16 +9,19 @@ export interface ModelPayloads {
     [MessageTypes.MODEL_REMOVED]: undefined;
     [MessageTypes.SIMULATE_MODEL]: undefined;
     [MessageTypes.SIMULATION_STATUS_UPDATE]: {
-        status: PageStatus;
+        pageStatus: PageStatus;
     };
     [MessageTypes.SIMULATION_STATUS_CHECK]: {
         documentId: string;
     };
     [MessageTypes.SIMULATION_STATUS_ERROR]: {
-        error: string;
+        errorMessage: string;
     };
     [MessageTypes.SIMULATION_STARTED]: {
         documentId: string;
+    };
+    [MessageTypes.OUTPUT_CREATE_PAGE]: {
+        pageName: string;
     };
 }
 //# sourceMappingURL=ModelPayloads.d.ts.map

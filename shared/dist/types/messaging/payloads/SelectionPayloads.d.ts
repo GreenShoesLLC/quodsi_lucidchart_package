@@ -11,6 +11,7 @@ interface BaseSelectionPayload {
     modelStructure?: ModelStructure;
     expandedNodes?: string[];
     validationResult?: ValidationResult;
+    documentId: string;
 }
 export interface UnconvertedSelectionState {
     pageId: string;

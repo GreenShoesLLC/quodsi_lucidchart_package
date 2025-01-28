@@ -1,14 +1,12 @@
 import React from "react";
-import {
-  DiagramElementType,
-  PageStatus,
-  SimulationObjectType,
-} from "@quodsi/shared";
+import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
 import { ValidationState } from "@quodsi/shared/dist/types/accordion/ValidationState";
 import { ModelItemData } from "@quodsi/shared/dist/types/messaging/payloads/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { SimulationStatusMonitor } from "../SimulationStatusMonitor";
 import { Trash2 } from "lucide-react";
+import { getSimulationState } from "src/utils/simulationState";
+import { SimulationStatus } from "src/types/SimulationStatus";
 
 interface HeaderProps {
   modelName: string;
@@ -24,12 +22,7 @@ interface HeaderProps {
   onSimulate?: () => void;
   onRemoveModel?: () => void;
   onConvertPage?: () => void;
-  simulationStatus: {
-    currentStatus: PageStatus | null;
-    isChecking: boolean;
-    error: string | null;
-    lastChecked: string | null;
-  };
+  simulationStatus: SimulationStatus;
 }
 
 export class Header extends React.Component<HeaderProps> {
@@ -117,15 +110,16 @@ export class Header extends React.Component<HeaderProps> {
         <div className="flex items-center gap-2">
           {onSimulate && (
             <button
-              className={`px-2 py-1 text-xs ${
-                simulationStatus.isChecking
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-green-500 hover:bg-green-600"
-              } text-white rounded`}
+              className={`px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded`}
               onClick={onSimulate}
-              disabled={simulationStatus.isChecking}
+              disabled={false}
             >
-              {simulationStatus.isChecking ? "Simulating..." : "Simulate"}
+              {
+                getSimulationState(
+                  simulationStatus.pageStatus,
+                  simulationStatus.isPollingSimState
+                ).buttonLabel
+              }
             </button>
           )}
           {onRemoveModel && (
@@ -198,9 +192,9 @@ export class Header extends React.Component<HeaderProps> {
             <>
               <div className="border-t my-2" />
               <SimulationStatusMonitor
-                status={simulationStatus.currentStatus}
-                isChecking={simulationStatus.isChecking}
-                error={simulationStatus.error}
+                status={simulationStatus.pageStatus}
+                isPollingSimState={false}
+                error={simulationStatus.errorMessage}
               />
             </>
           )}

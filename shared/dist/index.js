@@ -30,6 +30,7 @@ __exportStar(require("./types/SimulationElementFactory"), exports);
 __exportStar(require("./types/SimulationElementWrapper"), exports);
 __exportStar(require("./types/validation"), exports);
 __exportStar(require("./types/MetaData"), exports);
+__exportStar(require("./types/elements/RunState"), exports);
 __exportStar(require("./types/DiagramElementType"), exports);
 __exportStar(require("./types/elements/Activity"), exports);
 __exportStar(require("./types/elements/ActivityListManager"), exports);

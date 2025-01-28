@@ -5,7 +5,8 @@ import {
     ValidationMessage,
     ExtensionMessaging,
     ModelItemData,
-    SimulationObjectType
+    SimulationObjectType,
+    RunState
 } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
 
@@ -47,10 +48,9 @@ export const messageHandlers: Partial<{
                 validation: false,
                 editor: false,
                 modelTree: false
-            }
+            },
         }));
     },
-
     [MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing SELECTION_CHANGED_PAGE_WITH_MODEL:", data);
         setState(prev => {
@@ -88,151 +88,150 @@ export const messageHandlers: Partial<{
                 },
                 isProcessing: false,
                 error: null,
-                documentId: data.selectionState.pageId || prev.documentId
+                documentId: data.documentId
             };
         });
     },
+    [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT - Initial payload:", {
+            modelItemData: payload.modelItemData,
+            data: payload.modelItemData?.data,
+            timestamp: new Date().toISOString()
+        });
 
-        [MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT]: (payload, { setState }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_SIMULATION_OBJECT - Initial payload:", {
-                modelItemData: payload.modelItemData,
-                data: payload.modelItemData?.data,
-                timestamp: new Date().toISOString()
-            });
+        setState(prev => {
+            // Create currentElement without modifying the type
+            const currentElement = {
+                ...payload.modelItemData,
+                isUnconverted: false
+            };
 
-            setState(prev => {
-                // Create currentElement without modifying the type
-                const currentElement = {
-                    ...payload.modelItemData,
-                    isUnconverted: false
-                };
-
-                const newState = {
-                    ...prev,
-                    diagramElementType: payload.simulationSelection.diagramElementType,
-                    currentElement,
-                    // Add a separate lastElementUpdate field
-                    lastElementUpdate: new Date().toISOString(),
-                    modelStructure: payload.modelStructure,
-                    expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
-                    referenceData: payload.referenceData || {
-                        entities: [],
-                        resources: []
-                    },
-                    validationState: payload.validationResult ? {
-                        messages: [...(payload.validationResult.messages || [])],
-                        summary: {
-                            errorCount: payload.validationResult.errorCount,
-                            warningCount: payload.validationResult.warningCount
-                        },
-                        isValid: payload.validationResult.isValid,
+            const newState = {
+                ...prev,
+                diagramElementType: payload.simulationSelection.diagramElementType,
+                currentElement,
+                // Add a separate lastElementUpdate field
+                lastElementUpdate: new Date().toISOString(),
+                modelStructure: payload.modelStructure,
+                expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
+                referenceData: payload.referenceData || {
+                    entities: [],
+                    resources: []
+                },
+                validationState: payload.validationResult ? {
+                    messages: [...(payload.validationResult.messages || [])],
+                    summary: {
                         errorCount: payload.validationResult.errorCount,
                         warningCount: payload.validationResult.warningCount
-                    } : null,
-                    showModelName: true,
-                    showModelItemName: true,
-                    visibleSections: {
-                        header: true,
-                        validation: true,
-                        editor: true,
-                        modelTree: true
-                    }
-                };
-
-                console.log("[MessageHandlers] State update - Current vs New:", {
-                    previousId: prev.currentElement?.id,
-                    newId: currentElement.id,
-                    hasDataChanged: JSON.stringify(prev.currentElement?.data) !== JSON.stringify(currentElement.data),
-                    lastUpdate: newState.lastElementUpdate
-                });
-
-                return newState;
-            });
-        },
-        [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (data, deps) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", data);
-
-            // Check if the page has a model by examining the modelStructure
-            // Handle undefined modelStructure case
-            if (!data.modelStructure || !data.modelStructure.elements || Object.keys(data.modelStructure.elements).length === 0) {
-                // Handle as SELECTION_CHANGED_PAGE_NO_MODEL
-                const convertedPayload = {
-                    pageId: data.multipleSelection.pageId
-                };
-
-                // Call the PAGE_NO_MODEL handler with full dependencies
-                messageHandlers[MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]?.(
-                    convertedPayload,
-                    deps
-                );
-            } else {
-                // Handle as SELECTION_CHANGED_PAGE_WITH_MODEL
-                // We know modelStructure exists at this point
-                const modelElement = data.modelStructure.elements.find(e => e.id === "0_0");
-
-                if (!modelElement) {
-                    console.error("Could not find root model element");
-                    return;
-                }
-
-                // Create a converted payload matching SELECTION_CHANGED_PAGE_WITH_MODEL format
-                const convertedPayload: MessagePayloads[MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL] = {
-                    selectionState: data.selectionState,
-                    modelStructure: data.modelStructure,
-                    expandedNodes: data.expandedNodes,
-                    validationResult: data.validationResult,
-                    pageSelection: {
-                        pageId: data.multipleSelection.pageId
                     },
-                    modelItemData: {
-                        id: "0_0", // Root model ID
-                        name: modelElement.name || "Untitled Model",
-                        metadata: {
-                            type: SimulationObjectType.Model,
-                            version: "1.0",  // Add appropriate version
-                            lastModified: new Date().toISOString(), // Current timestamp
-                            id: "0_0",  // Same as the model ID
-                            isUnconverted: false
-                        },
-                        data: {} // Empty data object for root model
-                    }
-                };
+                    isValid: payload.validationResult.isValid,
+                    errorCount: payload.validationResult.errorCount,
+                    warningCount: payload.validationResult.warningCount
+                } : null,
+                showModelName: true,
+                showModelItemName: true,
+                visibleSections: {
+                    header: true,
+                    validation: true,
+                    editor: true,
+                    modelTree: true
+                },
+                documentId: payload.documentId
+            };
 
-                // Call the PAGE_WITH_MODEL handler with full dependencies
-                messageHandlers[MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL]?.(
-                    convertedPayload,
-                    deps
-                );
-            }
-        },
-
-        [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: (payload, { setState }) => {
-            console.log("[MessageHandlers] Processing SELECTION_CHANGED_UNCONVERTED:", payload);
-
-            setState(prev => {
-                const currentElement: ModelItemData = {
-                    ...payload.modelItemData,
-                    isUnconverted: true
-                };
-
-                return {
-                    ...prev,
-                    diagramElementType: payload.unconvertedSelection.diagramElementType,
-                    currentElement,
-                    modelStructure: payload.modelStructure || prev.modelStructure,
-                    expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
-                    showModelName: true,           // Show model name
-                    showModelItemName: false,      // Don't show model item name
-                    visibleSections: {             // Only show header
-                        header: true,
-                        validation: false,
-                        editor: false,
-                        modelTree: false
-                    }
-                };
+            console.log("[MessageHandlers] State update - Current vs New:", {
+                previousId: prev.currentElement?.id,
+                newId: currentElement.id,
+                hasDataChanged: JSON.stringify(prev.currentElement?.data) !== JSON.stringify(currentElement.data),
+                lastUpdate: newState.lastElementUpdate
             });
-        },
 
+            return newState;
+        });
+    },
+    [MessageTypes.SELECTION_CHANGED_MULTIPLE]: (payload, deps) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_MULTIPLE:", payload);
+
+        // Check if the page has a model by examining the modelStructure
+        // Handle undefined modelStructure case
+        if (!payload.modelStructure || !payload.modelStructure.elements || Object.keys(payload.modelStructure.elements).length === 0) {
+            // Handle as SELECTION_CHANGED_PAGE_NO_MODEL
+            const convertedPayload = {
+                pageId: payload.multipleSelection.pageId
+            };
+
+            // Call the PAGE_NO_MODEL handler with full dependencies
+            messageHandlers[MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL]?.(
+                convertedPayload,
+                deps
+            );
+        } else {
+            // Handle as SELECTION_CHANGED_PAGE_WITH_MODEL
+            // We know modelStructure exists at this point
+            const modelElement = payload.modelStructure.elements.find(e => e.id === "0_0");
+
+            if (!modelElement) {
+                console.error("Could not find root model element");
+                return;
+            }
+
+            // Create a converted payload matching SELECTION_CHANGED_PAGE_WITH_MODEL format
+            const convertedPayload: MessagePayloads[MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL] = {
+                selectionState: payload.selectionState,
+                modelStructure: payload.modelStructure,
+                expandedNodes: payload.expandedNodes,
+                validationResult: payload.validationResult,
+                pageSelection: {
+                    pageId: payload.multipleSelection.pageId
+                },
+                modelItemData: {
+                    id: "0_0", // Root model ID
+                    name: modelElement.name || "Untitled Model",
+                    metadata: {
+                        type: SimulationObjectType.Model,
+                        version: "1.0",  // Add appropriate version
+                        lastModified: new Date().toISOString(), // Current timestamp
+                        id: "0_0",  // Same as the model ID
+                        isUnconverted: false
+                    },
+                    data: {} // Empty data object for root model
+                },
+                documentId: payload.documentId
+            };
+
+            // Call the PAGE_WITH_MODEL handler with full dependencies
+            messageHandlers[MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL]?.(
+                convertedPayload,
+                deps
+            );
+        }
+    },
+    [MessageTypes.SELECTION_CHANGED_UNCONVERTED]: (payload, { setState }) => {
+        console.log("[MessageHandlers] Processing SELECTION_CHANGED_UNCONVERTED:", payload);
+
+        setState(prev => {
+            const currentElement: ModelItemData = {
+                ...payload.modelItemData,
+                isUnconverted: true
+            };
+
+            return {
+                ...prev,
+                diagramElementType: payload.unconvertedSelection.diagramElementType,
+                currentElement,
+                modelStructure: payload.modelStructure || prev.modelStructure,
+                expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
+                showModelName: true,           // Show model name
+                showModelItemName: false,      // Don't show model item name
+                visibleSections: {             // Only show header
+                    header: true,
+                    validation: false,
+                    editor: false,
+                    modelTree: false
+                }
+            };
+        });
+    },
     [MessageTypes.VALIDATION_RESULT]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing VALIDATION_RESULT:", data);
         setState(prev => ({
@@ -250,7 +249,6 @@ export const messageHandlers: Partial<{
             },
         }));
     },
-
     [MessageTypes.UPDATE_SUCCESS]: (data, { setState }) => {
         console.log("[MessageHandlers] Processing UPDATE_SUCCESS:", data);
         setState(prev => ({
@@ -258,7 +256,6 @@ export const messageHandlers: Partial<{
             isProcessing: false
         }));
     },
-
     [MessageTypes.ERROR]: (data, { setState, setError }) => {
         console.error("[MessageHandlers] Received ERROR:", data);
         setState(prev => ({
@@ -267,36 +264,61 @@ export const messageHandlers: Partial<{
         }));
         setError(data.error);
     },
-    [MessageTypes.SIMULATION_STATUS_UPDATE]: (
-        message: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE],
+    [MessageTypes.SIMULATION_STARTED]: (
+        payload: MessagePayloads[MessageTypes.SIMULATION_STARTED],
         { setState }: MessageHandlerDependencies
     ) => {
+        console.log("[messageHandlers] SIMULATION_STARTED received:", payload);
         setState(prev => ({
             ...prev,
             simulationStatus: {
                 ...prev.simulationStatus,
-                currentStatus: message.status,
-                isChecking: false,
+                pageStatus: {
+                    ...(prev.simulationStatus?.pageStatus || {}),
+                    hasContainer: false,
+                    scenarios:[{
+                        id: '00000000-0000-0000-0000-000000000000', // Replace with a unique identifier
+                        name: 'Base Scenario', // Replace with the name of the scenario
+                        reps:1,
+                        forecastDays:30,
+                        runState:RunState.Running,
+                        type: SimulationObjectType.Scenario
+                    }],
+                    statusDateTime: new Date().toISOString()
+                },
+                isPollingSimState: true,
                 lastChecked: new Date().toISOString()
             }
         }));
     },
-
+    [MessageTypes.SIMULATION_STATUS_UPDATE]: (
+        payload: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE],
+        { setState }: MessageHandlerDependencies
+    ) => {
+        console.log("[messageHandlers] SIMULATION_STATUS_UPDATE received:", payload);
+        setState(prev => ({
+            ...prev,
+            simulationStatus: {
+                ...prev.simulationStatus,
+                pageStatus: payload.pageStatus,
+                isPollingSimState: true,
+                lastChecked: new Date().toISOString()
+            }
+        }));
+    },
     [MessageTypes.SIMULATION_STATUS_ERROR]: (
-        message: MessagePayloads[MessageTypes.SIMULATION_STATUS_ERROR],
+        payload: MessagePayloads[MessageTypes.SIMULATION_STATUS_ERROR],
         { setState }: MessageHandlerDependencies
     ) => {
         setState(prev => ({
             ...prev,
             simulationStatus: {
                 ...prev.simulationStatus,
-                error: message.error,
-                isChecking: false
+                errorMessage: payload.errorMessage,
+                isPollingSimState: false
             }
         }));
     }
-
-
 } as const;
 
 export function registerHandler<T extends MessageTypes>(

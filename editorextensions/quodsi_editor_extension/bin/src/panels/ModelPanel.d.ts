@@ -20,6 +20,7 @@ export declare class ModelPanel extends Panel {
     private log;
     private logError;
     private setupModelMessageHandlers;
+    private handleOutputCreatePage;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
     private createSimulationObjectPayload;

@@ -15,6 +15,7 @@ export * from './types/SimulationElementWrapper';
 export * from './types/validation';
 export * from './types/MetaData';
 
+export * from "./types/elements/RunState";
 export * from './types/DiagramElementType';
 export * from './types/elements/Activity';
 export * from './types/elements/ActivityListManager';

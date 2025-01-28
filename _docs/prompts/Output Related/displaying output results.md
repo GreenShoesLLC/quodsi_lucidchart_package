@@ -28,7 +28,7 @@ When the user clicks the panel icon:
 
 The primary purpose of Quodsi application is to enhance diagrams with simulation and modeling capabilities.  
 
-One of the features of Quodsi's LucidChart extension package is a "Simulate" button.  When the user hits the "Simulate" button, the application creates a MS  storage Container where the name of the container is the LucidChart active documentId, the diagram is simulated and the various files containing the simulation results are uploaded to the Azure container with the same name as the documentId.
+One of the features of Quodsi's LucidChart extension package is a "Simulate" button.  When the user hits the "Simulate" button, the application creates a Microsoft Azure Storage Container where the name of the container is the LucidChart active documentId.  AFter the diagram is simulated, Quodsi creates and uploads various files containing the simulation results to the Azure container with the same name as the documentId.
 
 The purpose of this chat is to discuss varioius different ways to visualize the results of the simulation within the LucidChart application.
 

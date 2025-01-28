@@ -42,12 +42,15 @@ export enum MessageTypes {
     SIMULATION_STATUS_UPDATE = 'SIMULATION_STATUS_UPDATE',
     SIMULATION_STATUS_CHECK = 'SIMULATION_STATUS_CHECK',
     SIMULATION_STATUS_ERROR = 'SIMULATION_STATUS_ERROR',
-
+    OUTPUT_CREATE_PAGE = 'outputCreatePage',
+    
     // Tree View State Management
     TREE_STATE_UPDATE = 'treeStateUpdate',
     TREE_NODE_TOGGLE = 'treeNodeToggle',
     TREE_NODE_EXPAND_PATH = 'treeNodeExpandPath',
     TREE_STATE_SYNC = 'treeStateSync',
+
+    
 }
 
 export interface MessagePayloads extends

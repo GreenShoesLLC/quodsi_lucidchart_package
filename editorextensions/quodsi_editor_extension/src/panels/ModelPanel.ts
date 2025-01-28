@@ -10,7 +10,8 @@ import {
     ElementProxy,
     JsonObject as LucidJsonObject,
     Panel,
-    UserProxy
+    UserProxy,
+    PageDefinition
 } from 'lucid-extension-sdk';
 import {
     ModelItemData,
@@ -75,12 +76,6 @@ export class ModelPanel extends Panel {
 
         // Set up event handlers
         this.setupModelMessageHandlers();
-
-        // Wait for React app ready message before doing any model operations
-        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            this.handleReactReady();
-        });
-
         this.log('Model Panel initialized');
     }
     public setLogging(enabled: boolean): void {
@@ -141,8 +136,19 @@ export class ModelPanel extends Panel {
             this.handleTreeStateUpdate(data.expandedNodes));
         this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
             this.handleExpandPath(data.nodeId));
-
+        this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
+            this.handleOutputCreatePage(data);
+        });
         this.logError('Setting up message handlers END');
+    }
+    private handleOutputCreatePage(data: { pageName: string }): void {
+        console.log('[ModelPanel] Output page creation requested:', data.pageName);
+        const document = new DocumentProxy(this.client);
+        const def: PageDefinition = {
+            title: data.pageName, // Set the title of the new page
+        };
+        const page = document.addPage(def)
+        // TODO: Implement page creation logic
     }
     private async handleSimulationStatusUpdate(
         data: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE]
@@ -156,11 +162,11 @@ export class ModelPanel extends Panel {
             }
 
             // Update the simulation status using StorageAdapter
-            this.modelManager.getStorageAdapter().setSimulationStatus(currentPage, data.status);
+            this.modelManager.getStorageAdapter().setSimulationStatus(currentPage, data.pageStatus);
 
             // Send a success message back to React
-            this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                elementId: currentPage.id
+            this.sendTypedMessage(MessageTypes.SIMULATION_STATUS_UPDATE, {
+                pageStatus: data.pageStatus
             });
         } catch (error) {
             this.logError('Failed to update page status:', error);
@@ -476,12 +482,14 @@ export class ModelPanel extends Panel {
         const modelStructure = this.currentModelStructure || { elements: [], hierarchy: {} };
         const expandedNodes = this.treeStateManager.getExpandedNodes();
         const validationResult = await this.modelManager.validateModel();
-
+        const document = new DocumentProxy(this.client);
+        const documentId = document.id;
         const basePayload = {
             selectionState,
             modelStructure,
             expandedNodes,
-            validationResult
+            validationResult,
+            documentId
         };
 
         switch (selectionState.selectionType) {
@@ -790,8 +798,7 @@ export class ModelPanel extends Panel {
 
             let pageId: string = 'undefined';
             let userId: string = 'undefined';
-            if (user)
-            {
+            if (user) {
                 userId = user.id;
             }
 
