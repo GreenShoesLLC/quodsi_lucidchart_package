@@ -2,6 +2,7 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { ExtensionMessaging, MessageTypes, PageStatus, RunState } from '@quodsi/shared';
 import { createLucidApiService } from '@quodsi/shared';
+import axios from 'axios';
 
 export const useSimulationStatus = (
     documentId: string,
@@ -43,9 +44,16 @@ export const useSimulationStatus = (
         }
 
         try {
-            const data = await lucidApiService.getSimulationStatus(documentId);
-            console.log("[useSimulationStatus] Received data:", data);
+            // const data = await lucidApiService.getSimulationStatus(documentId);
+            // console.log("[useSimulationStatus] Received data:", data);
+            
+            const url = `${process.env.REACT_APP_API_URL}Lucid/status/${documentId}`;
+            console.log("[useSimulationStatus] Making API call to:", url);
 
+            const response = await axios.get(url);
+            const data = response.data;
+            console.log("[useSimulationStatus] API response:", response.data);
+            
             const mapNumericToRunState = (state: number): RunState => {
                 switch (state) {
                     case 1: return RunState.Running;
