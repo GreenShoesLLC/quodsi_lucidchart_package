@@ -68,3 +68,6 @@ __exportStar(require("./types/accordion/ModelStructure"), exports);
 __exportStar(require("./types/accordion/ValidationState"), exports);
 __exportStar(require("./types/accordion/AccordionState"), exports);
 __exportStar(require("./types/elements/ModelDefinitionLogger"), exports);
+// Export API services
+__exportStar(require("./services/lucidApi"), exports);
+__exportStar(require("./utils/csvUtils"), exports);

@@ -1,0 +1,1 @@
+https://developer.lucid.co/docs/extension-api-getting-started#bundle-your-package-for-upload

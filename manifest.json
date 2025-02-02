@@ -1,6 +1,6 @@
 {
   "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -48,8 +48,14 @@
       "name": "quodsi_data_connector",
       "oauthProviderName": "lucid",
       "callbackBaseUrl": "http://localhost:9902/?kind=action&name=",
+      "pollingInterval": 30,
       "dataActions": {
-        "Simulate": "simulate"
+        "Simulate": "simulate",
+        "GetActivityUtilization": "getActivityUtilizationAction",
+        "ImportSimulationResults": "importSimulationResults",
+        "Poll": "poll",
+        "Patch": "patch",
+        "HardRefresh": "hardRefresh"
       }
     }
   ]

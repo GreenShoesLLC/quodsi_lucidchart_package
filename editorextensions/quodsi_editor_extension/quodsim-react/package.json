@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@quodsi/shared": "file:../shared",
+    "@quodsi/shared": "file:../../../shared",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -11,7 +11,7 @@
     "@types/node": "^16.18.104",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "axios": "^1.7.7",
+    "axios": "^1.7.9",
     "lodash": "^4.17.21",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
@@ -26,10 +26,8 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
+    "extends": ["react-app"],
+    "root": true
   },
   "browserslist": {
     "production": [
@@ -53,6 +51,9 @@
     "postcss": "^8.4.49",
     "postcss-import": "^16.1.0",
     "tailwindcss": "^3.4.16",
-    "ts-loader": "^9.5.1"
+    "ts-loader": "^9.5.1",
+    "eslint": "^8.57.0",
+    "eslint-config-react-app": "^7.0.1",
+    "eslint-plugin-react": "^7.34.0"
   }
 }

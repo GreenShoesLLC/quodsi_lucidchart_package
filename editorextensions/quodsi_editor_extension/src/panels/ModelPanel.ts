@@ -11,7 +11,10 @@ import {
     JsonObject as LucidJsonObject,
     Panel,
     UserProxy,
-    PageDefinition
+    PageDefinition,
+    TableBlockProxy,
+    BlockDefinition,
+    DataActionResponse
 } from 'lucid-extension-sdk';
 import {
     ModelItemData,
@@ -31,9 +34,10 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
-    SimulationObjectTypeFactory,
+    SimulationObjectTypeFactory
 
 } from '@quodsi/shared';
+import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { ConversionService } from '../services/conversion/ConversionService';
 import { SelectionManager, TreeStateManager } from '../managers';
@@ -57,6 +61,8 @@ export class ModelPanel extends Panel {
         selectionType: SelectionType.NONE
     };
     private isHandlingSelectionChange: boolean = false;
+    private apiService: any;
+
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -66,7 +72,15 @@ export class ModelPanel extends Panel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
+        const baseUrl = 'http://localhost:5000/api/';//process.env.REACT_APP_API_URL;
+        if (!baseUrl) {
+            throw new Error('API URL is not configured');
+        }
 
+        this.apiService = createLucidApiService(baseUrl);
+        if (!this.apiService) {
+            throw new Error('Failed to create API service');
+        }
         // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
         this.modelManager = modelManager;
@@ -141,15 +155,165 @@ export class ModelPanel extends Panel {
         });
         this.logError('Setting up message handlers END');
     }
-    private handleOutputCreatePage(data: { pageName: string }): void {
+
+
+    private async handleOutputCreatePage(data: { pageName: string }): Promise<void> {
         console.log('[ModelPanel] Output page creation requested:', data.pageName);
-        const document = new DocumentProxy(this.client);
-        const def: PageDefinition = {
-            title: data.pageName, // Set the title of the new page
-        };
-        const page = document.addPage(def)
-        // TODO: Implement page creation logic
+
+        try {
+            const document = new DocumentProxy(this.client);
+            const user = new UserProxy(this.client);
+            const docId = document.id;
+            const userId = user.id;
+
+            if (!docId || !userId) {
+                throw new Error('Document ID or User ID is missing');
+            }
+
+            // Create new page
+            const def: PageDefinition = {
+                title: data.pageName,
+            };
+            const page = document.addPage(def);
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
+            // Fetch CSV data using the data connector
+            console.log('[ModelPanel] ImportSimulationResults');
+
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ImportSimulationResults',
+                actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
+                asynchronous: true
+            });
+            console.log('[ModelPanel] Successfully called ImportSimulationResults');
+
+        } catch (error) {
+            console.error('[ModelPanel] Error creating output page:', error);
+            this.messaging.sendMessage(MessageTypes.ERROR, {
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            });
+        }
     }
+
+
+    private async handleOutputCreatePageOld(data: { pageName: string }): Promise<void> {
+        console.log('[ModelPanel] Output page creation requested:', data.pageName);
+
+        try {
+            const document = new DocumentProxy(this.client);
+            const user = new UserProxy(this.client);
+            const docId = document.id;
+            const userId = user.id;
+
+            if (!docId || !userId) {
+                throw new Error('Document ID or User ID is missing');
+            }
+
+            // Create new page
+            const def: PageDefinition = {
+                title: data.pageName,
+            };
+            const page = document.addPage(def);
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
+            // Fetch CSV data using the data connector
+            console.log('[ModelPanel] Fetching CSV data through performDataAction');
+
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ImportSimulationResults',
+                actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
+                asynchronous: true
+            });
+            const result = { status : 200, json: {error:"blah", csvData: "dan"}}
+            console.log('[ModelPanel] GetActivityUtilization', result);
+            if (result.status !== 200 || !result.json?.csvData) {
+                throw new Error(result.json?.error || 'Failed to fetch CSV data');
+            }
+            console.log('[ModelPanel]  Parse the CSV string');
+            // Parse the CSV string
+            console.log('[ModelPanel]  Parse the CSV string');
+            const parsedData = await parseCsvBlob(new Blob([result.json.csvData], { type: 'text/csv' }));
+            if (!parsedData || !parsedData.length) {
+                throw new Error('No data found in CSV');
+            }
+
+            // Calculate table dimensions
+            console.log('[ModelPanel] Calculating table dimensions...');
+            const { width, height } = calculateTableDimensions(parsedData);
+
+            // Load Table block class
+            console.log('[ModelPanel] Loading Table block class...');
+            await this.client.loadBlockClasses(['TableBlock']);
+
+            // Create table block
+            const blockDef: BlockDefinition = {
+                className: 'TableBlock',
+                boundingBox: {
+                    x: 100,
+                    y: 100,
+                    w: width,
+                    h: height
+                }
+            };
+            console.log('[ModelPanel] Adding TableBlock to page...');
+            const tableBlock = page.addBlock(blockDef) as TableBlockProxy;
+
+            // Get row and column counts
+            const rowCount = parsedData.length;
+            const columnCount = parsedData[0]?.length || 0;
+
+            // Get the initial cell to use as reference
+            const rows = tableBlock.getRows();
+            let lastCell = rows[0].getCells()[0];
+
+            // Add rows as needed
+            console.log('[ModelPanel] Adding rows...');
+            for (let i = 1; i < rowCount; i++) {
+                const newRow = tableBlock.addRow(lastCell);
+                lastCell = newRow.getCells()[0];
+            }
+
+            // Reset to use first row for column additions
+            lastCell = rows[0].getCells()[0];
+
+            // Add columns as needed
+            console.log('[ModelPanel] Adding columns...');
+            for (let i = 1; i < columnCount; i++) {
+                const newColumn = tableBlock.addColumn(lastCell);
+                lastCell = newColumn.getCells()[0];
+            }
+
+            // Populate table data
+            console.log('[ModelPanel] Populating table data...');
+            const updatedRows = tableBlock.getRows();
+            parsedData.forEach((rowData, rowIndex) => {
+                const row = updatedRows[rowIndex];
+                const cells = row.getCells();
+
+                rowData.forEach((cellValue, colIndex) => {
+                    const cell = cells[colIndex];
+                    cell.setText(String(cellValue));
+
+                    // Style header row
+                    // if (rowIndex === 0) {
+                    //     cell.setBackgroundColor('#f0f0f0');
+                    //     cell.setBold(true);
+                    // }
+                });
+            });
+
+            console.log('[ModelPanel] Successfully created output page with data');
+
+        } catch (error) {
+            console.error('[ModelPanel] Error creating output page:', error);
+            this.messaging.sendMessage(MessageTypes.ERROR, {
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            });
+        }
+    }
+
     private async handleSimulationStatusUpdate(
         data: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE]
     ): Promise<void> {

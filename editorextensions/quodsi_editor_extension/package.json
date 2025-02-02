@@ -1,5 +1,9 @@
 {
+  "name": "@quodsi/editor-extension",
+  "version": "1.0.0",
+  "private": true,
   "devDependencies": {
+    "@types/node": "^16.18.122",
     "@types/uuid": "^10.0.0",
     "raw-loader": "^4.0.2",
     "ts-loader": "^9.2.6",

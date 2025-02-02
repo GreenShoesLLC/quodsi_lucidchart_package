@@ -3,7 +3,8 @@
   "workspaces": [
     "editorextensions/quodsi_editor_extension",
     "editorextensions/quodsi_editor_extension/quodsim-react",
-    "shared"
+    "shared",
+    "dataconnectors/quodsi_data_connector"
   ],
   "scripts": {
     "create-editor-extension": "npx lucid-package create-editor-extension",
@@ -17,6 +18,7 @@
     "bundle": "npx lucid-package bundle"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "webpack-shell-plugin-next": "^2.3.1"
   }
 }

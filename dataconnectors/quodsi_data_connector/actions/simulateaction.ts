@@ -1,5 +1,7 @@
 import { DataConnectorAsynchronousAction } from 'lucid-extension-sdk';
-import axios from 'axios';
+import { createLucidApiService } from '@quodsi/shared';
+import { getConfig } from '../config';
+
 export const simulateAction: (action: DataConnectorAsynchronousAction) => Promise<{ success: boolean }> = async (
     action,
 ) => {
@@ -7,39 +9,32 @@ export const simulateAction: (action: DataConnectorAsynchronousAction) => Promis
         // Type assertion to ensure action.data has the expected structure
         const data = action.data as { documentId: string, pageId: string, userId: string };
 
-        // Extract document ID from action data
-        const documentId = data.documentId;
-        const pageId = data.pageId;
-        const userId = data.userId;
+        // Extract data from action
+        const { documentId, pageId, userId } = data;
+        const authToken = action.context.userCredential;
 
         // Log the document ID for debugging purposes
-        console.log(`Simulate action triggered for document ID: ${documentId}`);
+        console.log(`[simulateAction] Simulate action triggered for document ID: ${documentId} with package ID: ${action.context.packageId}`);
 
-        // Define the API endpoint
-        // const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}`;
+        // Get configuration
+        const config = getConfig();
+        // Create LucidApiService instance
+        const baseUrl = config.apiBaseUrl;
+        const lucidApiService = createLucidApiService(baseUrl);
 
-        const apiUrl = `http://localhost:5000/api/Lucid/simulate/${documentId}?pageId=${pageId}&userId=${userId}`;
-        // const apiUrl = `${action.context.callbackBaseUrl}/Scenario/simulate/${documentId}`;
+        // Call the simulate endpoint using our service
+        const success = await lucidApiService.simulateDocument(
+            documentId,
+            pageId,
+            userId,
+            authToken
+        );
 
+        console.log(success ? "[simulateAction] Simulate action successfully triggered." : "Simulate action failed.");
+        return { success };
 
-        // Make the POST request to the QuodsiAPI's simulate endpoint using axios
-        const response = await axios.post(apiUrl, null, {
-            headers: {
-                Authorization: `Bearer ${action.context.userCredential}` // Pass OAuth token
-            }
-        });
-
-        // Check if the response was successful
-        if (response.status === 200) {
-            console.log("Simulate action successfully triggered.");
-            return { success: true };
-        } else {
-            console.error("Simulate action failed.", response.statusText);
-            return { success: false };
-        }
     } catch (error) {
-        console.error("Error executing simulate action:", error);
+        console.error("[simulateAction] Error executing simulate action:", error);
         return { success: false };
     }
 };
-

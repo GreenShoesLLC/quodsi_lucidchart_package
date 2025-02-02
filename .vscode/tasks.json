@@ -4,7 +4,10 @@
     {
       "label": "Watch Shared",
       "type": "shell",
-      "command": "npm run build -w @quodsi/shared -- --watch",
+      "command": "npm run watch",
+      "options": {
+        "cwd": "${workspaceFolder}/shared"
+      },
       "problemMatcher": ["$tsc-watch"],
       "isBackground": true,
       "presentation": {
