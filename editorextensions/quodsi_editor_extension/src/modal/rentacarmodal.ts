@@ -14,8 +14,8 @@ import {
   isDefAndNotNull,
   isJsonObject,
 } from "lucid-extension-sdk";
-import { CarSchema } from "../collections/car";
-import { LotSchema } from "../collections/lots";
+import { CarSchema } from "../collections/examples/car";
+import { LotSchema } from "../collections/examples/lots";
 import {
   BLOCK_SIZES,
   CARS_COLLECTION_NAME,

@@ -46,7 +46,6 @@ module.exports = {
                         `mkdir -p ../../public/${target.name} &&` +
                         `cd ${target.name} && ` +
                         `npm run build && ` +
-                        `sed -i -E "s/(src|href)=\\"\\//\\1=\\"\/gi" build/index.html &&` +
                         `cp -r build/* ../../../public/${target.name}`
                 ),
                 blocking: true,

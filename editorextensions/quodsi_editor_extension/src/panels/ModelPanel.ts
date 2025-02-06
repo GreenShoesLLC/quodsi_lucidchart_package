@@ -14,7 +14,8 @@ import {
     PageDefinition,
     TableBlockProxy,
     BlockDefinition,
-    DataActionResponse
+    DataActionResponse,
+    DataProxy
 } from 'lucid-extension-sdk';
 import {
     ModelItemData,
@@ -41,6 +42,8 @@ import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@
 import { ModelManager } from '../core/ModelManager';
 import { ConversionService } from '../services/conversion/ConversionService';
 import { SelectionManager, TreeStateManager } from '../managers';
+import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
+import { ModelDataSource } from '../collections/ModelDataSource';
 
 
 
@@ -136,7 +139,7 @@ export class ModelPanel extends Panel {
         this.messaging.onMessage(MessageTypes.CONVERT_ELEMENT, (data) =>
             this.handleConvertElement(data));
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
-        this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handleConvertRequest());
+        this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handlePageConvertRequest());
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
 
         // Element Operations
@@ -857,7 +860,7 @@ export class ModelPanel extends Panel {
     /**
      * Handles page conversion request
      */
-    private async handleConvertRequest(): Promise<void> {
+    private async handlePageConvertRequest(): Promise<void> {
         this.log('Handling convert request');
 
         const viewport = new Viewport(this.client);
@@ -872,6 +875,16 @@ export class ModelPanel extends Panel {
         }
 
         try {
+
+            this.log('Creating dataProxy');
+            const dataProxy = new DataProxy(this.client); 
+            this.log('Creating modelDataSource');
+            const modelDataSource = new ModelDataSource(dataProxy);
+            this.log('Creating pageSchemaConversionService');
+            const pageSchemaConversionService = new PageSchemaConversionService(modelDataSource);
+            this.log('pageSchemaConversionService.convertPage');
+            const result2 = await pageSchemaConversionService.convertPage(currentPage);
+
             const result = await this.conversionService.convertPage(currentPage);
             const selectedItems = viewport.getSelectedItems();
             await this.handleSelectionChange(selectedItems);
