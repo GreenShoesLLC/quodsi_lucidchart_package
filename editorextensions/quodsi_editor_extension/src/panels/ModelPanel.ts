@@ -75,7 +75,9 @@ export class ModelPanel extends Panel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
-        const baseUrl = 'http://localhost:5000/api/';//process.env.REACT_APP_API_URL;
+        // const baseUrl = 'http://localhost:5000/api/';//process.env.REACT_APP_API_URL;
+        const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
+        // const baseUrl = process.env.QUODSI_API_URL || 'http://localhost:5000/api/'
         if (!baseUrl) {
             throw new Error('API URL is not configured');
         }
@@ -221,7 +223,7 @@ export class ModelPanel extends Panel {
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
             // Fetch CSV data using the data connector
-            console.log('[ModelPanel] Fetching CSV data through performDataAction');
+            console.log('[ModelPanel] Fetching CSV data through Data Connector');
 
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
@@ -911,28 +913,45 @@ export class ModelPanel extends Panel {
             if (!currentPage) {
                 throw new Error('No active page found');
             }
-
             // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
-            // Update current selection first
-            this.currentSelection = {
-                pageId: currentPage.id,
-                selectedIds: selectedItems.map(item => item.id),
-                selectionType: this.currentSelection.selectionType
-            };
+            if (updateData.type == 'Model'){
+                this.log('Received element type of Model:', updateData.type);
+                this.modelManager.setElementData(
+                    currentPage,
+                    updateData.data,
+                    SimulationObjectType.Model
+                );
 
-            const element = selectedItems.find(item => item.id === updateData.elementId);
-            if (!element) {
-                throw new Error(`Element not found in selection: ${updateData.elementId}`);
+                // this.modelManager.updateElement({
+                //     id: currentPage.id,
+                //     type: SimulationObjectType.Model,
+                //     ...updateData.data
+                // });
             }
+            else
+            {
+                
+                // Update current selection first
+                this.currentSelection = {
+                    pageId: currentPage.id,
+                    selectedIds: selectedItems.map(item => item.id),
+                    selectionType: this.currentSelection.selectionType
+                };
 
-            // Save element data using ModelManager
-            await this.modelManager.saveElementData(
-                element,
-                updateData.data,
-                updateData.type,
-                currentPage
-            );
+                const element = selectedItems.find(item => item.id === updateData.elementId);
+                if (!element) {
+                    throw new Error(`Element not found in selection: ${updateData.elementId}`);
+                }
+
+                // Save element data using ModelManager
+                await this.modelManager.saveElementData(
+                    element,
+                    updateData.data,
+                    updateData.type,
+                    currentPage
+                );
+            }
 
             // Send success message
             this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {

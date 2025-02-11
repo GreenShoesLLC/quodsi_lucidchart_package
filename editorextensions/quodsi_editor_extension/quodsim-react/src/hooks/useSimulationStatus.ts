@@ -14,7 +14,8 @@ export const useSimulationStatus = (
 
     // Create LucidApiService instance
     const lucidApiService = useMemo(() => {
-        const baseUrl = process.env.REACT_APP_API_URL;
+        // const baseUrl = process.env.REACT_APP_API_URL;
+        const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
         console.log("[useSimulationStatus] Base URL:", baseUrl);
 
         if (!baseUrl) {
@@ -46,14 +47,16 @@ export const useSimulationStatus = (
         try {
             // const data = await lucidApiService.getSimulationStatus(documentId);
             // console.log("[useSimulationStatus] Received data:", data);
+            const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
+            // const baseUrl = process.env.REACT_APP_API_URL;
+            const url = `${baseUrl}Lucid/status/${documentId}`;
             
-            const url = `${process.env.REACT_APP_API_URL}Lucid/status/${documentId}`;
             console.log("[useSimulationStatus] Making API call to:", url);
 
             const response = await axios.get(url);
             const data = response.data;
             console.log("[useSimulationStatus] API response:", response.data);
-            
+
             const mapNumericToRunState = (state: number): RunState => {
                 switch (state) {
                     case 1: return RunState.Running;

@@ -44,14 +44,47 @@
       }
     },
     {
-      "label": "DataConnector",
+      "label": "Azure Function Build",
+      "type": "shell",
+      "command": "npm run build",
+      "options": {
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+      },
+      "problemMatcher": ["$tsc"],
+      "group": "build"
+    },
+    {
+      "label": "Azure Function Clean",
+      "type": "shell",
+      "command": "npm run clean",
+      "options": {
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+      }
+    },
+    {
+      "label": "Azure Function Watch",
+      "type": "shell",
+      "command": "npm run watch",
+      "options": {
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+      },
+      "problemMatcher": ["$tsc-watch"],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
+      "label": "Azure Function Start",
       "type": "shell",
       "command": "npm run start",
       "options": {
-        "cwd": "${workspaceFolder}/dataconnectors/quodsi_data_connector"
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
       },
       "problemMatcher": [],
-      "group": "build",
+      "dependsOn": ["Azure Function Clean", "Azure Function Build"],
       "presentation": {
         "reveal": "always",
         "panel": "shared",
@@ -64,7 +97,8 @@
         "Watch Shared",
         "LucidPackage",
         "ReactApp",
-        "DataConnector"
+        "Azure Function Watch",
+        "Azure Function Start"
       ],
       "problemMatcher": []
     }
