@@ -1,1 +1,29 @@
+# Dependencies
 **/node_modules
+**/.pnp
+**/.pnp.js
+
+# Build directories
+/shared/dist/*
+!/shared/dist/**/*.d.ts
+!/shared/dist/**/*.d.ts.map
+/editorextensions/quodsi_editor_extension/bin
+/editorextensions/quodsi_editor_extension/quodsim-react/build
+
+# TypeScript build info
+**/*.tsbuildinfo
+
+# Testing
+**/coverage
+
+# Environment files
+**/.env*
+!**/.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
