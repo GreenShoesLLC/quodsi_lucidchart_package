@@ -1,1 +1,0 @@
-{"version":3,"file":"ModelMessageBuilder.d.ts","sourceRoot":"","sources":["../../../../src/services/accordion/ModelMessageBuilder.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,eAAe,EAAE,YAAY,EAAE,MAAM,gBAAgB,CAAC;AAG/D,qBAAa,mBAAmB;IAC5B;;OAEG;WACW,wBAAwB,CAAC,IAAI,EAAE,GAAG,GAAG,eAAe,CAAC,YAAY,CAAC,aAAa,CAAC;IAc9F,OAAO,CAAC,MAAM,CAAC,mBAAmB;CAuCrC"}
