@@ -48,7 +48,7 @@
       "type": "shell",
       "command": "npm run build",
       "options": {
-        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucidchart_package\\dataconnectors\\quodsi_lucid_data_connector"
       },
       "problemMatcher": ["$tsc"],
       "group": "build"
@@ -58,7 +58,7 @@
       "type": "shell",
       "command": "npm run clean",
       "options": {
-        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucidchart_package\\dataconnectors\\quodsi_lucid_data_connector"
       }
     },
     {
@@ -66,7 +66,7 @@
       "type": "shell",
       "command": "npm run watch",
       "options": {
-        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucidchart_package\\dataconnectors\\quodsi_lucid_data_connector"
       },
       "problemMatcher": ["$tsc-watch"],
       "isBackground": true,
@@ -77,29 +77,51 @@
       }
     },
     {
+      "label": "Kill Debug Port",
+      "type": "shell",
+      "command": "Get-Process | Where-Object {$_.Name -like '*node*'} | Where-Object {$_.CommandLine -like '*--inspect=9229*'} | Stop-Process -Force",
+      "presentation": {
+        "reveal": "never"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Azure Function Start",
       "type": "shell",
-      "command": "npm run start",
+      "command": "func start --debug --verbose",
       "options": {
-        "cwd": "C:\\_source\\Greenshoes\\quodsi_lucid_data_connector"
+        "cwd": "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector",
+        "env": {
+          "NODE_OPTIONS": "--inspect=9229"
+        }
       },
-      "problemMatcher": [],
-      "dependsOn": ["Azure Function Clean", "Azure Function Build"],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "echo": true
-      }
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Worker process started and initialized.*$",
+          "endsPattern": "^.*For detailed output.*$"
+        }
+      },
+      "dependsOn": ["Kill Debug Port", "Azure Function Build"]
     },
     {
       "label": "Run All",
-      "dependsOn": [
-        "Watch Shared",
-        "LucidPackage",
-        "ReactApp",
-        "Azure Function Watch",
-        "Azure Function Start"
-      ],
+      "dependsOn": ["Setup And Watch", "Start Apps"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup And Watch",
+      "dependsOn": ["Kill Debug Port", "Watch Shared", "Azure Function Build"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Apps",
+      "dependsOn": ["Azure Function Start", "LucidPackage", "ReactApp"],
       "problemMatcher": []
     }
   ]

@@ -2,12 +2,26 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach to Node Functions",
+      "name": "Debug Lucid Data Connector",
       "type": "node",
       "request": "attach",
-      "restart": true,
       "port": 9229,
-      "preLaunchTask": "func: host start"
+      "restart": true,
+      "sourceMaps": true,
+      "outFiles": [
+        "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector/dist/**/*.js"
+      ],
+      "localRoot": "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector",
+      "remoteRoot": "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector",
+      "skipFiles": ["<node_internals>/**"],
+      "preLaunchTask": "Azure Function Build"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run All with Debug",
+      "configurations": ["Debug Lucid Data Connector"],
+      "preLaunchTask": "Run All"
     }
   ]
 }
