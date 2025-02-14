@@ -54,4 +54,5 @@ export * from './types/accordion/AccordionState';
 export * from './types/elements/ModelDefinitionLogger';
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
+export * from './serialization';
 //# sourceMappingURL=index.d.ts.map

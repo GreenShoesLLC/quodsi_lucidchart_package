@@ -35,7 +35,8 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
-    SimulationObjectTypeFactory
+    SimulationObjectTypeFactory,
+    ModelSerializerFactory
 
 } from '@quodsi/shared';
 import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@quodsi/shared';
@@ -1037,9 +1038,46 @@ export class ModelPanel extends Panel {
         this.log('Handling validate model');
 
         const validationResult = await this.modelManager.validateModel();
-
+        this.log('validationResult:', validationResult);
         // Send separate validation result message for explicit validation requests
         this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
+
+        // If validation succeeded, try to serialize
+        if (validationResult.isValid || !validationResult.isValid) {
+            try {
+                // Get the model definition from the model manager
+                const modelDefinition = await this.modelManager.getModelDefinition();
+
+                if (modelDefinition) {
+                    // Create a serializer using the factory (will use latest version by default)
+                    const serializer = ModelSerializerFactory.create(modelDefinition);
+
+                    // Attempt serialization
+                    const serializedModel = serializer.serialize(modelDefinition);
+                    this.log('serializedModel:', serializedModel);
+
+                    // Log success and send message with serialized data
+                    this.log('Model serialization successful');
+                    // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
+                    //     success: true,
+                    //     data: serializedModel
+                    // });
+                } else {
+                    this.log('No model definition available');
+                    // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
+                    //     success: false,
+                    //     error: 'No model definition available'
+                    // });
+                }
+            } catch (error) {
+                // Handle serialization errors
+                this.log('Model serialization failed:', error);
+                // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
+                //     success: false,
+                //     error: error instanceof Error ? error.message : 'Unknown serialization error'
+                // });
+            }
+        }
     }
     /**
      * Handles model saved message

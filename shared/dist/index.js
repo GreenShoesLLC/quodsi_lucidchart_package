@@ -71,3 +71,5 @@ __exportStar(require("./types/elements/ModelDefinitionLogger"), exports);
 // Export API services
 __exportStar(require("./services/lucidApi"), exports);
 __exportStar(require("./utils/csvUtils"), exports);
+// Export serialization
+__exportStar(require("./serialization"), exports);
