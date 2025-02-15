@@ -40,12 +40,9 @@ export const useSimulationStatus = (
         }
 
         try {
+
             const azureFunctionKey = process.env.REACT_APP_AZURE_FUNCTION_KEY;
-
-
-
             if (!azureFunctionKey) {
-
                 console.error("Azure Function Key is missing. Check environment variables.");
                 // Handle the error appropriately, perhaps disable the functionality
                 // or display an error message to the user.
