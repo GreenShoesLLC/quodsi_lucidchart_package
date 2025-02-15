@@ -1,19 +1,5 @@
  Using OAuth APIs
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 You may need to access OAuth-protected APIs from your editor extensions in order to communicate with other systems or sources of data. In order to do this, you need to:
 
 Configure the OAuth provider in your manifest.json.

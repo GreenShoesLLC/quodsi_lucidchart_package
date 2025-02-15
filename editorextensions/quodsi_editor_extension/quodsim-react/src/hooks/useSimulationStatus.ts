@@ -1,6 +1,6 @@
 // src/hooks/useSimulationStatus.ts
 import { useEffect, useCallback, useMemo } from 'react';
-import { ExtensionMessaging, MessageTypes, PageStatus, RunState } from '@quodsi/shared';
+import { ExtensionMessaging, MessageTypes, PageStatus, RunState, SimulationObjectType } from '@quodsi/shared';
 import { createLucidApiService } from '@quodsi/shared';
 import axios from 'axios';
 
@@ -39,23 +39,35 @@ export const useSimulationStatus = (
             return;
         }
 
-        if (!lucidApiService) {
-            console.error("[useSimulationStatus] Service not initialized");
-            return;
-        }
-
         try {
-            // const data = await lucidApiService.getSimulationStatus(documentId);
-            // console.log("[useSimulationStatus] Received data:", data);
-            const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
-            // const baseUrl = process.env.REACT_APP_API_URL;
-            const url = `${baseUrl}Lucid/status/${documentId}`;
-            
+            const azureFunctionKey = process.env.REACT_APP_AZURE_FUNCTION_KEY;
+
+
+
+            if (!azureFunctionKey) {
+
+                console.error("Azure Function Key is missing. Check environment variables.");
+                // Handle the error appropriately, perhaps disable the functionality
+                // or display an error message to the user.
+                return; // or throw an error
+            }
+
+            const url = `https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/status/${documentId}?code=${azureFunctionKey}`;
             console.log("[useSimulationStatus] Making API call to:", url);
 
-            const response = await axios.get(url);
+            const response = await axios.get(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                },
+                withCredentials: false
+            });
+
             const data = response.data;
-            console.log("[useSimulationStatus] API response:", response.data);
+            console.log("[useSimulationStatus] API response:", data);
 
             const mapNumericToRunState = (state: number): RunState => {
                 switch (state) {
@@ -65,7 +77,14 @@ export const useSimulationStatus = (
                     default: return RunState.NotRun;
                 }
             };
-
+            const mapStringToRunState = (state: string): RunState => {
+                switch (state) {
+                    case 'Running': return RunState.Running;
+                    case 'RanWithErrors': return RunState.RanWithErrors;
+                    case 'RAN_SUCCESSFULLY': return RunState.RanSuccessfully;
+                    default: return RunState.NotRun;
+                }
+            };
             const newStatus: PageStatus = {
                 hasContainer: data.hasContainer,
                 scenarios: data.scenarios.scenarios.map((s: {
@@ -76,7 +95,10 @@ export const useSimulationStatus = (
                     forecastDays?: number;
                 }) => ({
                     ...s,
-                    runState: mapNumericToRunState(s.runState)
+                    type: SimulationObjectType.Scenario,
+                    reps: s.reps || 1,
+                    forecastDays: s.forecastDays || 1,
+                    runState: s.runState
                 })),
                 statusDateTime: new Date().toISOString()
             };
@@ -90,7 +112,7 @@ export const useSimulationStatus = (
                 errorMessage: 'Failed to check simulation status'
             });
         }
-    }, [documentId, messaging, lucidApiService]);
+    }, [documentId, messaging]);
 
     useEffect(() => {
         if (disabled) {

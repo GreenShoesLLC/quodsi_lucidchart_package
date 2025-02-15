@@ -1,6 +1,16 @@
 // src/services/lucidApi.ts
 import axios from 'axios';
 
+interface ScenarioStates {
+    scenarios: any[];
+}
+
+interface DocumentStatusResponse {
+    hasContainer: boolean;
+    scenarios: ScenarioStates;
+    statusDateTime: string;
+}
+
 export class LucidApiService {
     private baseURL: string;
 
@@ -61,7 +71,34 @@ export class LucidApiService {
             throw error;
         }
     }
+    async getDocumentStatus(documentId: string, authToken?: string): Promise<DocumentStatusResponse> {
+        try {
+            const url = `${this.baseURL}Lucid/status/${documentId}`;
+            const headers: Record<string, string> = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            };
 
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+
+            const response = await axios({
+                method: 'GET',
+                url,
+                headers
+            });
+
+            if (response.status !== 200) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('Error in getDocumentStatus:', error);
+            throw error;
+        }
+    }
     async getSimulationStatus(documentId: string): Promise<any> {
         try {
             const url = `${this.baseURL}Lucid/status/${documentId}`;

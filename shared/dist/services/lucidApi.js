@@ -113,9 +113,44 @@ var LucidApiService = /** @class */ (function () {
             });
         });
     };
+    LucidApiService.prototype.getDocumentStatus = function (documentId, authToken) {
+        return __awaiter(this, void 0, void 0, function () {
+            var url, headers, response, error_3;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 2, , 3]);
+                        url = "".concat(this.baseURL, "Lucid/status/").concat(documentId);
+                        headers = {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        };
+                        if (authToken) {
+                            headers['Authorization'] = "Bearer ".concat(authToken);
+                        }
+                        return [4 /*yield*/, (0, axios_1.default)({
+                                method: 'GET',
+                                url: url,
+                                headers: headers
+                            })];
+                    case 1:
+                        response = _a.sent();
+                        if (response.status !== 200) {
+                            throw new Error("HTTP error! status: ".concat(response.status));
+                        }
+                        return [2 /*return*/, response.data];
+                    case 2:
+                        error_3 = _a.sent();
+                        console.error('Error in getDocumentStatus:', error_3);
+                        throw error_3;
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
+    };
     LucidApiService.prototype.getSimulationStatus = function (documentId) {
         return __awaiter(this, void 0, void 0, function () {
-            var url, response, error_3;
+            var url, response, error_4;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -135,9 +170,9 @@ var LucidApiService = /** @class */ (function () {
                         }
                         return [2 /*return*/, response.data];
                     case 2:
-                        error_3 = _a.sent();
-                        console.error('Error in getSimulationStatus:', error_3);
-                        throw error_3;
+                        error_4 = _a.sent();
+                        console.error('Error in getSimulationStatus:', error_4);
+                        throw error_4;
                     case 3: return [2 /*return*/];
                 }
             });

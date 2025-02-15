@@ -232,7 +232,7 @@ export class ModelPanel extends Panel {
                 actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
                 asynchronous: true
             });
-            const result = { status : 200, json: {error:"blah", csvData: "dan"}}
+            const result = { status: 200, json: { error: "blah", csvData: "dan" } }
             console.log('[ModelPanel] GetActivityUtilization', result);
             if (result.status !== 200 || !result.json?.csvData) {
                 throw new Error(result.json?.error || 'Failed to fetch CSV data');
@@ -880,7 +880,7 @@ export class ModelPanel extends Panel {
         try {
 
             this.log('Creating dataProxy');
-            const dataProxy = new DataProxy(this.client); 
+            const dataProxy = new DataProxy(this.client);
             this.log('Creating modelDataSource');
             const modelDataSource = new ModelDataSource(dataProxy);
             this.log('Creating pageSchemaConversionService');
@@ -916,7 +916,7 @@ export class ModelPanel extends Panel {
             }
             // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
-            if (updateData.type == 'Model'){
+            if (updateData.type == 'Model') {
                 this.log('Received element type of Model:', updateData.type);
                 this.modelManager.setElementData(
                     currentPage,
@@ -930,9 +930,8 @@ export class ModelPanel extends Panel {
                 //     ...updateData.data
                 // });
             }
-            else
-            {
-                
+            else {
+
                 // Update current selection first
                 this.currentSelection = {
                     pageId: currentPage.id,
@@ -1056,26 +1055,59 @@ export class ModelPanel extends Panel {
                     const serializedModel = serializer.serialize(modelDefinition);
                     this.log('serializedModel:', serializedModel);
 
-                    // Log success and send message with serialized data
+                    try {
+                        // Prepare the request payload
+                        const document = new DocumentProxy(this.client);
+                        const documentId = document.id;
+                        const viewport = new Viewport(this.client);
+                        const user: UserProxy = new UserProxy(this.client);
+                        // const activePageProxy = viewport.getCurrentPage();
+                        const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
+                        // const AZURE_FUNCTION_URL = "http://localhost:7071/api/"
+                        // const YOUR_AZURE_FUNCTION_URL = "http://dev-quodsi-lucid-function-app.azurewebsites.net/api/dataConnector/"
+                        let pageId: string = 'undefined';
+                        let userId: string = 'undefined';
+                        if (user) {
+                            userId = user.id;
+                        }
+
+                        if (activePageProxy) {
+                            pageId = activePageProxy.id;
+                        }
+
+                        // Make the request to upload the model definition
+                        await this.client.performDataAction({
+                            dataConnectorName: 'quodsi_data_connector',
+                            actionName: 'UploadModelDefinition',
+                            actionData: { documentId: documentId, userId: userId, pageId: pageId, model: serializedModel },
+                            asynchronous: true
+                        });
+
+                        // Send a message to the React app about the successful upload
+                        // this.sendTypedMessage(MessageTypes.MODEL_UPLOAD_SUCCESS, {
+                        //     blobUrl: response.data.blobUrl,
+                        //     uploadDateTime: response.data.uploadDateTime,
+                        //     batchJob: response.data.batchJob
+                        // });
+
+                    } catch (uploadError) {
+                        this.log('Model upload failed:', uploadError);
+
+                        // Send error message to the React app
+                        // this.sendTypedMessage(MessageTypes.MODEL_UPLOAD_ERROR, {
+                        //     error: uploadError.message || 'Failed to upload model'
+                        // });
+                    }
+
+                    // Log success of serialization
                     this.log('Model serialization successful');
-                    // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
-                    //     success: true,
-                    //     data: serializedModel
-                    // });
+
                 } else {
                     this.log('No model definition available');
-                    // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
-                    //     success: false,
-                    //     error: 'No model definition available'
-                    // });
                 }
             } catch (error) {
                 // Handle serialization errors
                 this.log('Model serialization failed:', error);
-                // this.sendTypedMessage(MessageTypes.SERIALIZATION_RESULT, {
-                //     success: false,
-                //     error: error instanceof Error ? error.message : 'Unknown serialization error'
-                // });
             }
         }
     }
