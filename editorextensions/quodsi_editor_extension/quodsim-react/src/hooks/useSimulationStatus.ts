@@ -40,8 +40,8 @@ export const useSimulationStatus = (
         }
 
         try {
-
             const azureFunctionKey = process.env.REACT_APP_AZURE_FUNCTION_KEY;
+
             if (!azureFunctionKey) {
                 console.error("Azure Function Key is missing. Check environment variables.");
                 // Handle the error appropriately, perhaps disable the functionality
@@ -50,6 +50,7 @@ export const useSimulationStatus = (
             }
 
             const url = `https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/status/${documentId}?code=${azureFunctionKey}`;
+
             console.log("[useSimulationStatus] Making API call to:", url);
 
             const response = await axios.get(url, {
