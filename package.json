@@ -4,7 +4,7 @@
     "editorextensions/quodsi_editor_extension",
     "editorextensions/quodsi_editor_extension/quodsim-react",
     "shared",
-    "dataconnectors/quodsi_lucid_data_connector"
+    "dataconnectors/quodsi_data_connector_lucidchart"
   ],
   "scripts": {
     "create-editor-extension": "npx lucid-package create-editor-extension",

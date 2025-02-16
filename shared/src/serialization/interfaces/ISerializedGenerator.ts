@@ -1,4 +1,5 @@
 import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
+import { ISerializedConnector } from './ISerializedConnector';
 import { ISerializedDuration } from './ISerializedDuration';
 
 export interface ISerializedGenerator {
@@ -12,4 +13,5 @@ export interface ISerializedGenerator {
     entitiesPerCreation: number;
     periodicStartDuration: ISerializedDuration;
     maxEntities: number;
+    connectors: ISerializedConnector[];
 }

@@ -14,7 +14,6 @@ export declare class ModelPanel extends Panel {
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
-    private apiService;
     constructor(client: EditorClient, modelManager: ModelManager);
     setLogging(enabled: boolean): void;
     private isLoggingEnabled;

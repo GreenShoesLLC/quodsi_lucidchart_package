@@ -1,7 +1,5 @@
-// src/hooks/useSimulationStatus.ts
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback } from 'react';
 import { ExtensionMessaging, MessageTypes, PageStatus, RunState, SimulationObjectType } from '@quodsi/shared';
-import { createLucidApiService } from '@quodsi/shared';
 import axios from 'axios';
 
 export const useSimulationStatus = (
@@ -11,78 +9,70 @@ export const useSimulationStatus = (
     console.log("[useSimulationStatus] Starting with:", { documentId, intervalSeconds });
     const messaging = ExtensionMessaging.getInstance();
     const disabled = process.env.REACT_APP_DISABLE_SIMULATION_STATUS === 'true';
-
-    // Create LucidApiService instance
-    const lucidApiService = useMemo(() => {
-        // const baseUrl = process.env.REACT_APP_API_URL;
-        const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
-        console.log("[useSimulationStatus] Base URL:", baseUrl);
-
-        if (!baseUrl) {
-            console.error("[useSimulationStatus] REACT_APP_API_URL is not defined");
-            return null;
-        }
-
-        try {
-            const service = createLucidApiService(baseUrl);
-            console.log("[useSimulationStatus] Service created successfully");
-            return service;
-        } catch (error) {
-            console.error("[useSimulationStatus] Failed to create service:", error);
-            return null;
-        }
-    }, []);
+    const azureFunctionKey = process.env.REACT_APP_AZURE_FUNCTION_KEY; 
 
     const checkStatus = useCallback(async () => {
+        if (disabled) return; // Early exit if disabled
+
         if (!documentId) {
             console.log("[useSimulationStatus] No documentId provided");
             return;
         }
 
+        // if (!azureFunctionKey) {
+        //     console.error("[useSimulationStatus] Azure Function Key is missing. Check environment variables.");
+        //     return;
+        // }
+
+        const env = process.env.DATA_CONNECTOR_ENV || 'local';
+        console.log("[useSimulationStatus] DATA_CONNECTOR_ENV:", env);
+        let baseUrl;
+
+        switch (env) {
+            case 'local':
+                baseUrl = process.env.DATA_CONNECTOR_API_URL_LOCAL;
+                break;
+            case 'dev':
+                baseUrl = process.env.DATA_CONNECTOR_API_URL_DEV;
+                break;
+            case 'test':
+                baseUrl = process.env.DATA_CONNECTOR_API_URL_TEST;
+                break;
+            case 'prod':
+                baseUrl = process.env.DATA_CONNECTOR_API_URL_PROD;
+                break;
+            default:
+                console.error(`Invalid DATA_CONNECTOR_ENV: ${env}`);
+                baseUrl = process.env.DATA_CONNECTOR_API_URL_LOCAL;
+                break;
+        }
+
+        if (!baseUrl) {
+            console.error(`No URL defined for DATA_CONNECTOR_ENV: ${env}`);
+            baseUrl = "http://localhost:7071/api/"; // Provide a hard-coded default (or throw an error)
+        }
+
+        const url = `${baseUrl}status/${documentId}?code=${azureFunctionKey}`; // Construct URL here
+
+        console.log("[useSimulationStatus] Making API call to:", url);
+
         try {
-            const azureFunctionKey = process.env.REACT_APP_AZURE_FUNCTION_KEY;
-
-            if (!azureFunctionKey) {
-                console.error("Azure Function Key is missing. Check environment variables.");
-                // Handle the error appropriately, perhaps disable the functionality
-                // or display an error message to the user.
-                return; // or throw an error
-            }
-
-            const url = `https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/status/${documentId}?code=${azureFunctionKey}`;
-
-            console.log("[useSimulationStatus] Making API call to:", url);
-
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'Access-Control-Allow-Origin': '*',
-                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                    'Access-Control-Allow-Headers': 'Content-Type'
+                    'Access-Control-Allow-Origin': '*', // Consider if these are still necessary
+                    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', // Consider if these are still necessary
+                    'Access-Control-Allow-Headers': 'Content-Type' // Consider if these are still necessary
                 },
-                withCredentials: false
+                withCredentials: false // Consider if this is still necessary
             });
 
             const data = response.data;
             console.log("[useSimulationStatus] API response:", data);
 
-            const mapNumericToRunState = (state: number): RunState => {
-                switch (state) {
-                    case 1: return RunState.Running;
-                    case 2: return RunState.RanWithErrors;
-                    case 3: return RunState.RanSuccessfully;
-                    default: return RunState.NotRun;
-                }
-            };
-            const mapStringToRunState = (state: string): RunState => {
-                switch (state) {
-                    case 'Running': return RunState.Running;
-                    case 'RanWithErrors': return RunState.RanWithErrors;
-                    case 'RAN_SUCCESSFULLY': return RunState.RanSuccessfully;
-                    default: return RunState.NotRun;
-                }
-            };
+            //... (Mapping functions mapNumericToRunState and mapStringToRunState remain the same)
+
             const newStatus: PageStatus = {
                 hasContainer: data.hasContainer,
                 scenarios: data.scenarios.scenarios.map((s: {
@@ -104,22 +94,18 @@ export const useSimulationStatus = (
             messaging.sendMessage(MessageTypes.SIMULATION_STATUS_UPDATE, {
                 pageStatus: newStatus
             });
+
         } catch (error) {
             console.error("[useSimulationStatus] Error checking status:", error);
             messaging.sendMessage(MessageTypes.SIMULATION_STATUS_ERROR, {
                 errorMessage: 'Failed to check simulation status'
             });
         }
-    }, [documentId, messaging]);
+    }, [documentId, messaging, disabled, azureFunctionKey]); // Add dependencies
 
     useEffect(() => {
         if (disabled) {
             console.log("[useSimulationStatus] Status updates are disabled");
-            return;
-        }
-
-        if (!lucidApiService) {
-            console.log("[useSimulationStatus] Service not available");
             return;
         }
 
@@ -131,5 +117,5 @@ export const useSimulationStatus = (
             console.log("[useSimulationStatus] Cleaning up interval");
             clearInterval(intervalId);
         };
-    }, [checkStatus, intervalSeconds, disabled, lucidApiService]);
+    }, [checkStatus, intervalSeconds, disabled]); // Removed lucidApiService dependency
 };

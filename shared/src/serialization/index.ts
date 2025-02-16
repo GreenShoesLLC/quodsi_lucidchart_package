@@ -16,12 +16,10 @@ export type { ISerializedEntity } from './interfaces/ISerializedEntity';
 export type { ISerializedGenerator } from './interfaces/ISerializedGenerator';
 export type { ISerializedOperationStep } from './interfaces/ISerializedOperationStep';
 export type { ISerializedResource } from './interfaces/ISerializedResource';
-export type { 
-    ISerializedResourceRequirement,
-    ISerializedRequirementClause,
-    ISerializedResourceRequest 
-} from './interfaces/ISerializedResourceRequirement';
+export type { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
+export type { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 
+export type { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

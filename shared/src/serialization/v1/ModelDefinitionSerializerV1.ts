@@ -36,13 +36,13 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                     this.serializeEntity(entity)
                 ),
                 activities: modelDefinition.activities.getAll().map(activity => 
-                    this.serializeActivity(activity)
+                    this.serializeActivity(activity, modelDefinition) 
                 ),
                 resources: modelDefinition.resources.getAll().map(resource => 
                     this.serializeResource(resource)
                 ),
                 generators: modelDefinition.generators.getAll().map(generator => 
-                    this.serializeGenerator(generator)
+                    this.serializeGenerator(generator, modelDefinition) 
                 ),
                 resourceRequirements: modelDefinition.resourceRequirements.getAll().map(requirement => 
                     this.serializeResourceRequirement(requirement)

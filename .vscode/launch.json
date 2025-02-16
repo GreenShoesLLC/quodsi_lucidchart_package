@@ -9,10 +9,10 @@
       "restart": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector/dist/**/*.js"
+        "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart/dist/**/*.js"
       ],
-      "localRoot": "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector",
-      "remoteRoot": "${workspaceFolder}/dataconnectors/quodsi_lucid_data_connector",
+      "localRoot": "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart",
+      "remoteRoot": "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart",
       "skipFiles": ["<node_internals>/**"],
       "preLaunchTask": "Azure Function Build"
     }

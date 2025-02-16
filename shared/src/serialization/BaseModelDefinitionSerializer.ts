@@ -21,7 +21,8 @@ import { ISerializedResourceRequirement } from './interfaces/ISerializedResource
 import { ISerializedConnector } from './interfaces/ISerializedConnector';
 import { ISerializedDuration } from './interfaces/ISerializedDuration';
 import { ISerializedOperationStep } from './interfaces/ISerializedOperationStep';
-import { ISerializedRequirementClause, ISerializedResourceRequest } from './interfaces/ISerializedResourceRequirement';
+import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
+import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
 import { SerializationError } from './errors/SerializationError';
 import { InvalidModelError } from './errors/InvalidModelError';
@@ -88,11 +89,16 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
-    protected serializeActivity(activity: Activity): ISerializedActivity {
+    protected serializeActivity(activity: Activity, modelDefinition: ModelDefinition): ISerializedActivity {
         try {
             if (!activity.id || !activity.name) {
                 throw new InvalidModelError('Activity must have id and name');
             }
+
+            // Get all connectors where the sourceId matches the activity's id
+            const relevantConnectors = modelDefinition.connectors.getAll()
+                .filter(connector => connector.sourceId === activity.id)
+                .map(connector => this.serializeConnector(connector));
 
             return {
                 id: activity.id,
@@ -101,11 +107,17 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 capacity: activity.capacity,
                 inputBufferCapacity: activity.inputBufferCapacity,
                 outputBufferCapacity: activity.outputBufferCapacity,
-                operationSteps: activity.operationSteps.map(step => this.serializeOperationStep(step)),
-                connectors: []  // Connectors will be populated by the version-specific implementation
+                operationSteps: activity.operationSteps.map(step =>
+                    this.serializeOperationStep(step)
+                ),
+                connectors: relevantConnectors
             };
         } catch (error) {
-            throw new SerializationError('Activity', `Failed to serialize activity ${activity.id}`, error instanceof Error ? error : undefined);
+            throw new SerializationError(
+                'Activity',
+                `Failed to serialize activity ${activity.id}`,
+                error instanceof Error ? error : undefined
+            );
         }
     }
 
@@ -140,11 +152,16 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
-    protected serializeGenerator(generator: Generator): ISerializedGenerator {
+    protected serializeGenerator(generator: Generator, modelDefinition: ModelDefinition): ISerializedGenerator {
         try {
             if (!generator.id || !generator.name) {
                 throw new InvalidModelError('Generator must have id and name');
             }
+
+            // Get all connectors where the sourceId matches the generator's id
+            const relevantConnectors = modelDefinition.connectors.getAll()
+                .filter(connector => connector.sourceId === generator.id)
+                .map(connector => this.serializeConnector(connector));
 
             return {
                 id: generator.id,
@@ -156,10 +173,15 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 periodIntervalDuration: this.serializeDuration(generator.periodIntervalDuration),
                 entitiesPerCreation: generator.entitiesPerCreation,
                 periodicStartDuration: this.serializeDuration(generator.periodicStartDuration),
-                maxEntities: generator.maxEntities
+                maxEntities: generator.maxEntities,
+                connectors: relevantConnectors
             };
         } catch (error) {
-            throw new SerializationError('Generator', `Failed to serialize generator ${generator.id}`, error instanceof Error ? error : undefined);
+            throw new SerializationError(
+                'Generator',
+                `Failed to serialize generator ${generator.id}`,
+                error instanceof Error ? error : undefined
+            );
         }
     }
 
@@ -240,12 +262,22 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             return {
                 id: connector.id,
+                name: connector.name,
                 sourceId: connector.sourceId,
                 targetId: connector.targetId,
-                type: connector.type
+                type: connector.type,
+                probability: connector.probability,
+                connectType: connector.connectType,
+                operationSteps: connector.operationSteps.map(step =>
+                    this.serializeOperationStep(step)
+                )
             };
         } catch (error) {
-            throw new SerializationError('Connector', `Failed to serialize connector ${connector.id}`, error instanceof Error ? error : undefined);
+            throw new SerializationError(
+                'Connector',
+                `Failed to serialize connector ${connector.id}`,
+                error instanceof Error ? error : undefined
+            );
         }
     }
 

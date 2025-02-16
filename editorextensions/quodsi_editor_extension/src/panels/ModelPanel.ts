@@ -65,8 +65,6 @@ export class ModelPanel extends Panel {
         selectionType: SelectionType.NONE
     };
     private isHandlingSelectionChange: boolean = false;
-    private apiService: any;
-
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -76,17 +74,7 @@ export class ModelPanel extends Panel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
-        // const baseUrl = 'http://localhost:5000/api/';//process.env.REACT_APP_API_URL;
-        const baseUrl = 'https://dev-quodsi-webapp-01.azurewebsites.net/api/'
-        // const baseUrl = process.env.QUODSI_API_URL || 'http://localhost:5000/api/'
-        if (!baseUrl) {
-            throw new Error('API URL is not configured');
-        }
 
-        this.apiService = createLucidApiService(baseUrl);
-        if (!this.apiService) {
-            throw new Error('Failed to create API service');
-        }
         // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
         this.modelManager = modelManager;
@@ -1063,8 +1051,6 @@ export class ModelPanel extends Panel {
                         const user: UserProxy = new UserProxy(this.client);
                         // const activePageProxy = viewport.getCurrentPage();
                         const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
-                        // const AZURE_FUNCTION_URL = "http://localhost:7071/api/"
-                        // const YOUR_AZURE_FUNCTION_URL = "http://dev-quodsi-lucid-function-app.azurewebsites.net/api/dataConnector/"
                         let pageId: string = 'undefined';
                         let userId: string = 'undefined';
                         if (user) {
