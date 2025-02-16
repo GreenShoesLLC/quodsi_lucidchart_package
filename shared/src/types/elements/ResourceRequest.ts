@@ -11,7 +11,7 @@ export class ResourceRequest {
     quantity: number;
     priority: number;
     keepResource: boolean;
-
+    
     /**
      * Constructs a new ResourceRequest.
      *
