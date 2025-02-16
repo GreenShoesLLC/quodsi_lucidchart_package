@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 // Import all model definitions
+
 import {
     createModel_def_e0_a1_r0_g1,
     createModel_def_e0_a1_r2_g1,
@@ -11,9 +12,10 @@ import {
     createModel_def_e1_a1_r0_g1,
     createModel_def_e1_a1_r2_g1,
     createModel_def_e1_a2_r0_g1,
-    createModel_def_e1_a2_r2_g1
-} from './__fixtures__/modelDefinitions';
-import { createNonSequentialFlowModel } from './__fixtures__/modelDefinitions/non_sequential_flow';
+    createModel_def_e1_a2_r2_g1,
+} from '../__fixtures__/models/valid';
+import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
+
 
 // Define all test cases
 const TEST_CASES = [

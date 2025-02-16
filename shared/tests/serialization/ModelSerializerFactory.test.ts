@@ -1,5 +1,5 @@
 import { ModelSerializerFactory, SchemaVersion } from '../../src/serialization/ModelSerializerFactory';
-import { createSequentialFlowModel } from './__fixtures__/modelDefinitions/sequential_flow';
+import { createSequentialFlowModel } from '../__fixtures__/models/valid/sequential_flow';
 import { UnsupportedVersionError } from '../../src/serialization/errors/UnsupportedVersionError';
 
 describe('ModelSerializerFactory', () => {

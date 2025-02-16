@@ -134,7 +134,7 @@ export class GeneratorValidation extends ValidationRule {
 
         this.log(`Starting duration settings validation for Generator ID: ${generator.id}`);
 
-        if (!generator.periodIntervalDuration || !generator.periodIntervalDuration.durationLength) {
+        if (!generator.periodIntervalDuration || generator.periodIntervalDuration.durationLength < 0) {
             this.log(`Validation failed: Generator ID ${generator.id} has invalid period interval duration.`);
             messages.push(ValidationMessages.generatorValidation(
                 'period interval duration',
@@ -143,7 +143,7 @@ export class GeneratorValidation extends ValidationRule {
             ));
         }
 
-        if (!generator.periodicStartDuration || !generator.periodicStartDuration.durationLength) {
+        if (!generator.periodicStartDuration || generator.periodicStartDuration.durationLength < 0) {
             this.log(`Validation failed: Generator ID ${generator.id} has invalid periodic start duration.`);
             messages.push(ValidationMessages.generatorValidation(
                 'periodic start duration',
@@ -152,16 +152,16 @@ export class GeneratorValidation extends ValidationRule {
             ));
         }
 
-        if (generator.periodIntervalDuration?.durationLength && generator.periodicStartDuration?.durationLength) {
-            if (generator.periodicStartDuration.durationLength > generator.periodIntervalDuration.durationLength) {
-                this.log(`Warning: Generator ID ${generator.id} has start duration longer than interval duration.`);
-                messages.push({
-                    type: 'warning',
-                    message: `Generator ${generator.id} has start duration longer than interval duration`,
-                    elementId: generator.id
-                });
-            }
-        }
+        // if (generator.periodIntervalDuration?.durationLength && generator.periodicStartDuration?.durationLength) {
+        //     if (generator.periodicStartDuration.durationLength > generator.periodIntervalDuration.durationLength) {
+        //         this.log(`Warning: Generator ID ${generator.id} has start duration longer than interval duration.`);
+        //         messages.push({
+        //             type: 'warning',
+        //             message: `Generator ${generator.id} has start duration longer than interval duration`,
+        //             elementId: generator.id
+        //         });
+        //     }
+        // }
 
         this.log(`Completed duration settings validation for Generator ID: ${generator.id}`);
     }

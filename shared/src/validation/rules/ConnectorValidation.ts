@@ -56,7 +56,9 @@ export class ConnectorValidation extends ValidationRule {
         this.log(`Validating endpoints for Connector ID: ${connector.id}`);
 
         const sourceActivity = state.modelDefinition.activities.get(connector.sourceId);
-        if (!sourceActivity) {
+
+        const sourceGenerator = state.modelDefinition.generators.get(connector.sourceId);
+        if (!sourceActivity && !sourceGenerator) {
             this.log(`Connector ID ${connector.id} has an invalid source ID: ${connector.sourceId}`);
             messages.push(ValidationMessages.invalidConnection(
                 connector.id,

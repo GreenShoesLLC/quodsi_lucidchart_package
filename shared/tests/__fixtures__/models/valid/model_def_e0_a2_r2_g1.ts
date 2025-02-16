@@ -1,11 +1,11 @@
 import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
-import { createModelDefinition } from './template_generator';
+import { createModelDefinition } from '../generators/template_generator';
 
-export function createModel_def_e1_a2_r2_g1(): ModelDefinition {
+export function createModel_def_e0_a2_r2_g1(): ModelDefinition {
     return createModelDefinition({
-        entityCount: 1,
+        entityCount: 0,
         activityCount: 2,
         resourceCount: 2,
         generatorCount: 1
-    }, 8);
+    }, 4);
 }

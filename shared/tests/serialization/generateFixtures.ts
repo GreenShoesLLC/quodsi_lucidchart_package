@@ -12,8 +12,8 @@ import {
     createModel_def_e1_a1_r2_g1,
     createModel_def_e1_a2_r0_g1,
     createModel_def_e1_a2_r2_g1
-} from './__fixtures__/modelDefinitions';
-import { createNonSequentialFlowModel } from './__fixtures__/modelDefinitions/non_sequential_flow';
+} from '../__fixtures__/models/valid';
+import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
 
 // Define all model creators with their corresponding filenames
 const MODEL_CREATORS = [

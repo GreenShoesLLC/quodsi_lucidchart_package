@@ -10,8 +10,8 @@
     "test": "jest",
     "test:update-snapshots": "ts-node --project tsconfig.test.json tests/serialization/generateFixtures.ts",
     "test:update-single-snapshot": "ts-node --project tsconfig.test.json tests/serialization/generateFixtures.ts",
-    "test:verify-snapshots": "jest ModelSerializer.snapshot.test.ts",
-    "test:verify-single-snapshot": "cross-env TEST_MODELS=%npm_config_model% jest ModelSerializer.snapshot.test.ts"
+    "test:verify-snapshots": "jest tests/serialization/ModelSerializer.snapshot.test.ts",
+    "test:verify-single-snapshot": "cross-env TEST_MODELS=%npm_config_model% jest tests/serialization/ModelSerializer.snapshot.test.ts"
   },
   "devDependencies": {
     "@jest/types": "^29.6.3",
