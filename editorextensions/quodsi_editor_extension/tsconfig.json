@@ -42,7 +42,7 @@
     }
   },
   "files": ["resources/resource.d.ts"],
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../../shared/src/validation"],
   "references": [
     {
       "path": "../../shared"

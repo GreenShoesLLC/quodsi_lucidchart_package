@@ -1,5 +1,6 @@
-import { ModelValidationService } from "../services/validation/ModelValidationService";
+// import { ModelValidationService } from "@quodsi/shared/src/validation/ModelValidationService";
 import {
+    ModelValidationService,
     Activity,
     Connector,
     Generator,
@@ -15,12 +16,14 @@ import {
     ModelElement,
     ModelDefinitionLogger,
     ActivityListManager,
-    ResourceRequirement
+    ResourceRequirement,
+    ValidationMessages
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
+
 
 interface ChangeTracker {
     modelDefinitionDirty: boolean;        // Tracks if we need to rebuild ModelDefinition
@@ -118,7 +121,7 @@ export class ModelManager {
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter);
             try {
                 const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);
-                
+
                 if (!newModelDefinition) {
                     throw new Error('Builder returned null ModelDefinition');
                 }

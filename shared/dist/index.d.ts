@@ -55,4 +55,5 @@ export * from './types/elements/ModelDefinitionLogger';
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
 export * from './serialization';
+export * from './validation';
 //# sourceMappingURL=index.d.ts.map
