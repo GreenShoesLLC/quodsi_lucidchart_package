@@ -17,7 +17,7 @@ const counts = {
     generators: [1]             // 1 option
 };
 
-// Generate all combinations
+// Generate base combinations
 for (const entityCount of counts.entities) {
     for (const activityCount of counts.activities) {
         for (const resourceCount of counts.resources) {
@@ -32,6 +32,14 @@ for (const entityCount of counts.entities) {
         }
     }
 }
+
+// Add specific large model configuration
+combinations.push({
+    entityCount: 3,
+    activityCount: 30,
+    resourceCount: 3,
+    generatorCount: 2
+});
 
 // Create model definition files
 combinations.forEach((config, index) => {

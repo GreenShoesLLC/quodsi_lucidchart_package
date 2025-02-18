@@ -11,7 +11,8 @@ import {
     createModel_def_e1_a1_r0_g1,
     createModel_def_e1_a1_r2_g1,
     createModel_def_e1_a2_r0_g1,
-    createModel_def_e1_a2_r2_g1
+    createModel_def_e1_a2_r2_g1,
+    createModel_def_e3_a30_r3_g2
 } from '../__fixtures__/models/valid';
 import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
 
@@ -25,6 +26,7 @@ const MODEL_CREATORS = [
     { create: createModel_def_e1_a1_r2_g1, name: 'model_def_e1_a1_r2_g1' },
     { create: createModel_def_e1_a2_r0_g1, name: 'model_def_e1_a2_r0_g1' },
     { create: createModel_def_e1_a2_r2_g1, name: 'model_def_e1_a2_r2_g1' },
+    { create: createModel_def_e3_a30_r3_g2, name: 'model_def_e3_a30_r3_g2' },
     { create: createNonSequentialFlowModel, name: 'non_sequential_flow' }
 ];
 

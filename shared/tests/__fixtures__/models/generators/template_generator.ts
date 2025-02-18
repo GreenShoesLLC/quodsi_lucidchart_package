@@ -51,21 +51,23 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
 
     // Create common duration for activities
     const duration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
-    
-    // Create operation step template - uses first resource if available
-    const operationStep = createOperationStep(duration, resources.length > 0 ? {
-        requirementId: requirements[0].id,
-        quantity: 1
-    } : undefined);
 
-    // Create activities
+    // Create activities with dedicated operation steps
     const activities: Activity[] = [];
     for (let i = 0; i < config.activityCount; i++) {
+        // Create dedicated operation steps for this activity
+        const operationSteps = requirements.length > 0
+            ? requirements.map(req => createOperationStep(duration, {
+                requirementId: req.id,
+                quantity: 1
+              }))
+            : [createOperationStep(duration)]; // If no resources, create single step with no requirement
+
         const activity = new Activity(
             `activity-${i + 1}`,
             `Activity${i + 1}`,
             1, 1, 1,
-            [operationStep]
+            operationSteps
         );
         modelDef.activities.add(activity);
         activities.push(activity);

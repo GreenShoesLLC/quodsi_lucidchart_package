@@ -1,0 +1,1748 @@
+{
+  "formatVersion": "1.0",
+  "metadata": {
+    "version": "1.0",
+    "timestamp": "2025-02-18T12:06:17.223Z"
+  },
+  "model": {
+    "id": "model-9",
+    "name": "Model E3A30R3G2",
+    "reps": 1,
+    "forecastDays": 30,
+    "seed": 12345,
+    "oneClockUnit": "MINUTES",
+    "simulationTimeType": "Clock",
+    "warmupClockPeriod": 0,
+    "warmupClockPeriodUnit": "HOURS",
+    "runClockPeriod": 24,
+    "runClockPeriodUnit": "HOURS",
+    "warmupDateTime": null,
+    "startDateTime": null,
+    "finishDateTime": null
+  },
+  "entities": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "Default Entity",
+      "type": "Entity"
+    },
+    {
+      "id": "entity-1",
+      "name": "Entity1",
+      "type": "Entity"
+    },
+    {
+      "id": "entity-2",
+      "name": "Entity2",
+      "type": "Entity"
+    },
+    {
+      "id": "entity-3",
+      "name": "Entity3",
+      "type": "Entity"
+    }
+  ],
+  "activities": [
+    {
+      "id": "activity-1",
+      "name": "Activity1",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-1",
+          "name": "Activity1ToActivity2",
+          "sourceId": "activity-1",
+          "targetId": "activity-2",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-2",
+      "name": "Activity2",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-2",
+          "name": "Activity2ToActivity3",
+          "sourceId": "activity-2",
+          "targetId": "activity-3",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-3",
+      "name": "Activity3",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-3",
+          "name": "Activity3ToActivity4",
+          "sourceId": "activity-3",
+          "targetId": "activity-4",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-4",
+      "name": "Activity4",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-4",
+          "name": "Activity4ToActivity5",
+          "sourceId": "activity-4",
+          "targetId": "activity-5",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-5",
+      "name": "Activity5",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-5",
+          "name": "Activity5ToActivity6",
+          "sourceId": "activity-5",
+          "targetId": "activity-6",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-6",
+      "name": "Activity6",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-6",
+          "name": "Activity6ToActivity7",
+          "sourceId": "activity-6",
+          "targetId": "activity-7",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-7",
+      "name": "Activity7",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-7",
+          "name": "Activity7ToActivity8",
+          "sourceId": "activity-7",
+          "targetId": "activity-8",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-8",
+      "name": "Activity8",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-8",
+          "name": "Activity8ToActivity9",
+          "sourceId": "activity-8",
+          "targetId": "activity-9",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-9",
+      "name": "Activity9",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-9",
+          "name": "Activity9ToActivity10",
+          "sourceId": "activity-9",
+          "targetId": "activity-10",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-10",
+      "name": "Activity10",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-10",
+          "name": "Activity10ToActivity11",
+          "sourceId": "activity-10",
+          "targetId": "activity-11",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-11",
+      "name": "Activity11",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-11",
+          "name": "Activity11ToActivity12",
+          "sourceId": "activity-11",
+          "targetId": "activity-12",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-12",
+      "name": "Activity12",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-12",
+          "name": "Activity12ToActivity13",
+          "sourceId": "activity-12",
+          "targetId": "activity-13",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-13",
+      "name": "Activity13",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-13",
+          "name": "Activity13ToActivity14",
+          "sourceId": "activity-13",
+          "targetId": "activity-14",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-14",
+      "name": "Activity14",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-14",
+          "name": "Activity14ToActivity15",
+          "sourceId": "activity-14",
+          "targetId": "activity-15",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-15",
+      "name": "Activity15",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-15",
+          "name": "Activity15ToActivity16",
+          "sourceId": "activity-15",
+          "targetId": "activity-16",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-16",
+      "name": "Activity16",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-16",
+          "name": "Activity16ToActivity17",
+          "sourceId": "activity-16",
+          "targetId": "activity-17",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-17",
+      "name": "Activity17",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-17",
+          "name": "Activity17ToActivity18",
+          "sourceId": "activity-17",
+          "targetId": "activity-18",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-18",
+      "name": "Activity18",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-18",
+          "name": "Activity18ToActivity19",
+          "sourceId": "activity-18",
+          "targetId": "activity-19",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-19",
+      "name": "Activity19",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-19",
+          "name": "Activity19ToActivity20",
+          "sourceId": "activity-19",
+          "targetId": "activity-20",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-20",
+      "name": "Activity20",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-20",
+          "name": "Activity20ToActivity21",
+          "sourceId": "activity-20",
+          "targetId": "activity-21",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-21",
+      "name": "Activity21",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-21",
+          "name": "Activity21ToActivity22",
+          "sourceId": "activity-21",
+          "targetId": "activity-22",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-22",
+      "name": "Activity22",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-22",
+          "name": "Activity22ToActivity23",
+          "sourceId": "activity-22",
+          "targetId": "activity-23",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-23",
+      "name": "Activity23",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-23",
+          "name": "Activity23ToActivity24",
+          "sourceId": "activity-23",
+          "targetId": "activity-24",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-24",
+      "name": "Activity24",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-24",
+          "name": "Activity24ToActivity25",
+          "sourceId": "activity-24",
+          "targetId": "activity-25",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-25",
+      "name": "Activity25",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-25",
+          "name": "Activity25ToActivity26",
+          "sourceId": "activity-25",
+          "targetId": "activity-26",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-26",
+      "name": "Activity26",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-26",
+          "name": "Activity26ToActivity27",
+          "sourceId": "activity-26",
+          "targetId": "activity-27",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-27",
+      "name": "Activity27",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-27",
+          "name": "Activity27ToActivity28",
+          "sourceId": "activity-27",
+          "targetId": "activity-28",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-28",
+      "name": "Activity28",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-28",
+          "name": "Activity28ToActivity29",
+          "sourceId": "activity-28",
+          "targetId": "activity-29",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-29",
+      "name": "Activity29",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "connector-29",
+          "name": "Activity29ToActivity30",
+          "sourceId": "activity-29",
+          "targetId": "activity-30",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "activity-30",
+      "name": "Activity30",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-3",
+          "quantity": 1
+        }
+      ],
+      "connectors": []
+    }
+  ],
+  "resources": [
+    {
+      "id": "resource-1",
+      "name": "Resource1",
+      "type": "Resource",
+      "capacity": 1
+    },
+    {
+      "id": "resource-2",
+      "name": "Resource2",
+      "type": "Resource",
+      "capacity": 1
+    },
+    {
+      "id": "resource-3",
+      "name": "Resource3",
+      "type": "Resource",
+      "capacity": 1
+    }
+  ],
+  "generators": [
+    {
+      "id": "generator-1",
+      "name": "Generator1",
+      "type": "Generator",
+      "activityKeyId": "activity-1",
+      "entityId": "entity-1",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationLength": 0,
+        "durationPeriodUnit": "MINUTES",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "maxEntities": null,
+      "connectors": [
+        {
+          "id": "connector-gen-1",
+          "name": "Generator1ToActivity1",
+          "sourceId": "generator-1",
+          "targetId": "activity-1",
+          "type": "Connector",
+          "probability": 0.5,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "generator-2",
+      "name": "Generator2",
+      "type": "Generator",
+      "activityKeyId": "activity-1",
+      "entityId": "entity-1",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationLength": 0,
+        "durationPeriodUnit": "MINUTES",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "maxEntities": null,
+      "connectors": [
+        {
+          "id": "connector-gen-2",
+          "name": "Generator2ToActivity1",
+          "sourceId": "generator-2",
+          "targetId": "activity-1",
+          "type": "Connector",
+          "probability": 0.5,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "resource-1",
+      "name": "Resource1",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "resource-1",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    },
+    {
+      "id": "resource-2",
+      "name": "Resource2",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "resource-2",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    },
+    {
+      "id": "resource-3",
+      "name": "Resource3",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "resource-3",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    }
+  ]
+}

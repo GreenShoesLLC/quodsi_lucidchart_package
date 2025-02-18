@@ -128,7 +128,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             }
 
             return {
-                duration: this.serializeDuration(step.duration)
+                duration: this.serializeDuration(step.duration),
+                requirementId: step.requirementId,
+                quantity: step.quantity
             };
         } catch (error) {
             throw new SerializationError('OperationStep', 'Failed to serialize operation step', error instanceof Error ? error : undefined);

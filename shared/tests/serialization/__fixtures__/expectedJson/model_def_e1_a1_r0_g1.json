@@ -2,7 +2,7 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-02-16T14:20:32.987Z"
+    "timestamp": "2025-02-18T12:06:17.218Z"
   },
   "model": {
     "id": "model-5",
@@ -47,7 +47,9 @@
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
-          }
+          },
+          "requirementId": null,
+          "quantity": 1
         }
       ],
       "connectors": []

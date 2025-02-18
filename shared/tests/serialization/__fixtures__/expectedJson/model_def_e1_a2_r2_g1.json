@@ -2,7 +2,7 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-02-16T14:20:32.990Z"
+    "timestamp": "2025-02-18T12:06:17.221Z"
   },
   "model": {
     "id": "model-8",
@@ -47,7 +47,19 @@
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
-          }
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
         }
       ],
       "connectors": [
@@ -77,7 +89,19 @@
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
-          }
+          },
+          "requirementId": "resource-1",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "resource-2",
+          "quantity": 1
         }
       ],
       "connectors": []
