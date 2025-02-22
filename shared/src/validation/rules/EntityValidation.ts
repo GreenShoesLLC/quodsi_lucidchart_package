@@ -1,9 +1,10 @@
 import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
-import { ValidationMessage } from "src/types/validation";
-import { Entity } from "src/types/elements/Entity";
-import { Generator } from "src/types/elements/Generator";
+import { ValidationMessage } from "../../types/validation";
+import { Entity } from "../../types/elements/Entity";
+import { Generator } from "../../types/elements/Generator";
+
 
 export class EntityValidation extends ValidationRule {
     validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {

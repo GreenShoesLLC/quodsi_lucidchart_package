@@ -1,11 +1,10 @@
 import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
-import { ValidationMessage } from 'src/types/validation';
-import { Connector } from 'src/types/elements/Connector';
-import { ConnectType } from 'src/types/elements/ConnectType';
-import { Activity } from 'src/types/elements/Activity';
-
+import { ConnectType } from '../../types/elements/ConnectType';
+import { ValidationMessage } from '../../types/validation';
+import { Connector } from '../../types/elements/Connector';
+import { Activity } from '../../types/elements/Activity';
 
 export class ConnectorValidation extends ValidationRule {
     private static readonly PROBABILITY_TOLERANCE = 0.0001;

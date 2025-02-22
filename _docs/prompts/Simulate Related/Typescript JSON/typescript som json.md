@@ -14,47 +14,6 @@ async handleValidateRequest(): Promise<void> {
 ```
 
 
-# ModelManager
-The full code for ModelManager can be found here:
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\core\ModelManager.ts
-
-ModelManager contains the property modelDefinition: ModelDefinition
-
-private modelDefinition: ModelDefinition | null = null;
-
-
-# ModelDefinition
-The full code for ModelDefinition can be found here:
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ModelDefinition.ts
-
-ModelDefinition is essentially a class that manages lists of other classes.  The following folder contains all the types and classes managed by ModelDefinition:
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements
-
-Here are some of the key paths:
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ActivityListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Activity.ts
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ConnectorListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Connector.ts
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Resource.ts
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\GeneratorListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Generator.ts
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\EntityListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Entity.ts
-
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequirementListManager.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequirement.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\RequirementClause.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequest.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\RequirementMode.ts
 
 
 

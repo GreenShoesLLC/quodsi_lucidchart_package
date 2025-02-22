@@ -10,8 +10,6 @@ import {
     Generator,
     Resource,
     Connector,
-    ModelDefaults,
-    ConnectType,
     QuodsiLogger,
     SimulationObjectTypeFactory
 } from '@quodsi/shared';

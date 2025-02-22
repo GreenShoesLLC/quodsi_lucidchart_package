@@ -1,7 +1,7 @@
 // src/services/lucidSimulationJobSubmissionService.ts
 
-import { 
-    BatchServiceClient, 
+import {
+    BatchServiceClient,
     BatchSharedKeyCredentials,
     JobAddParameter,
     PoolInformation,
@@ -127,7 +127,13 @@ export class LucidSimulationJobSubmissionService {
 
                 const taskParams: TaskAddParameter = {
                     id: taskId,
-                    commandLine: taskCommandLine
+                    commandLine: taskCommandLine,
+                    // Add environment settings here:
+                    environmentSettings: [
+                        { name: "BATCH_ACCOUNT_NAME", value: process.env.BatchAccountName || "" },
+                        { name: "BATCH_ACCOUNT_KEY", value: process.env.BatchAccountKey || "" },
+                        { name: "BATCH_URL", value: process.env.BatchAccountUrl || "" }
+                    ]
                 };
 
                 await this.batchClient.task.add(jobId, taskParams);

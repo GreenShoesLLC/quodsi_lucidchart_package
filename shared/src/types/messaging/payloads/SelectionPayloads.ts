@@ -3,9 +3,9 @@ import { SelectionState } from '../../SelectionState';
 import { ModelStructure } from '../../accordion/ModelStructure';
 import { ValidationResult } from '../../validation/ValidationTypes';
 import { ModelItemData } from './ModelItemData';
-import { SimulationObjectType } from 'src/types/elements/SimulationObjectType';
-import { DiagramElementType } from 'src/types/DiagramElementType';
-import { EditorReferenceData } from 'src/types/EditorReferenceData';
+import { SimulationObjectType } from '../../../types/elements/SimulationObjectType';
+import { DiagramElementType } from '../../../types/DiagramElementType';
+import { EditorReferenceData } from '../../../types/EditorReferenceData';
 
 interface BaseSelectionPayload {
     selectionState: SelectionState;

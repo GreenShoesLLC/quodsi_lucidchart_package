@@ -1,4 +1,4 @@
-import { ValidationMessage } from "src/types/validation";
+import { ValidationMessage } from "../../types/validation";
 
 export class ValidationMessages {
     // Existing messages...

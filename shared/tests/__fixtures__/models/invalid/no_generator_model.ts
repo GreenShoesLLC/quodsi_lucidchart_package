@@ -1,16 +1,13 @@
 // tests/__fixtures__/models/invalid/no_generator_model.ts
 import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
 import { Activity } from '../../../../src/types/elements/Activity';
-import { Generator } from '../../../../src/types/elements/Generator';
 import { Resource } from '../../../../src/types/elements/Resource';
 import { ResourceRequirement } from '../../../../src/types/elements/ResourceRequirement';
-import { Connector } from '../../../../src/types/elements/Connector';
 import { Entity } from '../../../../src/types/elements/Entity';
 import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
 import { DurationType } from '../../../../src/types/elements/DurationType';
 import { createOperationStep } from '../../../../src/types/elements/OperationStep';
-import { ConnectType } from '../../../../src/types/elements/ConnectType';
 import { Model } from '../../../../src/types/elements/Model';
 
 export function createNoGeneratorModel(): ModelDefinition {

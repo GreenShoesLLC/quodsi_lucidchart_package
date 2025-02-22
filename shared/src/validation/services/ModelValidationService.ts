@@ -6,11 +6,11 @@
 //     ValidationMessage,
 //     ValidationResult
 // } from "@quodsi/shared";
-import { ActivityRelationships } from "src/types/ActivityRelationships";
-import { ModelDefinition } from "src/types/elements/ModelDefinition";
-import { ModelDefinitionLogger } from "src/types/elements/ModelDefinitionLogger";
-import { QuodsiLogger } from "src/core/logging/QuodsiLogger";
-import { ValidationMessage } from "src/types/validation";
+import { ActivityRelationships } from "../../types/ActivityRelationships";
+import { ModelDefinition } from "../../types/elements/ModelDefinition";
+import { ModelDefinitionLogger } from "../../types/elements/ModelDefinitionLogger";
+import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
+import { ValidationMessage } from "../../types/validation"
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ActivityValidation } from "../rules/ActivityValidation";
@@ -20,7 +20,7 @@ import { GeneratorValidation } from "../rules/GeneratorValidation";
 import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
-import { ValidationResult } from "src/types/validation";
+import { ValidationResult } from "../../types/validation";
 
 export class ModelValidationService extends QuodsiLogger {
     protected readonly LOG_PREFIX = "[ModelValidation]";
@@ -86,7 +86,7 @@ export class ModelValidationService extends QuodsiLogger {
         const rule = this.rules.find(r => r.constructor.name === ruleName);
         if (rule) {
             rule.setLogging(enabled);
-            this.log(`[ModelValidationService] Logging for ${ruleName} set to ${enabled}`);
+            this.log(`Logging for ${ruleName} set to ${enabled}`);
         } else {
             console.warn(`[ModelValidationService] Validation rule ${ruleName} not found.`);
         }
@@ -105,9 +105,10 @@ export class ModelValidationService extends QuodsiLogger {
     private getModelState(modelDefinition: ModelDefinition, currentHash: string): ModelDefinitionState {
         // Reuse cached state if model hasn't changed
         if (this.cachedState && this.lastModelDefinitionHash === currentHash) {
+            this.log(`Model Definition hasn't changed, reusing cached validation}`);
             return this.cachedState;
         }
-
+        this.log(`Model Definition has change`);
         // Create new state
         const state: ModelDefinitionState = {
             modelDefinition,
@@ -123,7 +124,6 @@ export class ModelValidationService extends QuodsiLogger {
     }
 
     private batchValidate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
-        // Log the details of the model definition activities
         this.log("[ModelValidation] Starting batch validation.");
 
         // ModelDefinitionLogger.logModelDefinition(state.modelDefinition)

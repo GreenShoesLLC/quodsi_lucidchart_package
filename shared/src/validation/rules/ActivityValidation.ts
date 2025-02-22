@@ -1,12 +1,12 @@
 import { ValidationRule } from "../common/ValidationRule";
-import { ResourceRequirement } from "src/types/elements/ResourceRequirement";
-
-import { ValidationMessages } from "../common/ValidationMessages";
-import { ValidationMessage } from "src/types/validation";
-import { Activity } from "src/types/elements/Activity";
-import { OperationStep } from "src/types/elements/OperationStep";
-import { Connector } from "src/types/elements/Connector";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
+import { ValidationMessages } from "../common/ValidationMessages";
+import { ValidationMessage } from "../../types/validation";
+import { Activity } from "../../types/elements/Activity";
+import { OperationStep } from "../../types/elements/OperationStep";
+import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
+
+
 
 export class ActivityValidation extends ValidationRule {
     private static readonly MAX_BUFFER_SIZE = 10000;

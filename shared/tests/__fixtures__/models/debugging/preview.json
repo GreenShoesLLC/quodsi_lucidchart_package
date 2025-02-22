@@ -1,0 +1,136 @@
+{
+  "formatVersion": "1.0",
+  "metadata": { "version": "1.0", "timestamp": "2025-02-19T14:17:20.953Z" },
+  "model": {
+    "id": "0_0",
+    "name": "New Model",
+    "reps": 1,
+    "forecastDays": 30,
+    "seed": 12345,
+    "oneClockUnit": "MINUTES",
+    "simulationTimeType": "Clock",
+    "warmupClockPeriod": 0,
+    "warmupClockPeriodUnit": "HOURS",
+    "runClockPeriod": 24,
+    "runClockPeriodUnit": "HOURS",
+    "warmupDateTime": null,
+    "startDateTime": null,
+    "finishDateTime": null
+  },
+  "entities": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "Default Entity",
+      "type": "Entity"
+    }
+  ],
+  "activities": [
+    {
+      "id": "4alUnlP-zMQK",
+      "name": "Process",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "XmlUAFIKdaVf",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "_alUhotcYK-W",
+          "name": "Connector _alUhotcYK-W",
+          "sourceId": "4alUnlP-zMQK",
+          "targetId": "7alUCKVOYXMV",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "7alUCKVOYXMV",
+      "name": "Process",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "XmlUAFIKdaVf",
+          "quantity": 1
+        }
+      ],
+      "connectors": []
+    }
+  ],
+  "resources": [{ "id": "XmlUAFIKdaVf", "name": "Resource 1", "capacity": 1 }],
+  "generators": [
+    {
+      "id": "2alUcejr3pgn",
+      "name": "Process",
+      "activityKeyId": "{SomeActivityName}",
+      "entityId": "00000000-0000-0000-0000-000000000000",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationLength": 0,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "maxEntities": 999,
+      "connectors": [
+        {
+          "id": "9alUW~2pNTHB",
+          "name": "Connector 9alUW~2pNTHB",
+          "sourceId": "2alUcejr3pgn",
+          "targetId": "4alUnlP-zMQK",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "XmlUAFIKdaVf",
+      "name": "Resource 1",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "XmlUAFIKdaVf",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    }
+  ]
+}

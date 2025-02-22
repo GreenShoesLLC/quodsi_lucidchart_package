@@ -1,5 +1,3 @@
-// shared/src/core/logging/QuodsiLogger.ts
-
 export abstract class QuodsiLogger {
     private static readonly instanceMap = new Map<string, boolean>();
     protected abstract readonly LOG_PREFIX: string;

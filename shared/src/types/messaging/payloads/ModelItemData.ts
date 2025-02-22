@@ -1,4 +1,4 @@
-import { MetaData } from "src/types/MetaData";
+import { MetaData } from "../../../types/MetaData";
 import { JsonObject } from "../JsonTypes";
 
 export interface ModelItemData {

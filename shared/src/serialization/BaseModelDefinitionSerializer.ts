@@ -94,11 +94,24 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             if (!activity.id || !activity.name) {
                 throw new InvalidModelError('Activity must have id and name');
             }
-
+            console.log("[BaseModelDefinitionSerializer]: # of Connectors", modelDefinition.connectors.size())
             // Get all connectors where the sourceId matches the activity's id
             const relevantConnectors = modelDefinition.connectors.getAll()
-                .filter(connector => connector.sourceId === activity.id)
+                .filter(connector => {
+                    // Log values for debugging
+                    console.log(`[BaseModelDefinitionSerializer]: Comparing connector.sourceId: ${connector.sourceId} with activity.id: ${activity.id}`);
+                    return connector.sourceId === activity.id;
+                })
                 .map(connector => this.serializeConnector(connector));
+
+            if (relevantConnectors.length > 0)
+            {
+                console.log("[BaseModelDefinitionSerializer]: # of Activity Connectors", relevantConnectors.length)
+            }
+            else{
+                console.log("[BaseModelDefinitionSerializer]: # of Activity Connectors", 0)
+            }
+            
 
             return {
                 id: activity.id,

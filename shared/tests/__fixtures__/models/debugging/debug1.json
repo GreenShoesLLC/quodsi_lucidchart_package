@@ -1,0 +1,148 @@
+{
+  "formatVersion": "1.0",
+  "metadata": { "version": "1.0", "timestamp": "2025-02-19T13:01:31.679Z" },
+  "model": {
+    "id": "0_0",
+    "name": "New Model",
+    "reps": "1",
+    "forecastDays": 30,
+    "seed": 12345,
+    "oneClockUnit": "MINUTES",
+    "simulationTimeType": "Clock",
+    "warmupClockPeriod": 0,
+    "warmupClockPeriodUnit": "HOURS",
+    "runClockPeriod": 24,
+    "runClockPeriodUnit": "HOURS",
+    "warmupDateTime": null,
+    "startDateTime": null,
+    "finishDateTime": null
+  },
+  "entities": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "Default Entity",
+      "type": "Entity"
+    }
+  ],
+  "activities": [
+    {
+      "id": "DIPGmv75pCDf",
+      "name": "Activity 1",
+      "capacity": "1",
+      "inputBufferCapacity": "1",
+      "outputBufferCapacity": "1",
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "_XDIAU91Nc80",
+          "quantity": 1
+        },
+        {
+          "duration": {
+            "durationLength": 2,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": []
+    },
+    {
+      "id": "GIPGoUATZA2N",
+      "name": "Activity 2",
+      "capacity": "1",
+      "inputBufferCapacity": "1",
+      "outputBufferCapacity": "1",
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 2,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "_XDIAU91Nc80",
+          "quantity": 1
+        }
+      ],
+      "connectors": []
+    },
+    {
+      "id": "OIPGffw13dbV",
+      "name": "Activity 3",
+      "capacity": "1",
+      "inputBufferCapacity": "1",
+      "outputBufferCapacity": "1",
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 3,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "_XDIAU91Nc80",
+          "quantity": 1
+        }
+      ],
+      "connectors": []
+    }
+  ],
+  "resources": [
+    { "id": "_XDIAU91Nc80", "name": "Resource 1", "capacity": "4" }
+  ],
+  "generators": [
+    {
+      "id": "eIPG0QGwIbDd",
+      "name": "Generator 1",
+      "activityKeyId": "{SomeActivityName}",
+      "entityId": "00000000-0000-0000-0000-000000000000",
+      "periodicOccurrences": "240",
+      "periodIntervalDuration": {
+        "durationLength": 6,
+        "durationPeriodUnit": "MINUTES",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationLength": 0,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "maxEntities": "998",
+      "connectors": []
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "_XDIAU91Nc80",
+      "name": "Resource 1",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "_XDIAU91Nc80",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    }
+  ]
+}

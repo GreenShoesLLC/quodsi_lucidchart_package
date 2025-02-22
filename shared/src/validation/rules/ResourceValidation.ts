@@ -1,10 +1,11 @@
 import { ValidationRule } from "../common/ValidationRule";
-import { ValidationMessage } from "src/types/validation";
-import { Resource } from "src/types/elements/Resource";
-import { ResourceRequirement } from "src/types/elements/ResourceRequirement";
-import { Activity } from "src/types/elements/Activity";
-import { RequirementMode } from "src/types/elements/RequirementMode";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
+import { ValidationMessage } from "../../types/validation";
+import { Resource } from "../../types/elements/Resource";
+import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
+import { Activity } from "../../types/elements/Activity";
+import { RequirementMode } from "../../types/elements/RequirementMode";
+
 
 export class ResourceValidation extends ValidationRule {
     validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {

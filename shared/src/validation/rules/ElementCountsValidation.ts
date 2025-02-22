@@ -1,5 +1,5 @@
 
-import { ValidationMessage } from "src/types/validation";
+import { ValidationMessage } from "../../types/validation";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationRule } from "../common/ValidationRule";
 

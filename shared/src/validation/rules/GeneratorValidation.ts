@@ -1,8 +1,9 @@
 import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
-import { ValidationMessage } from 'src/types/validation';
-import { Generator } from 'src/types/elements/Generator';
+import { ValidationMessage } from "../../types/validation";
+import { Generator } from "../../types/elements/Generator";
+
 
 export class GeneratorValidation extends ValidationRule {
     // Constants for validation limits
@@ -105,19 +106,6 @@ export class GeneratorValidation extends ValidationRule {
                 generator.id,
                 `Must be Infinity or between ${GeneratorValidation.MIN_MAX_ENTITIES} and ${GeneratorValidation.MAX_MAX_ENTITIES}`
             ));
-        }
-
-        // Validate activity key ID if specified
-        if (generator.activityKeyId) {
-            const activityExists = state.modelDefinition.activities.get(generator.activityKeyId);
-            if (!activityExists) {
-                this.log(`Validation failed: Generator ID ${generator.id} references a non-existent activity (${generator.activityKeyId}).`);
-                messages.push({
-                    type: 'error',
-                    message: `Generator ${generator.id} references non-existent activity ${generator.activityKeyId}`,
-                    elementId: generator.id
-                });
-            }
         }
 
         this.log(`Completed validation for Generator ID: ${generator.id}`);

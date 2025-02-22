@@ -164,23 +164,44 @@ export class ModelPanel extends Panel {
                 throw new Error('Document ID or User ID is missing');
             }
 
-            // Create new page
-            const def: PageDefinition = {
-                title: data.pageName,
-            };
-            const page = document.addPage(def);
-            const viewport = new Viewport(this.client);
-            const currentPage = viewport.getCurrentPage();
-            // Fetch CSV data using the data connector
-            console.log('[ModelPanel] ImportSimulationResults');
+            const validationResult = await this.modelManager.validateModel();
+            if (validationResult.isValid || !validationResult.isValid) {
+                try {
+                    const modelDefinition = await this.modelManager.getModelDefinition();
 
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'ImportSimulationResults',
-                actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
-                asynchronous: true
-            });
-            console.log('[ModelPanel] Successfully called ImportSimulationResults');
+                    if (modelDefinition) {
+                        // Create a serializer using the factory (will use latest version by default)
+                        const serializer = ModelSerializerFactory.create(modelDefinition);
+
+                        // Attempt serialization
+                        const serializedModel = serializer.serialize(modelDefinition);
+                        this.log('serializedModel:', JSON.stringify(serializedModel));
+
+                        // Create new page
+                        const def: PageDefinition = {
+                            title: data.pageName,
+                        };
+                        const page = document.addPage(def);
+                        const viewport = new Viewport(this.client);
+                        const currentPage = viewport.getCurrentPage();
+                    }
+                } catch (error) {
+                    // Handle serialization errors
+                    this.log('Model serialization failed:', error);
+                }
+            }
+            else{
+                this.log('validationResult:', validationResult);
+            }
+            
+
+            // await this.client.performDataAction({
+            //     dataConnectorName: 'quodsi_data_connector',
+            //     actionName: 'ImportSimulationResults',
+            //     actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
+            //     asynchronous: true
+            // });
+            // console.log('[ModelPanel] Successfully called ImportSimulationResults');
 
         } catch (error) {
             console.error('[ModelPanel] Error creating output page:', error);
@@ -973,43 +994,49 @@ export class ModelPanel extends Panel {
 
         try {
             // Get the document ID using DocumentProxy
-            const document = new DocumentProxy(this.client);
-            const docId = document.id;
+            const documentId = new DocumentProxy(this.client).id;
             const viewport = new Viewport(this.client);
-            const user: UserProxy = new UserProxy(this.client);
+            const userId = new UserProxy(this.client).id;
             // const activePageProxy = viewport.getCurrentPage();
             const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
 
             let pageId: string = 'undefined';
-            let userId: string = 'undefined';
-            if (user) {
-                userId = user.id;
-            }
 
             if (activePageProxy) {
                 pageId = activePageProxy.id;
             }
-            if (activePageProxy) {
-                this.log(`Active page ID: ${activePageProxy.id}`);
-            } else {
-                this.log('No active page found');
+            else
+            {
+                this.log('No active page');
+                this.sendTypedMessage(MessageTypes.ERROR, {
+                    error: `Failed to start simulation: No active page`
+                });
+                return;
             }
 
-            this.log(`Extension: docId=${docId}, pageId=${pageId}, userId=${userId}`);
 
-            // Trigger simulation using the data connector
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'Simulate',
-                actionData: { 'documentId': docId, 'pageId': pageId, 'userId': userId },
-                asynchronous: true
-            });
+            this.log(`Extension: docId=${documentId}, pageId=${pageId}, userId=${userId}`);
 
-            // Send success message back to React app
-            this.sendTypedMessage(MessageTypes.SIMULATION_STARTED, {
-                documentId: docId
-            });
+            const modelDefinition = await this.modelManager.getModelDefinition();
+            if (modelDefinition) {
+                const serializer = ModelSerializerFactory.create(modelDefinition);
 
+                // Attempt serialization
+                const serializedModel = serializer.serialize(modelDefinition);
+                this.log('serializedModel:', JSON.stringify(serializedModel));
+
+                // Trigger simulation using the data connector
+                await this.client.performDataAction({
+                    dataConnectorName: 'quodsi_data_connector',
+                    actionName: 'SaveAndSubmitSimulation',
+                    actionData: { 'documentId': documentId, 'pageId': pageId, 'userId': userId, 'model': serializedModel },
+                    asynchronous: true
+                });
+                // Send success message back to React app
+                this.sendTypedMessage(MessageTypes.SIMULATION_STARTED, {
+                    documentId: documentId
+                });
+            }
         } catch (error) {
             this.logError('Error starting simulation:', error);
             this.sendTypedMessage(MessageTypes.ERROR, {

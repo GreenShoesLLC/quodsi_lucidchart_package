@@ -1,4 +1,4 @@
-import { PageStatus } from 'src/types/PageStatus';
+import { PageStatus } from '../../../types/PageStatus';
 import { MessageTypes } from '../MessageTypes';
 
 export interface ModelPayloads {
