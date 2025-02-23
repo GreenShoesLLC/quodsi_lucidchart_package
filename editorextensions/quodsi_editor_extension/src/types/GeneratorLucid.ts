@@ -126,7 +126,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
 
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
-    
+
     protected getElementName(defaultPrefix: string): string {
         const block = this.element as BlockProxy;
 
@@ -142,5 +142,45 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         // If no text found, use class name
         const className = block.getClassName() || 'Block';
         return `${defaultPrefix} ${className}`;
+    }
+
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): GeneratorLucid {
+        // Create default generator using the static method
+        const defaultGenerator = Generator.createDefault(block.id);
+
+        // Convert to StoredGeneratorData format
+        const storedData: StoredGeneratorData = {
+            id: defaultGenerator.id,
+            activityKeyId: defaultGenerator.activityKeyId,
+            entityId: defaultGenerator.entityId,
+            periodicOccurrences: defaultGenerator.periodicOccurrences,
+            periodIntervalDuration: {
+                durationLength: defaultGenerator.periodIntervalDuration.durationLength,
+                durationPeriodUnit: defaultGenerator.periodIntervalDuration.durationPeriodUnit,
+                durationType: defaultGenerator.periodIntervalDuration.durationType,
+                distribution: defaultGenerator.periodIntervalDuration.distribution
+            },
+            entitiesPerCreation: defaultGenerator.entitiesPerCreation,
+            periodicStartDuration: {
+                durationLength: defaultGenerator.periodicStartDuration.durationLength,
+                durationPeriodUnit: defaultGenerator.periodicStartDuration.durationPeriodUnit,
+                durationType: defaultGenerator.periodicStartDuration.durationType,
+                distribution: defaultGenerator.periodicStartDuration.distribution
+            },
+            maxEntities: defaultGenerator.maxEntities
+        };
+
+        // Set up both data and metadata
+        storageAdapter.setElementData(
+            block,
+            storedData,
+            SimulationObjectType.Generator,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Create and return the GeneratorLucid instance
+        return new GeneratorLucid(block, storageAdapter);
     }
 }

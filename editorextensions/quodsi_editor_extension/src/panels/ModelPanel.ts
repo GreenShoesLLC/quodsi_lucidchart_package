@@ -35,7 +35,6 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
-    SimulationObjectTypeFactory,
     ModelSerializerFactory
 
 } from '@quodsi/shared';
@@ -45,6 +44,7 @@ import { ConversionService } from '../services/conversion/ConversionService';
 import { SelectionManager, TreeStateManager } from '../managers';
 import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
 import { ModelDataSource } from '../collections/ModelDataSource';
+import { LucidElementFactory } from '../services/LucidElementFactory';
 
 
 
@@ -427,6 +427,7 @@ export class ModelPanel extends Panel {
         };
     }
 
+
     private async handleConvertElement(
         data: MessagePayloads[MessageTypes.CONVERT_ELEMENT]
     ): Promise<void> {
@@ -444,47 +445,19 @@ export class ModelPanel extends Panel {
                 throw new Error(`Element not found in selection: ${data.elementId}`);
             }
 
-            // Get model definition from model manager
+            // Get model definition (might be needed by some conversions)
             const modelDef = await this.modelManager.getModelDefinition();
             if (!modelDef) {
                 throw new Error('Model definition not found');
             }
 
-            // Get the appropriate list manager to get the next name
-            let nextName: string;
-            switch (data.type) {
-                case SimulationObjectType.Activity:
-                    nextName = modelDef.activities.getNextName();
-                    break;
-                case SimulationObjectType.Connector:
-                    nextName = modelDef.connectors.getNextName();
-                    break;
-                case SimulationObjectType.Generator:
-                    nextName = modelDef.generators.getNextName();
-                    break;
-                case SimulationObjectType.Resource:
-                    nextName = modelDef.resources.getNextName();
-                    break;
-                case SimulationObjectType.ResourceRequirement:
-                    nextName = modelDef.resourceRequirements.getNextName();
-                    break;
-                case SimulationObjectType.Entity:
-                    nextName = modelDef.entities.getNextName();
-                    break;
-                default:
-                    nextName = `New ${data.type}`;
-            }
-
-            // Create element with the next name
-            const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.elementId);
-            defaultData.name = nextName;
-
-            // Save element data using ModelManager
-            await this.modelManager.saveElementData(
+            // Create the platform object with conversion flag
+            // This will handle all the data creation and storage internally
+            const elementFactory = new LucidElementFactory(this.modelManager.getStorageAdapter());
+            const platformObject = elementFactory.createPlatformObject(
                 element,
-                defaultData,
                 data.type,
-                currentPage
+                true  // isConversion flag
             );
 
             await this.updateModelStructure();
@@ -513,7 +486,6 @@ export class ModelPanel extends Panel {
             });
         }
     }
-
 
     /**
      * Handles tree node expansion state changes

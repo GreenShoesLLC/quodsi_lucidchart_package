@@ -69,4 +69,31 @@ export class EntityLucid extends SimObjectLucid<Entity> {
         const className = block.getClassName() || 'Block';
         return `${defaultPrefix} ${className}`;
     }
+
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): EntityLucid {
+        // Create default entity using the static method from Entity
+        const defaultEntity = Entity.createDefault(block.id);
+        
+        // Get name from block text if available
+        const name = SimObjectLucid.getNameFromBlock(block, 'Entity');
+
+        // Convert to StoredEntityData format
+        const storedData: StoredEntityData = {
+            id: defaultEntity.id,
+            name: name  // Use the name from block text instead of default
+        };
+
+        // Set up both data and metadata using setElementData
+        storageAdapter.setElementData(
+            block,
+            storedData,
+            SimulationObjectType.Entity,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Now create the EntityLucid instance
+        return new EntityLucid(block, storageAdapter);
+    }
 }

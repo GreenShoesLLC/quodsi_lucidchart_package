@@ -1,5 +1,5 @@
 import { ElementProxy, LineProxy, BlockProxy, PageProxy } from 'lucid-extension-sdk';
-import { 
+import {
     SimulationObjectType,
     Resource
 } from '@quodsi/shared';
@@ -19,19 +19,21 @@ import {
  * Factory for creating platform-specific simulation objects from Lucid elements.
  */
 export class LucidElementFactory {
-    constructor(private storageAdapter: StorageAdapter) {}
+    constructor(private storageAdapter: StorageAdapter) { }
 
     /**
      * Creates the appropriate platform-specific simulation object based on the element type
      */
     public createPlatformObject(
-        element: ElementProxy, 
-        type: SimulationObjectType
+        element: ElementProxy,
+        type: SimulationObjectType,
+        isConversion: boolean = false
     ): SimObjectLucid<any> {
         console.log(`[LucidElementFactory] Creating platform object`, {
             elementId: element.id,
             type: type,
-            elementType: element.constructor.name
+            elementType: element.constructor.name,
+            isConversion: isConversion
         });
 
         try {
@@ -49,7 +51,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking BlockProxy for Activity`);
                     if (this.isBlockProxy(element)) {
                         console.log(`[LucidElementFactory] Creating ActivityLucid`);
-                        return new ActivityLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? ActivityLucid.createFromConversion(element, this.storageAdapter)
+                            : new ActivityLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a BlockProxy for Activity`);
                     break;
@@ -58,7 +62,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking LineProxy for Connector`);
                     if (this.isLineProxy(element)) {
                         console.log(`[LucidElementFactory] Creating ConnectorLucid`);
-                        return new ConnectorLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? ConnectorLucid.createFromConversion(element, this.storageAdapter)
+                            : new ConnectorLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a LineProxy for Connector`);
                     break;
@@ -67,7 +73,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking BlockProxy for Entity`);
                     if (this.isBlockProxy(element)) {
                         console.log(`[LucidElementFactory] Creating EntityLucid`);
-                        return new EntityLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? EntityLucid.createFromConversion(element, this.storageAdapter)
+                            : new EntityLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a BlockProxy for Entity`);
                     break;
@@ -76,7 +84,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking BlockProxy for Generator`);
                     if (this.isBlockProxy(element)) {
                         console.log(`[LucidElementFactory] Creating GeneratorLucid`);
-                        return new GeneratorLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? GeneratorLucid.createFromConversion(element, this.storageAdapter)
+                            : new GeneratorLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a BlockProxy for Generator`);
                     break;
@@ -85,7 +95,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking BlockProxy for Resource`);
                     if (this.isBlockProxy(element)) {
                         console.log(`[LucidElementFactory] Creating ResourceLucid`);
-                        return new ResourceLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? ResourceLucid.createFromConversion(element, this.storageAdapter)
+                            : new ResourceLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a BlockProxy for Resource`);
                     break;
@@ -94,7 +106,9 @@ export class LucidElementFactory {
                     console.log(`[LucidElementFactory] Checking BlockProxy for ResourceRequirement`);
                     if (this.isBlockProxy(element)) {
                         console.log(`[LucidElementFactory] Creating ResourceRequirementLucid`);
-                        return new ResourceRequirementLucid(element, this.storageAdapter);
+                        return isConversion
+                            ? ResourceRequirementLucid.createFromConversion(element, this.storageAdapter)
+                            : new ResourceRequirementLucid(element, this.storageAdapter);
                     }
                     console.error(`[LucidElementFactory] Element is not a BlockProxy for ResourceRequirement`);
                     break;
@@ -119,6 +133,7 @@ export class LucidElementFactory {
         }
     }
 
+    // Rest of the class remains the same...
     /**
      * Creates a ResourceRequirement from a Resource
      */

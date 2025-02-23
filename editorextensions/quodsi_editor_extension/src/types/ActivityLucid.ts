@@ -1,8 +1,9 @@
 import { BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     Activity,
+    MetaData,
     OperationStep,
-    SimulationObjectType 
+    SimulationObjectType
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -90,5 +91,32 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
         const className = block.getClassName() || 'Block';
         return `${defaultPrefix} ${className}`;
+    }
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ActivityLucid {
+        // Create default activity using the static method
+        const defaultActivity = Activity.createDefault(block.id);
+        const name = SimObjectLucid.getNameFromBlock(block, 'Act');
+        // Convert to StoredActivityData format
+        const storedData: StoredActivityData = {
+            id: defaultActivity.id,
+            name: name,
+            capacity: defaultActivity.capacity,
+            inputBufferCapacity: defaultActivity.inputBufferCapacity,
+            outputBufferCapacity: defaultActivity.outputBufferCapacity,
+            operationSteps: defaultActivity.operationSteps
+        };
+
+        // Set up both data and metadata using setElementData
+        storageAdapter.setElementData(
+            block,
+            storedData,
+            SimulationObjectType.Activity,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Now create the ActivityLucid instance
+        return new ActivityLucid(block, storageAdapter);
     }
 }

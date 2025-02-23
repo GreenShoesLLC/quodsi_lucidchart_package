@@ -1,4 +1,4 @@
-import { ElementProxy } from 'lucid-extension-sdk';
+import { BlockProxy, ElementProxy } from 'lucid-extension-sdk';
 import { 
     PlatformSimObject, 
     PlatformType,
@@ -40,6 +40,16 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     protected abstract createSimObject(): T;
 
     /**
+     * abstract static method for conversion
+     */
+    static createFromConversion(
+        element: ElementProxy,
+        storageAdapter: StorageAdapter
+    ): SimObjectLucid<SimulationObject> {
+        throw new Error('createFromConversion must be implemented by subclass');
+    }
+
+    /**
      * Gets the element name - implemented by derived classes since
      * different element types (Block, Line) handle text differently
      */
@@ -75,5 +85,20 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
             elementId: this.element.id,
             elementType: this.type
         };
+    }
+    /**
+     * Static utility method to get name from a block's text areas
+     */
+    protected static getNameFromBlock(block: BlockProxy, defaultPrefix: string): string {
+        if (block.textAreas && block.textAreas.size > 0) {
+            for (const text of block.textAreas.values()) {
+                if (text && text.trim()) {
+                    return text.trim();
+                }
+            }
+        }
+
+        const className = block.getClassName() || 'Block';
+        return `${defaultPrefix} ${className}`;
     }
 }

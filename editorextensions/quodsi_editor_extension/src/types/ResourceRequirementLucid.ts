@@ -8,6 +8,11 @@ import {
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
+interface StoredResourceRequirementData {
+    id: string;
+    name: string;
+    rootClauses: RequirementClause[];
+}
 /**
  * Lucid-specific implementation of a ResourceRequirement.
  * Maps a Lucid Block element to a simulation ResourceRequirement.
@@ -88,5 +93,35 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
     public removeClause(clauseId: string): void {
         this.simObject.removeClause(clauseId);
         this.storageAdapter.updateElementData(this.block, this.simObject);
+    }
+
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceRequirementLucid {
+        // Create default resource requirement
+        // Note: ResourceRequirement doesn't have a createDefault method
+        const defaultRequirement = new ResourceRequirement(
+            block.id,
+            `Resource Requirement ${block.getClassName() || 'Block'}`,
+            [] // empty root clauses
+        );
+
+        // Convert to StoredResourceRequirementData format
+        const storedData: StoredResourceRequirementData = {
+            id: defaultRequirement.id,
+            name: defaultRequirement.name,
+            rootClauses: defaultRequirement.rootClauses
+        };
+
+        // Set up both data and metadata
+        storageAdapter.setElementData(
+            block,
+            storedData,
+            SimulationObjectType.ResourceRequirement,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Create and return the ResourceRequirementLucid instance
+        return new ResourceRequirementLucid(block, storageAdapter);
     }
 }

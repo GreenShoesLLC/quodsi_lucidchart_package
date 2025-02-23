@@ -84,4 +84,30 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         const className = block.getClassName() || 'Block';
         return `${defaultPrefix} ${className}`;
     }
+
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceLucid {
+        // Create default resource using the static method
+        const defaultResource = Resource.createDefault(block.id);
+        // Get name from block text if available
+        const name = SimObjectLucid.getNameFromBlock(block, 'Res');
+        // Convert to StoredResourceData format
+        const storedData: StoredResourceData = {
+            id: defaultResource.id,
+            name: name,
+            capacity: defaultResource.capacity
+        };
+
+        // Set up both data and metadata
+        storageAdapter.setElementData(
+            block,
+            storedData,
+            SimulationObjectType.Resource,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Create and return the ResourceLucid instance
+        return new ResourceLucid(block, storageAdapter);
+    }
 }
