@@ -40,11 +40,12 @@ import {
 } from '@quodsi/shared';
 import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
-import { ConversionService } from '../services/conversion/ConversionService';
 import { SelectionManager, TreeStateManager } from '../managers';
 import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
 import { ModelDataSource } from '../collections/ModelDataSource';
 import { LucidElementFactory } from '../services/LucidElementFactory';
+import { LucidPageConversionService } from '../services/conversion/LucidPageConversionService';
+import { StorageAdapter } from '../core/StorageAdapter';
 
 
 
@@ -56,7 +57,6 @@ export class ModelPanel extends Panel {
     private messaging: ExtensionMessaging;
     private reactAppReady: boolean = false;
     private modelManager: ModelManager;
-    private conversionService: ConversionService;
     private expandedNodes: Set<string> = new Set();
     private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
@@ -80,8 +80,6 @@ export class ModelPanel extends Panel {
         this.modelManager = modelManager;
         this.selectionManager = new SelectionManager(modelManager);
         this.treeStateManager = new TreeStateManager(modelManager);
-        this.conversionService = new ConversionService(this.modelManager);
-
         // Set up event handlers
         this.setupModelMessageHandlers();
         this.log('Model Panel initialized');
@@ -867,9 +865,16 @@ export class ModelPanel extends Panel {
             this.log('Creating pageSchemaConversionService');
             const pageSchemaConversionService = new PageSchemaConversionService(modelDataSource);
             this.log('pageSchemaConversionService.convertPage');
-            const result2 = await pageSchemaConversionService.convertPage(currentPage);
 
-            const result = await this.conversionService.convertPage(currentPage);
+
+            // const result2 = await pageSchemaConversionService.convertPage(currentPage);
+
+            const storageAdapter = new StorageAdapter();
+            const lucidElementFactory = new LucidElementFactory(storageAdapter)
+            const lucidPageConversionService = new LucidPageConversionService(this.modelManager, lucidElementFactory,storageAdapter)
+            lucidPageConversionService.convertPage(currentPage)
+
+
             const selectedItems = viewport.getSelectedItems();
             await this.handleSelectionChange(selectedItems);
 

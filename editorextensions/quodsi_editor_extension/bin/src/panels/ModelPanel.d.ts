@@ -9,7 +9,6 @@ export declare class ModelPanel extends Panel {
     private messaging;
     private reactAppReady;
     private modelManager;
-    private conversionService;
     private expandedNodes;
     private currentModelStructure?;
     private currentSelection;

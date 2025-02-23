@@ -1,9 +1,9 @@
 {
   "formatVersion": "1.0",
-  "metadata": { "version": "1.0", "timestamp": "2025-02-23T15:07:30.003Z" },
+  "metadata": { "version": "1.0", "timestamp": "2025-02-23T21:18:20.098Z" },
   "model": {
     "id": "0_0",
-    "name": "New Model",
+    "name": "Page 1",
     "reps": 1,
     "forecastDays": 30,
     "seed": 12345,
@@ -26,8 +26,8 @@
   ],
   "activities": [
     {
-      "id": "KayVBXWQXsCJ",
-      "name": "P1",
+      "id": "1sEVZWNuF2xZ",
+      "name": "Process",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -35,31 +35,20 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 1,
+            "durationLength": 2,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "3ayVXOP9aqNT",
+          "requirementId": "TtEVRj4te1jq",
           "quantity": 1
         }
       ],
-      "connectors": [
-        {
-          "id": "WayVi5icjPKc",
-          "name": "P1 → P2",
-          "sourceId": "KayVBXWQXsCJ",
-          "targetId": "MayVPR8nk5Gs",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
+      "connectors": []
     },
     {
-      "id": "MayVPR8nk5Gs",
-      "name": "P2",
+      "id": "4sEV-dY398_R",
+      "name": "Process",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -67,31 +56,20 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 1,
+            "durationLength": 3,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "3ayVXOP9aqNT",
+          "requirementId": "TtEVRj4te1jq",
           "quantity": 1
         }
       ],
-      "connectors": [
-        {
-          "id": "ZayVu9eqY2th",
-          "name": "P2 → P3",
-          "sourceId": "MayVPR8nk5Gs",
-          "targetId": "RayVBj5zBQ8m",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
+      "connectors": []
     },
     {
-      "id": "RayVBj5zBQ8m",
-      "name": "P3",
+      "id": "7sEVil4ffwLR",
+      "name": "Process",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -99,12 +77,12 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 1,
+            "durationLength": 4,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "3ayVXOP9aqNT",
+          "requirementId": "TtEVRj4te1jq",
           "quantity": 1
         }
       ],
@@ -113,52 +91,17 @@
   ],
   "resources": [
     {
-      "id": "3ayVXOP9aqNT",
-      "name": "Resource 1",
+      "id": "TtEVRj4te1jq",
+      "name": "Res1",
       "type": "Resource",
-      "capacity": 1
+      "capacity": "2"
     }
   ],
-  "generators": [
-    {
-      "id": "HayVnZrKGAWE",
-      "name": "Process",
-      "type": "Generator",
-      "activityKeyId": "{SomeActivityName}",
-      "entityId": "00000000-0000-0000-0000-000000000000",
-      "periodicOccurrences": 10,
-      "periodIntervalDuration": {
-        "durationLength": 1,
-        "durationPeriodUnit": "HOURS",
-        "durationType": "CONSTANT",
-        "distribution": null
-      },
-      "entitiesPerCreation": 1,
-      "periodicStartDuration": {
-        "durationLength": 0,
-        "durationPeriodUnit": "HOURS",
-        "durationType": "CONSTANT",
-        "distribution": null
-      },
-      "maxEntities": 999,
-      "connectors": [
-        {
-          "id": "UayVq0t9V.t4",
-          "name": "Process → P1",
-          "sourceId": "HayVnZrKGAWE",
-          "targetId": "KayVBXWQXsCJ",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
-    }
-  ],
+  "generators": [],
   "resourceRequirements": [
     {
-      "id": "3ayVXOP9aqNT",
-      "name": "Resource 1",
+      "id": "TtEVRj4te1jq",
+      "name": "Res1",
       "type": "ResourceRequirement",
       "rootClauses": [
         {
@@ -166,7 +109,7 @@
           "mode": "REQUIRE_ALL",
           "requests": [
             {
-              "resourceId": "3ayVXOP9aqNT",
+              "resourceId": "TtEVRj4te1jq",
               "quantity": 1,
               "priority": 1,
               "keepResource": false
