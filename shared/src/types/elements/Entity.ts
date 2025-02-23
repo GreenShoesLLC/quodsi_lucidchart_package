@@ -1,6 +1,7 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { SimulationObject } from "./SimulationObject";
 
+
 export class Entity implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Entity;
 

@@ -1,6 +1,6 @@
 {
   "formatVersion": "1.0",
-  "metadata": { "version": "1.0", "timestamp": "2025-02-19T14:17:20.953Z" },
+  "metadata": { "version": "1.0", "timestamp": "2025-02-23T15:07:30.003Z" },
   "model": {
     "id": "0_0",
     "name": "New Model",
@@ -26,8 +26,9 @@
   ],
   "activities": [
     {
-      "id": "4alUnlP-zMQK",
-      "name": "Process",
+      "id": "KayVBXWQXsCJ",
+      "name": "P1",
+      "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
       "outputBufferCapacity": 1,
@@ -39,16 +40,17 @@
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "XmlUAFIKdaVf",
+          "requirementId": "3ayVXOP9aqNT",
           "quantity": 1
         }
       ],
       "connectors": [
         {
-          "id": "_alUhotcYK-W",
-          "name": "Connector _alUhotcYK-W",
-          "sourceId": "4alUnlP-zMQK",
-          "targetId": "7alUCKVOYXMV",
+          "id": "WayVi5icjPKc",
+          "name": "P1 → P2",
+          "sourceId": "KayVBXWQXsCJ",
+          "targetId": "MayVPR8nk5Gs",
+          "type": "Connector",
           "probability": 1,
           "connectType": "Probability",
           "operationSteps": []
@@ -56,8 +58,9 @@
       ]
     },
     {
-      "id": "7alUCKVOYXMV",
-      "name": "Process",
+      "id": "MayVPR8nk5Gs",
+      "name": "P2",
+      "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
       "outputBufferCapacity": 1,
@@ -69,18 +72,58 @@
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "XmlUAFIKdaVf",
+          "requirementId": "3ayVXOP9aqNT",
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "ZayVu9eqY2th",
+          "name": "P2 → P3",
+          "sourceId": "MayVPR8nk5Gs",
+          "targetId": "RayVBj5zBQ8m",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "RayVBj5zBQ8m",
+      "name": "P3",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": "3ayVXOP9aqNT",
           "quantity": 1
         }
       ],
       "connectors": []
     }
   ],
-  "resources": [{ "id": "XmlUAFIKdaVf", "name": "Resource 1", "capacity": 1 }],
+  "resources": [
+    {
+      "id": "3ayVXOP9aqNT",
+      "name": "Resource 1",
+      "type": "Resource",
+      "capacity": 1
+    }
+  ],
   "generators": [
     {
-      "id": "2alUcejr3pgn",
+      "id": "HayVnZrKGAWE",
       "name": "Process",
+      "type": "Generator",
       "activityKeyId": "{SomeActivityName}",
       "entityId": "00000000-0000-0000-0000-000000000000",
       "periodicOccurrences": 10,
@@ -100,10 +143,11 @@
       "maxEntities": 999,
       "connectors": [
         {
-          "id": "9alUW~2pNTHB",
-          "name": "Connector 9alUW~2pNTHB",
-          "sourceId": "2alUcejr3pgn",
-          "targetId": "4alUnlP-zMQK",
+          "id": "UayVq0t9V.t4",
+          "name": "Process → P1",
+          "sourceId": "HayVnZrKGAWE",
+          "targetId": "KayVBXWQXsCJ",
+          "type": "Connector",
           "probability": 1,
           "connectType": "Probability",
           "operationSteps": []
@@ -113,7 +157,7 @@
   ],
   "resourceRequirements": [
     {
-      "id": "XmlUAFIKdaVf",
+      "id": "3ayVXOP9aqNT",
       "name": "Resource 1",
       "type": "ResourceRequirement",
       "rootClauses": [
@@ -122,7 +166,7 @@
           "mode": "REQUIRE_ALL",
           "requests": [
             {
-              "resourceId": "XmlUAFIKdaVf",
+              "resourceId": "3ayVXOP9aqNT",
               "quantity": 1,
               "priority": 1,
               "keepResource": false

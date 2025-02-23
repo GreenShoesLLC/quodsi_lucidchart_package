@@ -1,4 +1,4 @@
-import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
+import { PageProxy, ElementProxy, BlockProxy } from 'lucid-extension-sdk';
 import {
     Model,
     ModelDefinition,
@@ -11,11 +11,15 @@ import {
     ResourceRequirement
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
+import { LucidElementFactory } from '../services/LucidElementFactory';
+import { ModelLucid } from '../types/ModelLucid';
 
 export class ModelDefinitionPageBuilder {
     private loggingEnabled: boolean = true;
 
-    constructor(private storageAdapter: StorageAdapter) { }
+    constructor(
+        private storageAdapter: StorageAdapter,
+        private elementFactory: LucidElementFactory) { }
 
     /**
      * Method to toggle logging
@@ -46,121 +50,165 @@ export class ModelDefinitionPageBuilder {
      */
     public buildFromConvertedPage(page: PageProxy): ModelDefinition | null {
         try {
-            this.log(`Starting model definition build for page ${page.id}`);
-            this.log(`Page title: ${page.getTitle()}`);
-
-            // Get the model data from the page
-            const modelData = this.storageAdapter.getElementData<Model>(page);
-            if (!modelData) {
-                this.log('No model data found on page', 'error');
+            // First validate that we have a valid page
+            if (!page) {
+                this.log('Page is undefined', 'error');
                 return null;
             }
-            this.log(`Found model data with ID: ${modelData.id}`);
+
+            // Log page details
+            this.log('Page details:', 'log');
+            this.log(JSON.stringify({
+                pageExists: !!page,
+                pageId: page.id,
+                pageTitle: page.getTitle?.(),
+                hasAllBlocks: 'allBlocks' in page,
+                hasGetTitle: 'getTitle' in page,
+                constructor: page.constructor.name
+            }));
+            this.log(`Starting model definition build for page ${page.id}`);
+            // Add explicit type check before creating ModelLucid
+            if (!this.elementFactory.isPageProxy(page)) {
+                this.log('Invalid page proxy provided', 'error');
+                return null;
+            }
+
+            // Create ModelLucid using the element factory
+            let modelLucid;
+            try {
+                modelLucid = this.elementFactory.createPlatformObject(page, SimulationObjectType.Model) as ModelLucid;
+                if (!modelLucid) {
+                    this.log('Failed to create ModelLucid', 'error');
+                    return null;
+                }
+            } catch (error) {
+                this.log(`Error creating ModelLucid: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                if (error instanceof Error && error.stack) {
+                    this.log(`Stack trace: ${error.stack}`, 'error');
+                }
+                return null;
+            }
+
+            let modelData;
+            try {
+                modelData = modelLucid.getSimulationObject();
+                if (!modelData) {
+                    this.log('Model data is undefined', 'error');
+                    return null;
+                }
+            } catch (error) {
+                this.log(`Error getting simulation object: ${error instanceof Error ? error.message : String(error)}`, 'error');
+                return null;
+            }
 
             // Create initial ModelDefinition
             const modelDefinition = new ModelDefinition(modelData);
-            // Verify the critical functions exist
-            if (!modelDefinition.activities || typeof modelDefinition.activities.add !== 'function') {
-                this.log('ModelDefinition activities not properly initialized', 'error');
-                return null;
+
+            // Validate ModelDefinition initialization
+            const requiredManagers = [
+                'activities',
+                'connectors',
+                'resources',
+                'resourceRequirements',
+                'generators',
+                'entities'
+            ] as const;
+
+            const managerKeys = requiredManagers;
+            for (const key of managerKeys) {
+                const manager = modelDefinition[key];
+                if (!manager || typeof manager.add !== 'function') {
+                    this.log(`ModelDefinition ${key} not properly initialized`, 'error');
+                    return null;
+                }
             }
-            if (!modelDefinition.connectors || typeof modelDefinition.connectors.add !== 'function') {
-                this.log('ModelDefinition connectors not properly initialized', 'error');
-                return null;
-            }
-            if (!modelDefinition.resources || typeof modelDefinition.resources.add !== 'function') {
-                this.log('ModelDefinition resources not properly initialized', 'error');
-                return null;
-            }
-            if (!modelDefinition.resourceRequirements || typeof modelDefinition.resourceRequirements.add !== 'function') {
-                this.log('ModelDefinition resourceRequirements not properly initialized', 'error');
-                return null;
-            }
-            if (!modelDefinition.generators || typeof modelDefinition.generators.add !== 'function') {
-                this.log('ModelDefinition generators not properly initialized', 'error');
-                return null;
-            }
-            if (!modelDefinition.entities || typeof modelDefinition.entities.add !== 'function') {
-                this.log('ModelDefinition entities not properly initialized', 'error');
-                return null;
-            }
- 
-            // Process all blocks (shapes)
-            this.log(`Processing ${page.allBlocks.size} blocks`);
+            const processingOrder: SimulationObjectType[] = [
+                SimulationObjectType.Resource,        // Process resources first to create requirements
+                SimulationObjectType.Entity,          // Then entities as they might be referenced
+                SimulationObjectType.Activity,        // Activities that use resources and entities
+                SimulationObjectType.Generator        // Generators that reference entities
+            ];
+
+            // Before first pass, pre-initialize the map with empty arrays for expected types
+            const blocksByType = new Map<SimulationObjectType, BlockProxy[]>(
+                processingOrder.map(type => [type, []])
+            );
+
+            // First pass: Organize blocks by type
             for (const [blockId, block] of page.allBlocks) {
-                this.log(`Processing block ${blockId}`);
-
-                const elementData = this.storageAdapter.getElementData(block);
                 const metadata = this.storageAdapter.getMetadata(block);
-
-                if (!elementData || !metadata) {
-                    this.log(`Missing data or metadata for block ${blockId}`, 'warn');
+                if (!metadata) {
+                    this.log(`No metadata found for block ${blockId}`, 'warn');
                     continue;
                 }
+                blocksByType.get(metadata.type)?.push(block);
+            }
+            // Process types in dependency order
 
-                try {
-                    this.log(`Block ${blockId} type: ${metadata.type}`);
-                    switch (metadata.type) {
-                        case SimulationObjectType.Activity:
-                            modelDefinition.activities.add(elementData as Activity);
-                            this.log(`Added activity ${blockId}`);
-                            break;
-                        case SimulationObjectType.Generator:
-                            modelDefinition.generators.add(elementData as Generator);
-                            this.log(`Added generator ${blockId}`);
-                            break;
-                        case SimulationObjectType.Resource:
-                            const resource = elementData as Resource;
-                            modelDefinition.resources.add(resource);
-                            const requirement = ResourceRequirement.createForSingleResource(resource);
-                            this.log(`requirement name ${requirement.name}`)
-                            modelDefinition.resourceRequirements.add(requirement);
-                            this.log(`Added resource ${blockId} for resource ${resource.name}`);
-                            break;
-                        case SimulationObjectType.Entity:
-                            modelDefinition.entities.add(elementData as Entity);
-                            this.log(`Added entity ${blockId}`);
-                            break;
-                        default:
-                            this.log(`Unknown type ${metadata.type} for block ${blockId}`, 'warn');
+            // Process each type in order
+            for (const type of processingOrder) {
+                const blocks = blocksByType.get(type) || [];
+                this.log(`Processing ${blocks.length} blocks of type ${type}`);
+
+                for (const block of blocks) {
+                    try {
+                        const platformObject = this.elementFactory.createPlatformObject(block, type);
+                        const simObject = platformObject.getSimulationObject();
+
+                        switch (type) {
+                            case SimulationObjectType.Resource:
+                                modelDefinition.resources.add(simObject);
+                                const requirement = ResourceRequirement.createForSingleResource(simObject);
+                                modelDefinition.resourceRequirements.add(requirement);
+                                this.log(`Added resource and requirement: ${simObject.name}`);
+                                break;
+
+                            case SimulationObjectType.Activity:
+                                modelDefinition.activities.add(simObject);
+                                this.log(`Added activity: ${simObject.name}`);
+                                break;
+
+                            case SimulationObjectType.Generator:
+                                modelDefinition.generators.add(simObject);
+                                this.log(`Added generator: ${simObject.name}`);
+                                break;
+
+                            case SimulationObjectType.Entity:
+                                modelDefinition.entities.add(simObject);
+                                this.log(`Added entity: ${simObject.name}`);
+                                break;
+                        }
+                    } catch (error) {
+                        this.log(`Error processing block of type ${type}: ${error}`, 'error');
                     }
-                } catch (error) {
-                    this.log(`Error adding ${metadata.type} ${blockId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
                 }
             }
 
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
-                this.log(`Processing line ${lineId}`);
-
-                const connectorData = this.storageAdapter.getElementData<Connector>(line);
                 const metadata = this.storageAdapter.getMetadata(line);
+                if (!metadata || metadata.type !== SimulationObjectType.Connector) continue;
 
-                if (!connectorData || !metadata) {
-                    this.log(`Missing data or metadata for line ${lineId}`, 'warn');
-                    continue;
-                }
-
-                if (metadata.type === SimulationObjectType.Connector) {
-                    try {
-                        modelDefinition.connectors.add(connectorData);
-                        this.log(`Added connector ${lineId} from ${connectorData.sourceId} to ${connectorData.targetId}`);
-                    } catch (error) {
-                        this.log(`Error adding connector ${lineId}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-                    }
-                } else {
-                    this.log(`Unexpected type ${metadata.type} for line ${lineId}`, 'warn');
+                try {
+                    const platformObject = this.elementFactory.createPlatformObject(line, metadata.type);
+                    const connector = platformObject.getSimulationObject();
+                    modelDefinition.connectors.add(connector);
+                } catch (error) {
+                    this.log(`Error processing line ${lineId}`, 'error');
                 }
             }
 
-            // Log summary
+            // Log summary with more detail
             this.logModelDefinitionSummary(modelDefinition);
 
             return modelDefinition;
 
         } catch (error) {
             this.log(`Error building ModelDefinition: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+            if (error instanceof Error) {
+                this.log(`Error stack: ${error.stack}`, 'error');
+            }
             return null;
         }
     }
@@ -174,7 +222,14 @@ export class ModelDefinitionPageBuilder {
         this.log('Model Definition Summary:');
         this.log(`- Model ID: ${modelDefinition.id}`);
         this.log(`- Model Name: ${modelDefinition.name}`);
-        this.log(`- Activities: ${modelDefinition.activities.size()}`);
+
+        // Log activities with names
+        const activities = modelDefinition.activities.getAll();
+        this.log(`- Activities: ${activities.length}`);
+        activities.forEach((activity, index) => {
+            this.log(`  ${index + 1}. ${activity.name}`);
+        });
+
         this.log(`- Generators: ${modelDefinition.generators.size()}`);
         this.log(`- Resources: ${modelDefinition.resources.size()}`);
         this.log(`- Requirements: ${modelDefinition.resourceRequirements.size()}`);

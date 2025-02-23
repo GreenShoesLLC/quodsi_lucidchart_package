@@ -1,10 +1,12 @@
 import { PageProxy } from 'lucid-extension-sdk';
 import { ModelDefinition } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
+import { LucidElementFactory } from '../services/LucidElementFactory';
 export declare class ModelDefinitionPageBuilder {
     private storageAdapter;
+    private elementFactory;
     private loggingEnabled;
-    constructor(storageAdapter: StorageAdapter);
+    constructor(storageAdapter: StorageAdapter, elementFactory: LucidElementFactory);
     /**
      * Method to toggle logging
      */

@@ -14,6 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+__exportStar(require("./platform"), exports);
 __exportStar(require("./core/logging/QuodsiLogger"), exports);
 __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);
@@ -57,6 +58,7 @@ __exportStar(require("./types/elements/RequirementMode"), exports);
 __exportStar(require("./types/elements/Resource"), exports);
 __exportStar(require("./types/elements/ResourceListManager"), exports);
 __exportStar(require("./types/elements/ResourceRequest"), exports);
+__exportStar(require("./types/elements/RequirementClause"), exports);
 __exportStar(require("./types/elements/ResourceRequirement"), exports);
 __exportStar(require("./types/elements/Scenario"), exports);
 __exportStar(require("./types/elements/SimulationObject"), exports);

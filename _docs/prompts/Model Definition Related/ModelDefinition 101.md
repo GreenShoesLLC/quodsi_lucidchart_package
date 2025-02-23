@@ -43,6 +43,19 @@ The ModelDefinitionPageBuilder can create a new instance of a ModelDefinition wi
 
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\core\ModelDefinitionPageBuilder.ts
 
+### ModelDefinitionPageBuilder depends on LucidElementFactory
+ModelDefinitionPageBuilder depends on LucidElementFactory.  LucidElementFactory is a platform specific class dedicated to create the Lucid specific version of the generic Entity, Activity, etc.  Please find the full code here:
+
+C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\services\LucidElementFactory.ts
+
+For more information, refer to the README.md located inside of this directory
+
+C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\types\
+
+here is another great README.md
+
+C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\platform\README.md
+
 ### Serialization
 
 

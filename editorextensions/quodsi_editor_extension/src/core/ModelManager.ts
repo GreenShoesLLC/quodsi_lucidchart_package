@@ -23,6 +23,7 @@ import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
+import { LucidElementFactory } from "../services/LucidElementFactory";
 
 
 interface ChangeTracker {
@@ -118,7 +119,8 @@ export class ModelManager {
             this.log('Rebuilding ModelDefinition due to pending changes:',
                 Array.from(this.changeTracker.pendingChanges));
 
-            const builder = new ModelDefinitionPageBuilder(this.storageAdapter);
+            const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
+            const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);
             try {
                 const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);
 

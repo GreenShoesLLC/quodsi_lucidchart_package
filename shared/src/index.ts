@@ -1,3 +1,4 @@
+export * from './platform';
 export * from './core/logging/QuodsiLogger';
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
@@ -42,6 +43,7 @@ export * from './types/elements/RequirementMode';
 export * from './types/elements/Resource';
 export * from './types/elements/ResourceListManager';
 export * from './types/elements/ResourceRequest';
+export * from './types/elements/RequirementClause';
 export * from './types/elements/ResourceRequirement';
 export * from './types/elements/Scenario';
 export * from './types/elements/SimulationObject';
