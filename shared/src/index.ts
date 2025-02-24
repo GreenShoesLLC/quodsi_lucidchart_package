@@ -64,3 +64,4 @@ export * from './serialization';
 
 // Export validation
 export * from './validation'
+export * from './versioning'

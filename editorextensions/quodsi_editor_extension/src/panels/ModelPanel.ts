@@ -46,6 +46,7 @@ import { ModelDataSource } from '../collections/ModelDataSource';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { LucidPageConversionService } from '../services/conversion/LucidPageConversionService';
 import { StorageAdapter } from '../core/StorageAdapter';
+import LucidVersionManager from '../versioning';
 
 
 
@@ -65,6 +66,7 @@ export class ModelPanel extends Panel {
         selectionType: SelectionType.NONE
     };
     private isHandlingSelectionChange: boolean = false;
+    private versionManager: LucidVersionManager;
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -74,7 +76,7 @@ export class ModelPanel extends Panel {
             iconUrl: 'https://lucid.app/favicon.ico',
             width: 300
         });
-
+        this.versionManager = new LucidVersionManager();
         // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
         this.modelManager = modelManager;
@@ -829,6 +831,8 @@ export class ModelPanel extends Panel {
         }
 
         try {
+            // Check for and handle any needed version upgrades
+            // await this.versionManager.handlePageLoad(currentPage);
             // Now initialize the model in response to a user-triggered event
             await this.initializeModelManager();
 

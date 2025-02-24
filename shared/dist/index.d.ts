@@ -55,4 +55,5 @@ export * from './services/lucidApi';
 export * from './utils/csvUtils';
 export * from './serialization';
 export * from './validation';
+export * from './versioning';
 //# sourceMappingURL=index.d.ts.map
