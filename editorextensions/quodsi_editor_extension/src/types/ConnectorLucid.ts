@@ -123,4 +123,58 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
 
         return this.getBlockName(block);
     }
+
+    static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter): ConnectorLucid {
+        // Create default connector using the static method
+        const defaultConnector = Connector.createDefault(line.id);
+
+        // Safely get endpoints with null checks
+        const endpoint1 = line.getEndpoint1();
+        const endpoint2 = line.getEndpoint2();
+
+        // Set source and target IDs if connections exist
+        if (endpoint1 && endpoint1.connection) {
+            defaultConnector.sourceId = endpoint1.connection.id;
+        }
+
+        if (endpoint2 && endpoint2.connection) {
+            defaultConnector.targetId = endpoint2.connection.id;
+        }
+
+        // Custom name using endpoints if available
+        let name = `Connector ${line.id}`;
+        if (defaultConnector.sourceId && defaultConnector.targetId) {
+            // Try to get block names from page
+            const page = line.getPage();
+            const sourceBlock = page.allBlocks.get(defaultConnector.sourceId);
+            const targetBlock = page.allBlocks.get(defaultConnector.targetId);
+
+            const sourceName = sourceBlock ? ConnectorLucid.getNameFromBlock(sourceBlock, 'Source') : 'Source';
+            const targetName = targetBlock ? ConnectorLucid.getNameFromBlock(targetBlock, 'Target') : 'Target';
+
+            name = `${sourceName} → ${targetName}`;
+        }
+        defaultConnector.name = name;
+
+        // Convert to StoredConnectorData format
+        const storedData: StoredConnectorData = {
+            id: defaultConnector.id,
+            probability: defaultConnector.probability,
+            connectType: defaultConnector.connectType,
+            operationSteps: defaultConnector.operationSteps
+        };
+
+        // Set up both data and metadata
+        storageAdapter.setElementData(
+            line,
+            storedData,
+            SimulationObjectType.Connector,
+            {
+                version: "1.0.0"
+            }
+        );
+
+        // Create and return the ConnectorLucid instance
+        return new ConnectorLucid(line, storageAdapter);
+    }
 }

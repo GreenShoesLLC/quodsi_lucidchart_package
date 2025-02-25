@@ -1,19 +1,5 @@
  Custom shape libraries
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 What is a custom shape library?
 Lucidchart and Lucidspark both support custom, user-created shape libraries. Custom shape libraries appear in the left panel of Lucid documents alongside Lucid's built-in shape libraries.
 Users can drag shapes from any custom shape libraries they have installed onto the canvas as they’re creating their documents.

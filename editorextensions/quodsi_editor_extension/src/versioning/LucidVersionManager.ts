@@ -1,6 +1,6 @@
-import { VersionManager, VersionManagerOptions } from '@quodsi/shared/src/versioning/VersionManager';
-import { PlatformType } from '@quodsi/shared/src/platform/PlatformType';
-import { VersionUpgraderFactory } from '@quodsi/shared/src/versioning/VersionUpgraderFactory';
+import { VersionManager, VersionManagerOptions } from '@quodsi/shared';
+import { PlatformType } from '@quodsi/shared';
+import { VersionUpgraderFactory } from '@quodsi/shared';
 import { LucidVersionUpgrader } from './LucidVersionUpgrader';
 import { PageProxy } from 'lucid-extension-sdk';
 import { NotificationService } from '../services/NotificationService';

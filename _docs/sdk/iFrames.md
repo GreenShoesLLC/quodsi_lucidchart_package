@@ -1,4 +1,4 @@
- iFrames
+iFrames
 
 The Extension API allows you to display custom UI in a sandboxed iframe. The UI displayed in these iframes can communicate with your extension code via asynchronous message passing. You can define custom UI by extending the Modal or Panel class.
 Modal Example

@@ -1,19 +1,5 @@
  File upload
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Menu items can be specified as prompting a file upload. To do this, you first register a named action for receiving the uploaded file content using EditorClient.registerFileUploadAction. This callback will receive an array of files that were selected by the user, including the file names and content as text. Optionally, the content may also be included as a Uint8Array if your menu item requests that binary be included:
 TypeScriptconst client = new EditorClient();
 const menu = new Menu(client);

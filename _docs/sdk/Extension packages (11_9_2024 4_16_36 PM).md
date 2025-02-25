@@ -1,19 +1,3 @@
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Extension packagesExtension packages can be created automatically using the lucid-package CLI tool:
 Shellnpx lucid-package@latest create
 

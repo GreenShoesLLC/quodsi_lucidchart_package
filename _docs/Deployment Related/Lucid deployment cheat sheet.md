@@ -42,7 +42,7 @@ echo $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY
 cd C:\_source\Greenshoes\quodsi*lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Remove-Item -Path ".\build" -Recurse -Force
 $env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/"
-$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="6nP0L69_cfGT8*-548e68CYUOiQtgX_11GjqpGwx85BoAzFuMW7w2A=="
+$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="6nP0L69_cfGT8_-548e68CYUOiQtgX_11GjqpGwx85BoAzFuMW7w2A=="
 npx react-scripts build
 
 Delete files from here:

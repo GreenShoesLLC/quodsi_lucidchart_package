@@ -1,6 +1,6 @@
 {
   "formatVersion": "1.0",
-  "metadata": { "version": "1.0", "timestamp": "2025-02-23T21:18:20.098Z" },
+  "metadata": { "version": "1.0", "timestamp": "2025-02-25T12:06:04.582Z" },
   "model": {
     "id": "0_0",
     "name": "Page 1",
@@ -26,8 +26,8 @@
   ],
   "activities": [
     {
-      "id": "1sEVZWNuF2xZ",
-      "name": "Process",
+      "id": "0x-V_6P9gjBB",
+      "name": "Depart",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -35,20 +35,20 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 2,
+            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "TtEVRj4te1jq",
+          "requirementId": null,
           "quantity": 1
         }
       ],
       "connectors": []
     },
     {
-      "id": "4sEV-dY398_R",
-      "name": "Process",
+      "id": "Dx-Vh6r0T7RP",
+      "name": "Main ED",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -56,20 +56,52 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 3,
+            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "TtEVRj4te1jq",
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "Lz-VEOlCAt2_",
+          "name": "Main ED → Decision",
+          "sourceId": "Dx-Vh6r0T7RP",
+          "targetId": "xz-VHMAyD~z.",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "Fy-V~elq-ELq",
+      "name": "Admit",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": null,
           "quantity": 1
         }
       ],
       "connectors": []
     },
     {
-      "id": "7sEVil4ffwLR",
-      "name": "Process",
+      "id": "Ix-VPtqJOolN",
+      "name": "Trauma",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -77,47 +109,191 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 4,
+            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": "TtEVRj4te1jq",
+          "requirementId": null,
           "quantity": 1
         }
       ],
-      "connectors": []
-    }
-  ],
-  "resources": [
-    {
-      "id": "TtEVRj4te1jq",
-      "name": "Res1",
-      "type": "Resource",
-      "capacity": "2"
-    }
-  ],
-  "generators": [],
-  "resourceRequirements": [
-    {
-      "id": "TtEVRj4te1jq",
-      "name": "Res1",
-      "type": "ResourceRequirement",
-      "rootClauses": [
+      "connectors": [
         {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "TtEVRj4te1jq",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
+          "id": "Pz-Vibc1YjT5",
+          "name": "Trauma → Decision",
+          "sourceId": "Ix-VPtqJOolN",
+          "targetId": "xz-VHMAyD~z.",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "fx-VvEY5DDZW",
+      "name": "Triage",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "1y-VYLW0SJtG",
+          "name": "Triage → Trauma",
+          "sourceId": "fx-VvEY5DDZW",
+          "targetId": "Ix-VPtqJOolN",
+          "type": "Connector",
+          "probability": 0.3333333333333333,
+          "connectType": "Probability",
+          "operationSteps": []
+        },
+        {
+          "id": "Wy-VcHiCOMfZ",
+          "name": "Triage → Main ED",
+          "sourceId": "fx-VvEY5DDZW",
+          "targetId": "Dx-Vh6r0T7RP",
+          "type": "Connector",
+          "probability": 0.3333333333333333,
+          "connectType": "Probability",
+          "operationSteps": []
+        },
+        {
+          "id": "_y-V1f8ABukx",
+          "name": "Triage → LATS",
+          "sourceId": "fx-VvEY5DDZW",
+          "targetId": "jx-VqhHsHuTf",
+          "type": "Connector",
+          "probability": 0.3333333333333333,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "jx-VqhHsHuTf",
+      "name": "LATS",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "Fz-VEF14RA-S",
+          "name": "LATS → Decision",
+          "sourceId": "jx-VqhHsHuTf",
+          "targetId": "xz-VHMAyD~z.",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    },
+    {
+      "id": "xz-VHMAyD~z.",
+      "name": "Decision",
+      "type": "Activity",
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationLength": 1,
+            "durationPeriodUnit": "MINUTES",
+            "durationType": "CONSTANT",
+            "distribution": null
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "9z-VYCxv~kaY",
+          "name": "No",
+          "sourceId": "xz-VHMAyD~z.",
+          "targetId": "Fy-V~elq-ELq",
+          "type": "Connector",
+          "probability": 0.5,
+          "connectType": "Probability",
+          "operationSteps": []
+        },
+        {
+          "id": "Wz-V6F8czQ1o",
+          "name": "Yes",
+          "sourceId": "xz-VHMAyD~z.",
+          "targetId": "0x-V_6P9gjBB",
+          "type": "Connector",
+          "probability": 0.5,
+          "connectType": "Probability",
+          "operationSteps": []
         }
       ]
     }
-  ]
+  ],
+  "resources": [],
+  "generators": [
+    {
+      "id": "~w-VWP443qki",
+      "name": "Arrive",
+      "type": "Generator",
+      "activityKeyId": "{SomeActivityName}",
+      "entityId": "00000000-0000-0000-0000-000000000000",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationLength": 0,
+        "durationPeriodUnit": "HOURS",
+        "durationType": "CONSTANT",
+        "distribution": null
+      },
+      "maxEntities": 999,
+      "connectors": [
+        {
+          "id": "Uy-VcpFbW-Oi",
+          "name": "Arrive → Triage",
+          "sourceId": "~w-VWP443qki",
+          "targetId": "fx-VvEY5DDZW",
+          "type": "Connector",
+          "probability": 1,
+          "connectType": "Probability",
+          "operationSteps": []
+        }
+      ]
+    }
+  ],
+  "resourceRequirements": []
 }

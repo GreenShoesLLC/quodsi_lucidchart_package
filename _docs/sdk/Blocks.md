@@ -54,7 +54,9 @@ TypeScriptfunction dumpERD(page: PageProxy) {
 
 Generic Lucid cards
 Lucid cards blocks are returned as a CardBlockProxy which has specific methods to read the fields specified on the Lucid card shape:
-TypeScriptasync function createGenericLucidCardBlock(page: PageProxy, title: string, description: string) {
+
+
+async function createGenericLucidCardBlock(page: PageProxy, title: string, description: string) {
     await client.loadBlockClasses(['LucidCardBlock']);
     const block = page.addBlock({
         className:'LucidCardBlock',

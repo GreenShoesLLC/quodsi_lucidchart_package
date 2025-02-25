@@ -1,11 +1,5 @@
  Lines
 
-
-
-
-
-
-
 Creating a line
 To create a line, you specify each endpoint as either a free-floating endpoint (just x/y coordinates), a block-connected endpoint, or a line-connected endpoint:
 TypeScriptfunction connectBlocks(block1: BlockProxy, block2: BlockProxy) {

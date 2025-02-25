@@ -1,19 +1,5 @@
  Items
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 The content on a page consists of blocks, lines, and groups, which are all kinds of items.
 All items (and in fact other elements such as pages or the document itself), have a set of properties that can be read and written using their .properties collection:
 TypeScriptfunction dumpProperties(page:PageProxy) {

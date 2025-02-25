@@ -1,19 +1,3 @@
- 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Editor extensionsEditor extensions can be created automatically using the npm run command:
 Shellnpm run create-editor-extension my-editor-extension
 

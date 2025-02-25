@@ -13,6 +13,7 @@ export declare class ModelPanel extends Panel {
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
+    private versionManager;
     constructor(client: EditorClient, modelManager: ModelManager);
     setLogging(enabled: boolean): void;
     private isLoggingEnabled;
@@ -20,7 +21,8 @@ export declare class ModelPanel extends Panel {
     private logError;
     private setupModelMessageHandlers;
     private handleOutputCreatePage;
-    private handleOutputCreatePageOld;
+    private addTableBlock;
+    private handleOutputCreatePageOld2;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
     private createSimulationObjectPayload;

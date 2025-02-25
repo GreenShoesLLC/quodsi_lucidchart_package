@@ -1,18 +1,5 @@
  Data import and sync
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 What is data import and sync?
 This function enables developers to take data from an external data source and pull it into Lucid.
 This can be done by:
