@@ -47,7 +47,7 @@
     {
       "name": "quodsi_data_connector",
       "oauthProviderName": "lucid",
-      "callbackBaseUrl": "https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/dataConnector/",
+      "callbackBaseUrl": "http://localhost:7071/api/dataConnector/",
       "pollingInterval": 30,
       "dataActions": {
         "Simulate": "simulate",

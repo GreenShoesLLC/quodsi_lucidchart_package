@@ -28,6 +28,33 @@ C:\_source\Greenshoes\sample-lucid-extensions\data-connector-example\dataconnect
 C:\_source\Greenshoes\sample-lucid-extensions\asana
 
 
+## CSV Files
+The following directory contains the same set of csv files that will be found in the Azure container.
+C:\_source\Greenshoes\quodsim\tests\simulation_tests\test_output\debug
+
+- activity_rep_summary.csv
+- activity_timing.csv
+- activity_utilization.csv
+- complete_activity_metrics.csv
+- custom_metrics.csv
+- entity_state_rep_summary.csv
+- entity_throughput_rep_summary.csv
+- resource_rep_summary.csv
+
+We need to create SchemaDefinition of each of those csv output files.
+
+For example, if you look at activity_utilization.csv, I have already created ActivityUtilizationSchema: SchemaDefinition.
+
+C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections\activityUtilizationSchema.ts
+
+I would like to create a new SchemaDefinition for the others.
+C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections
+
+
+
+
+
+
 In my extension app, I have already defined a button that when pushed has the required performDataAction code ready to trigger a data connector.
 
 await this.client.performDataAction({

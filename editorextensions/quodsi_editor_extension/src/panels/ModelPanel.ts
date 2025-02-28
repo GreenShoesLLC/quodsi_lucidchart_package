@@ -195,14 +195,14 @@ export class ModelPanel extends Panel {
                 this.log('validationResult:', validationResult);
             }
             
-
-            // await this.client.performDataAction({
-            //     dataConnectorName: 'quodsi_data_connector',
-            //     actionName: 'ImportSimulationResults',
-            //     actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
-            //     asynchronous: true
-            // });
-            // console.log('[ModelPanel] Successfully called ImportSimulationResults');
+            const viewport = new Viewport(this.client);
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ImportSimulationResults',
+                actionData: { documentId: docId, userId: userId, pageId: viewport.getCurrentPage()?.id },
+                asynchronous: true
+            });
+            console.log('[ModelPanel] Successfully called ImportSimulationResults');
 
         } catch (error) {
             console.error('[ModelPanel] Error creating output page:', error);
