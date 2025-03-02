@@ -22,6 +22,7 @@ export declare class ModelPanel extends Panel {
     private setupModelMessageHandlers;
     private handleOutputCreatePage;
     private handleOutputCreatePage2;
+    private handleOutputCreateDashboard;
     private addActivityUtilizationTable;
     private addTableBlock;
     private handleSimulationStatusUpdate;

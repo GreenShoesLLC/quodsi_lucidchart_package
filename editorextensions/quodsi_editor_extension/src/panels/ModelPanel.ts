@@ -50,6 +50,7 @@ import LucidVersionManager from '../versioning';
 import { SimulationResultsReader } from '../data_sources';
 import { SimulationResultsTableGenerator } from '../data_sources/simulation_results/SimulationResultsTableGenerator';
 import { DynamicSimulationResultsTableGenerator } from '../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+import { SimulationResultsDashboard } from '../data_sources/simulation_results/SimulationResultsDashboard';
 
 
 
@@ -163,7 +164,8 @@ export class ModelPanel extends Panel {
                 title: data.pageName,
             };
             const page = document.addPage(def);
-            this.addActivityUtilizationTable(page)
+            // this.addActivityUtilizationTable(page)
+            this.handleOutputCreateDashboard()
             console.log('[SimulationResultsTableGenerator] Successfully called addActivityUtilizationTable');
 
         } catch (error) {
@@ -266,6 +268,81 @@ export class ModelPanel extends Panel {
             this.messaging.sendMessage(MessageTypes.ERROR, {
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
             });
+        }
+    }
+    private async handleOutputCreateDashboard(): Promise<void> {
+        try {
+            console.log('[ModelPanel] Creating simulation results dashboard...');
+
+            // Create dashboard instance with custom configuration
+            const dashboard = new SimulationResultsDashboard(this.client, {
+                title: 'Simulation Results Overview',
+                tableSpacing: 60, // Extra space between tables
+                initialX: 50,
+                initialY: 50,
+                tableWidth: 900, // Wider tables
+                tableConfig: {
+                    formatNumbers: true,
+                    percentDecimals: 1,
+                    numberDecimals: 2,
+                    styleHeader: true,
+                    dynamicColumns: true,
+                    maxColumns: 6 // Limit columns for readability
+                },
+                // Customize which data types to include
+                includedDataTypes: {
+                    activityUtilization: true,
+                    activityRepSummary: true,
+                    activityTiming: true,
+                    entityThroughput: true,
+                    resourceRepSummary: true,
+                    entityState: true
+                },
+                // Custom column configurations for specific table types
+                customColumnConfig: {
+                    activityUtilization: {
+                        columnOrder: [
+                            'Name',
+                            'utilization_mean',
+                            'utilization_max',
+                            'capacity_mean',
+                            'capacity_max'
+                        ],
+                        excludeColumns: ['Id']
+                    },
+                    activityRepSummary: {
+                        columnOrder: [
+                            'activity_id',
+                            'rep',
+                            'utilization_percentage',
+                            'throughput_rate',
+                            'capacity'
+                        ]
+                    }
+                }
+            });
+
+            // Generate a dashboard with the current date/time in the name
+            const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
+            const result = await dashboard.createDashboard(`Simulation Results - ${timestamp}`);
+
+            console.log(`[ModelPanel] Dashboard created with ${result.tables.length} tables`);
+
+            // Optional: You could add additional elements to the page here
+            // For example, add a title or description text block
+
+            if (result.emptyDataTypes.length > 0) {
+                console.log(`[ModelPanel] The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
+            }
+
+            if (result.errors.length > 0) {
+                console.warn(`[ModelPanel] ${result.errors.length} errors occurred while creating the dashboard`);
+                result.errors.forEach(err => {
+                    console.error(`[ModelPanel] Error creating ${err.type} table:`, err.error);
+                });
+            }
+        } catch (error) {
+            console.error('[ModelPanel] Error creating simulation results dashboard:', error);
         }
     }
 
