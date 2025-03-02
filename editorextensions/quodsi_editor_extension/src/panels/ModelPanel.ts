@@ -49,6 +49,7 @@ import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsReader } from '../data_sources';
 import { SimulationResultsTableGenerator } from '../data_sources/simulation_results/SimulationResultsTableGenerator';
+import { DynamicSimulationResultsTableGenerator } from '../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
 
 
 
@@ -267,13 +268,14 @@ export class ModelPanel extends Panel {
             });
         }
     }
-    private async addActivityUtilizationTable(page: PageProxy): Promise<void>{
+
+    private async addActivityUtilizationTable(page: PageProxy): Promise<void> {
         try {
             console.log('[ModelPanel2] Testing SimulationResultsReader...');
             const resultsReader = new SimulationResultsReader(this.client);
 
             // Get current page ID
-            
+
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
             if (!currentPage) {
@@ -302,11 +304,22 @@ export class ModelPanel extends Panel {
             }
 
             // Initialize the generator
-            const tableGenerator = new SimulationResultsTableGenerator(resultsReader, {
+            const tableGenerator = new DynamicSimulationResultsTableGenerator(resultsReader, {
                 formatNumbers: true,
                 percentDecimals: 1,
                 numberDecimals: 2,
-                styleHeader: true
+                styleHeader: true,
+                dynamicColumns: true, // Only include columns with data
+                maxColumns: 6, // Limit number of columns
+                columnOrder: [
+                    'Id',
+                    'Name',
+                    'utilization_mean',
+                    'utilization_max',
+                    'capacity_mean',
+                    'capacity_max'
+                ],
+                excludeColumns: ['Id'],   // Don't show the ID column
             });
 
             // Create an activity utilization table
@@ -314,7 +327,11 @@ export class ModelPanel extends Panel {
             const activityUtilizationTable = await tableGenerator.createActivityUtilizationTable(
                 page,
                 this.client,
-                { position: { x: 50, y: currentY }, width: 700 }
+                {
+                    position: { x: 50, y: currentY },
+                    width: 700,
+                    title: 'Activity Utilization'
+                }
             );
         } catch (error) {
             console.error('[ModelPanel] Error testing SimulationResultsReader:', error);

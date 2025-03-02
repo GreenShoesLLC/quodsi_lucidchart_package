@@ -1,0 +1,22 @@
+// schemas/entityThroughputRepSummary.ts
+import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
+
+export const EntityThroughputRepSummarySchema: SchemaDefinition = {
+    fields: [
+        { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "entity_type", type: ScalarFieldTypeEnum.STRING },
+        { name: "count", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "completed_count", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "in_progress_count", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "throughput_rate", type: ScalarFieldTypeEnum.NUMBER }
+    ],
+    primaryKey: ["rep", "entity_type"],
+    fieldLabels: {
+        'rep': 'Replication',
+        'entity_type': 'Entity Type',
+        'count': 'Count',
+        'completed_count': 'Completed Count',
+        'in_progress_count': 'In Progress Count',
+        'throughput_rate': 'Throughput Rate'
+    }
+};
