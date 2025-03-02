@@ -47,7 +47,7 @@
     {
       "name": "quodsi_data_connector",
       "oauthProviderName": "lucid",
-      "callbackBaseUrl": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataConnector/",
+      "callbackBaseUrl": "http://localhost:7071/api/dataConnector/",
       "pollingInterval": 30,
       "dataActions": {
         "Simulate": "simulate",
@@ -55,10 +55,7 @@
         "ImportSimulationResults": "importSimulationResults",
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
         "SubmitSimulationJob": "submitSimulationJobAction",
-        "UploadModelDefinition": "uploadModelDefinitionAction",
-        "Poll": "poll",
-        "Patch": "patch",
-        "HardRefresh": "hardRefresh"
+        "UploadModelDefinition": "uploadModelDefinitionAction"
       }
     }
   ]

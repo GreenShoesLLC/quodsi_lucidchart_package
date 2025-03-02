@@ -99,12 +99,18 @@ export interface EntityThroughputRepSummaryData {
     count: number;
     completed_count: number;
     in_progress_count: number;
-    first_exit: number;
-    last_exit: number;
-    avg_interval: number;
-    min_interval: number;
-    max_interval: number;
     throughput_rate: number;
+
+    // These fields are optional since they exist in the CSV but are not required by Lucid
+    first_exit?: number;
+    last_exit?: number;
+    avg_interval?: number;
+    min_interval?: number;
+    max_interval?: number;
+
+    // Handle potential renamed fields from duplicate columns
+    // This allows TypeScript to know about them but we'll filter them out before sending to Lucid
+    [key: string]: any;
 }
 
 // ResourceRepSummaryData interface

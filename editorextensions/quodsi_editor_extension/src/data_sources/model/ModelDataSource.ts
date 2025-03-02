@@ -1,21 +1,21 @@
 import { DataProxy, JsonSerializable } from "lucid-extension-sdk";
-import { ModelSchema } from "./ModelSchema";
-import { ActivitySchema } from "./ActivitySchema";
-import { ResourceSchema } from "./ResourceSchema";
-import { EntitySchema } from "./EntitySchema";
-import { GeneratorSchema } from "./GeneratorSchema";
-import { ConnectorSchema } from "./ConnectorSchema";
-import { OperationStepSchema } from "./OperationStepSchema";
-import { ResourceRequirementSchema } from "./ResourceRequirementSchema";
-import { RequirementClauseSchema } from "./RequirementClauseSchema";
-import { ResourceRequestSchema } from "./ResourceRequestSchema";
+import { ModelSchema } from "./schemas/ModelSchema";
+import { ActivitySchema } from "./schemas/ActivitySchema";
+import { ResourceSchema } from "./schemas/ResourceSchema";
+import { EntitySchema } from "./schemas/EntitySchema";
+import { GeneratorSchema } from "./schemas/GeneratorSchema";
+import { ConnectorSchema } from "./schemas/ConnectorSchema";
+import { OperationStepSchema } from "./schemas/OperationStepSchema";
+import { ResourceRequirementSchema } from "./schemas/ResourceRequirementSchema";
+import { RequirementClauseSchema } from "./schemas/RequirementClauseSchema";
+import { ResourceRequestSchema } from "./schemas/ResourceRequestSchema";
 import { QuodsiLogger } from "@quodsi/shared";
 
 export const MODEL_COLLECTIONS = {
     MODEL: "model",
     ACTIVITIES: "activities",
     RESOURCES: "resources",
-    ENTITIES: "entities", 
+    ENTITIES: "entities",
     GENERATORS: "generators",
     CONNECTORS: "connectors",
     OPERATION_STEPS: "operationSteps",

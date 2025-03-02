@@ -13,7 +13,7 @@ import {
     QuodsiLogger,
     SimulationObjectTypeFactory
 } from '@quodsi/shared';
-import { ModelDataSource, MODEL_COLLECTIONS } from '../../collections/ModelDataSource';
+import { ModelDataSource, MODEL_COLLECTIONS } from '../../data_sources/model/ModelDataSource';
 
 export class PageSchemaConversionService extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[PageSchemaConversionService]';
@@ -117,7 +117,7 @@ export class PageSchemaConversionService extends QuodsiLogger {
     private async createOperationSteps(objectId: string, operationSteps: any[], source: any) {
         const stepsCollectionId = this.collectionIds[MODEL_COLLECTIONS.OPERATION_STEPS];
         this.log(`Adding operation steps for ${objectId}`, { steps: operationSteps });
-        
+
         const formattedSteps = operationSteps.map((step, index) => ({
             id: `${objectId}_step_${index}`,
             activityId: objectId,
@@ -152,7 +152,7 @@ export class PageSchemaConversionService extends QuodsiLogger {
                     case SimulationObjectType.Activity: {
                         const activity = element as Activity;
                         const collectionId = this.collectionIds[MODEL_COLLECTIONS.ACTIVITIES];
-                        
+
                         await source.collections.get(collectionId)?.patchItems({
                             added: [{
                                 id: activity.id,
@@ -178,7 +178,7 @@ export class PageSchemaConversionService extends QuodsiLogger {
                     case SimulationObjectType.Generator: {
                         const generator = element as Generator;
                         const collectionId = this.collectionIds[MODEL_COLLECTIONS.GENERATORS];
-                        
+
                         await source.collections.get(collectionId)?.patchItems({
                             added: [{
                                 id: generator.id,
@@ -206,7 +206,7 @@ export class PageSchemaConversionService extends QuodsiLogger {
                     case SimulationObjectType.Resource: {
                         const resource = element as Resource;
                         const collectionId = this.collectionIds[MODEL_COLLECTIONS.RESOURCES];
-                        
+
                         await source.collections.get(collectionId)?.patchItems({
                             added: [{
                                 id: resource.id,
@@ -323,7 +323,7 @@ export class PageSchemaConversionService extends QuodsiLogger {
 
     private determineElementTypes(blockAnalysis: Map<string, BlockAnalysis>, page: PageProxy): void {
         this.log('Starting element type determination');
-        
+
         // First pass: Block class identification
         this.log('First pass - Block class identification');
         for (const [blockId, block] of page.allBlocks) {

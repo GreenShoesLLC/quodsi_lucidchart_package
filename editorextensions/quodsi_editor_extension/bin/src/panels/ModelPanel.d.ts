@@ -21,8 +21,9 @@ export declare class ModelPanel extends Panel {
     private logError;
     private setupModelMessageHandlers;
     private handleOutputCreatePage;
+    private handleOutputCreatePage2;
+    private addActivityUtilizationTable;
     private addTableBlock;
-    private handleOutputCreatePageOld2;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
     private createSimulationObjectPayload;

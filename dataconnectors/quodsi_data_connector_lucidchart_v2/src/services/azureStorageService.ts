@@ -122,22 +122,32 @@ export class AzureStorageService {
         }
     }
 
+    // Enhanced getBlobContent method with better logging and path checking
     async getBlobContent(containerName: string, blobName: string): Promise<string | null> {
         const startTime = Date.now();
 
         try {
+            storageLog('[AzureStorageService] Attempting to get blob:', {
+                containerName,
+                blobName,
+                fullPath: `${containerName}/${blobName}`
+            });
+
             const containerClient = this.blobServiceClient.getContainerClient(containerName);
             const blobClient = containerClient.getBlobClient(blobName);
 
             // Check existence and get content in parallel if possible
-            const [exists, properties] = await Promise.all([
-                blobClient.exists(),
-                blobClient.getProperties().catch(() => null)
-            ]);
+            const exists = await blobClient.exists();
 
             if (!exists) {
+                storageLog('[AzureStorageService] Blob not found:', {
+                    containerName,
+                    blobName
+                });
                 return null;
             }
+
+            const properties = await blobClient.getProperties().catch(() => null);
 
             const content = await retry(async () => {
                 const downloadStart = Date.now();
@@ -152,7 +162,7 @@ export class AzureStorageService {
                 return content.toString();
             }, this.blobRetryOptions);
 
-            storageLog('[AzureStorageService] Blob retrieved:', {
+            storageLog('[AzureStorageService] Blob retrieved successfully:', {
                 containerName,
                 blobName,
                 contentLength: content.length,
@@ -235,5 +245,84 @@ export class AzureStorageService {
             readableStream.on('end', () => resolve(Buffer.concat(chunks)));
             readableStream.on('error', reject);
         });
+    }
+    // Add these methods to the AzureStorageService class in azureStorageService.ts
+
+    /**
+     * List all containers in the storage account
+     */
+    async listContainers(): Promise<string[]> {
+        const startTime = Date.now();
+        const containers: string[] = [];
+
+        try {
+            storageLog('[AzureStorageService] Listing containers...');
+
+            // List all containers
+            for await (const container of this.blobServiceClient.listContainers()) {
+                containers.push(container.name);
+            }
+
+            storageLog('[AzureStorageService] Listed containers:', {
+                count: containers.length,
+                durationMs: Date.now() - startTime
+            });
+
+            return containers;
+        } catch (error) {
+            storageError('[AzureStorageService] Failed to list containers:', {
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            return [];
+        }
+    }
+
+    /**
+     * List blobs within a container with an optional prefix
+     */
+    async listBlobs(containerName: string, prefix?: string): Promise<string[]> {
+        const startTime = Date.now();
+        const blobs: string[] = [];
+
+        try {
+            const containerClient = this.blobServiceClient.getContainerClient(containerName);
+
+            // Check if container exists
+            if (!await containerClient.exists()) {
+                storageWarn('[AzureStorageService] Container does not exist:', {
+                    containerName,
+                    durationMs: Date.now() - startTime
+                });
+                return [];
+            }
+
+            storageLog('[AzureStorageService] Listing blobs in container:', {
+                containerName,
+                prefix: prefix || '(none)'
+            });
+
+            // List blobs with optional prefix
+            for await (const blob of containerClient.listBlobsFlat({ prefix })) {
+                blobs.push(blob.name);
+            }
+
+            storageLog('[AzureStorageService] Listed blobs:', {
+                containerName,
+                prefix: prefix || '(none)',
+                count: blobs.length,
+                durationMs: Date.now() - startTime
+            });
+
+            return blobs;
+        } catch (error) {
+            storageError('[AzureStorageService] Failed to list blobs:', {
+                containerName,
+                prefix: prefix || '(none)',
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            return [];
+        }
     }
 }

@@ -1,6 +1,5 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { createDataConnector, validateLucidRequest } from '../utils/dataConnectorUtils';
-import { FunctionLogger } from '../services/loggerService';
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': 'https://lucid.app',
@@ -11,20 +10,19 @@ const corsHeaders = {
 };
 
 export async function dataConnectorHttpTrigger(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-    // Initialize the function logger
-    const logger = new FunctionLogger('DataConnectorHttpTrigger', context);
+    // Use direct context.log calls for Azure Functions visibility
     const requestId = context.invocationId;
-    
-    logger.info(`Processing request for URL "${request.url}" with method "${request.method}"`);
+
+    context.log(`[${requestId}] Processing request for URL "${request.url}" with method "${request.method}"`);
 
     // Log query parameters, if any
     if (request.query && Object.keys(request.query).length > 0) {
-        logger.debug('Query parameters received:', request.query);
+        context.log(`[${requestId}] Query parameters received:`, request.query);
     }
-    
+
     // Handle preflight OPTIONS request
     if (request.method.toUpperCase() === 'OPTIONS') {
-        logger.info('Received an OPTIONS preflight request. Returning CORS headers.');
+        context.log(`[${requestId}] Received an OPTIONS preflight request. Returning CORS headers.`);
         return {
             status: 204,
             headers: corsHeaders
@@ -33,58 +31,56 @@ export async function dataConnectorHttpTrigger(request: HttpRequest, context: In
 
     try {
         // Process and log request headers
-        logger.debug('Processing request headers');
-        
+        context.log(`[${requestId}] Processing request headers`);
+
         // Convert Azure Functions headers to Record<string, string | string[]>
         const headers: Record<string, string | string[]> = {};
         request.headers.forEach((value, key) => {
             headers[key] = value;
         });
-        
-        // Create validator logger for the validation step
-        const validationLogger = logger.child('Validation');
-        validationLogger.debug('Headers processed');
-        
+
+        context.log(`[${requestId}] Headers processed`);
+
         // Read the request body
-        validationLogger.debug('Reading request body');
+        context.log(`[${requestId}] Reading request body`);
         const body = await request.json();
-        
+
         // Validate the request from Lucid
-        validationLogger.info('Validating Lucid request');
+        context.log(`[${requestId}] Validating Lucid request`);
         await validateLucidRequest(headers, body);
-        validationLogger.info('Request validation succeeded');
-        
+        context.log(`[${requestId}] Request validation succeeded`);
+
         // Create the data connector instance
-        const connectorLogger = logger.child('Connector');
-        connectorLogger.debug('Creating data connector instance');
+        context.log(`[${requestId}] Creating data connector instance`);
         const dataConnector = createDataConnector();
-        
+
         // Execute the connector action
         const actionName = request.params.name || 'unknown';
-        connectorLogger.info(`Executing data connector action: ${actionName}`, { 
+        context.log(`[${requestId}] Executing data connector action: ${actionName}`, {
             url: request.url,
             actionName
         });
-        
+
         const startTime = Date.now();
-        
+
         // Execute action
+        context.log(`[${requestId}] About to run action`);
         const response = await dataConnector.runAction(
             request.url,
             headers,
             body
         );
-        
+
         const elapsedTime = Date.now() - startTime;
-        connectorLogger.info(`Action completed in ${elapsedTime}ms`, { 
+        context.log(`[${requestId}] Action completed in ${elapsedTime}ms`, {
             status: response.status,
             actionName,
             elapsedTimeMs: elapsedTime
         });
 
         // Log and return the final response
-        logger.debug('Returning response', { status: response.status });
-        
+        context.log(`[${requestId}] Returning response`, { status: response.status });
+
         return {
             status: response.status,
             jsonBody: response.body,
@@ -94,12 +90,11 @@ export async function dataConnectorHttpTrigger(request: HttpRequest, context: In
             }
         };
     } catch (error) {
-        logger.error('Error in data connector execution', {
+        context.error(`[${requestId}] Error in data connector execution: ${error.message}`, {
             type: error.constructor.name,
-            message: error.message,
             stack: error.stack
         });
-        
+
         return {
             status: 500,
             jsonBody: { error: error.message },

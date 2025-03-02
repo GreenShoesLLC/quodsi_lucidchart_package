@@ -85,7 +85,6 @@ function getRequiredColumnsFromType<T>(requiredProps: Array<keyof T> = []): stri
     return requiredProps.map(prop => String(prop));
 }
 
-// Generic function to fetch and parse CSV data from Azure Blob Storage
 export async function fetchCsvData<T>(
     containerName: string,
     blobName: string,
@@ -93,57 +92,145 @@ export async function fetchCsvData<T>(
     requiredColumns: string[] = []
 ): Promise<T[]> {
     try {
-        conditionalLog(`Fetching ${blobName} data for document ${documentId}...`);
-        
+        // Since documentId IS the container name, we don't need to prefix paths with it
+        // Just use the blob name directly
+        const fullBlobPath = blobName;
+
+        conditionalLog(`Fetching ${blobName} data for container ${containerName}...`);
+        conditionalLog(`Full blob path: ${containerName}/${fullBlobPath}`);
+
         // Get storage service
         const storage = getStorageService();
-        
-        // Construct the full blob path including the document ID
-        const fullBlobPath = `${documentId}/${blobName}`;
-        
+
         // Fetch CSV content from Azure Blob Storage
         const csvText = await storage.getBlobContent(containerName, fullBlobPath);
-        
+
         if (!csvText) {
             conditionalWarn(`CSV data not found for ${fullBlobPath}`);
-            return [];
-        }
-        
-        // Parse CSV to JSON
-        const parsedData = await new Promise<import('papaparse').ParseResult<any>>((resolve) => {
-            parse(csvText, {
-                header: true,
-                dynamicTyping: true,
-                skipEmptyLines: true,
-                complete: (results) => resolve(results)
-            });
-        });
-        
-        // Validate that all required columns are present
-        if (requiredColumns.length > 0) {
-            const availableColumns = parsedData.meta.fields || [];
-            const missingColumns = requiredColumns.filter(col => !availableColumns.includes(col));
-            
-            if (missingColumns.length > 0) {
-                conditionalError(`CSV ${blobName} is missing required columns: ${missingColumns.join(', ')}`);
-                conditionalError(`Available columns: ${availableColumns.join(', ')}`);
-                throw new Error(`CSV ${blobName} is missing required columns: ${missingColumns.join(', ')}`);
+            // Try alternative paths based on naming conventions
+            const alternativeBlobPath = `results/${blobName}`;
+            conditionalLog(`Trying alternative path: ${containerName}/${alternativeBlobPath}`);
+
+            const alternativeCSVText = await storage.getBlobContent(containerName, alternativeBlobPath);
+            if (!alternativeCSVText) {
+                conditionalWarn(`CSV data also not found at alternative path ${alternativeBlobPath}`);
+                return [];
             }
-            
-            // Log any extra columns as information
-            const extraColumns = availableColumns.filter(col => !requiredColumns.includes(col));
-            if (extraColumns.length > 0) {
-                conditionalInfo(`CSV ${blobName} contains extra columns not in interface: ${extraColumns.join(', ')}`);
-            }
+
+            conditionalLog(`Found CSV at alternative path! Length: ${alternativeCSVText.length} characters`);
+            conditionalLog(`CSV content preview: ${alternativeCSVText.substring(0, 100)}...`);
+
+            // Use the alternative CSV text
+            return parseAndValidateCsv(alternativeCSVText, blobName, requiredColumns);
         }
-        
-        conditionalLog(`Successfully parsed ${parsedData.data.length} rows from ${blobName}`);
-        
-        return parsedData.data as T[];
+
+        conditionalLog(`Found CSV! Length: ${csvText.length} characters`);
+        conditionalLog(`CSV content preview: ${csvText.substring(0, 100)}...`);
+
+        return parseAndValidateCsv(csvText, blobName, requiredColumns);
     } catch (error) {
         conditionalError(`Error fetching ${blobName} data:`, error);
         throw error;
     }
+}
+
+// Helper function to parse and validate CSV data
+// Helper function to parse and validate CSV data with duplicate header handling
+function parseAndValidateCsv<T>(
+    csvText: string,
+    blobName: string,
+    requiredColumns: string[] = []
+): Promise<T[]> {
+    return new Promise((resolve) => {
+        // First check for duplicate headers
+        const firstLineEnd = csvText.indexOf('\n');
+        const headerLine = csvText.substring(0, firstLineEnd > 0 ? firstLineEnd : csvText.length);
+        const headers = headerLine.split(',');
+
+        // Check for and fix duplicate headers in the CSV content
+        const headerCount = new Map<string, number>();
+        let fixedCsvText = csvText;
+        let duplicatesFound = false;
+
+        // Count occurrences of each header
+        headers.forEach(header => {
+            const trimmedHeader = header.trim();
+            headerCount.set(trimmedHeader, (headerCount.get(trimmedHeader) || 0) + 1);
+        });
+
+        // If we found duplicates, replace the header line
+        const duplicateHeaders = Array.from(headerCount.entries())
+            .filter(([_, count]) => count > 1);
+
+        if (duplicateHeaders.length > 0) {
+            duplicatesFound = true;
+            conditionalWarn(`CSV ${blobName} has duplicate headers: ${duplicateHeaders.map(([header]) => header).join(', ')}`);
+
+            // Create a new header line with renamed duplicates
+            const newHeaders = headers.map((header, index) => {
+                const trimmedHeader = header.trim();
+                if (headerCount.get(trimmedHeader) > 1) {
+                    // Find how many of this header we've seen so far
+                    let count = 0;
+                    for (let i = 0; i < index; i++) {
+                        if (headers[i].trim() === trimmedHeader) {
+                            count++;
+                        }
+                    }
+
+                    // If this is not the first occurrence, add a suffix
+                    if (count > 0) {
+                        return `${trimmedHeader}_${count}`;
+                    }
+                }
+                return trimmedHeader;
+            });
+
+            // Replace the header line in the CSV content
+            fixedCsvText = `${newHeaders.join(',')}\n${csvText.substring(firstLineEnd + 1)}`;
+            conditionalLog(`Fixed CSV headers: ${newHeaders.join(', ')}`);
+        }
+
+        // Now parse the CSV
+        parse(fixedCsvText, {
+            header: true,
+            dynamicTyping: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                if (duplicatesFound) {
+                    conditionalLog(`Duplicate headers found and renamed.`);
+                }
+
+                const availableColumns = results.meta.fields || [];
+
+                conditionalLog(`CSV ${blobName} parsed with ${results.data.length} rows`);
+                conditionalLog(`CSV columns: ${availableColumns.join(', ')}`);
+
+                // Validate that all required columns are present
+                if (requiredColumns.length > 0) {
+                    const missingColumns = requiredColumns.filter(col => !availableColumns.includes(col));
+
+                    if (missingColumns.length > 0) {
+                        conditionalError(`CSV ${blobName} is missing required columns: ${missingColumns.join(', ')}`);
+                        conditionalError(`Available columns: ${availableColumns.join(', ')}`);
+                        throw new Error(`CSV ${blobName} is missing required columns: ${missingColumns.join(', ')}`);
+                    }
+
+                    // Log any extra columns as information
+                    const extraColumns = availableColumns.filter(col => !requiredColumns.includes(col));
+                    if (extraColumns.length > 0) {
+                        conditionalInfo(`CSV ${blobName} contains extra columns not in interface: ${extraColumns.join(', ')}`);
+                    }
+                }
+
+                resolve(results.data as T[]);
+            },
+            error: (error) => {
+                conditionalError(`Error parsing CSV ${blobName}:`, error);
+                throw error;
+            }
+        });
+    });
 }
 
 // Prepare collection updates - Generic function for any schema type
@@ -280,16 +367,42 @@ export async function fetchEntityStateRepSummary(
     );
 }
 
-export async function fetchEntityThroughputRepSummary(
-    containerName: string,
-    documentId: string
-): Promise<EntityThroughputRepSummaryData[]> {
-    return fetchCsvData<EntityThroughputRepSummaryData>(
-        containerName, 
-        'entity_throughput_rep_summary.csv', 
-        documentId,
-        entityThroughputRepSummaryRequiredColumns
-    );
+export async function fetchEntityThroughputRepSummary(containerName: string, documentId: string): Promise<EntityThroughputRepSummaryData[]> {
+    const blobName = 'entity_throughput_rep_summary.csv';
+
+    // Note: The documentId IS the container name, so we don't include it in the path
+    // We just look for the CSV file directly in the container root
+    const fullPath = blobName;
+
+    console.log(`[simulationDataService] Attempting to fetch entity throughput data from: ${containerName}/${fullPath}`);
+
+    try {
+        // Try first at the root level
+        let result = await fetchCsvData<EntityThroughputRepSummaryData>(
+            containerName,
+            blobName,
+            documentId, // Passing documentId for consistency, though not used in path construction anymore
+            entityThroughputRepSummaryRequiredColumns
+        );
+
+        // If we didn't find any data at the root level, try in the results folder
+        if (result.length === 0) {
+            console.log(`[simulationDataService] No data at root level, trying in results folder...`);
+
+            const altBlobName = 'results/entity_throughput_rep_summary.csv';
+            result = await fetchCsvData<EntityThroughputRepSummaryData>(
+                containerName,
+                altBlobName,
+                documentId,
+                entityThroughputRepSummaryRequiredColumns
+            );
+        }
+
+        return result;
+    } catch (error) {
+        console.error(`[simulationDataService] Error fetching entity throughput data: ${error.message}`);
+        throw error;
+    }
 }
 
 export async function fetchResourceRepSummary(
@@ -357,13 +470,52 @@ export function prepareEntityStateRepSummaryUpdate(data: EntityStateRepSummaryDa
     );
 }
 
+// Add this function to simulationDataService.ts
+
+/**
+ * Special version of prepareEntityThroughputRepSummaryUpdate to handle the duplicate columns issue
+ */
 export function prepareEntityThroughputRepSummaryUpdate(data: EntityThroughputRepSummaryData[]) {
-    // Using composite key
-    return prepareCollectionUpdate(
-        data, 
-        EntityThroughputRepSummarySchema, 
-        (item: EntityThroughputRepSummaryData) => `${item.rep}_${item.entity_type}`
-    );
+    console.log("Starting special entity throughput update preparation");
+    console.log(`Processing ${data.length} rows of entity throughput data`);
+
+    // Create a Map to store the serialized fields
+    const items = new Map<string, SerializedFields>();
+
+    // Process each row of data
+    data.forEach(item => {
+        console.log(`Processing item: ${JSON.stringify(item, null, 2)}`);
+
+        // Create the composite key for this item
+        const key = `${item.rep}_${item.entity_type}`;
+        const quotedKey = `"${key}"`;
+
+        // Create a completely new object with ONLY the fields we need
+        // This ensures no extra or renamed fields make it through
+        const cleanedItem: SerializedFields = {
+            rep: item.rep,
+            entity_type: item.entity_type,
+            count: item.count,
+            completed_count: item.completed_count,
+            in_progress_count: item.in_progress_count,
+            throughput_rate: item.throughput_rate
+        };
+
+        console.log(`Cleaned item for key ${key}: ${JSON.stringify(cleanedItem, null, 2)}`);
+
+        // Add to our collection
+        items.set(quotedKey, cleanedItem);
+    });
+
+    console.log(`Final map has ${items.size} items`);
+
+    // Return the schema and patch directly
+    return {
+        schema: EntityThroughputRepSummarySchema,
+        patch: {
+            items
+        }
+    };
 }
 
 export function prepareResourceRepSummaryUpdate(data: ResourceRepSummaryData[]) {

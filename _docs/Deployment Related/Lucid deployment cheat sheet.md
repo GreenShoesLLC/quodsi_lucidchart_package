@@ -27,8 +27,12 @@ npm run build -w @quodsi/shared
 
 # Manfiest Dev
 
-"callbackBaseUrl": "https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/dataConnector/",
+
 "callbackBaseUrl": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataConnector/",
+
+        "Poll": "poll",
+        "Patch": "patch",
+        "HardRefresh": "hardRefresh"
 
 # Build quodsim-react
 

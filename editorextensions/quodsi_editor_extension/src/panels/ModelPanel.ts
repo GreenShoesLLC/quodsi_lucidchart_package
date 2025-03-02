@@ -42,11 +42,13 @@ import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@
 import { ModelManager } from '../core/ModelManager';
 import { SelectionManager, TreeStateManager } from '../managers';
 import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
-import { ModelDataSource } from '../collections/ModelDataSource';
+import { ModelDataSource } from '../data_sources/model/ModelDataSource';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { LucidPageConversionService } from '../services/conversion/LucidPageConversionService';
 import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
+import { SimulationResultsReader } from '../data_sources';
+import { SimulationResultsTableGenerator } from '../data_sources/simulation_results/SimulationResultsTableGenerator';
 
 
 
@@ -150,8 +152,27 @@ export class ModelPanel extends Panel {
         this.logError('Setting up message handlers END');
     }
 
-
     private async handleOutputCreatePage(data: { pageName: string }): Promise<void> {
+        console.log('[ModelPanel] Output page creation requested:', data.pageName);
+
+        try {
+            const document = new DocumentProxy(this.client);
+            // Create new page
+            const def: PageDefinition = {
+                title: data.pageName,
+            };
+            const page = document.addPage(def);
+            this.addActivityUtilizationTable(page)
+            console.log('[SimulationResultsTableGenerator] Successfully called addActivityUtilizationTable');
+
+        } catch (error) {
+            console.error('[SimulationResultsTableGenerator] Error creating output page:', error);
+            this.messaging.sendMessage(MessageTypes.ERROR, {
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            });
+        }
+    }
+    private async handleOutputCreatePage2(data: { pageName: string }): Promise<void> {
         console.log('[ModelPanel] Output page creation requested:', data.pageName);
 
         try {
@@ -191,10 +212,10 @@ export class ModelPanel extends Panel {
                     this.log('Model serialization failed:', error);
                 }
             }
-            else{
+            else {
                 this.log('validationResult:', validationResult);
             }
-            
+
             const viewport = new Viewport(this.client);
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
@@ -204,6 +225,41 @@ export class ModelPanel extends Panel {
             });
             console.log('[ModelPanel] Successfully called ImportSimulationResults');
 
+            // Add code to test SimulationResultsReader
+            try {
+                console.log('[ModelPanel2] Testing SimulationResultsReader...');
+                const resultsReader = new SimulationResultsReader(this.client);
+
+                // Get current page ID
+                const currentPage = viewport.getCurrentPage();
+                if (!currentPage) {
+                    console.log('[ModelPanel] No current page found');
+                    return;
+                }
+
+                // Try to get model data for the current page
+                const modelData = await resultsReader.getModelDataForPage(currentPage.id);
+                console.log('[ModelPanel2] Model data for current page:', modelData);
+
+                // Check if we have simulation results
+                const hasResults = await resultsReader.hasSimulationResults();
+                console.log('[ModelPanel2] Has simulation results:', hasResults);
+
+                // Try to get activity utilization data
+                const activityUtilization = await resultsReader.getActivityUtilizationData();
+                console.log('[ModelPanel2] Activity Utilization data count:', activityUtilization.length);
+
+                if (activityUtilization.length > 0) {
+                    console.log('[ModelPanel2] First activity utilization:', {
+                        name: activityUtilization[0].Name,
+                        meanUtilization: activityUtilization[0].utilization_mean,
+                        maxUtilization: activityUtilization[0].utilization_max
+                    });
+                }
+            } catch (error) {
+                console.error('[ModelPanel] Error testing SimulationResultsReader:', error);
+            }
+
         } catch (error) {
             console.error('[ModelPanel] Error creating output page:', error);
             this.messaging.sendMessage(MessageTypes.ERROR, {
@@ -211,7 +267,60 @@ export class ModelPanel extends Panel {
             });
         }
     }
+    private async addActivityUtilizationTable(page: PageProxy): Promise<void>{
+        try {
+            console.log('[ModelPanel2] Testing SimulationResultsReader...');
+            const resultsReader = new SimulationResultsReader(this.client);
 
+            // Get current page ID
+            
+            const viewport = new Viewport(this.client);
+            const currentPage = viewport.getCurrentPage();
+            if (!currentPage) {
+                console.log('[ModelPanel] No current page found');
+                return;
+            }
+
+            // Try to get model data for the current page
+            const modelData = await resultsReader.getModelDataForPage(currentPage.id);
+            console.log('[ModelPanel2] Model data for current page:', modelData);
+
+            // Check if we have simulation results
+            const hasResults = await resultsReader.hasSimulationResults();
+            console.log('[ModelPanel2] Has simulation results:', hasResults);
+
+            // Try to get activity utilization data
+            const activityUtilization = await resultsReader.getActivityUtilizationData();
+            console.log('[ModelPanel2] Activity Utilization data count:', activityUtilization.length);
+
+            if (activityUtilization.length > 0) {
+                console.log('[ModelPanel2] First activity utilization:', {
+                    name: activityUtilization[0].Name,
+                    meanUtilization: activityUtilization[0].utilization_mean,
+                    maxUtilization: activityUtilization[0].utilization_max
+                });
+            }
+
+            // Initialize the generator
+            const tableGenerator = new SimulationResultsTableGenerator(resultsReader, {
+                formatNumbers: true,
+                percentDecimals: 1,
+                numberDecimals: 2,
+                styleHeader: true
+            });
+
+            // Create an activity utilization table
+            const currentY = 0
+            const activityUtilizationTable = await tableGenerator.createActivityUtilizationTable(
+                page,
+                this.client,
+                { position: { x: 50, y: currentY }, width: 700 }
+            );
+        } catch (error) {
+            console.error('[ModelPanel] Error testing SimulationResultsReader:', error);
+        }
+
+    }
     private async addTableBlock(page: PageProxy): Promise<void> {
         console.log('[ModelPanel] Starting addTableBlock method...');
         try {
@@ -323,125 +432,6 @@ export class ModelPanel extends Panel {
         } catch (error) {
             console.error('[ModelPanel] ❌ Error creating table block:', error);
             console.error('[ModelPanel] Error details:', error instanceof Error ? error.stack : 'Unknown error');
-            this.messaging.sendMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
-        }
-    }
-
-
-
-    private async handleOutputCreatePageOld2(data: { pageName: string }): Promise<void> {
-        console.log('[ModelPanel] Output page creation requested:', data.pageName);
-
-        try {
-            const document = new DocumentProxy(this.client);
-            const user = new UserProxy(this.client);
-            const docId = document.id;
-            const userId = user.id;
-
-            if (!docId || !userId) {
-                throw new Error('Document ID or User ID is missing');
-            }
-
-            // Create new page
-            const def: PageDefinition = {
-                title: data.pageName,
-            };
-            const page = document.addPage(def);
-            const viewport = new Viewport(this.client);
-            const currentPage = viewport.getCurrentPage();
-            // Fetch CSV data using the data connector
-            console.log('[ModelPanel] Fetching CSV data through Data Connector');
-
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'ImportSimulationResults',
-                actionData: { documentId: docId, userId: userId, pageId: currentPage?.id },
-                asynchronous: true
-            });
-            const result = { status: 200, json: { error: "blah", csvData: "dan" } }
-            console.log('[ModelPanel] GetActivityUtilization', result);
-            if (result.status !== 200 || !result.json?.csvData) {
-                throw new Error(result.json?.error || 'Failed to fetch CSV data');
-            }
-            console.log('[ModelPanel]  Parse the CSV string');
-            // Parse the CSV string
-            console.log('[ModelPanel]  Parse the CSV string');
-            const parsedData = await parseCsvBlob(new Blob([result.json.csvData], { type: 'text/csv' }));
-            if (!parsedData || !parsedData.length) {
-                throw new Error('No data found in CSV');
-            }
-
-            // Calculate table dimensions
-            console.log('[ModelPanel] Calculating table dimensions...');
-            const { width, height } = calculateTableDimensions(parsedData);
-
-            // Load Table block class
-            console.log('[ModelPanel] Loading Table block class...');
-            await this.client.loadBlockClasses(['TableBlock']);
-
-            // Create table block
-            const blockDef: BlockDefinition = {
-                className: 'TableBlock',
-                boundingBox: {
-                    x: 100,
-                    y: 100,
-                    w: width,
-                    h: height
-                }
-            };
-            console.log('[ModelPanel] Adding TableBlock to page...');
-            const tableBlock = page.addBlock(blockDef) as TableBlockProxy;
-
-            // Get row and column counts
-            const rowCount = parsedData.length;
-            const columnCount = parsedData[0]?.length || 0;
-
-            // Get the initial cell to use as reference
-            const rows = tableBlock.getRows();
-            let lastCell = rows[0].getCells()[0];
-
-            // Add rows as needed
-            console.log('[ModelPanel] Adding rows...');
-            for (let i = 1; i < rowCount; i++) {
-                const newRow = tableBlock.addRow(lastCell);
-                lastCell = newRow.getCells()[0];
-            }
-
-            // Reset to use first row for column additions
-            lastCell = rows[0].getCells()[0];
-
-            // Add columns as needed
-            console.log('[ModelPanel] Adding columns...');
-            for (let i = 1; i < columnCount; i++) {
-                const newColumn = tableBlock.addColumn(lastCell);
-                lastCell = newColumn.getCells()[0];
-            }
-
-            // Populate table data
-            console.log('[ModelPanel] Populating table data...');
-            const updatedRows = tableBlock.getRows();
-            parsedData.forEach((rowData, rowIndex) => {
-                const row = updatedRows[rowIndex];
-                const cells = row.getCells();
-
-                rowData.forEach((cellValue, colIndex) => {
-                    const cell = cells[colIndex];
-                    cell.setText(String(cellValue));
-
-                    // Style header row
-                    // if (rowIndex === 0) {
-                    //     cell.setBackgroundColor('#f0f0f0');
-                    //     cell.setBold(true);
-                    // }
-                });
-            });
-
-            console.log('[ModelPanel] Successfully created output page with data');
-
-        } catch (error) {
-            console.error('[ModelPanel] Error creating output page:', error);
             this.messaging.sendMessage(MessageTypes.ERROR, {
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
             });
@@ -994,7 +984,7 @@ export class ModelPanel extends Panel {
 
             const storageAdapter = new StorageAdapter();
             const lucidElementFactory = new LucidElementFactory(storageAdapter)
-            const lucidPageConversionService = new LucidPageConversionService(this.modelManager, lucidElementFactory,storageAdapter)
+            const lucidPageConversionService = new LucidPageConversionService(this.modelManager, lucidElementFactory, storageAdapter)
             lucidPageConversionService.convertPage(currentPage)
 
 
@@ -1105,8 +1095,7 @@ export class ModelPanel extends Panel {
             if (activePageProxy) {
                 pageId = activePageProxy.id;
             }
-            else
-            {
+            else {
                 this.log('No active page');
                 this.sendTypedMessage(MessageTypes.ERROR, {
                     error: `Failed to start simulation: No active page`
