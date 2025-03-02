@@ -1,6 +1,6 @@
 {
   "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "2024.2.52",
+  "version": "2024.2.54",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -47,7 +47,7 @@
     {
       "name": "quodsi_data_connector",
       "oauthProviderName": "lucid",
-      "callbackBaseUrl": "http://localhost:7071/api/dataConnector/",
+      "callbackBaseUrl": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataConnector/",
       "pollingInterval": 30,
       "dataActions": {
         "Simulate": "simulate",

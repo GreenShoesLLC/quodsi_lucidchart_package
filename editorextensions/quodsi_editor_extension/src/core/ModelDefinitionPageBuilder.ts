@@ -193,6 +193,13 @@ export class ModelDefinitionPageBuilder {
                 try {
                     const platformObject = this.elementFactory.createPlatformObject(line, metadata.type);
                     const connector = platformObject.getSimulationObject();
+
+                    // Skip adding self-referencing connectors
+                    if (connector.sourceId && connector.targetId && connector.sourceId === connector.targetId) {
+                        this.log(`Skipping self-referencing connector from ${connector.sourceId} to itself`, 'warn');
+                        continue;
+                    }
+
                     modelDefinition.connectors.add(connector);
                 } catch (error) {
                     this.log(`Error processing line ${lineId}`, 'error');

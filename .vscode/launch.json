@@ -9,7 +9,7 @@
       "restart": true,
       "sourceMaps": true,
       "outFiles": [
-        "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart/dist/**/*.js"
+        "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart_v2/dist/**/*.js"
       ],
       "localRoot": "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart",
       "remoteRoot": "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart",

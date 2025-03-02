@@ -28,6 +28,7 @@ npm run build -w @quodsi/shared
 # Manfiest Dev
 
 "callbackBaseUrl": "https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/dataConnector/",
+"callbackBaseUrl": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataConnector/",
 
 # Build quodsim-react
 
@@ -41,13 +42,18 @@ echo $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY
 
 cd C:\_source\Greenshoes\quodsi*lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Remove-Item -Path ".\build" -Recurse -Force
-$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-lucid-v1.azurewebsites.net/api/"
+$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/"
+
+v1
 $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="6nP0L69_cfGT8_-548e68CYUOiQtgX_11GjqpGwx85BoAzFuMW7w2A=="
+
+v3
+$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="dSLWvgBABo1eFwJCYsni3_gNaanBlfYUjGUxoUDO6gv0AzFuoqzPqQ=="
 npx react-scripts build
 
 Delete files from here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\public\quodsim-react
+[Open public quodsim-react folder](file:///C:/_source/Greenshoes/quodsi_lucidchart_package/public/quodsim-react)
 
 Copy files from here:
 C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\build

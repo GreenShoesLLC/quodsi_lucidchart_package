@@ -36,15 +36,24 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
 
     protected createSimObject(): Connector {
         const line = this.element as LineProxy;
-
+        console.log(`[ConnectorLucid] Line ${line.id} endpoints:`, {
+            endpoint1: {
+                connectionId: line.getEndpoint1().connection?.id,
+                position: { x: line.getEndpoint1().x, y: line.getEndpoint1().y }
+            },
+            endpoint2: {
+                connectionId: line.getEndpoint2().connection?.id,
+                position: { x: line.getEndpoint2().x, y: line.getEndpoint2().y }
+            }
+        });
         // Create connector with element-specific properties
         const connector = new Connector(
-            this.platformElementId,
-            this.getElementName('Connector'),
-            line.getEndpoint1().connection?.id || '',
-            line.getEndpoint2().connection?.id || '',
-            1.0,  // default probability
-            ConnectType.Probability,  // default connectType
+            this.platformElementId,                     // id
+            this.getElementName('Connector'),           // name
+            line.getEndpoint1().connection?.id || '',   // sourceId
+            line.getEndpoint2().connection?.id || '',   // targetId
+            1.0,                                        // probability
+            ConnectType.Probability,                    // connectType
             []  // default operationSteps
         );
 
