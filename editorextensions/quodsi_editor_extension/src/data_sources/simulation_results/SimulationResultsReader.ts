@@ -8,6 +8,7 @@ import {
   EntityStateRepSummary, mapToEntityStateRepSummary,
   EntityThroughputRepSummary, mapToEntityThroughputRepSummary,
   ResourceRepSummary, mapToResourceRepSummary,
+  ResourceUtilization, mapToResourceUtilization,
   CompleteActivityMetrics, mapToCompleteActivityMetrics,
   CustomMetrics, mapToCustomMetrics
 } from './models';
@@ -168,6 +169,33 @@ export class SimulationResultsReader extends DataSourceReader {
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(mapToEntityThroughputRepSummary(item.fields));
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Gets resource utilization collection
+   * @returns The resource utilization collection if found, null otherwise
+   */
+  async getResourceUtilizationCollection(): Promise<CollectionProxy | null> {
+    return this.getCollectionByName('resource_utilization');
+  }
+  
+  /**
+   * Gets resource utilization data as strongly typed objects
+   * @returns Array of ResourceUtilization objects
+   */
+  async getResourceUtilizationData(): Promise<ResourceUtilization[]> {
+    const collection = await this.getResourceUtilizationCollection();
+    if (!collection) return [];
+    
+    const result: ResourceUtilization[] = [];
+    
+    for (const [_, item] of collection.items) {
+      if (item) {
+        result.push(mapToResourceUtilization(item.fields));
       }
     }
     

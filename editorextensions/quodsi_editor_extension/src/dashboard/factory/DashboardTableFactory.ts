@@ -8,7 +8,10 @@ import { TableHandlerInterface } from '../interfaces/DashboardTypes';
 import { BaseTableHandler } from '../handlers/BaseTableHandler';
 import { ActivityUtilizationTableHandler } from '../handlers/ActivityUtilizationTableHandler';
 import { ActivityRepSummaryTableHandler } from '../handlers/ActivityRepSummaryTableHandler';
+import { ActivityTimingTableHandler } from '../handlers/ActivityTimingTableHandler';
 import { EntityThroughputTableHandler } from '../handlers/EntityThroughputTableHandler';
+import { EntityStateTableHandler } from '../handlers/EntityStateTableHandler';
+import { ResourceUtilizationTableHandler } from '../handlers/ResourceUtilizationTableHandler';
 
 /**
  * Factory for creating table handlers
@@ -61,7 +64,29 @@ export class DashboardTableFactory {
             this.tableGenerator,
             this.config
         ));
+        
+        this.registerHandler(new ActivityTimingTableHandler(
+            this.client,
+            this.resultsReader,
+            this.tableGenerator,
+            this.config
+        ));
+        
         this.registerHandler(new EntityThroughputTableHandler(
+            this.client,
+            this.resultsReader, 
+            this.tableGenerator,
+            this.config
+        ));
+        
+        this.registerHandler(new EntityStateTableHandler(
+            this.client,
+            this.resultsReader, 
+            this.tableGenerator,
+            this.config
+        ));
+        
+        this.registerHandler(new ResourceUtilizationTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
@@ -69,9 +94,7 @@ export class DashboardTableFactory {
         ));
         
         // TODO: Add more handlers as they are implemented
-        // this.registerHandler(new ActivityTimingTableHandler(...));
         // this.registerHandler(new ResourceRepSummaryTableHandler(...));
-        // this.registerHandler(new EntityStateTableHandler(...));
     }
 
     /**

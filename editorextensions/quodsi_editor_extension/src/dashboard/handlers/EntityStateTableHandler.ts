@@ -1,0 +1,68 @@
+// handlers/EntityStateTableHandler.ts
+
+import { PageProxy } from 'lucid-extension-sdk';
+import { BaseTableHandler } from './BaseTableHandler';
+import { TableCreationResult } from '../interfaces/DashboardTypes';
+
+/**
+ * Handler for creating entity state tables
+ */
+export class EntityStateTableHandler extends BaseTableHandler {
+    /**
+     * Gets the table type identifier
+     * @returns Type identifier string
+     */
+    getTableType(): string {
+        return 'entityState';
+    }
+    
+    /**
+     * Gets the default title for this table type
+     * @returns Default title
+     */
+    getDefaultTitle(): string {
+        return 'Entity State Summary';
+    }
+    
+    /**
+     * Checks if this table can be created (has data)
+     * @returns True if the table can be created
+     */
+    async canCreateTable(): Promise<boolean> {
+        const data = await this.resultsReader.getEntityStateRepSummaryData();
+        return data && data.length > 0;
+    }
+    
+    /**
+     * Creates a table at the specified position
+     * @param page Page to add the table to
+     * @param position Position coordinates
+     * @returns Table creation result
+     */
+    async createTable(page: PageProxy, position: { x: number, y: number }): Promise<TableCreationResult> {
+        this.log(`Creating entity state table at position (${position.x}, ${position.y})`);
+        
+        try {
+            // Get table configuration
+            const tableConfig = this.getTableConfig(position);
+            
+            // Create the table
+            const table = await this.tableGenerator.createEntityStateTable(
+                page, 
+                this.client, 
+                tableConfig
+            );
+            
+            if (!table) {
+                this.log('No data available for entity state table', 'warn');
+                return this.createResult(null, false);
+            }
+            
+            this.log('Entity state table created successfully');
+            return this.createResult(table, true);
+        } catch (error) {
+            this.log(`Error creating entity state table: ${error}`, 'error');
+            return this.createResult(null, false, error);
+        }
+    }
+}

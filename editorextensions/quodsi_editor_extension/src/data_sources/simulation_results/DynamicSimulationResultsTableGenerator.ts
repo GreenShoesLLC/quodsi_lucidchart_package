@@ -15,14 +15,20 @@ import {
     ActivityTiming,
     EntityStateRepSummary,
     EntityThroughputRepSummary,
-    ResourceRepSummary
+    ResourceRepSummary,
+    ResourceUtilization
 } from './models';
 import { SimulationResultsReader } from './SimulationResultsReader';
 
 // Import schemas from the schemas directory
-import { ActivityUtilizationSchema } from './schemas/activityUtilizationSchema';
-import { ActivityRepSummarySchema } from './schemas/activityRepSummarySchema';
-import { EntityStateRepSummarySchema, EntityThroughputRepSummarySchema } from './schemas';
+import { 
+    ActivityUtilizationSchema, 
+    ActivityRepSummarySchema,
+    ActivityTimingSchema,
+    EntityStateRepSummarySchema, 
+    EntityThroughputRepSummarySchema,
+    ResourceUtilizationSchema 
+} from './schemas';
 
 /**
  * Configuration for table generation
@@ -128,7 +134,18 @@ export class DynamicSimulationResultsTableGenerator {
                 percentageFields: ['utilization_percentage', 'operational_efficiency', 'cycle_time_efficiency'],
                 priorityFields: ['rep', 'activity_id', 'utilization_percentage', 'throughput_rate', 'capacity']
             },
-            // Add the entity throughput schema mapping
+            'activity_timing': {
+                schema: ActivityTimingSchema,
+                identifierFields: ['Id', 'Name'],
+                percentageFields: [],
+                priorityFields: [
+                    'Name',
+                    'cycle_time_mean',
+                    'service_time_mean',
+                    'waiting_time_mean',
+                    'blocked_time_mean'
+                ]
+            },
             'entity_throughput_rep_summary': {
                 schema: EntityThroughputRepSummarySchema,
                 identifierFields: ['rep', 'entity_type'],
@@ -152,6 +169,18 @@ export class DynamicSimulationResultsTableGenerator {
                     'percent_waiting',
                     'percent_blocked',
                     'percent_operation'
+                ]
+            },
+            'resource_utilization': {
+                schema: ResourceUtilizationSchema,
+                identifierFields: ['Id', 'Name'],
+                percentageFields: ['utilization_rate_mean', 'utilization_rate_max'],
+                priorityFields: [
+                    'Name',
+                    'utilization_rate_mean',
+                    'utilization_rate_max',
+                    'contents_mean',
+                    'contents_max'
                 ]
             }
             // Add more schema mappings as needed
@@ -235,11 +264,49 @@ export class DynamicSimulationResultsTableGenerator {
     }
 
     /**
- * Creates a table for entity throughput data
- * @param page The page to add the table to
- * @param client The editor client
- * @param config Optional configuration overrides for this table
- */
+     * Creates a table for activity timing data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
+    public async createActivityTimingTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        console.log('[TableGenerator] Creating activity timing table...');
+
+        // Merge config with instance config and defaults
+        const tableConfig = { ...this.config, ...config };
+
+        // Get activity timing data
+        const data = await this.resultsReader.getActivityTimingData();
+        console.log('[TableGenerator] Activity timing data:', data);
+
+        if (!data || data.length === 0) {
+            console.warn('[TableGenerator] No activity timing data available');
+            return null;
+        }
+
+        // Create schema-based columns
+        const columns = this.createColumnsFromSchema(
+            'activity_timing',
+            data[0],
+            tableConfig
+        );
+
+        const title = tableConfig.title || 'Activity Timing';
+
+        // Generate the table with exactly the rows and columns needed
+        return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
+    }
+
+    /**
+     * Creates a table for entity throughput data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
     public async createEntityThroughputTable(
         page: PageProxy,
         client: EditorClient,
@@ -260,8 +327,6 @@ export class DynamicSimulationResultsTableGenerator {
         }
 
         // Create schema-based columns
-        // Import the schema first:
-        // import { EntityThroughputRepSummarySchema } from './schemas/entityThroughputRepSummarySchema';
         const columns = this.createColumnsFromSchema(
             'entity_throughput_rep_summary',
             data[0],
@@ -311,6 +376,45 @@ export class DynamicSimulationResultsTableGenerator {
         // Generate the table with the prepared columns and data
         return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
     }
+
+    /**
+     * Creates a table for resource utilization data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
+    public async createResourceUtilizationTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        console.log('[TableGenerator] Creating resource utilization table...');
+
+        // Merge config with instance config and defaults
+        const tableConfig = { ...this.config, ...config };
+
+        // Get resource utilization data
+        const data = await this.resultsReader.getResourceUtilizationData();
+        console.log('[TableGenerator] Resource utilization data:', data);
+
+        if (!data || data.length === 0) {
+            console.warn('[TableGenerator] No resource utilization data available');
+            return null;
+        }
+
+        // Create schema-based columns
+        const columns = this.createColumnsFromSchema(
+            'resource_utilization',
+            data[0],
+            tableConfig
+        );
+
+        const title = tableConfig.title || 'Resource Utilization';
+
+        // Generate the table with the prepared columns and data
+        return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
+    }
+    
     /**
      * Create column definitions from a schema and sample data
      * @param schemaType The type of schema to use

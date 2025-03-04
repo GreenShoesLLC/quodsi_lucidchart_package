@@ -32,6 +32,7 @@ export interface DashboardConfig {
         activityTiming?: boolean;
         entityThroughput?: boolean;
         resourceRepSummary?: boolean;
+        resourceUtilization?: boolean;
         entityState?: boolean;
     };
     /** Custom column configurations for specific table types */
@@ -66,6 +67,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
         activityTiming: true,
         entityThroughput: true,
         resourceRepSummary: true,
+        resourceUtilization: true,
         entityState: true
     },
     customColumnConfig: {
@@ -87,6 +89,26 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
                 'throughput_rate',
                 'capacity'
             ]
+        },
+        activityTiming: {
+            columnOrder: [
+                'Name',
+                'cycle_time_mean',
+                'service_time_mean',
+                'waiting_time_mean',
+                'blocked_time_mean'
+            ],
+            excludeColumns: ['Id']
+        },
+        resourceUtilization: {
+            columnOrder: [
+                'Name',
+                'utilization_rate_mean',
+                'utilization_rate_max',
+                'contents_mean',
+                'contents_max'
+            ],
+            excludeColumns: ['Id']
         }
     }
 };
