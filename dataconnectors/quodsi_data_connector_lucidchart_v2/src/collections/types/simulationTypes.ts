@@ -93,7 +93,9 @@ export interface EntityStateRepSummaryData {
 }
 
 // EntityThroughputRepSummaryData interface
+// Update in src/collections/types/simulationTypes.ts
 export interface EntityThroughputRepSummaryData {
+    id?: string; // Add this field (optional since we'll generate it)
     rep: number;
     entity_type: string;
     count: number;
@@ -101,15 +103,12 @@ export interface EntityThroughputRepSummaryData {
     in_progress_count: number;
     throughput_rate: number;
 
-    // These fields are optional since they exist in the CSV but are not required by Lucid
+    // Other fields remain the same
     first_exit?: number;
     last_exit?: number;
     avg_interval?: number;
     min_interval?: number;
     max_interval?: number;
-
-    // Handle potential renamed fields from duplicate columns
-    // This allows TypeScript to know about them but we'll filter them out before sending to Lucid
     [key: string]: any;
 }
 

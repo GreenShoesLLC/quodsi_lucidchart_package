@@ -22,6 +22,7 @@ import { SimulationResultsReader } from './SimulationResultsReader';
 // Import schemas from the schemas directory
 import { ActivityUtilizationSchema } from './schemas/activityUtilizationSchema';
 import { ActivityRepSummarySchema } from './schemas/activityRepSummarySchema';
+import { EntityStateRepSummarySchema, EntityThroughputRepSummarySchema } from './schemas';
 
 /**
  * Configuration for table generation
@@ -126,6 +127,32 @@ export class DynamicSimulationResultsTableGenerator {
                 identifierFields: ['rep', 'activity_id'],
                 percentageFields: ['utilization_percentage', 'operational_efficiency', 'cycle_time_efficiency'],
                 priorityFields: ['rep', 'activity_id', 'utilization_percentage', 'throughput_rate', 'capacity']
+            },
+            // Add the entity throughput schema mapping
+            'entity_throughput_rep_summary': {
+                schema: EntityThroughputRepSummarySchema,
+                identifierFields: ['rep', 'entity_type'],
+                percentageFields: [],
+                priorityFields: ['entity_type', 'rep', 'throughput_rate', 'completed_count', 'count']
+            },
+            'entity_state_rep_summary': {
+                schema: EntityStateRepSummarySchema,
+                identifierFields: ['rep', 'entity_type'],
+                percentageFields: [
+                    'percent_waiting',
+                    'percent_blocked',
+                    'percent_operation',
+                    'percent_connecting'
+                ],
+                priorityFields: [
+                    'entity_type',
+                    'rep',
+                    'count',
+                    'avg_time_in_system',
+                    'percent_waiting',
+                    'percent_blocked',
+                    'percent_operation'
+                ]
             }
             // Add more schema mappings as needed
         };
@@ -207,6 +234,83 @@ export class DynamicSimulationResultsTableGenerator {
         return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
     }
 
+    /**
+ * Creates a table for entity throughput data
+ * @param page The page to add the table to
+ * @param client The editor client
+ * @param config Optional configuration overrides for this table
+ */
+    public async createEntityThroughputTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        console.log('[TableGenerator] Creating entity throughput table...');
+
+        // Merge config with instance config and defaults
+        const tableConfig = { ...this.config, ...config };
+
+        // Get entity throughput data
+        const data = await this.resultsReader.getEntityThroughputRepSummaryData();
+        console.log('[TableGenerator] Entity throughput data:', data);
+
+        if (!data || data.length === 0) {
+            console.warn('[TableGenerator] No entity throughput data available');
+            return null;
+        }
+
+        // Create schema-based columns
+        // Import the schema first:
+        // import { EntityThroughputRepSummarySchema } from './schemas/entityThroughputRepSummarySchema';
+        const columns = this.createColumnsFromSchema(
+            'entity_throughput_rep_summary',
+            data[0],
+            tableConfig
+        );
+
+        const title = tableConfig.title || 'Entity Throughput';
+
+        // Generate the table with the prepared columns and data
+        return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
+    }
+
+    /**
+     * Creates a table for entity state summary data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
+    public async createEntityStateTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        console.log('[TableGenerator] Creating entity state summary table...');
+
+        // Merge config with instance config and defaults
+        const tableConfig = { ...this.config, ...config };
+
+        // Get entity state data
+        const data = await this.resultsReader.getEntityStateRepSummaryData();
+        console.log('[TableGenerator] Entity state summary data:', data);
+
+        if (!data || data.length === 0) {
+            console.warn('[TableGenerator] No entity state summary data available');
+            return null;
+        }
+
+        // Create schema-based columns
+        const columns = this.createColumnsFromSchema(
+            'entity_state_rep_summary',
+            data[0],
+            tableConfig
+        );
+
+        const title = tableConfig.title || 'Entity State Summary';
+
+        // Generate the table with the prepared columns and data
+        return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
+    }
     /**
      * Create column definitions from a schema and sample data
      * @param schemaType The type of schema to use

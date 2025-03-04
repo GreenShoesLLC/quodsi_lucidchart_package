@@ -48,9 +48,8 @@ import { LucidPageConversionService } from '../services/conversion/LucidPageConv
 import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsReader } from '../data_sources';
-import { SimulationResultsTableGenerator } from '../data_sources/simulation_results/SimulationResultsTableGenerator';
-import { DynamicSimulationResultsTableGenerator } from '../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
-import { SimulationResultsDashboard } from '../data_sources/simulation_results/SimulationResultsDashboard';
+import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
+
 
 
 
@@ -163,10 +162,17 @@ export class ModelPanel extends Panel {
             const def: PageDefinition = {
                 title: data.pageName,
             };
-            const page = document.addPage(def);
-            // this.addActivityUtilizationTable(page)
+
+            const user = new UserProxy(this.client);
+            const viewport = new Viewport(this.client);
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ImportSimulationResults',
+                actionData: { documentId: document.id, userId: user.id, pageId: viewport.getCurrentPage()?.id },
+                asynchronous: true
+            });
             this.handleOutputCreateDashboard()
-            console.log('[SimulationResultsTableGenerator] Successfully called addActivityUtilizationTable');
+
 
         } catch (error) {
             console.error('[SimulationResultsTableGenerator] Error creating output page:', error);
@@ -206,7 +212,7 @@ export class ModelPanel extends Panel {
                             title: data.pageName,
                         };
                         const page = document.addPage(def);
-                        this.addTableBlock(page)
+      
                         const viewport = new Viewport(this.client);
                         const currentPage = viewport.getCurrentPage();
                     }
@@ -343,192 +349,6 @@ export class ModelPanel extends Panel {
             }
         } catch (error) {
             console.error('[ModelPanel] Error creating simulation results dashboard:', error);
-        }
-    }
-
-    private async addActivityUtilizationTable(page: PageProxy): Promise<void> {
-        try {
-            console.log('[ModelPanel2] Testing SimulationResultsReader...');
-            const resultsReader = new SimulationResultsReader(this.client);
-
-            // Get current page ID
-
-            const viewport = new Viewport(this.client);
-            const currentPage = viewport.getCurrentPage();
-            if (!currentPage) {
-                console.log('[ModelPanel] No current page found');
-                return;
-            }
-
-            // Try to get model data for the current page
-            const modelData = await resultsReader.getModelDataForPage(currentPage.id);
-            console.log('[ModelPanel2] Model data for current page:', modelData);
-
-            // Check if we have simulation results
-            const hasResults = await resultsReader.hasSimulationResults();
-            console.log('[ModelPanel2] Has simulation results:', hasResults);
-
-            // Try to get activity utilization data
-            const activityUtilization = await resultsReader.getActivityUtilizationData();
-            console.log('[ModelPanel2] Activity Utilization data count:', activityUtilization.length);
-
-            if (activityUtilization.length > 0) {
-                console.log('[ModelPanel2] First activity utilization:', {
-                    name: activityUtilization[0].Name,
-                    meanUtilization: activityUtilization[0].utilization_mean,
-                    maxUtilization: activityUtilization[0].utilization_max
-                });
-            }
-
-            // Initialize the generator
-            const tableGenerator = new DynamicSimulationResultsTableGenerator(resultsReader, {
-                formatNumbers: true,
-                percentDecimals: 1,
-                numberDecimals: 2,
-                styleHeader: true,
-                dynamicColumns: true, // Only include columns with data
-                maxColumns: 6, // Limit number of columns
-                columnOrder: [
-                    'Id',
-                    'Name',
-                    'utilization_mean',
-                    'utilization_max',
-                    'capacity_mean',
-                    'capacity_max'
-                ],
-                excludeColumns: ['Id'],   // Don't show the ID column
-            });
-
-            // Create an activity utilization table
-            const currentY = 0
-            const activityUtilizationTable = await tableGenerator.createActivityUtilizationTable(
-                page,
-                this.client,
-                {
-                    position: { x: 50, y: currentY },
-                    width: 700,
-                    title: 'Activity Utilization'
-                }
-            );
-        } catch (error) {
-            console.error('[ModelPanel] Error testing SimulationResultsReader:', error);
-        }
-
-    }
-    private async addTableBlock(page: PageProxy): Promise<void> {
-        console.log('[ModelPanel] Starting addTableBlock method...');
-        try {
-            // Create mock data for testing
-            console.log('[ModelPanel] Creating mock CSV data...');
-            const mockCsvData = [
-                ["Activity", "Utilization", "Capacity"],
-                ["Production", "85.4%", "100"],
-                ["Packaging", "72.1%", "150"],
-                ["Quality Control", "63.8%", "75"]
-            ];
-            console.log('[ModelPanel] Mock data created:', mockCsvData);
-
-            // Calculate table dimensions
-            console.log('[ModelPanel] Calculating table dimensions...');
-            const { width, height } = calculateTableDimensions(mockCsvData);
-            console.log('[ModelPanel] Table dimensions calculated: width =', width, 'height =', height);
-
-            // Load Table block class
-            console.log('[ModelPanel] Loading TableBlock class...');
-            await this.client.loadBlockClasses(['DefaultTableBlock']);
-            console.log('[ModelPanel] TableBlock class loaded successfully');
-
-            // Create table block
-            console.log('[ModelPanel] Creating TableBlock definition...');
-
-            const blockDef: BlockDefinition = {
-                className: "DefaultTableBlock",
-                boundingBox: {
-                    x: 100,
-                    y: 100,
-                    w: 400,
-                    h: 300,
-                },
-            };
-            console.log('[ModelPanel] BlockDefinition created:', blockDef);
-
-            console.log('[ModelPanel] Adding TableBlock to page...');
-            const tableBlock = page.addBlock(blockDef) as TableBlockProxy;
-
-            console.log('[ModelPanel] TableBlock added to page successfully');
-
-            // Get row and column counts
-            const rowCount = mockCsvData.length;
-            const columnCount = mockCsvData[0]?.length || 0;
-            console.log('[ModelPanel] Table dimensions from data: rows =', rowCount, 'columns =', columnCount);
-
-            // Get the initial cell to use as reference
-            console.log('[ModelPanel] Getting initial rows from table...');
-            const rows = tableBlock.getRows();
-            console.log('[ModelPanel] Retrieved', rows.length, 'initial rows');
-
-            let lastCell = rows[0].getCells()[0];
-            console.log('[ModelPanel] Got reference to first cell');
-
-            // Add rows as needed
-            console.log('[ModelPanel] Starting to add', (rowCount - 1), 'additional rows...');
-            for (let i = 1; i < rowCount; i++) {
-                console.log('[ModelPanel] Adding row', i);
-                const newRow = tableBlock.addRow(lastCell);
-                lastCell = newRow.getCells()[0];
-                console.log('[ModelPanel] Row', i, 'added successfully');
-            }
-            console.log('[ModelPanel] All rows added successfully');
-
-            // Reset to use first row for column additions
-            console.log('[ModelPanel] Resetting reference cell for column additions');
-            lastCell = rows[0].getCells()[0];
-
-            // Add columns as needed
-            console.log('[ModelPanel] Starting to add', (columnCount - 1), 'additional columns...');
-            for (let i = 1; i < columnCount; i++) {
-                console.log('[ModelPanel] Adding column', i);
-                const newColumn = tableBlock.addColumn(lastCell);
-                lastCell = newColumn.getCells()[0];
-                console.log('[ModelPanel] Column', i, 'added successfully');
-            }
-            console.log('[ModelPanel] All columns added successfully');
-
-            // Populate table data
-            console.log('[ModelPanel] Starting to populate table data...');
-            const updatedRows = tableBlock.getRows();
-            console.log('[ModelPanel] Retrieved', updatedRows.length, 'rows for populating data');
-
-            mockCsvData.forEach((rowData, rowIndex) => {
-                console.log('[ModelPanel] Populating row', rowIndex, 'with data:', rowData);
-                const row = updatedRows[rowIndex];
-                const cells = row.getCells();
-                console.log('[ModelPanel] Row', rowIndex, 'has', cells.length, 'cells');
-
-                rowData.forEach((cellValue, colIndex) => {
-                    console.log('[ModelPanel] Setting cell [', rowIndex, ',', colIndex, '] to value:', cellValue);
-                    const cell = cells[colIndex];
-                    cell.setText(String(cellValue));
-
-                    // Style header row
-                    // if (rowIndex === 0) {
-                    //     console.log('[ModelPanel] Styling header cell at column', colIndex);
-                    //     cell.setBackgroundColor('#f0f0f0');
-                    //     cell.setBold(true);
-                    // }
-                });
-                console.log('[ModelPanel] Finished populating row', rowIndex);
-            });
-
-            console.log('[ModelPanel] Table data population completed successfully');
-            console.log('[ModelPanel] Table block creation and configuration completed successfully');
-
-        } catch (error) {
-            console.error('[ModelPanel] ❌ Error creating table block:', error);
-            console.error('[ModelPanel] Error details:', error instanceof Error ? error.stack : 'Unknown error');
-            this.messaging.sendMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
         }
     }
 

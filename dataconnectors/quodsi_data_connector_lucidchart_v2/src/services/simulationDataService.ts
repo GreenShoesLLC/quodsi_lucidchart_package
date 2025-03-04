@@ -335,12 +335,18 @@ export async function fetchActivityRepSummary(
     containerName: string,
     documentId: string
 ): Promise<ActivityRepSummaryData[]> {
-    return fetchCsvData<ActivityRepSummaryData>(
-        containerName, 
-        'activity_rep_summary.csv', 
+    const data = await fetchCsvData<ActivityRepSummaryData>(
+        containerName,
+        'activity_rep_summary.csv',
         documentId,
         activityRepSummaryRequiredColumns
     );
+
+    // Convert activity_id to string immediately after parsing
+    return data.map(item => ({
+        ...item,
+        activity_id: String(item.activity_id)
+    }));
 }
 
 export async function fetchActivityTiming(
@@ -448,10 +454,16 @@ export function prepareActivityUtilizationUpdate(data: ActivityUtilizationData[]
 }
 
 export function prepareActivityRepSummaryUpdate(data: ActivityRepSummaryData[]) {
+    // Ensure activity_id is always a string
+    const sanitizedData = data.map(item => ({
+        ...item,
+        activity_id: String(item.activity_id) // Explicitly convert to string
+    }));
+
     // Using composite key for rep_summary
     return prepareCollectionUpdate(
-        data, 
-        ActivityRepSummarySchema, 
+        sanitizedData,
+        ActivityRepSummarySchema,
         // Create a composite key from rep and activity_id 
         (item: ActivityRepSummaryData) => `${item.rep}_${item.activity_id}`
     );
@@ -470,11 +482,6 @@ export function prepareEntityStateRepSummaryUpdate(data: EntityStateRepSummaryDa
     );
 }
 
-// Add this function to simulationDataService.ts
-
-/**
- * Special version of prepareEntityThroughputRepSummaryUpdate to handle the duplicate columns issue
- */
 export function prepareEntityThroughputRepSummaryUpdate(data: EntityThroughputRepSummaryData[]) {
     console.log("Starting special entity throughput update preparation");
     console.log(`Processing ${data.length} rows of entity throughput data`);
@@ -486,13 +493,14 @@ export function prepareEntityThroughputRepSummaryUpdate(data: EntityThroughputRe
     data.forEach(item => {
         console.log(`Processing item: ${JSON.stringify(item, null, 2)}`);
 
-        // Create the composite key for this item
-        const key = `${item.rep}_${item.entity_type}`;
-        const quotedKey = `"${key}"`;
+        // Create a synthetic ID field that combines entity_type and rep
+        // Use whatever format you want for this - it's now a custom field
+        const id = `${item.entity_type}_${item.rep}`;
 
         // Create a completely new object with ONLY the fields we need
-        // This ensures no extra or renamed fields make it through
+        // Including our new synthetic ID field
         const cleanedItem: SerializedFields = {
+            id: id, // Add the ID field
             rep: item.rep,
             entity_type: item.entity_type,
             count: item.count,
@@ -501,10 +509,10 @@ export function prepareEntityThroughputRepSummaryUpdate(data: EntityThroughputRe
             throughput_rate: item.throughput_rate
         };
 
-        console.log(`Cleaned item for key ${key}: ${JSON.stringify(cleanedItem, null, 2)}`);
+        console.log(`Cleaned item with ID ${id}: ${JSON.stringify(cleanedItem, null, 2)}`);
 
-        // Add to our collection
-        items.set(quotedKey, cleanedItem);
+        // Add to our collection using the ID as the key
+        items.set(`"${id}"`, cleanedItem);
     });
 
     console.log(`Final map has ${items.size} items`);
@@ -517,6 +525,7 @@ export function prepareEntityThroughputRepSummaryUpdate(data: EntityThroughputRe
         }
     };
 }
+
 
 export function prepareResourceRepSummaryUpdate(data: ResourceRepSummaryData[]) {
     // Using composite key

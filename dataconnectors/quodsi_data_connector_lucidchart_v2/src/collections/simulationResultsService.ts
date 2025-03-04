@@ -18,11 +18,11 @@ export interface DataCollectionConfig {
 
 // Default configuration - all collections enabled
 const defaultDataCollectionConfig: DataCollectionConfig = {
-    activityUtilization: true,
-    activityRepSummary: true,
-    activityTiming: true,
+    activityUtilization: false,
+    activityRepSummary: false,
+    activityTiming: false,
     entityStateRepSummary: false,
-    entityThroughputRepSummary: false,
+    entityThroughputRepSummary: true,
     resourceRepSummary: false,
     completeActivityMetrics: false,
     customMetrics: false
