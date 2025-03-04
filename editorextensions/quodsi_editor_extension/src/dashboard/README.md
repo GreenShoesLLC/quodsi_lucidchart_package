@@ -18,12 +18,40 @@ The Dashboard module is responsible for generating comprehensive visualization d
 - **DashboardConfigManager**: Handles configuration merging and access.
 - **DashboardTableFactory**: Creates and manages table handler instances.
 
+### Table Generation
+
+- **DynamicSimulationResultsTableGenerator**: Wrapper class that provides backward compatibility with the original table generator.
+- **generators/**: Directory containing specialized table generator classes (see [generators/README.md](./generators/README.md) for details).
+  - **BaseTableGenerator**: Abstract base class for all table generators.
+  - **Specialized Generators**: Concrete implementations for each table type.
+  - **TableGeneratorFactory**: Factory for creating the appropriate generator.
+
 ### Table Handlers
 
 - **BaseTableHandler**: Abstract base class for all table handlers.
 - **ActivityUtilizationTableHandler**: Handles activity utilization tables.
 - **ActivityRepSummaryTableHandler**: Handles activity replication summary tables.
 - (Additional handlers for other table types)
+
+## Directory Structure
+
+```
+dashboard/
+├── DynamicSimulationResultsTableGenerator.ts  # Backward-compatible wrapper
+├── SimulationResultsDashboard.ts              # Main dashboard class
+├── factory/                                   # Dashboard component factories
+├── generators/                                # Table generators (refactored)
+│   ├── BaseTableGenerator.ts                  # Abstract base generator
+│   ├── ActivityUtilizationTableGenerator.ts   # Specialized generators
+│   ├── ...                                    # Other specialized generators
+│   └── TableGeneratorFactory.ts               # Factory for creating generators
+├── handlers/                                  # Table handlers
+├── interfaces/                                # Type definitions
+│   ├── DashboardTypes.ts                      # Dashboard-related types
+│   └── GeneratorTypes.ts                      # Generator-related types
+├── layout/                                    # Layout management
+└── utils/                                     # Utility functions
+```
 
 ## Usage
 
@@ -71,43 +99,109 @@ const dashboard = new SimulationResultsDashboard(client, config);
 const result = await dashboard.createDashboard('Performance Dashboard');
 ```
 
+### Using Table Generators Directly
+
+```typescript
+import { EditorClient } from 'lucid-extension-sdk';
+import { SimulationResultsReader } from '../data_sources/simulation_results';
+import { ActivityUtilizationTableGenerator } from './generators';
+
+// Create a specific table
+const client = new EditorClient();
+const reader = new SimulationResultsReader(client);
+const generator = new ActivityUtilizationTableGenerator(reader);
+
+// Get the current page
+const viewport = new Viewport(client);
+const page = viewport.getCurrentPage();
+
+// Generate the table
+const table = await generator.createTable(page, client);
+```
+
 ## Extending with Custom Table Types
 
 To add support for a new table type:
 
-1. Create a new handler class:
+1. Create a new generator class in the generators directory:
 
 ```typescript
-import { PageProxy } from 'lucid-extension-sdk';
-import { BaseTableHandler } from './BaseTableHandler';
-import { TableCreationResult } from '../interfaces/DashboardTypes';
+import { BaseTableGenerator } from './BaseTableGenerator';
+import { SchemaMapping } from '../interfaces/GeneratorTypes';
+import { CustomDataSchema } from '../../data_sources/simulation_results/schemas';
 
-export class MyCustomTableHandler extends BaseTableHandler {
+export class CustomTableGenerator extends BaseTableGenerator {
   getTableType(): string {
-    return 'myCustomTable';
+    return 'custom_table';
+  }
+  
+  getSchemaMapping(): SchemaMapping {
+    return {
+      schema: CustomDataSchema,
+      identifierFields: ['id', 'name'],
+      percentageFields: ['completion_rate'],
+      priorityFields: ['name', 'completion_rate', 'value']
+    };
+  }
+  
+  async getData(): Promise<any[]> {
+    return this.resultsReader.getCustomData();
   }
   
   getDefaultTitle(): string {
-    return 'My Custom Table';
-  }
-  
-  async canCreateTable(): Promise<boolean> {
-    // Check if data is available
-    const data = await this.resultsReader.getMyCustomData();
-    return data && data.length > 0;
-  }
-  
-  async createTable(page: PageProxy, position: { x: number, y: number }): Promise<TableCreationResult> {
-    // Implementation details...
+    return 'Custom Data';
   }
 }
 ```
 
-2. Register the handler in the factory:
+2. Add the generator to the TableGeneratorFactory:
+
+```typescript
+// In TableGeneratorFactory.ts
+import { CustomTableGenerator } from './CustomTableGenerator';
+
+// Inside getGenerator method:
+case 'custom_table':
+  return new CustomTableGenerator(this.resultsReader, this.config);
+```
+
+3. Create a matching handler class:
+
+```typescript
+import { BaseTableHandler } from './BaseTableHandler';
+import { TableCreationResult } from '../interfaces/DashboardTypes';
+
+export class CustomTableHandler extends BaseTableHandler {
+  getTableType(): string {
+    return 'custom_table';
+  }
+  
+  getDefaultTitle(): string {
+    return 'Custom Data';
+  }
+  
+  async canCreateTable(): Promise<boolean> {
+    const data = await this.resultsReader.getCustomData();
+    return data && data.length > 0;
+  }
+  
+  async createTable(page, position): Promise<TableCreationResult> {
+    const config = this.getTableConfig(position);
+    try {
+      const table = await this.tableGenerator.createCustomTable(page, this.client, config);
+      return this.createResult(table, !!table);
+    } catch (error) {
+      return this.createResult(null, false, error);
+    }
+  }
+}
+```
+
+4. Register the handler in the DashboardTableFactory:
 
 ```typescript
 // In DashboardTableFactory.ts, add to initializeHandlers method:
-this.registerHandler(new MyCustomTableHandler(
+this.registerHandler(new CustomTableHandler(
   this.client,
   this.resultsReader,
   this.tableGenerator,
@@ -115,7 +209,7 @@ this.registerHandler(new MyCustomTableHandler(
 ));
 ```
 
-3. Update the configuration interface:
+5. Update the configuration interface:
 
 ```typescript
 // In DashboardTypes.ts
@@ -123,7 +217,7 @@ export interface DashboardConfig {
   // ...
   includedDataTypes?: {
     // ...
-    myCustomTable?: boolean;
+    custom_table?: boolean;
   };
   // ...
 }
@@ -132,7 +226,7 @@ export interface DashboardConfig {
 ## Architecture Benefits
 
 - **Single Responsibility**: Each class has a clear, focused purpose
-- **Extensibility**: Adding new table types is as simple as creating a new handler class
+- **Extensibility**: Adding new table types is as simple as creating a new generator and handler
 - **Testability**: Smaller components with clear responsibilities are easier to test
 - **Maintainability**: Code is organized into logical, manageable pieces
 - **Readability**: The main dashboard class is much clearer and easier to understand

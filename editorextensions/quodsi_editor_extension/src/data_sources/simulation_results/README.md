@@ -18,6 +18,8 @@ This module consists of two main components:
 1. **SimulationResultsReader** - A class that extends `DataSourceReader` to provide specific methods for reading Quodsi simulation data
 2. **Models** - TypeScript interfaces and mapping functions that define the structure of simulation data
 
+> **Note:** The table generation functionality that was previously part of this module has been moved to the `dashboard` module. The `DynamicSimulationResultsTableGenerator` and related components are now located in `dashboard/generators/`.
+
 ## Available Data Collections
 
 The reader provides access to these simulation data collections:
@@ -42,7 +44,7 @@ The data flow between components works as follows:
 2. The data connector imports these files and creates collections in the LucidChart document
 3. The SimulationResultsReader in this module reads data from those collections
 4. Model interfaces and mapping functions convert raw data to strongly-typed objects
-5. The extension UI components consume these objects to display visualizations and reports
+5. The data can then be consumed by the dashboard module for visualization or by other components
 
 ## Usage
 
@@ -100,3 +102,20 @@ When working with data collections through the Lucid SDK:
 ## Relationship to Data Connector
 
 This module reads data created by the `quodsi_data_connector_lucidchart_v2` data connector. The schema definitions in the data connector and the model interfaces in this module should be kept in sync.
+
+## Relationship to Dashboard Module
+
+The data reading capabilities in this module provide the foundational data access layer for the dashboard visualizations. The dashboard module (specifically the table generators) consumes this data to create visual representations in LucidChart:
+
+```typescript
+// Example of dashboard using simulation results data
+import { SimulationResultsReader } from '../data_sources/simulation_results';
+import { DynamicSimulationResultsTableGenerator } from '../dashboard/DynamicSimulationResultsTableGenerator';
+
+// Create a reader and table generator
+const reader = new SimulationResultsReader(client);
+const tableGenerator = new DynamicSimulationResultsTableGenerator(reader);
+
+// Generate tables based on the data
+const table = await tableGenerator.createActivityUtilizationTable(page, client);
+```

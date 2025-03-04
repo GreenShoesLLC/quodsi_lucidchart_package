@@ -2,7 +2,7 @@
 
 import { EditorClient } from 'lucid-extension-sdk';
 import { SimulationResultsReader } from '../data_sources/simulation_results/SimulationResultsReader';
-import { DynamicSimulationResultsTableGenerator } from '../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+import { DynamicSimulationResultsTableGenerator } from './DynamicSimulationResultsTableGenerator';
 import { DashboardConfig, DashboardResult, DashboardTable } from './interfaces/DashboardTypes';
 import { DashboardConfigManager } from './utils/DashboardConfigManager';
 import { DashboardLayoutManager } from './layout/DashboardLayoutManager';

@@ -3,7 +3,7 @@
 import { EditorClient } from 'lucid-extension-sdk';
 import { DashboardConfig } from '../interfaces/DashboardTypes';
 import { SimulationResultsReader } from '../../data_sources/simulation_results/SimulationResultsReader';
-import { DynamicSimulationResultsTableGenerator } from '../../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+import { DynamicSimulationResultsTableGenerator } from '../DynamicSimulationResultsTableGenerator';
 import { TableHandlerInterface } from '../interfaces/DashboardTypes';
 import { BaseTableHandler } from '../handlers/BaseTableHandler';
 import { ActivityUtilizationTableHandler } from '../handlers/ActivityUtilizationTableHandler';

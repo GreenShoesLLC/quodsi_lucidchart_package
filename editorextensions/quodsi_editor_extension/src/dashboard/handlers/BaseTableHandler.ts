@@ -3,7 +3,8 @@
 import { PageProxy, TableBlockProxy, EditorClient } from 'lucid-extension-sdk';
 import { TableHandlerInterface, DashboardConfig, TableCreationResult } from '../interfaces/DashboardTypes';
 import { SimulationResultsReader } from '../../data_sources/simulation_results/SimulationResultsReader';
-import { DynamicSimulationResultsTableGenerator, TableGenerationConfig } from '../../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+import { DynamicSimulationResultsTableGenerator } from '../DynamicSimulationResultsTableGenerator';
+import { TableGenerationConfig } from '../interfaces/GeneratorTypes';
 import { DashboardConfigManager } from '../utils/DashboardConfigManager';
 
 /**

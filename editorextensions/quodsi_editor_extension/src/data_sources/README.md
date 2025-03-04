@@ -6,6 +6,8 @@ This directory contains modules for accessing and working with data sources avai
 
 The data sources framework provides a structured way to access data collections stored within LucidChart documents. These collections are created by the Quodsi data connector when simulation results are imported into the document.
 
+> **Note:** As part of a recent refactoring, the table generation functionality that was previously in this module has been moved to the `dashboard/generators/` directory. The data sources module now focuses exclusively on data access.
+
 ## Directory Structure
 
 ```
@@ -18,6 +20,7 @@ data_sources/
 │   ├── models/                # Type definitions for simulation data
 │   │   ├── ActivityUtilization.ts  # Activity utilization data model
 │   │   └── index.ts           # Exports all model interfaces
+│   ├── schemas/               # Schema definitions for simulation data
 │   ├── index.ts               # Exports the SimulationResultsReader
 │   └── SimulationResultsReader.ts  # Reader for simulation results data
 └── index.ts                   # Exports all data source readers
@@ -104,6 +107,28 @@ This module follows these design principles:
 2. **Type Safety** - Strongly typed interfaces for all data models
 3. **Abstraction** - Common functionality is extracted to base classes
 4. **Extensibility** - Easy to add new data sources and models
+
+## Relationship to Dashboard Module
+
+The data_sources module provides the raw data access layer that the dashboard module builds upon:
+
+```typescript
+// Example of how dashboard uses data sources
+import { SimulationResultsReader } from '../data_sources/simulation_results';
+import { ActivityUtilizationTableGenerator } from '../dashboard/generators';
+
+// Data access layer
+const reader = new SimulationResultsReader(client);
+
+// Visualization layer that consumes the data
+const generator = new ActivityUtilizationTableGenerator(reader);
+const table = await generator.createTable(page, client);
+```
+
+For table generation functionality that was previously in this module, refer to:
+- `dashboard/DynamicSimulationResultsTableGenerator.ts` - Backward-compatible wrapper
+- `dashboard/generators/` - Specialized table generators
+- `dashboard/REFACTORING_GUIDE.md` - Guide to the recent refactoring
 
 ## Extending
 

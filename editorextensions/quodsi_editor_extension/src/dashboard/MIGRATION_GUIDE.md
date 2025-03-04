@@ -1,22 +1,15 @@
-# Migration Guide: SimulationResultsDashboard Refactoring
+# Migration Guide: Dashboard Refactoring
 
-This guide helps you migrate from the original SimulationResultsDashboard to the new refactored implementation.
+This guide helps you migrate code to use the refactored dashboard and table generation components.
 
-## Current Status
+## Recent Refactorings
 
-We've implemented a new, refactored version of the SimulationResultsDashboard that breaks it down into smaller, more maintainable components. The original implementation is still available in its current location:
+The dashboard module has undergone two significant refactorings:
 
-```
-data_sources/simulation_results/SimulationResultsDashboard.ts
-```
+1. **SimulationResultsDashboard Refactoring**: Moved from data_sources/simulation_results to dashboard/
+2. **DynamicSimulationResultsTableGenerator Refactoring**: Moved from data_sources/simulation_results to dashboard/ and split into specialized generator classes
 
-The new implementation is in:
-
-```
-dashboard/SimulationResultsDashboard.ts
-```
-
-## Migration Steps
+## Migration Steps for SimulationResultsDashboard
 
 ### Step 1: Update Import Statements
 
@@ -40,49 +33,99 @@ The configuration interface `DashboardConfig` remains the same, but is now defin
 import { DashboardConfig } from './dashboard/interfaces/DashboardTypes';
 ```
 
-If you were using or extending this interface, update your imports.
+## Migration Steps for DynamicSimulationResultsTableGenerator
 
-### Step 3: Testing
+### Step 1: Update Import Statements
 
-The refactored implementation maintains the same public API, so your existing code should work without changes. However, it's recommended to test the new implementation to ensure it produces the same results as the original.
+**Before:**
+```typescript
+import { DynamicSimulationResultsTableGenerator } from './data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+// OR
+import { DynamicSimulationResultsTableGenerator } from './data_sources/simulation_results';
+```
 
-### Step 4: Adding Custom Table Types
+**After:**
+```typescript
+import { DynamicSimulationResultsTableGenerator } from './dashboard/DynamicSimulationResultsTableGenerator';
+```
 
-If you need to add new table types:
+### Step 2: Update TableGenerationConfig Import
 
-1. Create a new handler class extending `BaseTableHandler`
-2. Register it in the `DashboardTableFactory`
-3. Update the `DynamicSimulationResultsTableGenerator` if needed
+**Before:**
+```typescript
+import { TableGenerationConfig } from './data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+```
 
-See the examples in `handlers/ActivityUtilizationTableHandler.ts` and `handlers/ActivityRepSummaryTableHandler.ts`.
+**After:**
+```typescript
+import { TableGenerationConfig } from './dashboard/interfaces/GeneratorTypes';
+```
 
-### Step 5: Full Migration
+### Step 3: Consider Using Specialized Generators
 
-Once you've verified the new implementation works correctly:
+The refactored implementation introduces specialized generator classes that you can use directly:
 
-1. Update all imports to use the new path
-2. Consider removing the original implementation to avoid confusion
+```typescript
+import { ActivityUtilizationTableGenerator } from './dashboard/generators';
+
+const generator = new ActivityUtilizationTableGenerator(resultsReader);
+const table = await generator.createTable(page, client);
+```
+
+Or use the factory pattern:
+
+```typescript
+import { TableGeneratorFactory } from './dashboard/generators';
+
+const factory = new TableGeneratorFactory(resultsReader);
+const generator = factory.getGenerator('activity_utilization');
+const table = await generator.createTable(page, client);
+```
+
+## Adding Custom Components
+
+### Adding New Table Types
+
+1. Create a generator class in the generators directory that extends BaseTableGenerator
+2. Create a handler class in the handlers directory that extends BaseTableHandler
+3. Register the handler in DashboardTableFactory
+4. Add the table type to the includedDataTypes interface in DashboardTypes.ts
+
+See the [REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md) for detailed examples.
 
 ## Benefits of the New Architecture
 
 1. **Better Organization**: Each component has a clear, focused responsibility
-2. **Improved Extensibility**: Adding new table types is as simple as creating a new handler class
+2. **Improved Extensibility**: Adding new components is cleaner and more structured
 3. **Enhanced Testability**: Smaller, focused classes are easier to test individually
 4. **Code Reuse**: Common functionality is shared through base classes
-5. **Cleaner Code**: The main dashboard class is much more focused and readable
+5. **Strategy Pattern**: Different algorithms encapsulated in their own classes
+6. **Factory Pattern**: Object creation delegated to specialized factory classes
 
 ## Files in the New Implementation
 
-- `dashboard/SimulationResultsDashboard.ts` - Main class
-- `dashboard/interfaces/DashboardTypes.ts` - Types and interfaces
+### Dashboard Framework
+- `dashboard/SimulationResultsDashboard.ts` - Main dashboard class
+- `dashboard/interfaces/DashboardTypes.ts` - Dashboard types and interfaces
 - `dashboard/utils/DashboardConfigManager.ts` - Configuration utilities
 - `dashboard/layout/DashboardLayoutManager.ts` - Layout management
 - `dashboard/factory/DashboardTableFactory.ts` - Table handler factory
-- `dashboard/handlers/BaseTableHandler.ts` - Base handler
-- `dashboard/handlers/ActivityUtilizationTableHandler.ts` - Concrete handlers
-- `dashboard/handlers/ActivityRepSummaryTableHandler.ts` - Concrete handlers
-- `dashboard/index.ts` - Exports
+
+### Table Handlers
+- `dashboard/handlers/BaseTableHandler.ts` - Base handler class
+- `dashboard/handlers/ActivityUtilizationTableHandler.ts` - Specialized handlers
+- `dashboard/handlers/(other handlers)...` - Additional handlers
+
+### Table Generators (New)
+- `dashboard/DynamicSimulationResultsTableGenerator.ts` - Backward-compatible wrapper
+- `dashboard/interfaces/GeneratorTypes.ts` - Generator interfaces
+- `dashboard/generators/BaseTableGenerator.ts` - Base generator class
+- `dashboard/generators/ActivityUtilizationTableGenerator.ts` - Specialized generators
+- `dashboard/generators/(other generators)...` - Additional generators
+- `dashboard/generators/TableGeneratorFactory.ts` - Generator factory
 
 ## Help and Support
+
+For more details on the recent table generator refactoring, see the [REFACTORING_GUIDE.md](./REFACTORING_GUIDE.md).
 
 If you encounter any issues during migration, please refer to the implementation files for detailed documentation or reach out to the development team.
