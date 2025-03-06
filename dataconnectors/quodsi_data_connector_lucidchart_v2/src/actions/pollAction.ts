@@ -3,8 +3,8 @@ import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { updateSimulationResults } from "../collections/simulationResultsService";
 import { getRequiredContext } from "../utils/contextHelper";
 import { getConfig } from "../config";
-import { initializeStorageService } from "../services/simulationDataService";
 import { setStorageVerboseLogging } from "../services/azureStorageService";
+import { initializeStorageService } from "../services/simulationData";
 
 // Set to true to enable verbose logging for poll action
 const POLL_ACTION_VERBOSE_LOGGING = false;
