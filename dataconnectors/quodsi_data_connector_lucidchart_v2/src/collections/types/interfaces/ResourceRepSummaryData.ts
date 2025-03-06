@@ -3,6 +3,7 @@
  * Defines resource utilization and capacity metrics
  */
 export interface ResourceRepSummaryData {
+    id?: string; // Optional since we'll generate it as a composite key
     rep: number;
     resource_id: string;
     total_requests: number;

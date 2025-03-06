@@ -3,6 +3,7 @@
  * Defines summarized metrics for activities across simulation replications
  */
 export interface ActivityRepSummaryData {
+    id?: string; // Optional since we'll generate it as a composite key
     rep: number;
     activity_id: string;
     capacity: number;
