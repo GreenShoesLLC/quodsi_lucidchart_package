@@ -1,7 +1,8 @@
 // utils/DashboardConfigManager.ts
 
 import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../interfaces/DashboardTypes';
-import { TableGenerationConfig } from '../../data_sources/simulation_results/DynamicSimulationResultsTableGenerator';
+import { TableGenerationConfig } from '../interfaces/GeneratorTypes';
+
 
 /**
  * Manages and provides access to dashboard configuration

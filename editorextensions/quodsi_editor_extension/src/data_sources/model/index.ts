@@ -1,6 +1,12 @@
 // Export the ModelDataSource and ModelReader classes
 export { ModelDataSource } from './ModelDataSource';
-export { ModelReader } from './ModelReader';
+export { ModelReader } from './readers/ModelReader';
+
+// Export repositories
+export { ModelDefinitionRepository } from './repositories';
+export type { ModelDefinition } from './repositories';
+
+// Export data types from ModelReader
 export type {
   ModelData,
   ActivityData,
@@ -12,7 +18,7 @@ export type {
   ResourceRequirementData,
   RequirementClauseData,
   ResourceRequestData
-} from './ModelReader';
+} from './readers/ModelReader';
 
 // Export schemas and collection names
 export * from './schemas';

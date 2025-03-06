@@ -1,6 +1,9 @@
+// Export common utilities and constants
+export * from './common/constants';
+
 // Export all data source readers
 export { SimulationResultsReader } from './simulation_results/SimulationResultsReader';
-export { ModelReader, ModelDataSource } from './model';
+export { ModelReader, ModelDataSource, ModelDefinitionRepository } from './model';
 
 // Export data types
 export type {
@@ -14,4 +17,7 @@ export type {
   ResourceRequirementData,
   RequirementClauseData,
   ResourceRequestData
-} from './model/ModelReader';
+} from './model/readers/ModelReader';
+
+// Export repository types
+export type { ModelDefinition } from './model';

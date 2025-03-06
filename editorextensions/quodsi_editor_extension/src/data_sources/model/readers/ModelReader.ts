@@ -1,6 +1,6 @@
 import { EditorClient, CollectionProxy, MapProxy, DataItemProxy } from 'lucid-extension-sdk';
-import { DataSourceReader } from '../base/DataSourceReader';
-import { MODEL_COLLECTIONS } from './schemas';
+import { DataSourceReader } from '../../base/DataSourceReader';
+import { MODEL_COLLECTIONS } from '../schemas';
 import { SimulationObjectType } from '@quodsi/shared';
 
 // Define interfaces for the model data
@@ -139,15 +139,15 @@ export class ModelReader extends DataSourceReader {
   async getModelData(): Promise<ModelData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.MODEL);
     if (!collection) return [];
-    
+
     const result: ModelData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToModelData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -158,15 +158,15 @@ export class ModelReader extends DataSourceReader {
   async getActivities(): Promise<ActivityData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.ACTIVITIES);
     if (!collection) return [];
-    
+
     const result: ActivityData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToActivityData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -178,10 +178,10 @@ export class ModelReader extends DataSourceReader {
   async getActivity(id: string): Promise<ActivityData | null> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.ACTIVITIES);
     if (!collection) return null;
-    
+
     const item = collection.items.get(id);
     if (!item) return null;
-    
+
     return this.mapToActivityData(item);
   }
 
@@ -192,15 +192,15 @@ export class ModelReader extends DataSourceReader {
   async getResources(): Promise<ResourceData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.RESOURCES);
     if (!collection) return [];
-    
+
     const result: ResourceData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToResourceData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -211,15 +211,15 @@ export class ModelReader extends DataSourceReader {
   async getEntities(): Promise<EntityData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.ENTITIES);
     if (!collection) return [];
-    
+
     const result: EntityData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToEntityData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -230,15 +230,15 @@ export class ModelReader extends DataSourceReader {
   async getGenerators(): Promise<GeneratorData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.GENERATORS);
     if (!collection) return [];
-    
+
     const result: GeneratorData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToGeneratorData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -249,15 +249,15 @@ export class ModelReader extends DataSourceReader {
   async getConnectors(): Promise<ConnectorData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.CONNECTORS);
     if (!collection) return [];
-    
+
     const result: ConnectorData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToConnectorData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -268,15 +268,15 @@ export class ModelReader extends DataSourceReader {
   async getOperationSteps(): Promise<OperationStepData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.OPERATION_STEPS);
     if (!collection) return [];
-    
+
     const result: OperationStepData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToOperationStepData(item));
       }
     }
-    
+
     return result;
   }
 
@@ -287,15 +287,15 @@ export class ModelReader extends DataSourceReader {
   async getResourceRequirements(): Promise<ResourceRequirementData[]> {
     const collection = await this.getCollectionByName(MODEL_COLLECTIONS.RESOURCE_REQUIREMENTS);
     if (!collection) return [];
-    
+
     const result: ResourceRequirementData[] = [];
-    
+
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(this.mapToResourceRequirementData(item));
       }
     }
-    
+
     return result;
   }
 

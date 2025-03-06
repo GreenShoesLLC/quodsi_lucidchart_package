@@ -21,8 +21,8 @@ const defaultDataCollectionConfig: DataCollectionConfig = {
     activityUtilization: false,
     activityRepSummary: false,
     activityTiming: false,
-    entityStateRepSummary: false,
-    entityThroughputRepSummary: true,
+    entityStateRepSummary: true,
+    entityThroughputRepSummary: false,
     resourceRepSummary: false,
     completeActivityMetrics: false,
     customMetrics: false

@@ -3,6 +3,7 @@ import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const EntityStateRepSummarySchema: SchemaDefinition = {
     fields: [
+        { name: "id", type: ScalarFieldTypeEnum.STRING }, 
         { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
         { name: "entity_type", type: ScalarFieldTypeEnum.STRING },
         { name: "count", type: ScalarFieldTypeEnum.NUMBER },
@@ -16,8 +17,9 @@ export const EntityStateRepSummarySchema: SchemaDefinition = {
         { name: "percent_operation", type: ScalarFieldTypeEnum.NUMBER },
         { name: "percent_connecting", type: ScalarFieldTypeEnum.NUMBER }
     ],
-    primaryKey: ["rep", "entity_type"],
+    primaryKey: ["id"], // Use just the single field as primary key
     fieldLabels: {
+        'id': 'ID', 
         'rep': 'Replication',
         'entity_type': 'Entity Type',
         'count': 'Count',

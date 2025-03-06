@@ -4,6 +4,7 @@ export { ConnectorSchema } from './ConnectorSchema';
 export { EntitySchema } from './EntitySchema';
 export { GeneratorSchema } from './GeneratorSchema';
 export { ModelSchema } from './ModelSchema';
+export { ModelDefinitionSchema } from './ModelDefinitionSchema';
 export { OperationStepSchema } from './OperationStepSchema';
 export { RequirementClauseSchema } from './RequirementClauseSchema';
 export { ResourceRequestSchema } from './ResourceRequestSchema';

@@ -152,19 +152,119 @@ export class ModelPanel extends Panel {
         });
         this.logError('Setting up message handlers END');
     }
+    // Improved model initialization code with better logging and error handling
+    async initializeOrUpdateModel() {
+        try {
+            console.log("[ModelPanel] Starting model initialization or update");
+            const document = new DocumentProxy(this.client);
+            const viewport = new Viewport(this.client);
+            const dataProxy = new DataProxy(this.client);
+            // Log all existing data sources
+            console.log("[ModelPanel] Available data sources:");
+            for (const [id, source] of dataProxy.dataSources) {
+                try {
+                    const name = source.getName();
+                    const config = source.getSourceConfig();
+                    console.log(`[ModelPanel]   - ${id}: name="${name}", config:`, config);
+                } catch (e) {
+                    console.log(`[ModelPanel]   - ${id}: error accessing details`, e);
+                }
+            }
 
+            // Create the ModelDataSource
+            const modelDataSource = new ModelDataSource(dataProxy);
+            console.log("[ModelPanel] ModelDataSource created");
+
+            // Initialize the data source
+            const initResult = await modelDataSource.initialize();
+            console.log("[ModelPanel] ModelDataSource initialization result:", initResult);
+
+            if (!initResult) {
+                console.error("[ModelPanel] Failed to initialize model data source");
+                return null;
+            }
+
+            // Get current page
+            const currentPage = viewport.getCurrentPage();
+            if (!currentPage) {
+                console.error("[ModelPanel] No current page found");
+                return null;
+            }
+
+            const documentId = document.id;
+            const pageId = currentPage.id;
+            const modelName = "Process Model";  // Name for your model
+
+            console.log("[ModelPanel] Current context:", {
+                documentId,
+                pageId,
+                modelName
+            });
+
+            // Get the repository for debugging
+            const repo = modelDataSource.getModelDefinitionRepository();
+            // This requires exposing dataSourceId as a property or adding a getter in ModelDefinitionRepository
+            console.log("[ModelPanel] Using data source ID:", repo.getDataSourceId ? repo.getDataSourceId() : "unknown");
+
+            // First check if a model definition already exists
+            console.log("[ModelPanel] Checking for existing model definition");
+            const existingModel = await modelDataSource.findModelDefinition(documentId, pageId);
+
+            console.log("[ModelPanel] Existing model check result:", existingModel);
+
+            // Create or update the model definition
+            let modelDefinition;
+
+            if (existingModel) {
+                console.log("[ModelPanel] Updating existing model:", existingModel.id);
+
+                // Only update if needed
+                if (existingModel.name !== modelName) {
+                    console.log("[ModelPanel] Model name has changed, updating...");
+                    modelDefinition = await modelDataSource.updateModelDefinition({
+                        id: existingModel.id,
+                        name: modelName
+                    });
+                } else {
+                    console.log("[ModelPanel] No changes needed, using existing model");
+                    modelDefinition = existingModel;
+                }
+            } else {
+                console.log("[ModelPanel] No existing model found, creating new one");
+
+                // For debugging, try to list all models
+                const allModels = await modelDataSource.listModelDefinitions();
+                console.log("[ModelPanel] All existing models:", allModels);
+
+                modelDefinition = await modelDataSource.createModelDefinition(
+                    documentId,
+                    pageId,
+                    modelName
+                );
+            }
+
+            // Check the result
+            if (modelDefinition) {
+                console.log("[ModelPanel] Model operation successful:", modelDefinition);
+                return modelDefinition;
+            } else {
+                console.error("[ModelPanel] Failed to create/update model definition");
+                return null;
+            }
+        } catch (error) {
+            console.error("[ModelPanel] Error in initializeOrUpdateModel:", error);
+            return null;
+        }
+    }
     private async handleOutputCreatePage(data: { pageName: string }): Promise<void> {
         console.log('[ModelPanel] Output page creation requested:', data.pageName);
 
         try {
-            const document = new DocumentProxy(this.client);
-            // Create new page
-            const def: PageDefinition = {
-                title: data.pageName,
-            };
 
-            const user = new UserProxy(this.client);
+            // this.initializeOrUpdateModel()
+            const document = new DocumentProxy(this.client);
             const viewport = new Viewport(this.client);
+            const user = new UserProxy(this.client);
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'ImportSimulationResults',
@@ -176,101 +276,6 @@ export class ModelPanel extends Panel {
 
         } catch (error) {
             console.error('[SimulationResultsTableGenerator] Error creating output page:', error);
-            this.messaging.sendMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
-        }
-    }
-    private async handleOutputCreatePage2(data: { pageName: string }): Promise<void> {
-        console.log('[ModelPanel] Output page creation requested:', data.pageName);
-
-        try {
-            const document = new DocumentProxy(this.client);
-            const user = new UserProxy(this.client);
-            const docId = document.id;
-            const userId = user.id;
-
-            if (!docId || !userId) {
-                throw new Error('Document ID or User ID is missing');
-            }
-
-            const validationResult = await this.modelManager.validateModel();
-            if (validationResult.isValid || !validationResult.isValid) {
-                try {
-                    const modelDefinition = await this.modelManager.getModelDefinition();
-
-                    if (modelDefinition) {
-                        // Create a serializer using the factory (will use latest version by default)
-                        const serializer = ModelSerializerFactory.create(modelDefinition);
-
-                        // Attempt serialization
-                        const serializedModel = serializer.serialize(modelDefinition);
-                        this.log('serializedModel:', JSON.stringify(serializedModel));
-
-                        // Create new page
-                        const def: PageDefinition = {
-                            title: data.pageName,
-                        };
-                        const page = document.addPage(def);
-      
-                        const viewport = new Viewport(this.client);
-                        const currentPage = viewport.getCurrentPage();
-                    }
-                } catch (error) {
-                    // Handle serialization errors
-                    this.log('Model serialization failed:', error);
-                }
-            }
-            else {
-                this.log('validationResult:', validationResult);
-            }
-
-            const viewport = new Viewport(this.client);
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'ImportSimulationResults',
-                actionData: { documentId: docId, userId: userId, pageId: viewport.getCurrentPage()?.id },
-                asynchronous: true
-            });
-            console.log('[ModelPanel] Successfully called ImportSimulationResults');
-
-            // Add code to test SimulationResultsReader
-            try {
-                console.log('[ModelPanel2] Testing SimulationResultsReader...');
-                const resultsReader = new SimulationResultsReader(this.client);
-
-                // Get current page ID
-                const currentPage = viewport.getCurrentPage();
-                if (!currentPage) {
-                    console.log('[ModelPanel] No current page found');
-                    return;
-                }
-
-                // Try to get model data for the current page
-                const modelData = await resultsReader.getModelDataForPage(currentPage.id);
-                console.log('[ModelPanel2] Model data for current page:', modelData);
-
-                // Check if we have simulation results
-                const hasResults = await resultsReader.hasSimulationResults();
-                console.log('[ModelPanel2] Has simulation results:', hasResults);
-
-                // Try to get activity utilization data
-                const activityUtilization = await resultsReader.getActivityUtilizationData();
-                console.log('[ModelPanel2] Activity Utilization data count:', activityUtilization.length);
-
-                if (activityUtilization.length > 0) {
-                    console.log('[ModelPanel2] First activity utilization:', {
-                        name: activityUtilization[0].Name,
-                        meanUtilization: activityUtilization[0].utilization_mean,
-                        maxUtilization: activityUtilization[0].utilization_max
-                    });
-                }
-            } catch (error) {
-                console.error('[ModelPanel] Error testing SimulationResultsReader:', error);
-            }
-
-        } catch (error) {
-            console.error('[ModelPanel] Error creating output page:', error);
             this.messaging.sendMessage(MessageTypes.ERROR, {
                 error: error instanceof Error ? error.message : 'Unknown error occurred'
             });
@@ -817,13 +822,31 @@ export class ModelPanel extends Panel {
      */
     private async handleRemoveModel(): Promise<void> {
         try {
+            const document = new DocumentProxy(this.client);
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
             if (!currentPage) return;
 
             // Remove the model data from the page
             await this.modelManager.removeModelFromPage(currentPage);
+            // 1. Create an instance of DataProxy
+            const dataProxy = new DataProxy(this.client);
+            // 2. Create the ModelDataSource
+            const modelDataSource = new ModelDataSource(dataProxy);
+            // 3. Initialize the data source
+            await modelDataSource.initialize();
+            // 4. Delete the model definition
+            const success = await modelDataSource.deleteModelDefinition(
+                document.id,  // The document ID 
+                currentPage.id       // The page ID
+            );
 
+            // 5. Check the result
+            if (success) {
+                console.log("Model definition deleted successfully");
+            } else {
+                console.error("Failed to delete model definition");
+            }
             // Since the model was just removed, we know this is now a non-model page
             // Directly send PAGE_NO_MODEL state - no need for modelRemoved message
             this.sendTypedMessage(MessageTypes.SELECTION_CHANGED_PAGE_NO_MODEL, {
@@ -1185,4 +1208,6 @@ export class ModelPanel extends Panel {
 
         this.messaging.handleIncomingMessage(message);
     }
+
+
 }

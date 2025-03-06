@@ -20,8 +20,8 @@ export declare class ModelPanel extends Panel {
     private log;
     private logError;
     private setupModelMessageHandlers;
+    initializeOrUpdateModel(): Promise<import("../data_sources").ModelDefinition | null>;
     private handleOutputCreatePage;
-    private handleOutputCreatePage2;
     private handleOutputCreateDashboard;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
