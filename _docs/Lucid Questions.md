@@ -1,14 +1,6 @@
 
 
 
-
-
-# Providing Packages App to Cofounder
-Where can I find documentation on how to upload the package and work through the issues of deployment?
-
-## React code hosted or not?
-
-
 # No npm start script found
 "No npm start script found in C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react."
 
@@ -53,10 +45,5 @@ menu.addMenuItem({
     action: "import",
     menuType: MenuType.Main,
 });
-
-# knowing .env variables for stuff in the zip
-in code such as the quodsi_data_connector, how can i programmatically set settings such as base api URL?
-in dev, i generally want to use 'http://localhost:5000/api/'
-in production or test or staging, depending on my azure setup, it could change.  how can i set these without reuploading the zip?
 
 # use google sheets or excel as database

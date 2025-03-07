@@ -25,3 +25,6 @@ npm run start
 npm install
 npm run build -w @quodsi/shared
 
+
+npx lucid-package@latest test-editor-extension
+
