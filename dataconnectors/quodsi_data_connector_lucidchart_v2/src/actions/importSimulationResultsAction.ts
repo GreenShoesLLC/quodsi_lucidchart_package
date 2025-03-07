@@ -1,11 +1,10 @@
 // actions/importSimulationResultsAction.ts - with console.log calls
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
-import { updateSimulationResults, updateModelData } from "../collections/simulationResultsService";
 import { getConfig } from "../config";
 import { setStorageVerboseLogging } from "../services/azureStorageService";
-import { setDataCollectionConfig, resetDataCollectionConfig } from '../collections/simulationResultsService';
 import { ActionLogger } from '../utils/logging';
 import { getStorageService, initializeStorageService } from "../services/simulationData";
+import { resetDataCollectionConfig, setDataCollectionConfig, updateModelData, updateSimulationResults } from "../services";
 
 // Set to true to enable verbose logging for import action
 const IMPORT_ACTION_VERBOSE_LOGGING = true;

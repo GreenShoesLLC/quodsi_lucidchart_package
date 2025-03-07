@@ -1,175 +1,22 @@
-// collections/simulationResultsService.ts
-import { SerializedFields, DataConnectorAsynchronousAction } from "lucid-extension-sdk";
-import { ModelSchema } from "./modelSchema";
-import { getConfig } from "../config";
-import { initializeStorageService } from "../services/simulationDataService";
-import * as simulationDataService from "../services/simulationDataService";
-// Configuration for enabling/disabling specific data collections
-export interface DataCollectionConfig {
-    activityUtilization: boolean;
-    activityRepSummary: boolean;
-    activityTiming: boolean;
-    entityStateRepSummary: boolean;
-    entityThroughputRepSummary: boolean;
-    resourceRepSummary: boolean;
-    completeActivityMetrics: boolean;
-    customMetrics: boolean;
-}
-
-// Default configuration - all collections enabled
-const defaultDataCollectionConfig: DataCollectionConfig = {
-    activityUtilization: false,
-    activityRepSummary: false,
-    activityTiming: false,
-    entityStateRepSummary: true,
-    entityThroughputRepSummary: false,
-    resourceRepSummary: false,
-    completeActivityMetrics: false,
-    customMetrics: false
-};
-
-// Current active configuration - starts with defaults
-let activeDataCollectionConfig: DataCollectionConfig = { ...defaultDataCollectionConfig };
-
-/**
- * Set which data collections should be enabled/disabled
- * @param config Configuration specifying which collections to enable/disable
- */
-export function setDataCollectionConfig(config: Partial<DataCollectionConfig>): void {
-    // Only update the properties that are provided in the partial config
-    activeDataCollectionConfig = {
-        ...activeDataCollectionConfig,
-        ...config
-    };
-
-    // Fixed conditionalLog call - pass true as the second parameter to indicate verbosity
-    conditionalLog("Data collection configuration updated:", true, activeDataCollectionConfig);
-}
-
-/**
- * Reset data collection configuration to default (all enabled)
- */
-export function resetDataCollectionConfig(): void {
-    activeDataCollectionConfig = { ...defaultDataCollectionConfig };
-    // Fixed conditionalLog call
-    conditionalLog("Data collection configuration reset to defaults:", true, activeDataCollectionConfig);
-}
-
-// Also fix other instances of similar issues in the code:
-
-conditionalLog('Current data collection configuration:', true, activeDataCollectionConfig);
-
-/**
- * Get current data collection configuration
- */
-export function getDataCollectionConfig(): DataCollectionConfig {
-    return { ...activeDataCollectionConfig };
-}
-
-/**
- * Check if a specific data collection is enabled
- * @param collectionName Name of the collection to check
- */
-export function isDataCollectionEnabled(collectionName: keyof DataCollectionConfig): boolean {
-    return activeDataCollectionConfig[collectionName];
-}
-
-// Types
-interface CollectionUpdate {
-    schema: any;
-    patch: {
-        items: Map<string, SerializedFields>;
-    };
-}
-
-interface CollectionsUpdate {
-    [key: string]: CollectionUpdate;
-}
-
-/**
- * Conditionally logs based on verbosity setting
- */
-function conditionalLog(message: string, verbose: boolean, ...args: any[]) {
-    if (verbose) {
-        console.log(message, ...args);
-    }
-}
-
-/**
- * Error logs are always displayed regardless of verbosity setting
- */
-function conditionalError(message: string, ...args: any[]) {
-    console.error(message, ...args);
-}
-
-// Send updates to Lucid
-export async function sendCollectionUpdates(
-    action: DataConnectorAsynchronousAction,
-    updates: CollectionsUpdate,
-    dataSourceName: string = "simulation_results",
-    verbose: boolean = true
-): Promise<{ success: boolean }> {
-    try {
-        conditionalLog("=== Sending Updates to Lucid ===", verbose);
-        await action.client.update({
-            dataSourceName,
-            collections: updates
-        });
-        conditionalLog("=== Updates Sent Successfully ===", verbose);
-        return { success: true };
-    } catch (error) {
-        conditionalError("Error sending updates to Lucid:", error);
-        throw error;
-    }
-}
-
-// Updated functions in simulationResultsService.ts
-
-// Add this import at the top of the file
+import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { ActionLogger } from '../utils/logging';
+import { conditionalLog, conditionalError } from '../utils/loggingUtils';
+import { getConfig } from "../config";
+import { initializeStorageService } from "./simulationDataService";
+import * as simulationDataService from "./simulationDataService";
+import { getDataCollectionConfig, DataCollectionConfig, isDataCollectionEnabled } from './dataCollectionConfigService';
+import { CollectionsUpdate } from './collectionUpdateService';
 
-// Update the updateModelData function to accept a logger
-export async function updateModelData(
-    action: DataConnectorAsynchronousAction,
-    documentId: string,
-    userId: string,
-    pageId: string,
-    verbose: boolean = true,
-    logger?: ActionLogger
-): Promise<void> {
-    // Create a local logger if none was provided
-    const log = logger || new ActionLogger('[ModelData]', verbose);
-
-    if (!pageId) {
-        throw new Error('pageId is required for model data');
-    }
-
-    const modelData = {
-        documentId,
-        userId,
-        pageId
-    };
-
-    log.info(`=== Updating Model Data (pageId: ${pageId}) ===`);
-
-    await action.client.update({
-        dataSourceName: "simulation_results",
-        collections: {
-            "Models": {
-                schema: ModelSchema,
-                patch: {
-                    items: new Map([
-                        [`"${pageId}"`, modelData]  // Ensure the key is properly quoted
-                    ])
-                }
-            }
-        }
-    });
-
-    log.info(`=== Model Data Update Complete ===`);
-}
-
-// Update updateSimulationResults to accept a logger
+/**
+ * Updates simulation results data in the simulation_results datasource
+ * @param action The asynchronous action context
+ * @param documentId Document ID containing the simulation results
+ * @param userId User ID who initiated the simulation
+ * @param source Source identifier for the update
+ * @param verbose Whether to log verbose output
+ * @param logger Optional logger instance
+ * @returns Promise resolving with update status
+ */
 export async function updateSimulationResults(
     action: DataConnectorAsynchronousAction,
     documentId: string,
@@ -195,18 +42,18 @@ export async function updateSimulationResults(
         log.info(`Using container: ${config.simulationResultsContainer}`);
 
         // Log which collections are currently enabled
-        log.info('Current data collection configuration:', activeDataCollectionConfig);
+        log.info('Current data collection configuration:', getDataCollectionConfig());
 
         // Create an array to track which data fetches succeeded and which failed
         const dataFetchResults = {
-            activityUtilization: { success: false, count: 0, enabled: activeDataCollectionConfig.activityUtilization },
-            activityRepSummary: { success: false, count: 0, enabled: activeDataCollectionConfig.activityRepSummary },
-            activityTiming: { success: false, count: 0, enabled: activeDataCollectionConfig.activityTiming },
-            entityStateRepSummary: { success: false, count: 0, enabled: activeDataCollectionConfig.entityStateRepSummary },
-            entityThroughputRepSummary: { success: false, count: 0, enabled: activeDataCollectionConfig.entityThroughputRepSummary },
-            resourceRepSummary: { success: false, count: 0, enabled: activeDataCollectionConfig.resourceRepSummary },
-            completeActivityMetrics: { success: false, count: 0, enabled: activeDataCollectionConfig.completeActivityMetrics },
-            customMetrics: { success: false, count: 0, enabled: activeDataCollectionConfig.customMetrics }
+            activityUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('activityUtilization') },
+            activityRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('activityRepSummary') },
+            activityTiming: { success: false, count: 0, enabled: isDataCollectionEnabled('activityTiming') },
+            entityStateRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('entityStateRepSummary') },
+            entityThroughputRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('entityThroughputRepSummary') },
+            resourceRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('resourceRepSummary') },
+            completeActivityMetrics: { success: false, count: 0, enabled: isDataCollectionEnabled('completeActivityMetrics') },
+            customMetrics: { success: false, count: 0, enabled: isDataCollectionEnabled('customMetrics') }
         };
 
         // Initialize data holders
@@ -221,7 +68,7 @@ export async function updateSimulationResults(
 
         // Only fetch data for enabled collections
         // Activity Utilization
-        if (activeDataCollectionConfig.activityUtilization) {
+        if (isDataCollectionEnabled('activityUtilization')) {
             try {
                 log.info('Fetching activity utilization data...');
                 activityUtilization = await simulationDataService.fetchActivityUtilization(
@@ -237,7 +84,7 @@ export async function updateSimulationResults(
         }
 
         // Activity Rep Summary
-        if (activeDataCollectionConfig.activityRepSummary) {
+        if (isDataCollectionEnabled('activityRepSummary')) {
             try {
                 log.info('Fetching activity rep summary data...');
                 activityRepSummary = await simulationDataService.fetchActivityRepSummary(
@@ -253,7 +100,7 @@ export async function updateSimulationResults(
         }
 
         // Activity Timing
-        if (activeDataCollectionConfig.activityTiming) {
+        if (isDataCollectionEnabled('activityTiming')) {
             try {
                 log.info('Fetching activity timing data...');
                 activityTiming = await simulationDataService.fetchActivityTiming(
@@ -269,7 +116,7 @@ export async function updateSimulationResults(
         }
 
         // Entity State Rep Summary
-        if (activeDataCollectionConfig.entityStateRepSummary) {
+        if (isDataCollectionEnabled('entityStateRepSummary')) {
             try {
                 log.info('Fetching entity state rep summary data...');
                 entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
@@ -285,7 +132,7 @@ export async function updateSimulationResults(
         }
 
         // Entity Throughput Rep Summary - add extra logging for this problematic collection
-        if (activeDataCollectionConfig.entityThroughputRepSummary) {
+        if (isDataCollectionEnabled('entityThroughputRepSummary')) {
             try {
                 log.info('Fetching entity throughput rep summary data...');
 
@@ -356,7 +203,7 @@ export async function updateSimulationResults(
         }
 
         // Resource Rep Summary
-        if (activeDataCollectionConfig.resourceRepSummary) {
+        if (isDataCollectionEnabled('resourceRepSummary')) {
             try {
                 log.info('Fetching resource rep summary data...');
                 resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
@@ -372,7 +219,7 @@ export async function updateSimulationResults(
         }
 
         // Complete Activity Metrics
-        if (activeDataCollectionConfig.completeActivityMetrics) {
+        if (isDataCollectionEnabled('completeActivityMetrics')) {
             try {
                 log.info('Fetching complete activity metrics data...');
                 completeActivityMetrics = await simulationDataService.fetchCompleteActivityMetrics(
@@ -388,7 +235,7 @@ export async function updateSimulationResults(
         }
 
         // Custom Metrics
-        if (activeDataCollectionConfig.customMetrics) {
+        if (isDataCollectionEnabled('customMetrics')) {
             try {
                 log.info('Fetching custom metrics data...');
                 customMetrics = await simulationDataService.fetchCustomMetrics(
@@ -414,23 +261,23 @@ export async function updateSimulationResults(
         const updates: CollectionsUpdate = {};
 
         // Only add collections that are enabled
-        if (activeDataCollectionConfig.activityUtilization) {
+        if (isDataCollectionEnabled('activityUtilization')) {
             updates["activity_utilization"] = simulationDataService.prepareActivityUtilizationUpdate(activityUtilization);
         }
 
-        if (activeDataCollectionConfig.activityRepSummary) {
+        if (isDataCollectionEnabled('activityRepSummary')) {
             updates["activity_rep_summary"] = simulationDataService.prepareActivityRepSummaryUpdate(activityRepSummary);
         }
 
-        if (activeDataCollectionConfig.activityTiming) {
+        if (isDataCollectionEnabled('activityTiming')) {
             updates["activity_timing"] = simulationDataService.prepareActivityTimingUpdate(activityTiming);
         }
 
-        if (activeDataCollectionConfig.entityStateRepSummary) {
+        if (isDataCollectionEnabled('entityStateRepSummary')) {
             updates["entity_state_rep_summary"] = simulationDataService.prepareEntityStateRepSummaryUpdate(entityStateRepSummary);
         }
 
-        if (activeDataCollectionConfig.entityThroughputRepSummary) {
+        if (isDataCollectionEnabled('entityThroughputRepSummary')) {
             updates["entity_throughput_rep_summary"] = simulationDataService.prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
             log.info(`Prepared entity_throughput_rep_summary update with ${updates["entity_throughput_rep_summary"].patch.items.size} items`);
 
@@ -441,15 +288,15 @@ export async function updateSimulationResults(
             }
         }
 
-        if (activeDataCollectionConfig.resourceRepSummary) {
+        if (isDataCollectionEnabled('resourceRepSummary')) {
             updates["resource_rep_summary"] = simulationDataService.prepareResourceRepSummaryUpdate(resourceRepSummary);
         }
 
-        if (activeDataCollectionConfig.completeActivityMetrics) {
+        if (isDataCollectionEnabled('completeActivityMetrics')) {
             updates["complete_activity_metrics"] = simulationDataService.prepareCompleteActivityMetricsUpdate(completeActivityMetrics);
         }
 
-        if (activeDataCollectionConfig.customMetrics) {
+        if (isDataCollectionEnabled('customMetrics')) {
             updates["custom_metrics"] = simulationDataService.prepareCustomMetricsUpdate(customMetrics);
         }
 

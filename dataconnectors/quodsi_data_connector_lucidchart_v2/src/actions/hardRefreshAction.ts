@@ -1,9 +1,9 @@
 // actions/hardRefreshAction.ts
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
-import { updateSimulationResults } from "../collections/simulationResultsService";
 import { getRequiredContext } from "../utils/contextHelper";
 import { getConfig } from "../config";
 import { initializeStorageService } from "../services/simulationDataService";
+import { updateSimulationResults } from "../services";
 
 export const hardRefreshAction = async (action: DataConnectorAsynchronousAction) => {
     try {

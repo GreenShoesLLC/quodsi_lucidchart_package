@@ -10,10 +10,11 @@ import { importSimulationResultsAction } from '../actions/importSimulationResult
 import { saveAndSubmitSimulationAction } from '../actions/saveAndSubmitSimulationAction';
 import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAction';
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
+import { registerDataSources } from './registerDataSource';
 
 export const createDataConnector = () => {
     const client = new DataConnectorClient({ crypto, Buffer });
-    return new DataConnector(client)
+    const connector = new DataConnector(client)
         .defineAsynchronousAction("Simulate", simulateAction)
         .defineAsynchronousAction("GetActivityUtilization", getActivityUtilizationAction)
         .defineAsynchronousAction("Poll", pollAction)
@@ -23,6 +24,11 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("SaveAndSubmitSimulation", saveAndSubmitSimulationAction)
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction);
+    
+    // Register data sources and collections
+    // registerDataSources(connector);
+    
+    return connector;
 };
 
 export const validateLucidRequest = async (headers: Record<string, string | string[]>, body: any) => {

@@ -104,12 +104,16 @@ export class LucidSimulationJobSubmissionService {
         pageId: string,
         userId: string,
         applicationId?: string,
-        appVersion?: string
+        appVersion?: string,
+        scenarioId?: string
     ): Promise<string> {
         applicationId = applicationId || this.defaultApplicationId;
         appVersion = appVersion || this.defaultAppVersion;
+        
+        // Default scenarioId to empty string if not provided
+        const scenarioIdParam = scenarioId ? `--scenario-id ${scenarioId}` : '';
 
-        console.log('[BatchService] Starting job submission for document:', documentId);
+        console.log('[BatchService] Starting job submission for document:', documentId, 'scenario:', scenarioId || 'default');
 
         try {
             const jobId = `Job-${crypto.randomUUID()}`;
@@ -132,7 +136,8 @@ export class LucidSimulationJobSubmissionService {
             // Create and submit task with retry
             await retry(async () => {
                 const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replace(".", "_")}`;
-                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --page-id ${pageId} --user-id ${userId}"`;
+                // Add scenarioId parameter to the command line if provided
+                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --page-id ${pageId} --user-id ${userId} ${scenarioIdParam}"`;
 
                 const taskParams: TaskAddParameter = {
                     id: taskId,
@@ -148,7 +153,7 @@ export class LucidSimulationJobSubmissionService {
                 await this.batchClient.task.add(jobId, taskParams);
             }, this.taskRetryOptions);
 
-            console.log('[BatchService] Successfully submitted job with task:', { jobId, taskId });
+            console.log('[BatchService] Successfully submitted job with task:', { jobId, taskId, scenarioId });
             return `Job '${jobId}' with task '${taskId}' submitted successfully.`;
 
         } catch (error: any) {
