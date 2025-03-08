@@ -20,10 +20,11 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityTimingData>([
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<ActivityTimingData[]> {
-    const blobName = 'activity_timing.csv';
-
+    const baseBlobName = 'activity_timing.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
     conditionalLog(`[activityTiming] Attempting to fetch activity timing data from: ${containerName}/${blobName}`);
 
     try {

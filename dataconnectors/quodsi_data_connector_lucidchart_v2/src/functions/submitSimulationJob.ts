@@ -7,8 +7,7 @@ import { getConfig } from "../config";
 
 interface SubmitJobRequest {
     documentId: string;
-    pageId: string;
-    userId: string;
+    scenarioId: string;
     applicationId?: string;
     appVersion?: string;
 }
@@ -45,30 +44,28 @@ export async function submitSimulationJob(request: HttpRequest, context: Invocat
         // Parse and validate request body
         context.log(`[${requestId}] Attempting to parse request body`);
         const requestBody = await request.json() as SubmitJobRequest;
-        const { documentId, pageId, userId, applicationId, appVersion } = requestBody;
+        const { documentId, scenarioId, applicationId, appVersion } = requestBody;
         
         // Log validation check results
         context.log(`[${requestId}] Request body validation:`, {
             hasDocumentId: !!documentId,
-            hasPageId: !!pageId,
-            hasUserId: !!userId,
+            hasscenarioId: !!scenarioId,
             hasApplicationId: !!applicationId,
             hasAppVersion: !!appVersion,
             applicationId: applicationId || 'Using default',
             appVersion: appVersion || 'Using default'
         });
         
-        if (!documentId || !pageId || !userId) {
+        if (!documentId || !scenarioId) {
             context.log(`[${requestId}] Error: Missing required fields in request body`, {
                 missingFields: {
                     documentId: !documentId,
-                    pageId: !pageId,
-                    userId: !userId
+                    scenarioId: !scenarioId
                 }
             });
             return {
                 status: 400,
-                jsonBody: { message: "Missing required fields: documentId, pageId, or userId" } as ErrorResponse
+                jsonBody: { message: "Missing required fields: documentId, scenarioId" } as ErrorResponse
             };
         }
 
@@ -110,16 +107,14 @@ export async function submitSimulationJob(request: HttpRequest, context: Invocat
         const submitStart = Date.now();
         context.log(`[${requestId}] Submitting job to batch service`, {
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId: applicationId || 'default',
             appVersion: appVersion || 'default'
         });
 
         const result = await batchService.submitJob(
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion
         );
@@ -150,8 +145,7 @@ export async function submitSimulationJob(request: HttpRequest, context: Invocat
             batchServiceInitDuration: `${metrics.batchServiceInitDuration}ms`,
             batchSubmitDuration: `${metrics.batchSubmitDuration}ms`,
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             jobId: response.jobId,
             taskId: response.taskId,
             performanceBreakdown: {

@@ -21,10 +21,11 @@ export const requiredColumns = getRequiredColumnsFromType<EntityThroughputRepSum
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<EntityThroughputRepSummaryData[]> {
-    const blobName = 'entity_throughput_rep_summary.csv';
-
+    const baseBlobName = 'entity_throughput_rep_summary.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
     // The documentId IS the container name, so we don't include it in the path
     // We just look for the CSV file directly in the container root
     const fullPath = blobName;

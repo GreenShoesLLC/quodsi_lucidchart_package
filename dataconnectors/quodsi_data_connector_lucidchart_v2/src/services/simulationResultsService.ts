@@ -11,7 +11,7 @@ import { CollectionsUpdate } from './collectionUpdateService';
  * Updates simulation results data in the simulation_results datasource
  * @param action The asynchronous action context
  * @param documentId Document ID containing the simulation results
- * @param userId User ID who initiated the simulation
+ * @param scenarioId User ID who initiated the simulation
  * @param source Source identifier for the update
  * @param verbose Whether to log verbose output
  * @param logger Optional logger instance
@@ -20,7 +20,7 @@ import { CollectionsUpdate } from './collectionUpdateService';
 export async function updateSimulationResults(
     action: DataConnectorAsynchronousAction,
     documentId: string,
-    userId: string,
+    scenarioId: string,
     source: string = 'unknown',
     verbose: boolean = true,
     logger?: ActionLogger
@@ -30,7 +30,7 @@ export async function updateSimulationResults(
 
     try {
         log.info(`=== Starting Simulation Results Update (Source: ${source}) ===`);
-        log.info(`Document ID: ${documentId}, User ID: ${userId}`);
+        log.info(`Document ID: ${documentId}, Scenario ID: ${scenarioId}`);
 
         const config = getConfig();
         initializeStorageService(config.azureStorageConnectionString);
@@ -72,7 +72,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching activity utilization data...');
                 activityUtilization = await simulationDataService.fetchActivityUtilization(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.activityUtilization.success = true;
                 dataFetchResults.activityUtilization.count = activityUtilization.length;
@@ -88,7 +88,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching activity rep summary data...');
                 activityRepSummary = await simulationDataService.fetchActivityRepSummary(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.activityRepSummary.success = true;
                 dataFetchResults.activityRepSummary.count = activityRepSummary.length;
@@ -104,7 +104,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching activity timing data...');
                 activityTiming = await simulationDataService.fetchActivityTiming(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.activityTiming.success = true;
                 dataFetchResults.activityTiming.count = activityTiming.length;
@@ -120,7 +120,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching entity state rep summary data...');
                 entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.entityStateRepSummary.success = true;
                 dataFetchResults.entityStateRepSummary.count = entityStateRepSummary.length;
@@ -135,62 +135,10 @@ export async function updateSimulationResults(
         if (isDataCollectionEnabled('entityThroughputRepSummary')) {
             try {
                 log.info('Fetching entity throughput rep summary data...');
-
-                // Log the exact path being used
-                const fullPath = `${documentId}/entity_throughput_rep_summary.csv`;
-                log.info(`Full blob path: ${config.simulationResultsContainer}/${fullPath}`);
-
-                // Check if the file exists first
-                const storageService = simulationDataService.getStorageService();
-                const exists = await storageService.getBlobContent(
-                    config.simulationResultsContainer,
-                    fullPath
-                );
-
-                if (exists) {
-                    log.info(`Entity throughput file exists! Content length: ${exists.length} bytes`);
-                    log.info(`Preview: ${exists.substring(0, 100)}...`);
-
-                    // Try to examine the file content
-                    try {
-                        const lines = exists.split('\n');
-                        log.info(`CSV has ${lines.length} lines`);
-                        if (lines.length > 0) {
-                            log.info(`Headers: ${lines[0]}`);
-                        }
-                        if (lines.length > 1) {
-                            log.info(`First data row: ${lines[1]}`);
-                        }
-                    } catch (parseError) {
-                        log.error(`Error examining CSV content: ${parseError.message}`);
-                    }
-                } else {
-                    log.warn(`Entity throughput file NOT found at path: ${fullPath}`);
-
-                    // Try alternative path
-                    const altPath = `${documentId}/results/entity_throughput_rep_summary.csv`;
-                    log.info(`Trying alternative path: ${altPath}`);
-                    const altContent = await storageService.getBlobContent(
-                        config.simulationResultsContainer,
-                        altPath
-                    );
-
-                    if (altContent) {
-                        log.info(`Entity throughput file found at alternative path! Content length: ${altContent.length} bytes`);
-                    } else {
-                        log.warn(`Entity throughput file not found at alternative path either.`);
-                    }
-                }
-
                 // Now do the regular fetch
                 entityThroughputRepSummary = await simulationDataService.fetchEntityThroughputRepSummary(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
-
-                log.info(`Entity throughput data loaded: ${entityThroughputRepSummary.length} rows`);
-                if (entityThroughputRepSummary.length > 0) {
-                    log.info('First row data:', entityThroughputRepSummary[0]);
-                }
 
                 dataFetchResults.entityThroughputRepSummary.success = true;
                 dataFetchResults.entityThroughputRepSummary.count = entityThroughputRepSummary.length;
@@ -207,7 +155,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching resource rep summary data...');
                 resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.resourceRepSummary.success = true;
                 dataFetchResults.resourceRepSummary.count = resourceRepSummary.length;
@@ -223,7 +171,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching complete activity metrics data...');
                 completeActivityMetrics = await simulationDataService.fetchCompleteActivityMetrics(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.completeActivityMetrics.success = true;
                 dataFetchResults.completeActivityMetrics.count = completeActivityMetrics.length;
@@ -239,7 +187,7 @@ export async function updateSimulationResults(
             try {
                 log.info('Fetching custom metrics data...');
                 customMetrics = await simulationDataService.fetchCustomMetrics(
-                    config.simulationResultsContainer, documentId
+                    config.simulationResultsContainer, documentId, scenarioId
                 );
                 dataFetchResults.customMetrics.success = true;
                 dataFetchResults.customMetrics.count = customMetrics.length;

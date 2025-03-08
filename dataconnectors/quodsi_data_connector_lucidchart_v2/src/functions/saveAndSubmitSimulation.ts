@@ -8,8 +8,7 @@ import { getConfig } from "../config";
 
 interface SaveAndSubmitRequest {
     documentId: string;
-    pageId: string;
-    userId: string;
+    scenarioId: string;
     model: any;  // The model definition
     applicationId?: string;
     appVersion?: string;
@@ -55,13 +54,12 @@ export async function saveAndSubmitSimulation(request: HttpRequest, context: Inv
         // Parse and validate request body
         context.log(`[${requestId}] Attempting to parse request body`);
         const requestBody = await request.json() as SaveAndSubmitRequest;
-        const { documentId, pageId, userId, model, applicationId, appVersion } = requestBody;
+        const { documentId, scenarioId: scenarioId, model, applicationId, appVersion } = requestBody;
         
         // Log validation check results
         context.log(`[${requestId}] Request body validation:`, {
             hasDocumentId: !!documentId,
-            hasPageId: !!pageId,
-            hasUserId: !!userId,
+            hasScenarioId: !!scenarioId,
             hasModel: !!model,
             modelType: model ? typeof model : 'undefined',
             modelKeys: model ? Object.keys(model) : [],
@@ -69,19 +67,18 @@ export async function saveAndSubmitSimulation(request: HttpRequest, context: Inv
             hasAppVersion: !!appVersion
         });
         
-        if (!documentId || !pageId || !userId || !model) {
+        if (!documentId || !scenarioId || !model) {
             context.log(`[${requestId}] Error: Missing required fields in request body`, {
                 missingFields: {
                     documentId: !documentId,
-                    pageId: !pageId,
-                    userId: !userId,
+                    scenarioId: !scenarioId,
                     model: !model
                 }
             });
             return {
                 status: 400,
                 jsonBody: { 
-                    message: "Missing required fields: documentId, pageId, userId, or model",
+                    message: "Missing required fields: documentId, scenarioId, or model",
                     phase: "validation"
                 } as ErrorResponse
             };
@@ -98,7 +95,7 @@ export async function saveAndSubmitSimulation(request: HttpRequest, context: Inv
         const storageService = new AzureStorageService(config.azureStorageConnectionString);
         context.log(`[${requestId}] Storage service initialized`);
         
-        const blobName = "model_" + userId + "_" + pageId + ".json";
+        const blobName = "model_" + scenarioId + ".json";
 
         // Serialize model
         const serializeStart = Date.now();
@@ -173,16 +170,14 @@ export async function saveAndSubmitSimulation(request: HttpRequest, context: Inv
 
         context.log(`[${requestId}] Submitting job to batch service`, {
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion
         });
 
         const batchResult = await batchService.submitJob(
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion
         );
@@ -217,8 +212,7 @@ export async function saveAndSubmitSimulation(request: HttpRequest, context: Inv
             modelSize: metrics.modelSize,
             compressionRatio: metrics.compressionRatio,
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             jobId: response.batchJob.jobId,
             taskId: response.batchJob.taskId,
             blobUrl: response.blobUrl,

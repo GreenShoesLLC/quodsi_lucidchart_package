@@ -12,13 +12,13 @@ export const simulateAction: (action: DataConnectorAsynchronousAction) => Promis
 
         // Perform a type assertion to ensure action.data has the expected structure.
         console.log('[simulateAction] Attempting type assertion on action.data.');
-        const data = action.data as { documentId: string, pageId: string, userId: string };
+        const data = action.data as { documentId: string, scenarioId: string };
         console.log('[simulateAction] Type assertion successful. Data extracted:', data);
         // Extract data from action
-        const { documentId, pageId, userId } = data;
+        const { documentId, scenarioId } = data;
         const authToken = action.context.userCredential;
         console.log(
-            `[simulateAction] Extracted documentId: ${documentId}, pageId: ${pageId}, userId: ${userId}`
+            `[simulateAction] Extracted documentId: ${documentId}, scenarioId: ${scenarioId}`
         );
         // Log only the length of the auth token for security.
         console.log(
@@ -42,15 +42,13 @@ export const simulateAction: (action: DataConnectorAsynchronousAction) => Promis
         // Log details before calling the simulate endpoint.
         console.log('[simulateAction] Preparing to call simulateDocument endpoint with parameters:', {
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             authToken: authToken ? 'Provided' : 'Not Provided'
         });
         // Call the simulate endpoint using our service
         const success = await lucidApiService.simulateDocument(
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             authToken
         );
 

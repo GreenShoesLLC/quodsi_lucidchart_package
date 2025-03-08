@@ -51,7 +51,7 @@ import { SimulationResultsReader } from '../data_sources';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
 
 
-
+const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
 export class ModelPanel extends Panel {
     private static readonly LOG_PREFIX = '[ModelPanel]';
@@ -268,7 +268,7 @@ export class ModelPanel extends Panel {
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'ImportSimulationResults',
-                actionData: { documentId: document.id, userId: user.id, pageId: viewport.getCurrentPage()?.id },
+                actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
                 asynchronous: true
             });
             this.handleOutputCreateDashboard()
@@ -1055,7 +1055,7 @@ export class ModelPanel extends Panel {
                 await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'SaveAndSubmitSimulation',
-                    actionData: { 'documentId': documentId, 'pageId': pageId, 'userId': userId, 'model': serializedModel },
+                    actionData: { 'documentId': documentId, scenarioId: BASELINE_SCENARIO_ID, 'model': serializedModel },
                     asynchronous: true
                 });
                 // Send success message back to React app
@@ -1118,7 +1118,7 @@ export class ModelPanel extends Panel {
                         await this.client.performDataAction({
                             dataConnectorName: 'quodsi_data_connector',
                             actionName: 'UploadModelDefinition',
-                            actionData: { documentId: documentId, userId: userId, pageId: pageId, model: serializedModel },
+                            actionData: { documentId: documentId, scenarioId: BASELINE_SCENARIO_ID, model: serializedModel },
                             asynchronous: true
                         });
 

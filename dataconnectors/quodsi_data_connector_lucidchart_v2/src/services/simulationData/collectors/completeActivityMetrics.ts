@@ -17,7 +17,8 @@ export const requiredColumns = getRequiredColumnsFromType<CompleteActivityMetric
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<CompleteActivityMetricsData[]> {
     return fetchCsvData<CompleteActivityMetricsData>(
         containerName, 

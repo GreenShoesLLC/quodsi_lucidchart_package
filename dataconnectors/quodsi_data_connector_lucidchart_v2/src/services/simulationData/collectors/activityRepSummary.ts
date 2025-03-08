@@ -21,9 +21,11 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityRepSummaryData
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<ActivityRepSummaryData[]> {
-    const blobName = 'activity_rep_summary.csv';
+    const baseBlobName = 'activity_rep_summary.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
 
     conditionalLog(`[activityRepSummary] Attempting to fetch activity rep summary data from: ${containerName}/${blobName}`);
 

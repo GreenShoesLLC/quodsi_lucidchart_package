@@ -7,7 +7,8 @@ import { initializeStorageService } from "../services/simulationData";
 import {
     updateSimulationResults,
     getScenarioResultIds,
-    parseScenarioResultId
+    parseScenarioResultId,
+    createSimulationImportService
 } from "../services";
 import { ActionLogger } from "../utils/logging";
 
@@ -26,19 +27,24 @@ export const pollAction = async (action: DataConnectorAsynchronousAction) => {
         // Step 1: Check for any ScenarioResultsSchema instances
         logger.info("Checking for scenario results...");
         const scenarioResultIds = await getScenarioResultIds(action, POLL_ACTION_VERBOSE_LOGGING, logger);
-
+        const collectionsToImport: string[] = [];
         if (scenarioResultIds.length > 0) {
             logger.info(`Found ${scenarioResultIds.length} scenario results`);
-
+            // Create an instance of the simulation import service
+            const importService = createSimulationImportService(POLL_ACTION_VERBOSE_LOGGING);
             // Process each scenario result ID
             for (const compositeId of scenarioResultIds) {
                 try {
                     // Parse the composite ID to get documentId and scenarioId
                     const { documentId, scenarioId } = parseScenarioResultId(compositeId);
                     logger.info(`Polling found scenario: documentId=${documentId}, scenarioId=${scenarioId}`);
-
-                    // TODO: In the future, we would check Azure Storage for status updates
-                    // and update the scenario state accordingly
+                    // Use the service to perform the import
+                    const result = await importService.importSimulationResults(action, {
+                        documentId: documentId,
+                        scenarioId: scenarioId, //using scenarioId temporarily until importSimulationResults is modified
+                        collectionsToImport: collectionsToImport,
+                        verboseLogging: POLL_ACTION_VERBOSE_LOGGING
+                    });
 
                 } catch (parseError) {
                     logger.error(`Error parsing scenario ID ${compositeId}: ${parseError.message}`);
@@ -48,29 +54,6 @@ export const pollAction = async (action: DataConnectorAsynchronousAction) => {
             logger.info("No scenario results found");
         }
 
-        // Step 2: Continue with the existing simulation results update logic
-        // Get validated context data for the older model
-        const context = getRequiredContext(action);
-
-        // If no context found, return success without doing anything for simulation results
-        if (!context) {
-            logger.info("No valid context found for simulation results, skipping update");
-        } else {
-            // Initialize Azure Storage Service
-            const config = getConfig();
-            initializeStorageService(config.azureStorageConnectionString);
-
-            // Use the simulation results service
-            logger.info("Updating simulation results for context:", context);
-            const result = await updateSimulationResults(
-                action,
-                context.documentId,
-                context.userId,
-                'poll',
-                POLL_ACTION_VERBOSE_LOGGING
-            );
-            logger.info("Simulation results update completed:", result);
-        }
 
         logger.info("=== Poll Action Completed Successfully ===");
         return { success: true };

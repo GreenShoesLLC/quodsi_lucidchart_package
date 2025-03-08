@@ -18,17 +18,18 @@ export const requiredColumns = getRequiredColumnsFromType<ResourceRepSummaryData
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<ResourceRepSummaryData[]> {
-    const blobName = 'resource_rep_summary.csv';
-
+    const baseBlobName = 'resource_rep_summary.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
     conditionalLog(`[resourceRepSummary] Attempting to fetch resource rep summary data from: ${containerName}/${blobName}`);
 
     try {
         // Try first at the root level
         let result = await fetchCsvData<ResourceRepSummaryData>(
-            containerName, 
-            blobName, 
+            containerName,
+            blobName,
             documentId,
             requiredColumns
         );
@@ -55,10 +56,10 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Ensure resource_id is a string
             const resourceId = String(item.resource_id || 'unknown_resource');
-            
+
             // Create a composite ID
             const id = `${item.rep || 0}_${resourceId}`;
-            
+
             // Create a new object with defaults for all required fields
             const validItem: ResourceRepSummaryData = {
                 id,
@@ -74,7 +75,7 @@ export async function fetchData(
                 max_queue_length: item.max_queue_length ?? 0,
                 avg_contents: item.avg_contents ?? 0
             };
-            
+
             return validItem;
         });
 
@@ -103,10 +104,10 @@ export function prepareUpdate(data: ResourceRepSummaryData[]) {
     data.forEach(item => {
         // Ensure resource_id is a string
         const resourceId = String(item.resource_id || 'unknown_resource');
-        
+
         // Create a composite key
         const id = item.id || `${item.rep || 0}_${resourceId}`;
-        
+
         conditionalLog(`[resourceRepSummary] Processing item with ID ${id}`);
 
         // Create a cleaned object with no null values

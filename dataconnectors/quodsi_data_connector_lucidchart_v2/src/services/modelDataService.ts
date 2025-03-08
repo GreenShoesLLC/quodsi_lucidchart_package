@@ -7,8 +7,7 @@ import { ActionLogger } from '../utils/logging';
  * Updates model data in the simulation_results datasource
  * @param action The asynchronous action context
  * @param documentId Document ID containing the model
- * @param userId User ID who owns the model
- * @param pageId Page ID where the model is defined
+ * @param scenarioId Page ID where the model is defined
  * @param verbose Whether to log verbose output
  * @param logger Optional logger instance
  * @returns Promise resolving when the update is complete
@@ -16,25 +15,23 @@ import { ActionLogger } from '../utils/logging';
 export async function updateModelData(
     action: DataConnectorAsynchronousAction,
     documentId: string,
-    userId: string,
-    pageId: string,
+    scenarioId: string,
     verbose: boolean = true,
     logger?: ActionLogger
 ): Promise<void> {
     // Create a local logger if none was provided
     const log = logger || new ActionLogger('[ModelData]', verbose);
 
-    if (!pageId) {
-        throw new Error('pageId is required for model data');
+    if (!scenarioId) {
+        throw new Error('scenarioId is required for model data');
     }
 
     const modelData = {
         documentId,
-        userId,
-        pageId
+        scenarioId: scenarioId
     };
 
-    log.info(`=== Updating Model Data (pageId: ${pageId}) ===`);
+    log.info(`=== Updating Model Data (scenarioId: ${scenarioId}) ===`);
 
     await action.client.update({
         dataSourceName: "simulation_results",
@@ -43,7 +40,7 @@ export async function updateModelData(
                 schema: ModelSchema,
                 patch: {
                     items: new Map([
-                        [`"${pageId}"`, modelData]  // Ensure the key is properly quoted
+                        [`"${scenarioId}"`, modelData]  // Ensure the key is properly quoted
                     ])
                 }
             }

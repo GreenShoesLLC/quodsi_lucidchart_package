@@ -88,31 +88,15 @@ export class LucidSimulationJobSubmissionService {
         }
     }
 
-    private isTransientError(error: any): boolean {
-        if (!error.code) return false;
-
-        return [
-            'OperationTimedOut',
-            'ServerBusy',
-            'ServiceUnavailable',
-            'RequestRateTooLarge'
-        ].includes(error.code);
-    }
-
     public async submitJob(
         documentId: string,
-        pageId: string,
-        userId: string,
+        scenarioId: string,
         applicationId?: string,
-        appVersion?: string,
-        scenarioId?: string
+        appVersion?: string
     ): Promise<string> {
         applicationId = applicationId || this.defaultApplicationId;
         appVersion = appVersion || this.defaultAppVersion;
         
-        // Default scenarioId to empty string if not provided
-        const scenarioIdParam = scenarioId ? `--scenario-id ${scenarioId}` : '';
-
         console.log('[BatchService] Starting job submission for document:', documentId, 'scenario:', scenarioId || 'default');
 
         try {
@@ -137,7 +121,7 @@ export class LucidSimulationJobSubmissionService {
             await retry(async () => {
                 const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replace(".", "_")}`;
                 // Add scenarioId parameter to the command line if provided
-                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --page-id ${pageId} --user-id ${userId} ${scenarioIdParam}"`;
+                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --scenario-id ${scenarioId}"`;
 
                 const taskParams: TaskAddParameter = {
                     id: taskId,

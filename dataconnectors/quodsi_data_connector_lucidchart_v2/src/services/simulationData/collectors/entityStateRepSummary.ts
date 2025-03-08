@@ -16,18 +16,21 @@ export const requiredColumns = getRequiredColumnsFromType<EntityStateRepSummaryD
  * Fetches entity state rep summary data from storage
  * @param containerName Azure container name
  * @param documentId Document ID
+ * @param scenarioId Scenario ID to use as folder prefix
  * @returns Array of entity state rep summary data
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<EntityStateRepSummaryData[]> {
-    const blobName = 'entity_state_rep_summary.csv';
+    const baseBlobName = 'entity_state_rep_summary.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
 
     conditionalLog(`[entityStateRepSummary] Attempting to fetch entity state data from: ${containerName}/${blobName}`);
 
     try {
-        // Try first at the root level
+        // Try first at the root level or in the scenarioId folder
         let result = await fetchCsvData<EntityStateRepSummaryData>(
             containerName,
             blobName,
@@ -35,17 +38,46 @@ export async function fetchData(
             requiredColumns
         );
 
-        // If we didn't find any data at the root level, try in the results folder
+        // If we didn't find any data, try in the results folder
         if (result.length === 0) {
-            conditionalLog(`[entityStateRepSummary] No data at root level, trying in results folder...`);
+            conditionalLog(`[entityStateRepSummary] No data at primary location, trying in results folder...`);
 
-            const altBlobName = 'results/entity_state_rep_summary.csv';
+            // If scenarioId is provided, look in scenarioId/results/file.csv
+            // Otherwise, look in results/file.csv
+            const altBlobName = scenarioId 
+                ? `${scenarioId}/results/${baseBlobName}` 
+                : `results/${baseBlobName}`;
+                
             result = await fetchCsvData<EntityStateRepSummaryData>(
                 containerName,
                 altBlobName,
                 documentId,
                 requiredColumns
             );
+            
+            // If still no data and we're using a scenarioId, try without it as fallback
+            if (result.length === 0 && scenarioId) {
+                conditionalLog(`[entityStateRepSummary] No data in scenarioId folder, trying without scenarioId as fallback...`);
+                
+                // Try at root level without scenarioId folder
+                result = await fetchCsvData<EntityStateRepSummaryData>(
+                    containerName,
+                    baseBlobName,
+                    documentId,
+                    requiredColumns
+                );
+                
+                // Try in global results folder without scenarioId
+                if (result.length === 0) {
+                    conditionalLog(`[entityStateRepSummary] No data at root level without scenarioId, trying in results folder...`);
+                    result = await fetchCsvData<EntityStateRepSummaryData>(
+                        containerName,
+                        `results/${baseBlobName}`,
+                        documentId,
+                        requiredColumns
+                    );
+                }
+            }
         }
 
         conditionalLog(`[entityStateRepSummary] Fetched ${result.length} entity state records`);

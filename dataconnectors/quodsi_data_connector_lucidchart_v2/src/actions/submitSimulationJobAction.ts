@@ -5,8 +5,7 @@ import { getConfig } from "../config";
 
 interface SubmitJobRequest {
     documentId: string;
-    pageId: string;
-    userId: string;
+    scenarioId: string; 
     applicationId?: string;
     appVersion?: string;
 }
@@ -23,13 +22,12 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
     try {
         // Extract and validate request data
         const data = action.data as SubmitJobRequest;
-        const { documentId, pageId, userId, applicationId, appVersion } = data;
+        const { documentId, scenarioId, applicationId, appVersion } = data;
         
-        if (!documentId || !pageId || !userId) {
+        if (!documentId || !scenarioId) {
             console.error('[submitSimulationJobAction] Missing required fields', {
                 hasDocumentId: !!documentId,
-                hasPageId: !!pageId,
-                hasUserId: !!userId
+                hasscenarioId: !!scenarioId,
             });
             return { success: false };
         }
@@ -51,8 +49,7 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
 
         console.log('[submitSimulationJobAction] Submitting job to batch service', {
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion
         });
@@ -60,8 +57,7 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
         // Submit the job
         const result = await batchService.submitJob(
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion
         );
@@ -75,8 +71,7 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
         console.log('[submitSimulationJobAction] Operation completed', {
             totalDuration: `${totalDuration}ms`,
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             jobId: jobIdMatch?.[1],
             taskId: taskIdMatch?.[1],
             result

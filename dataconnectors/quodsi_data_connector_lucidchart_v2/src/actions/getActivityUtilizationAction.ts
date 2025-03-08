@@ -8,10 +8,10 @@ export const getActivityUtilizationAction: (action: DataConnectorAsynchronousAct
 ) => {
     try {
         // Type assertion to ensure action.data has the expected structure
-        const data = action.data as { documentId: string, userId: string };
+        const data = action.data as { documentId: string, scenarioId: string };
 
         // Extract data from action
-        const { documentId, userId } = data;
+        const { documentId, scenarioId } = data;
         const authToken = action.context.userCredential;
 
         // Log for debugging
@@ -24,7 +24,7 @@ export const getActivityUtilizationAction: (action: DataConnectorAsynchronousAct
         const lucidApiService = createLucidApiService(baseUrl);
 
         // Get the CSV blob
-        const csvText = await lucidApiService.getActivityUtilization(documentId, userId);
+        const csvText = await lucidApiService.getActivityUtilization(documentId, scenarioId);
 
         console.log("[getActivityUtilizationAction] Successfully retrieved activity utilization data");
         return {

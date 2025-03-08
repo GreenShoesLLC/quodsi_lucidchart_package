@@ -34,5 +34,14 @@ export {
     updateSimulationResults
 } from './simulationResultsService';
 
+// Simulation import operations
+export {
+    SimulationImportService,
+    createSimulationImportService,
+    SimulationImportParams,
+    SimulationImportResult,
+    CollectionImportConfig
+} from './simulationImportService';
+
 // Re-export existing services that might be used by others
 export * from './simulationDataService';

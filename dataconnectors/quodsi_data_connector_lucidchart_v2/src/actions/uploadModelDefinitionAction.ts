@@ -4,13 +4,12 @@ import { getConfig } from "../config";
 
 interface UploadModelRequest {
     documentId: string;  // Added to match the route parameter from the original function
-    userId: string;
-    pageId: string;
+    scenarioId: string;
     model: any;
 }
 
-function getBlobName(userId: string, pageId: string): string {
-    return `model_${userId}_${pageId}.json`;
+function getBlobName(scenarioId: string): string {
+    return `model_${scenarioId}.json`;
 }
 
 export const uploadModelDefinitionAction: (action: DataConnectorAsynchronousAction) => Promise<{ success: boolean }> = async (
@@ -27,14 +26,13 @@ export const uploadModelDefinitionAction: (action: DataConnectorAsynchronousActi
     try {
         // Extract and validate request data
         const data = action.data as UploadModelRequest;
-        const { documentId, userId, pageId, model } = data;
+        const { documentId, scenarioId: scenarioId, model } = data;
         
         // Validate required fields
-        if (!documentId || !userId || !pageId || !model) {
+        if (!documentId || !scenarioId || !model) {
             console.error('[uploadModelDefinitionAction] Missing required fields', {
                 hasDocumentId: !!documentId,
-                hasUserId: !!userId,
-                hasPageId: !!pageId,
+                hasScenarioId: !!scenarioId,
                 hasModel: !!model
             });
             return { success: false };
@@ -57,7 +55,7 @@ export const uploadModelDefinitionAction: (action: DataConnectorAsynchronousActi
 
         // Upload the model
         const uploadStart = Date.now();
-        const blobName = getBlobName(userId, pageId);
+        const blobName = getBlobName(scenarioId);
         
         console.log(`[uploadModelDefinitionAction] Uploading model to blob storage`, {
             documentId,

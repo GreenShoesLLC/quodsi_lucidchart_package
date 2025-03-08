@@ -12,13 +12,10 @@ const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
 interface SaveAndSubmitRequest {
     documentId: string;
-    pageId: string;
-    userId: string;
+    scenarioId: string; 
     model: any;
     applicationId?: string;
     appVersion?: string;
-    // Added scenarioId with default value
-    scenarioId?: string;
 }
 
 export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAction) => Promise<{ success: boolean }> = async (
@@ -36,12 +33,12 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     try {
         // Extract and validate request data
         const data = action.data as SaveAndSubmitRequest;
-        const { documentId, pageId, userId, model, applicationId, appVersion } = data;
+        const { documentId, scenarioId, model, applicationId, appVersion } = data;
         
         // Use default baseline scenario ID if not provided
-        const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
+        // const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
         
-        if (!documentId || !pageId || !userId || !model) {
+        if (!documentId || !scenarioId || !model) {
             logger.error('Missing required fields');
             return { success: false };
         }
@@ -54,16 +51,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             const scenarioResult = await updateScenarioResultsData(
                 action,
                 documentId,
-                pageId,
                 scenarioId,
-                pageId, // Using pageId as modelId for now
-                scenarioId === BASELINE_SCENARIO_ID ? 'Baseline' : `Scenario ${scenarioId.substring(0, 8)}`,
-                'submitted',
-                userId,
-                `${documentId}/${scenarioId}`,
-                undefined, // createdAt
-                undefined, // updatedAt
-                undefined, // completedAt
                 true,
                 logger
             );
@@ -84,7 +72,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const storageService = new AzureStorageService(config.azureStorageConnectionString);
         
         // Include scenario ID in the blob name for uniqueness
-        const blobName = `${scenarioId}/model_${userId}_${pageId}.json`;
+        const blobName = `${scenarioId}/model_${scenarioId}.json`;
         const modelJson = JSON.stringify(model, null, 2);
         
         logger.info(`Uploading model to blob storage for document: ${documentId}, scenario: ${scenarioId}`);
@@ -103,16 +91,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             const failedUpdate = await updateScenarioResultsData(
                 action,
                 documentId,
-                pageId,
                 scenarioId,
-                pageId,
-                scenarioId === BASELINE_SCENARIO_ID ? 'Baseline' : `Scenario ${scenarioId.substring(0, 8)}`,
-                'failed',
-                userId,
-                `${documentId}/${scenarioId}`,
-                undefined,
-                undefined,
-                undefined,
                 true,
                 logger
             );
@@ -139,11 +118,9 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         // Pass scenarioId to batch service
         const batchResult = await batchService.submitJob(
             documentId,
-            pageId,
-            userId,
+            scenarioId,
             applicationId,
             appVersion,
-            scenarioId // Add scenarioId to batch job submission
         );
         metrics.batchSubmitDuration = Date.now() - batchStart;
 
@@ -155,16 +132,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const runningUpdate = await updateScenarioResultsData(
             action,
             documentId,
-            pageId,
             scenarioId,
-            pageId,
-            scenarioId === BASELINE_SCENARIO_ID ? 'Baseline' : `Scenario ${scenarioId.substring(0, 8)}`,
-            'running',
-            userId,
-            `${documentId}/${scenarioId}`,
-            undefined,
-            undefined,
-            undefined,
             true,
             logger
         );
@@ -181,8 +149,6 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             uploadDuration: `${metrics.uploadDuration}ms`,
             batchSubmitDuration: `${metrics.batchSubmitDuration}ms`,
             documentId,
-            pageId,
-            userId,
             scenarioId,
             jobId: jobIdMatch?.[1],
             taskId: taskIdMatch?.[1],
@@ -216,21 +182,11 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         // If we have the data object, try to update the scenario to failed state
         try {
             const data = action.data as SaveAndSubmitRequest;
-            if (data && data.documentId && data.pageId && data.userId) {
-                const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
+            if (data && data.documentId && data.scenarioId) {
                 const failedUpdate = await updateScenarioResultsData(
                     action,
                     data.documentId,
-                    data.pageId,
-                    scenarioId,
-                    data.pageId,
-                    scenarioId === BASELINE_SCENARIO_ID ? 'Baseline' : `Scenario ${scenarioId.substring(0, 8)}`,
-                    'failed',
-                    data.userId,
-                    `${data.documentId}/${scenarioId}`,
-                    undefined,
-                    undefined,
-                    undefined,
+                    data.scenarioId,
                     true,
                     logger
                 );

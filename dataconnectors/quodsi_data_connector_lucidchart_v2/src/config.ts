@@ -19,7 +19,7 @@ const config: QuodsiConfig = {
     azureStorageConnectionString: process.env.AzureStorageConnectionString || '',
     simulationResultsContainer: process.env.SIMULATION_RESULTS_CONTAINER || 'simulation-results',
     batchPoolId: process.env.BatchPoolId || 'quodsi-pool',
-    defaultApplicationId: process.env.DefaultApplicationId,
+    defaultApplicationId: process.env.DefaultApplicationId || 'LucidQuodsim',
     defaultAppVersion: process.env.DefaultAppVersion,
     logLevel: process.env.LOG_LEVEL || 'info'
 };

@@ -7,16 +7,7 @@ import { ActionLogger } from '../utils/logging';
  * Updates or creates a scenario results entry in the simulation_results data source
  * @param action The asynchronous action context
  * @param documentId Document ID where the scenario is running
- * @param pageId Page ID where the model is located
  * @param scenarioId Scenario ID (UUID, with baseline as 00000000-0000-0000-0000-000000000000)
- * @param modelId ID of the model being simulated
- * @param name Name of the scenario (e.g., "Baseline", "Scenario 2")
- * @param state Current state of the simulation ("submitted", "running", "completed", "failed")
- * @param userId ID of the user who initiated the simulation
- * @param blobPath Path to the Azure storage location for results (optional)
- * @param createdAt Timestamp when the scenario was created (optional, defaults to now)
- * @param updatedAt Timestamp when the scenario was last updated (optional, defaults to now)
- * @param completedAt Timestamp when the scenario completed (optional)
  * @param verbose Whether to log verbose output
  * @param logger Optional logger instance
  * @returns Promise resolving with success status and optional error message
@@ -24,16 +15,7 @@ import { ActionLogger } from '../utils/logging';
 export async function updateScenarioResultsData(
     action: DataConnectorAsynchronousAction,
     documentId: string,
-    pageId: string,
     scenarioId: string,
-    modelId: string,
-    name: string,
-    state: string,
-    userId: string,
-    blobPath?: string,
-    createdAt?: string,
-    updatedAt?: string,
-    completedAt?: string,
     verbose: boolean = true,
     logger?: ActionLogger
 ): Promise<{ success: boolean, error?: string }> {

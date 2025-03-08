@@ -19,10 +19,11 @@ export const requiredColumns = getRequiredColumnsFromType<CustomMetricsData>([
  */
 export async function fetchData(
     containerName: string,
-    documentId: string
+    documentId: string,
+    scenarioId: string
 ): Promise<CustomMetricsData[]> {
-    const blobName = 'custom_metrics.csv';
-
+    const baseBlobName = 'custom_metrics.csv';
+    const blobName = `${scenarioId}/${baseBlobName}`
     conditionalLog(`[customMetrics] Attempting to fetch custom metrics data from: ${containerName}/${blobName}`);
 
     try {
