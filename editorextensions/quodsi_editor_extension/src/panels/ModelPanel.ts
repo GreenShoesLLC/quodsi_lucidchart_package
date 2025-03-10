@@ -305,22 +305,22 @@ export class ModelPanel extends Panel {
                     activityUtilization: true,
                     activityRepSummary: true,
                     activityTiming: true,
+                    entityState: true,
                     entityThroughput: true,
-                    resourceRepSummary: true,
-                    entityState: true
+                    resourceRepSummary: true
                 },
                 // Custom column configurations for specific table types
                 customColumnConfig: {
-                    activityUtilization: {
-                        columnOrder: [
-                            'Name',
-                            'utilization_mean',
-                            'utilization_max',
-                            'capacity_mean',
-                            'capacity_max'
-                        ],
-                        excludeColumns: ['Id']
-                    },
+                    // activityUtilization: {
+                    //     columnOrder: [
+                    //         'activity_name',
+                    //         'utilization_mean',
+                    //         'utilization_max',
+                    //         'capacity_mean',
+                    //         'capacity_max'
+                    //     ],
+                    //     excludeColumns: ['Id']
+                    // },
                     activityRepSummary: {
                         columnOrder: [
                             'activity_id',

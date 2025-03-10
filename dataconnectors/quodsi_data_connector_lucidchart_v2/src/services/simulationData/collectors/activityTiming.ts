@@ -67,11 +67,11 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Create a new object with defaults for all required fields
             const validItem: ActivityTimingData = {
-                id: item.id || "Unknown",
-                scenario_id: item.scenario_id || "Unknown",
-                scenario_name: item.scenario_name || "Unknown",
-                activity_id: item.activity_id || "Unknown",
-                activity_name: item.activity_name || "Unknown",
+                id: String(item.id || "Unknown"),
+                scenario_id: String(item.scenario_id || "Unknown"),
+                scenario_name: String(item.scenario_name || "Unknown"),
+                activity_id: String(item.activity_id || "Unknown"),
+                activity_name: String(item.activity_name || "Unknown"),
                 cycle_time_mean: item.cycle_time_mean ?? 0,
                 cycle_time_median: item.cycle_time_median ?? 0,
                 cycle_time_cv: item.cycle_time_cv ?? 0,
@@ -118,11 +118,11 @@ export function prepareUpdate(data: ActivityTimingData[]) {
     data.forEach(item => {
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            id: item.id || "Unknown",
-            scenario_id: item.scenario_id || "Unknown",
-            scenario_name: item.scenario_name || "Unknown",
-            activity_id: item.activity_id || "Unknown",
-            activity_name: item.activity_name || "Unknown",
+            id: String(item.id || "Unknown"),
+            scenario_id: String(item.scenario_id || "Unknown"),
+            scenario_name: String(item.scenario_name || "Unknown"),
+            activity_id: String(item.activity_id || "Unknown"),
+            activity_name: String(item.activity_name || "Unknown"),
             cycle_time_mean: item.cycle_time_mean ?? 0,
             cycle_time_median: item.cycle_time_median ?? 0,
             cycle_time_cv: item.cycle_time_cv ?? 0,
@@ -142,7 +142,7 @@ export function prepareUpdate(data: ActivityTimingData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
+        items.set(`"${String(item.id || 'Unknown')}"`, cleanedItem);
     });
 
     conditionalLog(`[activityTiming] Final map has ${items.size} items`);

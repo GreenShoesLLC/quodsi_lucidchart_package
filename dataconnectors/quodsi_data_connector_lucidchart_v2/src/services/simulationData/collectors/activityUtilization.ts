@@ -74,11 +74,11 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Create a new object with defaults for all required fields
             const validItem: ActivityUtilizationData = {
-                id: item.id || `Unknown`,
-                scenario_id: item.scenario_id || `Unknown`,
-                scenario_name: item.scenario_name || "Unknown",
-                activity_id: item.activity_id || `Unknown`,
-                activity_name: item.activity_name || 'Unknown Activity',
+                id: String(item.id || "Unknown"),
+                scenario_id: String(item.scenario_id || "Unknown"),
+                scenario_name: String(item.scenario_name || "Unknown"),
+                activity_id: String(item.activity_id || "Unknown"),
+                activity_name: String(item.activity_name || "Unknown"),
                 utilization_mean: item.utilization_mean ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
@@ -126,11 +126,11 @@ export function prepareUpdate(data: ActivityUtilizationData[]) {
 
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            id: item.id || `Unknown`,
-            scenario_id: item.scenario_id || `Unknown`,
-            scenario_name: item.scenario_name || "Unknown",
-            activity_id: item.activity_id || `Unknown`,
-            activity_name: item.activity_name || 'Unknown Activity',
+            id: String(item.id || "Unknown"),
+            scenario_id: String(item.scenario_id || "Unknown"),
+            scenario_name: String(item.scenario_name || "Unknown"),
+            activity_id: String(item.activity_id || "Unknown"),
+            activity_name: String(item.activity_name || "Unknown"),
             utilization_mean: item.utilization_mean ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
@@ -146,7 +146,7 @@ export function prepareUpdate(data: ActivityUtilizationData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
+        items.set(`"${String(item.id || 'Unknown')}"`, cleanedItem);
     });
 
     conditionalLog(`[activityUtilization] Final map has ${items.size} items`);

@@ -65,11 +65,11 @@ export async function fetchData(
 
             // Create a new object with defaults for all required fields
             const validItem: ResourceRepSummaryData = {
-                id: item.id || 'Unknown',
-                scenario_id: item.scenario_id || 'Unknown',
-                scenario_name: item.scenario_name || "Unknown",
-                resource_id: item.resource_id || 'Unknown',
-                resource_name: item.resource_name || 'Unknown',
+                id: String(item.id || "Unknown"),
+                scenario_id: String(item.scenario_id || 'Unknown'),
+                scenario_name: String(item.scenario_name || "Unknown"),
+                resource_id: String(item.resource_id || 'Unknown'),
+                resource_name: String(item.resource_name || 'Unknown'),
                 rep: item.rep || 0,
                 total_requests: item.total_requests ?? 0,
                 total_captures: item.total_captures ?? 0,
@@ -110,11 +110,11 @@ export function prepareUpdate(data: ResourceRepSummaryData[]) {
     data.forEach(item => {
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            id: item.id || 'Unknown',
-            scenario_id: item.scenario_id || 'Unknown',
-            scenario_name: item.scenario_name || "Unknown",
-            resource_id: item.resource_id || 'Unknown',
-            resource_name: item.resource_name || 'Unknown',
+            id: String(item.id || "Unknown"),
+            scenario_id: String(item.scenario_id || 'Unknown'),
+            scenario_name: String(item.scenario_name || "Unknown"),
+            resource_id: String(item.resource_id || 'Unknown'),
+            resource_name: String(item.resource_name || 'Unknown'),
             rep: item.rep || 0,
             total_requests: item.total_requests ?? 0,
             total_captures: item.total_captures ?? 0,

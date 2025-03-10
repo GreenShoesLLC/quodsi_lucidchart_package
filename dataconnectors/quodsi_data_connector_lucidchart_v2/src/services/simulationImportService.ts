@@ -5,7 +5,6 @@ import { getStorageService, initializeStorageService } from "./simulationData";
 import {
     resetDataCollectionConfig,
     setDataCollectionConfig,
-    updateModelData,
     updateSimulationResults
 } from "./index";
 import { ActionLogger } from '../utils/logging';
@@ -14,14 +13,12 @@ import { ActionLogger } from '../utils/logging';
  * Configuration for collections to import
  */
 export interface CollectionImportConfig {
-    activityUtilization?: boolean;
-    activityRepSummary?: boolean;
-    activityTiming?: boolean;
-    entityStateRepSummary?: boolean;
-    entityThroughputRepSummary?: boolean;
-    resourceRepSummary?: boolean;
-    completeActivityMetrics?: boolean;
-    customMetrics?: boolean;
+    collectActivityUtilization?: boolean;
+    collectActivityRepSummary?: boolean;
+    collectActivityTiming?: boolean;
+    collectEntityStateRepSummary?: boolean;
+    collectEntityThroughputRepSummary?: boolean;
+    collectResourceRepSummary?: boolean;
 }
 
 /**
@@ -224,14 +221,12 @@ export class SimulationImportService {
 
             // Start by disabling all collections
             setDataCollectionConfig({
-                activityUtilization: false,
-                activityRepSummary: false,
-                activityTiming: false,
-                entityStateRepSummary: false,
-                entityThroughputRepSummary: false,
-                resourceRepSummary: false,
-                completeActivityMetrics: false,
-                customMetrics: false
+                collectActivityUtilization: false,
+                collectActivityRepSummary: false,
+                collectActivityTiming: false,
+                collectEntityStateRepSummary: false,
+                collectEntityThroughputRepSummary: false,
+                collectResourceRepSummary: false
             });
 
             // Then enable only the specified collections
@@ -239,28 +234,22 @@ export class SimulationImportService {
             collectionsToImport.forEach(collection => {
                 switch (collection) {
                     case 'activity_utilization':
-                        configUpdate.activityUtilization = true;
+                        configUpdate.collectActivityUtilization = true;
                         break;
                     case 'activity_rep_summary':
-                        configUpdate.activityRepSummary = true;
+                        configUpdate.collectActivityRepSummary = true;
                         break;
                     case 'activity_timing':
-                        configUpdate.activityTiming = true;
+                        configUpdate.collectActivityTiming = true;
                         break;
                     case 'entity_state_rep_summary':
-                        configUpdate.entityStateRepSummary = true;
+                        configUpdate.collectEntityStateRepSummary = true;
                         break;
                     case 'entity_throughput_rep_summary':
-                        configUpdate.entityThroughputRepSummary = true;
+                        configUpdate.collectEntityThroughputRepSummary = true;
                         break;
                     case 'resource_rep_summary':
-                        configUpdate.resourceRepSummary = true;
-                        break;
-                    case 'complete_activity_metrics':
-                        configUpdate.completeActivityMetrics = true;
-                        break;
-                    case 'custom_metrics':
-                        configUpdate.customMetrics = true;
+                        configUpdate.collectResourceRepSummary = true;
                         break;
                     default:
                         this.logger.warn(`Unknown collection specified: ${collection}`);

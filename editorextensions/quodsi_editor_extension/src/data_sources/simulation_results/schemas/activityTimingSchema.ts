@@ -3,8 +3,11 @@ import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const ActivityTimingSchema: SchemaDefinition = {
     fields: [
-        { name: "Id", type: ScalarFieldTypeEnum.STRING },
-        { name: "Name", type: ScalarFieldTypeEnum.STRING },
+        { name: "id", type: ScalarFieldTypeEnum.STRING }, 
+        { name: "scenario_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "scenario_name", type: ScalarFieldTypeEnum.STRING },
+        { name: "activity_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "activity_name", type: ScalarFieldTypeEnum.STRING },
         { name: "cycle_time_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "cycle_time_median", type: ScalarFieldTypeEnum.NUMBER },
         { name: "cycle_time_cv", type: ScalarFieldTypeEnum.NUMBER },
@@ -22,10 +25,13 @@ export const ActivityTimingSchema: SchemaDefinition = {
         { name: "blocked_time_cv", type: ScalarFieldTypeEnum.NUMBER },
         { name: "blocked_time_std_dev", type: ScalarFieldTypeEnum.NUMBER }
     ],
-    primaryKey: ["Id"],
+    primaryKey: ["id"],
     fieldLabels: {
-        'Id': 'ID',
-        'Name': 'Activity Name',
+        'scenario_id': 'Scenario Id',
+        'scenario_name': 'Scenario Name',
+        'id': 'ID',
+        'activity_id': 'Activity ID',
+        'naactivity_nameme': 'Activity Name',
         'cycle_time_mean': 'Cycle Time Mean',
         'cycle_time_median': 'Cycle Time Median',
         'cycle_time_cv': 'Cycle Time CV',

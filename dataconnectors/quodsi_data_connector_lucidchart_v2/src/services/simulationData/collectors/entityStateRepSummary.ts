@@ -102,11 +102,11 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Create a new object with defaults for all required fields
             const validItem: EntityStateRepSummaryData = {
-                id: item.id || 'Unknown',
-                scenario_id: item.scenario_id || 'Unknown',
-                scenario_name: item.scenario_name || "Unknown",
-                entity_id: item.entity_id || 'Unknown',
-                entity_name: item.entity_name || 'Unknown',
+                id: String(item.id || "Unknown"),
+                scenario_id: String(item.scenario_id || 'Unknown'),
+                scenario_name: String(item.scenario_name || "Unknown"),
+                entity_id: String(item.entity_id || 'Unknown'),
+                entity_name: String(item.entity_name || 'Unknown'),
                 rep: item.rep || 0,
                 count: item.count || 0,
                 avg_time_in_system: item.avg_time_in_system || 0,
@@ -154,11 +154,11 @@ export function prepareUpdate(data: EntityStateRepSummaryData[]) {
         // Create a completely new object with ONLY the fields we need
         // Including our new synthetic ID field, ensuring no null values
         const cleanedItem: SerializedFields = {
-            id: item.id || 'Unknown',
-            scenario_id: item.scenario_id || 'Unknown',
-            scenario_name: item.scenario_name || "Unknown",
-            entity_id: item.entity_id || 'Unknown',
-            entity_name: item.entity_name || 'Unknown',
+            id: String(item.id || "Unknown"),
+            scenario_id: String(item.scenario_id || 'Unknown'),
+            scenario_name: String(item.scenario_name || "Unknown"),
+            entity_id: String(item.entity_id || 'Unknown'),
+            entity_name: String(item.entity_name || 'Unknown'),
             rep: item.rep || 0,
             count: item.count || 0,
             avg_time_in_system: item.avg_time_in_system || 0,
@@ -175,7 +175,7 @@ export function prepareUpdate(data: EntityStateRepSummaryData[]) {
         conditionalLog(`[entityStateRepSummary] Cleaned item with ID ${item.id}: ${JSON.stringify(cleanedItem, null, 2)}`);
 
         // Add to our collection using the ID as the key
-        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
+        items.set(`"${String(item.id || 'Unknown')}"`, cleanedItem);
     });
 
     conditionalLog(`[entityStateRepSummary] Final map has ${items.size} items`);

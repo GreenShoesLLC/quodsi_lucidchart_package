@@ -46,14 +46,12 @@ export async function updateSimulationResults(
 
         // Create an array to track which data fetches succeeded and which failed
         const dataFetchResults = {
-            activityUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('activityUtilization') },
-            activityRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('activityRepSummary') },
-            activityTiming: { success: false, count: 0, enabled: isDataCollectionEnabled('activityTiming') },
-            entityStateRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('entityStateRepSummary') },
-            entityThroughputRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('entityThroughputRepSummary') },
-            resourceRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('resourceRepSummary') },
-            completeActivityMetrics: { success: false, count: 0, enabled: isDataCollectionEnabled('completeActivityMetrics') },
-            customMetrics: { success: false, count: 0, enabled: isDataCollectionEnabled('customMetrics') }
+            activityUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityUtilization') },
+            activityRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityRepSummary') },
+            activityTiming: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityTiming') },
+            entityStateRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityStateRepSummary') },
+            entityThroughputRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityThroughputRepSummary') },
+            resourceRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceRepSummary') },
         };
 
         // Initialize data holders
@@ -63,12 +61,10 @@ export async function updateSimulationResults(
         let entityStateRepSummary = [];
         let entityThroughputRepSummary = [];
         let resourceRepSummary = [];
-        let completeActivityMetrics = [];
-        let customMetrics = [];
 
         // Only fetch data for enabled collections
         // Activity Utilization
-        if (isDataCollectionEnabled('activityUtilization')) {
+        if (isDataCollectionEnabled('collectActivityUtilization')) {
             try {
                 log.info('Fetching activity utilization data...');
                 activityUtilization = await simulationDataService.fetchActivityUtilization(
@@ -84,7 +80,7 @@ export async function updateSimulationResults(
         }
 
         // Activity Rep Summary
-        if (isDataCollectionEnabled('activityRepSummary')) {
+        if (isDataCollectionEnabled('collectActivityRepSummary')) {
             try {
                 log.info('Fetching activity rep summary data...');
                 activityRepSummary = await simulationDataService.fetchActivityRepSummary(
@@ -100,7 +96,7 @@ export async function updateSimulationResults(
         }
 
         // Activity Timing
-        if (isDataCollectionEnabled('activityTiming')) {
+        if (isDataCollectionEnabled('collectActivityTiming')) {
             try {
                 log.info('Fetching activity timing data...');
                 activityTiming = await simulationDataService.fetchActivityTiming(
@@ -116,7 +112,7 @@ export async function updateSimulationResults(
         }
 
         // Entity State Rep Summary
-        if (isDataCollectionEnabled('entityStateRepSummary')) {
+        if (isDataCollectionEnabled('collectEntityStateRepSummary')) {
             try {
                 log.info('Fetching entity state rep summary data...');
                 entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
@@ -132,7 +128,7 @@ export async function updateSimulationResults(
         }
 
         // Entity Throughput Rep Summary - add extra logging for this problematic collection
-        if (isDataCollectionEnabled('entityThroughputRepSummary')) {
+        if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
             try {
                 log.info('Fetching entity throughput rep summary data...');
                 // Now do the regular fetch
@@ -151,7 +147,7 @@ export async function updateSimulationResults(
         }
 
         // Resource Rep Summary
-        if (isDataCollectionEnabled('resourceRepSummary')) {
+        if (isDataCollectionEnabled('collectResourceRepSummary')) {
             try {
                 log.info('Fetching resource rep summary data...');
                 resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
@@ -177,23 +173,23 @@ export async function updateSimulationResults(
         const updates: CollectionsUpdate = {};
 
         // Only add collections that are enabled
-        if (isDataCollectionEnabled('activityUtilization')) {
+        if (isDataCollectionEnabled('collectActivityUtilization')) {
             updates["activity_utilization"] = simulationDataService.prepareActivityUtilizationUpdate(activityUtilization);
         }
 
-        if (isDataCollectionEnabled('activityRepSummary')) {
+        if (isDataCollectionEnabled('collectActivityRepSummary')) {
             updates["activity_rep_summary"] = simulationDataService.prepareActivityRepSummaryUpdate(activityRepSummary);
         }
 
-        if (isDataCollectionEnabled('activityTiming')) {
+        if (isDataCollectionEnabled('collectActivityTiming')) {
             updates["activity_timing"] = simulationDataService.prepareActivityTimingUpdate(activityTiming);
         }
 
-        if (isDataCollectionEnabled('entityStateRepSummary')) {
+        if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
             updates["entity_state_rep_summary"] = simulationDataService.prepareEntityStateRepSummaryUpdate(entityStateRepSummary);
         }
 
-        if (isDataCollectionEnabled('entityThroughputRepSummary')) {
+        if (isDataCollectionEnabled('collectResourceRepSummary')) {
             updates["entity_throughput_rep_summary"] = simulationDataService.prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
             log.info(`Prepared entity_throughput_rep_summary update with ${updates["entity_throughput_rep_summary"].patch.items.size} items`);
 
@@ -204,7 +200,7 @@ export async function updateSimulationResults(
             }
         }
 
-        if (isDataCollectionEnabled('resourceRepSummary')) {
+        if (isDataCollectionEnabled('collectResourceRepSummary')) {
             updates["resource_rep_summary"] = simulationDataService.prepareResourceRepSummaryUpdate(resourceRepSummary);
         }
         // Log prepared update item counts

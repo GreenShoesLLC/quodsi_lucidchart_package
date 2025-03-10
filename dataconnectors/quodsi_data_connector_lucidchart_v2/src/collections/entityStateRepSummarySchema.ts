@@ -1,4 +1,3 @@
-// schemas/entityStateRepSummary.ts
 import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const EntityStateRepSummarySchema: SchemaDefinition = {

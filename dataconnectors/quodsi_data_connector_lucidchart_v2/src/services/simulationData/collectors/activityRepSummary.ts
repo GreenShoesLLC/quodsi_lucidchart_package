@@ -70,14 +70,14 @@ export async function fetchData(
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {
-
             // Create a new object with defaults for all required fields
+            // Convert fields that should be strings but might be numbers in the CSV
             const validItem: ActivityRepSummaryData = {
-                id: item.id || "Unknown",
-                scenario_id: item.scenario_id || "Unknown",
-                scenario_name: item.scenario_name || "Unknown",
-                activity_id: item.activity_id || "Unknown",
-                activity_name: item.activity_name || "Unknown",
+                id: String(item.id || "Unknown"),
+                scenario_id: String(item.scenario_id || "Unknown"),
+                scenario_name: String(item.scenario_name || "Unknown"),
+                activity_id: String(item.activity_id || "Unknown"), // Ensure this is a string
+                activity_name: String(item.activity_name || "Unknown"),
                 rep: item.rep || 0,
                 capacity: item.capacity ?? 0,
                 total_available_clock: item.total_available_clock ?? 0,
@@ -140,12 +140,13 @@ export function prepareUpdate(data: ActivityRepSummaryData[]) {
     // Process each row of data
     data.forEach(item => {
         // Create a completely new object with no null values
+        // Ensure all string fields are explicitly cast to strings
         const cleanedItem: SerializedFields = {
-            id: item.id || "Unknown",
-            scenario_id: item.scenario_id || "Unknown",
-            scenario_name: item.scenario_name || "Unknown",
-            activity_id: item.activity_id || "Unknown",
-            activity_name: item.activity_name || "Unknown",
+            id: String(item.id || "Unknown"),
+            scenario_id: String(item.scenario_id || "Unknown"),
+            scenario_name: String(item.scenario_name || "Unknown"),
+            activity_id: String(item.activity_id || "Unknown"),
+            activity_name: String(item.activity_name || "Unknown"),
             rep: item.rep || 0,
             capacity: item.capacity ?? 0,
             total_available_clock: item.total_available_clock ?? 0,
@@ -182,7 +183,7 @@ export function prepareUpdate(data: ActivityRepSummaryData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
+        items.set(`"${String(item.id || 'Unknown')}"`, cleanedItem);
     });
 
     conditionalLog(`[activityRepSummary] Final map has ${items.size} items`);

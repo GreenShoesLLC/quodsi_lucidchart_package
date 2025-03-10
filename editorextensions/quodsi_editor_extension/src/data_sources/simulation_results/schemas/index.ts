@@ -6,6 +6,4 @@ export { EntityStateRepSummarySchema } from './entityStateRepSummarySchema';
 export { EntityThroughputRepSummarySchema } from './entityThroughputRepSummarySchema';
 export { ResourceRepSummarySchema } from './resourceRepSummarySchema';
 export { ResourceUtilizationSchema } from './resourceUtilizationSchema';
-export { CompleteActivityMetricsSchema } from './completeActivityMetricsSchema';
-export { CustomMetricsSchema } from './customMetricsSchema';
 export { ScenarioResultsSchema } from './scenarioResultsSchema';
