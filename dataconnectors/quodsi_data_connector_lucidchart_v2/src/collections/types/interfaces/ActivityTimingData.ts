@@ -3,8 +3,11 @@
  * Defines timing-related metrics for activities (durations, delays, etc.)
  */
 export interface ActivityTimingData {
-    Id: string;
-    Name: string;
+    id: string;
+    scenario_id: string;
+    scenario_name: string;
+    activity_id: string;
+    activity_name: string;
     cycle_time_mean: number;
     cycle_time_median: number;
     cycle_time_cv: number;

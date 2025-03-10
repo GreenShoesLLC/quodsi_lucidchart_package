@@ -91,15 +91,15 @@ export class SimulationImportService {
             initializeStorageService(this.config.azureStorageConnectionString);
 
             // First, update the Models collection
-            this.logger.info(`Updating model data...`);
-            await updateModelData(
-                action,
-                params.documentId,
-                params.scenarioId,
-                this.verboseLogging,
-                this.logger
-            );
-            this.logger.info(`Model data update completed successfully`);
+            // this.logger.info(`Updating model data...`);
+            // await updateModelData(
+            //     action,
+            //     params.documentId,
+            //     params.scenarioId,
+            //     this.verboseLogging,
+            //     this.logger
+            // );
+            // this.logger.info(`Model data update completed successfully`);
 
             // Check if container exists before proceeding
             const containerExists = await this.checkContainerExists(containerName);

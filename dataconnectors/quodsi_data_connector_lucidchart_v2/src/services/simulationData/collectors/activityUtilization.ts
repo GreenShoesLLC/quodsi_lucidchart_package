@@ -8,10 +8,23 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 export const requiredColumns = getRequiredColumnsFromType<ActivityUtilizationData>([
-    'Id', 'Name', 'utilization_mean', 'utilization_max', 'utilization_std_dev',
-    'capacity_mean', 'capacity_max', 'capacity_std_dev',
-    'contents_mean', 'contents_max', 'contents_std_dev',
-    'queue_length_mean', 'queue_length_max', 'queue_length_std_dev'
+    'id',
+    'scenario_id',
+    'scenario_name',
+    'activity_id',
+    'activity_name',
+    'utilization_mean',
+    'utilization_max',
+    'utilization_std_dev',
+    'capacity_mean',
+    'capacity_max',
+    'capacity_std_dev',
+    'contents_mean',
+    'contents_max',
+    'contents_std_dev',
+    'queue_length_mean',
+    'queue_length_max',
+    'queue_length_std_dev'
 ]);
 
 /**
@@ -29,12 +42,12 @@ export async function fetchData(
     const baseBlobName = 'activity_utilization.csv';
     const blobName = `${scenarioId}/${baseBlobName}`
     conditionalLog(`[activityUtilization] Attempting to fetch activity utilization data from: ${containerName}/${blobName}`);
-    
+
     try {
         // Try first at the root level
         let result = await fetchCsvData<ActivityUtilizationData>(
-            containerName, 
-            blobName, 
+            containerName,
+            blobName,
             documentId,
             requiredColumns
         );
@@ -61,8 +74,11 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Create a new object with defaults for all required fields
             const validItem: ActivityUtilizationData = {
-                Id: item.Id || `activity_${Math.random().toString(36).substring(2, 10)}`,
-                Name: item.Name || 'Unknown Activity',
+                id: item.id || `Unknown`,
+                scenario_id: item.scenario_id || `Unknown`,
+                scenario_name: item.scenario_name || "Unknown",
+                activity_id: item.activity_id || `Unknown`,
+                activity_name: item.activity_name || 'Unknown Activity',
                 utilization_mean: item.utilization_mean ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
@@ -76,7 +92,7 @@ export async function fetchData(
                 queue_length_max: item.queue_length_max ?? 0,
                 queue_length_std_dev: item.queue_length_std_dev ?? 0
             };
-            
+
             return validItem;
         });
 
@@ -104,14 +120,17 @@ export function prepareUpdate(data: ActivityUtilizationData[]) {
     // Process each row of data
     data.forEach(item => {
         // Ensure ID is never null or undefined
-        const id = item.Id || `activity_${Math.random().toString(36).substring(2, 10)}`;
-        
-        conditionalLog(`[activityUtilization] Processing item with ID ${id}`);
+        // const id = item.id || `activity_${Math.random().toString(36).substring(2, 10)}`;
+
+        conditionalLog(`[activityUtilization] Processing item with activity_id ${item.activity_id}`);
 
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            Id: id,
-            Name: item.Name || 'Unknown Activity',
+            id: item.id || `Unknown`,
+            scenario_id: item.scenario_id || `Unknown`,
+            scenario_name: item.scenario_name || "Unknown",
+            activity_id: item.activity_id || `Unknown`,
+            activity_name: item.activity_name || 'Unknown Activity',
             utilization_mean: item.utilization_mean ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
@@ -127,7 +146,7 @@ export function prepareUpdate(data: ActivityUtilizationData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${id}"`, cleanedItem);
+        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
     });
 
     conditionalLog(`[activityUtilization] Final map has ${items.size} items`);

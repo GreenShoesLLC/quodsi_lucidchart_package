@@ -9,8 +9,6 @@ export { ScenarioResultsSchema } from './scenarioResultsSchema';
 export * from './activityRepSummarySchema';
 export * from './activityTimingSchema';
 export * from './activityUtilizationSchema';
-export * from './completeActivityMetricsSchema';
-export * from './customMetricsSchema';
 export * from './entityStateRepSummarySchema';
 export * from './entityThroughputRepSummarySchema';
 export * from './resourceRepSummarySchema';

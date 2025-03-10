@@ -3,9 +3,12 @@
  * Defines entity throughput metrics across replications
  */
 export interface EntityThroughputRepSummaryData {
-    id?: string; // Optional since we'll generate it when processing the data
+    id: string;
+    scenario_id: string;
+    scenario_name: string;
+    entity_id: string;
+    entity_name: string;
     rep: number;
-    entity_type: string;
     count: number;
     completed_count: number;
     in_progress_count: number;

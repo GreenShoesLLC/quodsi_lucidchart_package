@@ -8,9 +8,21 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 export const requiredColumns = getRequiredColumnsFromType<ActivityRepSummaryData>([
-    'rep', 'activity_id', 'capacity', 'total_available_clock', 'total_arrivals',
-    'total_requests', 'total_captures', 'total_releases', 'total_time_in_capture',
-    'utilization_percentage', 'throughput_rate'
+    'id',
+    'scenario_id',
+    'scenario_name',
+    'activity_id',
+    'activity_name',
+    'rep',
+    'capacity',
+    'total_available_clock',
+    'total_arrivals',
+    'total_requests',
+    'total_captures',
+    'total_releases',
+    'total_time_in_capture',
+    'utilization_percentage',
+    'throughput_rate'
 ]);
 
 /**
@@ -58,17 +70,15 @@ export async function fetchData(
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {
-            // Convert activity_id to string immediately
-            const activityId = String(item.activity_id || 'unknown_activity');
-            
-            // Generate an id using rep and activity_id
-            const id = `${item.rep || 0}_${activityId}`;
-            
+
             // Create a new object with defaults for all required fields
             const validItem: ActivityRepSummaryData = {
-                id,
+                id: item.id || "Unknown",
+                scenario_id: item.scenario_id || "Unknown",
+                scenario_name: item.scenario_name || "Unknown",
+                activity_id: item.activity_id || "Unknown",
+                activity_name: item.activity_name || "Unknown",
                 rep: item.rep || 0,
-                activity_id: activityId,
                 capacity: item.capacity ?? 0,
                 total_available_clock: item.total_available_clock ?? 0,
                 total_arrivals: item.total_arrivals ?? 0,
@@ -102,7 +112,7 @@ export async function fetchData(
                 cycle_time_efficiency: item.cycle_time_efficiency ?? 0,
                 first_time_through: item.first_time_through ?? 0
             };
-            
+
             return validItem;
         });
 
@@ -129,19 +139,14 @@ export function prepareUpdate(data: ActivityRepSummaryData[]) {
 
     // Process each row of data
     data.forEach(item => {
-        // Ensure activity_id is always a string
-        const activityId = String(item.activity_id || 'unknown_activity');
-        
-        // Create the composite key for this item
-        const id = item.id || `${item.rep || 0}_${activityId}`;
-        
-        conditionalLog(`[activityRepSummary] Processing item with ID ${id}`);
-
         // Create a completely new object with no null values
         const cleanedItem: SerializedFields = {
-            id,
+            id: item.id || "Unknown",
+            scenario_id: item.scenario_id || "Unknown",
+            scenario_name: item.scenario_name || "Unknown",
+            activity_id: item.activity_id || "Unknown",
+            activity_name: item.activity_name || "Unknown",
             rep: item.rep || 0,
-            activity_id: activityId,
             capacity: item.capacity ?? 0,
             total_available_clock: item.total_available_clock ?? 0,
             total_arrivals: item.total_arrivals ?? 0,
@@ -177,7 +182,7 @@ export function prepareUpdate(data: ActivityRepSummaryData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${id}"`, cleanedItem);
+        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
     });
 
     conditionalLog(`[activityRepSummary] Final map has ${items.size} items`);

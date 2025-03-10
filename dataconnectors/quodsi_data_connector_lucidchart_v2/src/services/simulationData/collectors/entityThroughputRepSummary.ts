@@ -2,14 +2,21 @@
 
 import { EntityThroughputRepSummarySchema } from '../../../collections';
 import { fetchCsvData, getRequiredColumnsFromType } from '../csvParser';
-import { prepareCollectionUpdate } from '../collectionUpdater';
 import { conditionalLog, conditionalError } from '../storageService';
 import { SerializedFields } from 'lucid-extension-sdk';
 import { EntityThroughputRepSummaryData } from '../../../collections/types/interfaces/EntityThroughputRepSummaryData';
 
 // Required columns for validation
 export const requiredColumns = getRequiredColumnsFromType<EntityThroughputRepSummaryData>([
-    'rep', 'entity_type', 'count', 'completed_count', 'in_progress_count',
+    'id',
+    'scenario_id',
+    'scenario_name',
+    'entity_id',
+    'entity_name',
+    'rep',
+    'count',
+    'completed_count',
+    'in_progress_count',
     'throughput_rate'
 ]);
 
@@ -78,24 +85,27 @@ export function prepareUpdate(data: EntityThroughputRepSummaryData[]) {
         conditionalLog(`[entityThroughputRepSummary] Processing item: ${JSON.stringify(item, null, 2)}`);
 
         // Create a synthetic ID field that combines entity_type and rep
-        const id = `${item.entity_type}_${item.rep}`;
+        // const id = `${item.entity_type}_${item.rep}`;
 
         // Create a completely new object with ONLY the fields we need
         // Including our new synthetic ID field
         const cleanedItem: SerializedFields = {
-            id: id, // Add the ID field
+            id: item.id || 'Unknown',
+            scenario_id: item.scenario_id || 'Unknown',
+            scenario_name: item.scenario_name || "Unknown",
+            entity_id: item.entity_id || 'Unknown',
+            entity_name: item.name || 'Unknown',
             rep: item.rep,
-            entity_type: item.entity_type,
             count: item.count,
             completed_count: item.completed_count,
             in_progress_count: item.in_progress_count,
             throughput_rate: item.throughput_rate
         };
 
-        conditionalLog(`[entityThroughputRepSummary] Cleaned item with ID ${id}: ${JSON.stringify(cleanedItem, null, 2)}`);
+        conditionalLog(`[entityThroughputRepSummary] Cleaned item with ID ${item.id}: ${JSON.stringify(cleanedItem, null, 2)}`);
 
         // Add to our collection using the ID as the key
-        items.set(`"${id}"`, cleanedItem);
+        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
     });
 
     conditionalLog(`[entityThroughputRepSummary] Final map has ${items.size} items`);

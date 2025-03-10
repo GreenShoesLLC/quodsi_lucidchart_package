@@ -3,8 +3,11 @@
  * Defines metrics related to activity utilization including mean/max/std dev values
  */
 export interface ActivityUtilizationData {
-    Id: string;
-    Name: string;
+    id: string;
+    scenario_id: string;
+    scenario_name: string;
+    activity_id: string;
+    activity_name: string;
     utilization_mean: number;
     utilization_max: number;
     utilization_std_dev: number;

@@ -3,8 +3,12 @@ import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const ActivityRepSummarySchema: SchemaDefinition = {
     fields: [
-        { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "id", type: ScalarFieldTypeEnum.STRING }, 
+        { name: "scenario_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "scenario_name", type: ScalarFieldTypeEnum.STRING },
         { name: "activity_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "activity_name", type: ScalarFieldTypeEnum.STRING },
+        { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
         { name: "capacity", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_available_clock", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_arrivals", type: ScalarFieldTypeEnum.NUMBER },
@@ -38,10 +42,14 @@ export const ActivityRepSummarySchema: SchemaDefinition = {
         { name: "cycle_time_efficiency", type: ScalarFieldTypeEnum.NUMBER },
         { name: "first_time_through", type: ScalarFieldTypeEnum.NUMBER }
     ],
-    primaryKey: ["rep", "activity_id"],
+    primaryKey: ["id"],
     fieldLabels: {
-        'rep': 'Replication',
+        'id': 'ID', 
+        'scenario_id': 'Scenario Id',
+        'scenario_name': 'Scenario Name',
         'activity_id': 'Activity ID',
+        'activity_name': 'Activity Name',
+        'rep': 'Replication',
         'capacity': 'Capacity',
         'total_available_clock': 'Total Available Clock',
         'total_arrivals': 'Total Arrivals',

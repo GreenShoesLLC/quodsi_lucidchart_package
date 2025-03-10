@@ -3,8 +3,12 @@ import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const ResourceRepSummarySchema: SchemaDefinition = {
     fields: [
-        { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "scenario_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "scenario_name", type: ScalarFieldTypeEnum.STRING },
+        { name: "id", type: ScalarFieldTypeEnum.STRING }, 
         { name: "resource_id", type: ScalarFieldTypeEnum.STRING },
+        { name: "resource_name", type: ScalarFieldTypeEnum.STRING },
+        { name: "rep", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_requests", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_captures", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_releases", type: ScalarFieldTypeEnum.NUMBER },
@@ -15,10 +19,14 @@ export const ResourceRepSummarySchema: SchemaDefinition = {
         { name: "max_queue_length", type: ScalarFieldTypeEnum.NUMBER },
         { name: "avg_contents", type: ScalarFieldTypeEnum.NUMBER }
     ],
-    primaryKey: ["rep", "resource_id"],
+    primaryKey: ["id"],
     fieldLabels: {
-        'rep': 'Replication',
+        'scenario_id': 'Scenario Id',
+        'scenario_name': 'Scenario Name',
+        'id': 'ID', 
         'resource_id': 'Resource ID',
+        'resource_name': 'Resource Name',
+        'rep': 'Replication',
         'total_requests': 'Total Requests',
         'total_captures': 'Total Captures',
         'total_releases': 'Total Releases',

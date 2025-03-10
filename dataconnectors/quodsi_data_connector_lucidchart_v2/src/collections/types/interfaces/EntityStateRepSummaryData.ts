@@ -3,9 +3,12 @@
  * Defines entity state metrics across simulation replications
  */
 export interface EntityStateRepSummaryData {
-    id?: string; // Optional since we'll generate it when processing the data
+    id: string;
+    scenario_id: string;
+    scenario_name: string;
+    entity_id: string;
+    entity_name: string;
     rep: number;
-    entity_type: string;
     count: number;
     avg_time_in_system: number;
     avg_time_waiting: number;

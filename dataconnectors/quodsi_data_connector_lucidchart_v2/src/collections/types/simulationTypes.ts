@@ -12,7 +12,5 @@ export {
     ActivityTimingData,
     EntityStateRepSummaryData,
     EntityThroughputRepSummaryData,
-    ResourceRepSummaryData,
-    CompleteActivityMetricsData,
-    CustomMetricsData
+    ResourceRepSummaryData
 } from './interfaces';

@@ -7,7 +7,15 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 export const requiredColumns = getRequiredColumnsFromType<ResourceRepSummaryData>([
-    'rep', 'resource_id', 'total_requests', 'total_captures', 'total_releases'
+    'id',
+    'scenario_id',
+    'scenario_name',
+    'resource_id',
+    'resource_name',
+    'rep',
+    'total_requests',
+    'total_captures',
+    'total_releases'
 ]);
 
 /**
@@ -54,17 +62,15 @@ export async function fetchData(
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {
-            // Ensure resource_id is a string
-            const resourceId = String(item.resource_id || 'unknown_resource');
-
-            // Create a composite ID
-            const id = `${item.rep || 0}_${resourceId}`;
 
             // Create a new object with defaults for all required fields
             const validItem: ResourceRepSummaryData = {
-                id,
+                id: item.id || 'Unknown',
+                scenario_id: item.scenario_id || 'Unknown',
+                scenario_name: item.scenario_name || "Unknown",
+                resource_id: item.resource_id || 'Unknown',
+                resource_name: item.resource_name || 'Unknown',
                 rep: item.rep || 0,
-                resource_id: resourceId,
                 total_requests: item.total_requests ?? 0,
                 total_captures: item.total_captures ?? 0,
                 total_releases: item.total_releases ?? 0,
@@ -102,19 +108,14 @@ export function prepareUpdate(data: ResourceRepSummaryData[]) {
 
     // Process each row of data
     data.forEach(item => {
-        // Ensure resource_id is a string
-        const resourceId = String(item.resource_id || 'unknown_resource');
-
-        // Create a composite key
-        const id = item.id || `${item.rep || 0}_${resourceId}`;
-
-        conditionalLog(`[resourceRepSummary] Processing item with ID ${id}`);
-
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            id,
+            id: item.id || 'Unknown',
+            scenario_id: item.scenario_id || 'Unknown',
+            scenario_name: item.scenario_name || "Unknown",
+            resource_id: item.resource_id || 'Unknown',
+            resource_name: item.resource_name || 'Unknown',
             rep: item.rep || 0,
-            resource_id: resourceId,
             total_requests: item.total_requests ?? 0,
             total_captures: item.total_captures ?? 0,
             total_releases: item.total_releases ?? 0,
@@ -127,7 +128,7 @@ export function prepareUpdate(data: ResourceRepSummaryData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${id}"`, cleanedItem);
+        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
     });
 
     conditionalLog(`[resourceRepSummary] Final map has ${items.size} items`);

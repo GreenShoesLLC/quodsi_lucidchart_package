@@ -3,9 +3,12 @@
  * Defines resource utilization and capacity metrics
  */
 export interface ResourceRepSummaryData {
-    id?: string; // Optional since we'll generate it as a composite key
-    rep: number;
+    id: string;
+    scenario_id: string;
+    scenario_name: string;
     resource_id: string;
+    resource_name: string;
+    rep: number;
     total_requests: number;
     total_captures: number;
     total_releases: number;

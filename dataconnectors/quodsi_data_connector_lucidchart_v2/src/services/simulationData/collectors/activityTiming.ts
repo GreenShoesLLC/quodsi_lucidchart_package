@@ -8,8 +8,17 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 export const requiredColumns = getRequiredColumnsFromType<ActivityTimingData>([
-    'Id', 'Name', 'cycle_time_mean', 'cycle_time_median', 'cycle_time_std_dev',
-    'service_time_mean', 'waiting_time_mean', 'blocked_time_mean'
+    'id',
+    'scenario_id',
+    'scenario_name',
+    'activity_id',
+    'activity_name',
+    'cycle_time_mean',
+    'cycle_time_median',
+    'cycle_time_std_dev',
+    'service_time_mean',
+    'waiting_time_mean',
+    'blocked_time_mean'
 ]);
 
 /**
@@ -30,8 +39,8 @@ export async function fetchData(
     try {
         // Try first at the root level
         let result = await fetchCsvData<ActivityTimingData>(
-            containerName, 
-            blobName, 
+            containerName,
+            blobName,
             documentId,
             requiredColumns
         );
@@ -58,8 +67,11 @@ export async function fetchData(
         const validatedResult = result.map(item => {
             // Create a new object with defaults for all required fields
             const validItem: ActivityTimingData = {
-                Id: item.Id || `activity_${Math.random().toString(36).substring(2, 10)}`,
-                Name: item.Name || 'Unknown Activity',
+                id: item.id || "Unknown",
+                scenario_id: item.scenario_id || "Unknown",
+                scenario_name: item.scenario_name || "Unknown",
+                activity_id: item.activity_id || "Unknown",
+                activity_name: item.activity_name || "Unknown",
                 cycle_time_mean: item.cycle_time_mean ?? 0,
                 cycle_time_median: item.cycle_time_median ?? 0,
                 cycle_time_cv: item.cycle_time_cv ?? 0,
@@ -77,7 +89,7 @@ export async function fetchData(
                 blocked_time_cv: item.blocked_time_cv ?? 0,
                 blocked_time_std_dev: item.blocked_time_std_dev ?? 0
             };
-            
+
             return validItem;
         });
 
@@ -104,15 +116,13 @@ export function prepareUpdate(data: ActivityTimingData[]) {
 
     // Process each row of data
     data.forEach(item => {
-        // Ensure ID is never null or undefined
-        const id = item.Id || `activity_${Math.random().toString(36).substring(2, 10)}`;
-        
-        conditionalLog(`[activityTiming] Processing item with ID ${id}`);
-
         // Create a cleaned object with no null values
         const cleanedItem: SerializedFields = {
-            Id: id,
-            Name: item.Name || 'Unknown Activity',
+            id: item.id || "Unknown",
+            scenario_id: item.scenario_id || "Unknown",
+            scenario_name: item.scenario_name || "Unknown",
+            activity_id: item.activity_id || "Unknown",
+            activity_name: item.activity_name || "Unknown",
             cycle_time_mean: item.cycle_time_mean ?? 0,
             cycle_time_median: item.cycle_time_median ?? 0,
             cycle_time_cv: item.cycle_time_cv ?? 0,
@@ -132,7 +142,7 @@ export function prepareUpdate(data: ActivityTimingData[]) {
         };
 
         // Add to our collection using the ID as the key
-        items.set(`"${id}"`, cleanedItem);
+        items.set(`"${item.id || 'Unknown'}"`, cleanedItem);
     });
 
     conditionalLog(`[activityTiming] Final map has ${items.size} items`);

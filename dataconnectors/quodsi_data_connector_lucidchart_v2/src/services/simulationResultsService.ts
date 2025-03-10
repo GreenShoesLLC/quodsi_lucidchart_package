@@ -166,38 +166,6 @@ export async function updateSimulationResults(
             log.info('Resource rep summary data collection is disabled');
         }
 
-        // Complete Activity Metrics
-        if (isDataCollectionEnabled('completeActivityMetrics')) {
-            try {
-                log.info('Fetching complete activity metrics data...');
-                completeActivityMetrics = await simulationDataService.fetchCompleteActivityMetrics(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
-                dataFetchResults.completeActivityMetrics.success = true;
-                dataFetchResults.completeActivityMetrics.count = completeActivityMetrics.length;
-            } catch (error) {
-                log.error(`Error fetching complete activity metrics data: ${error.message}`);
-            }
-        } else {
-            log.info('Complete activity metrics data collection is disabled');
-        }
-
-        // Custom Metrics
-        if (isDataCollectionEnabled('customMetrics')) {
-            try {
-                log.info('Fetching custom metrics data...');
-                customMetrics = await simulationDataService.fetchCustomMetrics(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
-                dataFetchResults.customMetrics.success = true;
-                dataFetchResults.customMetrics.count = customMetrics.length;
-            } catch (error) {
-                log.error(`Error fetching custom metrics data: ${error.message}`);
-            }
-        } else {
-            log.info('Custom metrics data collection is disabled');
-        }
-
         // Log summary of data fetch results
         log.info('=== Data Fetch Results Summary ===');
         Object.entries(dataFetchResults).forEach(([dataType, result]) => {
@@ -239,15 +207,6 @@ export async function updateSimulationResults(
         if (isDataCollectionEnabled('resourceRepSummary')) {
             updates["resource_rep_summary"] = simulationDataService.prepareResourceRepSummaryUpdate(resourceRepSummary);
         }
-
-        if (isDataCollectionEnabled('completeActivityMetrics')) {
-            updates["complete_activity_metrics"] = simulationDataService.prepareCompleteActivityMetricsUpdate(completeActivityMetrics);
-        }
-
-        if (isDataCollectionEnabled('customMetrics')) {
-            updates["custom_metrics"] = simulationDataService.prepareCustomMetricsUpdate(customMetrics);
-        }
-
         // Log prepared update item counts
         log.info('=== Collection Update Item Counts ===');
         Object.entries(updates).forEach(([collectionName, update]) => {

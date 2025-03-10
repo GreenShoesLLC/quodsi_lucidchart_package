@@ -9,5 +9,3 @@ export { ActivityTimingData } from './ActivityTimingData';
 export { EntityStateRepSummaryData } from './EntityStateRepSummaryData';
 export { EntityThroughputRepSummaryData } from './EntityThroughputRepSummaryData';
 export { ResourceRepSummaryData } from './ResourceRepSummaryData';
-export { CompleteActivityMetricsData } from './CompleteActivityMetricsData';
-export { CustomMetricsData } from './CustomMetricsData';

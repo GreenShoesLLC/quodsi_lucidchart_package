@@ -19,8 +19,6 @@ import * as activityTimingCollector from './simulationData/collectors/activityTi
 import * as entityStateRepSummaryCollector from './simulationData/collectors/entityStateRepSummary';
 import * as entityThroughputRepSummaryCollector from './simulationData/collectors/entityThroughputRepSummary';
 import * as resourceRepSummaryCollector from './simulationData/collectors/resourceRepSummary';
-import * as completeActivityMetricsCollector from './simulationData/collectors/completeActivityMetrics';
-import * as customMetricsCollector from './simulationData/collectors/customMetrics';
 
 import { SerializedFields } from 'lucid-extension-sdk';
 
@@ -70,8 +68,6 @@ export const fetchActivityTiming = activityTimingCollector.fetchData;
 export const fetchEntityStateRepSummary = entityStateRepSummaryCollector.fetchData;
 export const fetchEntityThroughputRepSummary = entityThroughputRepSummaryCollector.fetchData;
 export const fetchResourceRepSummary = resourceRepSummaryCollector.fetchData;
-export const fetchCompleteActivityMetrics = completeActivityMetricsCollector.fetchData;
-export const fetchCustomMetrics = customMetricsCollector.fetchData;
 
 // Re-export prepare functions with the original names
 export const prepareActivityUtilizationUpdate = activityUtilizationCollector.prepareUpdate;
@@ -80,5 +76,3 @@ export const prepareActivityTimingUpdate = activityTimingCollector.prepareUpdate
 export const prepareEntityStateRepSummaryUpdate = entityStateRepSummaryCollector.prepareUpdate;
 export const prepareEntityThroughputRepSummaryUpdate = entityThroughputRepSummaryCollector.prepareUpdate;
 export const prepareResourceRepSummaryUpdate = resourceRepSummaryCollector.prepareUpdate;
-export const prepareCompleteActivityMetricsUpdate = completeActivityMetricsCollector.prepareUpdate;
-export const prepareCustomMetricsUpdate = customMetricsCollector.prepareUpdate;

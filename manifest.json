@@ -55,8 +55,7 @@
         "ImportSimulationResults": "importSimulationResults",
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
         "SubmitSimulationJob": "submitSimulationJobAction",
-        "UploadModelDefinition": "uploadModelDefinitionAction",
-        "Poll": "poll"
+        "UploadModelDefinition": "uploadModelDefinitionAction"
       }
     }
   ]
