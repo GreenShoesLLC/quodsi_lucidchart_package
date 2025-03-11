@@ -2,7 +2,8 @@
 
 import { PageProxy } from 'lucid-extension-sdk';
 import { BaseTableHandler } from './BaseTableHandler';
-import { TableCreationResult } from '../interfaces/DashboardTypes';
+import { TableCreationResult } from '../interfaces/results/TableResult';
+
 
 /**
  * Handler for creating entity throughput tables

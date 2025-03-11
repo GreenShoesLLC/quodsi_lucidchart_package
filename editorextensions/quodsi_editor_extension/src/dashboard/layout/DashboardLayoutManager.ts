@@ -1,20 +1,23 @@
 // layout/DashboardLayoutManager.ts
 
-import { PageProxy, DocumentProxy, Viewport, PageDefinition, EditorClient } from 'lucid-extension-sdk';
-import { DashboardConfig } from '../interfaces/DashboardTypes';
+import { PageProxy, DocumentProxy, Viewport, PageDefinition, EditorClient, BlockProxy } from 'lucid-extension-sdk';
+import { DashboardConfig } from '../interfaces/config/DashboardConfig';
 
 /**
  * Manages the layout and positioning of dashboard elements
  */
 export class DashboardLayoutManager {
     private config: DashboardConfig;
+    private client: EditorClient;
 
     /**
      * Creates a new DashboardLayoutManager
      * @param config Dashboard configuration
+     * @param client Editor client
      */
-    constructor(config: DashboardConfig) {
+    constructor(config: DashboardConfig, client: EditorClient) {
         this.config = config;
+        this.client = client;
     }
 
     /**
@@ -41,8 +44,8 @@ export class DashboardLayoutManager {
      */
     getInitialPosition(): { x: number, y: number } {
         return {
-            x: this.config.initialX || 50,
-            y: this.config.initialY || 50
+            x: this.config.layout?.initialX || 50,
+            y: this.config.layout?.initialY || 50
         };
     }
 
@@ -53,7 +56,7 @@ export class DashboardLayoutManager {
      * @returns Y position for the next table
      */
     calculateNextPosition(currentY: number, tableHeight: number): number {
-        return currentY + tableHeight + (this.config.tableSpacing || 50);
+        return currentY + tableHeight + (this.config.layout?.tableSpacing || 50);
     }
 
     /**
@@ -67,11 +70,71 @@ export class DashboardLayoutManager {
     }
 
     /**
+     * Creates a header text element
+     * @param page Page to add the header to
+     * @param headerText Text for the header
+     * @param position Position coordinates
+     * @returns The created header and its height
+     */
+    async createTableHeader(
+        page: PageProxy,
+        headerText: string,
+        position: { x: number, y: number }
+    ): Promise<{ header: BlockProxy, height: number }> {
+        console.log(`[Layout] Creating header at position (${position.x}, ${position.y}) with text "${headerText}"`);
+        
+        // Get table width from config
+        const tableWidth = this.config.layout?.tableWidth || 800;
+        
+        // Make sure the RectangleShape class is loaded
+        await this.client.loadBlockClasses(['ProcessBlock']);
+        
+        // Create text shape for header using addBlock
+        const headerShape = page.addBlock({
+            className: 'ProcessBlock',
+            boundingBox: {
+                x: position.x,
+                y: position.y,
+                w: tableWidth,
+                h: 30 // Default height for header
+            }
+        });
+        
+        // Set properties - we need to set these separately since they're not part of the block definition
+        headerShape.properties.set('TextAlignment', 'center');
+        headerShape.properties.set('FillColor', '#F0F0F0');
+        headerShape.properties.set('BorderColor', '#FFFFFF'); // No visible border
+        headerShape.properties.set('BorderWidth', 0);
+        
+        // Set the text content
+        headerShape.textAreas.set('Text', headerText);
+        
+        // Set text styles
+        // await headerShape.textStyles.set('Text', {
+        //     fontFamily: 'Open Sans,Helvetica,Arial,sans-serif',
+        //     fontSize: 14,
+        //     bold: true,
+        //     color: '#000000'
+        // });
+        
+        // Get actual height
+        const boundingBox = headerShape.getBoundingBox();
+        const height = boundingBox.h;
+        
+        console.log(`[Layout] Created header with height ${height}px`);
+        
+        return {
+            header: headerShape,
+            height 
+        };
+    }
+
+    /**
      * Gets the width to use for tables
      * @returns Table width in pixels
      */
     getTableWidth(): number {
-        return this.config.tableWidth || 800;
+        return this.config.layout?.tableWidth || 800;
     }
 
     /**
@@ -79,6 +142,14 @@ export class DashboardLayoutManager {
      * @returns Spacing in pixels
      */
     getTableSpacing(): number {
-        return this.config.tableSpacing || 50;
+        return this.config.layout?.tableSpacing || 50;
+    }
+    
+    /**
+     * Gets the spacing to use between a header and its table
+     * @returns Spacing in pixels 
+     */
+    getHeaderTableSpacing(): number {
+        return 5; // Small spacing between header and table
     }
 }

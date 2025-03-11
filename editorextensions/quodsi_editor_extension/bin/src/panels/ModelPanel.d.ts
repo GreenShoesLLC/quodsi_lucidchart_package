@@ -23,6 +23,7 @@ export declare class ModelPanel extends Panel {
     initializeOrUpdateModel(): Promise<import("../data_sources").ModelDefinition | null>;
     private handleOutputCreatePage;
     private handleOutputCreateDashboard;
+    private list_blocks;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
     private createSimulationObjectPayload;

@@ -49,6 +49,7 @@ import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsReader } from '../data_sources';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
+import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../dashboard/interfaces/config/DashboardConfig';
 
 
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
@@ -256,21 +257,23 @@ export class ModelPanel extends Panel {
             return null;
         }
     }
+
+    
     private async handleOutputCreatePage(data: { pageName: string }): Promise<void> {
         console.log('[ModelPanel] Output page creation requested:', data.pageName);
 
         try {
-
+            await this.list_blocks();
             // this.initializeOrUpdateModel()
             const document = new DocumentProxy(this.client);
             const viewport = new Viewport(this.client);
             const user = new UserProxy(this.client);
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'ImportSimulationResults',
-                actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
-                asynchronous: true
-            });
+            // await this.client.performDataAction({
+            //     dataConnectorName: 'quodsi_data_connector',
+            //     actionName: 'ImportSimulationResults',
+            //     actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
+            //     asynchronous: true
+            // });
             this.handleOutputCreateDashboard()
 
 
@@ -285,53 +288,8 @@ export class ModelPanel extends Panel {
         try {
             console.log('[ModelPanel] Creating simulation results dashboard...');
 
-            // Create dashboard instance with custom configuration
-            const dashboard = new SimulationResultsDashboard(this.client, {
-                title: 'Simulation Results Overview',
-                tableSpacing: 60, // Extra space between tables
-                initialX: 50,
-                initialY: 50,
-                tableWidth: 900, // Wider tables
-                tableConfig: {
-                    formatNumbers: true,
-                    percentDecimals: 1,
-                    numberDecimals: 2,
-                    styleHeader: true,
-                    dynamicColumns: true,
-                    maxColumns: 6 // Limit columns for readability
-                },
-                // Customize which data types to include
-                includedDataTypes: {
-                    activityUtilization: true,
-                    activityRepSummary: true,
-                    activityTiming: true,
-                    entityState: true,
-                    entityThroughput: true,
-                    resourceRepSummary: true
-                },
-                // Custom column configurations for specific table types
-                customColumnConfig: {
-                    // activityUtilization: {
-                    //     columnOrder: [
-                    //         'activity_name',
-                    //         'utilization_mean',
-                    //         'utilization_max',
-                    //         'capacity_mean',
-                    //         'capacity_max'
-                    //     ],
-                    //     excludeColumns: ['Id']
-                    // },
-                    activityRepSummary: {
-                        columnOrder: [
-                            'activity_id',
-                            'rep',
-                            'utilization_percentage',
-                            'throughput_rate',
-                            'capacity'
-                        ]
-                    }
-                }
-            });
+            // Create dashboard instance with default configuration
+            const dashboard = new SimulationResultsDashboard(this.client);
 
             // Generate a dashboard with the current date/time in the name
             const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
@@ -339,9 +297,7 @@ export class ModelPanel extends Panel {
 
             console.log(`[ModelPanel] Dashboard created with ${result.tables.length} tables`);
 
-            // Optional: You could add additional elements to the page here
-            // For example, add a title or description text block
-
+            // Check for issues
             if (result.emptyDataTypes.length > 0) {
                 console.log(`[ModelPanel] The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
             }
@@ -355,6 +311,21 @@ export class ModelPanel extends Panel {
         } catch (error) {
             console.error('[ModelPanel] Error creating simulation results dashboard:', error);
         }
+    }
+    private async list_blocks(): Promise<void> {
+
+        const viewport = new Viewport(this.client);
+        const currentPage = viewport.getCurrentPage();
+        if (currentPage)
+        {
+            for (const [blockId, block] of currentPage.allBlocks) {
+                console.log('[ModelPanel] Block of class ' + block.getClassName() + ' (' + blockId + '):')
+                for (const [propertyName, propertyValue] of block.properties) {
+                    console.log('[ModelPanel] ' + propertyName, propertyValue);
+                }
+            }
+        }
+
     }
 
     private async handleSimulationStatusUpdate(

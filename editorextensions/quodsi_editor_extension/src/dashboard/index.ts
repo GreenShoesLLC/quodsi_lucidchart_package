@@ -3,16 +3,6 @@
 // Main dashboard class
 export { SimulationResultsDashboard } from './SimulationResultsDashboard';
 
-// Interfaces and types
-export {
-    DashboardConfig,
-    DashboardResult,
-    DashboardTable,
-    TableCreationResult,
-    TableHandlerInterface,
-    DEFAULT_DASHBOARD_CONFIG
-} from './interfaces/DashboardTypes';
-
 // Utility classes
 export { DashboardConfigManager } from './utils/DashboardConfigManager';
 export { DashboardLayoutManager } from './layout/DashboardLayoutManager';

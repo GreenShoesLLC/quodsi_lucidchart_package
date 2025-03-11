@@ -1,8 +1,8 @@
 // utils/DashboardConfigManager.ts
 
-import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../interfaces/DashboardTypes';
+import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../interfaces/config/DashboardConfig';
 import { TableGenerationConfig } from '../interfaces/GeneratorTypes';
-
+import { TableConfig } from '../interfaces/config/TableConfig';
 
 /**
  * Manages and provides access to dashboard configuration
@@ -18,44 +18,59 @@ export class DashboardConfigManager {
             return { ...DEFAULT_DASHBOARD_CONFIG };
         }
 
-        // Deep merge the includedDataTypes object
-        const includedDataTypes = {
-            ...DEFAULT_DASHBOARD_CONFIG.includedDataTypes,
-            ...config.includedDataTypes
-        };
+        // Create a deep copy of the default config to avoid modifying it
+        const mergedConfig: DashboardConfig = JSON.parse(JSON.stringify(DEFAULT_DASHBOARD_CONFIG));
 
-        // Deep merge the tableConfig object
-        const tableConfig = {
-            ...DEFAULT_DASHBOARD_CONFIG.tableConfig,
-            ...config.tableConfig
-        };
+        // Merge top-level properties
+        if (config.title !== undefined) mergedConfig.title = config.title;
 
-        // Merge custom column configurations
-        const customColumnConfig = {
-            ...DEFAULT_DASHBOARD_CONFIG.customColumnConfig,
-            ...config.customColumnConfig
-        };
-
-        // For each table type in the default config, merge with provided config
-        if (DEFAULT_DASHBOARD_CONFIG.customColumnConfig) {
-            Object.keys(DEFAULT_DASHBOARD_CONFIG.customColumnConfig).forEach(tableType => {
-                if (customColumnConfig[tableType]) {
-                    customColumnConfig[tableType] = {
-                        ...DEFAULT_DASHBOARD_CONFIG.customColumnConfig![tableType],
-                        ...customColumnConfig[tableType]
-                    };
-                }
-            });
+        // Merge layout settings
+        if (config.layout) {
+            mergedConfig.layout = {
+                ...mergedConfig.layout,
+                ...config.layout
+            };
         }
 
-        // Return merged configuration
-        return {
-            ...DEFAULT_DASHBOARD_CONFIG,
-            ...config,
-            includedDataTypes,
-            tableConfig,
-            customColumnConfig
-        };
+        // Merge table default settings
+        if (config.tableDefaults) {
+            mergedConfig.tableDefaults = {
+                ...mergedConfig.tableDefaults,
+                ...config.tableDefaults
+            };
+        }
+
+        // Merge table-specific settings
+        if (config.tables) {
+            // Start with the defaults
+            const tables = { ...mergedConfig.tables };
+
+            // Merge each table configuration
+            Object.entries(config.tables).forEach(([tableType, tableConfig]) => {
+                if (!tables[tableType]) {
+                    // If the table type doesn't exist in defaults, add it
+                    tables[tableType] = tableConfig;
+                } else {
+                    // Otherwise merge with existing default
+                    tables[tableType] = {
+                        ...tables[tableType],
+                        ...tableConfig
+                    };
+
+                    // Deep merge columns if provided
+                    if (tableConfig.columns) {
+                        tables[tableType].columns = {
+                            ...tables[tableType].columns,
+                            ...tableConfig.columns
+                        };
+                    }
+                }
+            });
+
+            mergedConfig.tables = tables;
+        }
+
+        return mergedConfig;
     }
 
     /**
@@ -68,20 +83,31 @@ export class DashboardConfigManager {
         // Start with basic position and size
         const baseConfig: TableGenerationConfig = {
             position: { 
-                x: config.initialX || DEFAULT_DASHBOARD_CONFIG.initialX || 50, 
+                x: config.layout?.initialX || 50, 
                 y: 0 // This will be set by the layout manager
             },
-            width: config.tableWidth || DEFAULT_DASHBOARD_CONFIG.tableWidth || 800
+            width: config.layout?.tableWidth || 800
         };
 
-        // Add general table config
-        if (config.tableConfig) {
-            Object.assign(baseConfig, config.tableConfig);
+        // Add general table config from tableDefaults
+        if (config.tableDefaults) {
+            Object.assign(baseConfig, config.tableDefaults);
         }
 
         // Add type-specific customizations
-        if (config.customColumnConfig && config.customColumnConfig[tableType]) {
-            Object.assign(baseConfig, config.customColumnConfig[tableType]);
+        if (config.tables && config.tables[tableType]) {
+            const tableConfig = config.tables[tableType];
+            
+            // Add column configuration if available
+            if (tableConfig.columns) {
+                if (tableConfig.columns.order) {
+                    baseConfig.columnOrder = tableConfig.columns.order;
+                }
+                
+                if (tableConfig.columns.exclude) {
+                    baseConfig.excludeColumns = tableConfig.columns.exclude;
+                }
+            }
         }
 
         return baseConfig;
@@ -94,11 +120,11 @@ export class DashboardConfigManager {
      * @returns True if the table type is enabled
      */
     static isTableTypeEnabled(config: DashboardConfig, tableType: string): boolean {
-        if (!config.includedDataTypes) {
+        if (!config.tables || !config.tables[tableType]) {
             return false;
         }
 
-        return !!config.includedDataTypes[tableType as keyof typeof config.includedDataTypes];
+        return config.tables[tableType].included !== false; // Default to true if not specified
     }
 
     /**
@@ -107,12 +133,12 @@ export class DashboardConfigManager {
      * @returns Array of enabled table type names
      */
     static getEnabledTableTypes(config: DashboardConfig): string[] {
-        if (!config.includedDataTypes) {
+        if (!config.tables) {
             return [];
         }
 
-        return Object.entries(config.includedDataTypes)
-            .filter(([_, enabled]) => enabled)
+        return Object.entries(config.tables)
+            .filter(([_, tableConfig]) => tableConfig.included !== false)
             .map(([type]) => type);
     }
 }

@@ -1,10 +1,11 @@
 // factory/DashboardTableFactory.ts
 
 import { EditorClient } from 'lucid-extension-sdk';
-import { DashboardConfig } from '../interfaces/DashboardTypes';
+import { DashboardConfig } from '../interfaces/config/DashboardConfig';
 import { SimulationResultsReader } from '../../data_sources/simulation_results/SimulationResultsReader';
 import { DynamicSimulationResultsTableGenerator } from '../DynamicSimulationResultsTableGenerator';
-import { TableHandlerInterface } from '../interfaces/DashboardTypes';
+import { TableHandlerInterface } from '../interfaces/handlers/TableHandlerInterface';
+import { DashboardConfigManager } from '../utils/DashboardConfigManager';
 import { BaseTableHandler } from '../handlers/BaseTableHandler';
 import { ActivityUtilizationTableHandler } from '../handlers/ActivityUtilizationTableHandler';
 import { ActivityRepSummaryTableHandler } from '../handlers/ActivityRepSummaryTableHandler';
@@ -148,10 +149,6 @@ export class DashboardTableFactory {
      * @returns True if the table type is enabled
      */
     private isTableTypeEnabled(tableType: string): boolean {
-        if (!this.config.includedDataTypes) {
-            return false;
-        }
-
-        return !!this.config.includedDataTypes[tableType as keyof typeof this.config.includedDataTypes];
+        return DashboardConfigManager.isTableTypeEnabled(this.config, tableType);
     }
 }
