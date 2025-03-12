@@ -16,7 +16,7 @@ export class EntityStateTableGenerator extends BaseTableGenerator {
      * Returns the table type identifier
      */
     getTableType(): string {
-        return 'entity_state_rep_summary';
+        return 'entityState';
     }
     
     /**
@@ -25,7 +25,7 @@ export class EntityStateTableGenerator extends BaseTableGenerator {
     getSchemaMapping(): SchemaMapping {
         return {
             schema: EntityStateRepSummarySchema,
-            identifierFields: ['rep', 'entity_type'],
+            identifierFields: ['id', 'entity_id', 'entity_name'],
             percentageFields: [
                 'percent_waiting',
                 'percent_blocked',
@@ -33,13 +33,20 @@ export class EntityStateTableGenerator extends BaseTableGenerator {
                 'percent_connecting'
             ],
             priorityFields: [
-                'entity_type',
+                'entity_name',
+                'scenario_name',
+                'entity_id',
                 'rep',
                 'count',
                 'avg_time_in_system',
+                'avg_time_waiting',
+                'avg_time_blocked',
+                'avg_time_in_operation',
+                'avg_time_connecting',
                 'percent_waiting',
                 'percent_blocked',
-                'percent_operation'
+                'percent_operation',
+                'percent_connecting'
             ]
         };
     }
@@ -55,6 +62,6 @@ export class EntityStateTableGenerator extends BaseTableGenerator {
      * Returns the default title for entity state tables
      */
     getDefaultTitle(): string {
-        return 'Entity State Summary';
+        return 'Entity State Analysis';
     }
 }

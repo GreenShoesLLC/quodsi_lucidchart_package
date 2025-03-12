@@ -14,6 +14,7 @@ export class ActivityTimingTableHandler extends BaseTableHandler {
      * @returns Type identifier string
      */
     getTableType(): string {
+        console.log('ActivityTimingTableHandler.getTableType() called - returning activityTiming');
         return 'activityTiming';
     }
     
@@ -22,7 +23,7 @@ export class ActivityTimingTableHandler extends BaseTableHandler {
      * @returns Default title
      */
     getDefaultTitle(): string {
-        return 'Activity Timing';
+        return 'Activity Timing Analysis';
     }
     
     /**
@@ -46,6 +47,14 @@ export class ActivityTimingTableHandler extends BaseTableHandler {
         try {
             // Get table configuration
             const tableConfig = this.getTableConfig(position);
+            
+            // Print the table config for debugging
+            console.log('ActivityTimingTableHandler tableConfig:', tableConfig);
+            
+            // Force some useful settings
+            tableConfig.maxColumns = 15; // Show more columns
+            tableConfig.dynamicColumns = false; // Show all columns even if empty
+            tableConfig.excludeColumns = ['id', 'scenario_id']; // Only exclude these
             
             // Create the table
             const table = await this.tableGenerator.createActivityTimingTable(

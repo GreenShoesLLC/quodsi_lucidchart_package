@@ -16,7 +16,7 @@ export class ActivityUtilizationTableGenerator extends BaseTableGenerator {
      * Returns the table type identifier
      */
     getTableType(): string {
-        return 'activity_utilization';
+        return 'activityUtilization';
     }
     
     /**
@@ -25,9 +25,25 @@ export class ActivityUtilizationTableGenerator extends BaseTableGenerator {
     getSchemaMapping(): SchemaMapping {
         return {
             schema: ActivityUtilizationSchema,
-            identifierFields: ['Id', 'Name'],
+            identifierFields: ['id', 'activity_id', 'activity_name'],
             percentageFields: ['utilization_mean', 'utilization_max', 'utilization_std_dev'],
-            priorityFields: ['Name', 'utilization_mean', 'utilization_max', 'capacity_mean', 'queue_length_mean']
+            priorityFields: [
+                'activity_name',
+                'scenario_name',
+                'activity_id',
+                'utilization_mean',
+                'utilization_max',
+                'utilization_std_dev',
+                'capacity_mean',
+                'capacity_max',
+                'capacity_std_dev',
+                'contents_mean',
+                'contents_max',
+                'contents_std_dev',
+                'queue_length_mean',
+                'queue_length_max',
+                'queue_length_std_dev'
+            ]
         };
     }
     

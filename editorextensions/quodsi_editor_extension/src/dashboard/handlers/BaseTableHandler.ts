@@ -1,6 +1,6 @@
 // handlers/BaseTableHandler.ts
 
-import { PageProxy, TableBlockProxy, EditorClient, BlockProxy } from 'lucid-extension-sdk';
+import { PageProxy, TableBlockProxy, EditorClient, BlockProxy, TextMarkupNames } from 'lucid-extension-sdk';
 import { TableHandlerInterface } from '../interfaces/handlers/TableHandlerInterface';
 import { TableCreationResult } from '../interfaces/results/TableResult';
 import { DashboardConfig, getConfigValue } from '../interfaces/config/DashboardConfig';
@@ -97,7 +97,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
                 x: position.x,
                 y: position.y,
                 w: tableWidth,
-                h: 30 // Default height for header
+                h: 40 // Default height for header
             }
         });
         
@@ -111,12 +111,12 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
         headerShape.textAreas.set('Text', headerText);
         
         // Set text styles
-        // await headerShape.textStyles.set('Text', {
-        //     fontFamily: 'Open Sans,Helvetica,Arial,sans-serif',
-        //     fontSize: 14,
-        //     bold: true,
-        //     color: '#000000'
-        // });
+        await headerShape.textStyles.set('Text', {
+            [TextMarkupNames.Family]: 'Open Sans,Helvetica,Arial,sans-serif',
+            [TextMarkupNames.Size]: 14,
+            [TextMarkupNames.Bold]: true,
+            [TextMarkupNames.Color]: '#000000'
+        });
         
         // Get actual height
         const boundingBox = headerShape.getBoundingBox();

@@ -36,7 +36,7 @@ export async function displaySimulationResults() {
   
   if (activityUtilizationData.length > 0) {
     console.log('First activity utilization:', {
-      name: activityUtilizationData[0].Name,
+      name: activityUtilizationData[0].activity_name,
       meanUtilization: activityUtilizationData[0].utilization_mean,
       maxUtilization: activityUtilizationData[0].utilization_max
     });
@@ -63,7 +63,7 @@ export async function displaySimulationResults() {
   const activityTimingData = await resultsReader.getActivityTimingData();
   if (activityTimingData.length > 0) {
     console.log('First activity timing:', {
-      name: activityTimingData[0].Name,
+      name: activityTimingData[0].activity_name,
       cycleTImeMean: activityTimingData[0].cycle_time_mean,
       serviceTimeMean: activityTimingData[0].service_time_mean
     });

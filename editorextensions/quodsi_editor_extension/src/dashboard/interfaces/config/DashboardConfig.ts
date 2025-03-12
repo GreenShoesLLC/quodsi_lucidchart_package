@@ -53,8 +53,8 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
         percentDecimals: 1,
         numberDecimals: 2,
         styleHeader: true,
-        dynamicColumns: true,
-        maxColumns: 6
+        dynamicColumns: false,  // Changed to false to show all columns
+        maxColumns: 15  // Increased from 6 to 15
     },
     tables: DEFAULT_TABLE_CONFIGS
 };
@@ -77,6 +77,9 @@ export function getConfigValue<T>(
 ): T {
     if (!config) return defaultValue;
     
+    // Debug logging
+    console.log(`Getting config value for table type: ${tableType}, path: ${valuePath}`);
+    
     // Check table-specific config first
     const tableConfig = config.tables?.[tableType];
     if (tableConfig) {
@@ -89,12 +92,14 @@ export function getConfigValue<T>(
         }
         
         if (currentObj !== undefined && currentObj !== null) {
+            console.log(`Found table-specific value: ${currentObj}`);
             return currentObj as T;
         }
     }
     
     // Fall back to global defaults
     if (valuePath.startsWith('columns.')) {
+        console.log(`No global defaults for column-specific setting: ${valuePath}`);
         return defaultValue; // No global defaults for column-specific settings
     }
     
@@ -108,5 +113,11 @@ export function getConfigValue<T>(
         currentObj = currentObj[pathParts[i]];
     }
     
-    return (currentObj !== undefined && currentObj !== null) ? currentObj as T : defaultValue;
+    if (currentObj !== undefined && currentObj !== null) {
+        console.log(`Found global default value: ${currentObj}`);
+        return currentObj as T;
+    }
+    
+    console.log(`Using provided default value: ${defaultValue}`);
+    return defaultValue;
 }

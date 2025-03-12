@@ -263,7 +263,7 @@ export class ModelPanel extends Panel {
         console.log('[ModelPanel] Output page creation requested:', data.pageName);
 
         try {
-            await this.list_blocks();
+            //await this.list_blocks();
             // this.initializeOrUpdateModel()
             const document = new DocumentProxy(this.client);
             const viewport = new Viewport(this.client);

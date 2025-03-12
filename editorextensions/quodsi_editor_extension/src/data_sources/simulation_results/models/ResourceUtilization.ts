@@ -4,8 +4,11 @@ import { MapProxy } from 'lucid-extension-sdk';
  * Interface representing data from the resource_utilization collection
  */
 export interface ResourceUtilization {
-  Id: string;
-  Name: string;
+  id: string;
+  scenario_id: string;
+  scenario_name: string;
+  resource_id: string;
+  resource_name: string;
   utilization_rate_mean: number;
   utilization_rate_max: number;
   utilization_rate_std_dev: number;
@@ -21,8 +24,11 @@ export interface ResourceUtilization {
  */
 export function mapToResourceUtilization(itemFields: MapProxy<string, any>): ResourceUtilization {
   return {
-    Id: itemFields.get('Id') as string,
-    Name: itemFields.get('Name') as string,
+    id: itemFields.get('id') as string,
+    scenario_id: itemFields.get('scenario_id') as string,
+    scenario_name: itemFields.get('scenario_name') as string,
+    resource_id: itemFields.get('resource_id') as string,
+    resource_name: itemFields.get('resource_name') as string,
     utilization_rate_mean: itemFields.get('utilization_rate_mean') as number,
     utilization_rate_max: itemFields.get('utilization_rate_max') as number,
     utilization_rate_std_dev: itemFields.get('utilization_rate_std_dev') as number,

@@ -31,7 +31,7 @@ export const ActivityTimingSchema: SchemaDefinition = {
         'scenario_name': 'Scenario Name',
         'id': 'ID',
         'activity_id': 'Activity ID',
-        'naactivity_nameme': 'Activity Name',
+        'activity_name': 'Activity Name',
         'cycle_time_mean': 'Cycle Time Mean',
         'cycle_time_median': 'Cycle Time Median',
         'cycle_time_cv': 'Cycle Time CV',

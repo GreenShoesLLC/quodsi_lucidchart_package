@@ -1,6 +1,6 @@
 // layout/DashboardLayoutManager.ts
 
-import { PageProxy, DocumentProxy, Viewport, PageDefinition, EditorClient, BlockProxy } from 'lucid-extension-sdk';
+import { PageProxy, DocumentProxy, Viewport, PageDefinition, EditorClient, BlockProxy, TextMarkupNames } from 'lucid-extension-sdk';
 import { DashboardConfig } from '../interfaces/config/DashboardConfig';
 
 /**
@@ -96,7 +96,7 @@ export class DashboardLayoutManager {
                 x: position.x,
                 y: position.y,
                 w: tableWidth,
-                h: 30 // Default height for header
+                h: 40 // Default height for header
             }
         });
         
@@ -110,12 +110,12 @@ export class DashboardLayoutManager {
         headerShape.textAreas.set('Text', headerText);
         
         // Set text styles
-        // await headerShape.textStyles.set('Text', {
-        //     fontFamily: 'Open Sans,Helvetica,Arial,sans-serif',
-        //     fontSize: 14,
-        //     bold: true,
-        //     color: '#000000'
-        // });
+        await headerShape.textStyles.set('Text', {
+            [TextMarkupNames.Family]: 'Open Sans,Helvetica,Arial,sans-serif',
+            [TextMarkupNames.Size]: 14,
+            [TextMarkupNames.Bold]: true,
+            [TextMarkupNames.Color]: '#000000'
+        });
         
         // Get actual height
         const boundingBox = headerShape.getBoundingBox();

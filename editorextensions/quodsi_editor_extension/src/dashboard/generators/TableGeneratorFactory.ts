@@ -33,18 +33,30 @@ export class TableGeneratorFactory {
      */
     getGenerator(tableType: string): BaseTableGenerator {
         switch (tableType) {
-            case 'activity_utilization':
+            case 'activityUtilization':
+            case 'activity_utilization': // For backward compatibility
                 return new ActivityUtilizationTableGenerator(this.resultsReader, this.config);
-            case 'activity_rep_summary':
+                
+            case 'activityRepSummary':
+            case 'activity_rep_summary': // For backward compatibility
                 return new ActivityRepSummaryTableGenerator(this.resultsReader, this.config);
-            case 'activity_timing':
+                
+            case 'activityTiming':
+            case 'activity_timing': // For backward compatibility
                 return new ActivityTimingTableGenerator(this.resultsReader, this.config);
-            case 'entity_state_rep_summary':
+                
+            case 'entityState':
+            case 'entity_state_rep_summary': // For backward compatibility
                 return new EntityStateTableGenerator(this.resultsReader, this.config);
-            case 'entity_throughput_rep_summary':
+                
+            case 'entityThroughput':
+            case 'entity_throughput_rep_summary': // For backward compatibility
                 return new EntityThroughputTableGenerator(this.resultsReader, this.config);
-            case 'resource_utilization':
+                
+            case 'resourceUtilization':
+            case 'resource_utilization': // For backward compatibility
                 return new ResourceUtilizationTableGenerator(this.resultsReader, this.config);
+                
             default:
                 throw new Error(`Unknown table type: ${tableType}`);
         }

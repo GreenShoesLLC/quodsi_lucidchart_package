@@ -4,8 +4,11 @@ import { MapProxy } from 'lucid-extension-sdk';
  * Interface representing data from the activity_utilization collection
  */
 export interface ActivityUtilization {
-  Id: string;
-  Name: string;
+  id: string;
+  scenario_id: string;
+  scenario_name: string;
+  activity_id: string;
+  activity_name: string;
   utilization_mean: number;
   utilization_max: number;
   utilization_std_dev: number;
@@ -27,8 +30,11 @@ export interface ActivityUtilization {
  */
 export function mapToActivityUtilization(itemFields: MapProxy<string, any>): ActivityUtilization {
   return {
-    Id: itemFields.get('Id') as string,
-    Name: itemFields.get('Name') as string,
+    id: itemFields.get('id') as string,
+    scenario_id: itemFields.get('scenario_id') as string,
+    scenario_name: itemFields.get('scenario_name') as string,
+    activity_id: itemFields.get('activity_id') as string,
+    activity_name: itemFields.get('activity_name') as string,
     utilization_mean: itemFields.get('utilization_mean') as number,
     utilization_max: itemFields.get('utilization_max') as number,
     utilization_std_dev: itemFields.get('utilization_std_dev') as number,

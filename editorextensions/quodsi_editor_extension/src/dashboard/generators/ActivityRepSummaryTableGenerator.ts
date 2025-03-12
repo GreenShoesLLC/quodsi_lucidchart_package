@@ -16,7 +16,7 @@ export class ActivityRepSummaryTableGenerator extends BaseTableGenerator {
      * Returns the table type identifier
      */
     getTableType(): string {
-        return 'activity_rep_summary';
+        return 'activityRepSummary';
     }
     
     /**
@@ -25,9 +25,25 @@ export class ActivityRepSummaryTableGenerator extends BaseTableGenerator {
     getSchemaMapping(): SchemaMapping {
         return {
             schema: ActivityRepSummarySchema,
-            identifierFields: ['rep', 'activity_id'],
+            identifierFields: ['id', 'activity_id', 'activity_name'],
             percentageFields: ['utilization_percentage', 'operational_efficiency', 'cycle_time_efficiency'],
-            priorityFields: ['rep', 'activity_id', 'utilization_percentage', 'throughput_rate', 'capacity']
+            priorityFields: [
+                'activity_id',
+                'activity_name',
+                'scenario_name',
+                'rep',
+                'utilization_percentage',
+                'throughput_rate',
+                'capacity',
+                'total_available_clock',
+                'total_requests',
+                'total_captures',
+                'average_contents',
+                'maximum_contents',
+                'current_contents',
+                'average_time_per_entry',
+                'average_queue_length'
+            ]
         };
     }
     

@@ -16,7 +16,7 @@ export class ResourceUtilizationTableGenerator extends BaseTableGenerator {
      * Returns the table type identifier
      */
     getTableType(): string {
-        return 'resource_utilization';
+        return 'resourceUtilization';
     }
     
     /**
@@ -25,14 +25,18 @@ export class ResourceUtilizationTableGenerator extends BaseTableGenerator {
     getSchemaMapping(): SchemaMapping {
         return {
             schema: ResourceUtilizationSchema,
-            identifierFields: ['Id', 'Name'],
+            identifierFields: ['id', 'resource_id', 'resource_name'],
             percentageFields: ['utilization_rate_mean', 'utilization_rate_max'],
             priorityFields: [
-                'Name',
+                'resource_name',
+                'scenario_name',
+                'resource_id',
                 'utilization_rate_mean',
                 'utilization_rate_max',
+                'utilization_rate_std_dev',
                 'contents_mean',
-                'contents_max'
+                'contents_max',
+                'contents_std_dev'
             ]
         };
     }

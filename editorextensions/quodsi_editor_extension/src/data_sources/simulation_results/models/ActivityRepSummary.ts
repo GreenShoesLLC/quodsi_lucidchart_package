@@ -4,8 +4,12 @@ import { MapProxy } from 'lucid-extension-sdk';
  * Interface representing data from the activity_rep_summary collection
  */
 export interface ActivityRepSummary {
-  rep: number;
+  id: string;
+  scenario_id: string;
+  scenario_name: string;
   activity_id: string;
+  activity_name: string;
+  rep: number;
   capacity: number;
   total_available_clock: number;
   total_arrivals: number;
@@ -47,8 +51,12 @@ export interface ActivityRepSummary {
  */
 export function mapToActivityRepSummary(itemFields: MapProxy<string, any>): ActivityRepSummary {
   return {
-    rep: itemFields.get('rep') as number,
+    id: itemFields.get('id') as string,
+    scenario_id: itemFields.get('scenario_id') as string,
+    scenario_name: itemFields.get('scenario_name') as string,
     activity_id: itemFields.get('activity_id') as string,
+    activity_name: itemFields.get('activity_name') as string,
+    rep: itemFields.get('rep') as number,
     capacity: itemFields.get('capacity') as number,
     total_available_clock: itemFields.get('total_available_clock') as number,
     total_arrivals: itemFields.get('total_arrivals') as number,

@@ -4,8 +4,12 @@ import { MapProxy } from 'lucid-extension-sdk';
  * Interface representing data from the entity_state_rep_summary collection
  */
 export interface EntityStateRepSummary {
+  id: string;
+  scenario_id: string;
+  scenario_name: string;
+  entity_id: string;
+  entity_name: string;
   rep: number;
-  entity_type: string;
   count: number;
   avg_time_in_system: number;
   avg_time_waiting: number;
@@ -25,8 +29,12 @@ export interface EntityStateRepSummary {
  */
 export function mapToEntityStateRepSummary(itemFields: MapProxy<string, any>): EntityStateRepSummary {
   return {
+    id: itemFields.get('id') as string,
+    scenario_id: itemFields.get('scenario_id') as string,
+    scenario_name: itemFields.get('scenario_name') as string,
+    entity_id: itemFields.get('entity_id') as string,
+    entity_name: itemFields.get('entity_name') as string,
     rep: itemFields.get('rep') as number,
-    entity_type: itemFields.get('entity_type') as string,
     count: itemFields.get('count') as number,
     avg_time_in_system: itemFields.get('avg_time_in_system') as number,
     avg_time_waiting: itemFields.get('avg_time_waiting') as number,

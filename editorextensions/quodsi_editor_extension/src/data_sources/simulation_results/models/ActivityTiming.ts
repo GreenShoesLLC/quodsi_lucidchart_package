@@ -4,8 +4,11 @@ import { MapProxy } from 'lucid-extension-sdk';
  * Interface representing data from the activity_timing collection
  */
 export interface ActivityTiming {
-  Id: string;
-  Name: string;
+  id: string;
+  scenario_id: string;
+  scenario_name: string;
+  activity_id: string;
+  activity_name: string;
   cycle_time_mean: number;
   cycle_time_median: number;
   cycle_time_cv: number;
@@ -31,8 +34,11 @@ export interface ActivityTiming {
  */
 export function mapToActivityTiming(itemFields: MapProxy<string, any>): ActivityTiming {
   return {
-    Id: itemFields.get('Id') as string,
-    Name: itemFields.get('Name') as string,
+    id: itemFields.get('id') as string,
+    scenario_id: itemFields.get('scenario_id') as string,
+    scenario_name: itemFields.get('scenario_name') as string,
+    activity_id: itemFields.get('activity_id') as string,
+    activity_name: itemFields.get('activity_name') as string,
     cycle_time_mean: itemFields.get('cycle_time_mean') as number,
     cycle_time_median: itemFields.get('cycle_time_median') as number,
     cycle_time_cv: itemFields.get('cycle_time_cv') as number,

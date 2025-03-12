@@ -28,7 +28,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('activity_utilization');
+        const generator = this.factory.getGenerator('activityUtilization');
         return generator.createTable(page, client, config);
     }
     
@@ -43,7 +43,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('activity_rep_summary');
+        const generator = this.factory.getGenerator('activityRepSummary');
         return generator.createTable(page, client, config);
     }
     
@@ -58,7 +58,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('activity_timing');
+        const generator = this.factory.getGenerator('activityTiming');
         return generator.createTable(page, client, config);
     }
     
@@ -73,7 +73,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entity_throughput_rep_summary');
+        const generator = this.factory.getGenerator('entityThroughput');
         return generator.createTable(page, client, config);
     }
     
@@ -88,7 +88,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entity_state_rep_summary');
+        const generator = this.factory.getGenerator('entityState');
         return generator.createTable(page, client, config);
     }
     
@@ -103,7 +103,7 @@ export class DynamicSimulationResultsTableGenerator {
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('resource_utilization');
+        const generator = this.factory.getGenerator('resourceUtilization');
         return generator.createTable(page, client, config);
     }
 }

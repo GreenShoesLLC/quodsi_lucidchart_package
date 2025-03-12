@@ -29,20 +29,23 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Activity Utilization',
         columns: {
             order: [
-                'Name',
+                'activity_name',
+                'scenario_name',
+                'activity_id',
                 'utilization_mean',
                 'utilization_max',
+                'utilization_std_dev',
                 'capacity_mean',
                 'capacity_max',
+                'capacity_std_dev',
                 'contents_mean',
                 'contents_max',
+                'contents_std_dev',
                 'queue_length_mean',
                 'queue_length_max',
-                'busy_percentage',
-                'idle_percentage',
-                'blocked_percentage'
+                'queue_length_std_dev'
             ],
-            exclude: ['Id', 'id', 'scenario_id']
+            exclude: ['id', 'scenario_id']
         }
     },
     activityRepSummary: {
@@ -52,19 +55,24 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'activity_id',
                 'activity_name',
+                'scenario_name',
                 'rep',
                 'utilization_percentage',
                 'throughput_rate',
-                'throughput_count',
                 'capacity',
-                'contents_mean',
-                'contents_max',
-                'queue_length_mean',
-                'queue_length_max',
-                'busy_time',
-                'idle_time',
-                'blocked_time',
-                'total_time'
+                'total_available_clock',
+                'total_arrivals',
+                'total_requests',
+                'total_captures',
+                'total_releases',
+                'total_time_in_capture',
+                'total_time_blocked',
+                'total_time_waiting',
+                'average_contents',
+                'maximum_contents',
+                'current_contents',
+                'average_time_per_entry',
+                'average_queue_length'
             ],
             exclude: ['id', 'scenario_id']
         }
@@ -74,22 +82,26 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Activity Timing Analysis',
         columns: {
             order: [
-                'Name',
+                'activity_name',
+                'scenario_name',
                 'cycle_time_mean',
-                'cycle_time_min',
-                'cycle_time_max',
+                'cycle_time_median',
+                'cycle_time_std_dev',
+                'cycle_time_cv',
                 'service_time_mean',
-                'service_time_min',
-                'service_time_max',
+                'service_time_median',
+                'service_time_std_dev',
+                'service_time_cv',
                 'waiting_time_mean',
-                'waiting_time_min',
-                'waiting_time_max',
+                'waiting_time_median',
+                'waiting_time_std_dev',
+                'waiting_time_cv',
                 'blocked_time_mean',
-                'blocked_time_min',
-                'blocked_time_max',
-                'total_entities_processed'
+                'blocked_time_median',
+                'blocked_time_std_dev',
+                'blocked_time_cv'
             ],
-            exclude: ['Id', 'id', 'scenario_id']
+            exclude: ['id', 'scenario_id', 'activity_id']
         }
     },
     entityThroughput: {
@@ -97,17 +109,14 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Entity Throughput',
         columns: {
             order: [
-                'entity_type',
                 'entity_name',
-                'throughput_count',
-                'throughput_rate',
-                'cycle_time_mean',
-                'cycle_time_min',
-                'cycle_time_max',
-                'time_in_system_mean',
-                'time_in_system_min',
-                'time_in_system_max',
-                'rep'
+                'scenario_name',
+                'entity_id',
+                'rep',
+                'count',
+                'completed_count',
+                'in_progress_count',
+                'throughput_rate'
             ],
             exclude: ['id', 'scenario_id']
         }
@@ -119,17 +128,17 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'resource_id',
                 'resource_name',
+                'scenario_name',
                 'rep',
+                'total_requests',
+                'total_captures',
+                'total_releases',
+                'avg_capture_time',
                 'utilization_rate',
-                'available_time',
-                'busy_time',
-                'down_time',
-                'capacity',
-                'contents_mean',
-                'contents_min',
-                'contents_max',
-                'units_seized',
-                'units_released'
+                'total_time_waiting',
+                'avg_queue_time',
+                'max_queue_length',
+                'avg_contents'
             ],
             exclude: ['id', 'scenario_id']
         }
@@ -139,23 +148,17 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Resource Utilization',
         columns: {
             order: [
-                'Name',
+                'resource_name',
+                'scenario_name',
+                'resource_id',
                 'utilization_rate_mean',
-                'utilization_rate_min',
                 'utilization_rate_max',
-                'capacity_mean',
-                'capacity_min',
-                'capacity_max',
+                'utilization_rate_std_dev',
                 'contents_mean',
-                'contents_min',
                 'contents_max',
-                'available_time_mean',
-                'busy_time_mean',
-                'down_time_mean',
-                'units_seized_mean',
-                'units_released_mean'
+                'contents_std_dev'
             ],
-            exclude: ['Id', 'id', 'scenario_id']
+            exclude: ['id', 'scenario_id']
         }
     },
     entityState: {
@@ -163,17 +166,20 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Entity State Analysis',
         columns: {
             order: [
-                'entity_type',
                 'entity_name',
-                'state',
-                'percentage',
-                'count_mean',
-                'count_min',
-                'count_max',
-                'time_mean',
-                'time_min',
-                'time_max',
-                'rep'
+                'scenario_name',
+                'entity_id',
+                'rep',
+                'count',
+                'avg_time_in_system',
+                'avg_time_waiting',
+                'avg_time_blocked',
+                'avg_time_in_operation',
+                'avg_time_connecting',
+                'percent_waiting',
+                'percent_blocked',
+                'percent_operation',
+                'percent_connecting'
             ],
             exclude: ['id', 'scenario_id']
         }

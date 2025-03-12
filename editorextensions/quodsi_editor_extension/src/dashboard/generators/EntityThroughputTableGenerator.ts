@@ -16,7 +16,7 @@ export class EntityThroughputTableGenerator extends BaseTableGenerator {
      * Returns the table type identifier
      */
     getTableType(): string {
-        return 'entity_throughput_rep_summary';
+        return 'entityThroughput';
     }
     
     /**
@@ -25,9 +25,18 @@ export class EntityThroughputTableGenerator extends BaseTableGenerator {
     getSchemaMapping(): SchemaMapping {
         return {
             schema: EntityThroughputRepSummarySchema,
-            identifierFields: ['rep', 'entity_type'],
+            identifierFields: ['id', 'entity_id', 'entity_name'],
             percentageFields: [],
-            priorityFields: ['entity_type', 'rep', 'throughput_rate', 'completed_count', 'count']
+            priorityFields: [
+                'entity_name',
+                'scenario_name',
+                'entity_id',
+                'rep',
+                'count',
+                'completed_count',
+                'in_progress_count',
+                'throughput_rate'
+            ]
         };
     }
     

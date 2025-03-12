@@ -8,9 +8,8 @@ import {
   EntityStateRepSummary, mapToEntityStateRepSummary,
   EntityThroughputRepSummary, mapToEntityThroughputRepSummary,
   ResourceRepSummary, mapToResourceRepSummary,
-  ResourceUtilization, mapToResourceUtilization,
-  CompleteActivityMetrics, mapToCompleteActivityMetrics,
-  CustomMetrics, mapToCustomMetrics
+  ResourceUtilization, mapToResourceUtilization
+
 } from './models';
 
 /**
@@ -223,60 +222,6 @@ export class SimulationResultsReader extends DataSourceReader {
     for (const [_, item] of collection.items) {
       if (item) {
         result.push(mapToResourceRepSummary(item.fields));
-      }
-    }
-    
-    return result;
-  }
-  
-  /**
-   * Gets complete activity metrics collection
-   * @returns The complete activity metrics collection if found, null otherwise
-   */
-  async getCompleteActivityMetricsCollection(): Promise<CollectionProxy | null> {
-    return this.getCollectionByName('complete_activity_metrics');
-  }
-  
-  /**
-   * Gets complete activity metrics data as strongly typed objects
-   * @returns Array of CompleteActivityMetrics objects
-   */
-  async getCompleteActivityMetricsData(): Promise<CompleteActivityMetrics[]> {
-    const collection = await this.getCompleteActivityMetricsCollection();
-    if (!collection) return [];
-    
-    const result: CompleteActivityMetrics[] = [];
-    
-    for (const [_, item] of collection.items) {
-      if (item) {
-        result.push(mapToCompleteActivityMetrics(item.fields));
-      }
-    }
-    
-    return result;
-  }
-  
-  /**
-   * Gets custom metrics collection
-   * @returns The custom metrics collection if found, null otherwise
-   */
-  async getCustomMetricsCollection(): Promise<CollectionProxy | null> {
-    return this.getCollectionByName('custom_metrics');
-  }
-  
-  /**
-   * Gets custom metrics data as strongly typed objects
-   * @returns Array of CustomMetrics objects
-   */
-  async getCustomMetricsData(): Promise<CustomMetrics[]> {
-    const collection = await this.getCustomMetricsCollection();
-    if (!collection) return [];
-    
-    const result: CustomMetrics[] = [];
-    
-    for (const [_, item] of collection.items) {
-      if (item) {
-        result.push(mapToCustomMetrics(item.fields));
       }
     }
     
