@@ -46,8 +46,6 @@ The following schemas are defined in this directory:
 | `entityThroughputRepSummarySchema.ts` | Defines entity throughput metrics across replications |
 | `resourceRepSummarySchema.ts` | Defines resource utilization and capacity metrics |
 | `resourceUtilizationSchema.ts` | Defines detailed resource utilization metrics |
-| `completeActivityMetricsSchema.ts` | Defines a comprehensive set of activity metrics |
-| `customMetricsSchema.ts` | Defines user-defined custom metrics from simulation outputs |
 | `modelSchema.ts` | Defines the model metadata structure |
 
 ## Integration with Data Connector
