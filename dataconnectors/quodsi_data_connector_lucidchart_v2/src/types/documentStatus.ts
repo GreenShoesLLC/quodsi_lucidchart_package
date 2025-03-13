@@ -11,10 +11,19 @@ export interface ScenarioState {
     id: string;
     runState: RunState;
     name: string;
+    reps?: number;
+    forecastDays?: number;
+    seed?: number;
+    type?: string;
+    // New fields for results tracking
+    resultsLastUpdated?: string;
+    resultsLastImported?: string;
+    resultsViewed?: boolean;
 }
 
 export interface ScenarioStates {
     scenarios: ScenarioState[];
+    lastUpdated?: string;
 }
 
 export interface DocumentStatusResponse {

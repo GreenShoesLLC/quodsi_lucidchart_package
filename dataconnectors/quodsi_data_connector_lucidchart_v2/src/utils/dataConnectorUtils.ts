@@ -10,6 +10,7 @@ import { importSimulationResultsAction } from '../actions/importSimulationResult
 import { saveAndSubmitSimulationAction } from '../actions/saveAndSubmitSimulationAction';
 import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAction';
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
+import { markResultsViewedAction } from '../actions/markResultsViewedAction';
 import { registerDataSources } from './registerDataSource';
 
 export const createDataConnector = () => {
@@ -22,6 +23,7 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("HardRefresh", hardRefreshAction)
         .defineAsynchronousAction("ImportSimulationResults", importSimulationResultsAction)
         .defineAsynchronousAction("SaveAndSubmitSimulation", saveAndSubmitSimulationAction)
+        .defineAsynchronousAction("MarkResultsViewed", markResultsViewedAction)
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction);
     

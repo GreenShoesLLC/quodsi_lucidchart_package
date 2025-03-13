@@ -120,8 +120,13 @@ export class ModelPanel extends Panel {
             this.logError('REACT_APP_READY message received in handler');
             this.handleReactReady();
         });
-        this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, () =>
-            this.handleSimulateModel()
+
+        this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
+            this.logError('VIEW_SIMULATION_RESULTS message received in handler');
+            this.handleOutputCreateDashboard(payload)
+        })
+        this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, (payload) =>
+            this.handleSimulateModel(payload)
         );
         this.messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, (data) =>
             this.handleSimulationStatusUpdate(data)
@@ -149,7 +154,7 @@ export class ModelPanel extends Panel {
         this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
             this.handleExpandPath(data.nodeId));
         this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
-            this.handleOutputCreatePage(data);
+            this.handleOutputCreatePage();
         });
         this.logError('Setting up message handlers END');
     }
@@ -259,8 +264,8 @@ export class ModelPanel extends Panel {
     }
 
     
-    private async handleOutputCreatePage(data: { pageName: string }): Promise<void> {
-        console.log('[ModelPanel] Output page creation requested:', data.pageName);
+    private async handleOutputCreatePage(): Promise<void> {
+        console.log('[ModelPanel] Output page creation requested:');
 
         try {
             //await this.list_blocks();
@@ -274,7 +279,7 @@ export class ModelPanel extends Panel {
                 actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
                 asynchronous: true
             });
-            this.handleOutputCreateDashboard()
+            // this.handleOutputCreateDashboard()
 
 
         } catch (error) {
@@ -284,7 +289,9 @@ export class ModelPanel extends Panel {
             });
         }
     }
-    private async handleOutputCreateDashboard(): Promise<void> {
+    private async handleOutputCreateDashboard(
+        payload: MessagePayloads[MessageTypes.VIEW_SIMULATION_RESULTS]
+    ): Promise<void> {
         try {
             console.log('[ModelPanel] Creating simulation results dashboard...');
 
@@ -308,6 +315,13 @@ export class ModelPanel extends Panel {
                     console.error(`[ModelPanel] Error creating ${err.type} table:`, err.error);
                 });
             }
+            const document = new DocumentProxy(this.client);
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'MarkResultsViewed',
+                actionData: { documentId: document.id, scenarioId: payload.scenarioId },
+                asynchronous: true
+            });
         } catch (error) {
             console.error('[ModelPanel] Error creating simulation results dashboard:', error);
         }
@@ -987,7 +1001,9 @@ export class ModelPanel extends Panel {
         }
     }
 
-    private async handleSimulateModel(): Promise<void> {
+    private async handleSimulateModel(
+        payload: MessagePayloads[MessageTypes.SIMULATE_MODEL]
+    ): Promise<void> {
         this.log('Handling simulate model request');
 
         try {
@@ -1017,7 +1033,7 @@ export class ModelPanel extends Panel {
             const modelDefinition = await this.modelManager.getModelDefinition();
             if (modelDefinition) {
                 const serializer = ModelSerializerFactory.create(modelDefinition);
-
+                
                 // Attempt serialization
                 const serializedModel = serializer.serialize(modelDefinition);
                 this.log('serializedModel:', JSON.stringify(serializedModel));
@@ -1026,7 +1042,14 @@ export class ModelPanel extends Panel {
                 await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'SaveAndSubmitSimulation',
-                    actionData: { 'documentId': documentId, scenarioId: BASELINE_SCENARIO_ID, 'model': serializedModel },
+                    actionData: { 
+                        'documentId': documentId,
+                        scenarioId: BASELINE_SCENARIO_ID,
+                        'model': serializedModel,
+                        'scenarioName': payload.scenarioName,
+                        'applicationId':"LucidQuodsim",
+                        'appVersion':"1.0"
+                    },
                     asynchronous: true
                 });
                 // Send success message back to React app

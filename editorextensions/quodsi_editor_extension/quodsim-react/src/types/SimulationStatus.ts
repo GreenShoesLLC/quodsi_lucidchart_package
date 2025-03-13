@@ -5,4 +5,5 @@ export interface SimulationStatus {
     isPollingSimState: boolean;
     errorMessage: string | null;
     lastChecked: string | null;
+    newResultsAvailable?: boolean;
 }

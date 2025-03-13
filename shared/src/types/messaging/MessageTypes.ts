@@ -49,8 +49,11 @@ export enum MessageTypes {
     TREE_NODE_TOGGLE = 'treeNodeToggle',
     TREE_NODE_EXPAND_PATH = 'treeNodeExpandPath',
     TREE_STATE_SYNC = 'treeStateSync',
-
     
+    // Simulation Results Management
+    MARK_RESULTS_VIEWED = 'markResultsViewed',
+    SIMULATION_RESULTS_ACKNOWLEDGED = 'simulationResultsAcknowledged',
+    VIEW_SIMULATION_RESULTS = 'viewSimulationResults'
 }
 
 export interface MessagePayloads extends

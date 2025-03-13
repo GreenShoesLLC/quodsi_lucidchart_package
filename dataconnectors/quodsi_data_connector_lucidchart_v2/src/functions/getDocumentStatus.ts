@@ -2,7 +2,7 @@
 
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { AzureStorageService } from "../services/azureStorageService";
-import { DocumentStatusResponse, ScenarioStates, ErrorResponse } from "../types/documentStatus";
+import { DocumentStatusResponse, ScenarioStates, ErrorResponse, ScenarioState, RunState } from "../types/documentStatus";
 import { getConfig } from "../config";
 
 export async function getDocumentStatus(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -48,8 +48,42 @@ export async function getDocumentStatus(request: HttpRequest, context: Invocatio
 
         if (hasContainer && scenariosJson) {
             try {
-                scenarios = JSON.parse(scenariosJson);
+                // Parse the JSON data from scenarios_status.json
+                const parsedData = JSON.parse(scenariosJson);
+                
+                // Map to our expected format, ensuring we include the new fields
+                scenarios = {
+                    scenarios: (parsedData.scenarios || []).map((s: any) => {
+                        // Convert the scenario data to our expected ScenarioState format
+                        const scenario: ScenarioState = {
+                            id: s.id,
+                            name: s.name,
+                            runState: s.runState as RunState,
+                            reps: s.reps,
+                            forecastDays: s.forecastDays,
+                            seed: s.seed,
+                            type: s.type,
+                            // Include the new fields for results tracking
+                            resultsLastUpdated: s.resultsLastUpdated || null,
+                            resultsLastImported: s.resultsLastImported || null,
+                            resultsViewed: typeof s.resultsViewed === 'boolean' ? s.resultsViewed : false
+                        };
+                        return scenario;
+                    }),
+                    lastUpdated: parsedData.lastUpdated || new Date().toISOString()
+                };
                 context.log(`[${requestId}] Parsed ${scenarios.scenarios?.length ?? 0} scenarios`);
+                
+                // Log information about results availability
+                const scenariosWithNewResults = scenarios.scenarios.filter(s => 
+                    s.runState === RunState.RanSuccessfully && 
+                    s.resultsLastUpdated && 
+                    !s.resultsViewed
+                );
+                
+                if (scenariosWithNewResults.length > 0) {
+                    context.log(`[${requestId}] Found ${scenariosWithNewResults.length} scenarios with new results`);
+                }
             } catch (parseError) {
                 context.log(`[${requestId}] Error parsing scenarios JSON:`, {
                     error: parseError.message,

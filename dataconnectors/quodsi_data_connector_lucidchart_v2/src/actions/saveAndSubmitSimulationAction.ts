@@ -14,6 +14,7 @@ interface SaveAndSubmitRequest {
     documentId: string;
     scenarioId: string; 
     model: any;
+    scenarioName: string
     applicationId?: string;
     appVersion?: string;
 }
@@ -33,12 +34,12 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     try {
         // Extract and validate request data
         const data = action.data as SaveAndSubmitRequest;
-        const { documentId, scenarioId, model, applicationId, appVersion } = data;
+        const { documentId, scenarioId, model, scenarioName, applicationId, appVersion } = data;
         
         // Use default baseline scenario ID if not provided
         // const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
         
-        if (!documentId || !scenarioId || !model) {
+        if (!documentId || !scenarioId || !model || !scenarioName || !applicationId || !appVersion) {
             logger.error('Missing required fields');
             return { success: false };
         }
@@ -72,7 +73,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const storageService = new AzureStorageService(config.azureStorageConnectionString);
         
         // Include scenario ID in the blob name for uniqueness
-        const blobName = `${scenarioId}/model_${scenarioId}.json`;
+        const blobName = `${scenarioId}/model.json`;
         const modelJson = JSON.stringify(model, null, 2);
         
         logger.info(`Uploading model to blob storage for document: ${documentId}, scenario: ${scenarioId}`);
@@ -111,8 +112,8 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             batchAccountName: config.batchAccountName,
             batchAccountKey: config.batchAccountKey,
             poolId: config.batchPoolId,
-            defaultApplicationId: config.defaultApplicationId,
-            defaultAppVersion: config.defaultAppVersion
+            defaultApplicationId: config.defaultApplicationId, //TODO: handle old lucid versions
+            defaultAppVersion: config.defaultAppVersion //TODO: handle old lucid versions
         });
 
         // Pass scenarioId to batch service

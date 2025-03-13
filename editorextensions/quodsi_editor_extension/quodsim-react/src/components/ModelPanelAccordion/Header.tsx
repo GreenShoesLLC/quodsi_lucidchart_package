@@ -19,13 +19,44 @@ interface HeaderProps {
   diagramElementType?: DiagramElementType;
   onTypeChange: (elementId: string, newType: SimulationObjectType) => void;
   onRemoveComponent?: (elementId: string) => void;
-  onSimulate?: () => void;
+  onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
   onConvertPage?: () => void;
   simulationStatus: SimulationStatus;
+  onViewResults?: () => void;
 }
 
-export class Header extends React.Component<HeaderProps> {
+interface HeaderState {
+  isSimulating: boolean;
+  scenarioName: string;
+}
+
+export class Header extends React.Component<HeaderProps, HeaderState> {
+  constructor(props: HeaderProps) {
+    super(props);
+    this.state = {
+      isSimulating: false,
+      scenarioName: "New Scenario" // Default name
+    };
+  }
+  
+  // Reset the simulation button state when status changes
+  componentDidUpdate(prevProps: HeaderProps) {
+    if (
+      prevProps.simulationStatus.pageStatus !== this.props.simulationStatus.pageStatus &&
+      this.state.isSimulating
+    ) {
+      // Check if the simulation is no longer running
+      const scenarioStatus = this.props.simulationStatus.pageStatus?.scenarios?.[0];
+      if (
+        scenarioStatus?.runState === "RAN_SUCCESSFULLY" ||
+        scenarioStatus?.runState === "RAN_WITH_ERRORS"
+      ) {
+        this.setState({ isSimulating: false });
+      }
+    }
+  }
+
   handleTypeChange = (newType: SimulationObjectType, elementId: string) => {
     if (this.props.onTypeChange) {
       this.props.onTypeChange(elementId, newType);
@@ -36,6 +67,13 @@ export class Header extends React.Component<HeaderProps> {
     const { modelItemData, onRemoveComponent } = this.props;
     if (modelItemData?.id && onRemoveComponent) {
       onRemoveComponent(modelItemData.id);
+    }
+  };
+  
+  handleSimulateClick = () => {
+    this.setState({ isSimulating: true });
+    if (this.props.onSimulate) {
+      this.props.onSimulate(this.state.scenarioName);
     }
   };
 
@@ -72,6 +110,28 @@ export class Header extends React.Component<HeaderProps> {
       </div>
     );
   }
+  
+  // Add a scenario name input field
+  renderScenarioNameInput() {
+    const { modelItemData } = this.props;
+    const isModel = modelItemData?.metadata?.type === SimulationObjectType.Model;
+    
+    if (!isModel) return null;
+    
+    return (
+      <div className="flex items-center mb-2">
+        <label htmlFor="scenario-name" className="text-xs mr-2">Scenario Name:</label>
+        <input
+          id="scenario-name"
+          type="text"
+          className="text-xs p-1 border rounded flex-grow"
+          value={this.state.scenarioName}
+          onChange={(e) => this.setState({ scenarioName: e.target.value })}
+          disabled={this.state.isSimulating}
+        />
+      </div>
+    );
+  }
 
   renderButtons() {
     const {
@@ -84,12 +144,19 @@ export class Header extends React.Component<HeaderProps> {
       diagramElementType,
       simulationStatus,
     } = this.props;
+    
+    // Define fixed width for buttons
+    const buttonStyle = {
+      width: '120px',
+      textAlign: 'center' as const
+    };
 
     // Handle case when no modelItemData exists (Convert button)
     if (!modelItemData) {
       return (
         onConvertPage && (
           <button
+            style={buttonStyle}
             className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={onConvertPage}
           >
@@ -110,20 +177,27 @@ export class Header extends React.Component<HeaderProps> {
         <div className="flex items-center gap-2">
           {onSimulate && (
             <button
-              className={`px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded`}
-              onClick={onSimulate}
-              disabled={false}
+              style={buttonStyle}
+              className={`px-2 py-1 text-xs ${
+                this.state.isSimulating 
+                  ? 'bg-blue-500 cursor-not-allowed' 
+                  : 'bg-green-500 hover:bg-green-600'
+              } text-white rounded`}
+              onClick={this.handleSimulateClick}
+              disabled={this.state.isSimulating}
             >
-              {
-                getSimulationState(
-                  simulationStatus.pageStatus,
-                  simulationStatus.isPollingSimState
-                ).buttonLabel
+              {this.state.isSimulating 
+                ? "Running..." 
+                : getSimulationState(
+                    simulationStatus.pageStatus,
+                    simulationStatus.isPollingSimState
+                  ).buttonLabel
               }
             </button>
           )}
           {onRemoveModel && (
             <button
+              style={buttonStyle}
               className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
               onClick={onRemoveModel}
             >
@@ -132,6 +206,7 @@ export class Header extends React.Component<HeaderProps> {
           )}
           {onValidate && (
             <button
+              style={buttonStyle}
               className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
               onClick={onValidate}
             >
@@ -177,14 +252,14 @@ export class Header extends React.Component<HeaderProps> {
   }
 
   render() {
-    const { modelItemData, simulationStatus } = this.props;
-    const isModel =
-      modelItemData?.metadata?.type === SimulationObjectType.Model;
+    const { modelItemData, simulationStatus, onViewResults } = this.props;
+    const isModel = modelItemData?.metadata?.type === SimulationObjectType.Model;
 
     return (
       <div className="p-2 space-y-2 border-b">
         {this.renderModelName()}
         <div className="flex flex-col space-y-2">
+          {this.renderScenarioNameInput()}
           {this.renderButtons()}
 
           {/* Show SimulationStatusMonitor only when viewing a model */}
@@ -193,8 +268,10 @@ export class Header extends React.Component<HeaderProps> {
               <div className="border-t my-2" />
               <SimulationStatusMonitor
                 status={simulationStatus.pageStatus}
-                isPollingSimState={false}
+                isPollingSimState={simulationStatus.isPollingSimState}
                 error={simulationStatus.errorMessage}
+                newResultsAvailable={simulationStatus.newResultsAvailable}
+                onViewResults={onViewResults}
               />
             </>
           )}

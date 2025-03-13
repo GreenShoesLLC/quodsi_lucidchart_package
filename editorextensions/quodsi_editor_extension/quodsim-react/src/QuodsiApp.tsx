@@ -10,6 +10,7 @@ import {
   isValidMessage,
   ModelItemData,
   DiagramElementType,
+  RunState,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -51,6 +52,7 @@ export const initialSimulationStatus: SimulationStatus = {
   isPollingSimState: false,
   errorMessage: null,
   lastChecked: null,
+  newResultsAvailable: false
 } as const;
 
 const initialState: AppState = {
@@ -101,13 +103,65 @@ const QuodsiApp: React.FC = () => {
     },
     []
   );
+  
   const documentId = state.documentId;
+  
+  // Use the hook and capture its return values
+  const { newResultsAvailable, acknowledgeResults } = useSimulationStatus(documentId || "", 30);
+  
+  // Update our state when newResultsAvailable changes
+  useEffect(() => {
+    console.log("[QuodsiApp] newResultsAvailable changed:", newResultsAvailable);
+    
+    setState(prev => ({
+      ...prev,
+      simulationStatus: {
+        ...prev.simulationStatus,
+        newResultsAvailable
+      }
+    }));
+  }, [newResultsAvailable]);
+  
   useEffect(() => {
     console.log("[QuodsiApp] Component mounted");
     return () => console.log("[QuodsiApp] Component unmounted");
   }, []);
+  
   console.log("[QuodsiApp] documentId", documentId);
-  useSimulationStatus(documentId || "", 30);
+
+  // Add custom message handler for simulation status update that includes new results flag
+  useEffect(() => {
+    const handleSimulationStatusUpdate = (payload: any) => {
+      console.log("[QuodsiApp] Received SIMULATION_STATUS_UPDATE:", payload);
+      
+      if (payload.newResultsAvailable) {
+        console.log("[QuodsiApp] Setting newResultsAvailable to true from message");
+        setState(prev => ({
+          ...prev,
+          simulationStatus: {
+            ...prev.simulationStatus,
+            newResultsAvailable: true
+          }
+        }));
+      }
+      
+      // Always update the status even if newResultsAvailable hasn't changed
+      setState(prev => ({
+        ...prev, 
+        simulationStatus: {
+          ...prev.simulationStatus,
+          pageStatus: payload.pageStatus,
+          lastChecked: new Date().toISOString()
+        }
+      }));
+    };
+    
+    messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, handleSimulationStatusUpdate);
+    
+    return () => {
+      // Cleanup if needed
+    };
+  }, [messaging]);
 
   // Set up message handling
   useEffect(() => {
@@ -157,6 +211,11 @@ const QuodsiApp: React.FC = () => {
       expandedNodes: state.expandedNodes,
     });
   }, [state]);
+  
+  // Add debugging for simulationStatus
+  useEffect(() => {
+    console.log("[QuodsiApp] simulationStatus updated:", state.simulationStatus);
+  }, [state.simulationStatus]);
 
   // Event handlers
   const handleElementSelect = useCallback(
@@ -216,10 +275,37 @@ const QuodsiApp: React.FC = () => {
     [sendMessage, state.currentElement?.metadata?.type]
   );
 
-  const handleSimulate = useCallback(() => {
-    console.log("[QuodsiApp] Simulate requested");
-    sendMessage(MessageTypes.SIMULATE_MODEL);
-  }, [sendMessage]);
+const handleSimulate = useCallback(
+  (scenarioName?: string) => {
+    console.log("[QuodsiApp] Simulate requested", { scenarioName });
+    sendMessage(MessageTypes.SIMULATE_MODEL, { scenarioName });
+
+    // Set the simulation button to running state
+    setState((prev) => ({
+      ...prev,
+      simulationStatus: {
+        ...prev.simulationStatus,
+        pageStatus: {
+          ...(prev.simulationStatus.pageStatus || {}),
+          hasContainer: true, 
+          scenarios: [
+            {
+              id: "00000000-0000-0000-0000-000000000000",
+              name: scenarioName || "Base Scenario",
+              reps: 1,
+              forecastDays: 30,
+              runState: RunState.Running,
+              type: SimulationObjectType.Scenario,
+            },
+          ],
+          statusDateTime: new Date().toISOString(),
+        },
+        isPollingSimState: true,
+      },
+    }));
+  },
+  [sendMessage]
+);
 
   const handleRemoveModel = useCallback(() => {
     console.log("[QuodsiApp] Remove model requested");
@@ -290,7 +376,32 @@ const QuodsiApp: React.FC = () => {
     },
     [sendMessage, state.documentId]
   );
+  
+  // Handler for viewing results
+  const handleViewResults = useCallback(() => {
+    console.log("[QuodsiApp] View results requested");
 
+    if (documentId) {
+      // Send the message to LucidChart to create the dashboard
+      sendMessage(MessageTypes.VIEW_SIMULATION_RESULTS, {
+        documentId: documentId,
+        // You can add scenarioId here if you want to view results for a specific scenario
+      });
+
+      // Also call acknowledgeResults to mark results as viewed on the server
+      acknowledgeResults();
+
+      // Just update the local state to remove the notification
+      setState((prev) => ({
+        ...prev,
+        simulationStatus: {
+          ...prev.simulationStatus,
+          newResultsAvailable: false,
+        },
+      }));
+    }
+  }, [documentId, sendMessage, acknowledgeResults]);
+  
   return (
     <div className="flex flex-col h-screen">
       {state.error && <ErrorDisplay error={state.error} />}
@@ -319,6 +430,7 @@ const QuodsiApp: React.FC = () => {
           onConvertPage={handleConvertPage}
           onElementTypeChange={handleElementTypeChange}
           simulationStatus={state.simulationStatus}
+          onViewResults={handleViewResults}
         />
       </div>
     </div>

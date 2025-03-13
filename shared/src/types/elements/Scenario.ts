@@ -7,4 +7,8 @@ export interface Scenario extends SimulationObject {
     forecastDays: number;
     runState: RunState;
     type: SimulationObjectType.Scenario;
+    // Add the new properties
+    resultsLastUpdated?: string;
+    resultsLastImported?: string;
+    resultsViewed?: boolean;
 }

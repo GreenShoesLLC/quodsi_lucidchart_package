@@ -91,6 +91,7 @@ export class LucidSimulationJobSubmissionService {
     public async submitJob(
         documentId: string,
         scenarioId: string,
+        scenarioName: string,
         applicationId?: string,
         appVersion?: string
     ): Promise<string> {
@@ -121,7 +122,7 @@ export class LucidSimulationJobSubmissionService {
             await retry(async () => {
                 const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replace(".", "_")}`;
                 // Add scenarioId parameter to the command line if provided
-                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --scenario-id ${scenarioId}"`;
+                const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id ${documentId} --scenario-id ${scenarioId} --scenario-name ${scenarioName}"`;
 
                 const taskParams: TaskAddParameter = {
                     id: taskId,
@@ -137,7 +138,7 @@ export class LucidSimulationJobSubmissionService {
                 await this.batchClient.task.add(jobId, taskParams);
             }, this.taskRetryOptions);
 
-            console.log('[BatchService] Successfully submitted job with task:', { jobId, taskId, scenarioId });
+            console.log('[BatchService] Successfully submitted job with task:', { jobId, taskId, scenarioId, scenarioName });
             return `Job '${jobId}' with task '${taskId}' submitted successfully.`;
 
         } catch (error: any) {

@@ -38,4 +38,8 @@ var MessageTypes;
     MessageTypes["TREE_NODE_TOGGLE"] = "treeNodeToggle";
     MessageTypes["TREE_NODE_EXPAND_PATH"] = "treeNodeExpandPath";
     MessageTypes["TREE_STATE_SYNC"] = "treeStateSync";
+    // Simulation Results Management
+    MessageTypes["MARK_RESULTS_VIEWED"] = "markResultsViewed";
+    MessageTypes["SIMULATION_RESULTS_ACKNOWLEDGED"] = "simulationResultsAcknowledged";
+    MessageTypes["VIEW_SIMULATION_RESULTS"] = "viewSimulationResults";
 })(MessageTypes = exports.MessageTypes || (exports.MessageTypes = {}));

@@ -51,6 +51,7 @@
       "pollingInterval": 30,
       "dataActions": {
         "Simulate": "simulate",
+        "MarkResultsViewed": "markResultsViewed",
         "GetActivityUtilization": "getActivityUtilizationAction",
         "ImportSimulationResults": "importSimulationResults",
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",

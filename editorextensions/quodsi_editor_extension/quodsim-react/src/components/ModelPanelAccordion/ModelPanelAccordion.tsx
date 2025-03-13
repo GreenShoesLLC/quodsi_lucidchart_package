@@ -38,7 +38,7 @@ interface ModelPanelAccordionProps {
     editor: boolean;
     modelTree: boolean;
   };
-  onSimulate?: () => void;
+  onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
   onConvertPage?: () => void;
   onElementTypeChange: (
@@ -46,6 +46,7 @@ interface ModelPanelAccordionProps {
     newType: SimulationObjectType
   ) => void;
   simulationStatus: SimulationStatus;
+  onViewResults?: () => void;
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
@@ -71,6 +72,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onConvertPage,
   onElementTypeChange,
   simulationStatus,
+  onViewResults,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
     modelTree: !currentElement,
@@ -168,6 +170,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
           elementType={currentElement?.metadata?.type}
           diagramElementType={diagramElementType}
           simulationStatus={simulationStatus}
+          onViewResults={onViewResults}
         />
       )}
       <div className="flex-1 overflow-y-auto">
