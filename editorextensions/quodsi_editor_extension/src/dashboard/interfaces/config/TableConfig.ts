@@ -126,19 +126,20 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         header: 'Resource Replication Summary',
         columns: {
             order: [
-                'resource_id',
                 'resource_name',
                 'scenario_name',
+                'resource_id',
                 'rep',
+                'capacity',
                 'total_requests',
-                'total_captures',
-                'total_releases',
-                'avg_capture_time',
-                'utilization_rate',
-                'total_time_waiting',
-                'avg_queue_time',
-                'max_queue_length',
-                'avg_contents'
+                'times_acquired',
+                'times_released',
+                'average_utilization',
+                'peak_utilization',
+                'average_wait_time',
+                'max_wait_time',
+                'average_queue_length',
+                'max_queue_length'
             ],
             exclude: ['id', 'scenario_id']
         }
@@ -151,12 +152,11 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'resource_name',
                 'scenario_name',
                 'resource_id',
-                'utilization_rate_mean',
-                'utilization_rate_max',
-                'utilization_rate_std_dev',
-                'contents_mean',
-                'contents_max',
-                'contents_std_dev'
+                'utilization_mean',
+                'utilization_max',
+                'utilization_min',
+                'utilization_std_dev',
+                'bottleneck_frequency'
             ],
             exclude: ['id', 'scenario_id']
         }

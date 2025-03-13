@@ -29,6 +29,7 @@ import * as activityTiming from './collectors/activityTiming';
 import * as entityStateRepSummary from './collectors/entityStateRepSummary';
 import * as entityThroughputRepSummary from './collectors/entityThroughputRepSummary';
 import * as resourceRepSummary from './collectors/resourceRepSummary';
+import * as resourceUtilization from './collectors/resourceUtilization';
 
 // Export all collectors as a namespace
 export const collectors = {
@@ -38,6 +39,7 @@ export const collectors = {
     entityStateRepSummary,
     entityThroughputRepSummary,
     resourceRepSummary,
+    resourceUtilization
 };
 
 // Export all fetch functions
@@ -47,7 +49,8 @@ export const fetch = {
     activityTiming: activityTiming.fetchData,
     entityStateRepSummary: entityStateRepSummary.fetchData,
     entityThroughputRepSummary: entityThroughputRepSummary.fetchData,
-    resourceRepSummary: resourceRepSummary.fetchData
+    resourceRepSummary: resourceRepSummary.fetchData,
+    resourceUtilization: resourceUtilization.fetchData
 };
 
 // Export all prepare functions
@@ -57,5 +60,6 @@ export const prepare = {
     activityTiming: activityTiming.prepareUpdate,
     entityStateRepSummary: entityStateRepSummary.prepareUpdate,
     entityThroughputRepSummary: entityThroughputRepSummary.prepareUpdate,
-    resourceRepSummary: resourceRepSummary.prepareUpdate
+    resourceRepSummary: resourceRepSummary.prepareUpdate,
+    resourceUtilization: resourceUtilization.prepareUpdate
 };

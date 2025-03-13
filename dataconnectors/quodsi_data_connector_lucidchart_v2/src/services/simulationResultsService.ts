@@ -52,6 +52,7 @@ export async function updateSimulationResults(
             entityStateRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityStateRepSummary') },
             entityThroughputRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityThroughputRepSummary') },
             resourceRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceRepSummary') },
+            resourceUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceUtilization') }
         };
 
         // Initialize data holders
@@ -61,6 +62,7 @@ export async function updateSimulationResults(
         let entityStateRepSummary = [];
         let entityThroughputRepSummary = [];
         let resourceRepSummary = [];
+        let resourceUtilization = [];
 
         // Only fetch data for enabled collections
         // Activity Utilization
@@ -162,6 +164,22 @@ export async function updateSimulationResults(
             log.info('Resource rep summary data collection is disabled');
         }
 
+        // Resource Utilization
+        if (isDataCollectionEnabled('collectResourceUtilization')) {
+            try {
+                log.info('Fetching resource utilization data...');
+                resourceUtilization = await simulationDataService.fetchResourceUtilization(
+                    config.simulationResultsContainer, documentId, scenarioId
+                );
+                dataFetchResults.resourceUtilization.success = true;
+                dataFetchResults.resourceUtilization.count = resourceUtilization.length;
+            } catch (error) {
+                log.error(`Error fetching resource utilization data: ${error.message}`);
+            }
+        } else {
+            log.info('Resource utilization data collection is disabled');
+        }
+
         // Log summary of data fetch results
         log.info('=== Data Fetch Results Summary ===');
         Object.entries(dataFetchResults).forEach(([dataType, result]) => {
@@ -185,11 +203,11 @@ export async function updateSimulationResults(
             updates["activity_timing"] = simulationDataService.prepareActivityTimingUpdate(activityTiming);
         }
 
-        if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
+        if (isDataCollectionEnabled('collectEntityStateRepSummary')) {
             updates["entity_state_rep_summary"] = simulationDataService.prepareEntityStateRepSummaryUpdate(entityStateRepSummary);
         }
 
-        if (isDataCollectionEnabled('collectResourceRepSummary')) {
+        if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
             updates["entity_throughput_rep_summary"] = simulationDataService.prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
             log.info(`Prepared entity_throughput_rep_summary update with ${updates["entity_throughput_rep_summary"].patch.items.size} items`);
 
@@ -203,6 +221,11 @@ export async function updateSimulationResults(
         if (isDataCollectionEnabled('collectResourceRepSummary')) {
             updates["resource_rep_summary"] = simulationDataService.prepareResourceRepSummaryUpdate(resourceRepSummary);
         }
+
+        if (isDataCollectionEnabled('collectResourceUtilization')) {
+            updates["resource_utilization"] = simulationDataService.prepareResourceUtilizationUpdate(resourceUtilization);
+        }
+        
         // Log prepared update item counts
         log.info('=== Collection Update Item Counts ===');
         Object.entries(updates).forEach(([collectionName, update]) => {

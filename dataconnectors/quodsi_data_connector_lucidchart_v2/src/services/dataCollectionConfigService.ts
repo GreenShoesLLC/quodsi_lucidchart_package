@@ -9,6 +9,7 @@ export interface DataCollectionConfig {
     collectEntityStateRepSummary: boolean;
     collectEntityThroughputRepSummary: boolean;
     collectResourceRepSummary: boolean;
+    collectResourceUtilization: boolean;
 }
 
 // Default configuration - all collections enabled
@@ -18,7 +19,8 @@ const defaultDataCollectionConfig: DataCollectionConfig = {
     collectActivityTiming: true,
     collectEntityStateRepSummary: true,
     collectEntityThroughputRepSummary: true,
-    collectResourceRepSummary: false
+    collectResourceRepSummary: true,
+    collectResourceUtilization: true
 };
 
 // Current active configuration - starts with defaults

@@ -19,6 +19,7 @@ export interface CollectionImportConfig {
     collectEntityStateRepSummary?: boolean;
     collectEntityThroughputRepSummary?: boolean;
     collectResourceRepSummary?: boolean;
+    collectResourceUtilization?: boolean;
 }
 
 /**
@@ -86,17 +87,6 @@ export class SimulationImportService {
             // Initialize storage service
             this.logger.info(`Using Azure storage connection string: ${this.config.azureStorageConnectionString ? '(defined)' : '(undefined)'}`);
             initializeStorageService(this.config.azureStorageConnectionString);
-
-            // First, update the Models collection
-            // this.logger.info(`Updating model data...`);
-            // await updateModelData(
-            //     action,
-            //     params.documentId,
-            //     params.scenarioId,
-            //     this.verboseLogging,
-            //     this.logger
-            // );
-            // this.logger.info(`Model data update completed successfully`);
 
             // Check if container exists before proceeding
             const containerExists = await this.checkContainerExists(containerName);
@@ -226,7 +216,8 @@ export class SimulationImportService {
                 collectActivityTiming: false,
                 collectEntityStateRepSummary: false,
                 collectEntityThroughputRepSummary: false,
-                collectResourceRepSummary: false
+                collectResourceRepSummary: false,
+                collectResourceUtilization: false
             });
 
             // Then enable only the specified collections
@@ -250,6 +241,9 @@ export class SimulationImportService {
                         break;
                     case 'resource_rep_summary':
                         configUpdate.collectResourceRepSummary = true;
+                        break;
+                    case 'resource_utilization':
+                        configUpdate.collectResourceUtilization = true;
                         break;
                     default:
                         this.logger.warn(`Unknown collection specified: ${collection}`);

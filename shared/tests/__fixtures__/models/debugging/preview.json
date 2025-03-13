@@ -1,6 +1,9 @@
 {
   "formatVersion": "1.0",
-  "metadata": { "version": "1.0", "timestamp": "2025-03-01T16:57:27.686Z" },
+  "metadata": {
+    "version": "1.0",
+    "timestamp": "2025-03-12T03:14:34.802Z"
+  },
   "model": {
     "id": "0_0",
     "name": "Page 1",
@@ -26,8 +29,8 @@
   ],
   "activities": [
     {
-      "id": "t-WX0KeXgYSf",
-      "name": "Prepare package for customer",
+      "id": "eSwXKdgcWqT6",
+      "name": "Process",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -35,21 +38,21 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 10,
+            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": null,
+          "requirementId": "yNw0IVElWQGm",
           "quantity": 1
         }
       ],
       "connectors": [
         {
-          "id": "t-WXo4aj-Zdc",
-          "name": "Prepare package for customer → Ship package",
-          "sourceId": "t-WX0KeXgYSf",
-          "targetId": "t-WXqLzu6~Zz",
+          "id": "oSwXRaIiW1Gu",
+          "name": "Process → Process",
+          "sourceId": "eSwXKdgcWqT6",
+          "targetId": "gSwXIV0Hmurz",
           "type": "Connector",
           "probability": 1,
           "connectType": "Probability",
@@ -58,8 +61,8 @@
       ]
     },
     {
-      "id": "t-WX4MINiWxk",
-      "name": "Accept cash or check",
+      "id": "gSwXIV0Hmurz",
+      "name": "Process",
       "type": "Activity",
       "capacity": 1,
       "inputBufferCapacity": 1,
@@ -67,168 +70,37 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 10,
+            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
             "durationType": "CONSTANT",
             "distribution": null
           },
-          "requirementId": null,
-          "quantity": 1
-        }
-      ],
-      "connectors": [
-        {
-          "id": "t-WXmSH__HP~",
-          "name": "Accept cash or check → Prepare package for customer",
-          "sourceId": "t-WX4MINiWxk",
-          "targetId": "t-WX0KeXgYSf",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
-    },
-    {
-      "id": "t-WXHCIohQMW",
-      "name": "Identify payment method",
-      "type": "Activity",
-      "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
-      "operationSteps": [
-        {
-          "duration": {
-            "durationLength": 10,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
-          },
-          "requirementId": null,
-          "quantity": 1
-        }
-      ],
-      "connectors": [
-        {
-          "id": "t-WXyvUy_07c",
-          "name": "Identify payment method → Payment method",
-          "sourceId": "t-WXHCIohQMW",
-          "targetId": "t-WXYXn0R1u1",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
-    },
-    {
-      "id": "t-WXLvD5vl17",
-      "name": "Process credit card",
-      "type": "Activity",
-      "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
-      "operationSteps": [
-        {
-          "duration": {
-            "durationLength": 10,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
-          },
-          "requirementId": null,
-          "quantity": 1
-        }
-      ],
-      "connectors": [
-        {
-          "id": "t-WXdkLikmSJ",
-          "name": "Process credit card → Prepare package for customer",
-          "sourceId": "t-WXLvD5vl17",
-          "targetId": "t-WX0KeXgYSf",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
-    },
-    {
-      "id": "t-WXYXn0R1u1",
-      "name": "Payment method",
-      "type": "Activity",
-      "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
-      "operationSteps": [
-        {
-          "duration": {
-            "durationLength": 10,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
-          },
-          "requirementId": null,
-          "quantity": 1
-        }
-      ],
-      "connectors": [
-        {
-          "id": "t-WX.8hwnRY5",
-          "name": "Credit card",
-          "sourceId": "t-WXYXn0R1u1",
-          "targetId": "t-WXLvD5vl17",
-          "type": "Connector",
-          "probability": 0.5,
-          "connectType": "Probability",
-          "operationSteps": []
-        },
-        {
-          "id": "t-WXYi4hyWQg",
-          "name": "Check or cash",
-          "sourceId": "t-WXYXn0R1u1",
-          "targetId": "t-WX4MINiWxk",
-          "type": "Connector",
-          "probability": 0.5,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
-    },
-    {
-      "id": "t-WXqLzu6~Zz",
-      "name": "Ship package",
-      "type": "Activity",
-      "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
-      "operationSteps": [
-        {
-          "duration": {
-            "durationLength": 10,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
-          },
-          "requirementId": null,
+          "requirementId": "yNw0IVElWQGm",
           "quantity": 1
         }
       ],
       "connectors": []
     }
   ],
-  "resources": [],
+  "resources": [
+    {
+      "id": "yNw0IVElWQGm",
+      "name": "Resource1",
+      "type": "Resource",
+      "capacity": 1
+    }
+  ],
   "generators": [
     {
-      "id": "t-WXmBhmldBE",
-      "name": "Order request",
+      "id": "~RwX-Qxhp_C.",
+      "name": "Process",
       "type": "Generator",
       "activityKeyId": "{SomeActivityName}",
       "entityId": "00000000-0000-0000-0000-000000000000",
       "periodicOccurrences": 10,
       "periodIntervalDuration": {
         "durationLength": 1,
-        "durationPeriodUnit": "MINUTES",
+        "durationPeriodUnit": "HOURS",
         "durationType": "CONSTANT",
         "distribution": null
       },
@@ -242,10 +114,10 @@
       "maxEntities": 999,
       "connectors": [
         {
-          "id": "t-WXVys_5Kc7",
-          "name": "Order request → Identify payment method",
-          "sourceId": "t-WXmBhmldBE",
-          "targetId": "t-WXHCIohQMW",
+          "id": "jSwXeZa3QKA2",
+          "name": "Process → Process",
+          "sourceId": "~RwX-Qxhp_C.",
+          "targetId": "eSwXKdgcWqT6",
           "type": "Connector",
           "probability": 1,
           "connectType": "Probability",
@@ -254,5 +126,26 @@
       ]
     }
   ],
-  "resourceRequirements": []
+  "resourceRequirements": [
+    {
+      "id": "yNw0IVElWQGm",
+      "name": "Resource1",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "yNw0IVElWQGm",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    }
+  ]
 }

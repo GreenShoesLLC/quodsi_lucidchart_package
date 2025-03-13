@@ -13,6 +13,7 @@ import { ActivityTimingTableHandler } from '../handlers/ActivityTimingTableHandl
 import { EntityThroughputTableHandler } from '../handlers/EntityThroughputTableHandler';
 import { EntityStateTableHandler } from '../handlers/EntityStateTableHandler';
 import { ResourceUtilizationTableHandler } from '../handlers/ResourceUtilizationTableHandler';
+import { ResourceRepSummaryTableHandler } from '../handlers/ResourceRepSummaryTableHandler';
 
 /**
  * Factory for creating table handlers
@@ -94,8 +95,12 @@ export class DashboardTableFactory {
             this.config
         ));
         
-        // TODO: Add more handlers as they are implemented
-        // this.registerHandler(new ResourceRepSummaryTableHandler(...));
+        this.registerHandler(new ResourceRepSummaryTableHandler(
+            this.client,
+            this.resultsReader,
+            this.tableGenerator,
+            this.config
+        ));
     }
 
     /**

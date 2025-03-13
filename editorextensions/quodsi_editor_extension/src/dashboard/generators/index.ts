@@ -9,3 +9,4 @@ export { ActivityTimingTableGenerator } from './ActivityTimingTableGenerator';
 export { EntityStateTableGenerator } from './EntityStateTableGenerator';
 export { EntityThroughputTableGenerator } from './EntityThroughputTableGenerator';
 export { ResourceUtilizationTableGenerator } from './ResourceUtilizationTableGenerator';
+export { ResourceRepSummaryTableGenerator } from './ResourceRepSummaryTableGenerator';

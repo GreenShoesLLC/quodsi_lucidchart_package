@@ -7,6 +7,7 @@ import { ActivityTimingTableGenerator } from './ActivityTimingTableGenerator';
 import { EntityStateTableGenerator } from './EntityStateTableGenerator';
 import { EntityThroughputTableGenerator } from './EntityThroughputTableGenerator';
 import { ResourceUtilizationTableGenerator } from './ResourceUtilizationTableGenerator';
+import { ResourceRepSummaryTableGenerator } from './ResourceRepSummaryTableGenerator';
 
 /**
  * Factory class for creating table generators based on table type
@@ -56,6 +57,10 @@ export class TableGeneratorFactory {
             case 'resourceUtilization':
             case 'resource_utilization': // For backward compatibility
                 return new ResourceUtilizationTableGenerator(this.resultsReader, this.config);
+                
+            case 'resourceRepSummary':
+            case 'resource_rep_summary': // For backward compatibility
+                return new ResourceRepSummaryTableGenerator(this.resultsReader, this.config);
                 
             default:
                 throw new Error(`Unknown table type: ${tableType}`);

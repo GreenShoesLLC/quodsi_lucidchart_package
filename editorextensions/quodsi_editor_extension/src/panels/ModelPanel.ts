@@ -268,12 +268,12 @@ export class ModelPanel extends Panel {
             const document = new DocumentProxy(this.client);
             const viewport = new Viewport(this.client);
             const user = new UserProxy(this.client);
-            // await this.client.performDataAction({
-            //     dataConnectorName: 'quodsi_data_connector',
-            //     actionName: 'ImportSimulationResults',
-            //     actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
-            //     asynchronous: true
-            // });
+            await this.client.performDataAction({
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ImportSimulationResults',
+                actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
+                asynchronous: true
+            });
             this.handleOutputCreateDashboard()
 
 
