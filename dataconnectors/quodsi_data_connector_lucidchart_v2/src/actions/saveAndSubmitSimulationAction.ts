@@ -120,6 +120,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const batchResult = await batchService.submitJob(
             documentId,
             scenarioId,
+            scenarioName,
             applicationId,
             appVersion,
         );
