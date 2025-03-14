@@ -17,7 +17,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
     protected client: EditorClient;
     protected resultsReader: SimulationResultsReader;
     protected tableGenerator: DynamicSimulationResultsTableGenerator;
-    
+
     /**
      * Creates a new table handler
      * @param client Editor client
@@ -36,19 +36,19 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
         this.tableGenerator = tableGenerator;
         this.config = config;
     }
-    
+
     /**
      * Gets the table type identifier
      * @returns Type identifier string
      */
     abstract getTableType(): string;
-    
+
     /**
      * Gets the default title for this table type
      * @returns Default title
      */
     abstract getDefaultTitle(): string;
-    
+
     /**
      * Creates a table at the specified position
      * @param page Page to add the table to
@@ -56,13 +56,13 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
      * @returns Table creation result
      */
     abstract createTable(page: PageProxy, position: { x: number, y: number }): Promise<TableCreationResult>;
-    
+
     /**
      * Checks if this table can be created (has data)
      * @returns True if the table can be created
      */
     abstract canCreateTable(): Promise<boolean>;
-    
+
     /**
      * Creates a header for the table
      * @param page The page to create the header on
@@ -74,7 +74,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
         height: number;
     }> {
         this.log(`Creating header at position (${position.x}, ${position.y})`);
-        
+
         // Get header text from config or use default
         const tableType = this.getTableType();
         const headerText = getConfigValue<string>(
@@ -83,13 +83,13 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             'header',
             this.getDefaultTitle()
         );
-        
+
         // Get table width from config
         const tableWidth = this.config.layout?.tableWidth || 800;
-        
+
         // Make sure the RectangleShape class is loaded
         await this.client.loadBlockClasses(['ProcessBlock']);
-        
+
         // Create text shape for header using addBlock
         const headerShape = page.addBlock({
             className: 'ProcessBlock',
@@ -100,36 +100,36 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
                 h: 40 // Default height for header
             }
         });
-        
+
         // Set properties - we need to set these separately since they're not part of the block definition
         headerShape.properties.set('TextAlignment', 'center');
         headerShape.properties.set('FillColor', '#F0F0F0');
         headerShape.properties.set('BorderColor', '#FFFFFF'); // No visible border
         headerShape.properties.set('BorderWidth', 0);
-        
+
         // Set the text content
         headerShape.textAreas.set('Text', headerText);
-        
+
         // Set text styles
         await headerShape.textStyles.set('Text', {
-            [TextMarkupNames.Family]: 'Open Sans,Helvetica,Arial,sans-serif',
+            [TextMarkupNames.Family]: 'Open Sans',
             [TextMarkupNames.Size]: 14,
             [TextMarkupNames.Bold]: true,
             [TextMarkupNames.Color]: '#000000'
         });
-        
+
         // Get actual height
         const boundingBox = headerShape.getBoundingBox();
         const height = boundingBox.h;
-        
+
         this.log(`Created header with text "${headerText}"`);
-        
+
         return {
             header: headerShape,
-            height 
+            height
         };
     }
-    
+
     /**
      * Gets the table configuration for this table type
      * @param position Position for the table
@@ -137,7 +137,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
      */
     protected getTableConfig(position: { x: number, y: number }): TableGenerationConfig {
         const tableType = this.getTableType();
-        
+
         // Get column configuration
         const columnOrder = getConfigValue<string[]>(
             this.config,
@@ -145,14 +145,14 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             'columns.order',
             []
         );
-        
+
         const excludeColumns = getConfigValue<string[]>(
             this.config,
             tableType,
             'columns.exclude',
             []
         );
-        
+
         // Get table formatting options
         const formatNumbers = getConfigValue<boolean>(
             this.config,
@@ -160,45 +160,45 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             'formatNumbers',
             true
         );
-        
+
         const percentDecimals = getConfigValue<number>(
             this.config,
             tableType,
             'percentDecimals',
             1
         );
-        
+
         const numberDecimals = getConfigValue<number>(
             this.config,
             tableType,
             'numberDecimals',
             2
         );
-        
+
         const styleHeader = getConfigValue<boolean>(
             this.config,
             tableType,
             'styleHeader',
             true
         );
-        
+
         const dynamicColumns = getConfigValue<boolean>(
             this.config,
             tableType,
             'dynamicColumns',
             true
         );
-        
+
         const maxColumns = getConfigValue<number>(
             this.config,
             tableType,
             'maxColumns',
             6
         );
-        
+
         // Set position and title
         const tableWidth = this.config.layout?.tableWidth || 800;
-        
+
         return {
             position,
             title: this.getDefaultTitle(),
@@ -213,7 +213,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             width: tableWidth
         };
     }
-    
+
     /**
      * Creates a standardized result object for table creation
      * @param table The created table (or null if failed)
@@ -222,8 +222,8 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
      * @returns Standardized result object
      */
     protected createResult(
-        table: TableBlockProxy | null, 
-        success: boolean, 
+        table: TableBlockProxy | null,
+        success: boolean,
         error?: any
     ): TableCreationResult {
         // Get table height for layout calculations
@@ -232,7 +232,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             const boundingBox = table.getBoundingBox();
             height = boundingBox.h;
         }
-        
+
         return {
             table,
             height,
@@ -240,7 +240,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
             error
         };
     }
-    
+
     /**
      * Logs a message with the table type prefix
      * @param message Message to log
@@ -248,7 +248,7 @@ export abstract class BaseTableHandler implements TableHandlerInterface {
      */
     protected log(message: string, level: 'log' | 'warn' | 'error' = 'log'): void {
         const prefix = `[${this.getTableType()}]`;
-        
+
         switch (level) {
             case 'warn':
                 console.warn(`${prefix} ${message}`);

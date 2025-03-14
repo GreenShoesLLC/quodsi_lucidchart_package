@@ -111,7 +111,7 @@ export class DashboardLayoutManager {
         
         // Set text styles
         await headerShape.textStyles.set('Text', {
-            [TextMarkupNames.Family]: 'Open Sans,Helvetica,Arial,sans-serif',
+            [TextMarkupNames.Family]: 'Open Sans',
             [TextMarkupNames.Size]: 14,
             [TextMarkupNames.Bold]: true,
             [TextMarkupNames.Color]: '#000000'
