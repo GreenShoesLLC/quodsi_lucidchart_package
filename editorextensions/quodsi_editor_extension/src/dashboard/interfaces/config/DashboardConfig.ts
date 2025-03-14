@@ -41,7 +41,7 @@ export interface DashboardConfig {
  * Default dashboard configuration
  */
 export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
-    title: 'Simulation Results Dashboard',
+    title: 'Sim Results',
     layout: {
         tableSpacing: 50,
         initialX: 50,

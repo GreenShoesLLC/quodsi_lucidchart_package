@@ -102,11 +102,11 @@ export const SimulationStatusMonitor: React.FC<Props> = ({
           <div>Updated: {new Date(status.statusDateTime).toLocaleString()}</div>
           
           {/* DEBUG: Always show what triggered the button visibility decision */}
-          <div className="text-xs text-gray-500">
+          {/* <div className="text-xs text-gray-500">
             Debug: Complete={hasCompletedScenario ? 'Y' : 'N'}, 
             New={newResultsAvailable ? 'Y' : 'N'}, 
             Viewed={resultsAlreadyViewed ? 'Y' : 'N'}
-          </div>
+          </div> */}
           
           {/* Show View Results button only when needed */}
           {showViewResultsButton && (

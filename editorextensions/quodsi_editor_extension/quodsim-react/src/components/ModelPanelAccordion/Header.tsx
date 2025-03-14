@@ -36,18 +36,20 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     super(props);
     this.state = {
       isSimulating: false,
-      scenarioName: "New Scenario" // Default name
+      scenarioName: "New Scenario", // Default name
     };
   }
-  
+
   // Reset the simulation button state when status changes
   componentDidUpdate(prevProps: HeaderProps) {
     if (
-      prevProps.simulationStatus.pageStatus !== this.props.simulationStatus.pageStatus &&
+      prevProps.simulationStatus.pageStatus !==
+        this.props.simulationStatus.pageStatus &&
       this.state.isSimulating
     ) {
       // Check if the simulation is no longer running
-      const scenarioStatus = this.props.simulationStatus.pageStatus?.scenarios?.[0];
+      const scenarioStatus =
+        this.props.simulationStatus.pageStatus?.scenarios?.[0];
       if (
         scenarioStatus?.runState === "RAN_SUCCESSFULLY" ||
         scenarioStatus?.runState === "RAN_WITH_ERRORS"
@@ -69,7 +71,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
       onRemoveComponent(modelItemData.id);
     }
   };
-  
+
   handleSimulateClick = () => {
     this.setState({ isSimulating: true });
     if (this.props.onSimulate) {
@@ -110,17 +112,20 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
       </div>
     );
   }
-  
+
   // Add a scenario name input field
   renderScenarioNameInput() {
     const { modelItemData } = this.props;
-    const isModel = modelItemData?.metadata?.type === SimulationObjectType.Model;
-    
+    const isModel =
+      modelItemData?.metadata?.type === SimulationObjectType.Model;
+
     if (!isModel) return null;
-    
+
     return (
       <div className="flex items-center mb-2">
-        <label htmlFor="scenario-name" className="text-xs mr-2">Scenario Name:</label>
+        <label htmlFor="scenario-name" className="text-xs mr-2">
+          Scenario Name:
+        </label>
         <input
           id="scenario-name"
           type="text"
@@ -144,11 +149,16 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
       diagramElementType,
       simulationStatus,
     } = this.props;
-    
-    // Define fixed width for buttons
+
+    // Define fixed width for buttons - ensuring all three buttons have the same width
     const buttonStyle = {
-      width: '120px',
-      textAlign: 'center' as const
+      minWidth: "110px",
+      width: "33%",
+      textAlign: "center" as const,
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "32px",
     };
 
     // Handle case when no modelItemData exists (Convert button)
@@ -174,25 +184,24 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     // Handle Model type buttons (Simulate, Remove Model, Validate)
     if (elementType === SimulationObjectType.Model) {
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 w-full">
           {onSimulate && (
             <button
               style={buttonStyle}
               className={`px-2 py-1 text-xs ${
-                this.state.isSimulating 
-                  ? 'bg-blue-500 cursor-not-allowed' 
-                  : 'bg-green-500 hover:bg-green-600'
+                this.state.isSimulating
+                  ? "bg-blue-500 cursor-not-allowed"
+                  : "bg-green-500 hover:bg-green-600"
               } text-white rounded`}
               onClick={this.handleSimulateClick}
               disabled={this.state.isSimulating}
             >
-              {this.state.isSimulating 
-                ? "Running..." 
+              {this.state.isSimulating
+                ? "Running..."
                 : getSimulationState(
                     simulationStatus.pageStatus,
                     simulationStatus.isPollingSimState
-                  ).buttonLabel
-              }
+                  ).buttonLabel}
             </button>
           )}
           {onRemoveModel && (
@@ -204,7 +213,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
               Remove Model
             </button>
           )}
-          {onValidate && (
+          {/* {onValidate && (
             <button
               style={buttonStyle}
               className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -212,7 +221,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
             >
               Validate
             </button>
-          )}
+          )} */}
         </div>
       );
     }
@@ -253,7 +262,8 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
 
   render() {
     const { modelItemData, simulationStatus, onViewResults } = this.props;
-    const isModel = modelItemData?.metadata?.type === SimulationObjectType.Model;
+    const isModel =
+      modelItemData?.metadata?.type === SimulationObjectType.Model;
 
     return (
       <div className="p-2 space-y-2 border-b">

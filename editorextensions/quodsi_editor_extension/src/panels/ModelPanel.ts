@@ -279,7 +279,7 @@ export class ModelPanel extends Panel {
                 actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
                 asynchronous: true
             });
-            // this.handleOutputCreateDashboard()
+            this.handleOutputCreateDashboard({ documentId: document.id, scenarioId: BASELINE_SCENARIO_ID})
 
 
         } catch (error) {
@@ -300,7 +300,7 @@ export class ModelPanel extends Panel {
 
             // Generate a dashboard with the current date/time in the name
             const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
-            const result = await dashboard.createDashboard(`Simulation Results - ${timestamp}`);
+            const result = await dashboard.createDashboard(`Quodsi - ${timestamp}`);
 
             console.log(`[ModelPanel] Dashboard created with ${result.tables.length} tables`);
 

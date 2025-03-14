@@ -76,9 +76,9 @@ const initialState: AppState = {
   showModelItemName: true,
   visibleSections: {
     header: true,
-    validation: true,
+    validation: false,
     editor: true,
-    modelTree: true,
+    modelTree: false,
   },
   simulationStatus: initialSimulationStatus,
 };

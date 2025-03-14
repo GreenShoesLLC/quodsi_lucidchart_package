@@ -82,9 +82,9 @@ export const messageHandlers: Partial<{
                 showModelItemName: false,      // Don't show model item name since we're showing model name
                 visibleSections: {             // Show all sections
                     header: true,
-                    validation: true,
+                    validation: false,
                     editor: true,
-                    modelTree: true
+                    modelTree: false
                 },
                 isProcessing: false,
                 error: null,
@@ -132,9 +132,9 @@ export const messageHandlers: Partial<{
                 showModelItemName: true,
                 visibleSections: {
                     header: true,
-                    validation: true,
+                    validation: false,
                     editor: true,
-                    modelTree: true
+                    modelTree: false
                 },
                 documentId: payload.documentId
             };
