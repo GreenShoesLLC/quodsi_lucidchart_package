@@ -1,7 +1,7 @@
 // layout/DashboardLayoutManager.ts
 
 import { PageProxy, DocumentProxy, Viewport, PageDefinition, EditorClient, BlockProxy, TextMarkupNames } from 'lucid-extension-sdk';
-import { DashboardConfig } from '../interfaces/config/DashboardConfig';
+import { DashboardConfig } from '../interfaces/DashboardConfigInterface';
 
 /**
  * Manages the layout and positioning of dashboard elements
@@ -31,10 +31,10 @@ export class DashboardLayoutManager {
         const def: PageDefinition = {
             title: pageName,
         };
-        
+
         const page = document.addPage(def);
         console.log(`[Layout] Created new page with ID: ${page.id}`);
-        
+
         return page;
     }
 
@@ -82,13 +82,13 @@ export class DashboardLayoutManager {
         position: { x: number, y: number }
     ): Promise<{ header: BlockProxy, height: number }> {
         console.log(`[Layout] Creating header at position (${position.x}, ${position.y}) with text "${headerText}"`);
-        
+
         // Get table width from config
         const tableWidth = this.config.layout?.tableWidth || 800;
-        
+
         // Make sure the RectangleShape class is loaded
         await this.client.loadBlockClasses(['ProcessBlock']);
-        
+
         // Create text shape for header using addBlock
         const headerShape = page.addBlock({
             className: 'ProcessBlock',
@@ -99,16 +99,16 @@ export class DashboardLayoutManager {
                 h: 40 // Default height for header
             }
         });
-        
+
         // Set properties - we need to set these separately since they're not part of the block definition
         headerShape.properties.set('TextAlignment', 'center');
         headerShape.properties.set('FillColor', '#F0F0F0');
         headerShape.properties.set('BorderColor', '#FFFFFF'); // No visible border
         headerShape.properties.set('BorderWidth', 0);
-        
+
         // Set the text content
         headerShape.textAreas.set('Text', headerText);
-        
+
         // Set text styles
         await headerShape.textStyles.set('Text', {
             [TextMarkupNames.Family]: 'Open Sans',
@@ -116,16 +116,16 @@ export class DashboardLayoutManager {
             [TextMarkupNames.Bold]: true,
             [TextMarkupNames.Color]: '#000000'
         });
-        
+
         // Get actual height
         const boundingBox = headerShape.getBoundingBox();
         const height = boundingBox.h;
-        
+
         console.log(`[Layout] Created header with height ${height}px`);
-        
+
         return {
             header: headerShape,
-            height 
+            height
         };
     }
 
@@ -144,7 +144,7 @@ export class DashboardLayoutManager {
     getTableSpacing(): number {
         return this.config.layout?.tableSpacing || 50;
     }
-    
+
     /**
      * Gets the spacing to use between a header and its table
      * @returns Spacing in pixels 

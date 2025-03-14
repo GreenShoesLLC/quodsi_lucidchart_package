@@ -1,0 +1,505 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sites_dev_quodsi_func_lucid_v3_name": {
+      "defaultValue": "dev-quodsi-func-lucid-v3",
+      "type": "String"
+    },
+    "serverfarms_ASP_dev_quodsi_func_lucid_v3_a60d_externalid": {
+      "defaultValue": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.Web/serverfarms/ASP-dev-quodsi-func-lucid-v3-a60d",
+      "type": "String"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-04-01",
+      "name": "[parameters('sites_dev_quodsi_func_lucid_v3_name')]",
+      "location": "East US",
+      "tags": {
+        "hidden-link: /app-insights-resource-id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/devquodsilucidfunctionap/providers/microsoft.insights/components/devquodsilucidfunctionap",
+        "hidden-link: /app-insights-instrumentation-key": "c75f9ca1-55eb-45fb-99b8-0279c43c17c5",
+        "hidden-link: /app-insights-conn-string": "InstrumentationKey=c75f9ca1-55eb-45fb-99b8-0279c43c17c5;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=cec19a90-3460-4799-a3a9-0a7dbbb6a4a6"
+      },
+      "kind": "functionapp,linux",
+      "properties": {
+        "enabled": true,
+        "hostNameSslStates": [
+          {
+            "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Standard"
+          },
+          {
+            "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '.scm.azurewebsites.net')]",
+            "sslState": "Disabled",
+            "hostType": "Repository"
+          }
+        ],
+        "serverFarmId": "[parameters('serverfarms_ASP_dev_quodsi_func_lucid_v3_a60d_externalid')]",
+        "reserved": true,
+        "isXenon": false,
+        "hyperV": false,
+        "dnsConfiguration": {},
+        "vnetRouteAllEnabled": false,
+        "vnetImagePullEnabled": false,
+        "vnetContentShareEnabled": false,
+        "siteConfig": {
+          "numberOfWorkers": 1,
+          "linuxFxVersion": "Node|20",
+          "acrUseManagedIdentityCreds": false,
+          "alwaysOn": false,
+          "http20Enabled": false,
+          "functionAppScaleLimit": 200,
+          "minimumElasticInstanceCount": 0
+        },
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": false,
+        "clientCertEnabled": false,
+        "clientCertMode": "Required",
+        "hostNamesDisabled": false,
+        "ipMode": "IPv4",
+        "vnetBackupRestoreEnabled": false,
+        "customDomainVerificationId": "AD345AA89290515FAE2E32C1FB73228D035045B6246C9FFF4D0C433E5724E318",
+        "containerSize": 0,
+        "dailyMemoryTimeQuota": 0,
+        "httpsOnly": false,
+        "endToEndEncryptionEnabled": false,
+        "redundancyMode": "None",
+        "storageAccountRequired": false,
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/ftp')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "tags": {
+        "hidden-link: /app-insights-resource-id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/devquodsilucidfunctionap/providers/microsoft.insights/components/devquodsilucidfunctionap",
+        "hidden-link: /app-insights-instrumentation-key": "c75f9ca1-55eb-45fb-99b8-0279c43c17c5",
+        "hidden-link: /app-insights-conn-string": "InstrumentationKey=c75f9ca1-55eb-45fb-99b8-0279c43c17c5;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=cec19a90-3460-4799-a3a9-0a7dbbb6a4a6"
+      },
+      "properties": {
+        "allow": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/basicPublishingCredentialsPolicies",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/scm')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "tags": {
+        "hidden-link: /app-insights-resource-id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/devquodsilucidfunctionap/providers/microsoft.insights/components/devquodsilucidfunctionap",
+        "hidden-link: /app-insights-instrumentation-key": "c75f9ca1-55eb-45fb-99b8-0279c43c17c5",
+        "hidden-link: /app-insights-conn-string": "InstrumentationKey=c75f9ca1-55eb-45fb-99b8-0279c43c17c5;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=cec19a90-3460-4799-a3a9-0a7dbbb6a4a6"
+      },
+      "properties": {
+        "allow": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/web')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "tags": {
+        "hidden-link: /app-insights-resource-id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/devquodsilucidfunctionap/providers/microsoft.insights/components/devquodsilucidfunctionap",
+        "hidden-link: /app-insights-instrumentation-key": "c75f9ca1-55eb-45fb-99b8-0279c43c17c5",
+        "hidden-link: /app-insights-conn-string": "InstrumentationKey=c75f9ca1-55eb-45fb-99b8-0279c43c17c5;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=cec19a90-3460-4799-a3a9-0a7dbbb6a4a6"
+      },
+      "properties": {
+        "numberOfWorkers": 1,
+        "defaultDocuments": [
+          "Default.htm",
+          "Default.html",
+          "Default.asp",
+          "index.htm",
+          "index.html",
+          "iisstart.htm",
+          "default.aspx",
+          "index.php"
+        ],
+        "netFrameworkVersion": "v4.0",
+        "linuxFxVersion": "Node|20",
+        "requestTracingEnabled": false,
+        "remoteDebuggingEnabled": false,
+        "httpLoggingEnabled": false,
+        "acrUseManagedIdentityCreds": false,
+        "logsDirectorySizeLimit": 35,
+        "detailedErrorLoggingEnabled": false,
+        "publishingUsername": "$dev-quodsi-func-lucid-v3",
+        "scmType": "None",
+        "use32BitWorkerProcess": false,
+        "webSocketsEnabled": false,
+        "alwaysOn": false,
+        "managedPipelineMode": "Integrated",
+        "virtualApplications": [
+          {
+            "virtualPath": "/",
+            "physicalPath": "site\\wwwroot",
+            "preloadEnabled": false
+          }
+        ],
+        "loadBalancing": "LeastRequests",
+        "experiments": {
+          "rampUpRules": []
+        },
+        "autoHealEnabled": false,
+        "vnetRouteAllEnabled": false,
+        "vnetPrivatePortsCount": 0,
+        "cors": {
+          "allowedOrigins": [
+            "https://portal.azure.com",
+            "https://lucid.app",
+            "http://localhost:9900",
+            "https://98827c7ede87f33fa23f5932559ad2a6.lucidextensions.app"
+          ],
+          "supportCredentials": false
+        },
+        "localMySqlEnabled": false,
+        "ipSecurityRestrictions": [
+          {
+            "ipAddress": "Any",
+            "action": "Allow",
+            "priority": 2147483647,
+            "name": "Allow all",
+            "description": "Allow all access"
+          }
+        ],
+        "scmIpSecurityRestrictions": [
+          {
+            "ipAddress": "Any",
+            "action": "Allow",
+            "priority": 2147483647,
+            "name": "Allow all",
+            "description": "Allow all access"
+          }
+        ],
+        "scmIpSecurityRestrictionsUseMain": false,
+        "http20Enabled": false,
+        "minTlsVersion": "1.2",
+        "scmMinTlsVersion": "1.2",
+        "ftpsState": "FtpsOnly",
+        "preWarmedInstanceCount": 0,
+        "functionAppScaleLimit": 200,
+        "functionsRuntimeScaleMonitoringEnabled": false,
+        "minimumElasticInstanceCount": 0,
+        "azureStorageAccounts": {}
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/dataConnector')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/dataConnectorHttpTrigger.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/dataConnector.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/dataConnector",
+        "config": {
+          "name": "dataConnector",
+          "entryPoint": "",
+          "scriptFile": "dataConnectorHttpTrigger.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "GET",
+                "POST",
+                "OPTIONS"
+              ],
+              "authLevel": "anonymous",
+              "route": "dataConnector/{name}",
+              "type": "httpTrigger",
+              "name": "httpTriggerdd0512f625",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataconnector/{name}",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/getDocumentStatus')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/getDocumentStatus.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/getDocumentStatus.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/getDocumentStatus",
+        "config": {
+          "name": "getDocumentStatus",
+          "entryPoint": "",
+          "scriptFile": "getDocumentStatus.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "GET"
+              ],
+              "authLevel": "function",
+              "route": "status/{documentId}",
+              "type": "httpTrigger",
+              "name": "httpTrigger6e3472a075",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/status/{documentid}",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/httpTrigger1')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/httpTrigger1.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/httpTrigger1.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/httpTrigger1",
+        "config": {
+          "name": "httpTrigger1",
+          "entryPoint": "",
+          "scriptFile": "httpTrigger1.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "GET",
+                "POST"
+              ],
+              "authLevel": "anonymous",
+              "type": "httpTrigger",
+              "name": "httpTrigger624a61988c",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/httptrigger1",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/markResultsViewed')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/markResultsViewed.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/markResultsViewed.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/markResultsViewed",
+        "config": {
+          "name": "markResultsViewed",
+          "entryPoint": "",
+          "scriptFile": "markResultsViewed.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "authLevel": "function",
+              "route": "mark-viewed/{documentId}",
+              "type": "httpTrigger",
+              "name": "httpTrigger04ae404ea4",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/mark-viewed/{documentid}",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/saveAndSubmitSimulation')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/saveAndSubmitSimulation.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/saveAndSubmitSimulation.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/saveAndSubmitSimulation",
+        "config": {
+          "name": "saveAndSubmitSimulation",
+          "entryPoint": "",
+          "scriptFile": "saveAndSubmitSimulation.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "authLevel": "anonymous",
+              "route": "simulation/save-and-submit",
+              "type": "httpTrigger",
+              "name": "httpTrigger91df704039",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/simulation/save-and-submit",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/submitSimulationJob')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/submitSimulationJob.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/submitSimulationJob.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/submitSimulationJob",
+        "config": {
+          "name": "submitSimulationJob",
+          "entryPoint": "",
+          "scriptFile": "submitSimulationJob.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "authLevel": "anonymous",
+              "route": "simulation/submit",
+              "type": "httpTrigger",
+              "name": "httpTrigger1d92b2f07b",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/simulation/submit",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/functions",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/uploadModelDefinition')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "script_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/home/site/wwwroot/uploadModelDefinition.js",
+        "test_data_href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/vfs/tmp/FunctionsData/uploadModelDefinition.dat",
+        "href": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/admin/functions/uploadModelDefinition",
+        "config": {
+          "name": "uploadModelDefinition",
+          "entryPoint": "",
+          "scriptFile": "uploadModelDefinition.js",
+          "language": "node",
+          "functionDirectory": "/home/site/wwwroot/dist/src/functions",
+          "bindings": [
+            {
+              "methods": [
+                "POST"
+              ],
+              "authLevel": "anonymous",
+              "route": "model/{documentId}",
+              "type": "httpTrigger",
+              "name": "httpTrigger3551e7c641",
+              "direction": "in"
+            },
+            {
+              "type": "http",
+              "name": "$return",
+              "direction": "out"
+            }
+          ]
+        },
+        "invoke_url_template": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/model/{documentid}",
+        "language": "node",
+        "isDisabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/hostNameBindings",
+      "apiVersion": "2024-04-01",
+      "name": "[concat(parameters('sites_dev_quodsi_func_lucid_v3_name'), '/', parameters('sites_dev_quodsi_func_lucid_v3_name'), '.azurewebsites.net')]",
+      "location": "East US",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', parameters('sites_dev_quodsi_func_lucid_v3_name'))]"
+      ],
+      "properties": {
+        "siteName": "dev-quodsi-func-lucid-v3",
+        "hostNameType": "Verified"
+      }
+    }
+  ]
+}

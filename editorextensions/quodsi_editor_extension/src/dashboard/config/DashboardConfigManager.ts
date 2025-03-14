@@ -1,8 +1,6 @@
-// utils/DashboardConfigManager.ts
-
-import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../interfaces/config/DashboardConfig';
+import { DEFAULT_DASHBOARD_CONFIG } from './DefaultDashboardConfig';
+import { DashboardConfig } from '../interfaces/DashboardConfigInterface';
 import { TableGenerationConfig } from '../interfaces/GeneratorTypes';
-import { TableConfig } from '../interfaces/config/TableConfig';
 
 /**
  * Manages and provides access to dashboard configuration
@@ -82,8 +80,8 @@ export class DashboardConfigManager {
     static getTableTypeConfig(config: DashboardConfig, tableType: string): TableGenerationConfig {
         // Start with basic position and size
         const baseConfig: TableGenerationConfig = {
-            position: { 
-                x: config.layout?.initialX || 50, 
+            position: {
+                x: config.layout?.initialX || 50,
                 y: 0 // This will be set by the layout manager
             },
             width: config.layout?.tableWidth || 800
@@ -97,13 +95,13 @@ export class DashboardConfigManager {
         // Add type-specific customizations
         if (config.tables && config.tables[tableType]) {
             const tableConfig = config.tables[tableType];
-            
+
             // Add column configuration if available
             if (tableConfig.columns) {
                 if (tableConfig.columns.order) {
                     baseConfig.columnOrder = tableConfig.columns.order;
                 }
-                
+
                 if (tableConfig.columns.exclude) {
                     baseConfig.excludeColumns = tableConfig.columns.exclude;
                 }

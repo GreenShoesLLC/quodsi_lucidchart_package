@@ -54,7 +54,7 @@ export class ActivityTimingTableHandler extends BaseTableHandler {
             // Force some useful settings
             tableConfig.maxColumns = 15; // Show more columns
             tableConfig.dynamicColumns = false; // Show all columns even if empty
-            tableConfig.excludeColumns = ['id', 'scenario_id']; // Only exclude these
+            // tableConfig.excludeColumns = ['id', 'scenario_id']; // Only exclude these
             
             // Create the table
             const table = await this.tableGenerator.createActivityTimingTable(

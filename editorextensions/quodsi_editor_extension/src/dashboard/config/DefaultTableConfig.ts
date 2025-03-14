@@ -1,24 +1,4 @@
-// TableConfig.ts
-
-/**
- * Configuration for an individual table in the dashboard
- */
-export interface TableConfig {
-    /** Whether this table type is included in the dashboard */
-    included?: boolean;
-    
-    /** Display header for this table */
-    header?: string;
-    
-    /** Column configuration */
-    columns?: {
-        /** Column display order */
-        order?: string[];
-        
-        /** Columns to exclude */
-        exclude?: string[];
-    };
-}
+import { TableConfig } from "../interfaces";
 
 /**
  * Default table configurations
@@ -31,25 +11,28 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'activity_name',
                 'scenario_name',
-                'activity_id',
                 'utilization_mean',
+                'capacity_mean',
+                'contents_mean',
+                'queue_length_mean',
+            ],
+            exclude: [
+                'id',
+                'scenario_id',
+                'activity_id',
                 'utilization_max',
                 'utilization_std_dev',
-                'capacity_mean',
                 'capacity_max',
                 'capacity_std_dev',
-                'contents_mean',
                 'contents_max',
                 'contents_std_dev',
-                'queue_length_mean',
                 'queue_length_max',
                 'queue_length_std_dev'
-            ],
-            exclude: ['id', 'scenario_id']
+            ]
         }
     },
     activityRepSummary: {
-        included: true,
+        included: false,
         header: 'Activity Replication Summary',
         columns: {
             order: [
@@ -78,30 +61,34 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         }
     },
     activityTiming: {
-        included: true,
+        included: false,
         header: 'Activity Timing Analysis',
         columns: {
             order: [
                 'activity_name',
                 'scenario_name',
                 'cycle_time_mean',
+                'service_time_mean',
+                'waiting_time_mean',
+                'blocked_time_mean',
+            ],
+            exclude: [
+                'id',
+                'scenario_id',
+                'activity_id',
                 'cycle_time_median',
                 'cycle_time_std_dev',
                 'cycle_time_cv',
-                'service_time_mean',
                 'service_time_median',
                 'service_time_std_dev',
                 'service_time_cv',
-                'waiting_time_mean',
                 'waiting_time_median',
                 'waiting_time_std_dev',
                 'waiting_time_cv',
-                'blocked_time_mean',
                 'blocked_time_median',
                 'blocked_time_std_dev',
                 'blocked_time_cv'
-            ],
-            exclude: ['id', 'scenario_id', 'activity_id']
+            ]
         }
     },
     entityThroughput: {
@@ -111,18 +98,21 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'entity_name',
                 'scenario_name',
-                'entity_id',
                 'rep',
                 'count',
                 'completed_count',
                 'in_progress_count',
-                'throughput_rate'
             ],
-            exclude: ['id', 'scenario_id']
+            exclude: [
+                'id',
+                'scenario_id',
+                'entity_id',
+                'throughput_rate'
+            ]
         }
     },
     resourceRepSummary: {
-        included: true,
+        included: false,
         header: 'Resource Replication Summary',
         columns: {
             order: [
@@ -151,14 +141,17 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'resource_name',
                 'scenario_name',
-                'resource_id',
                 'utilization_mean',
+            ],
+            exclude: [
+                'id',
+                'scenario_id',
+                'resource_id',
                 'utilization_max',
                 'utilization_min',
                 'utilization_std_dev',
                 'bottleneck_frequency'
-            ],
-            exclude: ['id', 'scenario_id']
+            ]
         }
     },
     entityState: {
@@ -168,7 +161,6 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             order: [
                 'entity_name',
                 'scenario_name',
-                'entity_id',
                 'rep',
                 'count',
                 'avg_time_in_system',
@@ -181,7 +173,11 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'percent_operation',
                 'percent_connecting'
             ],
-            exclude: ['id', 'scenario_id']
+            exclude: [
+                'id',
+                'scenario_id',
+                'entity_id',
+            ]
         }
     }
 };

@@ -3,10 +3,10 @@
 import { EditorClient } from 'lucid-extension-sdk';
 import { SimulationResultsReader } from '../data_sources/simulation_results/SimulationResultsReader';
 import { DynamicSimulationResultsTableGenerator } from './DynamicSimulationResultsTableGenerator';
-import { DashboardConfig } from './interfaces/config/DashboardConfig';
+import { DashboardConfig } from './interfaces/DashboardConfigInterface';
 import { DashboardResult } from './interfaces/results/DashboardResult';
 import { DashboardTable } from './interfaces/results/TableResult';
-import { DashboardConfigManager } from './utils/DashboardConfigManager';
+import { DashboardConfigManager } from './config/DashboardConfigManager';
 import { DashboardLayoutManager } from './layout/DashboardLayoutManager';
 import { DashboardTableFactory } from './factory/DashboardTableFactory';
 
@@ -78,33 +78,33 @@ export class SimulationResultsDashboard {
         // Process each handler
         for (const handler of handlers) {
             const tableType = handler.getTableType();
-            
+
             try {
                 // Check if this table can be created (has data)
                 const canCreate = await handler.canCreateTable();
-                
+
                 if (!canCreate) {
                     console.log(`[Dashboard] No data available for ${tableType}`);
                     emptyDataTypes.push(tableType);
                     continue;
                 }
-                
+
                 // Create header for the table
                 const headerResult = await handler.createTableHeader(page, {
                     x: currentPosition.x,
                     y: currentPosition.y
                 });
-                
+
                 // Update position for table (after header)
                 const headerSpacing = this.layoutManager.getHeaderTableSpacing();
                 currentPosition.y += headerResult.height + headerSpacing;
-                
+
                 // Create the table
                 const tableResult = await handler.createTable(page, {
                     x: currentPosition.x,
                     y: currentPosition.y
                 });
-                
+
                 if (tableResult.success && tableResult.table) {
                     // Add to successful tables
                     tables.push({
@@ -114,16 +114,16 @@ export class SimulationResultsDashboard {
                         header: headerResult.header,
                         height: tableResult.height
                     });
-                    
+
                     // Update position for next table
                     currentPosition.y = this.layoutManager.calculateNextPosition(
-                        currentPosition.y, 
+                        currentPosition.y,
                         tableResult.height
                     );
                 } else {
                     // Add to empty types if no table was created
                     emptyDataTypes.push(tableType);
-                    
+
                     // If table creation failed, remove the header
                     if (headerResult.header) {
                         try {

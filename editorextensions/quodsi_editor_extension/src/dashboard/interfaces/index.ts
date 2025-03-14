@@ -1,8 +1,8 @@
 // index.ts - Exports all interfaces
 
 // Config interfaces
-export * from './config/TableConfig';
-export * from './config/DashboardConfig';
+export * from './TableConfigInterface';
+export * from './DashboardConfigInterface';
 
 // Result interfaces
 export * from './results/TableResult';

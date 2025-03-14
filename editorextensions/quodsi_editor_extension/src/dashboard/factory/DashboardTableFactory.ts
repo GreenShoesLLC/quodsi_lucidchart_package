@@ -1,12 +1,11 @@
 // factory/DashboardTableFactory.ts
 
 import { EditorClient } from 'lucid-extension-sdk';
-import { DashboardConfig } from '../interfaces/config/DashboardConfig';
+import { DashboardConfig } from '../interfaces/DashboardConfigInterface';
 import { SimulationResultsReader } from '../../data_sources/simulation_results/SimulationResultsReader';
 import { DynamicSimulationResultsTableGenerator } from '../DynamicSimulationResultsTableGenerator';
 import { TableHandlerInterface } from '../interfaces/handlers/TableHandlerInterface';
-import { DashboardConfigManager } from '../utils/DashboardConfigManager';
-import { BaseTableHandler } from '../handlers/BaseTableHandler';
+import { DashboardConfigManager } from '../config/DashboardConfigManager';
 import { ActivityUtilizationTableHandler } from '../handlers/ActivityUtilizationTableHandler';
 import { ActivityRepSummaryTableHandler } from '../handlers/ActivityRepSummaryTableHandler';
 import { ActivityTimingTableHandler } from '../handlers/ActivityTimingTableHandler';
@@ -43,7 +42,7 @@ export class DashboardTableFactory {
         this.tableGenerator = tableGenerator;
         this.config = config;
         this.handlers = new Map();
-        
+
         // Initialize handlers
         this.initializeHandlers();
     }
@@ -53,6 +52,13 @@ export class DashboardTableFactory {
      */
     private initializeHandlers(): void {
         // Register built-in handlers
+        this.registerHandler(new EntityStateTableHandler(
+            this.client,
+            this.resultsReader,
+            this.tableGenerator,
+            this.config
+        ));
+        
         this.registerHandler(new ActivityUtilizationTableHandler(
             this.client,
             this.resultsReader,
@@ -66,35 +72,28 @@ export class DashboardTableFactory {
             this.tableGenerator,
             this.config
         ));
-        
+
         this.registerHandler(new ActivityTimingTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
             this.config
         ));
-        
+
         this.registerHandler(new EntityThroughputTableHandler(
             this.client,
-            this.resultsReader, 
+            this.resultsReader,
             this.tableGenerator,
             this.config
         ));
-        
-        this.registerHandler(new EntityStateTableHandler(
-            this.client,
-            this.resultsReader, 
-            this.tableGenerator,
-            this.config
-        ));
-        
+
         this.registerHandler(new ResourceUtilizationTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
             this.config
         ));
-        
+
         this.registerHandler(new ResourceRepSummaryTableHandler(
             this.client,
             this.resultsReader,
@@ -136,7 +135,7 @@ export class DashboardTableFactory {
      */
     getEnabledHandlers(): TableHandlerInterface[] {
         const enabled: TableHandlerInterface[] = [];
-        
+
         // Only include handlers for enabled table types
         for (const handler of this.handlers.values()) {
             const type = handler.getTableType();
@@ -144,7 +143,27 @@ export class DashboardTableFactory {
                 enabled.push(handler);
             }
         }
-        
+
+        // Sort handlers based on tableOrder if provided
+        if (this.config.tableOrder && this.config.tableOrder.length > 0) {
+            enabled.sort((a, b) => {
+                const indexA = this.config.tableOrder?.indexOf(a.getTableType()) ?? -1;
+                const indexB = this.config.tableOrder?.indexOf(b.getTableType()) ?? -1;
+
+                // If both have a position in the order array
+                if (indexA >= 0 && indexB >= 0) {
+                    return indexA - indexB;
+                }
+
+                // If only one has a position, it comes first
+                if (indexA >= 0) return -1;
+                if (indexB >= 0) return 1;
+
+                // If neither has a position, maintain original order
+                return 0;
+            });
+        }
+
         return enabled;
     }
 

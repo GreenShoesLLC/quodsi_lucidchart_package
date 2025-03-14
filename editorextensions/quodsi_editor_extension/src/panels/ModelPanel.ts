@@ -8,13 +8,8 @@ import {
     BlockProxy,
     DocumentProxy,
     ElementProxy,
-    JsonObject as LucidJsonObject,
     Panel,
     UserProxy,
-    PageDefinition,
-    TableBlockProxy,
-    BlockDefinition,
-    DataActionResponse,
     DataProxy
 } from 'lucid-extension-sdk';
 import {
@@ -38,7 +33,6 @@ import {
     ModelSerializerFactory
 
 } from '@quodsi/shared';
-import { createLucidApiService, parseCsvBlob, calculateTableDimensions } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { SelectionManager, TreeStateManager } from '../managers';
 import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
@@ -47,9 +41,8 @@ import { LucidElementFactory } from '../services/LucidElementFactory';
 import { LucidPageConversionService } from '../services/conversion/LucidPageConversionService';
 import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
-import { SimulationResultsReader } from '../data_sources';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
-import { DashboardConfig, DEFAULT_DASHBOARD_CONFIG } from '../dashboard/interfaces/config/DashboardConfig';
+
 
 
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
@@ -123,7 +116,7 @@ export class ModelPanel extends Panel {
 
         this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
             this.logError('VIEW_SIMULATION_RESULTS message received in handler');
-            this.handleOutputCreateDashboard(payload)
+            this.handleOutputCreateDashboard(payload, true)
         })
         this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, (payload) =>
             this.handleSimulateModel(payload)
@@ -271,15 +264,10 @@ export class ModelPanel extends Panel {
             //await this.list_blocks();
             // this.initializeOrUpdateModel()
             const document = new DocumentProxy(this.client);
-            const viewport = new Viewport(this.client);
-            const user = new UserProxy(this.client);
-            await this.client.performDataAction({
-                dataConnectorName: 'quodsi_data_connector',
-                actionName: 'ImportSimulationResults',
-                actionData: {documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
-                asynchronous: true
-            });
-            this.handleOutputCreateDashboard({ documentId: document.id, scenarioId: BASELINE_SCENARIO_ID})
+            this.handleOutputCreateDashboard(
+                { documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
+                true,
+            )
 
 
         } catch (error) {
@@ -290,11 +278,18 @@ export class ModelPanel extends Panel {
         }
     }
     private async handleOutputCreateDashboard(
-        payload: MessagePayloads[MessageTypes.VIEW_SIMULATION_RESULTS]
+        payload: MessagePayloads[MessageTypes.VIEW_SIMULATION_RESULTS],
+        importResults: boolean = false
     ): Promise<void> {
         try {
             console.log('[ModelPanel] Creating simulation results dashboard...');
-
+            if (importResults)
+                await this.client.performDataAction({
+                    dataConnectorName: 'quodsi_data_connector',
+                    actionName: 'ImportSimulationResults',
+                    actionData: { documentId: payload.documentId, scenarioId: payload.scenarioId },
+                    asynchronous: true
+                });
             // Create dashboard instance with default configuration
             const dashboard = new SimulationResultsDashboard(this.client);
 
@@ -315,11 +310,10 @@ export class ModelPanel extends Panel {
                     console.error(`[ModelPanel] Error creating ${err.type} table:`, err.error);
                 });
             }
-            const document = new DocumentProxy(this.client);
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'MarkResultsViewed',
-                actionData: { documentId: document.id, scenarioId: payload.scenarioId },
+                actionData: { documentId: payload.documentId, scenarioId: payload.scenarioId },
                 asynchronous: true
             });
         } catch (error) {

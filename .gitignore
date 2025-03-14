@@ -27,3 +27,31 @@ yarn-error.log*
 
 # OS files
 .DS_Store
+
+# Azure Infrastructure
+# Extracted ARM templates (may contain sensitive information)
+infrastructure/extracted-config/*.json
+# Exclude these specific files which don't contain sensitive info
+!infrastructure/extracted-config/dev.parameters.json
+!infrastructure/extracted-config/tst.parameters.json
+!infrastructure/extracted-config/prd.parameters.json
+
+# Azure credentials and publish profiles
+*.publishsettings
+**/PublishProfiles/
+*.pubxml
+
+# Azure Functions local settings (contains connection strings)
+local.settings.json
+
+# Connection strings and keys
+*.connectionstring
+*.key
+connections.config
+
+# Azure deployment artifacts
+**/deployment-outputs.json
+
+# Azure CLI and PowerShell logs
+.azure/
+infrastructure/*.log

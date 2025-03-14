@@ -4,7 +4,7 @@
 export { SimulationResultsDashboard } from './SimulationResultsDashboard';
 
 // Utility classes
-export { DashboardConfigManager } from './utils/DashboardConfigManager';
+export { DashboardConfigManager } from './config/DashboardConfigManager';
 export { DashboardLayoutManager } from './layout/DashboardLayoutManager';
 export { DashboardTableFactory } from './factory/DashboardTableFactory';
 

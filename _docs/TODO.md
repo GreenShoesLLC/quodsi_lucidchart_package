@@ -1,10 +1,12 @@
-
 - separate rep vs summary
 - specify the best columns for tables
 - publish the Azure function
 - private publish app
+- model rep not being published to model.json
+- activityTiming not working
 - entity summary is missing
-
+- create and publish TST env
+- create and publish DEV env
 - get distribution support
 - multi scenario viewer
 - support dynamic scenario UUID

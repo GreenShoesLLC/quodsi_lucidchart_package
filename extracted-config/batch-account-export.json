@@ -1,0 +1,169 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "batchAccounts_qdsdeveus2batchsim01_name": {
+      "defaultValue": "qdsdeveus2batchsim01",
+      "type": "String"
+    },
+    "storageAccounts_qdsdeveus2stbatch01_externalid": {
+      "defaultValue": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.Storage/storageAccounts/qdsdeveus2stbatch01",
+      "type": "String"
+    },
+    "userAssignedIdentities_qdsdeveus2batchsim01_identity_externalid": {
+      "defaultValue": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.ManagedIdentity/userAssignedIdentities/qdsdeveus2batchsim01-identity",
+      "type": "String"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Batch/batchAccounts",
+      "apiVersion": "2024-07-01",
+      "name": "[parameters('batchAccounts_qdsdeveus2batchsim01_name')]",
+      "location": "eastus2",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.ManagedIdentity/userAssignedIdentities/qdsdeveus2batchsim01-identity": {}
+        }
+      },
+      "properties": {
+        "autoStorage": {
+          "storageAccountId": "[parameters('storageAccounts_qdsdeveus2stbatch01_externalid')]",
+          "nodeIdentityReference": {
+            "resourceId": "[parameters('userAssignedIdentities_qdsdeveus2batchsim01_identity_externalid')]"
+          },
+          "authenticationMode": "StorageKeys"
+        },
+        "poolAllocationMode": "BatchService",
+        "publicNetworkAccess": "Enabled",
+        "networkProfile": {
+          "accountAccess": {
+            "defaultAction": "Allow"
+          }
+        },
+        "encryption": {
+          "keySource": "Microsoft.Batch"
+        },
+        "allowedAuthenticationModes": [
+          "SharedKey",
+          "AAD",
+          "TaskAuthenticationToken"
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Batch/batchAccounts/applications",
+      "apiVersion": "2024-07-01",
+      "name": "[concat(parameters('batchAccounts_qdsdeveus2batchsim01_name'), '/LucidQuodsim')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Batch/batchAccounts', parameters('batchAccounts_qdsdeveus2batchsim01_name'))]"
+      ],
+      "properties": {
+        "allowUpdates": true
+      }
+    },
+    {
+      "type": "Microsoft.Batch/batchAccounts/applications/versions",
+      "apiVersion": "2024-07-01",
+      "name": "[concat(parameters('batchAccounts_qdsdeveus2batchsim01_name'), '/LucidQuodsim/1.0')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Batch/batchAccounts/applications', parameters('batchAccounts_qdsdeveus2batchsim01_name'), 'LucidQuodsim')]",
+        "[resourceId('Microsoft.Batch/batchAccounts', parameters('batchAccounts_qdsdeveus2batchsim01_name'))]"
+      ],
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Batch/batchAccounts/pools",
+      "apiVersion": "2024-07-01",
+      "name": "[concat(parameters('batchAccounts_qdsdeveus2batchsim01_name'), '/batchsim-dev-pyproc-pool-02')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Batch/batchAccounts', parameters('batchAccounts_qdsdeveus2batchsim01_name'))]",
+        "[resourceId('Microsoft.Batch/batchAccounts/applications', parameters('batchAccounts_qdsdeveus2batchsim01_name'), 'LucidQuodsim')]"
+      ],
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.ManagedIdentity/userAssignedIdentities/qdsdeveus2batchsim01-identity": {}
+        }
+      },
+      "properties": {
+        "vmSize": "STANDARD_D2S_V3",
+        "interNodeCommunication": "Disabled",
+        "taskSlotsPerNode": 1,
+        "taskSchedulingPolicy": {
+          "nodeFillType": "Pack"
+        },
+        "deploymentConfiguration": {
+          "virtualMachineConfiguration": {
+            "imageReference": {
+              "publisher": "microsoft-azure-batch",
+              "offer": "ubuntu-server-container",
+              "sku": "20-04-lts",
+              "version": "latest"
+            },
+            "nodeAgentSkuId": "batch.node.ubuntu 20.04",
+            "osDisk": {
+              "caching": "None",
+              "managedDisk": {
+                "storageAccountType": "Premium_LRS"
+              }
+            },
+            "nodePlacementConfiguration": {
+              "policy": "Regional"
+            }
+          }
+        },
+        "networkConfiguration": {
+          "publicIPAddressConfiguration": {
+            "provision": "BatchManaged"
+          },
+          "dynamicVnetAssignmentScope": "None",
+          "enableAcceleratedNetworking": false
+        },
+        "scaleSettings": {
+          "fixedScale": {
+            "targetDedicatedNodes": 1,
+            "targetLowPriorityNodes": 0,
+            "resizeTimeout": "PT15M"
+          }
+        },
+        "startTask": {
+          "commandLine": "/bin/bash -c \"\nsudo apt-get update && sudo apt-get upgrade -y &&\nsudo apt-get install --reinstall -y software-properties-common &&\nsudo add-apt-repository ppa:deadsnakes/ppa -y &&\nsudo apt-get update &&\nsudo apt-get install --reinstall -y python3.10 python3.10-venv python3-pip libssl-dev &&\npython3.10 -m venv batch_env &&\nsource batch_env/bin/activate &&\npip install --upgrade pip setuptools wheel &&\npip install testresources &&\nexport PATH=$PATH:$HOME/.local/bin &&\npip install --no-cache-dir -r $AZ_BATCH_APP_PACKAGE_LucidQuodsim_1_0/requirements.txt &&\necho 'Python packages installed successfully' &&\npip list\n\"",
+          "userIdentity": {
+            "autoUser": {
+              "scope": "Task",
+              "elevationLevel": "Admin"
+            }
+          },
+          "maxTaskRetryCount": 1,
+          "waitForSuccess": true
+        },
+        "applicationPackages": [
+          {
+            "id": "[resourceId('Microsoft.Batch/batchAccounts/applications', parameters('batchAccounts_qdsdeveus2batchsim01_name'), 'LucidQuodsim')]",
+            "version": "1.0"
+          }
+        ],
+        "targetNodeCommunicationMode": "Default",
+        "upgradePolicy": {
+          "mode": "Manual",
+          "automaticOSUpgradePolicy": {
+            "disableAutomaticRollback": false,
+            "enableAutomaticOSUpgrade": false,
+            "useRollingUpgradePolicy": false,
+            "osRollingUpgradeDeferral": false
+          },
+          "rollingUpgradePolicy": {
+            "maxBatchInstancePercent": 20,
+            "maxUnhealthyInstancePercent": 20,
+            "maxUnhealthyUpgradedInstancePercent": 20,
+            "pauseTimeBetweenBatches": "P0D",
+            "rollbackFailedInstancesOnPolicyBreach": false
+          }
+        }
+      }
+    }
+  ]
+}
