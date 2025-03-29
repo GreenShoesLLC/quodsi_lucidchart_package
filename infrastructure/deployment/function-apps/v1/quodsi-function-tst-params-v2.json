@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "tst"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "batchLocation": {
+      "value": "eastus2"
+    },
+    "product": {
+      "value": "quodsi"
+    },
+    "instance": {
+      "value": "01"
+    },
+    "version": {
+      "value": "v1"
+    },
+    "batchAccountName": {
+      "value": "quodsisharedbatch01"
+    },
+    "batchResourceGroup": {
+      "value": "shared-quodsi-rg-01"
+    },
+    "batchStorageConnectionString": {
+      "value": "BATCH_STORAGE_CONNECTION_STRING_PLACEHOLDER"
+    },
+    "modelStorageConnectionString": {
+      "value": "TST_STORAGE_CONNECTION_STRING_PLACEHOLDER"
+    },
+    "batchPoolId": {
+      "value": "quodsi-tst-python-pool-01"
+    },
+    "allowedOrigins": {
+      "value": [
+        "https://app.lucidchart.com",
+        "https://*.execute-api.us-east-1.amazonaws.com"
+      ]
+    },
+    "storageSkuName": {
+      "value": "Standard_LRS"
+    },
+    "functionAppSku": {
+      "value": "Y1"
+    },
+    "functionAppSkuTier": {
+      "value": "Dynamic"
+    },
+    "nodeVersion": {
+      "value": "~18"
+    },
+    "apiUrl": {
+      "value": "https://tst-quodsi-api.azurewebsites.net/api/"
+    },
+    "nodeEnv": {
+      "value": "testing"
+    },
+    "additionalSettings": {
+      "value": {
+        "ENABLE_DEBUGGING": "true",
+        "ENVIRONMENT": "Testing"
+      }
+    }
+  }
+}

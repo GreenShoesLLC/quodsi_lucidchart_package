@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "batchAccountName": {
+      "value": "quodsisharedbatch01"
+    },
+    "batchAccountResourceGroup": {
+      "value": "shared-quodsi-rg-01"
+    },
+    "poolName": {
+      "value": "quodsi-dev-python-pool-01"
+    },
+    "poolVmSize": {
+      "value": "Standard_D2s_v3"
+    },
+    "poolNodeCount": {
+      "value": 0
+    },
+    "appPackageName": {
+      "value": "dev_quodsim"
+    },
+    "appPackageVersion": {
+      "value": "1.0"
+    }
+  }
+}

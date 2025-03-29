@@ -1,0 +1,333 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": ["dev", "tst", "prd"],
+      "metadata": {
+        "description": "Environment (dev, tst, or prd)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus",
+      "metadata": {
+        "description": "Azure region for deployment"
+      }
+    },
+    "batchLocation": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Azure region for Batch account"
+      }
+    },
+    "product": {
+      "type": "string",
+      "defaultValue": "quodsi",
+      "metadata": {
+        "description": "Product name for resource naming"
+      }
+    },
+    "instance": {
+      "type": "string",
+      "defaultValue": "01",
+      "metadata": {
+        "description": "Instance number for resource naming"
+      }
+    },
+    "version": {
+      "type": "string",
+      "defaultValue": "v1",
+      "metadata": {
+        "description": "Version tag for resource naming"
+      }
+    },
+    "batchAccountName": {
+      "type": "string",
+      "defaultValue": "quodsisharedbatch01",
+      "metadata": {
+        "description": "Name of the Batch account"
+      }
+    },
+    "batchResourceGroup": {
+      "type": "string",
+      "defaultValue": "shared-quodsi-rg-01",
+      "metadata": {
+        "description": "Resource group containing the Batch account"
+      }
+    },
+    "batchStorageConnectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Connection string for the Batch storage account"
+      }
+    },
+    "modelStorageConnectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Connection string for the environment-specific model storage account"
+      }
+    },
+    "batchPoolId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Name of the Batch pool to use for this environment"
+      }
+    },
+    "allowedOrigins": {
+      "type": "array",
+      "defaultValue": [
+        "https://app.lucidchart.com",
+        "https://*.execute-api.us-east-1.amazonaws.com",
+        "http://localhost:3000"
+      ],
+      "metadata": {
+        "description": "Array of allowed origins for CORS"
+      }
+    },
+    "storageSkuName": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS"
+      ],
+      "metadata": {
+        "description": "Storage account SKU name"
+      }
+    },
+    "functionAppSku": {
+      "type": "string",
+      "defaultValue": "Y1",
+      "allowedValues": [
+        "Y1",
+        "EP1",
+        "EP2",
+        "EP3"
+      ],
+      "metadata": {
+        "description": "App Service Plan SKU for the Function App"
+      }
+    },
+    "functionAppSkuTier": {
+      "type": "string",
+      "defaultValue": "Dynamic",
+      "allowedValues": [
+        "Dynamic",
+        "ElasticPremium"
+      ],
+      "metadata": {
+        "description": "App Service Plan tier for the Function App"
+      }
+    },
+    "nodeVersion": {
+      "type": "string",
+      "defaultValue": "~16",
+      "metadata": {
+        "description": "NodeJS version to use"
+      }
+    },
+    "apiUrl": {
+      "type": "string",
+      "defaultValue": "http://localhost:5000/api/",
+      "metadata": {
+        "description": "API URL for the Function App"
+      }
+    },
+    "nodeEnv": {
+      "type": "string",
+      "defaultValue": "development",
+      "allowedValues": [
+        "development",
+        "testing",
+        "production"
+      ],
+      "metadata": {
+        "description": "Node environment (development, testing, production)"
+      }
+    },
+    "additionalSettings": {
+      "type": "object",
+      "defaultValue": {},
+      "metadata": {
+        "description": "Additional app settings for the Function App (JSON object)"
+      }
+    }
+  },
+  "variables": {
+    "functionAppName": "[concat(parameters('environment'), '-', parameters('product'), '-func-', parameters('version'))]",
+    "storageName": "[toLower(concat(parameters('environment'), parameters('product'), 'lucidfunctionap'))]",
+    "appServicePlanName": "[concat('ASP-', variables('functionAppName'))]",
+    "appInsightsName": "[concat(parameters('environment'), '-', parameters('product'), '-ai-', parameters('instance'))]",
+    "batchPoolIdFinal": "[if(empty(parameters('batchPoolId')), concat('quodsi-', parameters('environment'), '-python-pool-01'), parameters('batchPoolId'))]",
+    "modelStorageName": "[concat(parameters('environment'), parameters('product'), 'st01')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-04-01",
+      "name": "[variables('storageName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('storageSkuName')]"
+      },
+      "kind": "StorageV2"
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "location": "[parameters('location')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('functionAppSku')]",
+        "tier": "[parameters('functionAppSkuTier')]"
+      },
+      "kind": "functionapp"
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2022-03-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "kind": "functionapp",
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "node"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "[parameters('nodeVersion')]"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2021-04-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageName')), '2021-04-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(concat(variables('functionAppName'), uniqueString(resourceGroup().id)))]"
+            },
+            {
+              "name": "BatchAccountName",
+              "value": "[parameters('batchAccountName')]"
+            },
+            {
+              "name": "BatchAccountUrl",
+              "value": "[concat('https://', parameters('batchAccountName'), '.', parameters('batchLocation'), '.batch.azure.com')]"
+            },
+            {
+              "name": "BatchAccountKey",
+              "value": "REPLACE_WITH_BATCH_ACCOUNT_KEY"
+            },
+            {
+              "name": "BatchPoolId",
+              "value": "[variables('batchPoolIdFinal')]"
+            },
+            {
+              "name": "QUODSI_ENVIRONMENT",
+              "value": "[parameters('environment')]"
+            },
+            {
+              "name": "QUODSI_STORAGE_ACCOUNT",
+              "value": "[variables('modelStorageName')]"
+            },
+            {
+              "name": "AzureStorageConnectionString",
+              "value": "[parameters('modelStorageConnectionString')]"
+            },
+            {
+              "name": "BatchStorageConnectionString",
+              "value": "[parameters('batchStorageConnectionString')]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+            },
+            {
+              "name": "QUODSI_API_URL",
+              "value": "[parameters('apiUrl')]"
+            },
+            {
+              "name": "NODE_ENV",
+              "value": "[parameters('nodeEnv')]"
+            },
+            {
+              "name": "DefaultApplicationId",
+              "value": "[concat(parameters('environment'), '_quodsim')]"
+            },
+            {
+              "name": "DefaultAppVersion",
+              "value": "1.0"
+            },
+            {
+              "name": "WEBSITE_MOUNT_ENABLED",
+              "value": "1"
+            },
+            {
+              "name": "AZURE_FUNCTION_PROXY_BACKEND_URL_DECODE_SLASHES",
+              "value": "true"
+            }
+          ],
+          "cors": {
+            "allowedOrigins": "[parameters('allowedOrigins')]",
+            "supportCredentials": true
+          },
+          "ftpsState": "Disabled",
+          "minTlsVersion": "1.2"
+        },
+        "httpsOnly": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "functionAppName": {
+      "type": "string",
+      "value": "[variables('functionAppName')]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[concat('https://', variables('functionAppName'), '.azurewebsites.net')]"
+    },
+    "storageName": {
+      "type": "string",
+      "value": "[variables('storageName')]"
+    },
+    "modelStorageName": {
+      "type": "string",
+      "value": "[variables('modelStorageName')]"
+    }
+  }
+}

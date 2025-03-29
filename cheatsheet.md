@@ -19,7 +19,7 @@ Npx react-scripts start
 # Create a new terminal in VS Code
 cd dataconnectors\quodsi_data_connector
 npm run start
-
+func start --debug --verbose
 
 
 npm install

@@ -1,0 +1,32 @@
+[
+  {
+    "allowUpdates": true,
+    "defaultVersion": null,
+    "displayName": null,
+    "etag": "W/\"0x8DD6985D341FA07\"",
+    "id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.Batch/batchAccounts/qdsdeveus2batchsim01/applications/dev_quodsim",
+    "name": "dev_quodsim",
+    "resourceGroup": "dev-quodsi-rg-01",
+    "type": "Microsoft.Batch/batchAccounts/applications"
+  },
+  {
+    "allowUpdates": true,
+    "defaultVersion": null,
+    "displayName": null,
+    "etag": "W/\"0x8DD2ABFA44ACC52\"",
+    "id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.Batch/batchAccounts/qdsdeveus2batchsim01/applications/LucidQuodsim",
+    "name": "LucidQuodsim",
+    "resourceGroup": "dev-quodsi-rg-01",
+    "type": "Microsoft.Batch/batchAccounts/applications"
+  },
+  {
+    "allowUpdates": true,
+    "defaultVersion": null,
+    "displayName": null,
+    "etag": "W/\"0x8DD6985B5213915\"",
+    "id": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.Batch/batchAccounts/qdsdeveus2batchsim01/applications/tst_quodsim",
+    "name": "tst_quodsim",
+    "resourceGroup": "dev-quodsi-rg-01",
+    "type": "Microsoft.Batch/batchAccounts/applications"
+  }
+]

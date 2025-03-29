@@ -1,0 +1,191 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "allowedValues": ["dev", "tst", "prd"],
+      "metadata": {
+        "description": "Environment name"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Azure region for batch resources"
+      }
+    },
+    "batchAccountName": {
+      "type": "string",
+      "defaultValue": "quodsisharedbatch01",
+      "metadata": {
+        "description": "Name of the shared Batch account"
+      }
+    },
+    "batchAccountResourceGroup": {
+      "type": "string",
+      "defaultValue": "shared-quodsi-rg-01",
+      "metadata": {
+        "description": "Resource group where the Batch account is located"
+      }
+    },
+    "poolName": {
+      "type": "string",
+      "defaultValue": "[concat('quodsi-', parameters('environment'), '-python-pool-01')]",
+      "metadata": {
+        "description": "Name of the batch pool"
+      }
+    },
+    "poolVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v3",
+      "metadata": {
+        "description": "Size of the virtual machines in the pool"
+      }
+    },
+    "poolNodeCount": {
+      "type": "int",
+      "defaultValue": 0,
+      "minValue": 0,
+      "maxValue": 10,
+      "metadata": {
+        "description": "Number of dedicated compute nodes in the pool"
+      }
+    },
+    "appPackageName": {
+      "type": "string",
+      "defaultValue": "LucidQuodsim",
+      "metadata": {
+        "description": "Name of the application package to use (CASE SENSITIVE)"
+      }
+    },
+    "appPackageVersion": {
+      "type": "string",
+      "defaultValue": "1.0",
+      "metadata": {
+        "description": "Version of the application package to use"
+      }
+    }
+  },
+  "variables": {
+    "osOffer": "ubuntu-server-container",
+    "osPublisher": "microsoft-azure-batch",
+    "osSku": "20-04-lts",
+    "nodeAgentSkuId": "batch.node.ubuntu 20.04",
+    "startTaskCommandLine": "[concat('/bin/bash -c \"sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install --reinstall -y software-properties-common && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt-get update && sudo apt-get install --reinstall -y python3.10 python3.10-venv python3-pip libssl-dev && python3.10 -m venv batch_env && source batch_env/bin/activate && pip install --upgrade pip setuptools wheel && pip install testresources && export PATH=$PATH:$HOME/.local/bin && pip install --no-cache-dir -r $AZ_BATCH_APP_PACKAGE_', replace(parameters('appPackageName'), '-', '_'), '_', replace(parameters('appPackageVersion'), '.', '_'), '/requirements.txt && echo ''Python packages installed successfully'' && pip list\"')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[concat('deploy-pool-', parameters('environment'), '-', uniqueString(deployment().name))]",
+      "resourceGroup": "[parameters('batchAccountResourceGroup')]",
+      "properties": {
+        "mode": "Incremental",
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "resources": [
+            {
+              "type": "Microsoft.Batch/batchAccounts/pools",
+              "apiVersion": "2024-07-01",
+              "name": "[concat(parameters('batchAccountName'), '/', parameters('poolName'))]",
+              "properties": {
+                "vmSize": "[parameters('poolVmSize')]",
+                "deploymentConfiguration": {
+                  "virtualMachineConfiguration": {
+                    "imageReference": {
+                      "publisher": "[variables('osPublisher')]",
+                      "offer": "[variables('osOffer')]",
+                      "sku": "[variables('osSku')]",
+                      "version": "latest"
+                    },
+                    "nodeAgentSkuId": "[variables('nodeAgentSkuId')]",
+                    "osDisk": {
+                      "caching": "None",
+                      "managedDisk": {
+                        "storageAccountType": "Premium_LRS"
+                      }
+                    },
+                    "nodePlacementConfiguration": {
+                      "policy": "Regional"
+                    }
+                  }
+                },
+                "networkConfiguration": {
+                  "publicIPAddressConfiguration": {
+                    "provision": "BatchManaged"
+                  },
+                  "dynamicVnetAssignmentScope": "None",
+                  "enableAcceleratedNetworking": false
+                },
+                "scaleSettings": {
+                  "fixedScale": {
+                    "targetDedicatedNodes": "[parameters('poolNodeCount')]",
+                    "targetLowPriorityNodes": 0,
+                    "resizeTimeout": "PT15M"
+                  }
+                },
+                "startTask": {
+                  "commandLine": "[variables('startTaskCommandLine')]",
+                  "userIdentity": {
+                    "autoUser": {
+                      "scope": "Task",
+                      "elevationLevel": "Admin"
+                    }
+                  },
+                  "maxTaskRetryCount": 1,
+                  "waitForSuccess": true
+                },
+                "applicationPackages": [
+                  {
+                    "id": "[resourceId(parameters('batchAccountResourceGroup'), 'Microsoft.Batch/batchAccounts/applications', parameters('batchAccountName'), parameters('appPackageName'))]",
+                    "version": "[parameters('appPackageVersion')]"
+                  }
+                ],
+                "targetNodeCommunicationMode": "Default",
+                "upgradePolicy": {
+                  "mode": "Manual",
+                  "automaticOSUpgradePolicy": {
+                    "disableAutomaticRollback": false,
+                    "enableAutomaticOSUpgrade": false,
+                    "useRollingUpgradePolicy": false,
+                    "osRollingUpgradeDeferral": false
+                  },
+                  "rollingUpgradePolicy": {
+                    "maxBatchInstancePercent": 20,
+                    "maxUnhealthyInstancePercent": 20,
+                    "maxUnhealthyUpgradedInstancePercent": 20,
+                    "pauseTimeBetweenBatches": "P0D",
+                    "rollbackFailedInstancesOnPolicyBreach": false
+                  }
+                }
+              }
+            }
+          ],
+          "outputs": {}
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "poolName": {
+      "type": "string",
+      "value": "[parameters('poolName')]"
+    },
+    "batchAccountName": {
+      "type": "string",
+      "value": "[parameters('batchAccountName')]"
+    },
+    "batchAccountResourceGroup": {
+      "type": "string",
+      "value": "[parameters('batchAccountResourceGroup')]"
+    },
+    "applicationPackageReference": {
+      "type": "string",
+      "value": "[concat(parameters('appPackageName'), ':', parameters('appPackageVersion'))]"
+    }
+  }
+}

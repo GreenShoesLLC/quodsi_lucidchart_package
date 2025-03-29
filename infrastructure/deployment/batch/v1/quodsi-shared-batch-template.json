@@ -1,0 +1,102 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "batchAccountName": {
+      "type": "string",
+      "defaultValue": "quodsisharedbatch01",
+      "metadata": {
+        "description": "Name of the shared Batch account"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus2",
+      "metadata": {
+        "description": "Azure region for Batch account"
+      }
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "defaultValue": "shared-quodsi-rg-01",
+      "metadata": {
+        "description": "Resource group for the Batch account"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "sharedquodsist01",
+      "metadata": {
+        "description": "Name of the storage account to link to the Batch account"
+      }
+    },
+    "storageAccountResourceGroup": {
+      "type": "string",
+      "defaultValue": "shared-quodsi-rg-01",
+      "metadata": {
+        "description": "Resource group containing the storage account"
+      }
+    },
+    "createManagedIdentity": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Whether to create a managed identity for the Batch account"
+      }
+    },
+    "managedIdentityName": {
+      "type": "string",
+      "defaultValue": "quodsisharedbatch01-identity",
+      "metadata": {
+        "description": "Name of the managed identity for the Batch account"
+      }
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "condition": "[parameters('createManagedIdentity')]",
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2018-11-30",
+      "name": "[parameters('managedIdentityName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.Batch/batchAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('batchAccountName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+      ],
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]": {}
+        }
+      },
+      "properties": {
+        "autoStorage": {
+          "storageAccountId": "[resourceId(parameters('storageAccountResourceGroup'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+        },
+        "poolAllocationMode": "BatchService",
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ],
+  "outputs": {
+    "batchAccountName": {
+      "type": "string",
+      "value": "[parameters('batchAccountName')]"
+    },
+    "batchAccountEndpoint": {
+      "type": "string",
+      "value": "[reference(parameters('batchAccountName')).accountEndpoint]"
+    },
+    "managedIdentityId": {
+      "condition": "[parameters('createManagedIdentity')]",
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+    }
+  }
+}

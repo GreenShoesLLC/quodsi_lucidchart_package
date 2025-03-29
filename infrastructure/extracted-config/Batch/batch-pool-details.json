@@ -1,0 +1,113 @@
+{
+  "allocationState": "steady",
+  "allocationStateTransitionTime": "2025-03-13T18:18:35.286816+00:00",
+  "applicationLicenses": null,
+  "applicationPackageReferences": [
+    {
+      "applicationId": "lucidquodsim",
+      "version": "1.0"
+    }
+  ],
+  "autoScaleEvaluationInterval": null,
+  "autoScaleFormula": null,
+  "autoScaleRun": null,
+  "certificateReferences": [],
+  "cloudServiceConfiguration": null,
+  "creationTime": "2024-08-25T00:11:09.004622+00:00",
+  "currentDedicatedNodes": 1,
+  "currentLowPriorityNodes": 0,
+  "currentNodeCommunicationMode": "simplified",
+  "displayName": null,
+  "eTag": "0x8DD625B62981CE4",
+  "enableAutoScale": false,
+  "enableInterNodeCommunication": false,
+  "id": "batchsim-dev-pyproc-pool-02",
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": [
+      {
+        "clientId": "70012622-88d2-4aaa-9bdc-1624cf92a97a",
+        "principalId": "6b65de70-6440-4583-9cc6-ead0e22c1bad",
+        "resourceId": "/subscriptions/24eb1b16-3e2d-4a36-a357-f6512893e258/resourceGroups/dev-quodsi-rg-01/providers/Microsoft.ManagedIdentity/userAssignedIdentities/qdsdeveus2batchsim01-identity"
+      }
+    ]
+  },
+  "lastModified": "2025-03-13T18:17:59.216048+00:00",
+  "metadata": null,
+  "mountConfiguration": null,
+  "networkConfiguration": {
+    "dynamicVnetAssignmentScope": "none",
+    "enableAcceleratedNetworking": false,
+    "endpointConfiguration": null,
+    "publicIpAddressConfiguration": {
+      "ipAddressIds": null,
+      "provision": "batchmanaged"
+    },
+    "subnetId": null
+  },
+  "odata.metadata": "https://qdsdeveus2batchsim01.eastus2.batch.azure.com/$metadata#pools/@Element",
+  "resizeErrors": null,
+  "resizeTimeout": "0:15:00",
+  "resourceTags": null,
+  "startTask": {
+    "commandLine": "/bin/bash -c \"\nsudo apt-get update && sudo apt-get upgrade -y &&\nsudo apt-get install --reinstall -y software-properties-common &&\nsudo add-apt-repository ppa:deadsnakes/ppa -y &&\nsudo apt-get update &&\nsudo apt-get install --reinstall -y python3.10 python3.10-venv python3-pip libssl-dev &&\npython3.10 -m venv batch_env &&\nsource batch_env/bin/activate &&\npip install --upgrade pip setuptools wheel &&\npip install testresources &&\nexport PATH=$PATH:$HOME/.local/bin &&\npip install --no-cache-dir -r $AZ_BATCH_APP_PACKAGE_LucidQuodsim_1_0/requirements.txt &&\necho 'Python packages installed successfully' &&\npip list\n\"",
+    "containerSettings": null,
+    "environmentSettings": null,
+    "maxTaskRetryCount": 1,
+    "resourceFiles": null,
+    "userIdentity": {
+      "autoUser": {
+        "elevationLevel": "admin",
+        "scope": "task"
+      },
+      "userName": null
+    },
+    "waitForSuccess": true
+  },
+  "state": "active",
+  "stateTransitionTime": "2024-08-25T00:11:09.004622+00:00",
+  "stats": null,
+  "targetDedicatedNodes": 1,
+  "targetLowPriorityNodes": 0,
+  "targetNodeCommunicationMode": "default",
+  "taskSchedulingPolicy": {
+    "nodeFillType": "pack"
+  },
+  "taskSlotsPerNode": 1,
+  "url": "https://qdsdeveus2batchsim01.eastus2.batch.azure.com/pools/batchsim-dev-pyproc-pool-02",
+  "userAccounts": null,
+  "virtualMachineConfiguration": {
+    "containerConfiguration": null,
+    "dataDisks": null,
+    "diskEncryptionConfiguration": null,
+    "extensions": null,
+    "imageReference": {
+      "exactVersion": null,
+      "offer": "ubuntu-server-container",
+      "publisher": "microsoft-azure-batch",
+      "sku": "20-04-lts",
+      "version": "latest",
+      "virtualMachineImageId": null
+    },
+    "licenseType": null,
+    "nodeAgentSkuId": "batch.node.ubuntu 20.04",
+    "nodePlacementConfiguration": {
+      "policy": "regional"
+    },
+    "osDisk": {
+      "caching": "none",
+      "diskSizeGb": null,
+      "ephemeralOsDiskSettings": {
+        "placement": null
+      },
+      "managedDisk": {
+        "storageAccountType": "premium_lrs"
+      },
+      "writeAcceleratorEnabled": null
+    },
+    "securityProfile": null,
+    "serviceArtifactReference": null,
+    "windowsConfiguration": null
+  },
+  "vmSize": "standard_d2s_v3"
+}

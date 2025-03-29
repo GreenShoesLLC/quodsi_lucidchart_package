@@ -1,0 +1,26 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=devquodsilucidfunctionap;AccountKey=YOUR_FUNCTION_STORAGE_KEY;EndpointSuffix=core.windows.net",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "QUODSI_API_URL": "http://localhost:5000/api/",
+    "AZURE_FUNCTION_PROXY_BACKEND_URL_DECODE_SLASHES": "true",
+    "NODE_ENV": "development",
+    "QUODSI_ENVIRONMENT": "dev",
+    "QUODSI_STORAGE_ACCOUNT": "devquodsist01",
+    "AzureStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=devquodsist01;AccountKey=YOUR_DEV_STORAGE_KEY;EndpointSuffix=core.windows.net",
+    "BatchStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=quodsisharedbatch01storage;AccountKey=YOUR_BATCH_STORAGE_KEY;EndpointSuffix=core.windows.net",
+    "BatchAccountUrl": "https://quodsisharedbatch01.eastus2.batch.azure.com",
+    "BatchAccountName": "quodsisharedbatch01",
+    "BatchAccountKey": "YOUR_BATCH_ACCOUNT_KEY",
+    "BatchPoolId": "quodsi-dev-python-pool-01",
+    "DefaultApplicationId": "dev_quodsim",
+    "DefaultAppVersion": "1.0"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "https://lucid.app,https://lucidchart.com,http://localhost:9900,http://localhost:9901",
+    "CORSCredentials": true,
+    "CORSHeaders": "Content-Type,Authorization,X-Lucid-Signature,X-Lucid-RSA-Nonce"
+  }
+}

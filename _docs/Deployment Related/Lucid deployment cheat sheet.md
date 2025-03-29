@@ -26,9 +26,7 @@ npm run build -w @quodsi/shared
 "callbackBaseUrl": "http://localhost:7071/api/dataConnector/",
 
 # Manfiest Dev
-
-
-"callbackBaseUrl": "https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/dataConnector/",
+"callbackBaseUrl": "https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/",
 
         "Poll": "poll",
         "Patch": "patch",
@@ -44,9 +42,9 @@ Prior to doing a build, in the same terminal you will be making the build on, co
 echo $env:REACT_APP_DATA_CONNECTOR_API_URL
 echo $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY
 
-cd C:\_source\Greenshoes\quodsi*lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
+cd C:\_source\Greenshoes\quodsi\*lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Remove-Item -Path ".\build" -Recurse -Force
-$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-lucid-v3.azurewebsites.net/api/"
+$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-v1.azurewebsites.net/api/"
 $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="dSLWvgBABo1eFwJCYsni3_gNaanBlfYUjGUxoUDO6gv0AzFuoqzPqQ=="
 npx react-scripts build
 

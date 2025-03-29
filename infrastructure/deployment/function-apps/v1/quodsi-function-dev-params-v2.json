@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "batchLocation": {
+      "value": "eastus2"
+    },
+    "product": {
+      "value": "quodsi"
+    },
+    "instance": {
+      "value": "01"
+    },
+    "version": {
+      "value": "v1"
+    },
+    "batchAccountName": {
+      "value": "quodsisharedbatch01"
+    },
+    "batchResourceGroup": {
+      "value": "shared-quodsi-rg-01"
+    },
+    "batchStorageConnectionString": {
+      "value": "BATCH_STORAGE_CONNECTION_STRING_PLACEHOLDER"
+    },
+    "modelStorageConnectionString": {
+      "value": "DEV_STORAGE_CONNECTION_STRING_PLACEHOLDER"
+    },
+    "batchPoolId": {
+      "value": "quodsi-dev-python-pool-01"
+    },
+    "allowedOrigins": {
+      "value": [
+        "https://app.lucidchart.com",
+        "https://*.execute-api.us-east-1.amazonaws.com",
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://localhost:8080",
+        "https://localhost:3000",
+        "https://localhost:8000",
+        "https://localhost:8080"
+      ]
+    },
+    "storageSkuName": {
+      "value": "Standard_LRS"
+    },
+    "functionAppSku": {
+      "value": "Y1"
+    },
+    "functionAppSkuTier": {
+      "value": "Dynamic"
+    },
+    "nodeVersion": {
+      "value": "~18"
+    },
+    "apiUrl": {
+      "value": "http://localhost:5000/api/"
+    },
+    "nodeEnv": {
+      "value": "development"
+    },
+    "additionalSettings": {
+      "value": {
+        "ENABLE_DEBUGGING": "true",
+        "ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

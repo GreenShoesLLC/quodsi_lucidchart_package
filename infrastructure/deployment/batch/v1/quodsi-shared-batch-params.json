@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "batchAccountName": {
+      "value": "quodsisharedbatch01"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "resourceGroupName": {
+      "value": "shared-quodsi-rg-01"
+    },
+    "storageAccountName": {
+      "value": "sharedquodsist01"
+    },
+    "storageAccountResourceGroup": {
+      "value": "shared-quodsi-rg-01"
+    },
+    "createManagedIdentity": {
+      "value": true
+    },
+    "managedIdentityName": {
+      "value": "quodsisharedbatch01-identity"
+    }
+  }
+}

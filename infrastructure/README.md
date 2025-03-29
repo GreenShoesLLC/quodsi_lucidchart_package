@@ -15,7 +15,7 @@ This folder contains the infrastructure as code (IaC) scripts and templates for 
 The infrastructure management in this folder is focused on the following key resources:
 
 - **Function App**: `dev-quodsi-func-lucid-v3` (East US)
-- **Batch Account**: `qdsdeveus2batchsim01` (East US 2)
+- **Batch Account**: `quodsisharedbatch01` (East US 2)
 - **Storage Account**: `qdsdeveus2stbatch01` (East US 2)
 - **Resource Group**: `dev-quodsi-rg-01` (East US)
 
@@ -24,15 +24,17 @@ The infrastructure management in this folder is focused on the following key res
 ### Prerequisites
 
 1. Install Azure PowerShell modules:
+
    ```powershell
    Install-Module -Name Az -AllowClobber
    ```
 
 2. Install Azure CLI with Bicep extension:
+
    ```powershell
    # Check if Bicep is installed
    az bicep version
-   
+
    # Install if needed
    az bicep install
    ```
@@ -42,6 +44,7 @@ The infrastructure management in this folder is focused on the following key res
 If you need to update the Bicep templates based on changes to the development environment:
 
 1. Run the extraction script:
+
    ```powershell
    .\extract-azure-config.ps1
    ```
@@ -53,6 +56,7 @@ If you need to update the Bicep templates based on changes to the development en
 To deploy or update Test and Production environments:
 
 1. Navigate to the extracted-config folder:
+
    ```powershell
    cd .\extracted-config
    ```
@@ -60,16 +64,18 @@ To deploy or update Test and Production environments:
 2. Review and modify the Bicep template or parameter files if needed.
 
 3. Deploy to all environments:
+
    ```powershell
    .\deploy.ps1
    ```
 
 4. For selective deployment (single environment):
+
    ```powershell
    # For Test environment only
    New-AzResourceGroup -Name "tst-quodsi-rg-01" -Location "East US" -Force
    New-AzResourceGroupDeployment -ResourceGroupName "tst-quodsi-rg-01" -TemplateFile "./combined-template.bicep" -TemplateParameterFile "./tst.parameters.json"
-   
+
    # For Production environment only
    New-AzResourceGroup -Name "prd-quodsi-rg-01" -Location "East US" -Force
    New-AzResourceGroupDeployment -ResourceGroupName "prd-quodsi-rg-01" -TemplateFile "./combined-template.bicep" -TemplateParameterFile "./prd.parameters.json"
@@ -113,7 +119,7 @@ Where `{env}` is one of: `dev`, `tst`, or `prd`.
 If you encounter issues during deployment:
 
 1. Check Azure activity logs in the portal
-2. Review deployment operation details 
+2. Review deployment operation details
 3. Ensure you have sufficient permissions in the subscription
 4. Verify resource name uniqueness (especially for storage accounts)
 5. Check for resource constraints or quota limits in the subscription

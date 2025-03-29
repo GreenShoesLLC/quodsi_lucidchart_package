@@ -15,7 +15,7 @@ interface SaveAndSubmitRequest {
     scenarioId: string; 
     model: any;
     scenarioName: string
-    applicationId?: string;
+    // applicationId?: string;
     appVersion?: string;
 }
 
@@ -34,18 +34,23 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     try {
         // Extract and validate request data
         const data = action.data as SaveAndSubmitRequest;
-        const { documentId, scenarioId, model, scenarioName, applicationId, appVersion } = data;
+        const { documentId, scenarioId, model, scenarioName, appVersion } = data;
         
         // Use default baseline scenario ID if not provided
         // const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
         
-        if (!documentId || !scenarioId || !model || !scenarioName || !applicationId || !appVersion) {
+        if (!documentId || !scenarioId || !model || !scenarioName || !appVersion) {
             logger.error('Missing required fields');
             return { success: false };
         }
 
         // Get configuration
         const config = getConfig();
+        logger.info(`Operating in environment: ${config.environment}`);
+        logger.info(`Using storage account: ${config.azureStorageConnectionString.includes('AccountName=') ? 
+            config.azureStorageConnectionString.split('AccountName=')[1].split(';')[0] : 'unknown'}`);
+        logger.info(`Using batch pool: ${config.batchPoolId}`);
+        logger.info(`Using application: ${config.defaultApplicationId}`);
         // Create a scenario record in the "submitted" state
         logger.info(`Creating scenario record with ID5: ${scenarioId}`);
         try {
@@ -121,7 +126,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             documentId,
             scenarioId,
             scenarioName,
-            applicationId,
+            config.defaultApplicationId,
             appVersion,
         );
         metrics.batchSubmitDuration = Date.now() - batchStart;

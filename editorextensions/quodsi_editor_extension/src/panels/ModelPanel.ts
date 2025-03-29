@@ -1041,7 +1041,7 @@ export class ModelPanel extends Panel {
                         scenarioId: BASELINE_SCENARIO_ID,
                         'model': serializedModel,
                         'scenarioName': payload.scenarioName,
-                        'applicationId':"LucidQuodsim",
+                        // 'applicationId':"LucidQuodsim",
                         'appVersion':"1.0"
                     },
                     asynchronous: true

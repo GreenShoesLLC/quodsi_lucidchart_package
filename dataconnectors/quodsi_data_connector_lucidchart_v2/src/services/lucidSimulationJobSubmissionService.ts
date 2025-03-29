@@ -76,7 +76,7 @@ export class LucidSimulationJobSubmissionService {
 
             this.batchClient = new BatchServiceClient(credentials, config.batchAccountUrl);
             this.poolId = config.poolId;
-            this.defaultApplicationId = config.defaultApplicationId || "LucidQuodsim";
+            this.defaultApplicationId = config.defaultApplicationId || "dev_quodsim";
             this.defaultAppVersion = config.defaultAppVersion || "1.0";
 
             console.log('[BatchService] Initialized with pool:', this.poolId);
@@ -86,6 +86,26 @@ export class LucidSimulationJobSubmissionService {
             }
             throw new BatchConfigurationError("Failed to initialize batch configuration.", "Unknown", error as Error);
         }
+    }
+
+    // Helper method to extract storage URL from connection string
+    private extractStorageUrlFromConnectionString(connectionString: string): string {
+        // Default URL in case we can't extract it
+        let storageUrl = "https://devquodsist01.blob.core.windows.net";
+
+        try {
+            // Find the account name in the connection string
+            const accountNameMatch = connectionString.match(/AccountName=([^;]+)/i);
+            if (accountNameMatch && accountNameMatch[1]) {
+                const accountName = accountNameMatch[1];
+                storageUrl = `https://${accountName}.blob.core.windows.net`;
+                console.log(`[BatchService] Extracted storage URL: ${storageUrl}`);
+            }
+        } catch (error) {
+            console.warn('[BatchService] Failed to extract storage URL from connection string, using default');
+        }
+
+        return storageUrl;
     }
 
     public async submitJob(
@@ -117,7 +137,8 @@ export class LucidSimulationJobSubmissionService {
 
                 await this.batchClient.job.add(jobParams);
             }, this.jobRetryOptions);
-
+            // Get the configuration to access the current environment's storage account
+            const config = getConfig();
             // Create and submit task with retry
             await retry(async () => {
                 const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replace(".", "_")}`;
@@ -132,7 +153,9 @@ export class LucidSimulationJobSubmissionService {
                     environmentSettings: [
                         { name: "BATCH_ACCOUNT_NAME", value: this.batchAccountName },
                         { name: "BATCH_ACCOUNT_KEY", value: this.batchAccountKey },
-                        { name: "BATCH_URL", value: this.batchAccountUrl }
+                        { name: "BATCH_URL", value: this.batchAccountUrl },
+                        { name: "AZURE_STORAGE_CONNECTION_STRING", value: config.azureStorageConnectionString },
+                        { name: "AZURE_STORAGE_URL", value: this.extractStorageUrlFromConnectionString(config.azureStorageConnectionString) }
                     ]
                 };
 
