@@ -1,13 +1,11 @@
 {
-  "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "2024.2.65",
+  "id": "8dc6bc70-c635-4263-a104-179c1412d979",
+  "version": "2024.2.60",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
       "title": "Quodsim",
-      "products": [
-        "chart"
-      ],
+      "products": ["chart"],
       "codePath": "editorextensions\\quodsi_editor_extension\\bin\\extension.js",
       "scopes": [
         "READ",
@@ -33,12 +31,8 @@
       "title": "Lucid",
       "authorizationUrl": "https://lucid.app/oauth2/authorize",
       "tokenUrl": "https://api.lucid.co/oauth2/token",
-      "scopes": [
-        "lucidchart.document.content:readonly"
-      ],
-      "domainWhitelist": [
-        "https://api.lucid.co"
-      ],
+      "scopes": ["lucidchart.document.content:readonly"],
+      "domainWhitelist": ["https://api.lucid.co"],
       "clientAuthentication": "clientParameters",
       "faviconUrl": "https://cdn-cashy-static-assets.lucidchart.com/marketing/images/LucidSoftwareFavicon.png"
     }
@@ -47,7 +41,7 @@
     {
       "name": "quodsi_data_connector",
       "oauthProviderName": "lucid",
-      "callbackBaseUrl": "https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/",
+      "callbackBaseUrl": "http://localhost:7071/api/dataConnector/",
       "pollingInterval": 30,
       "dataActions": {
         "Simulate": "simulate",

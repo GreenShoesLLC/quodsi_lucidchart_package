@@ -32,20 +32,37 @@ npm run build -w @quodsi/shared
         "Patch": "patch",
         "HardRefresh": "hardRefresh"
 
-# Build quodsim-react
-
-Prior building the react app, please do the following:
-
 https://create-react-app.dev/docs/adding-custom-environment-variables/#what-other-env-files-can-be-used
 
+# Build quodsim-react
+
+## Set your working directory:
+```
+cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
+Remove-Item -Path ".\build" -Recurse -Force
+```
+
+## Set Environment Variables Based upon target environment
+if target environment is Dev
+```
+$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-v1.azurewebsites.net/api/"
+$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="zwH0vpBDPYko4QfIbNC9TjJRu4gZP9wbWu8CHuLFMrUkAzFuTazGeg=="
+```
+if target environment is TST
+```
+$env:REACT_APP_DATA_CONNECTOR_API_URL="https://tst-quodsi-func-v1.azurewebsites.net/api/"
+$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
+```
+if target environment is PRD
+```
+$env:REACT_APP_DATA_CONNECTOR_API_URL="https://prd-quodsi-func-v1.azurewebsites.net/api/"
+$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="IuYzy5x9yt6FRhQhL5U9j8bXePABxfSEbVQ0pVEPk6fuAzFuE0P6tw=="
+```
 Prior to doing a build, in the same terminal you will be making the build on, confirm the following:
 echo $env:REACT_APP_DATA_CONNECTOR_API_URL
 echo $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY
 
-cd C:\_source\Greenshoes\quodsi\*lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
-Remove-Item -Path ".\build" -Recurse -Force
-$env:REACT_APP_DATA_CONNECTOR_API_URL="https://dev-quodsi-func-v1.azurewebsites.net/api/"
-$env:REACT_APP_AZURE_STATUS_FUNCTION_KEY="dSLWvgBABo1eFwJCYsni3_gNaanBlfYUjGUxoUDO6gv0AzFuoqzPqQ=="
+
 npx react-scripts build
 
 Delete files from here:

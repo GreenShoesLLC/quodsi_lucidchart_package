@@ -1,5 +1,5 @@
 // src/services/lucidSimulationJobSubmissionService.ts
-
+import { randomUUID } from 'crypto';
 import {
     BatchServiceClient,
     BatchSharedKeyCredentials,
@@ -121,8 +121,8 @@ export class LucidSimulationJobSubmissionService {
         console.log('[BatchService] Starting job submission for document:', documentId, 'scenario:', scenarioId || 'default');
 
         try {
-            const jobId = `Job-${crypto.randomUUID()}`;
-            const taskId = `Task-${crypto.randomUUID()}`;
+            const jobId = `Job-${randomUUID()}`;
+            const taskId = `Task-${randomUUID()}`;
 
             // Create and commit job with retry
             await retry(async () => {
@@ -166,12 +166,21 @@ export class LucidSimulationJobSubmissionService {
             return `Job '${jobId}' with task '${taskId}' submitted successfully.`;
 
         } catch (error: any) {
+            // Log the original error details first!
+            console.error('[BatchService] Caught unexpected error during job/task submission:', {
+                errorMessage: error.message,
+                errorCode: error.code, // Log code even if it might be undefined
+                errorStack: error.stack,
+                errorDetails: error // Log the whole error object if possible
+            });
+
             if (error.code === 'JobExists') {
                 throw new BatchJobCreationError("Job already exists", '', error);
             }
             if (error.code) {
                 throw new BatchJobCreationError(`Batch error: ${error.message}`, '', error);
             }
+            // Now throw the generic error
             throw new BatchConfigurationError("An unexpected error occurred while submitting the Batch job.", "Unknown", error);
         }
     }
