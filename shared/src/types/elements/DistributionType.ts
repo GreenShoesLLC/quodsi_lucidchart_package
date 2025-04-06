@@ -1,4 +1,5 @@
 export enum DistributionType {
+    CONSTANT = "constant", // Add CONSTANT as first option
     MULTINOMIAL = "multinomial",
     UNIFORM = "uniform",
     TRIANGULAR = "triangular",
@@ -30,5 +31,35 @@ export enum DistributionType {
     VON_MISES = "vonmises",
     WALD = "wald",
     ZIPF = "zipf"
+}
+
+// Add helper for display names
+export function getDistributionDisplayName(type: DistributionType): string {
+    switch (type) {
+        case DistributionType.CONSTANT:
+            return "Constant";
+        case DistributionType.UNIFORM:
+            return "Uniform";
+        case DistributionType.TRIANGULAR:
+            return "Triangular";
+        case DistributionType.NORMAL:
+            return "Normal";
+        // ... other cases
+        default:
+            return type.toString().replace(/_/g, ' ').toLowerCase()
+                .replace(/\b\w/g, char => char.toUpperCase());
+    }
+}
+
+// Add helper for determining if a distribution is supported in the UI
+export function isDistributionTypeSupported(type: DistributionType): boolean {
+    const supportedTypes = [
+        DistributionType.CONSTANT,
+        DistributionType.UNIFORM,
+        DistributionType.TRIANGULAR, 
+        DistributionType.NORMAL
+    ];
+    
+    return supportedTypes.includes(type);
 }
 

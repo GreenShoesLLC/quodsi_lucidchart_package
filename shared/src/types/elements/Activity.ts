@@ -1,16 +1,15 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { createOperationStep, OperationStep } from "./OperationStep";
 import { SimulationObject } from "./SimulationObject";
-import { Connector } from "./Connector";
 import { Duration } from "./Duration";
 import { PeriodUnit } from "./PeriodUnit";
-import { DurationType } from "./DurationType";
+import { ConstantDistribution } from "./distributions";
 
 export class Activity implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Activity;
 
     static createDefault(id: string): Activity {
-        const defaultDuration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
+        const defaultDuration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
         const defaultOperationStep = createOperationStep(defaultDuration);
 
         return new Activity(

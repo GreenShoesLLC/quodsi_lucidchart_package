@@ -18,7 +18,7 @@ cd editorextensions\quodsi_editor_extension\quodsim-react
 Npx react-scripts start
 # Create a new terminal in VS Code
 cd dataconnectors\quodsi_data_connector
-npm run start
+npm run build
 func start --debug --verbose
 
 

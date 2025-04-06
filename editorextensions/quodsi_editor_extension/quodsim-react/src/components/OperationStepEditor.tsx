@@ -1,7 +1,13 @@
 import React from "react";
-import { OperationStep, Duration, ResourceRequirement } from "@quodsi/shared";
+import {
+  OperationStep,
+  Duration,
+  PeriodUnit,
+  Distribution,
+  ResourceRequirement,
+} from "@quodsi/shared";
 import { X } from "lucide-react";
-import { CompactDurationEditor } from "./CompactDurationEditor";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 
 interface OperationStepEditorProps {
   step: OperationStep;
@@ -18,7 +24,7 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   onChange,
   resourceRequirements = [],
 }) => {
-  // debug logging
+  // Debug logging
   React.useEffect(() => {
     console.log("OperationStepEditor Debug:", {
       stepRequirementId: step.requirementId,
@@ -30,8 +36,19 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
     });
   }, [step.requirementId, resourceRequirements]);
 
-  const handleDurationChange = (updatedDuration: Duration) => {
-    onChange({ ...step, duration: updatedDuration });
+  // Updated to handle separate periodUnit and distribution within existing Duration
+  const handleDurationChange = (
+    periodUnit: PeriodUnit,
+    distribution: Distribution
+  ) => {
+    onChange({
+      ...step,
+      duration: {
+        ...step.duration,
+        durationPeriodUnit: periodUnit,
+        distribution,
+      },
+    });
   };
 
   const handleRequirementChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -63,12 +80,15 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
       </div>
 
       <div className="space-y-2">
-        {/* Duration Editor */}
-        <CompactDurationEditor
-          duration={step.duration}
+        {/* Updated Duration Editor */}
+        <EnhancedDurationEditor
+          periodUnit={step.duration.durationPeriodUnit}
+          distribution={step.duration.distribution}
           onChange={handleDurationChange}
-          lengthLabel="Duration"
+          label="Duration"
+          compact={true}
         />
+
         {/* Resource Requirement Selection */}
         <div>
           <label className="block text-xs text-gray-600 mb-1">

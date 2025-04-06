@@ -4,6 +4,7 @@ import { SimulationObject } from "./SimulationObject";
 import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
 import { DurationType } from "./DurationType";
+import { ConstantDistribution } from "./distributions";
 
 export class Generator implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Generator;
@@ -15,9 +16,9 @@ export class Generator implements SimulationObject {
             '{SomeActivityName}',
             ModelDefaults.DEFAULT_ENTITY_ID,
             10, // periodicOccurrences
-            new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT), // periodIntervalDuration
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // periodIntervalDuration
             1, // entitiesPerCreation
-            new Duration(0, PeriodUnit.HOURS, DurationType.CONSTANT), // periodicStartDuration
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // periodicStartDuration
             999 // maxEntities
         );
     }

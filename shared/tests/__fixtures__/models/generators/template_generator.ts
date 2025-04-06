@@ -8,7 +8,10 @@ import { Connector } from '../../../../src/types/elements/Connector';
 import { Entity } from '../../../../src/types/elements/Entity';
 import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
-import { DurationType } from '../../../../src/types/elements/DurationType';
+import { Distribution } from '../../../../src/types/elements/Distribution';
+import { DistributionType } from '../../../../src/types/elements/DistributionType';
+import { ConstantDistribution } from '../../../../src/types/elements/distributions';
+import { UniformParameters, TriangularParameters, NormalParameters } from '../../../../src/types/elements/distributions';
 import { createOperationStep } from '../../../../src/types/elements/OperationStep';
 import { ConnectType } from '../../../../src/types/elements/ConnectType';
 import { ModelDefaults } from '../../../../src/types/elements/ModelDefaults';
@@ -18,6 +21,16 @@ interface ModelConfig {
     activityCount: number;
     resourceCount: number;
     generatorCount: number;
+    distributions?: {
+        // Default distribution for all components if not specifically mapped
+        default?: DistributionType;
+        
+        // Specific mapping for activities
+        activities?: Record<number, DistributionType>;
+        
+        // Specific mapping for generators
+        generators?: Record<number, DistributionType>;
+    };
 }
 
 export function createModelDefinition(config: ModelConfig, index: number): ModelDefinition {
@@ -49,19 +62,71 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
         entities.push(entity);
     }
 
-    // Create common duration for activities
-    const duration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
+    // Helper function to create appropriate distribution based on type
+    function createDistributionByType(type: DistributionType): Distribution {
+        switch (type) {
+            case DistributionType.CONSTANT:
+                return ConstantDistribution.create(1);
+                
+            case DistributionType.UNIFORM:
+                return new Distribution(
+                    DistributionType.UNIFORM, 
+                    { low: 0.5, high: 1.5 } as UniformParameters
+                );
+                
+            case DistributionType.TRIANGULAR:
+                return new Distribution(
+                    DistributionType.TRIANGULAR, 
+                    { left: 0.5, mode: 1.0, right: 1.5 } as TriangularParameters
+                );
+                
+            case DistributionType.NORMAL:
+                return new Distribution(
+                    DistributionType.NORMAL, 
+                    { mean: 1.0, std: 0.2 } as NormalParameters
+                );
+                
+            default:
+                return ConstantDistribution.create(1);
+        }
+    }
+    
+    // Helper function to get distribution for a specific component
+    function getDistributionForIndex(
+        index: number, 
+        componentType: 'activity' | 'generator'
+    ): Distribution {
+        // Check if there's a specific mapping for this component
+        const specificMapping = componentType === 'activity' 
+            ? config.distributions?.activities?.[index]
+            : config.distributions?.generators?.[index];
+            
+        // Use specific mapping if available, otherwise use default, falling back to CONSTANT
+        const distributionType = specificMapping || 
+            config.distributions?.default || 
+            DistributionType.CONSTANT;
+            
+        // Create the appropriate distribution with sensible parameters
+        return createDistributionByType(distributionType);
+    }
+    
+    // Create common duration for activities - default for when no specific one is needed
+    const defaultDuration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
     // Create activities with dedicated operation steps
     const activities: Activity[] = [];
     for (let i = 0; i < config.activityCount; i++) {
+        // Get distribution for this activity
+        const activityDistribution = getDistributionForIndex(i, 'activity');
+        const activityDuration = new Duration(PeriodUnit.MINUTES, activityDistribution);
+        
         // Create dedicated operation steps for this activity
         const operationSteps = requirements.length > 0
-            ? requirements.map(req => createOperationStep(duration, {
+            ? requirements.map(req => createOperationStep(activityDuration, {
                 requirementId: req.id,
                 quantity: 1
               }))
-            : [createOperationStep(duration)]; // If no resources, create single step with no requirement
+            : [createOperationStep(activityDuration)]; // If no resources, create single step with no requirement
 
         const activity = new Activity(
             `activity-${i + 1}`,
@@ -90,7 +155,7 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
             activities[0].id, // Always connect to first activity
             entityForGenerator.id,
             10,
-            new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT),
+            new Duration(PeriodUnit.HOURS, getDistributionForIndex(i, 'generator')),
             1
         );
         modelDef.generators.add(generator);

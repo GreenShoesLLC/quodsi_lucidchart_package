@@ -5,10 +5,11 @@ import {
   Generator,
   SimulationObjectType,
   EditorReferenceData,
-
+  PeriodUnit,
+  Distribution,
 } from "@quodsi/shared";
 import { Clock, Users, Timer, PlayCircle } from "lucide-react";
-import { CompactDurationEditor } from "./CompactDurationEditor";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 
 interface Props {
   generator: Generator;
@@ -29,8 +30,22 @@ const GeneratorEditor: React.FC<Props> = ({
     return <div className="text-red-500 text-sm">Invalid generator data</div>;
   }
 
-  const handleDurationChange = (name: string, updatedDuration: Duration) => {
-    onSave({ ...generator, [name]: updatedDuration });
+  const handleDurationChange = (
+    name: keyof Pick<
+      Generator,
+      "periodIntervalDuration" | "periodicStartDuration"
+    >,
+    periodUnit: PeriodUnit,
+    distribution: Distribution
+  ) => {
+    onSave({
+      ...generator,
+      [name]: {
+        ...generator[name],
+        durationPeriodUnit: periodUnit,
+        distribution,
+      },
+    });
   };
 
   return (
@@ -42,23 +57,7 @@ const GeneratorEditor: React.FC<Props> = ({
     >
       {(localGenerator, handleChange) => (
         <div className="space-y-3 p-2">
-          {/* Basic Settings */}
-          {/* <div className="space-y-2">
-            <div className="flex items-center gap-1">
-              <PlayCircle className="w-4 h-4 text-blue-500" />
-              <label className="text-xs font-medium text-gray-700">
-                Generate at Activity
-              </label>
-            </div>
-            <input
-              type="text"
-              name="activityKeyId"
-              className="w-full px-2 py-1 text-sm border rounded"
-              value={localGenerator.activityKeyId}
-              onChange={handleChange}
-            />
-          </div> */}
-
+          {/* Entity Selection */}
           <div className="space-y-2">
             <div className="flex items-center gap-1">
               <Users className="w-4 h-4 text-blue-500" />
@@ -119,21 +118,47 @@ const GeneratorEditor: React.FC<Props> = ({
 
           {/* Timing Settings */}
           <div className="space-y-3 pt-1">
-            <CompactDurationEditor
-              duration={localGenerator.periodIntervalDuration}
-              onChange={(updatedDuration) =>
-                handleDurationChange("periodIntervalDuration", updatedDuration)
-              }
-              lengthLabel="Interarrival Time"
-            />
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Interarrival Time
+              </label>
+              <EnhancedDurationEditor
+                periodUnit={
+                  localGenerator.periodIntervalDuration.durationPeriodUnit
+                }
+                distribution={
+                  localGenerator.periodIntervalDuration.distribution
+                }
+                onChange={(periodUnit, distribution) =>
+                  handleDurationChange(
+                    "periodIntervalDuration",
+                    periodUnit,
+                    distribution
+                  )
+                }
+                compact={true}
+              />
+            </div>
 
-            <CompactDurationEditor
-              duration={localGenerator.periodicStartDuration}
-              onChange={(updatedDuration) =>
-                handleDurationChange("periodicStartDuration", updatedDuration)
-              }
-              lengthLabel="Start Delay"
-            />
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Start Delay
+              </label>
+              <EnhancedDurationEditor
+                periodUnit={
+                  localGenerator.periodicStartDuration.durationPeriodUnit
+                }
+                distribution={localGenerator.periodicStartDuration.distribution}
+                onChange={(periodUnit, distribution) =>
+                  handleDurationChange(
+                    "periodicStartDuration",
+                    periodUnit,
+                    distribution
+                  )
+                }
+                compact={true}
+              />
+            </div>
           </div>
 
           {/* Max Entities */}

@@ -1,13 +1,7 @@
-import { PageProxy, ElementProxy, BlockProxy } from 'lucid-extension-sdk';
+import { PageProxy, BlockProxy } from 'lucid-extension-sdk';
 import {
-    Model,
     ModelDefinition,
     SimulationObjectType,
-    Activity,
-    Generator,
-    Resource,
-    Connector,
-    Entity,
     ResourceRequirement
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';

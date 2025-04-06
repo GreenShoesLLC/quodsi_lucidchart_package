@@ -1,5 +1,6 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import { 
+    ConstantDistribution,
     Distribution,
     Duration,
     DurationType,
@@ -18,17 +19,13 @@ interface StoredGeneratorData {
     entityId?: string;
     periodicOccurrences?: number;
     periodIntervalDuration?: {
-        durationLength: number;
         durationPeriodUnit: PeriodUnit;
-        durationType: DurationType;
-        distribution: Distribution | null;
+        distribution: Distribution;
     };
     entitiesPerCreation?: number;
     periodicStartDuration?: {
-        durationLength: number;
         durationPeriodUnit: PeriodUnit;
-        durationType: DurationType;
-        distribution: Distribution | null;
+        distribution: Distribution;
     };
     maxEntities?: number;
 }
@@ -58,9 +55,9 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             "", // default activityKeyId
             ModelDefaults.DEFAULT_ENTITY_ID,
             Infinity, // default periodicOccurrences
-            new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT), // default periodIntervalDuration
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // default periodIntervalDuration
             1, // default entitiesPerCreation
-            new Duration(0, PeriodUnit.HOURS, DurationType.CONSTANT), // default periodicStartDuration
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // default periodicStartDuration
             Infinity // default maxEntities
         );
 
@@ -78,18 +75,14 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             // Handle Duration objects
             if (storedData.periodIntervalDuration) {
                 generator.periodIntervalDuration = new Duration(
-                    storedData.periodIntervalDuration.durationLength,
                     storedData.periodIntervalDuration.durationPeriodUnit,
-                    storedData.periodIntervalDuration.durationType,
                     storedData.periodIntervalDuration.distribution
                 );
             }
 
             if (storedData.periodicStartDuration) {
                 generator.periodicStartDuration = new Duration(
-                    storedData.periodicStartDuration.durationLength,
                     storedData.periodicStartDuration.durationPeriodUnit,
-                    storedData.periodicStartDuration.durationType,
                     storedData.periodicStartDuration.distribution
                 );
             }
@@ -109,16 +102,12 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             entityId: this.simObject.entityId,
             periodicOccurrences: this.simObject.periodicOccurrences,
             periodIntervalDuration: {
-                durationLength: this.simObject.periodIntervalDuration.durationLength,
                 durationPeriodUnit: this.simObject.periodIntervalDuration.durationPeriodUnit,
-                durationType: this.simObject.periodIntervalDuration.durationType,
                 distribution: this.simObject.periodIntervalDuration.distribution
             },
             entitiesPerCreation: this.simObject.entitiesPerCreation,
             periodicStartDuration: {
-                durationLength: this.simObject.periodicStartDuration.durationLength,
                 durationPeriodUnit: this.simObject.periodicStartDuration.durationPeriodUnit,
-                durationType: this.simObject.periodicStartDuration.durationType,
                 distribution: this.simObject.periodicStartDuration.distribution
             },
             maxEntities: this.simObject.maxEntities
@@ -155,16 +144,12 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             entityId: defaultGenerator.entityId,
             periodicOccurrences: defaultGenerator.periodicOccurrences,
             periodIntervalDuration: {
-                durationLength: defaultGenerator.periodIntervalDuration.durationLength,
                 durationPeriodUnit: defaultGenerator.periodIntervalDuration.durationPeriodUnit,
-                durationType: defaultGenerator.periodIntervalDuration.durationType,
                 distribution: defaultGenerator.periodIntervalDuration.distribution
             },
             entitiesPerCreation: defaultGenerator.entitiesPerCreation,
             periodicStartDuration: {
-                durationLength: defaultGenerator.periodicStartDuration.durationLength,
                 durationPeriodUnit: defaultGenerator.periodicStartDuration.durationPeriodUnit,
-                durationType: defaultGenerator.periodicStartDuration.durationType,
                 distribution: defaultGenerator.periodicStartDuration.distribution
             },
             maxEntities: defaultGenerator.maxEntities

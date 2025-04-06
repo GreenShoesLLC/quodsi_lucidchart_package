@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Python simulation engine (Quodsim) needs to be updated to handle the new approach where CONSTANT is a distribution type. This requires changes to the Python dataclasses and serialization/deserialization logic.
+The Python simulation engine (Quodsim) needs to be updated to handle our class-based distribution implementation. This requires implementing similar class-based structures in Python to match the TypeScript implementation, including distribution-specific classes with validation and sampling methods.
 
 ## Current Python Implementation
 
@@ -18,6 +18,15 @@ Currently, the Python side has:
    - `distribution_type` property
    - `parameters` property
    - No CONSTANT distribution type
+
+## Implementation Approach
+
+We'll implement a similar class-based structure in Python with:
+
+1. Distribution-specific classes for each distribution type
+2. Parameter dataclasses for each distribution type
+3. Static methods for creation, validation, and sampling
+4. A registry to manage distribution types
 
 ## Required Changes
 
@@ -56,44 +65,203 @@ class DistributionType(Enum):
             return cls.deserialize(value["value"])
         else:
             raise TypeError(f"Expected str or dict, got {type(value)}")
+            
+    @classmethod
+    def get_supported_types(cls) -> list["DistributionType"]:
+        """Get list of supported distribution types"""
+        return [
+            cls.CONSTANT,
+            cls.UNIFORM,
+            cls.TRIANGULAR,
+            cls.NORMAL
+        ]
+        
+    @classmethod
+    def is_supported(cls, dist_type: "DistributionType") -> bool:
+        """Check if a distribution type is supported"""
+        return dist_type in cls.get_supported_types()
 ```
 
-### 2. Add Constant Parameters Dataclass
+### 2. Create Distribution-Specific Modules
 
-#### File Location
+#### Directory Structure
 ```
-C:\_source\Greenshoes\quodsim\quodsim\model_definition\distribution_parameters.py
+quodsim/
+├── model_definition/
+│   ├── distributions/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── constant.py
+│   │   ├── uniform.py
+│   │   ├── triangular.py
+│   │   ├── normal.py
+│   │   └── registry.py
 ```
 
-#### Updated Code
-
+#### Base Distribution Module
 ```python
+# base.py
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Union, Dict, Any
+from typing import Dict, Any, TypeVar, Generic
+
+from ..enums import DistributionType
+
+
+class DistributionParameters(ABC):
+    """Base class for all distribution parameter classes"""
+    
+    @classmethod
+    @abstractmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "DistributionParameters":
+        """Create parameters from dictionary"""
+        pass
+    
+    @abstractmethod
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert parameters to dictionary"""
+        pass
+
+
+P = TypeVar('P', bound=DistributionParameters)
+
+
+class DistributionBase(Generic[P], ABC):
+    """Base class for all distribution classes"""
+    
+    @classmethod
+    @abstractmethod
+    def create_default(cls) -> "Distribution":
+        """Create a default distribution of this type"""
+        pass
+    
+    @classmethod
+    @abstractmethod
+    def create(cls, *args, **kwargs) -> "Distribution":
+        """Create a distribution with the specified parameters"""
+        pass
+    
+    @staticmethod
+    @abstractmethod
+    def validate_parameters(params: P) -> bool:
+        """Validate parameters for this distribution type"""
+        pass
+    
+    @staticmethod
+    @abstractmethod
+    def sample(params: P) -> float:
+        """Sample a value from this distribution"""
+        pass
+```
+
+#### Constant Distribution Module
+```python
+# constant.py
+from dataclasses import dataclass
+from typing import Dict, Any, ClassVar
+
+from ..enums import DistributionType
+from ..distribution import Distribution
+from .base import DistributionParameters, DistributionBase
 
 
 @dataclass
-class ConstantParameters:
-    value: float
+class ConstantParameters(DistributionParameters):
+    """Parameters for a CONSTANT distribution"""
+    value: float = 1.0
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ConstantParameters":
-        return cls(value=float(data.get("value", 0)))
+        """Create parameters from dictionary"""
+        return cls(value=float(data.get("value", 1.0)))
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert parameters to dictionary"""
+        return {"value": self.value}
 
 
-@dataclass
-class UniformParameters:
-    low: float
-    high: float
+class ConstantDistribution(DistributionBase[ConstantParameters]):
+    """Implementation of CONSTANT distribution"""
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "UniformParameters":
-        return cls(
-            low=float(data.get("low", 0)),
-            high=float(data.get("high", 10))
+    def create_default(cls) -> Distribution:
+        """Create a default CONSTANT distribution"""
+        return cls.create(1.0)
+    
+    @classmethod
+    def create(cls, value: float) -> Distribution:
+        """Create a CONSTANT distribution with the specified value"""
+        params = ConstantParameters(value=value)
+        return Distribution(
+            distribution_type=DistributionType.CONSTANT,
+            parameters=params
         )
+    
+    @staticmethod
+    def validate_parameters(params: ConstantParameters) -> bool:
+        """Validate CONSTANT distribution parameters"""
+        return isinstance(params.value, (int, float)) and params.value >= 0
+    
+    @staticmethod
+    def sample(params: ConstantParameters) -> float:
+        """Sample a value from this CONSTANT distribution"""
+        return params.value
+        
+    @staticmethod
+    def get_effective_value(params: ConstantParameters) -> float:
+        """Get effective value for UI display"""
+        return params.value
+```
 
-# ... existing parameter classes
+#### Distribution Registry Module
+```python
+# registry.py
+from typing import Dict, Type, Any, Optional
+
+from ..enums import DistributionType
+from .base import DistributionBase, DistributionParameters
+from .constant import ConstantDistribution, ConstantParameters
+from .uniform import UniformDistribution, UniformParameters
+from .triangular import TriangularDistribution, TriangularParameters
+from .normal import NormalDistribution, NormalParameters
+
+
+class DistributionRegistry:
+    """Registry of distribution handlers"""
+    
+    _handlers: Dict[DistributionType, Type[DistributionBase]] = {
+        DistributionType.CONSTANT: ConstantDistribution,
+        DistributionType.UNIFORM: UniformDistribution,
+        DistributionType.TRIANGULAR: TriangularDistribution,
+        DistributionType.NORMAL: NormalDistribution
+    }
+    
+    @classmethod
+    def get_handler(cls, dist_type: DistributionType) -> Type[DistributionBase]:
+        """Get handler for a distribution type"""
+        handler = cls._handlers.get(dist_type)
+        if not handler:
+            # Default to CONSTANT if not found
+            return cls._handlers[DistributionType.CONSTANT]
+        return handler
+    
+    @classmethod
+    def create_default(cls, dist_type: DistributionType) -> "Distribution":
+        """Create a default distribution of the specified type"""
+        handler = cls.get_handler(dist_type)
+        return handler.create_default()
+    
+    @classmethod
+    def validate_parameters(cls, dist_type: DistributionType, params: DistributionParameters) -> bool:
+        """Validate parameters for a distribution type"""
+        handler = cls.get_handler(dist_type)
+        return handler.validate_parameters(params)
+    
+    @classmethod
+    def sample(cls, dist_type: DistributionType, params: DistributionParameters) -> float:
+        """Sample from a distribution with the given parameters"""
+        handler = cls.get_handler(dist_type)
+        return handler.sample(params)
 ```
 
 ### 3. Update Distribution Class
@@ -109,13 +277,13 @@ C:\_source\Greenshoes\quodsim\quodsim\model_definition\distribution.py
 from dataclasses import dataclass
 from typing import Union, Dict, Any, Optional
 
-from quodsim.model_definition.enums import DistributionType
-from quodsim.model_definition.distribution_parameters import (
+from .enums import DistributionType
+from .distributions import (
+    DistributionParameters,
     ConstantParameters,
     UniformParameters,
     TriangularParameters,
-    NormalParameters,
-    # ... other parameter types
+    NormalParameters
 )
 
 
@@ -124,23 +292,31 @@ DistributionParametersType = Union[
     ConstantParameters,
     UniformParameters,
     TriangularParameters,
-    NormalParameters,
-    # ... other parameter types
+    NormalParameters
 ]
 
 
 @dataclass
 class Distribution:
+    """Represents a statistical distribution for simulation"""
+    
     distribution_type: DistributionType
     parameters: DistributionParametersType
     description: str = ""
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Distribution":
-        dist_type = DistributionType.deserialize(data.get("distributionType", "uniform"))
+        """Create a Distribution from a dictionary"""
+        from .distributions.registry import DistributionRegistry
+        
+        # Get distribution type
+        dist_type = DistributionType.deserialize(data.get("distributionType", "constant"))
         params_data = data.get("parameters", {})
         
-        # Create parameters object based on distribution type
+        # Create distribution using registry
+        handler = DistributionRegistry.get_handler(dist_type)
+        
+        # Create parameters
         if dist_type == DistributionType.CONSTANT:
             parameters = ConstantParameters.from_dict(params_data)
         elif dist_type == DistributionType.UNIFORM:
@@ -149,7 +325,6 @@ class Distribution:
             parameters = TriangularParameters.from_dict(params_data)
         elif dist_type == DistributionType.NORMAL:
             parameters = NormalParameters.from_dict(params_data)
-        # ... other distribution types
         else:
             raise ValueError(f"Unsupported distribution type: {dist_type}")
         
@@ -160,32 +335,17 @@ class Distribution:
         )
     
     def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
         return {
             "distributionType": self.distribution_type.value,
-            "parameters": self._parameters_to_dict(),
+            "parameters": self.parameters.to_dict(),
             "description": self.description
         }
     
-    def _parameters_to_dict(self) -> Dict[str, Any]:
-        # Convert parameters to dictionary based on type
-        if isinstance(self.parameters, ConstantParameters):
-            return {"value": self.parameters.value}
-        elif isinstance(self.parameters, UniformParameters):
-            return {"low": self.parameters.low, "high": self.parameters.high}
-        # ... other parameter types
-        else:
-            return vars(self.parameters)
-    
     def sample(self) -> float:
         """Sample a value from this distribution"""
-        if self.distribution_type == DistributionType.CONSTANT:
-            return self.parameters.value
-        elif self.distribution_type == DistributionType.UNIFORM:
-            import random
-            return random.uniform(self.parameters.low, self.parameters.high)
-        # ... implement sampling for other distributions
-        else:
-            raise NotImplementedError(f"Sampling not implemented for {self.distribution_type}")
+        from .distributions.registry import DistributionRegistry
+        return DistributionRegistry.sample(self.distribution_type, self.parameters)
 ```
 
 ### 4. Update Duration Class
@@ -201,13 +361,15 @@ C:\_source\Greenshoes\quodsim\quodsim\model_definition\duration.py
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
 
-from quodsim.model_definition.enums import DurationType, PeriodUnit, DistributionType
-from quodsim.model_definition.distribution import Distribution
-from quodsim.model_definition.distribution_parameters import ConstantParameters
+from .enums import DurationType, PeriodUnit, DistributionType
+from .distribution import Distribution
+from .distributions import ConstantDistribution
 
 
 @dataclass
 class Duration:
+    """Represents a duration in the simulation model"""
+    
     duration_length: float
     duration_period_unit: PeriodUnit
     duration_type: DurationType
@@ -215,22 +377,21 @@ class Duration:
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Duration":
+        """Create a Duration from a dictionary"""
         # Get basic properties
         length = float(data.get("durationLength", 0))
         period_unit = PeriodUnit.deserialize(data.get("durationPeriodUnit", "MINUTES"))
-        dur_type = DurationType.deserialize(data.get("durationType", "CONSTANT"))
+        dur_type = DurationType.deserialize(data.get("durationType", "DISTRIBUTION"))
         
         # Handle legacy CONSTANT format
         if dur_type == DurationType.CONSTANT:
             # Convert to new format with CONSTANT distribution
+            dist = ConstantDistribution.create(length)
             return cls(
                 duration_length=length,
                 duration_period_unit=period_unit,
                 duration_type=DurationType.DISTRIBUTION,
-                distribution=Distribution(
-                    distribution_type=DistributionType.CONSTANT,
-                    parameters=ConstantParameters(value=length)
-                )
+                distribution=dist
             )
         
         # Handle distribution format
@@ -241,10 +402,7 @@ class Duration:
             distribution = Distribution.from_dict(dist_data)
         else:
             # If no distribution but type is DISTRIBUTION, create a CONSTANT distribution
-            distribution = Distribution(
-                distribution_type=DistributionType.CONSTANT,
-                parameters=ConstantParameters(value=length)
-            )
+            distribution = ConstantDistribution.create(length)
         
         return cls(
             duration_length=length,
@@ -254,12 +412,13 @@ class Duration:
         )
     
     def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
         result = {
             "durationPeriodUnit": self.duration_period_unit.value,
             "durationType": self.duration_type.value,
         }
         
-        # For backward compatibility
+        # For compatibility with other components
         if (self.distribution and 
             self.distribution.distribution_type == DistributionType.CONSTANT):
             # Set durationLength to match CONSTANT value
@@ -274,78 +433,125 @@ class Duration:
         return result
     
     def get_value(self) -> float:
-        """Get effective value of this duration"""
+        """Sample a value for this duration"""
         if self.distribution:
             return self.distribution.sample()
         return self.duration_length
 ```
 
-## Sampling Implementation
+## Key Benefits of This Approach
 
-For each distribution type, we need to implement proper sampling logic:
+1. **Separation of Concerns**:
+   - Each distribution type has its own module
+   - Parameter classes are separated from distribution logic
 
-```python
-def sample(self) -> float:
-    """Sample a value from this distribution"""
-    if self.distribution_type == DistributionType.CONSTANT:
-        return self.parameters.value
-    
-    elif self.distribution_type == DistributionType.UNIFORM:
-        import random
-        return random.uniform(self.parameters.low, self.parameters.high)
-    
-    elif self.distribution_type == DistributionType.TRIANGULAR:
-        import random
-        return random.triangular(
-            self.parameters.left,
-            self.parameters.right,
-            self.parameters.mode
-        )
-    
-    elif self.distribution_type == DistributionType.NORMAL:
-        import random
-        # Ensure we don't return negative values for durations
-        value = random.normalvariate(self.parameters.mean, self.parameters.std)
-        return max(0, value)
-    
-    # ... other distribution types
-    
-    else:
-        raise NotImplementedError(f"Sampling not implemented for {self.distribution_type}")
-```
+2. **Type Safety**:
+   - Strong typing through Python's type hints
+   - Generic base classes ensure consistent interfaces
+
+3. **Consistent Interfaces**:
+   - All distribution classes implement the same interface
+   - Registry pattern provides a unified access point
+
+4. **Extensibility**:
+   - Easy to add new distribution types
+   - Registry automatically handles new distributions
+
+5. **Compatibility with TypeScript Implementation**:
+   - Mirrors the class-based approach in TypeScript
+   - Same structure and method names for consistency
 
 ## Testing Strategy
 
-1. Test deserializing old format:
-   ```python
-   old_format = {
-     "durationLength": 5,
-     "durationPeriodUnit": "MINUTES",
-     "durationType": "CONSTANT",
-     "distribution": None
-   }
-   duration = Duration.from_dict(old_format)
-   # Should have distribution.distribution_type=CONSTANT, distribution.parameters.value=5
-   ```
+### 1. Distribution Classes
 
-2. Test sampling from different distributions:
-   ```python
-   # Test CONSTANT
-   constant_dist = Distribution(
-       distribution_type=DistributionType.CONSTANT,
-       parameters=ConstantParameters(value=5)
-   )
-   assert constant_dist.sample() == 5
-   
-   # Test UNIFORM
-   uniform_dist = Distribution(
-       distribution_type=DistributionType.UNIFORM,
-       parameters=UniformParameters(low=0, high=10)
-   )
-   sample = uniform_dist.sample()
-   assert 0 <= sample <= 10
-   
-   # Similar tests for other distributions
-   ```
+```python
+def test_constant_distribution():
+    # Test creation
+    dist = ConstantDistribution.create(5)
+    assert dist.distribution_type == DistributionType.CONSTANT
+    assert isinstance(dist.parameters, ConstantParameters)
+    assert dist.parameters.value == 5
+    
+    # Test validation
+    assert ConstantDistribution.validate_parameters(ConstantParameters(value=5))
+    assert not ConstantDistribution.validate_parameters(ConstantParameters(value=-1))
+    
+    # Test sampling
+    assert ConstantDistribution.sample(ConstantParameters(value=5)) == 5
+```
 
-3. Test integration with simulation engine to ensure distributions affect timing correctly
+### 2. Distribution Registry
+
+```python
+def test_registry():
+    # Test get_handler
+    handler = DistributionRegistry.get_handler(DistributionType.CONSTANT)
+    assert handler == ConstantDistribution
+    
+    # Test create_default
+    dist = DistributionRegistry.create_default(DistributionType.UNIFORM)
+    assert dist.distribution_type == DistributionType.UNIFORM
+    assert isinstance(dist.parameters, UniformParameters)
+    
+    # Test validate_parameters
+    params = UniformParameters(low=0, high=10)
+    assert DistributionRegistry.validate_parameters(DistributionType.UNIFORM, params)
+    
+    # Test sample
+    value = DistributionRegistry.sample(DistributionType.CONSTANT, ConstantParameters(value=5))
+    assert value == 5
+```
+
+### 3. Serialization/Deserialization
+
+```python
+def test_distribution_serialization():
+    # Create distribution
+    dist = ConstantDistribution.create(5)
+    
+    # Serialize
+    data = dist.to_dict()
+    assert data["distributionType"] == "constant"
+    assert data["parameters"]["value"] == 5
+    
+    # Deserialize
+    deserialized = Distribution.from_dict(data)
+    assert deserialized.distribution_type == DistributionType.CONSTANT
+    assert deserialized.parameters.value == 5
+```
+
+### 4. Integration with Simulation
+
+```python
+def test_simulation_integration():
+    # Create process with distribution-based duration
+    process = Process(
+        duration=Duration(
+            duration_length=0,
+            duration_period_unit=PeriodUnit.MINUTES,
+            duration_type=DurationType.DISTRIBUTION,
+            distribution=UniformDistribution.create(3, 7)
+        )
+    )
+    
+    # Run simulation and check durations
+    simulation = Simulation(process)
+    results = simulation.run()
+    
+    # Check that process duration varies between runs
+    durations = [run.process_duration for run in results.runs]
+    assert min(durations) >= 3
+    assert max(durations) <= 7
+```
+
+## Implementation Schedule
+
+1. **Week 1**: Implement distribution type enum and base classes
+2. **Week 2**: Implement distribution-specific classes and registry
+3. **Week 3**: Update Distribution and Duration classes
+4. **Week 4**: Integrate with simulation engine and test
+
+## Conclusion
+
+The Python implementation will mirror our class-based TypeScript approach, providing a consistent interface across both environments. This will make it easier to add new distribution types in the future and ensure that both the UI and simulation engine handle distributions in the same way.

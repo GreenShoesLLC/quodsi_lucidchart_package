@@ -3,8 +3,8 @@ import { DurationType } from '../../types/elements/DurationType';
 import { Distribution } from '../../types/elements/Distribution';
 
 export interface ISerializedDuration {
-    durationLength: number;
+    // durationLength: number;
     durationPeriodUnit: PeriodUnit;
-    durationType: DurationType;
+    // durationType: DurationType;
     distribution: Distribution | null;
 }

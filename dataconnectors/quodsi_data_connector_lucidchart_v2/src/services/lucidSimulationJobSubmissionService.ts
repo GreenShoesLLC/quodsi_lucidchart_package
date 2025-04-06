@@ -132,7 +132,12 @@ export class LucidSimulationJobSubmissionService {
 
                 const jobParams: JobAddParameter = {
                     id: jobId,
-                    poolInfo: poolInfo
+                    poolInfo: poolInfo,
+                    constraints: {
+                        maxWallClockTime: "PT1H",  // 1 hour maximum runtime
+                        maxTaskRetryCount: 1
+                    },
+                    onAllTasksComplete: "terminatejob"  // Automatically terminate job when all tasks complete
                 };
 
                 await this.batchClient.job.add(jobParams);

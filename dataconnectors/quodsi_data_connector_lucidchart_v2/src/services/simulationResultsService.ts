@@ -6,6 +6,7 @@ import { initializeStorageService } from "./simulationDataService";
 import * as simulationDataService from "./simulationDataService";
 import { getDataCollectionConfig, DataCollectionConfig, isDataCollectionEnabled } from './dataCollectionConfigService';
 import { CollectionsUpdate } from './collectionUpdateService';
+import { LoggingLevel } from "../utils/loggingLevels";
 
 /**
  * Updates simulation results data in the simulation_results datasource
@@ -13,7 +14,7 @@ import { CollectionsUpdate } from './collectionUpdateService';
  * @param documentId Document ID containing the simulation results
  * @param scenarioId User ID who initiated the simulation
  * @param source Source identifier for the update
- * @param verbose Whether to log verbose output
+ * @param loggingLevel LoggingLevel to use, or boolean for backward compatibility
  * @param logger Optional logger instance
  * @returns Promise resolving with update status
  */
@@ -22,27 +23,36 @@ export async function updateSimulationResults(
     documentId: string,
     scenarioId: string,
     source: string = 'unknown',
-    verbose: boolean = true,
+    loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL,
     logger?: ActionLogger
 ) {
+    // Handle backward compatibility with boolean parameter
+    let logLevel: LoggingLevel;
+    
+    if (typeof loggingLevel === 'boolean') {
+        logLevel = loggingLevel ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
+    } else {
+        logLevel = loggingLevel;
+    }
+    
     // Create a logger or use the provided one with a new child scope
-    const log = logger ? logger.child('SimResults') : new ActionLogger('[SimResults]', verbose);
+    const log = logger ? logger.child('SimResults') : new ActionLogger('[SimResults]', logLevel);
 
     try {
-        log.info(`=== Starting Simulation Results Update (Source: ${source}) ===`);
+        log.important(`=== Starting Simulation Results Update (Source: ${source}) ===`);
         log.info(`Document ID: ${documentId}, Scenario ID: ${scenarioId}`);
 
         const config = getConfig();
         initializeStorageService(config.azureStorageConnectionString);
 
-        // Tell simulation data service about verbosity
-        simulationDataService.setVerboseLogging(verbose);
+        // Tell simulation data service about verbosity (convert to boolean for backward compatibility)
+        simulationDataService.setVerboseLogging(logLevel >= LoggingLevel.VERBOSE);
 
         // Log the container we're using
-        log.info(`Using container: ${config.simulationResultsContainer}`);
+        log.debug(`Using container: ${config.simulationResultsContainer}`);
 
         // Log which collections are currently enabled
-        log.info('Current data collection configuration:', getDataCollectionConfig());
+        log.debug('Current data collection configuration:', getDataCollectionConfig());
 
         // Create an array to track which data fetches succeeded and which failed
         const dataFetchResults = {
@@ -78,7 +88,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching activity utilization data: ${error.message}`);
             }
         } else {
-            log.info('Activity utilization data collection is disabled');
+            log.debug('Activity utilization data collection is disabled');
         }
 
         // Activity Rep Summary
@@ -94,7 +104,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching activity rep summary data: ${error.message}`);
             }
         } else {
-            log.info('Activity rep summary data collection is disabled');
+            log.debug('Activity rep summary data collection is disabled');
         }
 
         // Activity Timing
@@ -110,7 +120,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching activity timing data: ${error.message}`);
             }
         } else {
-            log.info('Activity timing data collection is disabled');
+            log.debug('Activity timing data collection is disabled');
         }
 
         // Entity State Rep Summary
@@ -126,7 +136,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching entity state rep summary data: ${error.message}`);
             }
         } else {
-            log.info('Entity state rep summary data collection is disabled');
+            log.debug('Entity state rep summary data collection is disabled');
         }
 
         // Entity Throughput Rep Summary - add extra logging for this problematic collection
@@ -145,7 +155,7 @@ export async function updateSimulationResults(
                 log.error('Error stack:', error.stack);
             }
         } else {
-            log.info('Entity throughput rep summary data collection is disabled');
+            log.debug('Entity throughput rep summary data collection is disabled');
         }
 
         // Resource Rep Summary
@@ -161,7 +171,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching resource rep summary data: ${error.message}`);
             }
         } else {
-            log.info('Resource rep summary data collection is disabled');
+            log.debug('Resource rep summary data collection is disabled');
         }
 
         // Resource Utilization
@@ -177,7 +187,7 @@ export async function updateSimulationResults(
                 log.error(`Error fetching resource utilization data: ${error.message}`);
             }
         } else {
-            log.info('Resource utilization data collection is disabled');
+            log.debug('Resource utilization data collection is disabled');
         }
 
         // Log summary of data fetch results
@@ -211,10 +221,10 @@ export async function updateSimulationResults(
             updates["entity_throughput_rep_summary"] = simulationDataService.prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
             log.info(`Prepared entity_throughput_rep_summary update with ${updates["entity_throughput_rep_summary"].patch.items.size} items`);
 
-            // Log the item keys if there are any
-            if (updates["entity_throughput_rep_summary"].patch.items.size > 0) {
+            // Log the item keys if there are any - only in verbose mode
+            if (updates["entity_throughput_rep_summary"].patch.items.size > 0 && logLevel >= LoggingLevel.VERBOSE) {
                 const keys = Array.from(updates["entity_throughput_rep_summary"].patch.items.keys());
-                log.info(`Item keys: ${keys.join(', ')}`);
+                log.debug(`Item keys: ${keys.join(', ')}`);
             }
         }
 
@@ -227,9 +237,9 @@ export async function updateSimulationResults(
         }
         
         // Log prepared update item counts
-        log.info('=== Collection Update Item Counts ===');
+        log.debug('=== Collection Update Item Counts ===');
         Object.entries(updates).forEach(([collectionName, update]) => {
-            log.info(`${collectionName}: ${update.patch.items.size} items`);
+            log.debug(`${collectionName}: ${update.patch.items.size} items`);
         });
 
         // Only proceed with update if we have collections to update
@@ -246,7 +256,7 @@ export async function updateSimulationResults(
                 dataSourceName: "simulation_results",
                 collections: updates
             });
-            log.info('=== Updates sent successfully ===');
+            log.important('=== Updates sent successfully ===');
             return { success: true, collectionsUpdated: Object.keys(updates).length };
         } catch (updateError) {
             log.error(`Error during Lucid update: ${updateError.message}`);

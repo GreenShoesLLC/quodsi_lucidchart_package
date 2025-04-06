@@ -11,6 +11,31 @@ This set of documents outlines the implementation plan for enhancing the Quodsi 
 3. Create an intuitive UI within space constraints
 4. Ensure compatibility with the Python simulation engine
 
+## Implementation Approach
+
+We're using a class-based approach where each distribution type is implemented as a self-contained module with:
+- Parameter interface definition
+- Default parameter values
+- Parameter metadata for UI display
+- Factory methods for creating distributions
+- Validation methods for parameters
+- Value calculation methods
+
+## Directory Structure
+
+```
+shared/src/types/elements/
+├── DistributionType.ts
+├── Distribution.ts
+├── distributions/
+│   ├── index.ts                      # Re-exports all distribution types
+│   ├── ConstantDistribution.ts       # CONSTANT distribution implementation
+│   ├── UniformDistribution.ts        # UNIFORM distribution implementation
+│   ├── TriangularDistribution.ts     # TRIANGULAR distribution implementation
+│   ├── NormalDistribution.ts         # NORMAL distribution implementation
+│   └── DistributionFactory.ts        # Factory and utility functions
+```
+
 ## Initial Supported Distributions
 
 - CONSTANT
@@ -48,9 +73,17 @@ This set of documents outlines the implementation plan for enhancing the Quodsi 
 - **Phase 3 (Python Integration)**: 1-2 weeks
 - **Testing and Validation**: 1 week
 
+## Implementation Benefits
+
+1. **Modularity**: Each distribution type is self-contained
+2. **Extensibility**: Easy to add new distribution types
+3. **Maintainability**: Clear separation of concerns
+4. **Consistency**: Unified approach to distributions in both TypeScript and Python
+
 ## Next Steps
 
-1. Review and finalize the proposed changes
-2. Create implementation tickets in the issue tracking system
-3. Begin with Phase 1 implementation
-4. Plan for user education about statistical distributions
+1. Implement the Enhanced Duration Editor
+2. Create the UI components for distribution type selection and parameter editing
+3. Complete the serialization and Python integration
+4. Execute comprehensive testing
+5. Plan for user education about statistical distributions

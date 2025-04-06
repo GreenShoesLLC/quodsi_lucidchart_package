@@ -5,7 +5,7 @@ var SimulationObjectType_1 = require("./SimulationObjectType");
 var Duration_1 = require("./Duration");
 var ModelDefaults_1 = require("./ModelDefaults");
 var PeriodUnit_1 = require("./PeriodUnit");
-var DurationType_1 = require("./DurationType");
+var distributions_1 = require("./distributions");
 var Generator = /** @class */ (function () {
     function Generator(id, name, activityKeyId, entityId, periodicOccurrences, periodIntervalDuration, entitiesPerCreation, periodicStartDuration, maxEntities) {
         if (activityKeyId === void 0) { activityKeyId = ""; }
@@ -28,9 +28,9 @@ var Generator = /** @class */ (function () {
     }
     Generator.createDefault = function (id) {
         return new Generator(id, 'New Generator', '{SomeActivityName}', ModelDefaults_1.ModelDefaults.DEFAULT_ENTITY_ID, 10, // periodicOccurrences
-        new Duration_1.Duration(1, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodIntervalDuration
+        new Duration_1.Duration(PeriodUnit_1.PeriodUnit.HOURS, distributions_1.ConstantDistribution.create(1)), // periodIntervalDuration
         1, // entitiesPerCreation
-        new Duration_1.Duration(0, PeriodUnit_1.PeriodUnit.HOURS, DurationType_1.DurationType.CONSTANT), // periodicStartDuration
+        new Duration_1.Duration(PeriodUnit_1.PeriodUnit.HOURS, distributions_1.ConstantDistribution.create(1)), // periodicStartDuration
         999 // maxEntities
         );
     };

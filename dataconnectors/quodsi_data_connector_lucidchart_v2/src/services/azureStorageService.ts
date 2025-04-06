@@ -2,40 +2,67 @@
 
 import { BlobServiceClient, BlobUploadCommonResponse } from '@azure/storage-blob';
 import { retry, AttemptContext, PartialAttemptOptions } from '@lifeomic/attempt';
+import { LoggingLevel } from '../utils/loggingLevels';
 
-// Static verbosity control for all instances of AzureStorageService
-let isVerboseLogging = false;
+// Static logging level control for all instances of AzureStorageService
+let storageLoggingLevel: LoggingLevel = LoggingLevel.NORMAL;
 
 /**
- * Set whether verbose logging is enabled for all storage service instances
+ * Set the logging level for all storage service instances
+ * @param level LoggingLevel enum value or boolean for backward compatibility
  */
-export function setStorageVerboseLogging(verbose: boolean): void {
-    isVerboseLogging = verbose;
+export function setStorageVerboseLogging(level: LoggingLevel | boolean): void {
+    if (typeof level === 'boolean') {
+        // Convert boolean to logging level for backward compatibility
+        storageLoggingLevel = level ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
+    } else {
+        storageLoggingLevel = level;
+    }
 }
 
 /**
- * Conditionally logs based on verbosity setting
+ * Debug logs - only for detailed debugging (VERBOSE level)
+ */
+function storageDebug(message: string, ...args: any[]): void {
+    if (storageLoggingLevel >= LoggingLevel.VERBOSE) {
+        console.log(`[StorageService][DEBUG] ${message}`, ...args);
+    }
+}
+
+/**
+ * Regular info logs - normal operational details (NORMAL level)
  */
 function storageLog(message: string, ...args: any[]): void {
-    if (isVerboseLogging) {
+    if (storageLoggingLevel >= LoggingLevel.NORMAL) {
         console.log(message, ...args);
     }
 }
 
 /**
- * Warning logs - only shown if verbose logging is enabled
+ * Important operational logs - major steps like initialization (MINIMAL level)
+ */
+function storageImportant(message: string, ...args: any[]): void {
+    if (storageLoggingLevel >= LoggingLevel.MINIMAL) {
+        console.log(`[StorageService][IMPORTANT] ${message}`, ...args);
+    }
+}
+
+/**
+ * Warning logs (ERROR level and above)
  */
 function storageWarn(message: string, ...args: any[]): void {
-    if (isVerboseLogging) {
+    if (storageLoggingLevel >= LoggingLevel.ERROR) {
         console.warn(message, ...args);
     }
 }
 
 /**
- * Error logs are always displayed regardless of verbosity setting
+ * Error logs are always displayed if ERROR level or above
  */
 function storageError(message: string, ...args: any[]): void {
-    console.error(message, ...args);
+    if (storageLoggingLevel >= LoggingLevel.ERROR) {
+        console.error(message, ...args);
+    }
 }
 
 export class AzureStorageService {
@@ -45,7 +72,7 @@ export class AzureStorageService {
     private uploadRetryOptions: PartialAttemptOptions<BlobUploadCommonResponse>;
 
     constructor(connectionString: string) {
-        storageLog('[AzureStorageService] Initializing service');
+        storageImportant('[AzureStorageService] Initializing service');
         this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
         storageLog('[AzureStorageService] BlobServiceClient initialized:', {
             url: this.blobServiceClient.url,
@@ -127,7 +154,7 @@ export class AzureStorageService {
         const startTime = Date.now();
 
         try {
-            storageLog('[AzureStorageService] Attempting to get blob:', {
+            storageDebug('[AzureStorageService] Attempting to get blob:', {
                 containerName,
                 blobName,
                 fullPath: `${containerName}/${blobName}`
@@ -154,7 +181,7 @@ export class AzureStorageService {
                 const response = await blobClient.download();
 
                 const content = await this.streamToBuffer(response.readableStreamBody!);
-                storageLog('[AzureStorageService] Blob download:', {
+                storageDebug('[AzureStorageService] Blob download:', {
                     size: content.length,
                     downloadMs: Date.now() - downloadStart
                 });
@@ -195,7 +222,7 @@ export class AzureStorageService {
             // Ensure container exists
             if (!await containerClient.exists()) {
                 await containerClient.create();
-                storageLog('[AzureStorageService] Container created:', { containerName });
+                storageImportant('[AzureStorageService] Container created:', { containerName });
             }
 
             const blockBlobClient = containerClient.getBlockBlobClient(blobName);
@@ -209,7 +236,7 @@ export class AzureStorageService {
                     }
                 });
 
-                storageLog('[AzureStorageService] Blob upload:', {
+                storageDebug('[AzureStorageService] Blob upload:', {
                     etag: result.etag,
                     uploadMs: Date.now() - uploadStart
                 });
@@ -297,7 +324,7 @@ export class AzureStorageService {
                 return [];
             }
 
-            storageLog('[AzureStorageService] Listing blobs in container:', {
+            storageDebug('[AzureStorageService] Listing blobs in container:', {
                 containerName,
                 prefix: prefix || '(none)'
             });

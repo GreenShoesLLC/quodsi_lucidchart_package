@@ -122,23 +122,23 @@ export class GeneratorValidation extends ValidationRule {
 
         this.log(`Starting duration settings validation for Generator ID: ${generator.id}`);
 
-        if (!generator.periodIntervalDuration || generator.periodIntervalDuration.durationLength < 0) {
-            this.log(`Validation failed: Generator ID ${generator.id} has invalid period interval duration.`);
-            messages.push(ValidationMessages.generatorValidation(
-                'period interval duration',
-                generator.id,
-                'Must have a valid duration length'
-            ));
-        }
+        // if (!generator.periodIntervalDuration || generator.periodIntervalDuration.durationLength < 0) {
+        //     this.log(`Validation failed: Generator ID ${generator.id} has invalid period interval duration.`);
+        //     messages.push(ValidationMessages.generatorValidation(
+        //         'period interval duration',
+        //         generator.id,
+        //         'Must have a valid duration length'
+        //     ));
+        // }
 
-        if (!generator.periodicStartDuration || generator.periodicStartDuration.durationLength < 0) {
-            this.log(`Validation failed: Generator ID ${generator.id} has invalid periodic start duration.`);
-            messages.push(ValidationMessages.generatorValidation(
-                'periodic start duration',
-                generator.id,
-                'Must have a valid duration length'
-            ));
-        }
+        // if (!generator.periodicStartDuration || generator.periodicStartDuration.durationLength < 0) {
+        //     this.log(`Validation failed: Generator ID ${generator.id} has invalid periodic start duration.`);
+        //     messages.push(ValidationMessages.generatorValidation(
+        //         'periodic start duration',
+        //         generator.id,
+        //         'Must have a valid duration length'
+        //     ));
+        // }
 
         // if (generator.periodIntervalDuration?.durationLength && generator.periodicStartDuration?.durationLength) {
         //     if (generator.periodicStartDuration.durationLength > generator.periodIntervalDuration.durationLength) {
@@ -213,31 +213,31 @@ export class GeneratorValidation extends ValidationRule {
 
         const startTimes = new Map<number, Generator[]>();
 
-        generators.forEach(generator => {
-            const startTime = generator.periodicStartDuration?.durationLength || 0;
-            const existingGenerators = startTimes.get(startTime) || [];
-            existingGenerators.push(generator);
-            startTimes.set(startTime, existingGenerators);
-        });
+        // generators.forEach(generator => {
+        //     const startTime = generator.periodicStartDuration?.durationLength || 0;
+        //     const existingGenerators = startTimes.get(startTime) || [];
+        //     existingGenerators.push(generator);
+        //     startTimes.set(startTime, existingGenerators);
+        // });
 
-        startTimes.forEach((overlappingGenerators, startTime) => {
-            if (overlappingGenerators.length > 1) {
-                this.log(`Warning: Overlapping start times detected for Generators: ${overlappingGenerators.map(g => g.id).join(', ')} at time ${startTime}.`);
-                messages.push({
-                    type: 'warning',
-                    message: `Multiple generators (${overlappingGenerators.map(g => g.id).join(', ')}) start at the same time (${startTime})`,
-                    elementId: overlappingGenerators[0].id
-                });
-            }
-        });
+        // startTimes.forEach((overlappingGenerators, startTime) => {
+        //     if (overlappingGenerators.length > 1) {
+        //         this.log(`Warning: Overlapping start times detected for Generators: ${overlappingGenerators.map(g => g.id).join(', ')} at time ${startTime}.`);
+        //         messages.push({
+        //             type: 'warning',
+        //             message: `Multiple generators (${overlappingGenerators.map(g => g.id).join(', ')}) start at the same time (${startTime})`,
+        //             elementId: overlappingGenerators[0].id
+        //         });
+        //     }
+        // });
 
         let totalEntitiesPerSecond = 0;
-        generators.forEach(generator => {
-            if (generator.periodIntervalDuration?.durationLength) {
-                const generatorRate = generator.entitiesPerCreation / generator.periodIntervalDuration.durationLength;
-                totalEntitiesPerSecond += generatorRate;
-            }
-        });
+        // generators.forEach(generator => {
+        //     if (generator.periodIntervalDuration?.durationLength) {
+        //         const generatorRate = generator.entitiesPerCreation / generator.periodIntervalDuration.durationLength;
+        //         totalEntitiesPerSecond += generatorRate;
+        //     }
+        // });
 
         if (totalEntitiesPerSecond > 1000) {
             this.log(`Warning: High entity generation rate detected (${totalEntitiesPerSecond.toFixed(2)} entities/second).`);

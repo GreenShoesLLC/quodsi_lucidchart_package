@@ -1,7 +1,6 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import {
     Activity,
-    MetaData,
     OperationStep,
     SimulationObjectType
 } from '@quodsi/shared';

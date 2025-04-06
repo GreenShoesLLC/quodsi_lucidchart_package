@@ -2,7 +2,7 @@
 
 ## Overview
 
-The serialization and deserialization processes need to be updated to handle the new approach where CONSTANT is a distribution type. This requires changes to ensure both backward compatibility and support for the new format.
+The serialization and deserialization processes need to be updated to handle our class-based distribution implementation where CONSTANT is a distribution type. This document outlines the changes needed to ensure both forward compatibility and support for the new format.
 
 ## Current Serialization
 
@@ -40,11 +40,11 @@ With CONSTANT treated as a distribution type, we'll update the serialization to:
 ```json
 // CONSTANT as distribution
 {
-  "durationLength": 5, // Maintain for backward compatibility
+  "durationLength": 5, // Maintain for compatibility with other components
   "durationPeriodUnit": "MINUTES",
   "durationType": "DISTRIBUTION",
   "distribution": {
-    "distributionType": "CONSTANT",
+    "distributionType": "constant",
     "parameters": {
       "value": 5
     },
@@ -65,9 +65,14 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\serialization\BaseMod
 #### Updated Code
 
 ```typescript
+import { 
+  ConstantParameters, 
+  ConstantDistribution 
+} from '../types/elements/distributions';
+
 protected serializeDuration(duration: Duration): ISerializedDuration {
     try {
-        // For backward compatibility, ensure durationLength is set
+        // For compatibility with other components, ensure durationLength is set
         // when distribution type is CONSTANT
         let durationLength = duration.durationLength;
         
@@ -104,34 +109,25 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\serialization\ModelDe
 #### Updated Code
 
 ```typescript
+import { 
+  ConstantDistribution 
+} from '../types/elements/distributions';
+
 protected deserializeDuration(serialized: ISerializedDuration): Duration {
     try {
-        // Handle legacy CONSTANT format
-        if (serialized.durationType === DurationType.CONSTANT) {
-            // Convert to new format with CONSTANT distribution
+        // Since Quodsi is in development, we'll standardize on the new format
+        // Handle case where distribution is null or durationType is CONSTANT
+        if (serialized.durationType === DurationType.CONSTANT || 
+            (serialized.durationType === DurationType.DISTRIBUTION && !serialized.distribution)) {
+            
+            // Create a CONSTANT distribution using our distribution class
+            const constantDistribution = ConstantDistribution.create(serialized.durationLength);
+            
             return new Duration(
                 serialized.durationLength,
                 serialized.durationPeriodUnit,
                 DurationType.DISTRIBUTION,
-                new Distribution(
-                    DistributionType.CONSTANT,
-                    { value: serialized.durationLength } as ConstantParameters
-                )
-            );
-        }
-        
-        // Handle case where distribution is null but should be CONSTANT
-        if (serialized.durationType === DurationType.DISTRIBUTION && 
-            !serialized.distribution) {
-            // Create a CONSTANT distribution with the durationLength value
-            return new Duration(
-                serialized.durationLength,
-                serialized.durationPeriodUnit,
-                DurationType.DISTRIBUTION,
-                new Distribution(
-                    DistributionType.CONSTANT,
-                    { value: serialized.durationLength } as ConstantParameters
-                )
+                constantDistribution
             );
         }
         
@@ -150,63 +146,97 @@ protected deserializeDuration(serialized: ISerializedDuration): Duration {
 
 ## Interface Updates
 
-We need to ensure our interfaces properly represent the serialized structure:
+The interfaces remain the same, but we should document that we're standardizing on the new format:
 
 ```typescript
 export interface ISerializedDuration {
-    durationLength: number;
+    durationLength: number;  // Still maintained for component compatibility
     durationPeriodUnit: PeriodUnit;
-    durationType: DurationType;
-    distribution: Distribution | null;
+    durationType: DurationType;  // Always DISTRIBUTION in the new format
+    distribution: Distribution | null;  // Never null in the new format
 }
 
 export interface ISerializedDistribution {
-    distributionType: DistributionType;
-    parameters: DistributionParameters;
+    distributionType: DistributionType;  // Now includes CONSTANT as an option
+    parameters: DistributionParameters;  // Type union now includes ConstantParameters
     description?: string;
 }
 ```
 
-## Backward Compatibility Strategy
+## Compatibility Considerations
 
-1. **Reading Old Format**:
-   - When deserializing, if `durationType` is `CONSTANT`, create a new Distribution of type `CONSTANT` with the `durationLength` as its value
-   - Set `durationType` to `DISTRIBUTION` to use the new format
+1. **Standardizing on New Format**:
+   - Since Quodsi is still in development, we can standardize on the new format
+   - All durations will use DurationType.DISTRIBUTION with an appropriate Distribution object
+   - For CONSTANT distributions, we'll maintain the durationLength field for compatibility with other components
 
-2. **Writing New Format**:
-   - When serializing, if distribution type is `CONSTANT`, also set the legacy `durationLength` field to match the `value` parameter
-   - This ensures older code can still read the duration value
+2. **Using Class-Based Implementation**:
+   - Use ConstantDistribution.create() instead of direct object creation
+   - This ensures consistent distribution creation
 
-3. **Gradual Migration**:
-   - As models are loaded and saved, they'll automatically migrate to the new format
-   - No need for a separate migration script
+3. **Maintaining Field Values**:
+   - For CONSTANT distributions, ensure durationLength matches the distribution value
 
 ## Testing Approach
 
 To ensure proper serialization and deserialization:
 
-1. Test deserializing old format:
+1. Test serializing with class-based distributions:
    ```typescript
-   const oldFormatJson = {
+   // Create a CONSTANT distribution using the class
+   const constantDistribution = ConstantDistribution.create(5);
+   
+   const duration = new Duration(
+     5,
+     PeriodUnit.MINUTES,
+     DurationType.DISTRIBUTION,
+     constantDistribution
+   );
+   
+   const serialized = serializeDuration(duration);
+   // Should have: durationLength=5, durationType=DISTRIBUTION, 
+   // distribution.distributionType=CONSTANT, distribution.parameters.value=5
+   ```
+
+2. Test deserializing legacy format:
+   ```typescript
+   const legacyFormat = {
      "durationLength": 5,
      "durationPeriodUnit": "MINUTES",
      "durationType": "CONSTANT",
      "distribution": null
    };
-   const duration = deserializeDuration(oldFormatJson);
-   // Should be: durationType=DISTRIBUTION, distribution.type=CONSTANT, distribution.parameters.value=5
+   
+   const duration = deserializeDuration(legacyFormat);
+   // Should be converted to: durationType=DISTRIBUTION, 
+   // with distribution created using ConstantDistribution.create()
    ```
 
-2. Test serializing new format with CONSTANT distribution:
+3. Test round-trip serialization and deserialization:
    ```typescript
-   const duration = new Duration(
-     5,
-     PeriodUnit.MINUTES,
-     DurationType.DISTRIBUTION,
-     new Distribution(DistributionType.CONSTANT, { value: 5 })
-   );
-   const serialized = serializeDuration(duration);
-   // Should maintain durationLength=5 for backward compatibility
+   // Create durations with different distribution types
+   const distributions = [
+     ConstantDistribution.create(5),
+     UniformDistribution.create(0, 10),
+     TriangularDistribution.create(0, 5, 10),
+     NormalDistribution.create(5, 1)
+   ];
+   
+   // Test round-trip for each
+   distributions.forEach(dist => {
+     const duration = new Duration(0, PeriodUnit.MINUTES, DurationType.DISTRIBUTION, dist);
+     const serialized = serializeDuration(duration);
+     const deserialized = deserializeDuration(serialized);
+     
+     // Verify the distribution type and parameters are preserved
+     expect(deserialized.distribution?.distributionType).toBe(dist.distributionType);
+     // Type-specific parameter checks...
+   });
    ```
 
-3. Test round-trip serialization and deserialization for all distribution types
+## Implementation Strategy
+
+1. Update the serialization/deserialization code to use the class-based approach
+2. Add comprehensive unit tests for all serialization/deserialization scenarios
+3. Update any code that creates or modifies durations to use the new format
+4. Ensure all UI components handle the new format correctly

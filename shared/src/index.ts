@@ -1,5 +1,8 @@
+// Platform and core exports
 export * from './platform';
 export * from './core/logging/QuodsiLogger';
+
+// Type exports
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/ConversionResult';
@@ -13,6 +16,7 @@ export * from './types/simComponentType';
 export * from './types/validation';
 export * from './types/MetaData';
 
+// Element types
 export * from "./types/elements/RunState";
 export * from './types/DiagramElementType';
 export * from './types/elements/Activity';
@@ -46,22 +50,27 @@ export * from './types/elements/Scenario';
 export * from './types/elements/SimulationObject';
 export * from './types/elements/SimulationObjectType';
 export * from './types/elements/SimulationTimeType';
+export * from './types/elements/ModelDefinitionLogger';
 
-export * from './factories/SimulationObjectTypeFactory';
+// Distribution types
+export * from './types/elements/distributions';
 
+// Export accordion types
 export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 export * from './types/accordion/AccordionState';
-export * from './types/elements/ModelDefinitionLogger';
 
-// Export API services
+// Factory exports
+export * from './factories/SimulationObjectTypeFactory';
+
+// Service exports
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
 
-// Export serialization
+// Serialization exports
 export * from './serialization';
 
-// Export validation
-export * from './validation'
-export * from './versioning'
+// Validation exports
+export * from './validation';
+export * from './versioning';

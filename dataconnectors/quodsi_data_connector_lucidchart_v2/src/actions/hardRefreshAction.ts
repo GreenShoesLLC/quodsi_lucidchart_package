@@ -1,39 +1,92 @@
 // actions/hardRefreshAction.ts
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
-import { getRequiredContext } from "../utils/contextHelper";
 import { getConfig } from "../config";
-import { initializeStorageService } from "../services/simulationDataService";
-import { updateSimulationResults } from "../services";
+import { setStorageVerboseLogging } from "../services/azureStorageService";
+import { initializeStorageService } from "../services/simulationData";
+import {
+    getScenarioResultIds,
+    parseScenarioResultId,
+    createSimulationImportService
+} from "../services";
+import { ActionLogger } from "../utils/logging";
+import { 
+    updateResultsLastImported 
+} from "../utils/simulationResultsUtils";
+import { LoggingLevel } from "../utils/loggingLevels";
 
 export const hardRefreshAction = async (action: DataConnectorAsynchronousAction) => {
-    try {
-        console.log("=== Hard Refresh Action Started ===");
+    // Get logging level from config - use NORMAL level by default for user-initiated actions
+    const config = getConfig();
+    const loggingLevel = config.logging?.hardRefreshActionLoggingLevel || LoggingLevel.NORMAL;
+    
+    const logger = new ActionLogger('[HardRefreshAction]', loggingLevel);
 
-        // Get validated context data
-        const context = getRequiredContext(action);
-        // If no context found, return success without doing anything
-        if (!context) {
-            console.log("No valid context found, skipping refresh update");
-            return { success: true };
+    try {
+        // Log start of action (visible at MINIMAL level)
+        logger.important("=== Hard Refresh Action Started ===");
+
+        // Set storage service logging level (can be more verbose for user-initiated actions)
+        const storageLoggingLevel = config.logging?.storageServiceLoggingLevel || LoggingLevel.NORMAL;
+        setStorageVerboseLogging(storageLoggingLevel);
+        
+        // IMPORTANT: Initialize storage service before using it
+        initializeStorageService(config.azureStorageConnectionString);
+        logger.info("Storage service initialized");
+        
+        // Step 1: Check for any ScenarioResultsSchema instances
+        logger.info("Checking for scenario results...");
+        const scenarioResultIds = await getScenarioResultIds(action, loggingLevel >= LoggingLevel.VERBOSE, logger);
+        const collectionsToImport: string[] = [];
+        
+        if (scenarioResultIds.length > 0) {
+            logger.info(`Found ${scenarioResultIds.length} scenario results`);
+            // Create an instance of the simulation import service (verbose only if we're in VERBOSE mode)
+            const importService = createSimulationImportService(loggingLevel >= LoggingLevel.VERBOSE);
+            
+            // Process each scenario result ID
+            for (const compositeId of scenarioResultIds) {
+                try {
+                    // Parse the composite ID to get documentId and scenarioId
+                    const { documentId, scenarioId } = parseScenarioResultId(compositeId);
+                    logger.info(`Hard refresh found scenario: documentId=${documentId}, scenarioId=${scenarioId}`);
+                    
+                    // For hard refresh, we always import regardless of timestamps
+                    logger.info(`Force importing results for scenario ${scenarioId}...`);
+                    
+                    // Use the service to perform the import
+                    const result = await importService.importSimulationResults(action, {
+                        documentId: documentId,
+                        scenarioId: scenarioId,
+                        collectionsToImport: collectionsToImport,
+                        verboseLogging: loggingLevel >= LoggingLevel.VERBOSE
+                    });
+                    
+                    if (result.success) {
+                        // Update the scenarios_status.json file to mark results as imported
+                        await updateResultsLastImported(documentId, scenarioId, logger);
+                        logger.info(`Successfully imported results for scenario ${scenarioId}`);
+                    } else {
+                        logger.error(`Failed to import results for scenario ${scenarioId}: ${result.error || 'Unknown error'}`);
+                    }
+                } catch (parseError) {
+                    logger.error(`Error parsing scenario ID ${compositeId}: ${parseError.message}`);
+                }
+            }
+        } else {
+            logger.info("No scenario results found");
         }
 
-        // Initialize Azure Storage Service
-        const config = getConfig();
-        initializeStorageService(config.azureStorageConnectionString);
-
-        // Use the simulation results service
-        const result = await updateSimulationResults(action, context.documentId, context.userId, 'hardRefresh');
-
-        console.log("=== Hard Refresh Action Completed Successfully ===");
-        return result;
+        logger.important("=== Hard Refresh Action Completed Successfully ===");
+        return { success: true };
 
     } catch (error) {
-        console.error("=== Error in Hard Refresh Action ===");
-        console.error("Error details:", error);
+        // Always log errors
+        logger.error("=== Error in Hard Refresh Action ===");
+        logger.error("Error details:", error);
         if (error instanceof Error) {
-            console.error("Error name:", error.name);
-            console.error("Error message:", error.message);
-            console.error("Error stack:", error.stack);
+            logger.error("Error name:", error.name);
+            logger.error("Error message:", error.message);
+            logger.error("Error stack:", error.stack);
         }
         return { success: false };
     }

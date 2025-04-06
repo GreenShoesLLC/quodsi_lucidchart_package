@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Enhanced Duration Editor will be the main component for editing durations with distribution support. It will replace the current `CompactDurationEditor` and provide a unified interface for all duration types.
+The Enhanced Duration Editor will be the main component for editing durations with distribution support. It will replace the current `CompactDurationEditor` and provide a unified interface for all duration types. The component will use our class-based distribution implementation to handle creation, validation, and value calculation.
 
 ## Component Structure
 
@@ -10,10 +10,10 @@ The Enhanced Duration Editor will be the main component for editing durations wi
 EnhancedDurationEditor
 ├── DistributionTypeSelector
 └── DistributionParametersEditor
-    ├── ConstantParametersEditor
-    ├── UniformParametersEditor
-    ├── TriangularParametersEditor
-    └── NormalParametersEditor
+    ├── ConstantParameterEditor
+    ├── UniformParameterEditor
+    ├── TriangularParameterEditor
+    └── NormalParameterEditor
 ```
 
 ## API
@@ -38,11 +38,17 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_e
 ### Component Code
 
 ```tsx
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Duration, DurationType, PeriodUnit, Distribution, DistributionType } from "@quodsi/shared";
 import { DistributionTypeSelector } from "./distribution/DistributionTypeSelector";
 import { DistributionParametersEditor } from "./distribution/DistributionParametersEditor";
-import { createDefaultDistribution, constantToDuration } from "@quodsi/shared/src/types/elements/helpers/DistributionFactory";
+import { 
+  createDefaultDistribution 
+} from "@quodsi/shared/src/types/elements/distributions/DistributionFactory";
+import { 
+  ConstantParameters, 
+  ConstantDistribution 
+} from "@quodsi/shared/src/types/elements/distributions";
 
 interface EnhancedDurationEditorProps {
   duration: Duration;
@@ -65,35 +71,30 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     [PeriodUnit.SECONDS]: "SEC",
   };
 
-  // Local state for initial migration of old format
-  const [migrated, setMigrated] = useState(false);
-
-  // Migrate CONSTANT durations to distribution-based format
-  useEffect(() => {
-    if (!migrated && duration.durationType === DurationType.CONSTANT) {
-      const migratedDuration = constantToDuration(
-        duration.durationLength,
-        duration.durationPeriodUnit
-      );
-      onChange(migratedDuration);
-      setMigrated(true);
-    }
-  }, [duration, onChange, migrated]);
-
   // Handle distribution type change
   const handleDistributionTypeChange = (type: DistributionType) => {
+    // Use factory method to create default distribution
     const newDistribution = createDefaultDistribution(type);
     
-    // For CONSTANT type, preserve the current value
-    if (type === DistributionType.CONSTANT) {
-      newDistribution.parameters = { value: duration.durationLength };
+    // For CONSTANT type, preserve the current value if available
+    if (type === DistributionType.CONSTANT && duration.durationLength) {
+      const value = duration.durationLength;
+      // Use the class method to create a constant distribution
+      const constantDistribution = ConstantDistribution.create(value);
+      
+      onChange({
+        ...duration,
+        durationType: DurationType.DISTRIBUTION,
+        distribution: constantDistribution,
+        durationLength: value // For backward compatibility
+      });
+    } else {
+      onChange({
+        ...duration,
+        durationType: DurationType.DISTRIBUTION,
+        distribution: newDistribution
+      });
     }
-    
-    onChange({
-      ...duration,
-      durationType: DurationType.DISTRIBUTION,
-      distribution: newDistribution
-    });
   };
 
   // Handle distribution parameter changes
@@ -104,9 +105,10 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
       distribution: updatedDistribution
     };
     
+    // If it's a CONSTANT distribution, update the durationLength field for compatibility with other components
     if (updatedDistribution.distributionType === DistributionType.CONSTANT) {
-      const value = (updatedDistribution.parameters as any).value || 0;
-      updatedDuration.durationLength = value;
+      const params = updatedDistribution.parameters as ConstantParameters;
+      updatedDuration.durationLength = params.value;
     }
     
     onChange(updatedDuration);
@@ -122,7 +124,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     });
   };
 
-  // Get current distribution type
+  // Get current distribution type, defaulting to CONSTANT if not set
   const distributionType = duration.distribution?.distributionType || DistributionType.CONSTANT;
 
   return (
@@ -167,13 +169,35 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
 };
 ```
 
+## Key Implementation Details
+
+1. **Distribution Type Selection**:
+   - Uses the class-based factory methods for creating distributions
+   - Preserves durationLength if changing to CONSTANT type
+
+2. **Parameter Editing**:
+   - Delegates to the DistributionParametersEditor component
+   - Updates the durationLength field when CONSTANT parameters change for compatibility with other components
+
+3. **Period Unit Selection**:
+   - Allows selecting from available period units (SECONDS, MINUTES, HOURS, DAYS)
+
 ## Usage Example
 
 ```tsx
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import { Duration, PeriodUnit, DurationType } from "@quodsi/shared";
+import { ConstantDistribution } from "@quodsi/shared/src/types/elements/distributions";
 
 // Inside another component
-const [duration, setDuration] = useState(new Duration(1, PeriodUnit.MINUTES));
+const [duration, setDuration] = useState(
+  new Duration(
+    1, 
+    PeriodUnit.MINUTES, 
+    DurationType.DISTRIBUTION,
+    ConstantDistribution.create(1)
+  )
+);
 
 return (
   <EnhancedDurationEditor 
@@ -201,4 +225,23 @@ For space-constrained contexts, the component supports a compact mode that reduc
 
 This component will replace `CompactDurationEditor` in:
 - `OperationStepEditor.tsx`
+- `ActivityEditor.tsx`
 - Any other components using duration editing
+
+## Testing Considerations
+
+1. **Initial State**:
+   - Test initialization with different distribution types
+   - Verify default parameters are applied correctly
+
+2. **Distribution Type Changes**:
+   - Test switching between different distribution types
+   - Verify that parameters are properly initialized
+
+3. **Parameter Updates**:
+   - Test updating parameters for each distribution type
+   - Verify that changes are properly propagated to the Duration object
+
+4. **Component Integration**:
+   - Test integration with other components that use the Duration object
+   - Verify that all necessary fields (durationLength, durationPeriodUnit, etc.) are properly updated

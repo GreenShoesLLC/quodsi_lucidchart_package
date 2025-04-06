@@ -5,10 +5,11 @@ import {
   SimulationTimeType,
   SimulationObjectType,
   Duration,
-  DurationType,
+  Distribution,
+  ConstantDistribution,
 } from "@quodsi/shared";
 import { Settings, Clock } from "lucide-react";
-import { CompactDurationEditor } from "./CompactDurationEditor";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import BaseEditor from "./BaseEditor";
 import OutputForm from "./OutputForm";
 
@@ -31,6 +32,24 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
       target: { name, value },
       currentTarget: { name, value },
     } as React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
+  };
+
+  const handleDurationChange = (
+    periodField: "warmupClockPeriod" | "runClockPeriod",
+    periodUnitField: "warmupClockPeriodUnit" | "runClockPeriodUnit",
+    periodUnit: PeriodUnit,
+    distribution: Distribution
+  ) => {
+    const value =
+      distribution.distributionType === "constant"
+        ? (distribution.parameters as { value: number }).value
+        : 0;
+
+    onSave({
+      ...model,
+      [periodField]: value,
+      [periodUnitField]: periodUnit,
+    });
   };
 
   const ModelForm = () => (
@@ -119,54 +138,50 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
             {localModel.simulationTimeType === SimulationTimeType.Clock && (
               <div className="space-y-2 pt-2">
                 <div className="space-y-2">
-                  <CompactDurationEditor
-                    duration={
-                      new Duration(
-                        localModel.warmupClockPeriod || 0,
-                        localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
-                        DurationType.CONSTANT
-                      )
-                    }
-                    onChange={(duration) => {
-                      handleChange(
-                        createSyntheticEvent(
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Warmup Time
+                    </label>
+                    <EnhancedDurationEditor
+                      periodUnit={
+                        localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES
+                      }
+                      distribution={ConstantDistribution.create(
+                        localModel.warmupClockPeriod || 0
+                      )}
+                      onChange={(periodUnit, distribution) =>
+                        handleDurationChange(
                           "warmupClockPeriod",
-                          duration.durationLength
-                        )
-                      );
-                      handleChange(
-                        createSyntheticEvent(
                           "warmupClockPeriodUnit",
-                          duration.durationPeriodUnit
+                          periodUnit,
+                          distribution
                         )
-                      );
-                    }}
-                    lengthLabel="Warmup Time"
-                  />
-                  <CompactDurationEditor
-                    duration={
-                      new Duration(
-                        localModel.runClockPeriod || 0,
-                        localModel.runClockPeriodUnit || PeriodUnit.MINUTES,
-                        DurationType.CONSTANT
-                      )
-                    }
-                    onChange={(duration) => {
-                      handleChange(
-                        createSyntheticEvent(
+                      }
+                      compact={true}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Run Time
+                    </label>
+                    <EnhancedDurationEditor
+                      periodUnit={
+                        localModel.runClockPeriodUnit || PeriodUnit.MINUTES
+                      }
+                      distribution={ConstantDistribution.create(
+                        localModel.runClockPeriod || 0
+                      )}
+                      onChange={(periodUnit, distribution) =>
+                        handleDurationChange(
                           "runClockPeriod",
-                          duration.durationLength
-                        )
-                      );
-                      handleChange(
-                        createSyntheticEvent(
                           "runClockPeriodUnit",
-                          duration.durationPeriodUnit
+                          periodUnit,
+                          distribution
                         )
-                      );
-                    }}
-                    lengthLabel="Run Time"
-                  />
+                      }
+                      compact={true}
+                    />
+                  </div>
                 </div>
               </div>
             )}

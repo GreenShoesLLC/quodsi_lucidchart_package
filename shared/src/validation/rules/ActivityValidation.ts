@@ -145,16 +145,16 @@ export class ActivityValidation extends ValidationRule {
         this.log(`Validating operation step ${index + 1} for Activity ID: ${activityId}`);
 
         // Validate duration
-        if (!step.duration?.durationLength) {
-            this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an invalid duration.`);
-            messages.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
-        } else {
-            const duration = step.duration.durationLength;
-            if (duration < ActivityValidation.MIN_CYCLE_TIME || duration > ActivityValidation.MAX_CYCLE_TIME) {
-                this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an unusual duration: ${duration}`);
-                messages.push(ValidationMessages.unusualStepDuration(activityId, index + 1, duration));
-            }
-        }
+        // if (!step.duration?.durationLength) {
+        //     this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an invalid duration.`);
+        //     messages.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
+        // } else {
+        //     const duration = step.duration.durationLength;
+        //     if (duration < ActivityValidation.MIN_CYCLE_TIME || duration > ActivityValidation.MAX_CYCLE_TIME) {
+        //         this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an unusual duration: ${duration}`);
+        //         messages.push(ValidationMessages.unusualStepDuration(activityId, index + 1, duration));
+        //     }
+        // }
 
         // Validate resource requirement
         if (step.requirementId) {

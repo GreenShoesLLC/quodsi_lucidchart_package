@@ -2,9 +2,8 @@
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { getStorageService } from "../services/simulationData";
 import { ActionLogger } from "../utils/logging";
-
-// Set to true to enable verbose logging for mark results viewed action
-const MARK_RESULTS_VIEWED_VERBOSE_LOGGING = true;
+import { LoggingLevel } from "../utils/loggingLevels";
+import { getConfig } from "../config";
 
 /**
  * Action to mark scenario results as viewed by the user
@@ -12,10 +11,14 @@ const MARK_RESULTS_VIEWED_VERBOSE_LOGGING = true;
  * @returns Promise resolving with success status
  */
 export const markResultsViewedAction = async (action: DataConnectorAsynchronousAction) => {
-    const logger = new ActionLogger('[MarkResultsViewedAction]', MARK_RESULTS_VIEWED_VERBOSE_LOGGING);
+    // Get config and logging level - use a normal level since this is a user UI action
+    const config = getConfig();
+    const loggingLevel = config.logging?.hardRefreshActionLoggingLevel || LoggingLevel.NORMAL;
+    
+    const logger = new ActionLogger('[MarkResultsViewedAction]', loggingLevel);
 
     try {
-        logger.info("=== Mark Results Viewed Action Started ===");
+        logger.important("=== Mark Results Viewed Action Started ===");
 
         // Extract request data
         const data = action.data as {
@@ -54,7 +57,7 @@ export const markResultsViewedAction = async (action: DataConnectorAsynchronousA
                 if (scenario.resultsViewed === false) {
                     scenario.resultsViewed = true;
                     scenariosUpdated++;
-                    logger.info(`Marked scenario ${scenario.id} as viewed`);
+                    logger.debug(`Marked scenario ${scenario.id} as viewed`);
                 }
             }
         }
@@ -75,7 +78,7 @@ export const markResultsViewedAction = async (action: DataConnectorAsynchronousA
         );
 
         logger.info(`Updated ${scenariosUpdated} scenarios as viewed`);
-        logger.info("=== Mark Results Viewed Action Completed Successfully ===");
+        logger.important("=== Mark Results Viewed Action Completed Successfully ===");
 
         return { 
             success: true,

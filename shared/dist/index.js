@@ -14,8 +14,10 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Platform and core exports
 __exportStar(require("./platform"), exports);
 __exportStar(require("./core/logging/QuodsiLogger"), exports);
+// Type exports
 __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);
 __exportStar(require("./types/ConversionResult"), exports);
@@ -28,6 +30,7 @@ __exportStar(require("./types/SelectionType"), exports);
 __exportStar(require("./types/simComponentType"), exports);
 __exportStar(require("./types/validation"), exports);
 __exportStar(require("./types/MetaData"), exports);
+// Element types
 __exportStar(require("./types/elements/RunState"), exports);
 __exportStar(require("./types/DiagramElementType"), exports);
 __exportStar(require("./types/elements/Activity"), exports);
@@ -61,17 +64,21 @@ __exportStar(require("./types/elements/Scenario"), exports);
 __exportStar(require("./types/elements/SimulationObject"), exports);
 __exportStar(require("./types/elements/SimulationObjectType"), exports);
 __exportStar(require("./types/elements/SimulationTimeType"), exports);
-__exportStar(require("./factories/SimulationObjectTypeFactory"), exports);
+__exportStar(require("./types/elements/ModelDefinitionLogger"), exports);
+// Distribution types
+__exportStar(require("./types/elements/distributions"), exports);
+// Export accordion types
 __exportStar(require("./types/accordion/ModelElement"), exports);
 __exportStar(require("./types/accordion/ModelStructure"), exports);
 __exportStar(require("./types/accordion/ValidationState"), exports);
 __exportStar(require("./types/accordion/AccordionState"), exports);
-__exportStar(require("./types/elements/ModelDefinitionLogger"), exports);
-// Export API services
+// Factory exports
+__exportStar(require("./factories/SimulationObjectTypeFactory"), exports);
+// Service exports
 __exportStar(require("./services/lucidApi"), exports);
 __exportStar(require("./utils/csvUtils"), exports);
-// Export serialization
+// Serialization exports
 __exportStar(require("./serialization"), exports);
-// Export validation
+// Validation exports
 __exportStar(require("./validation"), exports);
 __exportStar(require("./versioning"), exports);

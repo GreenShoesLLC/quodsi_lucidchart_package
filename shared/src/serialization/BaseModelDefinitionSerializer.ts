@@ -152,14 +152,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
     protected serializeDuration(duration: Duration): ISerializedDuration {
         try {
-            if (duration.durationLength < 0) {
-                throw new InvalidModelError('Duration length cannot be negative');
-            }
 
             return {
-                durationLength: duration.durationLength,
+                // durationLength: duration.durationLength,
                 durationPeriodUnit: duration.durationPeriodUnit,
-                durationType: duration.durationType,
+                // durationType: duration.durationType,
                 distribution: duration.distribution
             };
         } catch (error) {

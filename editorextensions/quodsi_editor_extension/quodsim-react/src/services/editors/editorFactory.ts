@@ -13,7 +13,7 @@ interface EditorHandlers {
   onCancel: () => void;
   onTypeChange: (type: SimComponentType, elementId: string) => void;
   elementId: string;
-  referenceData: EditorReferenceData;  // Add this
+  referenceData: EditorReferenceData;
 }
 
 export const createEditorComponent = (
@@ -29,7 +29,8 @@ export const createEditorComponent = (
       return React.createElement(ActivityEditor, {
         activity: elementData,
         onSave: onSave,
-        onCancel: onCancel
+        onCancel: onCancel,
+        referenceData: referenceData // Add referenceData here
       });
 
     case SimulationObjectType.Entity:
@@ -51,7 +52,7 @@ export const createEditorComponent = (
         generator: elementData,
         onSave: onSave,
         onCancel: onCancel,
-        referenceData: referenceData  // Pass reference data
+        referenceData: referenceData
       });
 
     case SimulationObjectType.Resource:

@@ -99,9 +99,7 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         this.log("    Output Buffer Capacity: ".concat(activity.outputBufferCapacity));
         this.log("    Number of Operation Steps: ".concat(((_a = activity.operationSteps) === null || _a === void 0 ? void 0 : _a.length) || 0));
         (_b = activity.operationSteps) === null || _b === void 0 ? void 0 : _b.forEach(function (step, index) {
-            var _a;
             _this.log("      Operation Step ".concat(index + 1, ":"));
-            _this.log("        Duration: ".concat(((_a = step.duration) === null || _a === void 0 ? void 0 : _a.durationLength) || "Not defined"));
             if (step.requirementId) {
                 _this.log("        Resource Requirement ID: ".concat(step.requirementId));
                 _this.log("        Quantity: ".concat(step.quantity));
@@ -134,9 +132,7 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         var operationSteps = connector.operationSteps;
         this.log("    Number of Operation Steps: ".concat((operationSteps === null || operationSteps === void 0 ? void 0 : operationSteps.length) || 0));
         operationSteps === null || operationSteps === void 0 ? void 0 : operationSteps.forEach(function (step, index) {
-            var _a;
             _this.log("      Operation Step ".concat(index + 1, ":"));
-            _this.log("        Duration: ".concat(((_a = step.duration) === null || _a === void 0 ? void 0 : _a.durationLength) || "Not defined"));
             if (step.requirementId) {
                 _this.log("        Resource Requirement ID: ".concat(step.requirementId));
                 _this.log("        Quantity: ".concat(step.quantity));
@@ -154,17 +150,16 @@ var ModelDefinitionLogger = /** @class */ (function (_super) {
         // this.log(`    Mode: ${resourceRequirement.mode}`);
     };
     ModelDefinitionLogger.prototype.logGenerator = function (generator) {
-        var _a, _b;
         this.log("  Generator ID: ".concat(generator.id));
         this.log("    Name: ".concat(generator.name || "Unnamed"));
         this.log("    Activity Key ID: ".concat(generator.activityKeyId || "Not defined"));
         this.log("    Entity ID: ".concat(generator.entityId || "Not defined"));
         this.log("    Periodic Occurrences: ".concat(generator.periodicOccurrences || "Not defined"));
-        var periodIntervalDuration = (_a = generator.periodIntervalDuration) === null || _a === void 0 ? void 0 : _a.durationLength;
-        this.log("    Period Interval Duration: ".concat(periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"));
+        // const periodIntervalDuration = generator.periodIntervalDuration?.durationLength;
+        // this.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
         this.log("    Entities Per Creation: ".concat(generator.entitiesPerCreation || "Not defined"));
-        var periodicStartDuration = (_b = generator.periodicStartDuration) === null || _b === void 0 ? void 0 : _b.durationLength;
-        this.log("    Periodic Start Duration: ".concat(periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"));
+        // const periodicStartDuration = generator.periodicStartDuration?.durationLength;
+        // this.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
         this.log("    Max Entities: ".concat(generator.maxEntities || "Not defined"));
     };
     ModelDefinitionLogger.prototype.logEntity = function (entity) {

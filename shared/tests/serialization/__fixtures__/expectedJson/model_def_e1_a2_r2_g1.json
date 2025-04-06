@@ -2,7 +2,7 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-02-18T12:06:17.221Z"
+    "timestamp": "2025-04-01T19:22:52.716Z"
   },
   "model": {
     "id": "model-8",
@@ -43,20 +43,28 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
           },
           "requirementId": "resource-1",
           "quantity": 1
         },
         {
           "duration": {
-            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
           },
           "requirementId": "resource-2",
           "quantity": 1
@@ -85,20 +93,28 @@
       "operationSteps": [
         {
           "duration": {
-            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
           },
           "requirementId": "resource-1",
           "quantity": 1
         },
         {
           "duration": {
-            "durationLength": 1,
             "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
           },
           "requirementId": "resource-2",
           "quantity": 1
@@ -130,17 +146,25 @@
       "entityId": "entity-1",
       "periodicOccurrences": 10,
       "periodIntervalDuration": {
-        "durationLength": 1,
         "durationPeriodUnit": "HOURS",
-        "durationType": "CONSTANT",
-        "distribution": null
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 1
+          },
+          "description": ""
+        }
       },
       "entitiesPerCreation": 1,
       "periodicStartDuration": {
-        "durationLength": 0,
         "durationPeriodUnit": "MINUTES",
-        "durationType": "CONSTANT",
-        "distribution": null
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 0
+          },
+          "description": ""
+        }
       },
       "maxEntities": null,
       "connectors": [

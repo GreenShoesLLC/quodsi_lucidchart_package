@@ -1,0 +1,66 @@
+/* Styles for EnhancedDurationEditor */
+
+.duration-editor {
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.duration-editor.compact {
+  padding: 4px;
+}
+
+.duration-editor .parameters-editor {
+  background-color: white;
+  border-radius: 4px;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.duration-editor.compact .parameters-editor {
+  padding: 4px;
+}
+
+.duration-editor label {
+  font-weight: 500;
+}
+
+.duration-editor input[type="number"] {
+  text-align: right;
+}
+
+/* Remove up/down arrows from number inputs */
+.duration-editor input[type="number"]::-webkit-inner-spin-button,
+.duration-editor input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.duration-editor input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Spacing adjustments for compact mode */
+.duration-editor.compact .text-sm {
+  font-size: 0.8125rem;
+}
+
+.duration-editor.compact .mb-1 {
+  margin-bottom: 0.125rem;
+}
+
+.duration-editor.compact .mb-2 {
+  margin-bottom: 0.25rem;
+}
+
+.duration-editor.compact .space-y-2 > * + * {
+  margin-top: 0.25rem;
+}
+
+.duration-editor.compact input,
+.duration-editor.compact select {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+  height: 1.75rem;
+}

@@ -19,21 +19,23 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 - **Changes**:
   - Create dropdown component for selecting distribution types
   - Group options by category (common vs. advanced)
-  - Display formatted names for distribution types
+  - Use `getDistributionDisplayName` from DistributionType.ts for display
+  - Use `isDistributionTypeSupported` to filter available types
 
 **Estimated Time**: 2 days
 
 ### 2. Create Parameter Editors
 
 - **New Files**:
-  - `quodsim-react/src/components/distribution/parameters/ConstantParametersEditor.tsx`
-  - `quodsim-react/src/components/distribution/parameters/UniformParametersEditor.tsx`
-  - `quodsim-react/src/components/distribution/parameters/TriangularParametersEditor.tsx`
-  - `quodsim-react/src/components/distribution/parameters/NormalParametersEditor.tsx`
+  - `quodsim-react/src/components/distribution/parameters/ParameterEditor.tsx` (base interface)
+  - `quodsim-react/src/components/distribution/parameters/ConstantParameterEditor.tsx`
+  - `quodsim-react/src/components/distribution/parameters/UniformParameterEditor.tsx`
+  - `quodsim-react/src/components/distribution/parameters/TriangularParameterEditor.tsx`
+  - `quodsim-react/src/components/distribution/parameters/NormalParameterEditor.tsx`
 - **Changes**:
-  - Create specialized parameter editors for each distribution type
-  - Implement validation logic
-  - Ensure consistent UI patterns
+  - Create specialized editors that use the parameter metadata from distribution classes
+  - Import metadata (e.g., `CONSTANT_PARAMETER_METADATA`) to drive UI
+  - Implement validation using the distribution classes (e.g., `ConstantDistribution.validateParameters`)
 
 **Estimated Time**: 4 days
 
@@ -42,8 +44,8 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 - **New File**: `quodsim-react/src/components/distribution/DistributionParametersEditor.tsx`
 - **Changes**:
   - Create container component that switches between parameter editors
-  - Handle distribution creation and updates
-  - Manage parameter validation
+  - Use DistributionFactory to manage distributions
+  - Handle distribution creation and validation through the appropriate distribution class
 
 **Estimated Time**: 2 days
 
@@ -52,8 +54,8 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 - **New File**: `quodsim-react/src/components/EnhancedDurationEditor.tsx`
 - **Changes**:
   - Create main duration editor component
-  - Integrate distribution type selector and parameters editor
-  - Handle conversion between formats
+  - Use DistributionFactory for converting between duration formats
+  - Use `createDistributionFromConstantDuration` for backward compatibility
   - Support compact mode for space-constrained contexts
 
 **Estimated Time**: 3 days
@@ -69,9 +71,106 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 
 **Estimated Time**: 2 days
 
+## Implementation Notes
+
+### Distribution Type Selector Implementation
+
+```tsx
+import React from 'react';
+import { DistributionType, getDistributionDisplayName, isDistributionTypeSupported } from '@quodsi/shared';
+
+interface DistributionTypeSelectorProps {
+  value: DistributionType;
+  onChange: (type: DistributionType) => void;
+  disabled?: boolean;
+}
+
+export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> = ({
+  value,
+  onChange,
+  disabled = false
+}) => {
+  // Filter supported distribution types
+  const supportedTypes = Object.values(DistributionType)
+    .filter(type => isDistributionTypeSupported(type));
+  
+  return (
+    <div>
+      <label className="block text-xs text-gray-600 mb-1">
+        Distribution Type
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as DistributionType)}
+        disabled={disabled}
+        className="w-full px-2 py-1 text-sm border rounded"
+      >
+        {supportedTypes.map((type) => (
+          <option key={type} value={type}>
+            {getDistributionDisplayName(type)}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+```
+
+### Parameter Editor Usage Example
+
+```tsx
+import React from 'react';
+import { 
+  ConstantParameters, 
+  CONSTANT_PARAMETER_METADATA, 
+  ConstantDistribution 
+} from '@quodsi/shared';
+
+interface ConstantParameterEditorProps {
+  parameters: ConstantParameters;
+  onChange: (updated: ConstantParameters) => void;
+  disabled?: boolean;
+}
+
+export const ConstantParameterEditor: React.FC<ConstantParameterEditorProps> = ({
+  parameters,
+  onChange,
+  disabled = false
+}) => {
+  const metadata = CONSTANT_PARAMETER_METADATA.value;
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = parseFloat(e.target.value);
+    const updatedParams = { ...parameters, value: isNaN(newValue) ? 0 : newValue };
+    
+    // Only update if valid
+    if (ConstantDistribution.validateParameters(updatedParams)) {
+      onChange(updatedParams);
+    }
+  };
+  
+  return (
+    <div>
+      <label className="block text-xs text-gray-600 mb-1">
+        {metadata.label}
+      </label>
+      <input
+        type="number"
+        value={parameters.value}
+        onChange={handleChange}
+        disabled={disabled}
+        min={metadata.min}
+        step={metadata.step}
+        className="w-full px-2 py-1 text-sm border rounded"
+      />
+    </div>
+  );
+};
+```
+
 ## Dependencies
 
-- Phase 1: Core Type Changes must be completed
+- Phase 1: Core Type Changes with reorganized distribution types must be completed
 
 ## Deliverables
 
@@ -88,18 +187,20 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 1. **Distribution Type Selector Tests**:
    - Test selection change events
    - Test display name formatting
+   - Test supported types filtering
 
 2. **Parameter Editor Tests**:
-   - Test input validation
+   - Test input validation using distribution validation methods
    - Test change events
-   - Test default values
+   - Test parameter updates
 
 3. **Distribution Parameters Editor Tests**:
    - Test switching between parameter editors
    - Test parameter updates
+   - Test integration with distribution factory
 
 4. **Enhanced Duration Editor Tests**:
-   - Test format conversion
+   - Test format conversion using DistributionFactory
    - Test distribution type changes
    - Test parameter updates
    - Test period unit changes
@@ -127,8 +228,8 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Complex UI in limited space | High | Use compact mode, collapsible sections, tooltips |
-| Parameter validation UX | Medium | Clear error messages, prevent invalid states |
-| Migration of existing data | Medium | Test with real models, provide fallbacks |
+| Parameter validation UX | Medium | Use distribution class validation methods for consistent validation |
+| Migration of existing data | Medium | Use DistributionFactory.createDistributionFromConstantDuration |
 | Performance with dynamic components | Low | Optimize rerenders, use memoization |
 
 ## Acceptance Criteria
@@ -136,7 +237,7 @@ Phase 2 focuses on implementing the UI components needed to support distribution
 1. EnhancedDurationEditor component renders correctly in all contexts
 2. Users can switch between distribution types
 3. Parameter editors display appropriate fields for each distribution
-4. All inputs are properly validated
+4. All inputs are properly validated using the distribution class validation methods
 5. Changes to distributions are correctly propagated to the model
 6. UI fits within space constraints
 7. All unit, integration, and UI tests pass

@@ -8,7 +8,8 @@ import { Connector } from '../../../../src/types/elements/Connector';
 import { Entity } from '../../../../src/types/elements/Entity';
 import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
-import { DurationType } from '../../../../src/types/elements/DurationType';
+import { Distribution } from '../../../../src/types/elements/Distribution';
+import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { createOperationStep } from '../../../../src/types/elements/OperationStep';
 import { ConnectType } from '../../../../src/types/elements/ConnectType';
 
@@ -33,7 +34,7 @@ export function createSequentialFlowModel(): ModelDefinition {
     modelDef.entities.add(entity);
 
     // Create common duration for activities
-    const duration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
+    const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
     
     // Create operation step template
     const operationStep = createOperationStep(duration, {
@@ -57,7 +58,7 @@ export function createSequentialFlowModel(): ModelDefinition {
         activity1.id,
         entity.id,
         10,
-        new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT),
+        new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
         1
     );
     modelDef.generators.add(generator);

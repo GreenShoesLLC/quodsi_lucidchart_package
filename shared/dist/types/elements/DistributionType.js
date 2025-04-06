@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DistributionType = void 0;
+exports.isDistributionTypeSupported = exports.getDistributionDisplayName = exports.DistributionType = void 0;
 var DistributionType;
 (function (DistributionType) {
+    DistributionType["CONSTANT"] = "constant";
     DistributionType["MULTINOMIAL"] = "multinomial";
     DistributionType["UNIFORM"] = "uniform";
     DistributionType["TRIANGULAR"] = "triangular";
@@ -35,3 +36,32 @@ var DistributionType;
     DistributionType["WALD"] = "wald";
     DistributionType["ZIPF"] = "zipf";
 })(DistributionType = exports.DistributionType || (exports.DistributionType = {}));
+// Add helper for display names
+function getDistributionDisplayName(type) {
+    switch (type) {
+        case DistributionType.CONSTANT:
+            return "Constant";
+        case DistributionType.UNIFORM:
+            return "Uniform";
+        case DistributionType.TRIANGULAR:
+            return "Triangular";
+        case DistributionType.NORMAL:
+            return "Normal";
+        // ... other cases
+        default:
+            return type.toString().replace(/_/g, ' ').toLowerCase()
+                .replace(/\b\w/g, function (char) { return char.toUpperCase(); });
+    }
+}
+exports.getDistributionDisplayName = getDistributionDisplayName;
+// Add helper for determining if a distribution is supported in the UI
+function isDistributionTypeSupported(type) {
+    var supportedTypes = [
+        DistributionType.CONSTANT,
+        DistributionType.UNIFORM,
+        DistributionType.TRIANGULAR,
+        DistributionType.NORMAL
+    ];
+    return supportedTypes.includes(type);
+}
+exports.isDistributionTypeSupported = isDistributionTypeSupported;

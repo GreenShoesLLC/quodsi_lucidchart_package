@@ -8,6 +8,7 @@ import {
     updateSimulationResults
 } from "./index";
 import { ActionLogger } from '../utils/logging';
+import { LoggingLevel } from "../utils/loggingLevels";
 
 /**
  * Configuration for collections to import
@@ -29,7 +30,7 @@ export interface SimulationImportParams {
     documentId: string;
     scenarioId: string;
     collectionsToImport?: string[];
-    verboseLogging?: boolean;
+    verboseLogging?: boolean | LoggingLevel;
 }
 
 /**
@@ -47,17 +48,23 @@ export interface SimulationImportResult {
  */
 export class SimulationImportService {
     private logger: ActionLogger;
-    private verboseLogging: boolean;
+    private loggingLevel: LoggingLevel;
     private config = getConfig();
 
     /**
      * Creates a new instance of SimulationImportService
      * @param actionId Unique identifier for the current action (for logging)
-     * @param verboseLogging Whether to enable verbose logging
+     * @param loggingLevel LoggingLevel to use, or boolean for backward compatibility
      */
-    constructor(actionId: string, verboseLogging = false) {
-        this.verboseLogging = verboseLogging;
-        this.logger = new ActionLogger(`[Import:${actionId}]`, verboseLogging);
+    constructor(actionId: string, loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL) {
+        // Handle backward compatibility with boolean parameter
+        if (typeof loggingLevel === 'boolean') {
+            this.loggingLevel = loggingLevel ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
+        } else {
+            this.loggingLevel = loggingLevel;
+        }
+        
+        this.logger = new ActionLogger(`[Import:${actionId}]`, this.loggingLevel);
     }
 
     /**
@@ -71,7 +78,7 @@ export class SimulationImportService {
         params: SimulationImportParams
     ): Promise<SimulationImportResult> {
         try {
-            this.logger.info(`=== Processing Simulation Import ===`);
+            this.logger.important(`=== Processing Simulation Import ===`);
 
             // Validate required parameters
             if (!params.scenarioId) {
@@ -82,10 +89,10 @@ export class SimulationImportService {
 
             // Use documentId as container name
             const containerName = params.documentId;
-            this.logger.info(`Using documentId as container name: ${containerName}`);
+            this.logger.debug(`Using documentId as container name: ${containerName}`);
 
             // Initialize storage service
-            this.logger.info(`Using Azure storage connection string: ${this.config.azureStorageConnectionString ? '(defined)' : '(undefined)'}`);
+            this.logger.debug(`Using Azure storage connection string: ${this.config.azureStorageConnectionString ? '(defined)' : '(undefined)'}`);
             initializeStorageService(this.config.azureStorageConnectionString);
 
             // Check if container exists before proceeding
@@ -106,9 +113,19 @@ export class SimulationImportService {
             await this.investigateEntityThroughputData(containerName);
 
             // Override the container name in config to use documentId
-            this.logger.info(`Temporarily overriding simulationResultsContainer config from "${this.config.simulationResultsContainer}" to "${containerName}"`);
+            this.logger.debug(`Temporarily overriding simulationResultsContainer config from "${this.config.simulationResultsContainer}" to "${containerName}"`);
             const originalContainer = this.config.simulationResultsContainer;
             (this.config as any).simulationResultsContainer = containerName;
+
+            // Convert verboseLogging parameter to match new logging system
+            let updateLoggingLevel: LoggingLevel | boolean;
+            if (typeof params.verboseLogging === 'boolean') {
+                updateLoggingLevel = params.verboseLogging;
+            } else if (params.verboseLogging !== undefined) {
+                updateLoggingLevel = params.verboseLogging;
+            } else {
+                updateLoggingLevel = this.loggingLevel >= LoggingLevel.VERBOSE;
+            }
 
             // Proceed with simulation results update
             this.logger.info(`Updating simulation results...`);
@@ -117,16 +134,16 @@ export class SimulationImportService {
                 params.documentId,
                 params.scenarioId,
                 'import',
-                this.verboseLogging,
+                updateLoggingLevel,
                 this.logger
             );
 
             // Restore original config value
             (this.config as any).simulationResultsContainer = originalContainer;
-            this.logger.info(`Restored original container config value: "${originalContainer}"`);
+            this.logger.debug(`Restored original container config value: "${originalContainer}"`);
 
             if (result.success) {
-                this.logger.info(`=== Import Processing Completed Successfully ===`);
+                this.logger.important(`=== Import Processing Completed Successfully ===`);
             } else {
                 this.logger.error(`=== Import Processing Partially Completed with Errors ===`);
                 // Check if 'error' property exists
@@ -272,9 +289,9 @@ export class SimulationImportService {
             let foundContent = null;
             let foundPath = null;
 
-            this.logger.info(`Checking multiple possible paths for entity throughput data in container ${containerName}:`);
+            this.logger.debug(`Checking multiple possible paths for entity throughput data in container ${containerName}:`);
             for (const path of possiblePaths) {
-                this.logger.info(`Checking path: ${path}`);
+                this.logger.debug(`Checking path: ${path}`);
                 const content = await storageService.getBlobContent(containerName, path);
                 if (content) {
                     foundContent = content;
@@ -286,7 +303,7 @@ export class SimulationImportService {
 
             if (foundContent) {
                 this.logger.info(`Entity throughput data found at ${foundPath}! Length: ${foundContent.length} bytes`);
-                this.logger.info(`Preview: ${foundContent.substring(0, 100)}...`);
+                this.logger.debug(`Preview: ${foundContent.substring(0, 100)}...`);
             } else {
                 this.logger.warn(`Entity throughput data NOT found after checking common paths.`);
 
@@ -295,8 +312,10 @@ export class SimulationImportService {
                     const blobs = await storageService.listBlobs(containerName);
 
                     if (blobs.length > 0) {
-                        this.logger.info(`Found ${blobs.length} files in container ${containerName}:`);
-                        blobs.forEach(blob => this.logger.info(`- ${blob}`));
+                        this.logger.debug(`Found ${blobs.length} files in container ${containerName}:`);
+                        if (this.loggingLevel >= LoggingLevel.VERBOSE) {
+                            blobs.forEach(blob => this.logger.debug(`- ${blob}`));
+                        }
 
                         // Look specifically for CSV files that might contain our data
                         const csvFiles = blobs.filter(b => b.endsWith('.csv'));
@@ -328,10 +347,10 @@ export class SimulationImportService {
 
 /**
  * Create a SimulationImportService instance with a random action ID
- * @param verboseLogging Whether to enable verbose logging
+ * @param loggingLevel LoggingLevel to use, or boolean for backward compatibility
  * @returns A new SimulationImportService instance
  */
-export function createSimulationImportService(verboseLogging = false): SimulationImportService {
+export function createSimulationImportService(loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL): SimulationImportService {
     const actionId = Math.random().toString(36).substring(2, 10);
-    return new SimulationImportService(actionId, verboseLogging);
+    return new SimulationImportService(actionId, loggingLevel);
 }

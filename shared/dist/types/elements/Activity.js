@@ -5,7 +5,7 @@ var SimulationObjectType_1 = require("./SimulationObjectType");
 var OperationStep_1 = require("./OperationStep");
 var Duration_1 = require("./Duration");
 var PeriodUnit_1 = require("./PeriodUnit");
-var DurationType_1 = require("./DurationType");
+var distributions_1 = require("./distributions");
 var Activity = /** @class */ (function () {
     function Activity(id, name, capacity, inputBufferCapacity, outputBufferCapacity, operationSteps) {
         if (capacity === void 0) { capacity = 1; }
@@ -21,7 +21,7 @@ var Activity = /** @class */ (function () {
         this.type = SimulationObjectType_1.SimulationObjectType.Activity;
     }
     Activity.createDefault = function (id) {
-        var defaultDuration = new Duration_1.Duration(1, PeriodUnit_1.PeriodUnit.MINUTES, DurationType_1.DurationType.CONSTANT);
+        var defaultDuration = new Duration_1.Duration(PeriodUnit_1.PeriodUnit.MINUTES, distributions_1.ConstantDistribution.create(1));
         var defaultOperationStep = (0, OperationStep_1.createOperationStep)(defaultDuration);
         return new Activity(id, 'New Activity', 1, // capacity
         1, // inputBufferCapacity

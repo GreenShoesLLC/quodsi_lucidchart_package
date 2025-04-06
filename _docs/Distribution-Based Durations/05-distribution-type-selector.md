@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Distribution Type Selector is a component that allows users to select from available distribution types. It will display a dropdown with options like CONSTANT, UNIFORM, TRIANGULAR, and NORMAL.
+The Distribution Type Selector is a component that allows users to select from available distribution types. It will display a dropdown with options like CONSTANT, UNIFORM, TRIANGULAR, and NORMAL. The component uses the helper functions from DistributionType.ts to determine which distribution types to display and how to format their names.
 
 ## API
 
@@ -26,7 +26,7 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_e
 
 ```tsx
 import React from "react";
-import { DistributionType, isDistributionTypeSupported, getDistributionDisplayName } from "@quodsi/shared";
+import { DistributionType, getDistributionDisplayName, isDistributionTypeSupported } from "@quodsi/shared";
 
 interface DistributionTypeSelectorProps {
   distributionType: DistributionType;
@@ -39,21 +39,16 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   onChange,
   disabled = false,
 }) => {
-  // Define common/recommended distribution types to show at the top
-  const commonDistributions = [
-    DistributionType.CONSTANT,
-    DistributionType.UNIFORM,
-    DistributionType.TRIANGULAR,
-    DistributionType.NORMAL,
-  ];
-
-  // Define groups for the dropdown
+  // Filter distribution types to only show supported ones
+  const supportedTypes = Object.values(DistributionType)
+    .filter(type => isDistributionTypeSupported(type));
+  
+  // Define groups for the dropdown - in future versions, we might add more groups
   const groups = [
     {
       label: "Common Distributions",
-      options: commonDistributions,
+      options: supportedTypes,
     }
-    // Can add more groups in the future for less common distributions
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -86,6 +81,20 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
 };
 ```
 
+## Key Implementation Details
+
+1. **Distribution Type Filtering**:
+   - Uses `isDistributionTypeSupported` from the DistributionType.ts file
+   - Only shows distribution types that are supported (CONSTANT, UNIFORM, TRIANGULAR, NORMAL)
+
+2. **Display Name Formatting**:
+   - Uses `getDistributionDisplayName` from the DistributionType.ts file
+   - Formats distribution types for display (e.g., "CONSTANT" → "Constant")
+
+3. **Grouping Structure**:
+   - Groups distribution types into categories (currently just "Common Distributions")
+   - Provides a structure that can be extended with additional groups in the future
+
 ## Display Names
 
 The component uses the `getDistributionDisplayName` helper function to format distribution types for display:
@@ -97,12 +106,13 @@ The component uses the `getDistributionDisplayName` helper function to format di
 | TRIANGULAR        | Triangular   |
 | NORMAL            | Normal       |
 
-## Grouping
+## Future Extensions
 
-The component organizes distribution types into groups:
+The component structure allows for easy extension in the future:
 
-1. **Common Distributions** - The initially supported types (CONSTANT, UNIFORM, TRIANGULAR, NORMAL)
-2. Additional groups can be added in the future for less common distributions
+1. **Additional Groups**: More distribution types can be added in separate groups (e.g., "Advanced Distributions")
+2. **Filtering Options**: Add filtering functionality to show/hide certain distribution types
+3. **Custom Rendering**: Customize the rendering of each distribution type option
 
 ## Usage Example
 
@@ -120,3 +130,21 @@ return (
   />
 );
 ```
+
+## Testing Considerations
+
+1. **Supported Types**:
+   - Verify that only supported distribution types are displayed
+   - Test that new types are displayed when added to the supported list
+
+2. **Selection Change**:
+   - Test that the onChange handler is called with the correct distribution type
+   - Verify that the selected value is properly displayed
+
+3. **Display Names**:
+   - Verify that distribution types are formatted correctly
+   - Test with different distribution types to ensure proper formatting
+
+4. **Disabled State**:
+   - Test that the component respects the disabled prop
+   - Verify that no onChange events occur when disabled

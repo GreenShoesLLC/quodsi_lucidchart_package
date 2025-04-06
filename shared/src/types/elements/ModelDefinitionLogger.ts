@@ -89,8 +89,6 @@ export class ModelDefinitionLogger extends QuodsiLogger {
 
         activity.operationSteps?.forEach((step, index) => {
             this.log(`      Operation Step ${index + 1}:`);
-            this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
-
             if (step.requirementId) {
                 this.log(`        Resource Requirement ID: ${step.requirementId}`);
                 this.log(`        Quantity: ${step.quantity}`);
@@ -127,7 +125,6 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);
         operationSteps?.forEach((step, index) => {
             this.log(`      Operation Step ${index + 1}:`);
-            this.log(`        Duration: ${step.duration?.durationLength || "Not defined"}`);
             if (step.requirementId) {
                 this.log(`        Resource Requirement ID: ${step.requirementId}`);
                 this.log(`        Quantity: ${step.quantity}`);
@@ -154,13 +151,13 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Entity ID: ${generator.entityId || "Not defined"}`);
         this.log(`    Periodic Occurrences: ${generator.periodicOccurrences || "Not defined"}`);
 
-        const periodIntervalDuration = generator.periodIntervalDuration?.durationLength;
-        this.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
+        // const periodIntervalDuration = generator.periodIntervalDuration?.durationLength;
+        // this.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
 
         this.log(`    Entities Per Creation: ${generator.entitiesPerCreation || "Not defined"}`);
 
-        const periodicStartDuration = generator.periodicStartDuration?.durationLength;
-        this.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
+        // const periodicStartDuration = generator.periodicStartDuration?.durationLength;
+        // this.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
 
         this.log(`    Max Entities: ${generator.maxEntities || "Not defined"}`);
     }

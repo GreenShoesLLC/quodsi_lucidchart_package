@@ -6,6 +6,7 @@ import { BatchConfigurationError, BatchJobCreationError } from "../services/erro
 import { getConfig } from "../config";
 import { ActionLogger } from '../utils/logging';
 import { updateModelData } from '../services';
+import { LoggingLevel } from '../utils/loggingLevels';
 
 // Default baseline scenario ID (all zeros UUID)
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
@@ -28,8 +29,13 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         batchSubmitDuration: 0
     };
 
-    const logger = new ActionLogger('[saveAndSubmitSimulationAction]', true);
-    logger.info('Starting execution');
+    // Get config and logging level
+    const config = getConfig();
+    // Since this is a user-initiated action, use NORMAL level by default
+    const loggingLevel = config.logging?.hardRefreshActionLoggingLevel || LoggingLevel.NORMAL;
+
+    const logger = new ActionLogger('[saveAndSubmitSimulationAction]', loggingLevel);
+    logger.important('Starting execution');
 
     try {
         // Extract and validate request data
@@ -45,20 +51,19 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         }
 
         // Get configuration
-        const config = getConfig();
         logger.info(`Operating in environment: ${config.environment}`);
-        logger.info(`Using storage account: ${config.azureStorageConnectionString.includes('AccountName=') ? 
+        logger.debug(`Using storage account: ${config.azureStorageConnectionString.includes('AccountName=') ? 
             config.azureStorageConnectionString.split('AccountName=')[1].split(';')[0] : 'unknown'}`);
-        logger.info(`Using batch pool: ${config.batchPoolId}`);
-        logger.info(`Using application: ${config.defaultApplicationId}`);
+        logger.debug(`Using batch pool: ${config.batchPoolId}`);
+        logger.debug(`Using application: ${config.defaultApplicationId}`);
         // Create a scenario record in the "submitted" state
-        logger.info(`Creating scenario record with ID5: ${scenarioId}`);
+        logger.info(`Creating scenario record with ID: ${scenarioId}`);
         try {
             const scenarioResult = await updateScenarioResultsData(
                 action,
                 documentId,
                 scenarioId,
-                true,
+                loggingLevel >= LoggingLevel.VERBOSE, // Use verbose flag based on logging level
                 logger
             );
 
@@ -98,7 +103,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
                 action,
                 documentId,
                 scenarioId,
-                true,
+                loggingLevel >= LoggingLevel.VERBOSE,
                 logger
             );
 
@@ -140,7 +145,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             action,
             documentId,
             scenarioId,
-            true,
+            loggingLevel >= LoggingLevel.VERBOSE,
             logger
         );
 
@@ -151,7 +156,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
 
         // Log performance metrics
         const totalDuration = Date.now() - metrics.startTime;
-        logger.info('Operation completed', {
+        logger.important('Operation completed', {
             totalDuration: `${totalDuration}ms`,
             uploadDuration: `${metrics.uploadDuration}ms`,
             batchSubmitDuration: `${metrics.batchSubmitDuration}ms`,
@@ -194,7 +199,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
                     action,
                     data.documentId,
                     data.scenarioId,
-                    true,
+                    loggingLevel >= LoggingLevel.VERBOSE,
                     logger
                 );
                 

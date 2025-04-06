@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Distribution = void 0;
+/**
+ * Class representing a statistical distribution.
+ */
 var Distribution = /** @class */ (function () {
     function Distribution(distributionType, parameters, description) {
         if (description === void 0) { description = ""; }

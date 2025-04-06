@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Distribution Parameters Editor is a dynamic component that renders the appropriate parameter inputs based on the selected distribution type. It will handle switching between parameter editors for CONSTANT, UNIFORM, TRIANGULAR, and NORMAL distributions.
+The Distribution Parameters Editor is a dynamic component that renders the appropriate parameter inputs based on the selected distribution type. It will handle switching between parameter editors for CONSTANT, UNIFORM, TRIANGULAR, and NORMAL distributions. The component leverages our class-based distribution implementations to create and validate parameters.
 
 ## API
 
@@ -27,12 +27,18 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_e
 
 ```tsx
 import React from "react";
-import { Distribution, DistributionType, DistributionParameters } from "@quodsi/shared";
-import { createDefaultDistribution } from "@quodsi/shared/src/types/elements/helpers/DistributionFactory";
-import { ConstantParametersEditor } from "./parameters/ConstantParametersEditor";
-import { UniformParametersEditor } from "./parameters/UniformParametersEditor";
-import { TriangularParametersEditor } from "./parameters/TriangularParametersEditor";
-import { NormalParametersEditor } from "./parameters/NormalParametersEditor";
+import { Distribution, DistributionType } from "@quodsi/shared";
+import { createDefaultDistribution } from "@quodsi/shared/src/types/elements/distributions/DistributionFactory";
+import { 
+  ConstantParameters, 
+  UniformParameters, 
+  TriangularParameters, 
+  NormalParameters 
+} from "@quodsi/shared/src/types/elements/distributions";
+import { ConstantParameterEditor } from "./parameters/ConstantParameterEditor";
+import { UniformParameterEditor } from "./parameters/UniformParameterEditor";
+import { TriangularParameterEditor } from "./parameters/TriangularParameterEditor";
+import { NormalParameterEditor } from "./parameters/NormalParameterEditor";
 
 interface DistributionParametersEditorProps {
   distribution: Distribution | null;
@@ -52,19 +58,11 @@ export const DistributionParametersEditor: React.FC<DistributionParametersEditor
     ? distribution
     : createDefaultDistribution(distributionType);
 
-  // Handler for parameter changes
-  const handleParameterChange = (
-    paramName: string,
-    value: number
-  ) => {
-    const updatedParameters = {
-      ...effectiveDistribution.parameters,
-      [paramName]: value,
-    };
-
+  // Handler for parameter updates
+  const handleParameterUpdate = (updatedParameters: any) => {
     const updatedDistribution = new Distribution(
       distributionType,
-      updatedParameters as DistributionParameters,
+      updatedParameters,
       effectiveDistribution.description || ""
     );
 
@@ -76,33 +74,33 @@ export const DistributionParametersEditor: React.FC<DistributionParametersEditor
     switch (distributionType) {
       case DistributionType.CONSTANT:
         return (
-          <ConstantParametersEditor
-            parameters={effectiveDistribution.parameters}
-            onChange={handleParameterChange}
+          <ConstantParameterEditor
+            parameters={effectiveDistribution.parameters as ConstantParameters}
+            onChange={handleParameterUpdate}
             disabled={disabled}
           />
         );
       case DistributionType.UNIFORM:
         return (
-          <UniformParametersEditor
-            parameters={effectiveDistribution.parameters}
-            onChange={handleParameterChange}
+          <UniformParameterEditor
+            parameters={effectiveDistribution.parameters as UniformParameters}
+            onChange={handleParameterUpdate}
             disabled={disabled}
           />
         );
       case DistributionType.TRIANGULAR:
         return (
-          <TriangularParametersEditor
-            parameters={effectiveDistribution.parameters}
-            onChange={handleParameterChange}
+          <TriangularParameterEditor
+            parameters={effectiveDistribution.parameters as TriangularParameters}
+            onChange={handleParameterUpdate}
             disabled={disabled}
           />
         );
       case DistributionType.NORMAL:
         return (
-          <NormalParametersEditor
-            parameters={effectiveDistribution.parameters}
-            onChange={handleParameterChange}
+          <NormalParameterEditor
+            parameters={effectiveDistribution.parameters as NormalParameters}
+            onChange={handleParameterUpdate}
             disabled={disabled}
           />
         );
@@ -123,35 +121,56 @@ export const DistributionParametersEditor: React.FC<DistributionParametersEditor
 };
 ```
 
-## Dynamic Parameter Editors
+## Key Implementation Details
 
-The component dynamically renders one of the following parameter editors based on the selected distribution type:
+1. **Dynamic Parameter Editors**:
+   - The component dynamically selects and renders the appropriate parameter editor based on the distribution type
+   - Each parameter editor is designed specifically for its corresponding distribution type
 
-1. `ConstantParametersEditor` - For CONSTANT distribution
-2. `UniformParametersEditor` - For UNIFORM distribution
-3. `TriangularParametersEditor` - For TRIANGULAR distribution
-4. `NormalParametersEditor` - For NORMAL distribution
+2. **Type-Safe Parameters**:
+   - Uses proper type casting to provide type-safe parameter editing
+   - Each editor receives the correctly typed parameters object
 
-## Parameter Handling
+3. **Default Distribution Creation**:
+   - Uses the createDefaultDistribution factory method to create a new distribution when needed
+   - Ensures that the editor always has a valid distribution to work with
 
-When a parameter value changes:
-1. The component creates a copy of the current parameters
-2. Updates the specific parameter value
-3. Creates a new Distribution object with the updated parameters
-4. Calls the onChange callback with the updated distribution
+4. **Parameter Update Handling**:
+   - Receives complete parameter objects from the parameter editors
+   - Creates a new Distribution with the updated parameters
+   - Passes the updated distribution to the onChange callback
 
-## Default Distribution Creation
+## Parameter Editor Components
 
-If the distribution is null or has a different type than what's selected, the component creates a new default distribution of the selected type using the `createDefaultDistribution` helper.
+The component works with the following parameter editor components:
+
+1. **ConstantParameterEditor**:
+   - Edits parameters for CONSTANT distributions (value)
+   - Uses ConstantParameters interface
+
+2. **UniformParameterEditor**:
+   - Edits parameters for UNIFORM distributions (low, high)
+   - Uses UniformParameters interface
+
+3. **TriangularParameterEditor**:
+   - Edits parameters for TRIANGULAR distributions (left, mode, right)
+   - Uses TriangularParameters interface
+
+4. **NormalParameterEditor**:
+   - Edits parameters for NORMAL distributions (mean, std)
+   - Uses NormalParameters interface
 
 ## Usage Example
 
 ```tsx
 import { DistributionParametersEditor } from "./distribution/DistributionParametersEditor";
 import { Distribution, DistributionType } from "@quodsi/shared";
+import { createDefaultDistribution } from "@quodsi/shared/src/types/elements/distributions/DistributionFactory";
 
 // Inside another component
-const [distribution, setDistribution] = useState(createDefaultDistribution(DistributionType.CONSTANT));
+const [distribution, setDistribution] = useState(
+  createDefaultDistribution(DistributionType.CONSTANT)
+);
 
 return (
   <DistributionParametersEditor 
@@ -161,3 +180,34 @@ return (
   />
 );
 ```
+
+## Parameter Editor API
+
+Each parameter editor follows this common interface pattern:
+
+```typescript
+// Example for ConstantParameterEditor
+interface ConstantParameterEditorProps {
+  parameters: ConstantParameters;
+  onChange: (updatedParameters: ConstantParameters) => void;
+  disabled?: boolean;
+}
+```
+
+## Testing Considerations
+
+1. **Dynamic Type Handling**:
+   - Test switching between different distribution types
+   - Verify that the correct parameter editor is rendered for each type
+
+2. **Parameter Updates**:
+   - Test updating parameters for each distribution type
+   - Verify that parameter changes are properly propagated to the parent component
+
+3. **Default Distribution Creation**:
+   - Test behavior when distribution is null
+   - Test behavior when distribution type doesn't match distributionType prop
+
+4. **Error Handling**:
+   - Test behavior with unsupported distribution types
+   - Verify appropriate error messaging

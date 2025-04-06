@@ -13,6 +13,7 @@ import {
     createModel_def_e1_a1_r2_g1,
     createModel_def_e1_a2_r0_g1,
     createModel_def_e1_a2_r2_g1,
+    createModelWithMixedDistributions
 } from '../__fixtures__/models/valid';
 import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
 
@@ -27,7 +28,8 @@ const TEST_CASES = [
     { name: 'model_def_e1_a1_r2_g1', create: createModel_def_e1_a1_r2_g1 },
     { name: 'model_def_e1_a2_r0_g1', create: createModel_def_e1_a2_r0_g1 },
     { name: 'model_def_e1_a2_r2_g1', create: createModel_def_e1_a2_r2_g1 },
-    { name: 'non_sequential_flow', create: createNonSequentialFlowModel }
+    { name: 'non_sequential_flow', create: createNonSequentialFlowModel },
+    { name: 'model_def_mixed_distributions', create: createModelWithMixedDistributions }
 ];
 
 // Helper function to normalize values for comparison
@@ -123,6 +125,10 @@ describe('ModelSerializer Snapshots', () => {
 
         describe('Flow Variations', () => {
             testFixture('non_sequential_flow', createNonSequentialFlowModel);
+        });
+
+        describe('Distribution Variations', () => {
+            testFixture('model_def_mixed_distributions', createModelWithMixedDistributions);
         });
 
         describe('All Models', () => {

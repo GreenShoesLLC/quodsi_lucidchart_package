@@ -1,19 +1,13 @@
 import { PageProxy, BlockProxy } from 'lucid-extension-sdk';
-import { v4 as uuidv4 } from 'uuid';
 import {
     ConversionResult,
     ProcessAnalysisResult,
     BlockAnalysis,
     SimulationObjectType,
     Model,
-    Activity,
-    Generator,
-    Resource,
-    Connector,
-    QuodsiLogger,
-    SimulationObjectTypeFactory
+    QuodsiLogger
 } from '@quodsi/shared';
-import { ModelDataSource, MODEL_COLLECTIONS } from '../../data_sources/model/ModelDataSource';
+import { ModelDataSource } from '../../data_sources/model/ModelDataSource';
 import { createModelId } from '../../data_sources/common/constants';
 
 export class PageSchemaConversionService extends QuodsiLogger {

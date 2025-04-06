@@ -1,18 +1,19 @@
 import React from "react";
+import { Settings, Layout, Plus, Layers } from "lucide-react";
 import {
   Activity,
   OperationStep,
-  Duration,
   PeriodUnit,
-  DurationType,
+  DistributionType,
   SimulationObjectType,
   createOperationStep,
+  ConstantDistribution,
   EditorReferenceData,
+  Duration,
+  DurationType,
 } from "@quodsi/shared";
-import { Settings, Layout, Plus, Layers } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
-
 
 // Main Activity Editor Component
 interface ActivityEditorProps {
@@ -55,10 +56,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   // Handlers
   const handleSave = (updatedActivity: Activity) => {
-      console.log("ActivityEditor - Before Save:", {
-        updatedActivity,
-        operationSteps: updatedActivity.operationSteps,
-      });
+    console.log("ActivityEditor - Before Save:", {
+      updatedActivity,
+      operationSteps: updatedActivity.operationSteps,
+    });
 
     const activityToSave: Activity = {
       ...updatedActivity,
@@ -90,9 +91,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   };
 
   const handleAddOperationStep = () => {
+    // Create a new operation step with a default constant distribution
     const newStep = createOperationStep(
-      new Duration(0, PeriodUnit.MINUTES, DurationType.CONSTANT)
+      new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
+
     setLocalActivity((prev) => ({
       ...prev,
       operationSteps: [...prev.operationSteps, newStep],
@@ -119,7 +122,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     },
     []
   );
-
 
   if (!localActivity?.id) {
     return (

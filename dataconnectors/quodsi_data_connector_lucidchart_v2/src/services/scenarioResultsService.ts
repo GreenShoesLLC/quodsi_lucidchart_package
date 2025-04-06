@@ -2,13 +2,14 @@
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { ScenarioResultsSchema } from "../collections/scenarioResultsSchema";
 import { ActionLogger } from '../utils/logging';
+import { LoggingLevel } from "../utils/loggingLevels";
 
 /**
  * Updates or creates a scenario results entry in the simulation_results data source
  * @param action The asynchronous action context
  * @param documentId Document ID where the scenario is running
  * @param scenarioId Scenario ID (UUID, with baseline as 00000000-0000-0000-0000-000000000000)
- * @param verbose Whether to log verbose output
+ * @param loggingLevel Logging level to use (LoggingLevel enum or boolean for backward compatibility)
  * @param logger Optional logger instance
  * @returns Promise resolving with success status and optional error message
  */
@@ -16,15 +17,24 @@ export async function updateScenarioResultsData(
     action: DataConnectorAsynchronousAction,
     documentId: string,
     scenarioId: string,
-    verbose: boolean = true,
+    loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL,
     logger?: ActionLogger
 ): Promise<{ success: boolean, error?: string }> {
+    // Handle backward compatibility with boolean parameter
+    let logLevel: LoggingLevel;
+    
+    if (typeof loggingLevel === 'boolean') {
+        logLevel = loggingLevel ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
+    } else {
+        logLevel = loggingLevel;
+    }
+    
     // Create a local logger if none was provided
-    const log = logger || new ActionLogger('[ScenarioResults]', verbose);
+    const log = logger || new ActionLogger('[ScenarioResults]', logLevel);
 
     try {
-        log.info(`=== Starting scenario results update ===`);
-        log.info(`Parameters: documentId=${documentId}, scenarioId=${scenarioId}`);
+        log.important(`=== Starting scenario results update ===`);
+        log.debug(`Parameters: documentId=${documentId}, scenarioId=${scenarioId}`);
         
         // Validate the key parameters
         if (!documentId) {
@@ -41,7 +51,7 @@ export async function updateScenarioResultsData(
 
         // Create a composite ID using documentId and scenarioId
         const compositeId = `${documentId}_${scenarioId}`;
-        log.info(`Created composite ID: ${compositeId}`);
+        log.debug(`Created composite ID: ${compositeId}`);
 
         // Data object includes the composite ID
         const data = {
@@ -65,7 +75,7 @@ export async function updateScenarioResultsData(
                 }
             });
             
-            log.info(`=== Scenario Results Update Complete ===`);
+            log.important(`=== Scenario Results Update Complete ===`);
             return { success: true };
         } catch (updateError) {
             log.error(`Error during update: ${updateError.message}`);
@@ -92,19 +102,28 @@ export async function updateScenarioResultsData(
 /**
  * Retrieves all scenario result IDs from the simulation_results data source
  * @param action The asynchronous action context
- * @param verbose Whether to log verbose output
+ * @param loggingLevel Logging level to use (LoggingLevel enum or boolean for backward compatibility)
  * @param logger Optional logger instance
  * @returns Promise resolving with an array of scenario result IDs
  */
 export async function getScenarioResultIds(
     action: DataConnectorAsynchronousAction,
-    verbose: boolean = true,
+    loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL,
     logger?: ActionLogger
 ): Promise<string[]> {
+    // Handle backward compatibility with boolean parameter
+    let logLevel: LoggingLevel;
+    
+    if (typeof loggingLevel === 'boolean') {
+        logLevel = loggingLevel ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
+    } else {
+        logLevel = loggingLevel;
+    }
+    
     // Create a local logger if none was provided
-    const log = logger || new ActionLogger('[ScenarioResults]', verbose);
+    const log = logger || new ActionLogger('[ScenarioResults]', logLevel);
 
-    log.info(`=== Retrieving Scenario Result IDs ===`);
+    log.important(`=== Retrieving Scenario Result IDs ===`);
 
     // Check if the collection exists in the context
     const allScenarioResultIds = action.context.documentCollections?.['scenario_results'] || [];
