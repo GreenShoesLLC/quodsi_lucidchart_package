@@ -24,7 +24,8 @@ export async function updateSimulationResults(
     scenarioId: string,
     source: string = 'unknown',
     loggingLevel: LoggingLevel | boolean = LoggingLevel.NORMAL,
-    logger?: ActionLogger
+    logger?: ActionLogger,
+    explicitContainerName?: string
 ) {
     // Handle backward compatibility with boolean parameter
     let logLevel: LoggingLevel;
@@ -51,10 +52,14 @@ export async function updateSimulationResults(
         // Log the container we're using
         log.debug(`Using container: ${config.simulationResultsContainer}`);
 
-        // Log which collections are currently enabled
-        log.debug('Current data collection configuration:', getDataCollectionConfig());
+        // IMPORTANT: Always use documentId as container name, not from config
+        const containerName = explicitContainerName || documentId;
+    log.important(`CONTAINER NAME FIX: Using container: ${containerName} (config value: ${config.simulationResultsContainer})`);
+        
+    // Log which collections are currently enabled
+    log.debug('Current data collection configuration:', getDataCollectionConfig());
 
-        // Create an array to track which data fetches succeeded and which failed
+    // Create an array to track which data fetches succeeded and which failed
         const dataFetchResults = {
             activityUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityUtilization') },
             activityRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityRepSummary') },
@@ -78,10 +83,11 @@ export async function updateSimulationResults(
         // Activity Utilization
         if (isDataCollectionEnabled('collectActivityUtilization')) {
             try {
-                log.info('Fetching activity utilization data...');
-                activityUtilization = await simulationDataService.fetchActivityUtilization(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching activity utilization data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            activityUtilization = await simulationDataService.fetchActivityUtilization(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.activityUtilization.success = true;
                 dataFetchResults.activityUtilization.count = activityUtilization.length;
             } catch (error) {
@@ -94,10 +100,11 @@ export async function updateSimulationResults(
         // Activity Rep Summary
         if (isDataCollectionEnabled('collectActivityRepSummary')) {
             try {
-                log.info('Fetching activity rep summary data...');
-                activityRepSummary = await simulationDataService.fetchActivityRepSummary(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching activity rep summary data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            activityRepSummary = await simulationDataService.fetchActivityRepSummary(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.activityRepSummary.success = true;
                 dataFetchResults.activityRepSummary.count = activityRepSummary.length;
             } catch (error) {
@@ -110,10 +117,11 @@ export async function updateSimulationResults(
         // Activity Timing
         if (isDataCollectionEnabled('collectActivityTiming')) {
             try {
-                log.info('Fetching activity timing data...');
-                activityTiming = await simulationDataService.fetchActivityTiming(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching activity timing data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            activityTiming = await simulationDataService.fetchActivityTiming(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.activityTiming.success = true;
                 dataFetchResults.activityTiming.count = activityTiming.length;
             } catch (error) {
@@ -126,10 +134,11 @@ export async function updateSimulationResults(
         // Entity State Rep Summary
         if (isDataCollectionEnabled('collectEntityStateRepSummary')) {
             try {
-                log.info('Fetching entity state rep summary data...');
-                entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching entity state rep summary data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.entityStateRepSummary.success = true;
                 dataFetchResults.entityStateRepSummary.count = entityStateRepSummary.length;
             } catch (error) {
@@ -142,11 +151,12 @@ export async function updateSimulationResults(
         // Entity Throughput Rep Summary - add extra logging for this problematic collection
         if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
             try {
-                log.info('Fetching entity throughput rep summary data...');
-                // Now do the regular fetch
-                entityThroughputRepSummary = await simulationDataService.fetchEntityThroughputRepSummary(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching entity throughput rep summary data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            // Now do the regular fetch
+            entityThroughputRepSummary = await simulationDataService.fetchEntityThroughputRepSummary(
+                containerName, documentId, scenarioId
+            );
 
                 dataFetchResults.entityThroughputRepSummary.success = true;
                 dataFetchResults.entityThroughputRepSummary.count = entityThroughputRepSummary.length;
@@ -161,10 +171,11 @@ export async function updateSimulationResults(
         // Resource Rep Summary
         if (isDataCollectionEnabled('collectResourceRepSummary')) {
             try {
-                log.info('Fetching resource rep summary data...');
-                resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching resource rep summary data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.resourceRepSummary.success = true;
                 dataFetchResults.resourceRepSummary.count = resourceRepSummary.length;
             } catch (error) {
@@ -177,10 +188,11 @@ export async function updateSimulationResults(
         // Resource Utilization
         if (isDataCollectionEnabled('collectResourceUtilization')) {
             try {
-                log.info('Fetching resource utilization data...');
-                resourceUtilization = await simulationDataService.fetchResourceUtilization(
-                    config.simulationResultsContainer, documentId, scenarioId
-                );
+            log.info('Fetching resource utilization data...');
+            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+            resourceUtilization = await simulationDataService.fetchResourceUtilization(
+                containerName, documentId, scenarioId
+            );
                 dataFetchResults.resourceUtilization.success = true;
                 dataFetchResults.resourceUtilization.count = resourceUtilization.length;
             } catch (error) {

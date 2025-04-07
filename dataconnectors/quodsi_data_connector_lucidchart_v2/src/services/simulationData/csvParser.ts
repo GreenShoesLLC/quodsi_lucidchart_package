@@ -17,35 +17,70 @@ export async function fetchCsvData<T>(
     requiredColumns: string[] = []
 ): Promise<T[]> {
     try {
-        // We don't need to prefix paths with documentId anymore
+        // Use the provided blobName directly - it should already include the scenarioId
         const fullBlobPath = blobName;
 
-        conditionalLog(`Fetching ${blobName} data for container ${containerName}...`);
-        conditionalLog(`Full blob path: ${containerName}/${fullBlobPath}`);
+        conditionalLog(`ENHANCED LOGGING: Fetching CSV from ${containerName}/${fullBlobPath}`);
+        conditionalLog(`Document ID: ${documentId}, Blob Path: ${fullBlobPath}`);
 
         // Get storage service
         const storage = getStorageService();
+        
+        // Check if blob exists before trying to fetch it
+        const exists = await blobExists(containerName, fullBlobPath);
+        if (!exists) {
+            conditionalWarn(`CSV file does not exist at path: ${containerName}/${fullBlobPath}`);
+            
+            // List blobs in the container to help diagnose the issue
+            try {
+                const blobs = await listBlobs(containerName);
+                conditionalLog(`Container ${containerName} contains ${blobs.length} files at top level`);
+                
+                // Look for folders that might contain our scenario ID
+                const folders = new Set<string>();
+                blobs.forEach(blob => {
+                    const parts = blob.split('/');
+                    if (parts.length > 1) {
+                        folders.add(parts[0]);
+                    }
+                });
+                
+                if (folders.size > 0) {
+                    conditionalLog(`Found ${folders.size} top-level folders: ${Array.from(folders).join(', ')}`);
+                    
+                    // Check if any folder looks like a scenario ID folder
+                    const scenarioFolder = Array.from(folders).find(f => 
+                        f.includes('00000000') || f.length === 36 // Common UUID patterns
+                    );
+                    
+                    if (scenarioFolder) {
+                        conditionalLog(`Found potential scenario folder: ${scenarioFolder}`);
+                        
+                        // List files in this potential scenario folder
+                        const scenarioFiles = await listBlobs(containerName, scenarioFolder);
+                        conditionalLog(`Folder ${scenarioFolder} contains ${scenarioFiles.length} files`);
+                        
+                        // Look for CSV files in this folder
+                        const csvFiles = scenarioFiles.filter(f => f.endsWith('.csv'));
+                        if (csvFiles.length > 0) {
+                            conditionalLog(`Found ${csvFiles.length} CSV files in folder ${scenarioFolder}:`);
+                            csvFiles.forEach(f => conditionalLog(`- ${f}`));
+                        }
+                    }
+                }
+            } catch (listError) {
+                conditionalError(`Error listing container contents:`, listError);
+            }
+            
+            return [];
+        }
 
         // Fetch CSV content from Azure Blob Storage
         const csvText = await storage.getBlobContent(containerName, fullBlobPath);
 
         if (!csvText) {
-            conditionalWarn(`CSV data not found for ${fullBlobPath}`);
-            // Try alternative paths based on naming conventions
-            const alternativeBlobPath = `results/${blobName}`;
-            conditionalLog(`Trying alternative path: ${containerName}/${alternativeBlobPath}`);
-
-            const alternativeCSVText = await storage.getBlobContent(containerName, alternativeBlobPath);
-            if (!alternativeCSVText) {
-                conditionalWarn(`CSV data also not found at alternative path ${alternativeBlobPath}`);
-                return [];
-            }
-
-            conditionalLog(`Found CSV at alternative path! Length: ${alternativeCSVText.length} characters`);
-            conditionalLog(`CSV content preview: ${alternativeCSVText.substring(0, 100)}...`);
-
-            // Use the alternative CSV text
-            return parseAndValidateCsv(alternativeCSVText, blobName, requiredColumns);
+            conditionalWarn(`CSV file exists but content could not be read: ${containerName}/${fullBlobPath}`);
+            return [];
         }
 
         conditionalLog(`Found CSV! Length: ${csvText.length} characters`);
@@ -169,4 +204,36 @@ function parseAndValidateCsv<T>(
  */
 export function getRequiredColumnsFromType<T>(requiredProps: Array<keyof T> = []): string[] {
     return requiredProps.map(prop => String(prop));
+}
+
+/**
+ * Checks if a blob exists in Azure Storage
+ * @param containerName Container name
+ * @param blobName Blob name (path)
+ * @returns Promise<boolean> True if the blob exists, false otherwise
+ */
+export async function blobExists(containerName: string, blobName: string): Promise<boolean> {
+    try {
+        const storage = getStorageService();
+        return await storage.blobExists(containerName, blobName);
+    } catch (error) {
+        conditionalError(`Error checking if blob exists: ${containerName}/${blobName}`, error);
+        return false;
+    }
+}
+
+/**
+ * Lists all blobs in a container, optionally with a prefix
+ * @param containerName Container name
+ * @param prefix Optional prefix to filter blobs (e.g., folder path)
+ * @returns Promise<string[]> Array of blob names
+ */
+export async function listBlobs(containerName: string, prefix?: string): Promise<string[]> {
+    try {
+        const storage = getStorageService();
+        return await storage.listBlobs(containerName, prefix);
+    } catch (error) {
+        conditionalError(`Error listing blobs in container ${containerName}:`, error);
+        return [];
+    }
 }

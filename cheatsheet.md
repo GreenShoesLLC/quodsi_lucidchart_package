@@ -14,10 +14,10 @@ npm run start
 # Create a new terminal in VS Code
 npx lucid-package@latest test-editor-extension quodsi_editor_extension
 # Create a new terminal in VS Code
-cd editorextensions\quodsi_editor_extension\quodsim-react
+cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Npx react-scripts start
 # Create a new terminal in VS Code
-cd dataconnectors\quodsi_data_connector
+cd C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2
 npm run build
 func start --debug --verbose
 

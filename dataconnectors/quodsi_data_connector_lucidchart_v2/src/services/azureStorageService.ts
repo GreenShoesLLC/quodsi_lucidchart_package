@@ -273,7 +273,55 @@ export class AzureStorageService {
             readableStream.on('error', reject);
         });
     }
-    // Add these methods to the AzureStorageService class in azureStorageService.ts
+        /**
+     * Checks if a specific blob exists in a container
+     * @param containerName Container name
+     * @param blobName Blob name/path
+     * @returns Promise<boolean> True if the blob exists, false otherwise
+     */
+    async blobExists(containerName: string, blobName: string): Promise<boolean> {
+        const startTime = Date.now();
+
+        try {
+            storageDebug('[AzureStorageService] Checking if blob exists:', {
+                containerName, 
+                blobName,
+                fullPath: `${containerName}/${blobName}`
+            });
+
+            const containerClient = this.blobServiceClient.getContainerClient(containerName);
+            
+            // Check if container exists first to avoid unnecessary errors
+            const containerExists = await containerClient.exists();
+            if (!containerExists) {
+                storageLog('[AzureStorageService] Container does not exist:', { containerName });
+                return false;
+            }
+            
+            const blobClient = containerClient.getBlobClient(blobName);
+
+            const exists = await retry(async () => {
+                return await blobClient.exists();
+            }, this.existsRetryOptions);
+
+            storageLog('[AzureStorageService] Blob exists check:', {
+                containerName,
+                blobName,
+                exists,
+                durationMs: Date.now() - startTime
+            });
+
+            return exists;
+        } catch (error) {
+            storageError('[AzureStorageService] Blob exists check failed:', {
+                containerName,
+                blobName,
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            return false;
+        }
+    }
 
     /**
      * List all containers in the storage account

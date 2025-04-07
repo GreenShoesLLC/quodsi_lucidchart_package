@@ -2,12 +2,12 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-04-01T19:22:52.881Z"
+    "timestamp": "2025-04-06T22:18:05.069Z"
   },
   "model": {
     "id": "model-100",
     "name": "Model E2A3R2G1",
-    "reps": 10,
+    "reps": 1,
     "forecastDays": 30,
     "seed": 12345,
     "oneClockUnit": "MINUTES",

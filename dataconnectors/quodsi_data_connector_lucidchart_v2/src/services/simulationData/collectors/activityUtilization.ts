@@ -1,7 +1,7 @@
 // services/simulationData/collectors/activityUtilization.ts
 import { ActivityUtilizationData } from '../../../collections/types/interfaces/ActivityUtilizationData';
 import { ActivityUtilizationSchema } from '../../../collections';
-import { fetchCsvData, getRequiredColumnsFromType } from '../csvParser';
+import { fetchCsvData, getRequiredColumnsFromType, blobExists, listBlobs } from '../csvParser';
 import { prepareCollectionUpdate } from '../collectionUpdater';
 import { conditionalLog, conditionalError, conditionalWarn } from '../storageService';
 import { SerializedFields } from 'lucid-extension-sdk';
@@ -31,6 +31,7 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityUtilizationDat
  * Fetches activity utilization data from storage
  * @param containerName Azure container name
  * @param documentId Document ID
+ * @param scenarioId Scenario ID (folder name within container)
  * @returns Array of activity utilization data
  */
 export async function fetchData(
@@ -38,13 +39,71 @@ export async function fetchData(
     documentId: string,
     scenarioId: string
 ): Promise<ActivityUtilizationData[]> {
+    // Enhanced logging to help diagnose issues
+    conditionalLog(`[activityUtilization] ENHANCED LOGGING: Starting fetch operation`);
+    conditionalLog(`[activityUtilization] Container name: ${containerName}`);
+    conditionalLog(`[activityUtilization] Document ID: ${documentId}`);
+    conditionalLog(`[activityUtilization] Scenario ID: ${scenarioId}`);
 
+    // Use the correct path structure: scenarioId/filename.csv
     const baseBlobName = 'activity_utilization.csv';
-    const blobName = `${scenarioId}/${baseBlobName}`
-    conditionalLog(`[activityUtilization] Attempting to fetch activity utilization data from: ${containerName}/${blobName}`);
+    const blobName = `${scenarioId}/${baseBlobName}`;
+    conditionalLog(`[activityUtilization] Target file path: ${containerName}/${blobName}`);
 
     try {
-        // Try first at the root level
+        // Check if the blob exists before trying to fetch it
+        conditionalLog(`[activityUtilization] Checking if file exists at path: ${blobName}`);
+        const exists = await blobExists(containerName, blobName);
+        
+        if (!exists) {
+            conditionalLog(`[activityUtilization] WARNING: File does not exist at path: ${blobName}`);
+            
+            // List scenario folder contents to see what files are actually there
+            conditionalLog(`[activityUtilization] Listing files in scenario folder: ${scenarioId}`);
+            const scenarioFiles = await listBlobs(containerName, scenarioId);
+            
+            if (scenarioFiles.length > 0) {
+                conditionalLog(`[activityUtilization] Found ${scenarioFiles.length} files in scenario folder:`);
+                scenarioFiles.forEach(file => conditionalLog(`[activityUtilization] - ${file}`));
+                
+                // Check if there's any file that might contain activity utilization data
+                const activityFiles = scenarioFiles.filter(file => 
+                    file.toLowerCase().includes('activity') && 
+                    file.toLowerCase().includes('utilization') &&
+                    file.endsWith('.csv')
+                );
+                
+                if (activityFiles.length > 0) {
+                    conditionalLog(`[activityUtilization] Found potential activity utilization files with different names:`);
+                    activityFiles.forEach(file => conditionalLog(`[activityUtilization] - ${file}`));
+                }
+            } else {
+                conditionalLog(`[activityUtilization] No files found in scenario folder: ${scenarioId}`);
+                
+                // Check if the scenario folder itself exists
+                conditionalLog(`[activityUtilization] Checking top-level folders in container`);
+                const topLevelBlobs = await listBlobs(containerName);
+                const folders = new Set<string>();
+                
+                topLevelBlobs.forEach(blob => {
+                    const parts = blob.split('/');
+                    if (parts.length > 1) {
+                        folders.add(parts[0]);
+                    }
+                });
+                
+                conditionalLog(`[activityUtilization] Found top-level folders: ${Array.from(folders).join(', ')}`);
+                
+                if (!folders.has(scenarioId)) {
+                    conditionalLog(`[activityUtilization] WARNING: Scenario folder ${scenarioId} not found in container!`);
+                }
+            }
+            
+            return [];
+        }
+        
+        // Now fetch the data since we know the file exists
+        conditionalLog(`[activityUtilization] File exists. Fetching data...`);
         let result = await fetchCsvData<ActivityUtilizationData>(
             containerName,
             blobName,
@@ -52,18 +111,6 @@ export async function fetchData(
             requiredColumns
         );
 
-        // If we didn't find any data at the root level, try in the results folder
-        if (result.length === 0) {
-            conditionalLog(`[activityUtilization] No data at root level, trying in results folder...`);
-
-            const altBlobName = 'results/activity_utilization.csv';
-            result = await fetchCsvData<ActivityUtilizationData>(
-                containerName,
-                altBlobName,
-                documentId,
-                requiredColumns
-            );
-        }
 
         conditionalLog(`[activityUtilization] Fetched ${result.length} activity utilization records`);
         if (result.length > 0) {

@@ -1,8 +1,10 @@
 // services/simulationData/collectors/entityThroughputRepSummary.ts
 
 import { EntityThroughputRepSummarySchema } from '../../../collections';
-import { fetchCsvData, getRequiredColumnsFromType } from '../csvParser';
+import { fetchCsvData, getRequiredColumnsFromType, blobExists, listBlobs } from '../csvParser';
 import { conditionalLog, conditionalError, conditionalWarn } from '../storageService';
+import { ActionLogger } from '../../../utils/logging';
+import { LoggingLevel } from '../../../utils/loggingLevels';
 import { SerializedFields } from 'lucid-extension-sdk';
 import { EntityThroughputRepSummaryData } from '../../../collections/types/interfaces/EntityThroughputRepSummaryData';
 
@@ -32,58 +34,92 @@ export async function fetchData(
     documentId: string,
     scenarioId: string
 ): Promise<EntityThroughputRepSummaryData[]> {
+    // Enhanced logging to help diagnose issues
+    conditionalLog(`[entityThroughputRepSummary] ENHANCED LOGGING: Starting fetch operation`);
+    conditionalLog(`[entityThroughputRepSummary] Container name: ${containerName}`);
+    conditionalLog(`[entityThroughputRepSummary] Document ID: ${documentId}`);
+    conditionalLog(`[entityThroughputRepSummary] Scenario ID: ${scenarioId}`);
+    
+    // Fixed: Use ONLY the correct path structure: scenarioId/filename.csv
     const baseBlobName = 'entity_throughput_rep_summary.csv';
     const blobName = `${scenarioId}/${baseBlobName}`;
-
-    conditionalLog(`[entityThroughputRepSummary] Attempting to fetch entity throughput data from: ${containerName}/${blobName}`);
+    conditionalLog(`[entityThroughputRepSummary] TARGET FILE PATH: ${containerName}/${blobName}`);
 
     try {
-        // Try first at the primary location (with scenarioId prefix)
+        // Check if the blob exists before trying to fetch it
+        conditionalLog(`[entityThroughputRepSummary] Checking if file exists at path: ${containerName}/${blobName}`);
+        const exists = await blobExists(containerName, blobName);
+        
+        if (!exists) {
+            conditionalLog(`[entityThroughputRepSummary] WARNING: File does not exist at path: ${containerName}/${blobName}`);
+            
+            // List scenario folder contents to see what files are actually there
+            conditionalLog(`[entityThroughputRepSummary] Listing files in scenario folder: ${containerName}/${scenarioId}`);
+            const scenarioFiles = await listBlobs(containerName, scenarioId);
+            
+            if (scenarioFiles.length > 0) {
+                conditionalLog(`[entityThroughputRepSummary] Found ${scenarioFiles.length} files in scenario folder:`);
+                scenarioFiles.forEach(file => conditionalLog(`[entityThroughputRepSummary] - ${file}`));
+                
+                // Check if there's any file that might contain entity throughput data
+                const throughputFiles = scenarioFiles.filter(file => 
+                    file.toLowerCase().includes('throughput') && 
+                    file.endsWith('.csv')
+                );
+                
+                if (throughputFiles.length > 0) {
+                    conditionalLog(`[entityThroughputRepSummary] Found potential throughput files with different names:`);
+                    throughputFiles.forEach(file => conditionalLog(`[entityThroughputRepSummary] - ${file}`));
+                    
+                    // If we found just one potential file, try using it
+                    if (throughputFiles.length === 1) {
+                        conditionalLog(`[entityThroughputRepSummary] Attempting to use alternative file: ${throughputFiles[0]}`);
+                        const result = await fetchCsvData<EntityThroughputRepSummaryData>(
+                            containerName,
+                            throughputFiles[0],
+                            documentId,
+                            requiredColumns
+                        );
+                        
+                        if (result.length > 0) {
+                            conditionalLog(`[entityThroughputRepSummary] Successfully loaded ${result.length} records from alternative file`);
+                            return result;
+                        }
+                    }
+                }
+            } else {
+                conditionalLog(`[entityThroughputRepSummary] No files found in scenario folder ${scenarioId}`);
+                
+                // Check if the scenario folder itself exists
+                conditionalLog(`[entityThroughputRepSummary] Checking top-level folders in container ${containerName}`);
+                const topLevelBlobs = await listBlobs(containerName);
+                const folders = new Set<string>();
+                
+                topLevelBlobs.forEach(blob => {
+                    const parts = blob.split('/');
+                    if (parts.length > 1) {
+                        folders.add(parts[0]);
+                    }
+                });
+                
+                conditionalLog(`[entityThroughputRepSummary] Found top-level folders: ${Array.from(folders).join(', ')}`);
+                
+                if (!folders.has(scenarioId)) {
+                    conditionalLog(`[entityThroughputRepSummary] WARNING: Scenario folder ${scenarioId} not found in container!`);
+                }
+            }
+            
+            return [];
+        }
+        
+        // Now fetch the data since we know the file exists
+        conditionalLog(`[entityThroughputRepSummary] File exists at ${containerName}/${blobName}. Fetching data...`);
         let result = await fetchCsvData<EntityThroughputRepSummaryData>(
             containerName,
             blobName,
             documentId,
             requiredColumns
         );
-
-        // If we didn't find any data, try in the results folder with scenarioId
-        if (result.length === 0) {
-            conditionalLog(`[entityThroughputRepSummary] No data at primary location, trying in results folder with scenarioId...`);
-            
-            const altBlobName = `${scenarioId}/results/${baseBlobName}`;
-            result = await fetchCsvData<EntityThroughputRepSummaryData>(
-                containerName,
-                altBlobName,
-                documentId,
-                requiredColumns
-            );
-            
-            // If still no data, try without scenarioId
-            if (result.length === 0) {
-                conditionalLog(`[entityThroughputRepSummary] No data in results folder with scenarioId, trying at root level...`);
-                
-                // Try at root level without scenarioId
-                result = await fetchCsvData<EntityThroughputRepSummaryData>(
-                    containerName,
-                    baseBlobName,
-                    documentId,
-                    requiredColumns
-                );
-                
-                // Try in results folder without scenarioId
-                if (result.length === 0) {
-                    conditionalLog(`[entityThroughputRepSummary] No data at root level, trying in results folder without scenarioId...`);
-                    
-                    const rootResultsBlobName = `results/${baseBlobName}`;
-                    result = await fetchCsvData<EntityThroughputRepSummaryData>(
-                        containerName,
-                        rootResultsBlobName,
-                        documentId,
-                        requiredColumns
-                    );
-                }
-            }
-        }
 
         conditionalLog(`[entityThroughputRepSummary] Fetched ${result.length} entity throughput records`);
         if (result.length > 0) {

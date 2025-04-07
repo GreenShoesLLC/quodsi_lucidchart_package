@@ -112,11 +112,9 @@ export class SimulationImportService {
             // Check for entity throughput data files
             await this.investigateEntityThroughputData(containerName);
 
-            // Override the container name in config to use documentId
-            this.logger.debug(`Temporarily overriding simulationResultsContainer config from "${this.config.simulationResultsContainer}" to "${containerName}"`);
-            const originalContainer = this.config.simulationResultsContainer;
-            (this.config as any).simulationResultsContainer = containerName;
-
+            // CONTAINER NAME FIX: No longer temporarily override config, but pass explicitly
+            this.logger.important(`IMPORTANT: Using documentId as container name: "${containerName}" (instead of default: "${this.config.simulationResultsContainer}")`);
+            
             // Convert verboseLogging parameter to match new logging system
             let updateLoggingLevel: LoggingLevel | boolean;
             if (typeof params.verboseLogging === 'boolean') {
@@ -127,7 +125,7 @@ export class SimulationImportService {
                 updateLoggingLevel = this.loggingLevel >= LoggingLevel.VERBOSE;
             }
 
-            // Proceed with simulation results update
+            // Proceed with simulation results update - pass containerName explicitly
             this.logger.info(`Updating simulation results...`);
             const result = await updateSimulationResults(
                 action,
@@ -135,12 +133,9 @@ export class SimulationImportService {
                 params.scenarioId,
                 'import',
                 updateLoggingLevel,
-                this.logger
+                this.logger,
+                containerName // Pass container name explicitly
             );
-
-            // Restore original config value
-            (this.config as any).simulationResultsContainer = originalContainer;
-            this.logger.debug(`Restored original container config value: "${originalContainer}"`);
 
             if (result.success) {
                 this.logger.important(`=== Import Processing Completed Successfully ===`);
