@@ -27,7 +27,7 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityTimingData>([
  * @param documentId Document ID
  * @returns Array of activity timing data
  */
-export async function fetchData(
+export async function fetchActivityTiming(
     containerName: string,
     documentId: string,
     scenarioId: string
@@ -107,7 +107,7 @@ export async function fetchData(
  * @param data Array of activity timing data
  * @returns Collection update for Lucid
  */
-export function prepareUpdate(data: ActivityTimingData[]) {
+export function prepareActivityTimingUpdate(data: ActivityTimingData[]) {
     conditionalLog("[activityTiming] Starting activity timing update preparation");
     conditionalLog(`[activityTiming] Processing ${data.length} rows of activity timing data`);
 

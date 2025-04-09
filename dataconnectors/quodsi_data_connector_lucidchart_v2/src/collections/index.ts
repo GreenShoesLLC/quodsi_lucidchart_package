@@ -12,3 +12,7 @@ export * from './activityUtilizationSchema';
 export * from './entityStateRepSummarySchema';
 export * from './entityThroughputRepSummarySchema';
 export * from './resourceRepSummarySchema';
+
+// Export new cross-replication summary schemas
+export * from './entityStateCrossRepSummarySchema';
+export * from './entityThroughputCrossRepSummarySchema';

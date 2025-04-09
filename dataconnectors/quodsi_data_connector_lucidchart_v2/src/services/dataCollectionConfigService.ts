@@ -10,6 +10,8 @@ export interface DataCollectionConfig {
     collectEntityThroughputRepSummary: boolean;
     collectResourceRepSummary: boolean;
     collectResourceUtilization: boolean;
+    collectEntityStateCrossRepSummary: boolean;
+    collectEntityThroughputCrossRepSummary: boolean;
 }
 
 // Default configuration - all collections enabled
@@ -20,7 +22,9 @@ const defaultDataCollectionConfig: DataCollectionConfig = {
     collectEntityStateRepSummary: true,
     collectEntityThroughputRepSummary: true,
     collectResourceRepSummary: true,
-    collectResourceUtilization: true
+    collectResourceUtilization: true,
+    collectEntityStateCrossRepSummary: true,
+    collectEntityThroughputCrossRepSummary: true
 };
 
 // Current active configuration - starts with defaults

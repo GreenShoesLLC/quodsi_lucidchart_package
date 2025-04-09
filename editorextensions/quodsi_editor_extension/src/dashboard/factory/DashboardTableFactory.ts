@@ -13,6 +13,8 @@ import { EntityThroughputTableHandler } from '../handlers/EntityThroughputTableH
 import { EntityStateTableHandler } from '../handlers/EntityStateTableHandler';
 import { ResourceUtilizationTableHandler } from '../handlers/ResourceUtilizationTableHandler';
 import { ResourceRepSummaryTableHandler } from '../handlers/ResourceRepSummaryTableHandler';
+import { EntityStateCrossRepSummaryTableHandler } from '../handlers/EntityStateCrossRepSummaryTableHandler';
+import { EntityThroughputCrossRepSummaryTableHandler } from '../handlers/EntityThroughputCrossRepSummaryTableHandler';
 
 /**
  * Factory for creating table handlers
@@ -95,6 +97,20 @@ export class DashboardTableFactory {
         ));
 
         this.registerHandler(new ResourceRepSummaryTableHandler(
+            this.client,
+            this.resultsReader,
+            this.tableGenerator,
+            this.config
+        ));
+
+        this.registerHandler(new EntityStateCrossRepSummaryTableHandler(
+            this.client,
+            this.resultsReader,
+            this.tableGenerator,
+            this.config
+        ));
+
+        this.registerHandler(new EntityThroughputCrossRepSummaryTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,

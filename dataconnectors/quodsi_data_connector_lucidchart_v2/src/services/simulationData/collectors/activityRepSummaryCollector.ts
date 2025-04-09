@@ -2,7 +2,6 @@
 import { ActivityRepSummaryData } from '../../../collections/types/interfaces/ActivityRepSummaryData';
 import { ActivityRepSummarySchema } from '../../../collections';
 import { fetchCsvData, getRequiredColumnsFromType } from '../csvParser';
-import { prepareCollectionUpdate } from '../collectionUpdater';
 import { conditionalLog, conditionalError, conditionalWarn } from '../storageService';
 import { SerializedFields } from 'lucid-extension-sdk';
 
@@ -31,7 +30,7 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityRepSummaryData
  * @param documentId Document ID
  * @returns Array of activity rep summary data
  */
-export async function fetchData(
+export async function fetchActivityRepSummary(
     containerName: string,
     documentId: string,
     scenarioId: string
@@ -130,7 +129,7 @@ export async function fetchData(
  * @param data Array of activity rep summary data
  * @returns Collection update for Lucid
  */
-export function prepareUpdate(data: ActivityRepSummaryData[]) {
+export function prepareActivityRepSummaryUpdate(data: ActivityRepSummaryData[]) {
     conditionalLog("[activityRepSummary] Starting activity rep summary update preparation");
     conditionalLog(`[activityRepSummary] Processing ${data.length} rows of activity rep summary data`);
 

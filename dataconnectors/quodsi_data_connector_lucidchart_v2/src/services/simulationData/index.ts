@@ -23,13 +23,13 @@ export {
 } from './collectionUpdater';
 
 // Import all collectors
-import * as activityUtilization from './collectors/activityUtilization';
-import * as activityRepSummary from './collectors/activityRepSummary';
-import * as activityTiming from './collectors/activityTiming';
-import * as entityStateRepSummary from './collectors/entityStateRepSummary';
-import * as entityThroughputRepSummary from './collectors/entityThroughputRepSummary';
-import * as resourceRepSummary from './collectors/resourceRepSummary';
-import * as resourceUtilization from './collectors/resourceUtilization';
+import * as activityUtilization from './collectors/activityUtilizationCollector';
+import * as activityRepSummary from './collectors/activityRepSummaryCollector';
+import * as activityTiming from './collectors/activityTimingCollector';
+import * as entityStateRepSummary from './collectors/entityStateRepSummaryCollector';
+import * as entityThroughputRepSummary from './collectors/entityThroughputRepSummaryCollector';
+import * as resourceRepSummary from './collectors/resourceRepSummaryCollector';
+import * as resourceUtilization from './collectors/resourceUtilizationCollector';
 
 // Export all collectors as a namespace
 export const collectors = {
@@ -44,22 +44,22 @@ export const collectors = {
 
 // Export all fetch functions
 export const fetch = {
-    activityUtilization: activityUtilization.fetchData,
-    activityRepSummary: activityRepSummary.fetchData,
-    activityTiming: activityTiming.fetchData,
-    entityStateRepSummary: entityStateRepSummary.fetchData,
-    entityThroughputRepSummary: entityThroughputRepSummary.fetchData,
-    resourceRepSummary: resourceRepSummary.fetchData,
-    resourceUtilization: resourceUtilization.fetchData
+    activityUtilization: activityUtilization.fetchActivityUtilization,
+    activityRepSummary: activityRepSummary.fetchActivityRepSummary,
+    activityTiming: activityTiming.fetchActivityTiming,
+    entityStateRepSummary: entityStateRepSummary.fetchEntityStateRepSummary,
+    entityThroughputRepSummary: entityThroughputRepSummary.fetchEntityThroughputRepSummary,
+    resourceRepSummary: resourceRepSummary.fetchResourceRepSummary,
+    resourceUtilization: resourceUtilization.fetchResourceUtilization
 };
 
 // Export all prepare functions
 export const prepare = {
-    activityUtilization: activityUtilization.prepareUpdate,
-    activityRepSummary: activityRepSummary.prepareUpdate,
-    activityTiming: activityTiming.prepareUpdate,
-    entityStateRepSummary: entityStateRepSummary.prepareUpdate,
-    entityThroughputRepSummary: entityThroughputRepSummary.prepareUpdate,
-    resourceRepSummary: resourceRepSummary.prepareUpdate,
-    resourceUtilization: resourceUtilization.prepareUpdate
+    activityUtilization: activityUtilization.prepareActivityUtilizationUpdate,
+    activityRepSummary: activityRepSummary.prepareActivityRepSummaryUpdate,
+    activityTiming: activityTiming.prepareActivityTimingUpdate,
+    entityStateRepSummary: entityStateRepSummary.prepareEntityStateRepSummaryUpdate,
+    entityThroughputRepSummary: entityThroughputRepSummary.prepareEntityThroughputRepSummaryUpdate,
+    resourceRepSummary: resourceRepSummary.prepareResourceRepSummaryUpdate,
+    resourceUtilization: resourceUtilization.prepareResourceUtilizationUpdate
 };

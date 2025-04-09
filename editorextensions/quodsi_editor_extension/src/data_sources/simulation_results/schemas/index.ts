@@ -7,3 +7,5 @@ export { EntityThroughputRepSummarySchema } from './entityThroughputRepSummarySc
 export { ResourceRepSummarySchema } from './resourceRepSummarySchema';
 export { ResourceUtilizationSchema } from './resourceUtilizationSchema';
 export { ScenarioResultsSchema } from './scenarioResultsSchema';
+export { EntityStateCrossRepSummarySchema } from './EntityStateCrossRepSummarySchema';
+export { EntityThroughputCrossRepSummarySchema } from './EntityThroughputCrossRepSummarySchema';

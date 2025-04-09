@@ -2,7 +2,7 @@
 // Re-export all service functionality to maintain a clean public API
 
 // Config service
-export { 
+export {
     DataCollectionConfig,
     getDataCollectionConfig,
     setDataCollectionConfig,
@@ -32,7 +32,7 @@ export {
 // Main simulation results operations
 export {
     updateSimulationResults
-} from './simulationResultsService';
+} from './simulationData/resultsImportService';
 
 // Simulation import operations
 export {
@@ -44,4 +44,4 @@ export {
 } from './simulationImportService';
 
 // Re-export existing services that might be used by others
-export * from './simulationDataService';
+// export * from './simulationData/dataAccessService';

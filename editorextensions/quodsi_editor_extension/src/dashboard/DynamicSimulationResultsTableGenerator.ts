@@ -121,4 +121,34 @@ export class DynamicSimulationResultsTableGenerator {
         const generator = this.factory.getGenerator('resourceRepSummary');
         return generator.createTable(page, client, config);
     }
+
+    /**
+     * Creates a table for entity state cross replication summary data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
+    public async createEntityStateCrossRepSummaryTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        const generator = this.factory.getGenerator('entityStateCrossRepSummary');
+        return generator.createTable(page, client, config);
+    }
+    
+    /**
+     * Creates a table for entity throughput cross replication summary data
+     * @param page The page to add the table to
+     * @param client The editor client
+     * @param config Optional configuration overrides for this table
+     */
+    public async createEntityThroughputCrossRepSummaryTable(
+        page: PageProxy,
+        client: EditorClient,
+        config?: TableGenerationConfig
+    ): Promise<TableBlockProxy | null> {
+        const generator = this.factory.getGenerator('entityThroughputCrossRepSummary');
+        return generator.createTable(page, client, config);
+    }
 }

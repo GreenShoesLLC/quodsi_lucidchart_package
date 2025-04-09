@@ -8,6 +8,8 @@ import { EntityStateTableGenerator } from './EntityStateTableGenerator';
 import { EntityThroughputTableGenerator } from './EntityThroughputTableGenerator';
 import { ResourceUtilizationTableGenerator } from './ResourceUtilizationTableGenerator';
 import { ResourceRepSummaryTableGenerator } from './ResourceRepSummaryTableGenerator';
+import { EntityStateCrossRepSummaryTableGenerator } from './EntityStateCrossRepSummaryTableGenerator';
+import { EntityThroughputCrossRepSummaryTableGenerator } from './EntityThroughputCrossRepSummaryTableGenerator';
 
 /**
  * Factory class for creating table generators based on table type
@@ -61,6 +63,14 @@ export class TableGeneratorFactory {
             case 'resourceRepSummary':
             case 'resource_rep_summary': // For backward compatibility
                 return new ResourceRepSummaryTableGenerator(this.resultsReader, this.config);
+                
+            case 'entityStateCrossRepSummary':
+            case 'entity_state_cross_rep_summary': // For backward compatibility
+                return new EntityStateCrossRepSummaryTableGenerator(this.resultsReader, this.config);
+                
+            case 'entityThroughputCrossRepSummary':
+            case 'entity_throughput_cross_rep_summary': // For backward compatibility
+                return new EntityThroughputCrossRepSummaryTableGenerator(this.resultsReader, this.config);
                 
             default:
                 throw new Error(`Unknown table type: ${tableType}`);

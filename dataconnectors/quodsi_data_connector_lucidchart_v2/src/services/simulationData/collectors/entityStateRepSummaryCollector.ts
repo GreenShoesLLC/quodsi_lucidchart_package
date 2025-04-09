@@ -32,7 +32,7 @@ export const requiredColumns = getRequiredColumnsFromType<EntityStateRepSummaryD
  * @param scenarioId Scenario ID to use as folder prefix
  * @returns Array of entity state rep summary data
  */
-export async function fetchData(
+export async function fetchEntityStateRepSummary(
     containerName: string,
     documentId: string,
     scenarioId: string
@@ -137,7 +137,7 @@ export async function fetchData(
  * @param data Array of entity state rep summary data
  * @returns Collection update for Lucid
  */
-export function prepareUpdate(data: EntityStateRepSummaryData[]) {
+export function prepareEntityStateRepSummaryUpdate(data: EntityStateRepSummaryData[]) {
     conditionalLog("[entityStateRepSummary] Starting entity state update preparation");
     conditionalLog(`[entityStateRepSummary] Processing ${data.length} rows of entity state data`);
 

@@ -24,7 +24,7 @@ export const requiredColumns = getRequiredColumnsFromType<ResourceRepSummaryData
  * @param scenarioId Scenario ID
  * @returns Array of resource rep summary data
  */
-export async function fetchData(
+export async function fetchResourceRepSummary(
     containerName: string,
     documentId: string,
     scenarioId: string
@@ -115,7 +115,7 @@ export async function fetchData(
  * @param data Array of resource rep summary data
  * @returns Collection update for Lucid
  */
-export function prepareUpdate(data: ResourceRepSummaryData[]) {
+export function prepareResourceRepSummaryUpdate(data: ResourceRepSummaryData[]) {
     conditionalLog("[resourceRepSummary] Starting resource rep summary update preparation");
     conditionalLog(`[resourceRepSummary] Processing ${data.length} rows of resource rep summary data`);
 

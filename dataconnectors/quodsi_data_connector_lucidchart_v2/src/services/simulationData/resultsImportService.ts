@@ -1,12 +1,22 @@
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
-import { ActionLogger } from '../utils/logging';
-import { conditionalLog, conditionalError } from '../utils/loggingUtils';
-import { getConfig } from "../config";
-import { initializeStorageService } from "./simulationDataService";
-import * as simulationDataService from "./simulationDataService";
-import { getDataCollectionConfig, DataCollectionConfig, isDataCollectionEnabled } from './dataCollectionConfigService';
-import { CollectionsUpdate } from './collectionUpdateService';
-import { LoggingLevel } from "../utils/loggingLevels";
+import { ActionLogger } from '../../utils/logging';
+import { conditionalLog, conditionalError } from '../../utils/loggingUtils';
+import { getConfig } from "../../config";
+// import { initializeStorageService } from "./dataAccessService";
+// import * as simulationDataService from "./dataAccessService";
+import { getDataCollectionConfig, DataCollectionConfig, isDataCollectionEnabled } from '../dataCollectionConfigService';
+import { CollectionsUpdate } from '../collectionUpdateService';
+import { LoggingLevel } from "../../utils/loggingLevels";
+import { fetchActivityUtilization, prepareActivityUtilizationUpdate } from "./collectors/activityUtilizationCollector";
+import { fetchActivityRepSummary, prepareActivityRepSummaryUpdate } from "./collectors/activityRepSummaryCollector";
+import { fetchActivityTiming, prepareActivityTimingUpdate } from "./collectors/activityTimingCollector";
+import { fetchEntityStateRepSummary, prepareEntityStateRepSummaryUpdate } from "./collectors/entityStateRepSummaryCollector";
+import { fetchEntityThroughputRepSummary, prepareEntityThroughputRepSummaryUpdate } from "./collectors/entityThroughputRepSummaryCollector";
+import { fetchResourceRepSummary, prepareResourceRepSummaryUpdate } from "./collectors/resourceRepSummaryCollector";
+import { fetchResourceUtilization, prepareResourceUtilizationUpdate } from "./collectors/resourceUtilizationCollector";
+import { fetchEntityStateCrossRepSummary, prepareEntityStateCrossRepSummaryUpdate } from "./collectors/entityStateCrossRepSummaryCollector";
+import { fetchEntityThroughputCrossRepSummary, prepareEntityThroughputCrossRepSummaryUpdate } from "./collectors/entityThroughputCrossRepSummaryCollector";
+import { initializeStorageService, setVerboseLogging } from "./storageService";
 
 /**
  * Updates simulation results data in the simulation_results datasource
@@ -29,13 +39,13 @@ export async function updateSimulationResults(
 ) {
     // Handle backward compatibility with boolean parameter
     let logLevel: LoggingLevel;
-    
+
     if (typeof loggingLevel === 'boolean') {
         logLevel = loggingLevel ? LoggingLevel.VERBOSE : LoggingLevel.MINIMAL;
     } else {
         logLevel = loggingLevel;
     }
-    
+
     // Create a logger or use the provided one with a new child scope
     const log = logger ? logger.child('SimResults') : new ActionLogger('[SimResults]', logLevel);
 
@@ -47,19 +57,19 @@ export async function updateSimulationResults(
         initializeStorageService(config.azureStorageConnectionString);
 
         // Tell simulation data service about verbosity (convert to boolean for backward compatibility)
-        simulationDataService.setVerboseLogging(logLevel >= LoggingLevel.VERBOSE);
+        setVerboseLogging(logLevel >= LoggingLevel.VERBOSE);
 
         // Log the container we're using
         log.debug(`Using container: ${config.simulationResultsContainer}`);
 
         // IMPORTANT: Always use documentId as container name, not from config
         const containerName = explicitContainerName || documentId;
-    log.important(`CONTAINER NAME FIX: Using container: ${containerName} (config value: ${config.simulationResultsContainer})`);
-        
-    // Log which collections are currently enabled
-    log.debug('Current data collection configuration:', getDataCollectionConfig());
+        log.important(`CONTAINER NAME FIX: Using container: ${containerName} (config value: ${config.simulationResultsContainer})`);
 
-    // Create an array to track which data fetches succeeded and which failed
+        // Log which collections are currently enabled
+        log.debug('Current data collection configuration:', getDataCollectionConfig());
+
+        // Create an array to track which data fetches succeeded and which failed
         const dataFetchResults = {
             activityUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityUtilization') },
             activityRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectActivityRepSummary') },
@@ -67,7 +77,10 @@ export async function updateSimulationResults(
             entityStateRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityStateRepSummary') },
             entityThroughputRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityThroughputRepSummary') },
             resourceRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceRepSummary') },
-            resourceUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceUtilization') }
+            resourceUtilization: { success: false, count: 0, enabled: isDataCollectionEnabled('collectResourceUtilization') },
+            // Add new cross-rep summary data types
+            entityStateCrossRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityStateCrossRepSummary') },
+            entityThroughputCrossRepSummary: { success: false, count: 0, enabled: isDataCollectionEnabled('collectEntityThroughputCrossRepSummary') }
         };
 
         // Initialize data holders
@@ -78,16 +91,19 @@ export async function updateSimulationResults(
         let entityThroughputRepSummary = [];
         let resourceRepSummary = [];
         let resourceUtilization = [];
+        // Add new cross-rep summary data holders
+        let entityStateCrossRepSummary = [];
+        let entityThroughputCrossRepSummary = [];
 
         // Only fetch data for enabled collections
         // Activity Utilization
         if (isDataCollectionEnabled('collectActivityUtilization')) {
             try {
-            log.info('Fetching activity utilization data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            activityUtilization = await simulationDataService.fetchActivityUtilization(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching activity utilization data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                activityUtilization = await fetchActivityUtilization(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.activityUtilization.success = true;
                 dataFetchResults.activityUtilization.count = activityUtilization.length;
             } catch (error) {
@@ -100,11 +116,11 @@ export async function updateSimulationResults(
         // Activity Rep Summary
         if (isDataCollectionEnabled('collectActivityRepSummary')) {
             try {
-            log.info('Fetching activity rep summary data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            activityRepSummary = await simulationDataService.fetchActivityRepSummary(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching activity rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                activityRepSummary = await fetchActivityRepSummary(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.activityRepSummary.success = true;
                 dataFetchResults.activityRepSummary.count = activityRepSummary.length;
             } catch (error) {
@@ -117,11 +133,11 @@ export async function updateSimulationResults(
         // Activity Timing
         if (isDataCollectionEnabled('collectActivityTiming')) {
             try {
-            log.info('Fetching activity timing data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            activityTiming = await simulationDataService.fetchActivityTiming(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching activity timing data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                activityTiming = await fetchActivityTiming(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.activityTiming.success = true;
                 dataFetchResults.activityTiming.count = activityTiming.length;
             } catch (error) {
@@ -134,11 +150,11 @@ export async function updateSimulationResults(
         // Entity State Rep Summary
         if (isDataCollectionEnabled('collectEntityStateRepSummary')) {
             try {
-            log.info('Fetching entity state rep summary data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            entityStateRepSummary = await simulationDataService.fetchEntityStateRepSummary(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching entity state rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                entityStateRepSummary = await fetchEntityStateRepSummary(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.entityStateRepSummary.success = true;
                 dataFetchResults.entityStateRepSummary.count = entityStateRepSummary.length;
             } catch (error) {
@@ -151,12 +167,12 @@ export async function updateSimulationResults(
         // Entity Throughput Rep Summary - add extra logging for this problematic collection
         if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
             try {
-            log.info('Fetching entity throughput rep summary data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            // Now do the regular fetch
-            entityThroughputRepSummary = await simulationDataService.fetchEntityThroughputRepSummary(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching entity throughput rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                // Now do the regular fetch
+                entityThroughputRepSummary = await fetchEntityThroughputRepSummary(
+                    containerName, documentId, scenarioId
+                );
 
                 dataFetchResults.entityThroughputRepSummary.success = true;
                 dataFetchResults.entityThroughputRepSummary.count = entityThroughputRepSummary.length;
@@ -171,11 +187,11 @@ export async function updateSimulationResults(
         // Resource Rep Summary
         if (isDataCollectionEnabled('collectResourceRepSummary')) {
             try {
-            log.info('Fetching resource rep summary data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            resourceRepSummary = await simulationDataService.fetchResourceRepSummary(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching resource rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                resourceRepSummary = await fetchResourceRepSummary(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.resourceRepSummary.success = true;
                 dataFetchResults.resourceRepSummary.count = resourceRepSummary.length;
             } catch (error) {
@@ -188,11 +204,11 @@ export async function updateSimulationResults(
         // Resource Utilization
         if (isDataCollectionEnabled('collectResourceUtilization')) {
             try {
-            log.info('Fetching resource utilization data...');
-            log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
-            resourceUtilization = await simulationDataService.fetchResourceUtilization(
-                containerName, documentId, scenarioId
-            );
+                log.info('Fetching resource utilization data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                resourceUtilization = await fetchResourceUtilization(
+                    containerName, documentId, scenarioId
+                );
                 dataFetchResults.resourceUtilization.success = true;
                 dataFetchResults.resourceUtilization.count = resourceUtilization.length;
             } catch (error) {
@@ -200,6 +216,42 @@ export async function updateSimulationResults(
             }
         } else {
             log.debug('Resource utilization data collection is disabled');
+        }
+
+        // Entity State Cross Rep Summary - New
+        if (isDataCollectionEnabled('collectEntityStateCrossRepSummary')) {
+            try {
+                log.info('Fetching entity state cross rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                entityStateCrossRepSummary = await fetchEntityStateCrossRepSummary(
+                    containerName, documentId, scenarioId
+                );
+                dataFetchResults.entityStateCrossRepSummary.success = true;
+                dataFetchResults.entityStateCrossRepSummary.count = entityStateCrossRepSummary.length;
+            } catch (error) {
+                log.error(`Error fetching entity state cross rep summary data: ${error.message}`);
+                log.error('Error stack:', error.stack);
+            }
+        } else {
+            log.debug('Entity state cross rep summary data collection is disabled');
+        }
+
+        // Entity Throughput Cross Rep Summary - New
+        if (isDataCollectionEnabled('collectEntityThroughputCrossRepSummary')) {
+            try {
+                log.info('Fetching entity throughput cross rep summary data...');
+                log.info(`Using container: ${containerName} instead of config value: ${config.simulationResultsContainer}`);
+                entityThroughputCrossRepSummary = await fetchEntityThroughputCrossRepSummary(
+                    containerName, documentId, scenarioId
+                );
+                dataFetchResults.entityThroughputCrossRepSummary.success = true;
+                dataFetchResults.entityThroughputCrossRepSummary.count = entityThroughputCrossRepSummary.length;
+            } catch (error) {
+                log.error(`Error fetching entity throughput cross rep summary data: ${error.message}`);
+                log.error('Error stack:', error.stack);
+            }
+        } else {
+            log.debug('Entity throughput cross rep summary data collection is disabled');
         }
 
         // Log summary of data fetch results
@@ -214,23 +266,23 @@ export async function updateSimulationResults(
 
         // Only add collections that are enabled
         if (isDataCollectionEnabled('collectActivityUtilization')) {
-            updates["activity_utilization"] = simulationDataService.prepareActivityUtilizationUpdate(activityUtilization);
+            updates["activity_utilization"] = prepareActivityUtilizationUpdate(activityUtilization);
         }
 
         if (isDataCollectionEnabled('collectActivityRepSummary')) {
-            updates["activity_rep_summary"] = simulationDataService.prepareActivityRepSummaryUpdate(activityRepSummary);
+            updates["activity_rep_summary"] = prepareActivityRepSummaryUpdate(activityRepSummary);
         }
 
         if (isDataCollectionEnabled('collectActivityTiming')) {
-            updates["activity_timing"] = simulationDataService.prepareActivityTimingUpdate(activityTiming);
+            updates["activity_timing"] = prepareActivityTimingUpdate(activityTiming);
         }
 
         if (isDataCollectionEnabled('collectEntityStateRepSummary')) {
-            updates["entity_state_rep_summary"] = simulationDataService.prepareEntityStateRepSummaryUpdate(entityStateRepSummary);
+            updates["entity_state_rep_summary"] = prepareEntityStateRepSummaryUpdate(entityStateRepSummary);
         }
 
         if (isDataCollectionEnabled('collectEntityThroughputRepSummary')) {
-            updates["entity_throughput_rep_summary"] = simulationDataService.prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
+            updates["entity_throughput_rep_summary"] = prepareEntityThroughputRepSummaryUpdate(entityThroughputRepSummary);
             log.info(`Prepared entity_throughput_rep_summary update with ${updates["entity_throughput_rep_summary"].patch.items.size} items`);
 
             // Log the item keys if there are any - only in verbose mode
@@ -241,13 +293,36 @@ export async function updateSimulationResults(
         }
 
         if (isDataCollectionEnabled('collectResourceRepSummary')) {
-            updates["resource_rep_summary"] = simulationDataService.prepareResourceRepSummaryUpdate(resourceRepSummary);
+            updates["resource_rep_summary"] = prepareResourceRepSummaryUpdate(resourceRepSummary);
         }
 
         if (isDataCollectionEnabled('collectResourceUtilization')) {
-            updates["resource_utilization"] = simulationDataService.prepareResourceUtilizationUpdate(resourceUtilization);
+            updates["resource_utilization"] = prepareResourceUtilizationUpdate(resourceUtilization);
         }
-        
+
+        // Add the new cross-rep summary collections
+        if (isDataCollectionEnabled('collectEntityStateCrossRepSummary')) {
+            updates["entity_state_cross_rep_summary"] = prepareEntityStateCrossRepSummaryUpdate(entityStateCrossRepSummary);
+            log.info(`Prepared entity_state_cross_rep_summary update with ${updates["entity_state_cross_rep_summary"].patch.items.size} items`);
+
+            // Log the item keys if there are any - only in verbose mode
+            if (updates["entity_state_cross_rep_summary"].patch.items.size > 0 && logLevel >= LoggingLevel.VERBOSE) {
+                const keys = Array.from(updates["entity_state_cross_rep_summary"].patch.items.keys());
+                log.debug(`Item keys: ${keys.join(', ')}`);
+            }
+        }
+
+        if (isDataCollectionEnabled('collectEntityThroughputCrossRepSummary')) {
+            updates["entity_throughput_cross_rep_summary"] = prepareEntityThroughputCrossRepSummaryUpdate(entityThroughputCrossRepSummary);
+            log.info(`Prepared entity_throughput_cross_rep_summary update with ${updates["entity_throughput_cross_rep_summary"].patch.items.size} items`);
+
+            // Log the item keys if there are any - only in verbose mode
+            if (updates["entity_throughput_cross_rep_summary"].patch.items.size > 0 && logLevel >= LoggingLevel.VERBOSE) {
+                const keys = Array.from(updates["entity_throughput_cross_rep_summary"].patch.items.keys());
+                log.debug(`Item keys: ${keys.join(', ')}`);
+            }
+        }
+
         // Log prepared update item counts
         log.debug('=== Collection Update Item Counts ===');
         Object.entries(updates).forEach(([collectionName, update]) => {

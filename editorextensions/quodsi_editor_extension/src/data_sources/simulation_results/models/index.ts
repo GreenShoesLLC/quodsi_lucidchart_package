@@ -8,3 +8,5 @@ export { EntityStateRepSummary, mapToEntityStateRepSummary } from './EntityState
 export { EntityThroughputRepSummary, mapToEntityThroughputRepSummary } from './EntityThroughputRepSummary';
 export { ResourceRepSummary, mapToResourceRepSummary } from './ResourceRepSummary';
 export { ResourceUtilization, mapToResourceUtilization } from './ResourceUtilization';
+export { EntityStateCrossRepSummary, mapToEntityStateCrossRepSummary } from './EntityStateCrossRepSummary';
+export { EntityThroughputCrossRepSummary, mapToEntityThroughputCrossRepSummary } from './EntityThroughputCrossRepSummary';

@@ -23,7 +23,7 @@ export const requiredColumns = getRequiredColumnsFromType<ResourceUtilizationDat
  * @param scenarioId Scenario ID
  * @returns Array of resource utilization data
  */
-export async function fetchData(
+export async function fetchResourceUtilization(
     containerName: string,
     documentId: string,
     scenarioId: string
@@ -69,13 +69,13 @@ export async function fetchData(
                 scenario_name: String(item.scenario_name || "Unknown"),
                 resource_id: String(item.resource_id || 'Unknown'),
                 resource_name: String(item.resource_name || 'Unknown'),
-                
+
                 // Utilization metrics
                 utilization_mean: item.utilization_mean ?? 0,
                 utilization_min: item.utilization_min ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
-                
+
                 // Summary metrics
                 bottleneck_frequency: item.bottleneck_frequency ?? 0
             };
@@ -97,7 +97,7 @@ export async function fetchData(
  * @param data Array of resource utilization data
  * @returns Collection update for Lucid
  */
-export function prepareUpdate(data: ResourceUtilizationData[]) {
+export function prepareResourceUtilizationUpdate(data: ResourceUtilizationData[]) {
     conditionalLog("[resourceUtilization] Starting resource utilization update preparation");
     conditionalLog(`[resourceUtilization] Processing ${data.length} rows of resource utilization data`);
 
@@ -113,13 +113,13 @@ export function prepareUpdate(data: ResourceUtilizationData[]) {
             scenario_name: String(item.scenario_name || "Unknown"),
             resource_id: String(item.resource_id || 'Unknown'),
             resource_name: String(item.resource_name || 'Unknown'),
-            
+
             // Utilization metrics
             utilization_mean: item.utilization_mean ?? 0,
             utilization_min: item.utilization_min ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
-            
+
             // Summary metrics
             bottleneck_frequency: item.bottleneck_frequency ?? 0
         };

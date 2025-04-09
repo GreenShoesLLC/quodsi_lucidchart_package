@@ -19,8 +19,10 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
     },
     tableOrder: [
         'entityState',
-        'activityUtilization',
+        'entityStateCrossRepSummary',
         'entityThroughput',
+        'entityThroughputCrossRepSummary',
+        'activityUtilization',
         'activityTiming',
         // Any tables not in this list will be shown after these
     ],

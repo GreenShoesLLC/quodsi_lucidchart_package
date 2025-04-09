@@ -1,10 +1,11 @@
 // actions/importSimulationResultsAction.ts
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { setStorageVerboseLogging } from "../services/azureStorageService";
-import { createSimulationImportService, getStorageService } from "../services";
 import { ActionLogger } from '../utils/logging';
 import { LoggingLevel } from '../utils/loggingLevels';
 import { getConfig } from "../config";
+import { createSimulationImportService } from "../services/simulationImportService";
+import { getStorageService } from "../services/simulationData/storageService";
 
 export const importSimulationResultsAction = async (action: DataConnectorAsynchronousAction) => {
     // Get config and logging level - use the same level as hardRefresh since this is user-initiated

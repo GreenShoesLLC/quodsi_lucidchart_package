@@ -8,8 +8,9 @@ import {
   EntityStateRepSummary, mapToEntityStateRepSummary,
   EntityThroughputRepSummary, mapToEntityThroughputRepSummary,
   ResourceRepSummary, mapToResourceRepSummary,
-  ResourceUtilization, mapToResourceUtilization
-
+  ResourceUtilization, mapToResourceUtilization,
+  EntityStateCrossRepSummary, mapToEntityStateCrossRepSummary,
+  EntityThroughputCrossRepSummary, mapToEntityThroughputCrossRepSummary
 } from './models';
 
 /**
@@ -243,6 +244,84 @@ export class SimulationResultsReader extends DataSourceReader {
     return mapToActivityUtilization(item.fields);
   }
   
+  /**
+   * Gets entity state cross replication summary collection
+   * @returns The entity state cross replication summary collection if found, null otherwise
+   */
+  async getEntityStateCrossRepSummaryCollection(): Promise<CollectionProxy | null> {
+    return this.getCollectionByName('entity_state_cross_rep_summary');
+  }
+  
+  /**
+   * Gets entity state cross replication summary data as strongly typed objects
+   * @returns Array of EntityStateCrossRepSummary objects
+   */
+  async getEntityStateCrossRepSummaryData(): Promise<EntityStateCrossRepSummary[]> {
+    const collection = await this.getEntityStateCrossRepSummaryCollection();
+    console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary collection:', collection ? 'Found' : 'Not found');
+    if (!collection) return [];
+    
+    const result: EntityStateCrossRepSummary[] = [];
+    console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary collection size:', collection.items.size);
+    
+    for (const [key, item] of collection.items) {
+      if (item) {
+        console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary raw item key:', key);
+        console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary raw fields:', JSON.stringify(item.fields));
+        const mappedItem = mapToEntityStateCrossRepSummary(item.fields);
+        console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary mapped item:', JSON.stringify(mappedItem));
+        result.push(mappedItem);
+      }
+    }
+    
+    console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary final result size:', result.length);
+    if (result.length > 0) {
+      console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary sample entity_name:', result[0].entity_name);
+      console.log('[EntityStateCrossRepSummary] EntityStateCrossRepSummary sample scenario_name:', result[0].scenario_name);
+    }
+    
+    return result;
+  }
+  
+  /**
+   * Gets entity throughput cross replication summary collection
+   * @returns The entity throughput cross replication summary collection if found, null otherwise
+   */
+  async getEntityThroughputCrossRepSummaryCollection(): Promise<CollectionProxy | null> {
+    return this.getCollectionByName('entity_throughput_cross_rep_summary');
+  }
+  
+  /**
+   * Gets entity throughput cross replication summary data as strongly typed objects
+   * @returns Array of EntityThroughputCrossRepSummary objects
+   */
+  async getEntityThroughputCrossRepSummaryData(): Promise<EntityThroughputCrossRepSummary[]> {
+    const collection = await this.getEntityThroughputCrossRepSummaryCollection();
+    console.log('[DEBUG] EntityThroughputCrossRepSummary collection:', collection ? 'Found' : 'Not found');
+    if (!collection) return [];
+    
+    const result: EntityThroughputCrossRepSummary[] = [];
+    console.log('[DEBUG] EntityThroughputCrossRepSummary collection size:', collection.items.size);
+    
+    for (const [key, item] of collection.items) {
+      if (item) {
+        console.log('[DEBUG] EntityThroughputCrossRepSummary raw item key:', key);
+        console.log('[DEBUG] EntityThroughputCrossRepSummary raw fields:', JSON.stringify(item.fields));
+        const mappedItem = mapToEntityThroughputCrossRepSummary(item.fields);
+        console.log('[DEBUG] EntityThroughputCrossRepSummary mapped item:', JSON.stringify(mappedItem));
+        result.push(mappedItem);
+      }
+    }
+    
+    console.log('[DEBUG] EntityThroughputCrossRepSummary final result size:', result.length);
+    if (result.length > 0) {
+      console.log('[DEBUG] EntityThroughputCrossRepSummary sample entity_name:', result[0].entity_name);
+      console.log('[DEBUG] EntityThroughputCrossRepSummary sample scenario_name:', result[0].scenario_name);
+    }
+    
+    return result;
+  }
+
   /**
    * Checks if simulation results exist for the current document
    * @returns True if any simulation results collections exist, false otherwise

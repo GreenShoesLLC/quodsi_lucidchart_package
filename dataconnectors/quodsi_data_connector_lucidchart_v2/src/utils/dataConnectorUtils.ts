@@ -11,7 +11,7 @@ import { saveAndSubmitSimulationAction } from '../actions/saveAndSubmitSimulatio
 import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAction';
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
 import { markResultsViewedAction } from '../actions/markResultsViewedAction';
-import { registerDataSources } from './registerDataSource';
+
 
 export const createDataConnector = () => {
     const client = new DataConnectorClient({ crypto, Buffer });
@@ -26,9 +26,6 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("MarkResultsViewed", markResultsViewedAction)
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction);
-    
-    // Register data sources and collections
-    // registerDataSources(connector);
     
     return connector;
 };
