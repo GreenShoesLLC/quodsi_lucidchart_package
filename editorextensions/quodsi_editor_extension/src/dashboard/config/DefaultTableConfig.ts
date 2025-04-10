@@ -61,8 +61,8 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         }
     },
     activityTiming: {
-        included: false,
-        header: 'Activity Timing Analysis',
+        included: true,
+        header: 'Activity States',
         columns: {
             order: [
                 'activity_name',
@@ -92,7 +92,7 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         }
     },
     entityThroughput: {
-        included: true,
+        included: false,
         header: 'Entity Throughput',
         columns: {
             order: [
@@ -155,7 +155,7 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
         }
     },
     entityState: {
-        included: true,
+        included: false,
         header: 'Entity State Analysis',
         columns: {
             order: [
@@ -182,25 +182,25 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
     },
     entityStateCrossRepSummary: {
         included: true,
-        header: 'Entity State Cross Rep Summary',
+        header: 'Entity States',
         columns: {
             order: [
                 'entity_name',
                 'scenario_name',
-                'count_mean',
-                'count_median',
-                'count_std_dev',
+                // 'count_mean',
+                // 'count_median',
+                // 'count_std_dev',
                 'time_in_system_mean',
-                'time_in_system_median',
+                // 'time_in_system_median',
                 'time_in_system_std_dev',
                 'time_waiting_mean',
-                'time_waiting_median',
+                // 'time_waiting_median',
                 'time_waiting_std_dev',
                 'time_blocked_mean',
-                'time_blocked_median',
+                // 'time_blocked_median',
                 'time_blocked_std_dev',
                 'time_in_operation_mean',
-                'time_in_operation_median',
+                // 'time_in_operation_median',
                 'time_in_operation_std_dev',
                 'percent_waiting_mean',
                 'percent_waiting_std_dev',
@@ -217,32 +217,39 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'time_connecting_median',
                 'time_connecting_std_dev',
                 'percent_connecting_mean',
-                'percent_connecting_std_dev'
+                'percent_connecting_std_dev',
+                'time_in_system_median',
+                'time_waiting_median',
+                'time_blocked_median',
+                'time_in_operation_median',
+                'count_mean',
+                'count_median',
+                'count_std_dev',
             ]
         }
     },
     entityThroughputCrossRepSummary: {
         included: true,
-        header: 'Entity Throughput Cross Rep Summary',
+        header: 'Entity Throughput',
         columns: {
             order: [
                 'entity_name',
                 'scenario_name',
                 'count_mean',
-                'count_median',
+                // 'count_median',
                 'count_std_dev',
                 'completed_count_mean',
-                'completed_count_median',
+                // 'completed_count_median',
                 'completed_count_std_dev',
                 'in_progress_count_mean',
-                'in_progress_count_median',
+                // 'in_progress_count_median',
                 'in_progress_count_std_dev',
                 'throughput_rate_mean',
-                'throughput_rate_median',
+                // 'throughput_rate_median',
                 'throughput_rate_std_dev',
                 'throughput_rate_cv',
                 'interval_mean',
-                'interval_median',
+                // 'interval_median',
                 'interval_std_dev',
                 'interval_cv'
             ],
@@ -255,7 +262,12 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'first_exit_std_dev',
                 'last_exit_mean',
                 'last_exit_median',
-                'last_exit_std_dev'
+                'last_exit_std_dev',
+                'count_median',
+                'completed_count_median',
+                'in_progress_count_median',
+                'throughput_rate_median',
+                'interval_median',
             ]
         }
     }

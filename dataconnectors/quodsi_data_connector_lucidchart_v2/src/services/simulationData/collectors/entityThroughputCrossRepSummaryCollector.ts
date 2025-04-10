@@ -128,17 +128,17 @@ function validateData(data: EntityThroughputCrossRepSummaryData[]): EntityThroug
             throughput_rate_mean: item.throughput_rate_mean || 0,
             throughput_rate_median: item.throughput_rate_median || 0,
             throughput_rate_std_dev: item.throughput_rate_std_dev || 0,
-            throughput_rate_cv: String(item.throughput_rate_cv || ''),
+            throughput_rate_cv: (item.throughput_rate_cv || 0),
             interval_mean: item.interval_mean || 0,
             interval_median: item.interval_median || 0,
             interval_std_dev: item.interval_std_dev || 0,
-            interval_cv: String(item.interval_cv || ''),
-            first_exit_mean: String(item.first_exit_mean || ''),
-            first_exit_median: String(item.first_exit_median || ''),
-            first_exit_std_dev: String(item.first_exit_std_dev || ''),
-            last_exit_mean: String(item.last_exit_mean || ''),
-            last_exit_median: String(item.last_exit_median || ''),
-            last_exit_std_dev: String(item.last_exit_std_dev || '')
+            interval_cv: item.interval_cv || 0,
+            first_exit_mean: (item.first_exit_mean || 0),
+            first_exit_median: (item.first_exit_median || 0),
+            first_exit_std_dev: (item.first_exit_std_dev || 0),
+            last_exit_mean: (item.last_exit_mean || 0),
+            last_exit_median: (item.last_exit_median || 0),
+            last_exit_std_dev: (item.last_exit_std_dev || 0)
         };
 
         return validItem;
@@ -180,17 +180,17 @@ export function prepareEntityThroughputCrossRepSummaryUpdate(data: EntityThrough
             throughput_rate_mean: item.throughput_rate_mean || 0,
             throughput_rate_median: item.throughput_rate_median || 0,
             throughput_rate_std_dev: item.throughput_rate_std_dev || 0,
-            throughput_rate_cv: String(item.throughput_rate_cv || ''),
+            throughput_rate_cv: (item.throughput_rate_cv || ''),
             interval_mean: item.interval_mean || 0,
             interval_median: item.interval_median || 0,
             interval_std_dev: item.interval_std_dev || 0,
-            interval_cv: String(item.interval_cv || ''),
-            first_exit_mean: String(item.first_exit_mean || ''),
-            first_exit_median: String(item.first_exit_median || ''),
-            first_exit_std_dev: String(item.first_exit_std_dev || ''),
-            last_exit_mean: String(item.last_exit_mean || ''),
-            last_exit_median: String(item.last_exit_median || ''),
-            last_exit_std_dev: String(item.last_exit_std_dev || '')
+            interval_cv: (item.interval_cv || 0),
+            first_exit_mean: (item.first_exit_mean || 0),
+            first_exit_median: (item.first_exit_median || 0),
+            first_exit_std_dev: (item.first_exit_std_dev || 0),
+            last_exit_mean: (item.last_exit_mean || 0),
+            last_exit_median: (item.last_exit_median || 0),
+            last_exit_std_dev: (item.last_exit_std_dev || 0)
         };
 
         conditionalLog(`[entityThroughputCrossRepSummary] Cleaned item with ID ${item.id}: ${JSON.stringify(cleanedItem, null, 2)}`);

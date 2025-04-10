@@ -18,9 +18,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
         maxColumns: 15  // Increased from 6 to 15
     },
     tableOrder: [
-        'entityState',
         'entityStateCrossRepSummary',
-        'entityThroughput',
         'entityThroughputCrossRepSummary',
         'activityUtilization',
         'activityTiming',

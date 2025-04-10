@@ -3,7 +3,7 @@ import { SchemaDefinition, ScalarFieldTypeEnum } from "lucid-extension-sdk";
 
 export const ActivityUtilizationSchema: SchemaDefinition = {
     fields: [
-        { name: "id", type: ScalarFieldTypeEnum.STRING }, 
+        { name: "id", type: ScalarFieldTypeEnum.STRING },
         { name: "scenario_id", type: ScalarFieldTypeEnum.STRING },
         { name: "scenario_name", type: ScalarFieldTypeEnum.STRING },
         { name: "activity_id", type: ScalarFieldTypeEnum.STRING },
@@ -31,7 +31,7 @@ export const ActivityUtilizationSchema: SchemaDefinition = {
         'utilization_mean': 'Mean Utilization',
         'utilization_max': 'Max Utilization',
         'utilization_std_dev': 'Utilization Std Dev',
-        'capacity_mean': 'Mean Capacity',
+        'capacity_mean': 'Capacity',
         'capacity_max': 'Max Capacity',
         'capacity_std_dev': 'Capacity Std Dev',
         'contents_mean': 'Mean Contents',

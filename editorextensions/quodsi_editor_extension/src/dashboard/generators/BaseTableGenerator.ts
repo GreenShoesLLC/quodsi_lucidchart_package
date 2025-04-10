@@ -46,19 +46,30 @@ export abstract class BaseTableGenerator {
      * @param client The editor client
      * @param config Optional configuration overrides for this table
      */
+    /**
+     * Creates a table with the provided data
+     */
     public async createTable(
         page: PageProxy, 
         client: EditorClient, 
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
         console.log(`[TableGenerator] Creating ${this.getTableType()} table...`);
+        console.log(`[DEBUG] BaseTableGenerator.createTable() - tableType: ${this.getTableType()}`);
         
         // Merge config with instance config and defaults
         const tableConfig = { ...this.config, ...config };
         
         // Get data using specialized method
+        console.log(`[DEBUG] BaseTableGenerator.createTable() - calling getData()`);
         const data = await this.getData();
+        console.log(`[DEBUG] BaseTableGenerator.createTable() - getData() returned ${data ? data.length : 0} items`);
         console.log(`[TableGenerator] ${this.getTableType()} data:`, data);
+        
+        if (data && data.length > 0) {
+            console.log(`[DEBUG] First data item:`, JSON.stringify(data[0]));
+            console.log(`[DEBUG] Data item fields:`, Object.keys(data[0]));
+        }
         
         if (!data || data.length === 0) {
             console.warn(`[TableGenerator] No ${this.getTableType()} data available`);
@@ -66,11 +77,14 @@ export abstract class BaseTableGenerator {
         }
         
         // Create schema-based columns
+        console.log(`[DEBUG] BaseTableGenerator.createTable() - creating columns from schema`);
         const columns = this.createColumnsFromSchema(data[0], tableConfig);
+        console.log(`[DEBUG] Created ${columns.length} columns:`, columns.map(c => c.field).join(', '));
         
         const title = tableConfig.title || this.getDefaultTitle();
         
         // Generate the table with exactly the rows and columns needed
+        console.log(`[DEBUG] BaseTableGenerator.createTable() - calling generateDynamicTable()`);
         return this.generateDynamicTable(page, client, data, columns, title, tableConfig);
     }
     
@@ -203,6 +217,7 @@ export abstract class BaseTableGenerator {
                     // If neither column is in the custom order, maintain their relative positions
                     return (a.sortOrder || 1000) - (b.sortOrder || 1000);
                 });
+                // Removed erroneous return
             } else {
                 this.sortColumns(allColumns, typeof config.columnOrder === 'string' ? config.columnOrder : 'schema');
             }
@@ -342,20 +357,39 @@ export abstract class BaseTableGenerator {
     ): Promise<TableBlockProxy | null> {
         try {
             console.log(`[TableGenerator] Generating dynamic table: ${title}...`);
+            console.log(`[DEBUG] generateDynamicTable - Starting for table: ${title}`);
+            console.log(`[DEBUG] Data for table:`, JSON.stringify(data.slice(0, 1)));
             console.log(`[TableGenerator] Using ${columns.length} columns for ${data.length} rows`);
 
             // Create header row data
             const headerRow = columns.map(col => col.header);
 
+            console.log(`[DEBUG] Column definitions:`, columns.map(c => `${c.field}: ${c.header}`).join(', '));
+            
             // Create data rows
-            const dataRows = data.map(item =>
-                columns.map(col => {
+            console.log(`[DEBUG] Processing ${data.length} data rows`);
+            const dataRows = data.map((item, rowIndex) => {
+                // Only log the first row in detail to avoid excessive logs
+                const showDetailedLogs = rowIndex === 0;
+                
+                return columns.map(col => {
                     const value = (item as any)[col.field];
-                    return col.formatter ? col.formatter(value) : String(value);
-                })
-            );
+                    const formatted = col.formatter ? col.formatter(value) : String(value);
+                    
+                    if (showDetailedLogs) {
+                        console.log(`[DEBUG] Row ${rowIndex}, Column ${col.field}: Raw=${value}, Formatted=${formatted}`);
+                    }
+                    
+                    return formatted;
+                });
+            });
 
             // Calculate row and column counts
+            console.log(`[DEBUG] Table data preview:`);
+            console.log(`[DEBUG] Headers:`, headerRow.join(', '));
+            if (dataRows.length > 0) {
+                console.log(`[DEBUG] First row data:`, dataRows[0].join(', '));
+            }
             const rowCount = dataRows.length + 1; // +1 for header row
             const columnCount = headerRow.length;
 

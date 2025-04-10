@@ -20,17 +20,17 @@ export interface EntityThroughputCrossRepSummaryData {
     throughput_rate_mean: number;
     throughput_rate_median: number;
     throughput_rate_std_dev: number;
-    throughput_rate_cv: string;
+    throughput_rate_cv: number;
     interval_mean: number;
     interval_median: number;
     interval_std_dev: number;
-    interval_cv: string;
-    first_exit_mean: string;
-    first_exit_median: string;
-    first_exit_std_dev: string;
-    last_exit_mean: string;
-    last_exit_median: string;
-    last_exit_std_dev: string;
+    interval_cv: number;
+    first_exit_mean: number;
+    first_exit_median: number;
+    first_exit_std_dev: number;
+    last_exit_mean: number;
+    last_exit_median: number;
+    last_exit_std_dev: number;
     
     // Allow for additional properties
     [key: string]: any;
