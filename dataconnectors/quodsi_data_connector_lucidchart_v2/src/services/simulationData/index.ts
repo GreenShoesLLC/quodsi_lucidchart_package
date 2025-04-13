@@ -23,43 +23,41 @@ export {
 } from './collectionUpdater';
 
 // Import all collectors
-import * as activityUtilization from './collectors/activityUtilizationCollector';
+import * as activityCrossRepSummary from './collectors/activityCrossRepCollector';
 import * as activityRepSummary from './collectors/activityRepSummaryCollector';
-import * as activityTiming from './collectors/activityTimingCollector';
-import * as entityStateRepSummary from './collectors/entityStateRepSummaryCollector';
-import * as entityThroughputRepSummary from './collectors/entityThroughputRepSummaryCollector';
+
+import * as resourceCrossRepSummary from './collectors/resourceCrossRepCollector'
 import * as resourceRepSummary from './collectors/resourceRepSummaryCollector';
-import * as resourceUtilization from './collectors/resourceUtilizationCollector';
+
+import * as entityCrossRepCollector from './collectors/entityCrossRepCollector';
+import * as entityRepCollector from './collectors/entityRepCollector';
 
 // Export all collectors as a namespace
 export const collectors = {
-    activityUtilization,
+    activityCrossRepSummary,
     activityRepSummary,
-    activityTiming,
-    entityStateRepSummary,
-    entityThroughputRepSummary,
+    resourceCrossRepSummary,
     resourceRepSummary,
-    resourceUtilization
+    entityCrossRepCollector,
+    entityRepCollector,
 };
 
 // Export all fetch functions
 export const fetch = {
-    activityUtilization: activityUtilization.fetchActivityUtilization,
+    activityUtilization: activityCrossRepSummary.fetchActivityCrossRep,
     activityRepSummary: activityRepSummary.fetchActivityRepSummary,
-    activityTiming: activityTiming.fetchActivityTiming,
-    entityStateRepSummary: entityStateRepSummary.fetchEntityStateRepSummary,
-    entityThroughputRepSummary: entityThroughputRepSummary.fetchEntityThroughputRepSummary,
+    resourceCrossRepSummary: resourceCrossRepSummary.fetchResourceCrossRep,
     resourceRepSummary: resourceRepSummary.fetchResourceRepSummary,
-    resourceUtilization: resourceUtilization.fetchResourceUtilization
+    entityCrossRepCollector: entityCrossRepCollector.fetchEntityCrossRep,
+    entityRepCollector: entityRepCollector.fetchEntityRep,
 };
 
 // Export all prepare functions
 export const prepare = {
-    activityUtilization: activityUtilization.prepareActivityUtilizationUpdate,
+    activityUtilization: activityCrossRepSummary.prepareActivityCrossRepUpdate,
     activityRepSummary: activityRepSummary.prepareActivityRepSummaryUpdate,
-    activityTiming: activityTiming.prepareActivityTimingUpdate,
-    entityStateRepSummary: entityStateRepSummary.prepareEntityStateRepSummaryUpdate,
-    entityThroughputRepSummary: entityThroughputRepSummary.prepareEntityThroughputRepSummaryUpdate,
+    resourceCrossRepSummary: resourceCrossRepSummary.prepareResourceCrossRepUpdate,
     resourceRepSummary: resourceRepSummary.prepareResourceRepSummaryUpdate,
-    resourceUtilization: resourceUtilization.prepareResourceUtilizationUpdate
+    entityCrossRepCollector: entityCrossRepCollector.prepareEntityCrossRepUpdate,
+    entityRepCollector: entityRepCollector.prepareEntityRepUpdate,
 };

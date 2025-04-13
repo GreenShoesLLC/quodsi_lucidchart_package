@@ -11,25 +11,10 @@ import { TableGeneratorFactory } from './generators/TableGeneratorFactory';
  * backward compatibility with existing code.
  */
 export class DynamicSimulationResultsTableGenerator {
-    private factory: TableGeneratorFactory;
+    public factory: TableGeneratorFactory;
     
     constructor(resultsReader: SimulationResultsReader, config?: TableGenerationConfig) {
         this.factory = new TableGeneratorFactory(resultsReader, config);
-    }
-    
-    /**
-     * Creates a table for activity utilization data
-     * @param page The page to add the table to
-     * @param client The editor client
-     * @param config Optional configuration overrides for this table
-     */
-    public async createActivityUtilizationTable(
-        page: PageProxy,
-        client: EditorClient,
-        config?: TableGenerationConfig
-    ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('activityUtilization');
-        return generator.createTable(page, client, config);
     }
     
     /**
@@ -48,62 +33,47 @@ export class DynamicSimulationResultsTableGenerator {
     }
     
     /**
-     * Creates a table for activity timing data
+     * Creates a table for activity cross replication data
      * @param page The page to add the table to
      * @param client The editor client
      * @param config Optional configuration overrides for this table
      */
-    public async createActivityTimingTable(
+    public async createActivityCrossRepTable(
         page: PageProxy,
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('activityTiming');
+        const generator = this.factory.getGenerator('activityCrossRep');
         return generator.createTable(page, client, config);
     }
     
     /**
-     * Creates a table for entity throughput data
+     * Creates a table for entity replication data
      * @param page The page to add the table to
      * @param client The editor client
      * @param config Optional configuration overrides for this table
      */
-    public async createEntityThroughputTable(
+    public async createEntityRepTable(
         page: PageProxy,
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entityThroughput');
+        const generator = this.factory.getGenerator('entityRep');
         return generator.createTable(page, client, config);
     }
     
     /**
-     * Creates a table for entity state summary data
+     * Creates a table for entity cross replication data
      * @param page The page to add the table to
      * @param client The editor client
      * @param config Optional configuration overrides for this table
      */
-    public async createEntityStateTable(
+    public async createEntityCrossRepTable(
         page: PageProxy,
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entityState');
-        return generator.createTable(page, client, config);
-    }
-    
-    /**
-     * Creates a table for resource utilization data
-     * @param page The page to add the table to
-     * @param client The editor client
-     * @param config Optional configuration overrides for this table
-     */
-    public async createResourceUtilizationTable(
-        page: PageProxy,
-        client: EditorClient,
-        config?: TableGenerationConfig
-    ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('resourceUtilization');
+        const generator = this.factory.getGenerator('entityCrossRep');
         return generator.createTable(page, client, config);
     }
     
@@ -121,34 +91,19 @@ export class DynamicSimulationResultsTableGenerator {
         const generator = this.factory.getGenerator('resourceRepSummary');
         return generator.createTable(page, client, config);
     }
-
-    /**
-     * Creates a table for entity state cross replication summary data
-     * @param page The page to add the table to
-     * @param client The editor client
-     * @param config Optional configuration overrides for this table
-     */
-    public async createEntityStateCrossRepSummaryTable(
-        page: PageProxy,
-        client: EditorClient,
-        config?: TableGenerationConfig
-    ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entityStateCrossRepSummary');
-        return generator.createTable(page, client, config);
-    }
     
     /**
-     * Creates a table for entity throughput cross replication summary data
+     * Creates a table for resource cross replication data
      * @param page The page to add the table to
      * @param client The editor client
      * @param config Optional configuration overrides for this table
      */
-    public async createEntityThroughputCrossRepSummaryTable(
+    public async createResourceCrossRepTable(
         page: PageProxy,
         client: EditorClient,
         config?: TableGenerationConfig
     ): Promise<TableBlockProxy | null> {
-        const generator = this.factory.getGenerator('entityThroughputCrossRepSummary');
+        const generator = this.factory.getGenerator('resourceCrossRep');
         return generator.createTable(page, client, config);
     }
 }

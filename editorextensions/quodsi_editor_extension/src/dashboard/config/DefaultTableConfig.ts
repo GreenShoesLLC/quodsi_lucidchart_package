@@ -4,33 +4,6 @@ import { TableConfig } from "../interfaces";
  * Default table configurations
  */
 export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
-    activityUtilization: {
-        included: true,
-        header: 'Activity Utilization',
-        columns: {
-            order: [
-                'activity_name',
-                'scenario_name',
-                'utilization_mean',
-                'capacity_mean',
-                'contents_mean',
-                'queue_length_mean',
-            ],
-            exclude: [
-                'id',
-                'scenario_id',
-                'activity_id',
-                'utilization_max',
-                'utilization_std_dev',
-                'capacity_max',
-                'capacity_std_dev',
-                'contents_max',
-                'contents_std_dev',
-                'queue_length_max',
-                'queue_length_std_dev'
-            ]
-        }
-    },
     activityRepSummary: {
         included: false,
         header: 'Activity Replication Summary',
@@ -40,8 +13,7 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'activity_name',
                 'scenario_name',
                 'rep',
-                'utilization_percentage',
-                'throughput_rate',
+                'utilization_0_to_1',
                 'capacity',
                 'total_available_clock',
                 'total_arrivals',
@@ -60,54 +32,150 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             exclude: ['id', 'scenario_id']
         }
     },
-    activityTiming: {
+    activityCrossRep: {
         included: true,
-        header: 'Activity States',
+        header: 'Activity Cross Replication',
         columns: {
             order: [
                 'activity_name',
                 'scenario_name',
+                'utilization_mean',
+                'utilization_max',
+                'utilization_std_dev',
+                'capacity_mean',
+                'capacity_max',
+                'contents_mean',
+                'contents_max',
+                'queue_length_mean',
+                'queue_length_max',
                 'cycle_time_mean',
-                'service_time_mean',
                 'waiting_time_mean',
                 'blocked_time_mean',
+                'arrivals_mean',
+                'captures_mean',
+                'releases_mean'
             ],
             exclude: [
                 'id',
                 'scenario_id',
                 'activity_id',
+                'capacity_std_dev',
+                'contents_std_dev',
+                'queue_length_std_dev',
                 'cycle_time_median',
                 'cycle_time_std_dev',
                 'cycle_time_cv',
-                'service_time_median',
-                'service_time_std_dev',
-                'service_time_cv',
                 'waiting_time_median',
                 'waiting_time_std_dev',
                 'waiting_time_cv',
                 'blocked_time_median',
                 'blocked_time_std_dev',
-                'blocked_time_cv'
+                'blocked_time_cv',
+                'arrivals_max',
+                'arrivals_std_dev',
+                'captures_max',
+                'captures_std_dev',
+                'releases_max',
+                'releases_std_dev'
             ]
         }
     },
-    entityThroughput: {
+    entityRep: {
         included: false,
-        header: 'Entity Throughput',
+        header: 'Entity Replication',
         columns: {
             order: [
                 'entity_name',
                 'scenario_name',
                 'rep',
-                'count',
+                'entity_count',
                 'completed_count',
                 'in_progress_count',
+                'throughput_rate',
+                'first_exit',
+                'last_exit',
+                'avg_time_in_system',
+                'avg_time_waiting',
+                'avg_time_blocked',
+                'avg_time_in_operation',
+                'avg_time_connecting',
+                'percent_waiting',
+                'percent_blocked',
+                'percent_operation',
+                'percent_connecting'
             ],
             exclude: [
                 'id',
                 'scenario_id',
                 'entity_id',
-                'throughput_rate'
+                'avg_interval',
+                'min_interval',
+                'max_interval'
+            ]
+        }
+    },
+    entityCrossRep: {
+        included: true,
+        header: 'Entity Cross Replication',
+        columns: {
+            order: [
+                'entity_name',
+                'scenario_name',
+                'count_mean',
+                'count_std_dev',
+                'completed_count_mean',
+                'completed_count_std_dev',
+                'in_progress_count_mean',
+                'in_progress_count_std_dev',
+                'throughput_rate_mean',
+                'throughput_rate_std_dev',
+                'throughput_rate_cv',
+                'time_in_system_mean',
+                'time_in_system_std_dev',
+                'time_waiting_mean',
+                'time_waiting_std_dev',
+                'time_blocked_mean',
+                'time_blocked_std_dev',
+                'time_in_operation_mean',
+                'time_in_operation_std_dev',
+                'percent_waiting_mean',
+                'percent_blocked_mean',
+                'percent_operation_mean'
+            ],
+            exclude: [
+                'id',
+                'scenario_id',
+                'entity_id',
+                'count_median',
+                'completed_count_median',
+                'in_progress_count_median',
+                'throughput_rate_median',
+                'interval_mean',
+                'interval_median',
+                'interval_std_dev',
+                'interval_cv',
+                'overall_interval_mean',
+                'overall_interval_median',
+                'overall_interval_std_dev',
+                'overall_interval_cv',
+                'first_exit_mean',
+                'first_exit_median',
+                'first_exit_std_dev',
+                'last_exit_mean',
+                'last_exit_median',
+                'last_exit_std_dev',
+                'time_in_system_median',
+                'time_waiting_median',
+                'time_blocked_median',
+                'time_in_operation_median',
+                'time_connecting_mean',
+                'time_connecting_median',
+                'time_connecting_std_dev',
+                'percent_waiting_std_dev',
+                'percent_blocked_std_dev',
+                'percent_operation_std_dev',
+                'percent_connecting_mean',
+                'percent_connecting_std_dev'
             ]
         }
     },
@@ -134,140 +202,23 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
             exclude: ['id', 'scenario_id']
         }
     },
-    resourceUtilization: {
+    resourceCrossRep: {
         included: true,
-        header: 'Resource Utilization',
+        header: 'Resource Cross Replication',
         columns: {
             order: [
                 'resource_name',
                 'scenario_name',
                 'utilization_mean',
-            ],
-            exclude: [
-                'id',
-                'scenario_id',
-                'resource_id',
-                'utilization_max',
                 'utilization_min',
+                'utilization_max',
                 'utilization_std_dev',
                 'bottleneck_frequency'
-            ]
-        }
-    },
-    entityState: {
-        included: false,
-        header: 'Entity State Analysis',
-        columns: {
-            order: [
-                'entity_name',
-                'scenario_name',
-                'rep',
-                'count',
-                'avg_time_in_system',
-                'avg_time_waiting',
-                'avg_time_blocked',
-                'avg_time_in_operation',
-                'avg_time_connecting',
-                'percent_waiting',
-                'percent_blocked',
-                'percent_operation',
-                'percent_connecting'
             ],
             exclude: [
                 'id',
                 'scenario_id',
-                'entity_id',
-            ]
-        }
-    },
-    entityStateCrossRepSummary: {
-        included: true,
-        header: 'Entity States',
-        columns: {
-            order: [
-                'entity_name',
-                'scenario_name',
-                // 'count_mean',
-                // 'count_median',
-                // 'count_std_dev',
-                'time_in_system_mean',
-                // 'time_in_system_median',
-                'time_in_system_std_dev',
-                'time_waiting_mean',
-                // 'time_waiting_median',
-                'time_waiting_std_dev',
-                'time_blocked_mean',
-                // 'time_blocked_median',
-                'time_blocked_std_dev',
-                'time_in_operation_mean',
-                // 'time_in_operation_median',
-                'time_in_operation_std_dev',
-                'percent_waiting_mean',
-                'percent_waiting_std_dev',
-                'percent_blocked_mean',
-                'percent_blocked_std_dev',
-                'percent_operation_mean',
-                'percent_operation_std_dev'
-            ],
-            exclude: [
-                'id',
-                'scenario_id',
-                'entity_id',
-                'time_connecting_mean',
-                'time_connecting_median',
-                'time_connecting_std_dev',
-                'percent_connecting_mean',
-                'percent_connecting_std_dev',
-                'time_in_system_median',
-                'time_waiting_median',
-                'time_blocked_median',
-                'time_in_operation_median',
-                'count_mean',
-                'count_median',
-                'count_std_dev',
-            ]
-        }
-    },
-    entityThroughputCrossRepSummary: {
-        included: true,
-        header: 'Entity Throughput',
-        columns: {
-            order: [
-                'entity_name',
-                'scenario_name',
-                'count_mean',
-                // 'count_median',
-                'count_std_dev',
-                'completed_count_mean',
-                // 'completed_count_median',
-                'completed_count_std_dev',
-                'in_progress_count_mean',
-                // 'in_progress_count_median',
-                'in_progress_count_std_dev',
-                'throughput_rate_mean',
-                // 'throughput_rate_median',
-                'throughput_rate_std_dev',
-                'throughput_rate_cv',
-                'interval_mean',
-                // 'interval_median',
-                'interval_std_dev',
-                'interval_cv'
-            ],
-            exclude: [
-                'id',
-                'scenario_id',
-                'entity_id',
-                'first_exit_mean',
-                'first_exit_median',
-                'first_exit_std_dev',
-                'last_exit_mean',
-                'last_exit_median',
-                'last_exit_std_dev',
-                'count_median',
-                'completed_count_median',
-                'in_progress_count_median',
-                'throughput_rate_median',
-                'interval_median',
+                'resource_id'
             ]
         }
     }

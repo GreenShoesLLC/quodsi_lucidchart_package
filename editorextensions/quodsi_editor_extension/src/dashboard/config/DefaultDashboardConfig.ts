@@ -18,10 +18,12 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
         maxColumns: 15  // Increased from 6 to 15
     },
     tableOrder: [
-        'entityStateCrossRepSummary',
-        'entityThroughputCrossRepSummary',
-        'activityUtilization',
-        'activityTiming',
+        'entityCrossRep',         // Entity cross-replication summary (replacing entityStateCrossRepSummary)
+        'activityCrossRep',       // Activity cross-replication summary (replacing activityUtilization)
+        'resourceCrossRep',       // Resource cross-replication summary (replacing resourceUtilization)
+        // 'entityRep',
+        // 'activityRepSummary',
+        // 'resourceRepSummary'
         // Any tables not in this list will be shown after these
     ],
     tables: DEFAULT_TABLE_CONFIGS

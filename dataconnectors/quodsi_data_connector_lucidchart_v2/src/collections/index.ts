@@ -7,12 +7,10 @@ export { ScenarioResultsSchema } from './scenarioResultsSchema';
 
 // Export other collection schemas
 export * from './activityRepSummarySchema';
-export * from './activityTimingSchema';
-export * from './activityUtilizationSchema';
-export * from './entityStateRepSummarySchema';
-export * from './entityThroughputRepSummarySchema';
-export * from './resourceRepSummarySchema';
+export * from './activityCrossRepSchema';
 
-// Export new cross-replication summary schemas
-export * from './entityStateCrossRepSummarySchema';
-export * from './entityThroughputCrossRepSummarySchema';
+export * from './entityCrossRepSchema';
+export * from './entityRepSchema';
+
+export * from './resourceCrossRepSchema';
+export * from './resourceRepSummarySchema';

@@ -20,8 +20,7 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityRepSummaryData
     'total_captures',
     'total_releases',
     'total_time_in_capture',
-    'utilization_percentage',
-    'throughput_rate'
+    'utilization_0_to_1'
 ]);
 
 /**
@@ -90,26 +89,18 @@ export async function fetchActivityRepSummary(
                 average_contents: item.average_contents ?? 0,
                 maximum_contents: item.maximum_contents ?? 0,
                 current_contents: item.current_contents ?? 0,
-                utilization_percentage: item.utilization_percentage ?? 0,
-                throughput_rate: item.throughput_rate ?? 0,
+                utilization_0_to_1: item.utilization_0_to_1 ?? 0,
                 average_time_per_entry: item.average_time_per_entry ?? 0,
                 average_queue_length: item.average_queue_length ?? 0,
                 input_buffer_utilization: item.input_buffer_utilization ?? 0,
                 output_buffer_utilization: item.output_buffer_utilization ?? 0,
                 input_buffer_queue_time: item.input_buffer_queue_time ?? 0,
                 output_buffer_queue_time: item.output_buffer_queue_time ?? 0,
-                min_service_time: item.min_service_time ?? 0,
-                max_service_time: item.max_service_time ?? 0,
-                avg_service_time: item.avg_service_time ?? 0,
-                service_time_variance: item.service_time_variance ?? 0,
                 total_time_blocked_upstream: item.total_time_blocked_upstream ?? 0,
                 total_time_blocked_downstream: item.total_time_blocked_downstream ?? 0,
                 blocking_frequency: item.blocking_frequency ?? 0,
                 resource_starvation_time: item.resource_starvation_time ?? 0,
-                resource_conflict_count: item.resource_conflict_count ?? 0,
-                operational_efficiency: item.operational_efficiency ?? 0,
-                cycle_time_efficiency: item.cycle_time_efficiency ?? 0,
-                first_time_through: item.first_time_through ?? 0
+                resource_conflict_count: item.resource_conflict_count ?? 0
             };
 
             return validItem;
@@ -159,26 +150,18 @@ export function prepareActivityRepSummaryUpdate(data: ActivityRepSummaryData[]) 
             average_contents: item.average_contents ?? 0,
             maximum_contents: item.maximum_contents ?? 0,
             current_contents: item.current_contents ?? 0,
-            utilization_percentage: item.utilization_percentage ?? 0,
-            throughput_rate: item.throughput_rate ?? 0,
+            utilization_0_to_1: item.utilization_0_to_1 ?? 0,
             average_time_per_entry: item.average_time_per_entry ?? 0,
             average_queue_length: item.average_queue_length ?? 0,
             input_buffer_utilization: item.input_buffer_utilization ?? 0,
             output_buffer_utilization: item.output_buffer_utilization ?? 0,
             input_buffer_queue_time: item.input_buffer_queue_time ?? 0,
             output_buffer_queue_time: item.output_buffer_queue_time ?? 0,
-            min_service_time: item.min_service_time ?? 0,
-            max_service_time: item.max_service_time ?? 0,
-            avg_service_time: item.avg_service_time ?? 0,
-            service_time_variance: item.service_time_variance ?? 0,
             total_time_blocked_upstream: item.total_time_blocked_upstream ?? 0,
             total_time_blocked_downstream: item.total_time_blocked_downstream ?? 0,
             blocking_frequency: item.blocking_frequency ?? 0,
             resource_starvation_time: item.resource_starvation_time ?? 0,
-            resource_conflict_count: item.resource_conflict_count ?? 0,
-            operational_efficiency: item.operational_efficiency ?? 0,
-            cycle_time_efficiency: item.cycle_time_efficiency ?? 0,
-            first_time_through: item.first_time_through ?? 0
+            resource_conflict_count: item.resource_conflict_count ?? 0
         };
 
         // Add to our collection using the ID as the key

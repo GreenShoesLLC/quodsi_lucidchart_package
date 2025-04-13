@@ -11,7 +11,14 @@ export { DashboardTableFactory } from './factory/DashboardTableFactory';
 // Base handler
 export { BaseTableHandler } from './handlers/BaseTableHandler';
 
-// Concrete handlers
-export { ActivityUtilizationTableHandler } from './handlers/ActivityUtilizationTableHandler';
+// Activity handlers
 export { ActivityRepSummaryTableHandler } from './handlers/ActivityRepSummaryTableHandler';
-// Additional handlers will be exported here as they are created
+export { ActivityCrossRepTableHandler } from './handlers/ActivityCrossRepTableHandler';
+
+// Entity handlers
+export { EntityRepTableHandler } from './handlers/EntityRepTableHandler';
+export { EntityCrossRepTableHandler } from './handlers/EntityCrossRepTableHandler';
+
+// Resource handlers
+export { ResourceRepSummaryTableHandler } from './handlers/ResourceRepSummaryTableHandler';
+export { ResourceCrossRepTableHandler } from './handlers/ResourceCrossRepTableHandler';

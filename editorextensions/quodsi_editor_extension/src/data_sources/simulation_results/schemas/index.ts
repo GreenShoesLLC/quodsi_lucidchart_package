@@ -1,11 +1,12 @@
 // collections/index.ts
-export { ActivityUtilizationSchema } from './activityUtilizationSchema';
+export { ActivityCrossRepSchema } from './activityCrossRepSchema';
 export { ActivityRepSummarySchema } from './activityRepSummarySchema';
-export { ActivityTimingSchema } from './activityTimingSchema';
-export { EntityStateRepSummarySchema } from './entityStateRepSummarySchema';
-export { EntityThroughputRepSummarySchema } from './entityThroughputRepSummarySchema';
+
+export { ResourceCrossRepSchema } from './resourceCrossRepSchema';
 export { ResourceRepSummarySchema } from './resourceRepSummarySchema';
-export { ResourceUtilizationSchema } from './resourceUtilizationSchema';
+
+export { EntityCrossRepSchema } from './entityCrossRepSchema'
+export { EntityRepSchema } from './entityRepSchema';
+
+export { ModelSchema } from './modelSchema'
 export { ScenarioResultsSchema } from './scenarioResultsSchema';
-export { EntityStateCrossRepSummarySchema } from './EntityStateCrossRepSummarySchema';
-export { EntityThroughputCrossRepSummarySchema } from './EntityThroughputCrossRepSummarySchema';

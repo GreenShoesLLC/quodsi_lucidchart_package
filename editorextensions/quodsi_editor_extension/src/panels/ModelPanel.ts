@@ -287,7 +287,18 @@ export class ModelPanel extends Panel {
                 await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'ImportSimulationResults',
-                    actionData: { documentId: payload.documentId, scenarioId: payload.scenarioId },
+                    actionData: {
+                        documentId: payload.documentId,
+                        scenarioId: payload.scenarioId,
+                        collectionsToImport: [
+                            'activity_cross_rep',
+                            // 'activity_rep',
+                            'entity_cross_rep',
+                            // 'entity_rep',
+                            'resource_cross_rep',
+                            // 'resource_rep'
+                        ]
+                    },
                     asynchronous: true
                 });
             // Create dashboard instance with default configuration

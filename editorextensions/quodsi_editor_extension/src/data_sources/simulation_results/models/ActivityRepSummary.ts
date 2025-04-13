@@ -22,7 +22,7 @@ export interface ActivityRepSummary {
   average_contents: number;
   maximum_contents: number;
   current_contents: number;
-  utilization_percentage: number;
+  utilization_0_to_1: number;
   throughput_rate: number;
   average_time_per_entry: number;
   average_queue_length: number;
@@ -30,18 +30,11 @@ export interface ActivityRepSummary {
   output_buffer_utilization: number;
   input_buffer_queue_time: number;
   output_buffer_queue_time: number;
-  min_service_time: number;
-  max_service_time: number;
-  avg_service_time: number;
-  service_time_variance: number;
   total_time_blocked_upstream: number;
   total_time_blocked_downstream: number;
   blocking_frequency: number;
   resource_starvation_time: number;
   resource_conflict_count: number;
-  operational_efficiency: number;
-  cycle_time_efficiency: number;
-  first_time_through: number;
 }
 
 /**
@@ -69,7 +62,7 @@ export function mapToActivityRepSummary(itemFields: MapProxy<string, any>): Acti
     average_contents: itemFields.get('average_contents') as number,
     maximum_contents: itemFields.get('maximum_contents') as number,
     current_contents: itemFields.get('current_contents') as number,
-    utilization_percentage: itemFields.get('utilization_percentage') as number,
+    utilization_0_to_1: itemFields.get('utilization_0_to_1') as number,
     throughput_rate: itemFields.get('throughput_rate') as number,
     average_time_per_entry: itemFields.get('average_time_per_entry') as number,
     average_queue_length: itemFields.get('average_queue_length') as number,
@@ -77,17 +70,10 @@ export function mapToActivityRepSummary(itemFields: MapProxy<string, any>): Acti
     output_buffer_utilization: itemFields.get('output_buffer_utilization') as number,
     input_buffer_queue_time: itemFields.get('input_buffer_queue_time') as number,
     output_buffer_queue_time: itemFields.get('output_buffer_queue_time') as number,
-    min_service_time: itemFields.get('min_service_time') as number,
-    max_service_time: itemFields.get('max_service_time') as number,
-    avg_service_time: itemFields.get('avg_service_time') as number,
-    service_time_variance: itemFields.get('service_time_variance') as number,
     total_time_blocked_upstream: itemFields.get('total_time_blocked_upstream') as number,
     total_time_blocked_downstream: itemFields.get('total_time_blocked_downstream') as number,
     blocking_frequency: itemFields.get('blocking_frequency') as number,
     resource_starvation_time: itemFields.get('resource_starvation_time') as number,
-    resource_conflict_count: itemFields.get('resource_conflict_count') as number,
-    operational_efficiency: itemFields.get('operational_efficiency') as number,
-    cycle_time_efficiency: itemFields.get('cycle_time_efficiency') as number,
-    first_time_through: itemFields.get('first_time_through') as number
+    resource_conflict_count: itemFields.get('resource_conflict_count') as number
   };
 }

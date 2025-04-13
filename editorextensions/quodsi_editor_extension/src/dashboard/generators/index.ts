@@ -3,10 +3,11 @@ export { BaseTableGenerator } from './BaseTableGenerator';
 export { TableGeneratorFactory } from './TableGeneratorFactory';
 
 // Export individual generator classes
-export { ActivityUtilizationTableGenerator } from './ActivityUtilizationTableGenerator';
 export { ActivityRepSummaryTableGenerator } from './ActivityRepSummaryTableGenerator';
-export { ActivityTimingTableGenerator } from './ActivityTimingTableGenerator';
-export { EntityStateTableGenerator } from './EntityStateTableGenerator';
-export { EntityThroughputTableGenerator } from './EntityThroughputTableGenerator';
-export { ResourceUtilizationTableGenerator } from './ResourceUtilizationTableGenerator';
+export { ActivityCrossRepTableGenerator } from './ActivityCrossRepTableGenerator';
+
+export { EntityRepTableGenerator } from './EntityRepTableGenerator';
+export { EntityCrossRepTableGenerator } from './EntityCrossRepTableGenerator';
+
 export { ResourceRepSummaryTableGenerator } from './ResourceRepSummaryTableGenerator';
+export { ResourceCrossRepTableGenerator } from './ResourceCrossRepTableGenerator';

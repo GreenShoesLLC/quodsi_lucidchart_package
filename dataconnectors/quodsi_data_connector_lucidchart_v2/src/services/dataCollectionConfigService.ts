@@ -3,28 +3,26 @@ import { conditionalLog } from '../utils/loggingUtils';
 
 // Configuration for enabling/disabling specific data collections
 export interface DataCollectionConfig {
-    collectActivityUtilization: boolean;
+    collectActivityCrossRep: boolean;
     collectActivityRepSummary: boolean;
-    collectActivityTiming: boolean;
-    collectEntityStateRepSummary: boolean;
-    collectEntityThroughputRepSummary: boolean;
+
+    collectEntityCrossRep: boolean;
+    collectEntityRep: boolean;
+
+    collectResourceCrossRep: boolean;
     collectResourceRepSummary: boolean;
-    collectResourceUtilization: boolean;
-    collectEntityStateCrossRepSummary: boolean;
-    collectEntityThroughputCrossRepSummary: boolean;
 }
 
 // Default configuration - all collections enabled
 const defaultDataCollectionConfig: DataCollectionConfig = {
-    collectActivityUtilization: true,
-    collectActivityRepSummary: true,
-    collectActivityTiming: true,
-    collectEntityStateRepSummary: true,
-    collectEntityThroughputRepSummary: true,
-    collectResourceRepSummary: true,
-    collectResourceUtilization: true,
-    collectEntityStateCrossRepSummary: true,
-    collectEntityThroughputCrossRepSummary: true
+    collectActivityCrossRep: true,
+    collectActivityRepSummary: false,
+
+    collectEntityCrossRep: false,
+    collectEntityRep: false,
+
+    collectResourceCrossRep: false,
+    collectResourceRepSummary: false,
 };
 
 // Current active configuration - starts with defaults

@@ -7,10 +7,10 @@
  */
 
 export {
-    ActivityUtilizationData,
+    ActivityCrossRepSummaryData,
     ActivityRepSummaryData,
-    ActivityTimingData,
-    EntityStateRepSummaryData,
-    EntityThroughputRepSummaryData,
+    EntityCrossRepSummaryData,
+    EntityRepSummaryData,
+    ResourceCrossRepData,
     ResourceRepSummaryData
 } from './interfaces';

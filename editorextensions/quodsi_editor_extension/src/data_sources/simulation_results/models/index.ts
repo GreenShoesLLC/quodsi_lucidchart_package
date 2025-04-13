@@ -1,12 +1,14 @@
 // Export all simulation results models
 export { ModelData, mapToModelData } from './ModelData';
 
-export { ActivityUtilization, mapToActivityUtilization } from './ActivityUtilization';
+// Activity models
 export { ActivityRepSummary, mapToActivityRepSummary } from './ActivityRepSummary';
-export { ActivityTiming, mapToActivityTiming } from './ActivityTiming';
-export { EntityStateRepSummary, mapToEntityStateRepSummary } from './EntityStateRepSummary';
-export { EntityThroughputRepSummary, mapToEntityThroughputRepSummary } from './EntityThroughputRepSummary';
+export { ActivityCrossRep, mapToActivityCrossRep } from './ActivityCrossRep';
+
+// Entity models
+export { EntityRep, mapToEntityRep } from './EntityRep';
+export { EntityCrossRep, mapToEntityCrossRep } from './EntityCrossRep';
+
+// Resource models
 export { ResourceRepSummary, mapToResourceRepSummary } from './ResourceRepSummary';
-export { ResourceUtilization, mapToResourceUtilization } from './ResourceUtilization';
-export { EntityStateCrossRepSummary, mapToEntityStateCrossRepSummary } from './EntityStateCrossRepSummary';
-export { EntityThroughputCrossRepSummary, mapToEntityThroughputCrossRepSummary } from './EntityThroughputCrossRepSummary';
+export { ResourceCrossRep, mapToResourceCrossRep } from './ResourceCrossRep';

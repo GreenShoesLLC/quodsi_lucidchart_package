@@ -6,15 +6,12 @@ import { SimulationResultsReader } from '../../data_sources/simulation_results/S
 import { DynamicSimulationResultsTableGenerator } from '../DynamicSimulationResultsTableGenerator';
 import { TableHandlerInterface } from '../interfaces/handlers/TableHandlerInterface';
 import { DashboardConfigManager } from '../config/DashboardConfigManager';
-import { ActivityUtilizationTableHandler } from '../handlers/ActivityUtilizationTableHandler';
 import { ActivityRepSummaryTableHandler } from '../handlers/ActivityRepSummaryTableHandler';
-import { ActivityTimingTableHandler } from '../handlers/ActivityTimingTableHandler';
-import { EntityThroughputTableHandler } from '../handlers/EntityThroughputTableHandler';
-import { EntityStateTableHandler } from '../handlers/EntityStateTableHandler';
-import { ResourceUtilizationTableHandler } from '../handlers/ResourceUtilizationTableHandler';
+import { ActivityCrossRepTableHandler } from '../handlers/ActivityCrossRepTableHandler';
+import { EntityRepTableHandler } from '../handlers/EntityRepTableHandler';
+import { EntityCrossRepTableHandler } from '../handlers/EntityCrossRepTableHandler';
 import { ResourceRepSummaryTableHandler } from '../handlers/ResourceRepSummaryTableHandler';
-import { EntityStateCrossRepSummaryTableHandler } from '../handlers/EntityStateCrossRepSummaryTableHandler';
-import { EntityThroughputCrossRepSummaryTableHandler } from '../handlers/EntityThroughputCrossRepSummaryTableHandler';
+import { ResourceCrossRepTableHandler } from '../handlers/ResourceCrossRepTableHandler';
 
 /**
  * Factory for creating table handlers
@@ -53,21 +50,7 @@ export class DashboardTableFactory {
      * Initializes all available table handlers
      */
     private initializeHandlers(): void {
-        // Register built-in handlers
-        this.registerHandler(new EntityStateTableHandler(
-            this.client,
-            this.resultsReader,
-            this.tableGenerator,
-            this.config
-        ));
-        
-        this.registerHandler(new ActivityUtilizationTableHandler(
-            this.client,
-            this.resultsReader,
-            this.tableGenerator,
-            this.config
-        ));
-
+        // Register built-in handlers for activity data
         this.registerHandler(new ActivityRepSummaryTableHandler(
             this.client,
             this.resultsReader,
@@ -75,27 +58,29 @@ export class DashboardTableFactory {
             this.config
         ));
 
-        this.registerHandler(new ActivityTimingTableHandler(
+        this.registerHandler(new ActivityCrossRepTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
             this.config
         ));
 
-        this.registerHandler(new EntityThroughputTableHandler(
+        // Register built-in handlers for entity data
+        this.registerHandler(new EntityRepTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
             this.config
         ));
 
-        this.registerHandler(new ResourceUtilizationTableHandler(
+        this.registerHandler(new EntityCrossRepTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,
             this.config
         ));
 
+        // Register built-in handlers for resource data
         this.registerHandler(new ResourceRepSummaryTableHandler(
             this.client,
             this.resultsReader,
@@ -103,14 +88,7 @@ export class DashboardTableFactory {
             this.config
         ));
 
-        this.registerHandler(new EntityStateCrossRepSummaryTableHandler(
-            this.client,
-            this.resultsReader,
-            this.tableGenerator,
-            this.config
-        ));
-
-        this.registerHandler(new EntityThroughputCrossRepSummaryTableHandler(
+        this.registerHandler(new ResourceCrossRepTableHandler(
             this.client,
             this.resultsReader,
             this.tableGenerator,

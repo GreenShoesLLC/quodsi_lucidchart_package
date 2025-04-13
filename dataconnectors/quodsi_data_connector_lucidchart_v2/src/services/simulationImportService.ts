@@ -14,13 +14,14 @@ import { LoggingLevel } from "../utils/loggingLevels";
  * Configuration for collections to import
  */
 export interface CollectionImportConfig {
-    collectActivityUtilization?: boolean;
+    collectActivityCrossRep?: boolean;
     collectActivityRepSummary?: boolean;
-    collectActivityTiming?: boolean;
-    collectEntityStateRepSummary?: boolean;
-    collectEntityThroughputRepSummary?: boolean;
+
+    collectEntityCrossRep?: boolean;
+    collectEntityRep?: boolean;
+
+    collectResourceCrossRep?: boolean;
     collectResourceRepSummary?: boolean;
-    collectResourceUtilization?: boolean;
 }
 
 /**
@@ -132,9 +133,9 @@ export class SimulationImportService {
                 params.documentId,
                 params.scenarioId,
                 'import',
-                updateLoggingLevel,
+                'info',
                 this.logger,
-                containerName // Pass container name explicitly
+                containerName 
             );
 
             if (result.success) {
@@ -223,39 +224,37 @@ export class SimulationImportService {
 
             // Start by disabling all collections
             setDataCollectionConfig({
-                collectActivityUtilization: false,
+                collectActivityCrossRep: false,
                 collectActivityRepSummary: false,
-                collectActivityTiming: false,
-                collectEntityStateRepSummary: false,
-                collectEntityThroughputRepSummary: false,
+
+                collectEntityCrossRep: false,
+                collectEntityRep: false,
+
+                collectResourceCrossRep: false,
                 collectResourceRepSummary: false,
-                collectResourceUtilization: false
             });
 
             // Then enable only the specified collections
             const configUpdate: CollectionImportConfig = {};
             collectionsToImport.forEach(collection => {
                 switch (collection) {
-                    case 'activity_utilization':
-                        configUpdate.collectActivityUtilization = true;
+                    case 'activity_cross_rep':
+                        configUpdate.collectActivityCrossRep = true;
                         break;
-                    case 'activity_rep_summary':
+                    case 'activity_rep':
                         configUpdate.collectActivityRepSummary = true;
                         break;
-                    case 'activity_timing':
-                        configUpdate.collectActivityTiming = true;
+                    case 'entity_cross_rep':
+                        configUpdate.collectEntityCrossRep = true;
                         break;
-                    case 'entity_state_rep_summary':
-                        configUpdate.collectEntityStateRepSummary = true;
+                    case 'entity_rep':
+                        configUpdate.collectEntityRep = true;
                         break;
-                    case 'entity_throughput_rep_summary':
-                        configUpdate.collectEntityThroughputRepSummary = true;
+                    case 'resource_cross_rep':
+                        configUpdate.collectResourceCrossRep = true;
                         break;
-                    case 'resource_rep_summary':
+                    case 'resource_rep':
                         configUpdate.collectResourceRepSummary = true;
-                        break;
-                    case 'resource_utilization':
-                        configUpdate.collectResourceUtilization = true;
                         break;
                     default:
                         this.logger.warn(`Unknown collection specified: ${collection}`);

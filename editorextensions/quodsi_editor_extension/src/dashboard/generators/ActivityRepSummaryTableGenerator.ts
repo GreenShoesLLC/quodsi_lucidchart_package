@@ -26,14 +26,13 @@ export class ActivityRepSummaryTableGenerator extends BaseTableGenerator {
         return {
             schema: ActivityRepSummarySchema,
             identifierFields: ['id', 'activity_id', 'activity_name'],
-            percentageFields: ['utilization_percentage', 'operational_efficiency', 'cycle_time_efficiency'],
+            percentageFields: ['utilization_0_to_1'],
             priorityFields: [
                 'activity_id',
                 'activity_name',
                 'scenario_name',
                 'rep',
-                'utilization_percentage',
-                'throughput_rate',
+                'utilization_0_to_1',
                 'capacity',
                 'total_available_clock',
                 'total_requests',

@@ -2,10 +2,9 @@
 export { BaseTableHandler } from './BaseTableHandler';
 
 // Export individual handler classes
-export { ActivityUtilizationTableHandler } from './ActivityUtilizationTableHandler';
 export { ActivityRepSummaryTableHandler } from './ActivityRepSummaryTableHandler';
-export { ActivityTimingTableHandler } from './ActivityTimingTableHandler';
-export { EntityStateTableHandler } from './EntityStateTableHandler';
-export { EntityThroughputTableHandler } from './EntityThroughputTableHandler';
-export { ResourceUtilizationTableHandler } from './ResourceUtilizationTableHandler';
+export { ActivityCrossRepTableHandler } from './ActivityCrossRepTableHandler';
+export { EntityRepTableHandler } from './EntityRepTableHandler';
+export { EntityCrossRepTableHandler } from './EntityCrossRepTableHandler';
 export { ResourceRepSummaryTableHandler } from './ResourceRepSummaryTableHandler';
+export { ResourceCrossRepTableHandler } from './ResourceCrossRepTableHandler';

@@ -1,15 +1,12 @@
 import { SimulationResultsReader } from '../../data_sources/simulation_results/SimulationResultsReader';
 import { TableGenerationConfig } from '../interfaces/GeneratorTypes';
 import { BaseTableGenerator } from './BaseTableGenerator';
-import { ActivityUtilizationTableGenerator } from './ActivityUtilizationTableGenerator';
 import { ActivityRepSummaryTableGenerator } from './ActivityRepSummaryTableGenerator';
-import { ActivityTimingTableGenerator } from './ActivityTimingTableGenerator';
-import { EntityStateTableGenerator } from './EntityStateTableGenerator';
-import { EntityThroughputTableGenerator } from './EntityThroughputTableGenerator';
-import { ResourceUtilizationTableGenerator } from './ResourceUtilizationTableGenerator';
+import { ActivityCrossRepTableGenerator } from './ActivityCrossRepTableGenerator';
+import { EntityRepTableGenerator } from './EntityRepTableGenerator';
+import { EntityCrossRepTableGenerator } from './EntityCrossRepTableGenerator';
 import { ResourceRepSummaryTableGenerator } from './ResourceRepSummaryTableGenerator';
-import { EntityStateCrossRepSummaryTableGenerator } from './EntityStateCrossRepSummaryTableGenerator';
-import { EntityThroughputCrossRepSummaryTableGenerator } from './EntityThroughputCrossRepSummaryTableGenerator';
+import { ResourceCrossRepTableGenerator } from './ResourceCrossRepTableGenerator';
 
 /**
  * Factory class for creating table generators based on table type
@@ -36,43 +33,58 @@ export class TableGeneratorFactory {
      */
     getGenerator(tableType: string): BaseTableGenerator {
         switch (tableType) {
-            case 'activityUtilization':
-            case 'activity_utilization': // For backward compatibility
-                return new ActivityUtilizationTableGenerator(this.resultsReader, this.config);
-                
+            // Activity generators
             case 'activityRepSummary':
             case 'activity_rep_summary': // For backward compatibility
                 return new ActivityRepSummaryTableGenerator(this.resultsReader, this.config);
                 
-            case 'activityTiming':
-            case 'activity_timing': // For backward compatibility
-                return new ActivityTimingTableGenerator(this.resultsReader, this.config);
+            case 'activityCrossRep':
+            case 'activity_cross_rep': // For backward compatibility
+                return new ActivityCrossRepTableGenerator(this.resultsReader, this.config);
                 
-            case 'entityState':
-            case 'entity_state_rep_summary': // For backward compatibility
-                return new EntityStateTableGenerator(this.resultsReader, this.config);
+            // Entity generators
+            case 'entityRep':
+            case 'entity_rep': // For backward compatibility
+                return new EntityRepTableGenerator(this.resultsReader, this.config);
                 
-            case 'entityThroughput':
-            case 'entity_throughput_rep_summary': // For backward compatibility
-                return new EntityThroughputTableGenerator(this.resultsReader, this.config);
+            case 'entityCrossRep':
+            case 'entity_cross_rep': // For backward compatibility
+                return new EntityCrossRepTableGenerator(this.resultsReader, this.config);
                 
-            case 'resourceUtilization':
-            case 'resource_utilization': // For backward compatibility
-                return new ResourceUtilizationTableGenerator(this.resultsReader, this.config);
-                
+            // Resource generators
             case 'resourceRepSummary':
             case 'resource_rep_summary': // For backward compatibility
                 return new ResourceRepSummaryTableGenerator(this.resultsReader, this.config);
                 
-            case 'entityStateCrossRepSummary':
-            case 'entity_state_cross_rep_summary': // For backward compatibility
-                return new EntityStateCrossRepSummaryTableGenerator(this.resultsReader, this.config);
+            case 'resourceCrossRep':
+            case 'resource_cross_rep': // For backward compatibility
+                return new ResourceCrossRepTableGenerator(this.resultsReader, this.config);
                 
+            // Handle legacy table types by mapping to new equivalents
+            case 'activityUtilization':
+            case 'activity_utilization':
+                console.log('[TableGeneratorFactory] Mapping legacy activityUtilization to activityCrossRep');
+                return new ActivityCrossRepTableGenerator(this.resultsReader, this.config);
+                
+            case 'entityState':
+            case 'entity_state_rep_summary':
+                console.log('[TableGeneratorFactory] Mapping legacy entityState to entityRep');
+                return new EntityRepTableGenerator(this.resultsReader, this.config);
+                
+            case 'resourceUtilization':
+            case 'resource_utilization':
+                console.log('[TableGeneratorFactory] Mapping legacy resourceUtilization to resourceCrossRep');
+                return new ResourceCrossRepTableGenerator(this.resultsReader, this.config);
+                
+            case 'entityStateCrossRepSummary':
+            case 'entity_state_cross_rep_summary':
             case 'entityThroughputCrossRepSummary':
-            case 'entity_throughput_cross_rep_summary': // For backward compatibility
-                return new EntityThroughputCrossRepSummaryTableGenerator(this.resultsReader, this.config);
+            case 'entity_throughput_cross_rep_summary':
+                console.log('[TableGeneratorFactory] Mapping legacy entity summary to entityCrossRep');
+                return new EntityCrossRepTableGenerator(this.resultsReader, this.config);
                 
             default:
+                console.warn(`[TableGeneratorFactory] Unknown table type: ${tableType}`);
                 throw new Error(`Unknown table type: ${tableType}`);
         }
     }
