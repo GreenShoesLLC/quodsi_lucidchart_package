@@ -34,6 +34,11 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
     onChange(e.target.value as DistributionType);
   };
 
+  // If there's only one option and it matches the current distribution type, don't render the selector
+  if (supportedTypes.length === 1 && supportedTypes[0] === distributionType) {
+    return null; // Don't render anything
+  }
+  
   return (
     <div>
       <label className="block text-xs text-gray-600 mb-1">

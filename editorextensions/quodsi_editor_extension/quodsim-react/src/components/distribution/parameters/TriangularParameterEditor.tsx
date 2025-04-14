@@ -21,8 +21,9 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
   const modeMetadata = TRIANGULAR_PARAMETER_METADATA.mode;
   const rightMetadata = TRIANGULAR_PARAMETER_METADATA.right;
 
-  const handleParameterChange = (paramName: keyof TriangularParameters, value: number) => {
-    const updatedParams: TriangularParameters = {
+  const handleParameterChange = (paramName: keyof TriangularParameters, value: number, preAdjustedParams?: TriangularParameters) => {
+    // Use pre-adjusted parameters if provided, otherwise create new updated params
+    const updatedParams: TriangularParameters = preAdjustedParams || {
       ...parameters,
       [paramName]: value
     };
@@ -35,17 +36,73 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
 
   const handleLeftChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    handleParameterChange('left', isNaN(newValue) ? 0 : newValue);
+    const leftValue = isNaN(newValue) ? 0 : newValue;
+    
+    // Create a copy of parameters with the new left value
+    const updatedParams: TriangularParameters = {
+      ...parameters,
+      left: leftValue
+    };
+    
+    // If left becomes greater than mode, cascade adjustments with 1-unit spacing
+    if (leftValue > parameters.mode) {
+      // Set mode to 1 more than left
+      updatedParams.mode = leftValue + 1;
+      
+      // Set right to 1 more than mode
+      if (updatedParams.mode > parameters.right) {
+        updatedParams.right = updatedParams.mode + 1;
+      }
+    }
+    
+    handleParameterChange('left', leftValue, updatedParams);
   };
 
   const handleModeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    handleParameterChange('mode', isNaN(newValue) ? 0 : newValue);
+    const modeValue = isNaN(newValue) ? 0 : newValue;
+    
+    // Create a copy of parameters with the new mode value
+    const updatedParams: TriangularParameters = {
+      ...parameters,
+      mode: modeValue
+    };
+    
+    // If mode becomes greater than right, set right to mode + 1
+    if (modeValue > parameters.right) {
+      updatedParams.right = modeValue + 1;
+    }
+    
+    // If mode becomes less than left, set left to mode - 1 (but not below 0)
+    if (modeValue < parameters.left) {
+      updatedParams.left = Math.max(0, modeValue - 1);
+    }
+    
+    handleParameterChange('mode', modeValue, updatedParams);
   };
 
   const handleRightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    handleParameterChange('right', isNaN(newValue) ? 0 : newValue);
+    const rightValue = isNaN(newValue) ? 0 : newValue;
+    
+    // Create a copy of parameters with the new right value
+    const updatedParams: TriangularParameters = {
+      ...parameters,
+      right: rightValue
+    };
+    
+    // If right becomes less than mode, cascade adjustments with 1-unit spacing
+    if (rightValue < parameters.mode) {
+      // Set mode to 1 less than right (but not less than 0)
+      updatedParams.mode = Math.max(0, rightValue - 1);
+      
+      // Set left to 1 less than mode (but not less than 0)
+      if (updatedParams.mode < parameters.left) {
+        updatedParams.left = Math.max(0, updatedParams.mode - 1);
+      }
+    }
+    
+    handleParameterChange('right', rightValue, updatedParams);
   };
 
   return (
@@ -91,6 +148,9 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
           step={rightMetadata.step}
           className="w-full px-2 py-1 text-sm border rounded"
         />
+      </div>
+      <div className="text-xs text-gray-500 mt-1 italic">
+        Triangular distribution generates random values with increasing probability up to the Mode (peak) and then decreasing probability to the Maximum. Most likely value is the Mode.
       </div>
     </div>
   );

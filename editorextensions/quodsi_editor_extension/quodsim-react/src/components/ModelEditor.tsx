@@ -204,10 +204,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
               <div className="space-y-2 pt-2">
                 <div className="space-y-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Warmup Time
-                    </label>
                     <EnhancedDurationEditor
+                      label="Warmup Time"
                       periodUnit={
                         localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES
                       }
@@ -229,10 +227,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Run Time
-                    </label>
                     <EnhancedDurationEditor
+                      label="Run Time"
                       periodUnit={
                         localModel.runClockPeriodUnit || PeriodUnit.MINUTES
                       }

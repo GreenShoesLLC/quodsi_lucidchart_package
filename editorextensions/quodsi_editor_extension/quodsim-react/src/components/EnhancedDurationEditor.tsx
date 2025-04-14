@@ -30,10 +30,10 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
 }) => {
   // Map for period unit display
   const periodUnitDisplay: Record<PeriodUnit, string> = {
-    [PeriodUnit.MINUTES]: "MIN",
-    [PeriodUnit.HOURS]: "HR",
-    [PeriodUnit.DAYS]: "DAY",
-    [PeriodUnit.SECONDS]: "SEC",
+    [PeriodUnit.MINUTES]: "Minutes",
+    [PeriodUnit.HOURS]: "Hours",
+    [PeriodUnit.DAYS]: "Days",
+    [PeriodUnit.SECONDS]: "Seconds",
   };
 
   // Handle distribution type change
@@ -66,12 +66,21 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
   const distributionType =
     distribution?.distributionType || DistributionType.CONSTANT;
 
+  // Check if we have only one allowed distribution type that matches the current type
+  const isFixedDistribution = allowedDistributionTypes && 
+                            allowedDistributionTypes.length === 1 && 
+                            allowedDistributionTypes[0] === distributionType;
+
   return (
     <div className={`duration-editor ${compact ? "compact" : ""}`}>
-      {/* Label */}
-      <div className="text-sm font-medium text-gray-700 mb-1">{label}</div>
+      {/* Label - enhanced to include distribution type info when fixed */}
+      <div className="text-sm font-medium text-gray-700 mb-1">
+        {isFixedDistribution && distributionType === DistributionType.CONSTANT
+          ? `${label}` 
+          : label}
+      </div>
 
-      {/* Distribution Type Selector */}
+      {/* Distribution Type Selector - only shown if not fixed */}
       <div className="mb-2">
         <DistributionTypeSelector
           distributionType={distributionType}

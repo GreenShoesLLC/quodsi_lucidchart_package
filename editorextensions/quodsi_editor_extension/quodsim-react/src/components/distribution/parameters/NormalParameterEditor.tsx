@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   NormalParameters,
   NORMAL_PARAMETER_METADATA,
@@ -16,15 +16,28 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   onChange,
   disabled = false,
 }) => {
+  // State for error messages
+  const [errors, setErrors] = useState<{mean?: string; std?: string}>({});
+  
   // Get metadata
   const meanMetadata = NORMAL_PARAMETER_METADATA.mean;
   const stdMetadata = NORMAL_PARAMETER_METADATA.std;
 
   const handleParameterChange = (paramName: keyof NormalParameters, value: number) => {
+    // Clear any previous errors for this parameter
+    setErrors(prev => ({...prev, [paramName]: undefined}));
+    
+    // Create an updated copy of parameters
     const updatedParams: NormalParameters = {
       ...parameters,
       [paramName]: value
     };
+    
+    // Special handling for std to ensure it's always positive
+    if (paramName === 'std' && value <= 0) {
+      updatedParams.std = 0.1; // Minimum allowed value for std
+      setErrors(prev => ({...prev, std: 'Standard deviation must be greater than 0. Set to minimum value (0.1).'}));
+    }
     
     // Only update if the parameters are valid
     if (NormalDistribution.validateParameters(updatedParams)) {
@@ -34,12 +47,20 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
 
   const handleMeanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    handleParameterChange('mean', isNaN(newValue) ? 0 : newValue);
+    if (isNaN(newValue)) {
+      setErrors(prev => ({...prev, mean: 'Mean must be a valid number.'}));
+      return;
+    }
+    handleParameterChange('mean', newValue);
   };
 
   const handleStdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = parseFloat(e.target.value);
-    handleParameterChange('std', isNaN(newValue) ? 0.1 : newValue);
+    if (isNaN(newValue)) {
+      setErrors(prev => ({...prev, std: 'Standard deviation must be a valid number.'}));
+      return;
+    }
+    handleParameterChange('std', newValue);
   };
 
   return (
@@ -47,6 +68,7 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
       <div>
         <label className="block text-xs text-gray-600 mb-1">
           {meanMetadata.label}
+          <span className="text-xs text-gray-400 ml-1">(Average value)</span>
         </label>
         <input
           type="number"
@@ -57,10 +79,12 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
           step={meanMetadata.step}
           className="w-full px-2 py-1 text-sm border rounded"
         />
+        {errors.mean && <p className="text-xs text-red-500 mt-1">{errors.mean}</p>}
       </div>
       <div>
         <label className="block text-xs text-gray-600 mb-1">
           {stdMetadata.label}
+          <span className="text-xs text-gray-400 ml-1">(Variability around mean)</span>
         </label>
         <input
           type="number"
@@ -71,6 +95,10 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
           step={stdMetadata.step}
           className="w-full px-2 py-1 text-sm border rounded"
         />
+        {errors.std && <p className="text-xs text-red-500 mt-1">{errors.std}</p>}
+      </div>
+      <div className="text-xs text-gray-500 mt-1 italic">
+        Normal distribution generates a bell curve centered at the Mean with most values falling within 3 Standard Deviations from the Mean.
       </div>
     </div>
   );
