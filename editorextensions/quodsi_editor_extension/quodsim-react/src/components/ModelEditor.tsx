@@ -7,6 +7,7 @@ import {
   Duration,
   Distribution,
   ConstantDistribution,
+  DistributionType,
 } from "@quodsi/shared";
 import { Settings, Clock } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
@@ -24,6 +25,77 @@ type EditorTab = "model" | "output";
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>("model");
 
+  // Helper function to ensure all model properties are present
+  const extractModelData = (mod: any): Model => {
+    const data = mod.data || mod;
+    return {
+      id: data.id || "",
+      name: data.name || "New Model",
+      type: SimulationObjectType.Model,
+      reps: data.reps || 1,
+      seed: data.seed || 0,
+      simulationTimeType: data.simulationTimeType || SimulationTimeType.Clock,
+      oneClockUnit: data.oneClockUnit || PeriodUnit.MINUTES,
+      warmupClockPeriod: data.warmupClockPeriod || 0,
+      warmupClockPeriodUnit: data.warmupClockPeriodUnit || PeriodUnit.MINUTES,
+      runClockPeriod: data.runClockPeriod || 0,
+      runClockPeriodUnit: data.runClockPeriodUnit || PeriodUnit.MINUTES,
+      // Adding missing properties
+      forecastDays: data.forecastDays || 30,
+      warmupDateTime: data.warmupDateTime || null,
+      startDateTime: data.startDateTime || null,
+      finishDateTime: data.finishDateTime || null,
+    };
+  };
+
+  // Create local state with extracted model data
+  const [localModel, setLocalModel] = useState<Model>(extractModelData(model));
+
+  // Handlers
+  const handleSave = (updatedModel: Model) => {
+    console.log("ModelEditor - Before Save:", updatedModel);
+    console.log("ModelEditor - Type value:", updatedModel.type);
+    console.log(
+      "ModelEditor - Type === SimulationObjectType.Model:",
+      updatedModel.type === SimulationObjectType.Model
+    );
+    console.log(
+      "ModelEditor - Type is string 'Model':",
+      updatedModel.type === "Model"
+    );
+    console.log("ModelEditor - Type toString():", String(updatedModel.type));
+
+    const modelToSave: Model = {
+      ...updatedModel,
+      type: "Model" as any, // Use string 'Model' instead of enum to match what ModelPanel.ts expects
+      // Ensure all properties are included
+      reps: updatedModel.reps || 1,
+      seed: updatedModel.seed || 12345,
+      simulationTimeType:
+        updatedModel.simulationTimeType || SimulationTimeType.Clock,
+      oneClockUnit: updatedModel.oneClockUnit || PeriodUnit.MINUTES,
+      warmupClockPeriod: updatedModel.warmupClockPeriod || 0,
+      warmupClockPeriodUnit:
+        updatedModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
+      runClockPeriod: updatedModel.runClockPeriod || 0,
+      runClockPeriodUnit: updatedModel.runClockPeriodUnit || PeriodUnit.MINUTES,
+      // Add missing properties
+      forecastDays: updatedModel.forecastDays || 30,
+      warmupDateTime: updatedModel.warmupDateTime || null,
+      startDateTime: updatedModel.startDateTime || null,
+      finishDateTime: updatedModel.finishDateTime || null,
+    };
+
+    console.log("ModelEditor - After Save Transform:", modelToSave);
+
+    // Update our local state immediately with the new model data
+    // This ensures our UI reflects the changes even if we don't get a refresh from the extension
+    setLocalModel(modelToSave);
+
+    // Then send to parent
+    onSave(modelToSave);
+  };
+
   const createSyntheticEvent = (
     name: string,
     value: any
@@ -38,24 +110,26 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
     periodField: "warmupClockPeriod" | "runClockPeriod",
     periodUnitField: "warmupClockPeriodUnit" | "runClockPeriodUnit",
     periodUnit: PeriodUnit,
-    distribution: Distribution
+    distribution: Distribution,
+    localData: Model,
+    handleChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => void
   ) => {
     const value =
       distribution.distributionType === "constant"
         ? (distribution.parameters as { value: number }).value
         : 0;
 
-    onSave({
-      ...model,
-      [periodField]: value,
-      [periodUnitField]: periodUnit,
-    });
+    // Update through handleChange so BaseEditor state is updated properly
+    handleChange(createSyntheticEvent(periodField, value));
+    handleChange(createSyntheticEvent(periodUnitField, periodUnit));
   };
 
   const ModelForm = () => (
     <BaseEditor
-      data={{ ...model, type: SimulationObjectType.Model }}
-      onSave={onSave}
+      data={localModel}
+      onSave={handleSave}
       onCancel={onCancel}
       messageType="modelSaved"
     >
@@ -87,16 +161,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                   min="1"
                 />
               </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Seed</label>
-                <input
-                  type="number"
-                  name="seed"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  value={localModel.seed}
-                  onChange={handleChange}
-                />
-              </div>
+              {/* Seed field removed as requested */}
             </div>
           </div>
 
@@ -154,10 +219,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                           "warmupClockPeriod",
                           "warmupClockPeriodUnit",
                           periodUnit,
-                          distribution
+                          distribution,
+                          localModel,
+                          handleChange
                         )
                       }
                       compact={true}
+                      allowedDistributionTypes={[DistributionType.CONSTANT]}
                     />
                   </div>
                   <div>
@@ -176,10 +244,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
                           "runClockPeriod",
                           "runClockPeriodUnit",
                           periodUnit,
-                          distribution
+                          distribution,
+                          localModel,
+                          handleChange
                         )
                       }
                       compact={true}
+                      allowedDistributionTypes={[DistributionType.CONSTANT]}
                     />
                   </div>
                 </div>

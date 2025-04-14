@@ -17,6 +17,7 @@ interface EnhancedDurationEditorProps {
   onChange: (periodUnit: PeriodUnit, distribution: Distribution) => void;
   label?: string;
   compact?: boolean;
+  allowedDistributionTypes?: DistributionType[];
 }
 
 export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
@@ -25,6 +26,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
   onChange,
   label = "Duration",
   compact = false,
+  allowedDistributionTypes,
 }) => {
   // Map for period unit display
   const periodUnitDisplay: Record<PeriodUnit, string> = {
@@ -74,6 +76,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
         <DistributionTypeSelector
           distributionType={distributionType}
           onChange={handleDistributionTypeChange}
+          allowedTypes={allowedDistributionTypes}
         />
       </div>
 

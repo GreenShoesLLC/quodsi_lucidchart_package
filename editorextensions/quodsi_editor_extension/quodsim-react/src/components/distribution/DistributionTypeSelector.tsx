@@ -8,16 +8,19 @@ interface DistributionTypeSelectorProps {
   distributionType: DistributionType;
   onChange: (type: DistributionType) => void;
   disabled?: boolean;
+  allowedTypes?: DistributionType[];
 }
 
 export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> = ({
   distributionType,
   onChange,
   disabled = false,
+  allowedTypes,
 }) => {
-  // Filter distribution types to only show supported ones
+  // Filter distribution types to only show supported ones and if allowedTypes is provided, filter further
   const supportedTypes = Object.values(DistributionType)
-    .filter(type => isDistributionTypeSupported(type));
+    .filter(type => isDistributionTypeSupported(type))
+    .filter(type => !allowedTypes || allowedTypes.includes(type));
   
   // Define groups for the dropdown - in future versions, we might add more groups
   const groups = [

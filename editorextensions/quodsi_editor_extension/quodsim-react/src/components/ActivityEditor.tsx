@@ -80,26 +80,34 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const handleOperationStepChange = (
     index: number,
-    updatedStep: OperationStep
+    updatedStep: OperationStep,
+    localData: Activity,
+    handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   ) => {
-    setLocalActivity((prev) => ({
-      ...prev,
-      operationSteps: prev.operationSteps.map((step, i) =>
-        i === index ? updatedStep : step
-      ),
-    }));
+    const newOperationSteps = [...localData.operationSteps];
+    newOperationSteps[index] = updatedStep;
+    
+    handleChange({
+      target: {
+        name: "operationSteps",
+        value: newOperationSteps
+      }
+    } as any);
   };
 
-  const handleAddOperationStep = () => {
+  const handleAddOperationStep = (localData: Activity, handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void) => {
     // Create a new operation step with a default constant distribution
     const newStep = createOperationStep(
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
-    setLocalActivity((prev) => ({
-      ...prev,
-      operationSteps: [...prev.operationSteps, newStep],
-    }));
+    const newOperationSteps = [...localData.operationSteps, newStep];
+    handleChange({
+      target: {
+        name: "operationSteps",
+        value: newOperationSteps
+      }
+    } as any);
   };
 
   const handleOperationStepDelete = React.useCallback(
@@ -232,7 +240,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               </div>
               <button
                 type="button"
-                onClick={handleAddOperationStep}
+                onClick={() => handleAddOperationStep(localData, handleChange)}
                 className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
               >
                 <Plus className="w-3 h-3" />
@@ -246,7 +254,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   step={step}
                   index={index}
                   onChange={(updatedStep) =>
-                    handleOperationStepChange(index, updatedStep)
+                    handleOperationStepChange(index, updatedStep, localData, handleChange)
                   }
                   onDelete={() =>
                     handleOperationStepDelete(index, localData, handleChange)
