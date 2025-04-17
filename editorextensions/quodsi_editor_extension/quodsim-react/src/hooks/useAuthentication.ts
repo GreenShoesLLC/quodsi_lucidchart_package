@@ -22,15 +22,26 @@ interface TokenResponse {
 }
 
 export function useAuthentication() {
-    const { instance, accounts } = useMsal();
+    const { instance, accounts, inProgress } = useMsal();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [userInfo, setUserInfo] = useState<{ name: string; email: string } | null>(null);
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [tokenExpiration, setTokenExpiration] = useState<Date | null>(null);
     const [isProcessingAuth, setIsProcessingAuth] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [isMsalInitialized, setIsMsalInitialized] = useState(false);
     
     const messaging = ExtensionMessaging.getInstance();
+    
+    // Track MSAL initialization state
+    useEffect(() => {
+        if (inProgress === 'none') {
+            setIsMsalInitialized(true);
+            console.log("[useAuthentication] MSAL initialization complete");
+        } else {
+            console.log("[useAuthentication] MSAL initialization in progress:", inProgress);
+        }
+    }, [inProgress]);
 
     // Clear any existing login session data
     const clearExistingSession = useCallback(() => {
@@ -62,6 +73,12 @@ export function useAuthentication() {
 
     // Get active token silently
     const acquireTokenSilently = useCallback(async (): Promise<TokenResponse | null> => {
+        // Ensure MSAL is initialized before attempting to acquire token
+        if (!isMsalInitialized) {
+            console.log("[useAuthentication] MSAL not yet initialized, cannot acquire token");
+            return null;
+        }
+    
         if (accounts.length === 0) {
             return null;
         }
@@ -72,7 +89,9 @@ export function useAuthentication() {
                 account: accounts[0]
             };
             
+            console.log("[useAuthentication] Acquiring token silently");
             const response = await instance.acquireTokenSilent(request);
+            console.log("[useAuthentication] Token acquired successfully");
             
             return {
                 accessToken: response.accessToken,
@@ -92,7 +111,7 @@ export function useAuthentication() {
             
             throw error;
         }
-    }, [instance, accounts]);
+    }, [instance, accounts, isMsalInitialized]);
 
     // Check if token is expiring soon (within 5 minutes)
     const isTokenExpiringSoon = useCallback((): boolean => {
@@ -134,11 +153,21 @@ export function useAuthentication() {
     // Check if user is authenticated on mount and when accounts change
     useEffect(() => {
         const checkAuth = async () => {
+            // Only proceed if MSAL is initialized
+            if (!isMsalInitialized) {
+                console.log("[useAuthentication] Waiting for MSAL to initialize before checking auth");
+                return; // Exit early and wait for next update when initialized
+            }
+            
+            console.log("[useAuthentication] Checking authentication status with accounts:", accounts.length);
+            
             if (accounts.length > 0) {
                 try {
+                    console.log("[useAuthentication] Account found, attempting to acquire token");
                     const tokenResponse = await acquireTokenSilently();
                     
                     if (tokenResponse) {
+                        console.log("[useAuthentication] Token response received, updating state");
                         setIsAuthenticated(true);
                         setAccessToken(tokenResponse.accessToken);
                         setTokenExpiration(tokenResponse.expiresOn);
@@ -152,6 +181,7 @@ export function useAuthentication() {
                         setError(null);
 
                         // Notify extension about successful auth
+                        console.log("[useAuthentication] Sending AUTH_COMPLETED message");
                         messaging.sendMessage(MessageTypes.AUTH_COMPLETED, {
                             success: true,
                             userInfo: accountInfo,
@@ -160,6 +190,7 @@ export function useAuthentication() {
                         console.log("[useAuthentication] Authentication successful", accountInfo);
                     } else {
                         // Could not get token silently
+                        console.log("[useAuthentication] Could not get token silently, resetting state");
                         setIsAuthenticated(false);
                         setUserInfo(null);
                         setAccessToken(null);
@@ -179,6 +210,7 @@ export function useAuthentication() {
                     });
                 }
             } else {
+                console.log("[useAuthentication] No accounts found, setting unauthenticated state");
                 setIsAuthenticated(false);
                 setUserInfo(null);
                 setAccessToken(null);
@@ -187,7 +219,7 @@ export function useAuthentication() {
         };
 
         checkAuth();
-    }, [accounts, messaging, acquireTokenSilently]);
+    }, [accounts, messaging, acquireTokenSilently, isMsalInitialized]);
 
     // Set up a token refresh timer
     useEffect(() => {
@@ -218,12 +250,35 @@ export function useAuthentication() {
         setError(null);
 
         try {
+            // Check if MSAL is initialized
+            if (!isMsalInitialized) {
+                console.log("[useAuthentication] MSAL not initialized yet, waiting...");
+                await new Promise(resolve => {
+                    // Wait for a maximum of 3 seconds for initialization
+                    const timeout = setTimeout(() => {
+                        console.log("[useAuthentication] MSAL initialization timeout reached");
+                        resolve(null);
+                    }, 3000);
+                    
+                    // Check every 100ms if MSAL is ready
+                    const checkInterval = setInterval(() => {
+                        if (inProgress === 'none') {
+                            console.log("[useAuthentication] MSAL is now initialized");
+                            clearTimeout(timeout);
+                            clearInterval(checkInterval);
+                            resolve(null);
+                        }
+                    }, 100);
+                });
+            }
+
             // Notify extension that sign-in is starting
             messaging.sendMessage(MessageTypes.AUTH_SIGN_IN);
 
             // Clear any existing authentication session
             clearExistingSession();
 
+            console.log("[useAuthentication] Initiating loginPopup");
             // ALWAYS use standard MSAL popup flow
             const response = await instance.loginPopup(loginRequest);
             console.log("[useAuthentication] Login successful", response);
@@ -242,7 +297,7 @@ export function useAuthentication() {
         } finally {
             setIsProcessingAuth(false);
         }
-    }, [instance, messaging, isProcessingAuth, clearExistingSession]);
+    }, [instance, messaging, isProcessingAuth, clearExistingSession, isMsalInitialized, inProgress]);
 
     // Handle sign-out
     const handleSignOut = useCallback(async () => {

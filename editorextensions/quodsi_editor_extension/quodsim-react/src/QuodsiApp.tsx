@@ -86,7 +86,9 @@ const initialState: AppState = {
     modelTree: false,
   },
   simulationStatus: initialSimulationStatus,
-  panelType: null,
+  // Set a default panelType based on URL - if it contains 'auth' in the URL path
+  // If we can't determine it yet, default to null and wait for panel init message
+  panelType: window.location.pathname.includes('auth') ? 'auth' : null,
 };
 
 const QuodsiApp: React.FC = () => {
@@ -194,6 +196,17 @@ const QuodsiApp: React.FC = () => {
         ...prev,
         panelType: data.panelType,
       }));
+
+      // Delay requesting auth status to ensure MSAL is fully initialized
+      // This fixes the "uninitialized_public_client_application" error
+      if (data.panelType === 'auth') {
+        console.log("[QuodsiApp] Auth panel initialized, scheduling auth status request");
+        // Use a small delay to ensure MSAL is fully initialized
+        setTimeout(() => {
+          console.log("[QuodsiApp] Now requesting auth status after delay");
+          sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
+        }, 1000);
+      }
     };
 
     // Register the handler

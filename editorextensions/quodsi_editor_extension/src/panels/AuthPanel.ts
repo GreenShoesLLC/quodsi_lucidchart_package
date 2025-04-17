@@ -104,6 +104,9 @@ export class AuthPanel extends Panel {
     private setupMessageHandlers(): void {
         this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
             this.log('REACT_APP_READY message received in auth panel');
+            // When the React app is ready, check if we need to reload session state
+            // This ensures we have fresh state when the panel is reopened
+            this.loadSessionState();
             this.handleReactReady();
         });
         
@@ -266,12 +269,14 @@ export class AuthPanel extends Panel {
      * Handles the initialization message from the React app
      */
     private async handleReactReady(): Promise<void> {
-        if (this.reactAppReady) {
-            this.logError('React app already ready, skipping initialization');
-            return;
-        }
-
         this.log('handleReactReady in AuthPanel');
+        
+        // If the app was already initialized, we're likely reopening the panel
+        // We still need to send the initialization messages
+        if (this.reactAppReady) {
+            this.log('React app already ready, but panel might be reopening - sending init messages');
+        }
+        
         this.reactAppReady = true;
 
         // Tell React this is the AuthPanel
@@ -279,13 +284,17 @@ export class AuthPanel extends Panel {
             panelType: 'auth'
         });
         
-        // If we have a stored session, send the auth status
-        if (this.isAuthenticated && this.userInfo) {
-            this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
-                isAuthenticated: this.isAuthenticated,
-                userInfo: this.userInfo
-            });
-        }
+        // Always send the auth status, whether authenticated or not
+        // This ensures the React app has the current state
+        this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+            isAuthenticated: this.isAuthenticated,
+            userInfo: this.userInfo || undefined
+        });
+        
+        this.log('Sent auth panel init with authentication state:', { 
+            isAuthenticated: this.isAuthenticated,
+            hasUserInfo: !!this.userInfo 
+        });
     }
     
     /**
@@ -408,5 +417,21 @@ export class AuthPanel extends Panel {
     protected frameLoaded(): void {
         this.log('AuthPanel frame loaded');
         super.frameLoaded();
+        
+        // Send panel type initialization message immediately when the frame loads
+        // This ensures the React app knows which panel it is, even after panel reopening
+        if (this.reactAppReady) {
+            this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+                panelType: 'auth'
+            });
+            
+            // Also send auth status if authenticated
+            if (this.isAuthenticated && this.userInfo) {
+                this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+                    isAuthenticated: this.isAuthenticated,
+                    userInfo: this.userInfo
+                });
+            }
+        }
     }
 }
