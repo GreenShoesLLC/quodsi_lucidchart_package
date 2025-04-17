@@ -23,13 +23,16 @@ import {
 } from "./services/messageHandlers/messageHandlers";
 import { useSimulationStatus } from "./hooks/useSimulationStatus";
 import { SimulationStatus } from "./types/SimulationStatus";
+import { useAuth } from "./auth/AuthProvider";
+import { AuthPanel } from "./components/auth/AuthPanel";
 
 export interface AppState {
+  // Existing properties
   modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
-  lastElementUpdate: string | null; // Add this line
+  lastElementUpdate: string | null;
   isProcessing: boolean;
   error: string | null;
   documentId: string | null;
@@ -46,13 +49,17 @@ export interface AppState {
     modelTree: boolean;
   };
   simulationStatus: SimulationStatus;
+
+  // Panel type - determines which panel is shown
+  panelType: "auth" | "model" | null;
 }
+
 export const initialSimulationStatus: SimulationStatus = {
   pageStatus: null,
   isPollingSimState: false,
   errorMessage: null,
   lastChecked: null,
-  newResultsAvailable: false
+  newResultsAvailable: false,
 } as const;
 
 const initialState: AppState = {
@@ -60,18 +67,16 @@ const initialState: AppState = {
   modelName: "New Model",
   validationState: null,
   currentElement: null,
-  lastElementUpdate: null, // Add this line
+  lastElementUpdate: null,
   isProcessing: false,
   error: null,
   documentId: null,
-  // diagramElementType: null,
   expandedNodes: new Set<string>(),
   referenceData: {
     entities: [],
     resources: [],
   },
   isReady: false,
-  // Initialize new visibility controls
   showModelName: true,
   showModelItemName: true,
   visibleSections: {
@@ -81,12 +86,16 @@ const initialState: AppState = {
     modelTree: false,
   },
   simulationStatus: initialSimulationStatus,
+  panelType: null,
 };
 
 const QuodsiApp: React.FC = () => {
-  console.log("[QuodsiApp] Component mounting 2");
+  console.log("[QuodsiApp] Component mounting");
   const [state, setState] = useState<AppState>(initialState);
   const messaging = ExtensionMessaging.getInstance();
+
+  // Use the authentication hook from the AuthProvider context
+  const { isAuthenticated, userInfo } = useAuth();
 
   // Create a type-safe message sender that uses window.postMessage
   const sendMessage = useCallback(
@@ -103,61 +112,72 @@ const QuodsiApp: React.FC = () => {
     },
     []
   );
-  
+
   const documentId = state.documentId;
-  
+
   // Use the hook and capture its return values
-  const { newResultsAvailable, acknowledgeResults } = useSimulationStatus(documentId || "", 30);
-  
+  const { newResultsAvailable, acknowledgeResults } = useSimulationStatus(
+    documentId || "",
+    30
+  );
+
   // Update our state when newResultsAvailable changes
   useEffect(() => {
-    console.log("[QuodsiApp] newResultsAvailable changed:", newResultsAvailable);
-    
-    setState(prev => ({
+    console.log(
+      "[QuodsiApp] newResultsAvailable changed:",
+      newResultsAvailable
+    );
+
+    setState((prev) => ({
       ...prev,
       simulationStatus: {
         ...prev.simulationStatus,
-        newResultsAvailable
-      }
+        newResultsAvailable,
+      },
     }));
   }, [newResultsAvailable]);
-  
+
   useEffect(() => {
     console.log("[QuodsiApp] Component mounted");
     return () => console.log("[QuodsiApp] Component unmounted");
   }, []);
-  
+
   console.log("[QuodsiApp] documentId", documentId);
 
   // Add custom message handler for simulation status update that includes new results flag
   useEffect(() => {
     const handleSimulationStatusUpdate = (payload: any) => {
       console.log("[QuodsiApp] Received SIMULATION_STATUS_UPDATE:", payload);
-      
+
       if (payload.newResultsAvailable) {
-        console.log("[QuodsiApp] Setting newResultsAvailable to true from message");
-        setState(prev => ({
+        console.log(
+          "[QuodsiApp] Setting newResultsAvailable to true from message"
+        );
+        setState((prev) => ({
           ...prev,
           simulationStatus: {
             ...prev.simulationStatus,
-            newResultsAvailable: true
-          }
+            newResultsAvailable: true,
+          },
         }));
       }
-      
+
       // Always update the status even if newResultsAvailable hasn't changed
-      setState(prev => ({
-        ...prev, 
+      setState((prev) => ({
+        ...prev,
         simulationStatus: {
           ...prev.simulationStatus,
           pageStatus: payload.pageStatus,
-          lastChecked: new Date().toISOString()
-        }
+          lastChecked: new Date().toISOString(),
+        },
       }));
     };
-    
-    messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, handleSimulationStatusUpdate);
-    
+
+    messaging.onMessage(
+      MessageTypes.SIMULATION_STATUS_UPDATE,
+      handleSimulationStatusUpdate
+    );
+
     return () => {
       // Cleanup if needed
     };
@@ -166,7 +186,19 @@ const QuodsiApp: React.FC = () => {
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
+    
+    // Handler for AUTH_PANEL_INIT
+    const handleAuthPanelInit = (data: any) => {
+      console.log("[QuodsiApp] Received AUTH_PANEL_INIT:", data);
+      setState((prev) => ({
+        ...prev,
+        panelType: data.panelType,
+      }));
+    };
 
+    // Register the handler
+    messaging.onMessage(MessageTypes.AUTH_PANEL_INIT, handleAuthPanelInit);
+    
     const deps = {
       setState,
       setError: (error: string | null) =>
@@ -211,10 +243,13 @@ const QuodsiApp: React.FC = () => {
       expandedNodes: state.expandedNodes,
     });
   }, [state]);
-  
+
   // Add debugging for simulationStatus
   useEffect(() => {
-    console.log("[QuodsiApp] simulationStatus updated:", state.simulationStatus);
+    console.log(
+      "[QuodsiApp] simulationStatus updated:",
+      state.simulationStatus
+    );
   }, [state.simulationStatus]);
 
   // Event handlers
@@ -275,37 +310,37 @@ const QuodsiApp: React.FC = () => {
     [sendMessage, state.currentElement?.metadata?.type]
   );
 
-const handleSimulate = useCallback(
-  (scenarioName?: string) => {
-    console.log("[QuodsiApp] Simulate requested", { scenarioName });
-    sendMessage(MessageTypes.SIMULATE_MODEL, { scenarioName });
+  const handleSimulate = useCallback(
+    (scenarioName?: string) => {
+      console.log("[QuodsiApp] Simulate requested", { scenarioName });
+      sendMessage(MessageTypes.SIMULATE_MODEL, { scenarioName });
 
-    // Set the simulation button to running state
-    setState((prev) => ({
-      ...prev,
-      simulationStatus: {
-        ...prev.simulationStatus,
-        pageStatus: {
-          ...(prev.simulationStatus.pageStatus || {}),
-          hasContainer: true, 
-          scenarios: [
-            {
-              id: "00000000-0000-0000-0000-000000000000",
-              name: scenarioName || "Base Scenario",
-              reps: 1,
-              forecastDays: 30,
-              runState: RunState.Running,
-              type: SimulationObjectType.Scenario,
-            },
-          ],
-          statusDateTime: new Date().toISOString(),
+      // Set the simulation button to running state
+      setState((prev) => ({
+        ...prev,
+        simulationStatus: {
+          ...prev.simulationStatus,
+          pageStatus: {
+            ...(prev.simulationStatus.pageStatus || {}),
+            hasContainer: true,
+            scenarios: [
+              {
+                id: "00000000-0000-0000-0000-000000000000",
+                name: scenarioName || "Base Scenario",
+                reps: 1,
+                forecastDays: 30,
+                runState: RunState.Running,
+                type: SimulationObjectType.Scenario,
+              },
+            ],
+            statusDateTime: new Date().toISOString(),
+          },
+          isPollingSimState: true,
         },
-        isPollingSimState: true,
-      },
-    }));
-  },
-  [sendMessage]
-);
+      }));
+    },
+    [sendMessage]
+  );
 
   const handleRemoveModel = useCallback(() => {
     console.log("[QuodsiApp] Remove model requested");
@@ -376,7 +411,7 @@ const handleSimulate = useCallback(
     },
     [sendMessage, state.documentId]
   );
-  
+
   // Handler for viewing results
   const handleViewResults = useCallback(() => {
     console.log("[QuodsiApp] View results requested");
@@ -385,7 +420,6 @@ const handleSimulate = useCallback(
       // Send the message to LucidChart to create the dashboard
       sendMessage(MessageTypes.VIEW_SIMULATION_RESULTS, {
         documentId: documentId,
-        // You can add scenarioId here if you want to view results for a specific scenario
       });
 
       // Also call acknowledgeResults to mark results as viewed on the server
@@ -401,18 +435,22 @@ const handleSimulate = useCallback(
       }));
     }
   }, [documentId, sendMessage, acknowledgeResults]);
-  
+
   return (
     <div className="flex flex-col h-screen">
       {state.error && <ErrorDisplay error={state.error} />}
-      {/* {state.isProcessing && <ProcessingIndicator />} */}
-      <div className="flex-grow overflow-auto">
+
+      {state.panelType === "auth" ? (
+        // Show the Auth Panel when panelType is "auth"
+        <AuthPanel />
+      ) : isAuthenticated || state.panelType !== "model" ? (
+        // Show ModelPanelAccordion if authenticated or panelType is not "model"
         <ModelPanelAccordion
           modelStructure={state.modelStructure}
           modelName={state.modelName}
           validationState={state.validationState}
           currentElement={state.currentElement}
-          lastElementUpdate={state.lastElementUpdate} // Add this line
+          lastElementUpdate={state.lastElementUpdate}
           diagramElementType={state.diagramElementType}
           expandedNodes={state.expandedNodes}
           onElementSelect={handleElementSelect}
@@ -432,7 +470,14 @@ const handleSimulate = useCallback(
           simulationStatus={state.simulationStatus}
           onViewResults={handleViewResults}
         />
-      </div>
+      ) : (
+        // Show a message to authenticate if not authenticated and panelType is "model"
+        <div className="p-4">
+          <p>
+            Please sign in using the Quodsi panel to access simulation tools.
+          </p>
+        </div>
+      )}
     </div>
   );
 };

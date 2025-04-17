@@ -7,6 +7,7 @@ import {
 import { ModelManager } from './core/ModelManager';
 import { ModelPanel } from './panels/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
+import { AuthPanel } from './panels/AuthPanel';
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -14,16 +15,26 @@ const viewport = new Viewport(client);
 // Initialize storage adapter
 const storageAdapter = new StorageAdapter();
 
-// Initialize the messaging singleton
-// const messaging = ExtensionMessaging.getInstance(); 
 // Initialize core model management with storage adapter
 const modelManager = new ModelManager(storageAdapter);
 
-// Initialize panel with model manager instance
+// Initialize panels
+console.info('[extension] About to create AuthPanel');
+const authPanel = new AuthPanel(client);
+authPanel.setLogging(true);
+console.info('[extension] Created AuthPanel');
+
 console.info('[extension] About to create ModelPanel');
 const modelPanel = new ModelPanel(client, modelManager);
 modelPanel.setLogging(true);
-console.info('[extension] Created ModelPanel2');
+console.info('[extension] Created ModelPanel');
+
+// Connect panels to allow communication
+authPanel.setModelPanel(modelPanel);
+
+// Initially show only AuthPanel, ModelPanel is hidden until authentication
+authPanel.show();
+modelPanel.hide();
 
 // Hook selection changes
 viewport.hookSelection((items) => {

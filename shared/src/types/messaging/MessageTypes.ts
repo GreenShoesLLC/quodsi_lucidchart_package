@@ -4,10 +4,20 @@ import { ModelItemPayloads } from './payloads/ModelItemPayloads';
 import { ValidationPayloads } from './payloads/ValidationPayloads';
 import { ModelTreePayloads } from './payloads/ModelTreePayloads';
 import { SelectionPayloads } from './payloads';
+import { AuthPayloads } from './payloads/AuthPayloads';
 
 export enum MessageTypes {
     // React App Lifecycle
     REACT_APP_READY = 'reactAppReady',
+    
+    // Authentication
+    AUTH_PANEL_INIT = 'authPanelInit',
+    AUTH_STATUS_REQUEST = 'authStatusRequest',
+    AUTH_STATUS_RESPONSE = 'authStatusResponse',
+    AUTH_SIGN_IN = 'authSignIn',
+    AUTH_SIGN_OUT = 'authSignOut',
+    AUTH_COMPLETED = 'authCompleted',
+    AUTH_ERROR = 'authError',
 
     // Selection Management
     SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
@@ -62,7 +72,8 @@ export interface MessagePayloads extends
     ModelPayloads,
     ModelItemPayloads,
     ValidationPayloads,
-    ModelTreePayloads { }
+    ModelTreePayloads,
+    AuthPayloads { }
 
 export type Message<T extends MessageTypes> = {
     messagetype: T;

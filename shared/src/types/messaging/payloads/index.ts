@@ -6,3 +6,4 @@ export * from './ModelItemPayloads';
 export * from './ValidationPayloads';
 export * from './ModelTreePayloads';
 export * from './SelectionPayloads';
+export * from './AuthPayloads';

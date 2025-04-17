@@ -1,0 +1,412 @@
+// panels/AuthPanel.ts
+import {
+    PanelLocation,
+    EditorClient,
+    Panel
+} from 'lucid-extension-sdk';
+import {
+    ExtensionMessaging,
+    isValidMessage,
+    JsonSerializable,
+    MessageTypes,
+    UserInfo
+} from '@quodsi/shared';
+
+// Session storage keys
+const SESSION_AUTH_STATE = 'quodsi_auth_state';
+const SESSION_USER_INFO = 'quodsi_user_info';
+const SESSION_LAST_ACTIVE = 'quodsi_last_active';
+
+// Session timeout in milliseconds (30 minutes)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
+
+/**
+ * AuthPanel is responsible for handling user authentication in a left-side panel.
+ * It communicates with the React application to manage the authentication flow
+ * using Azure AD B2C and controls the visibility of the ModelPanel based on
+ * authentication state.
+ */
+export class AuthPanel extends Panel {
+    private static readonly LOG_PREFIX = '[AuthPanel]';
+    private loggingEnabled: boolean = false;
+    private messaging: ExtensionMessaging;
+    private reactAppReady: boolean = false;
+    private isAuthenticated: boolean = false;
+    private userInfo: UserInfo | null = null;
+    private modelPanel: any; // Reference to ModelPanel for toggling visibility
+    private sessionCheckInterval: any; // For periodic session checking
+
+    constructor(client: EditorClient) {
+        super(client, {
+            title: 'Quodsi',
+            url: 'quodsim-react/index.html', // Same React app
+            location: PanelLocation.ContentDock,
+            iconUrl: 'https://lucid.app/favicon.ico', // Temporary icon, should be replaced
+            width: 300,
+            toolTip: 'Quodsi Simulation Tools'
+        });
+        
+        this.messaging = ExtensionMessaging.getInstance();
+        this.setupMessageHandlers();
+        this.loadSessionState();
+        this.startSessionMonitoring();
+        this.log('Auth Panel initialized');
+    }
+
+    /**
+     * Sets a reference to the ModelPanel instance to control its visibility
+     * based on authentication state
+     */
+    public setModelPanel(modelPanel: any): void {
+        this.modelPanel = modelPanel;
+        this.log('ModelPanel reference set');
+        
+        // Update model panel visibility based on current auth state
+        this.updateModelPanelVisibility();
+    }
+
+    /**
+     * Enables or disables logging
+     */
+    public setLogging(enabled: boolean): void {
+        this.loggingEnabled = enabled;
+        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
+    }
+
+    /**
+     * Returns whether logging is currently enabled
+     */
+    private isLoggingEnabled(): boolean {
+        return this.loggingEnabled;
+    }
+
+    /**
+     * Log a message if logging is enabled
+     */
+    private log(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.log(`${AuthPanel.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
+
+    /**
+     * Log an error message if logging is enabled
+     */
+    private logError(message: string, ...args: any[]): void {
+        if (this.isLoggingEnabled()) {
+            console.error(`${AuthPanel.LOG_PREFIX} ${message}`, ...args);
+        }
+    }
+    
+    /**
+     * Sets up message handlers for authentication-related messages
+     */
+    private setupMessageHandlers(): void {
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
+            this.log('REACT_APP_READY message received in auth panel');
+            this.handleReactReady();
+        });
+        
+        // Auth-specific message handlers
+        this.messaging.onMessage(MessageTypes.AUTH_STATUS_REQUEST, () => {
+            this.handleAuthStatusRequest();
+        });
+        
+        this.messaging.onMessage(MessageTypes.AUTH_SIGN_IN, () => {
+            this.handleAuthSignIn();
+        });
+        
+        this.messaging.onMessage(MessageTypes.AUTH_SIGN_OUT, () => {
+            this.handleAuthSignOut();
+        });
+        
+        this.messaging.onMessage(MessageTypes.AUTH_COMPLETED, (data) => {
+            this.handleAuthCompleted(data);
+        });
+        
+        this.messaging.onMessage(MessageTypes.AUTH_ERROR, (data) => {
+            this.handleAuthError(data);
+        });
+    }
+
+    /**
+     * Loads authentication state from session storage
+     */
+    private loadSessionState(): void {
+        try {
+            // Check if we have auth state in session storage
+            const authState = sessionStorage.getItem(SESSION_AUTH_STATE);
+            const userInfoStr = sessionStorage.getItem(SESSION_USER_INFO);
+            const lastActiveStr = sessionStorage.getItem(SESSION_LAST_ACTIVE);
+            
+            if (authState && userInfoStr && lastActiveStr) {
+                const isAuthenticated = authState === 'true';
+                const userInfo = JSON.parse(userInfoStr) as UserInfo;
+                const lastActive = parseInt(lastActiveStr, 10);
+                
+                // Check if the session is still valid (not timed out)
+                const now = Date.now();
+                if (now - lastActive < SESSION_TIMEOUT) {
+                    this.isAuthenticated = isAuthenticated;
+                    this.userInfo = userInfo;
+                    this.updateLastActive();
+                    this.log('Loaded valid session state from storage', {
+                        isAuthenticated,
+                        userInfo
+                    });
+                } else {
+                    // Session has timed out
+                    this.log('Session has timed out, clearing state');
+                    this.clearSessionState();
+                }
+            } else {
+                this.log('No session state found in storage');
+            }
+        } catch (error) {
+            this.logError('Error loading session state', error);
+            this.clearSessionState();
+        }
+    }
+
+    /**
+     * Saves the current authentication state to session storage
+     */
+    private saveSessionState(): void {
+        try {
+            sessionStorage.setItem(SESSION_AUTH_STATE, this.isAuthenticated.toString());
+            sessionStorage.setItem(SESSION_USER_INFO, this.userInfo ? JSON.stringify(this.userInfo) : '');
+            this.updateLastActive();
+            this.log('Saved session state to storage');
+        } catch (error) {
+            this.logError('Error saving session state', error);
+        }
+    }
+
+    /**
+     * Updates the last active timestamp
+     */
+    private updateLastActive(): void {
+        sessionStorage.setItem(SESSION_LAST_ACTIVE, Date.now().toString());
+    }
+
+    /**
+     * Clears all session state
+     */
+    private clearSessionState(): void {
+        this.isAuthenticated = false;
+        this.userInfo = null;
+        
+        try {
+            sessionStorage.removeItem(SESSION_AUTH_STATE);
+            sessionStorage.removeItem(SESSION_USER_INFO);
+            sessionStorage.removeItem(SESSION_LAST_ACTIVE);
+            this.log('Cleared session state');
+        } catch (error) {
+            this.logError('Error clearing session state', error);
+        }
+    }
+
+    /**
+     * Starts periodic session monitoring to check for timeouts
+     */
+    private startSessionMonitoring(): void {
+        // Check the session every minute
+        this.sessionCheckInterval = setInterval(() => {
+            if (this.isAuthenticated) {
+                const lastActiveStr = sessionStorage.getItem(SESSION_LAST_ACTIVE);
+                if (lastActiveStr) {
+                    const lastActive = parseInt(lastActiveStr, 10);
+                    const now = Date.now();
+                    
+                    // If session has timed out
+                    if (now - lastActive > SESSION_TIMEOUT) {
+                        this.log('Session timed out during monitoring');
+                        this.clearSessionState();
+                        this.updateModelPanelVisibility();
+                        
+                        // Notify the React app
+                        this.sendTypedMessage(MessageTypes.AUTH_ERROR, {
+                            error: 'Your session has timed out due to inactivity. Please sign in again.',
+                            errorCode: 'session_timeout'
+                        });
+                    }
+                }
+            }
+        }, 60000); // Check every minute
+    }
+
+    /**
+     * Stops session monitoring
+     */
+    private stopSessionMonitoring(): void {
+        if (this.sessionCheckInterval) {
+            clearInterval(this.sessionCheckInterval);
+            this.sessionCheckInterval = null;
+        }
+    }
+
+    /**
+     * Updates the visibility of the model panel based on authentication state
+     */
+    private updateModelPanelVisibility(): void {
+        if (!this.modelPanel) {
+            return;
+        }
+        
+        if (this.isAuthenticated) {
+            this.log('Showing model panel');
+            this.modelPanel.show();
+        } else {
+            this.log('Hiding model panel');
+            this.modelPanel.hide();
+        }
+    }
+
+    /**
+     * Handles the initialization message from the React app
+     */
+    private async handleReactReady(): Promise<void> {
+        if (this.reactAppReady) {
+            this.logError('React app already ready, skipping initialization');
+            return;
+        }
+
+        this.log('handleReactReady in AuthPanel');
+        this.reactAppReady = true;
+
+        // Tell React this is the AuthPanel
+        this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+            panelType: 'auth'
+        });
+        
+        // If we have a stored session, send the auth status
+        if (this.isAuthenticated && this.userInfo) {
+            this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+                isAuthenticated: this.isAuthenticated,
+                userInfo: this.userInfo
+            });
+        }
+    }
+    
+    /**
+     * Responds to authentication status requests
+     */
+    private handleAuthStatusRequest(): void {
+        this.log('Auth status requested');
+        this.updateLastActive();
+        this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+            isAuthenticated: this.isAuthenticated,
+            userInfo: this.userInfo || undefined
+        });
+    }
+    
+    /**
+     * Logs sign-in initiation
+     */
+    private handleAuthSignIn(): void {
+        this.log('Auth sign-in initiated');
+        this.updateLastActive();
+        // The React app will handle the actual sign-in with MSAL
+    }
+    
+    /**
+     * Handles sign-out events
+     */
+    private handleAuthSignOut(): void {
+        this.log('Auth sign-out initiated');
+        this.isAuthenticated = false;
+        this.userInfo = null;
+        
+        // Clear session state
+        this.clearSessionState();
+        
+        // Hide the model panel
+        this.updateModelPanelVisibility();
+    }
+    
+    /**
+     * Handles successful authentication completion
+     */
+    private handleAuthCompleted(data: any): void {
+        this.log('Auth completed:', data);
+        this.isAuthenticated = data.success;
+        this.userInfo = data.userInfo || null;
+        
+        // Save the authentication state
+        if (data.success) {
+            this.saveSessionState();
+        } else {
+            this.clearSessionState();
+        }
+        
+        // Update the model panel visibility
+        this.updateModelPanelVisibility();
+    }
+    
+    /**
+     * Handles authentication errors
+     */
+    private handleAuthError(data: any): void {
+        this.logError('Auth error:', data.error);
+        
+        // If this is a serious error that affects the authentication state
+        if (data.errorCode === 'token_expired' || 
+            data.errorCode === 'session_timeout' || 
+            data.errorCode === 'unauthorized') {
+            
+            this.isAuthenticated = false;
+            this.userInfo = null;
+            this.clearSessionState();
+            this.updateModelPanelVisibility();
+        }
+    }
+    
+    /**
+     * Sends a typed message to the React app
+     */
+    protected sendTypedMessage<T extends MessageTypes>(
+        type: T,
+        payload?: any
+    ): void {
+        const message = {
+            messagetype: type,
+            data: payload ?? null
+        } as JsonSerializable;
+
+        this.sendMessage(message);
+    }
+
+    /**
+     * Processes messages from the React app
+     */
+    protected messageFromFrame(message: any): void {
+        if (!isValidMessage(message)) {
+            this.logError('Invalid message format:', message);
+            this.sendTypedMessage(MessageTypes.ERROR, {
+                error: 'Invalid message format'
+            });
+            return;
+        }
+
+        this.messaging.handleIncomingMessage(message);
+    }
+    
+    /**
+     * Called when the iframe has been removed from the DOM
+     * We override this method to clean up resources
+     */
+    protected frameClosed(): void {
+        this.log('AuthPanel frame closed, cleaning up resources');
+        this.stopSessionMonitoring();
+        super.frameClosed();
+    }
+    
+    /**
+     * Called when the iframe has been constructed and loaded
+     * We override this method to set up initial state
+     */
+    protected frameLoaded(): void {
+        this.log('AuthPanel frame loaded');
+        super.frameLoaded();
+    }
+}

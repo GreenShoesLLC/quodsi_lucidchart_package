@@ -1,17 +1,5 @@
  Using web frameworks
 
-
-
-
-
-
-
-
-
-
-
-
-
 When developing with the Extension API, you can utilize web frameworks to display content onto a panel or modal. The following sections will go over using Angular and React, but other frameworks can be used as well.
 Angular
 Complex custom UI built directly with HTML and Javascript can be difficult to write and maintain. There are a number of popular frameworks you can use to make UI development more scalable. Angular is one popular option. This section will walk you through building a simple Angular application that is displayed in a custom panel.

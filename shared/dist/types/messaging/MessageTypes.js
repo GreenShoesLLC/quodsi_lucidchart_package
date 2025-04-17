@@ -5,6 +5,14 @@ var MessageTypes;
 (function (MessageTypes) {
     // React App Lifecycle
     MessageTypes["REACT_APP_READY"] = "reactAppReady";
+    // Authentication
+    MessageTypes["AUTH_PANEL_INIT"] = "authPanelInit";
+    MessageTypes["AUTH_STATUS_REQUEST"] = "authStatusRequest";
+    MessageTypes["AUTH_STATUS_RESPONSE"] = "authStatusResponse";
+    MessageTypes["AUTH_SIGN_IN"] = "authSignIn";
+    MessageTypes["AUTH_SIGN_OUT"] = "authSignOut";
+    MessageTypes["AUTH_COMPLETED"] = "authCompleted";
+    MessageTypes["AUTH_ERROR"] = "authError";
     // Selection Management
     MessageTypes["SELECTION_CHANGED_PAGE_NO_MODEL"] = "selectionPageNoModel";
     MessageTypes["SELECTION_CHANGED_PAGE_WITH_MODEL"] = "selectionPageWithModel";

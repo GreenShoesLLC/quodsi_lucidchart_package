@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Complete</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            text-align: center;
+        }
+        .card {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            margin-top: 0;
+            color: #333;
+        }
+        p {
+            color: #666;
+            line-height: 1.5;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .error {
+            color: #F44336;
+            font-weight: bold;
+        }
+        button {
+            background-color: #4285F4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #3367D6;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Authentication Complete</h1>
+        <div id="status-message">
+            <p>Processing authentication result...</p>
+        </div>
+        <button id="close-button" onclick="closeWindow()">Close Window</button>
+    </div>
+
+    <script>
+        // Process the authentication result
+        function processAuthResult() {
+            const statusElement = document.getElementById('status-message');
+            
+            try {
+                // Check if we have a token in the URL hash
+                if (window.location.hash) {
+                    statusElement.innerHTML = '<p class="success">Authentication successful!</p>' +
+                        '<p>You can now close this window and return to Quodsi.</p>';
+                    
+                    // Try to store the token in localStorage to be accessed by the parent window
+                    try {
+                        localStorage.setItem('quodsi_auth_result', JSON.stringify({
+                            timestamp: Date.now(),
+                            hash: window.location.hash
+                        }));
+                    } catch (e) {
+                        console.error('Failed to store auth result:', e);
+                    }
+                    
+                    // Try to notify the opener window if it exists
+                    if (window.opener && !window.opener.closed) {
+                        try {
+                            window.opener.postMessage({
+                                type: 'QUODSI_AUTH_COMPLETE',
+                                hash: window.location.hash
+                            }, '*');
+                        } catch (e) {
+                            console.error('Failed to send message to opener:', e);
+                        }
+                    }
+                } else if (window.location.search && window.location.search.includes('error')) {
+                    // Check for error parameters
+                    statusElement.innerHTML = '<p class="error">Authentication failed!</p>' +
+                        '<p>Please close this window and try again.</p>';
+                } else {
+                    // No token or error found
+                    statusElement.innerHTML = '<p>No authentication information found.</p>' +
+                        '<p>Please close this window and try again.</p>';
+                }
+            } catch (error) {
+                console.error('Error processing auth result:', error);
+                statusElement.innerHTML = '<p class="error">An error occurred while processing the authentication.</p>' +
+                    '<p>Please close this window and try again.</p>';
+            }
+        }
+
+        // Close the window
+        function closeWindow() {
+            window.close();
+        }
+
+        // Run when the page loads
+        window.onload = function() {
+            processAuthResult();
+            
+            // Auto-close after 10 seconds
+            setTimeout(function() {
+                closeWindow();
+            }, 10000);
+        };
+    </script>
+</body>
+</html>
