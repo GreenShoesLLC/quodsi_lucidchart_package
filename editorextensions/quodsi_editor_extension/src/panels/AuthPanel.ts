@@ -33,7 +33,6 @@ export class AuthPanel extends Panel {
     private reactAppReady: boolean = false;
     private isAuthenticated: boolean = false;
     private userInfo: UserInfo | null = null;
-    private modelPanel: any; // Reference to ModelPanel for toggling visibility
     private sessionCheckInterval: any; // For periodic session checking
 
     constructor(client: EditorClient) {
@@ -42,27 +41,14 @@ export class AuthPanel extends Panel {
             url: 'quodsim-react/index.html', // Same React app
             location: PanelLocation.ContentDock,
             iconUrl: 'https://lucid.app/favicon.ico', // Temporary icon, should be replaced
-            width: 300,
-            toolTip: 'Quodsi Simulation Tools'
+            width: 300
         });
-        
+        this.log('Auth Panel Constructor called');
         this.messaging = ExtensionMessaging.getInstance();
         this.setupMessageHandlers();
         this.loadSessionState();
-        this.startSessionMonitoring();
+        // this.startSessionMonitoring();
         this.log('Auth Panel initialized');
-    }
-
-    /**
-     * Sets a reference to the ModelPanel instance to control its visibility
-     * based on authentication state
-     */
-    public setModelPanel(modelPanel: any): void {
-        this.modelPanel = modelPanel;
-        this.log('ModelPanel reference set');
-        
-        // Update model panel visibility based on current auth state
-        this.updateModelPanelVisibility();
     }
 
     /**
@@ -212,58 +198,40 @@ export class AuthPanel extends Panel {
     /**
      * Starts periodic session monitoring to check for timeouts
      */
-    private startSessionMonitoring(): void {
-        // Check the session every minute
-        this.sessionCheckInterval = setInterval(() => {
-            if (this.isAuthenticated) {
-                const lastActiveStr = sessionStorage.getItem(SESSION_LAST_ACTIVE);
-                if (lastActiveStr) {
-                    const lastActive = parseInt(lastActiveStr, 10);
-                    const now = Date.now();
+    // private startSessionMonitoring(): void {
+    //     // Check the session every minute
+    //     this.sessionCheckInterval = window.setInterval(() => {
+    //         if (this.isAuthenticated) {
+    //             const lastActiveStr = sessionStorage.getItem(SESSION_LAST_ACTIVE);
+    //             if (lastActiveStr) {
+    //                 const lastActive = parseInt(lastActiveStr, 10);
+    //                 const now = Date.now();
                     
-                    // If session has timed out
-                    if (now - lastActive > SESSION_TIMEOUT) {
-                        this.log('Session timed out during monitoring');
-                        this.clearSessionState();
-                        this.updateModelPanelVisibility();
+    //                 // If session has timed out
+    //                 if (now - lastActive > SESSION_TIMEOUT) {
+    //                     this.log('Session timed out during monitoring');
+    //                     this.clearSessionState();
                         
-                        // Notify the React app
-                        this.sendTypedMessage(MessageTypes.AUTH_ERROR, {
-                            error: 'Your session has timed out due to inactivity. Please sign in again.',
-                            errorCode: 'session_timeout'
-                        });
-                    }
-                }
-            }
-        }, 60000); // Check every minute
-    }
+    //                     // Notify the React app
+    //                     this.sendTypedMessage(MessageTypes.AUTH_ERROR, {
+    //                         error: 'Your session has timed out due to inactivity. Please sign in again.',
+    //                         errorCode: 'session_timeout'
+    //                     });
+    //                 }
+    //             }
+    //         }
+    //     }, 60000); // Check every minute
+    // }
 
     /**
      * Stops session monitoring
      */
-    private stopSessionMonitoring(): void {
-        if (this.sessionCheckInterval) {
-            clearInterval(this.sessionCheckInterval);
-            this.sessionCheckInterval = null;
-        }
-    }
-
-    /**
-     * Updates the visibility of the model panel based on authentication state
-     */
-    private updateModelPanelVisibility(): void {
-        if (!this.modelPanel) {
-            return;
-        }
-        
-        if (this.isAuthenticated) {
-            this.log('Showing model panel');
-            this.modelPanel.show();
-        } else {
-            this.log('Hiding model panel');
-            this.modelPanel.hide();
-        }
-    }
+    // private stopSessionMonitoring(): void {
+    //     if (this.sessionCheckInterval) {
+    //         window.clearInterval(this.sessionCheckInterval);
+    //         this.sessionCheckInterval = null;
+    //     }
+    // }
 
     /**
      * Handles the initialization message from the React app
@@ -328,9 +296,7 @@ export class AuthPanel extends Panel {
         
         // Clear session state
         this.clearSessionState();
-        
-        // Hide the model panel
-        this.updateModelPanelVisibility();
+    
     }
     
     /**
@@ -347,9 +313,7 @@ export class AuthPanel extends Panel {
         } else {
             this.clearSessionState();
         }
-        
-        // Update the model panel visibility
-        this.updateModelPanelVisibility();
+    
     }
     
     /**
@@ -366,7 +330,6 @@ export class AuthPanel extends Panel {
             this.isAuthenticated = false;
             this.userInfo = null;
             this.clearSessionState();
-            this.updateModelPanelVisibility();
         }
     }
     
@@ -406,7 +369,7 @@ export class AuthPanel extends Panel {
      */
     protected frameClosed(): void {
         this.log('AuthPanel frame closed, cleaning up resources');
-        this.stopSessionMonitoring();
+        // this.stopSessionMonitoring();
         super.frameClosed();
     }
     

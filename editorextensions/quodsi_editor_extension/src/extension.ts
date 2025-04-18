@@ -8,6 +8,7 @@ import { ModelManager } from './core/ModelManager';
 import { ModelPanel } from './panels/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
 import { AuthPanel } from './panels/AuthPanel';
+import { ExtensionMessaging } from '@quodsi/shared';
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -19,22 +20,21 @@ const storageAdapter = new StorageAdapter();
 const modelManager = new ModelManager(storageAdapter);
 
 // Initialize panels
+
+
 console.info('[extension] About to create AuthPanel');
 const authPanel = new AuthPanel(client);
 authPanel.setLogging(true);
 console.info('[extension] Created AuthPanel');
+// authPanel.show();
+
 
 console.info('[extension] About to create ModelPanel');
-const modelPanel = new ModelPanel(client, modelManager);
+const modelPanel = new ModelPanel(client, modelManager, authPanel);
 modelPanel.setLogging(true);
 console.info('[extension] Created ModelPanel');
+// modelPanel.show();
 
-// Connect panels to allow communication
-authPanel.setModelPanel(modelPanel);
-
-// Initially show only AuthPanel, ModelPanel is hidden until authentication
-authPanel.show();
-modelPanel.hide();
 
 // Hook selection changes
 viewport.hookSelection((items) => {
@@ -70,3 +70,5 @@ menu.addMenuItem({
     action: "import",
     menuType: MenuType.Main,
 });
+
+console.info('[extension] Completed Successfully');

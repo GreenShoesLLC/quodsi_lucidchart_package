@@ -1,14 +1,32 @@
 // src/components/auth/AuthPanel.tsx
-import React, { useState } from 'react';
-import { useAuth } from '../../auth/AuthProvider';
-import { AuthError } from './AuthError';
-import { DebugPanel } from './DebugPanel';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../auth/AuthProvider";
+import { AuthError } from "./AuthError";
+import { DebugPanel } from "./DebugPanel";
 
 export const AuthPanel: React.FC = () => {
-  const { isAuthenticated, userInfo, isProcessingAuth, error, 
-          handleSignIn, handleSignOut, handlePasswordReset, handleEditProfile } = useAuth();
+  const {
+    isAuthenticated,
+    userInfo,
+    isProcessingAuth,
+    error,
+    handleSignIn,
+    handleSignOut,
+    handlePasswordReset,
+    handleEditProfile,
+  } = useAuth();
   const [showError, setShowError] = useState(true);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Add effect to detect when auth is initialized
+  useEffect(() => {
+    const initTimer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1500); // Give MSAL 1.5 seconds to initialize
+
+    return () => clearTimeout(initTimer);
+  }, []);
 
   // Dismiss error message
   const handleDismissError = () => {
@@ -24,8 +42,18 @@ export const AuthPanel: React.FC = () => {
 
   // Toggle debug panel visibility
   const toggleDebugPanel = () => {
-    setShowDebugPanel(prev => !prev);
+    setShowDebugPanel((prev) => !prev);
   };
+
+  // If still initializing, show a loading spinner
+  if (isInitializing) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Initializing authentication...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full p-4">
@@ -34,7 +62,7 @@ export const AuthPanel: React.FC = () => {
           <h1 className="text-lg font-bold">Quodsi</h1>
           <p className="text-sm mt-1">Simulation Modeling for Lucidchart</p>
         </div>
-        <button 
+        <button
           onClick={toggleDebugPanel}
           className="text-xs text-gray-500 hover:text-gray-700"
           title="Toggle Debug Panel"
@@ -119,8 +147,8 @@ export const AuthPanel: React.FC = () => {
         // Unauthenticated view
         <div className="flex flex-col">
           <p className="mb-4">
-            Welcome to Quodsi! Sign in to access simulation modeling tools
-            for your Lucidchart diagrams.
+            Welcome to Quodsi! Sign in to access simulation modeling tools for
+            your Lucidchart diagrams.
           </p>
 
           <button
@@ -128,7 +156,7 @@ export const AuthPanel: React.FC = () => {
             onClick={handleSignIn}
             disabled={isProcessingAuth}
           >
-            {isProcessingAuth ? 'Signing in...' : 'Sign In / Sign Up'}
+            {isProcessingAuth ? "Signing in..." : "Sign In / Sign Up"}
           </button>
 
           <button
@@ -143,8 +171,8 @@ export const AuthPanel: React.FC = () => {
             <h2 className="font-medium mb-2">About Quodsi</h2>
             <p className="text-sm">
               Quodsi adds process simulation capabilities to your Lucidchart
-              diagrams. Convert your flowcharts into interactive simulations
-              to analyze performance and identify bottlenecks.
+              diagrams. Convert your flowcharts into interactive simulations to
+              analyze performance and identify bottlenecks.
             </p>
           </div>
         </div>

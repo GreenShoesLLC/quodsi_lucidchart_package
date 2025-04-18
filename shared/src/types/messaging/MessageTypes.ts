@@ -18,6 +18,8 @@ export enum MessageTypes {
     AUTH_SIGN_OUT = 'authSignOut',
     AUTH_COMPLETED = 'authCompleted',
     AUTH_ERROR = 'authError',
+    SHOW_AUTH_PANEL = 'SHOW_AUTH_PANEL',
+    MODEL_PANEL_FOCUS = 'model_panel_focus',
 
     // Selection Management
     SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists

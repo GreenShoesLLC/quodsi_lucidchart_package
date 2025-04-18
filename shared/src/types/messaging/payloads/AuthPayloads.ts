@@ -21,7 +21,13 @@ export interface AuthPayloads {
     [MessageTypes.AUTH_STATUS_REQUEST]: {
         // No payload needed, just a request for status
     };
-
+    [MessageTypes.SHOW_AUTH_PANEL]: {
+        // No payload needed, just a request for status
+    };
+    [MessageTypes.MODEL_PANEL_FOCUS]: {
+        // No payload needed, just a request for status
+    };
+    
     [MessageTypes.AUTH_STATUS_RESPONSE]: {
         isAuthenticated: boolean;
         userInfo?: UserInfo;

@@ -13,6 +13,8 @@ var MessageTypes;
     MessageTypes["AUTH_SIGN_OUT"] = "authSignOut";
     MessageTypes["AUTH_COMPLETED"] = "authCompleted";
     MessageTypes["AUTH_ERROR"] = "authError";
+    MessageTypes["SHOW_AUTH_PANEL"] = "SHOW_AUTH_PANEL";
+    MessageTypes["MODEL_PANEL_FOCUS"] = "model_panel_focus";
     // Selection Management
     MessageTypes["SELECTION_CHANGED_PAGE_NO_MODEL"] = "selectionPageNoModel";
     MessageTypes["SELECTION_CHANGED_PAGE_WITH_MODEL"] = "selectionPageWithModel";

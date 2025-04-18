@@ -1,6 +1,7 @@
 import { EditorClient, ItemProxy, Panel } from 'lucid-extension-sdk';
 import { MessagePayloads, MessageTypes } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
+import { AuthPanel } from './AuthPanel';
 export declare class ModelPanel extends Panel {
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -9,12 +10,13 @@ export declare class ModelPanel extends Panel {
     private messaging;
     private reactAppReady;
     private modelManager;
+    private authPanel;
     private expandedNodes;
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
     private versionManager;
-    constructor(client: EditorClient, modelManager: ModelManager);
+    constructor(client: EditorClient, modelManager: ModelManager, authPanel: AuthPanel);
     setLogging(enabled: boolean): void;
     private isLoggingEnabled;
     private log;

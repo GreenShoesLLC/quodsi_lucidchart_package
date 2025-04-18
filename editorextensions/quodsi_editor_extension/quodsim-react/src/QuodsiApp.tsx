@@ -25,6 +25,7 @@ import { useSimulationStatus } from "./hooks/useSimulationStatus";
 import { SimulationStatus } from "./types/SimulationStatus";
 import { useAuth } from "./auth/AuthProvider";
 import { AuthPanel } from "./components/auth/AuthPanel";
+import { useMsal } from "@azure/msal-react";
 
 export interface AppState {
   // Existing properties
@@ -88,7 +89,7 @@ const initialState: AppState = {
   simulationStatus: initialSimulationStatus,
   // Set a default panelType based on URL - if it contains 'auth' in the URL path
   // If we can't determine it yet, default to null and wait for panel init message
-  panelType: window.location.pathname.includes('auth') ? 'auth' : null,
+  panelType: window.location.pathname.includes("auth") ? "auth" : null,
 };
 
 const QuodsiApp: React.FC = () => {
@@ -98,6 +99,7 @@ const QuodsiApp: React.FC = () => {
 
   // Use the authentication hook from the AuthProvider context
   const { isAuthenticated, userInfo } = useAuth();
+  const { inProgress } = useMsal();
 
   // Create a type-safe message sender that uses window.postMessage
   const sendMessage = useCallback(
@@ -114,6 +116,11 @@ const QuodsiApp: React.FC = () => {
     },
     []
   );
+
+  // Handle redirect to auth panel
+  const handleRedirectToAuthPanel = useCallback(() => {
+    sendMessage(MessageTypes.SHOW_AUTH_PANEL);
+  }, [sendMessage]);
 
   const documentId = state.documentId;
 
@@ -145,6 +152,44 @@ const QuodsiApp: React.FC = () => {
   }, []);
 
   console.log("[QuodsiApp] documentId", documentId);
+
+  // Add a handler for MODEL_PANEL_FOCUS
+  useEffect(() => {
+    const handleModelPanelFocus = () => {
+      console.log(
+        "[QuodsiApp] Model panel received focus, checking auth status"
+      );
+      // Request fresh auth status from extension
+      sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
+    };
+
+    messaging.onMessage(MessageTypes.MODEL_PANEL_FOCUS, handleModelPanelFocus);
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, [messaging, sendMessage]);
+
+  // Add a listener for AUTH_COMPLETED in QuodsiApp.tsx
+  useEffect(() => {
+    const handleAuthCompleted = (data: any) => {
+      console.log("[QuodsiApp] Received AUTH_COMPLETED:", data);
+      // Force a re-render when auth completes
+      if (data.success) {
+        // Small delay to ensure auth state is fully updated
+        setTimeout(() => {
+          console.log("[QuodsiApp] Refreshing UI after auth completion");
+          setState((prev) => ({ ...prev }));
+        }, 500);
+      }
+    };
+
+    messaging.onMessage(MessageTypes.AUTH_COMPLETED, handleAuthCompleted);
+
+    return () => {
+      // Cleanup if needed
+    };
+  }, [messaging]);
 
   // Add custom message handler for simulation status update that includes new results flag
   useEffect(() => {
@@ -188,7 +233,7 @@ const QuodsiApp: React.FC = () => {
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
-    
+
     // Handler for AUTH_PANEL_INIT
     const handleAuthPanelInit = (data: any) => {
       console.log("[QuodsiApp] Received AUTH_PANEL_INIT:", data);
@@ -199,8 +244,10 @@ const QuodsiApp: React.FC = () => {
 
       // Delay requesting auth status to ensure MSAL is fully initialized
       // This fixes the "uninitialized_public_client_application" error
-      if (data.panelType === 'auth') {
-        console.log("[QuodsiApp] Auth panel initialized, scheduling auth status request");
+      if (data.panelType === "auth") {
+        console.log(
+          "[QuodsiApp] Auth panel initialized, scheduling auth status request"
+        );
         // Use a small delay to ensure MSAL is fully initialized
         setTimeout(() => {
           console.log("[QuodsiApp] Now requesting auth status after delay");
@@ -211,7 +258,7 @@ const QuodsiApp: React.FC = () => {
 
     // Register the handler
     messaging.onMessage(MessageTypes.AUTH_PANEL_INIT, handleAuthPanelInit);
-    
+
     const deps = {
       setState,
       setError: (error: string | null) =>
@@ -394,7 +441,7 @@ const QuodsiApp: React.FC = () => {
         pageId: state.documentId || "",
       });
     },
-    [sendMessage, state.documentId]
+    [sendMessage, state.documentId, state.expandedNodes]
   );
 
   useEffect(() => {
@@ -456,8 +503,33 @@ const QuodsiApp: React.FC = () => {
       {state.panelType === "auth" ? (
         // Show the Auth Panel when panelType is "auth"
         <AuthPanel />
-      ) : isAuthenticated || state.panelType !== "model" ? (
-        // Show ModelPanelAccordion if authenticated or panelType is not "model"
+      ) : // For ModelPanel, check if MSAL is initializing, then check auth status
+      inProgress !== "none" ? (
+        // Show loading while MSAL is initializing
+        <div className="flex flex-col items-center justify-center h-full p-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+          <p className="text-gray-600">Initializing authentication...</p>
+        </div>
+      ) : !isAuthenticated ? (
+        // Not authenticated - show sign-in message
+        <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-50">
+          <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-800 mb-3">
+              Authentication Required
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Please sign in to access the Quodsi simulation modeling tools.
+            </p>
+            <button
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              onClick={handleRedirectToAuthPanel}
+            >
+              Sign In
+            </button>
+          </div>
+        </div>
+      ) : (
+        // Authenticated - show ModelPanelAccordion
         <ModelPanelAccordion
           modelStructure={state.modelStructure}
           modelName={state.modelName}
@@ -483,13 +555,6 @@ const QuodsiApp: React.FC = () => {
           simulationStatus={state.simulationStatus}
           onViewResults={handleViewResults}
         />
-      ) : (
-        // Show a message to authenticate if not authenticated and panelType is "model"
-        <div className="p-4">
-          <p>
-            Please sign in using the Quodsi panel to access simulation tools.
-          </p>
-        </div>
       )}
     </div>
   );

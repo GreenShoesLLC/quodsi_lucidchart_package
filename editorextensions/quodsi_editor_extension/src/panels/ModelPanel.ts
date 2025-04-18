@@ -42,6 +42,7 @@ import { LucidPageConversionService } from '../services/conversion/LucidPageConv
 import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
+import { AuthPanel } from './AuthPanel';
 
 
 
@@ -55,6 +56,7 @@ export class ModelPanel extends Panel {
     private messaging: ExtensionMessaging;
     private reactAppReady: boolean = false;
     private modelManager: ModelManager;
+    private authPanel: AuthPanel;
     private expandedNodes: Set<string> = new Set();
     private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
@@ -65,7 +67,7 @@ export class ModelPanel extends Panel {
     private isHandlingSelectionChange: boolean = false;
     private versionManager: LucidVersionManager;
 
-    constructor(client: EditorClient, modelManager: ModelManager) {
+    constructor(client: EditorClient, modelManager: ModelManager, authPanel: AuthPanel) {
         super(client, {
             title: 'Quodsi Model',
             url: 'quodsim-react/index.html',
@@ -77,6 +79,7 @@ export class ModelPanel extends Panel {
         // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
         this.modelManager = modelManager;
+        this.authPanel = authPanel;
         this.selectionManager = new SelectionManager(modelManager);
         this.treeStateManager = new TreeStateManager(modelManager);
         // Set up event handlers
@@ -113,7 +116,13 @@ export class ModelPanel extends Panel {
             this.logError('REACT_APP_READY message received in handler');
             this.handleReactReady();
         });
-
+        this.messaging.onMessage(MessageTypes.SHOW_AUTH_PANEL, () => {
+            this.log('Showing Auth panel on user request');
+            // Get the AuthPanel instance and show it
+            // We'll need a way to access the AuthPanel instance here
+            // This could be through a global reference or by passing it to ModelPanel
+            this.authPanel.show();  // Access AuthPanel instance somehow
+        });
         this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
             this.logError('VIEW_SIMULATION_RESULTS message received in handler');
             this.handleOutputCreateDashboard(payload, true)
@@ -591,7 +600,7 @@ export class ModelPanel extends Panel {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
         this.log('Current page at show:', currentPage);
-
+        this.sendTypedMessage(MessageTypes.MODEL_PANEL_FOCUS);
         this.initializeModelManager(); // Re-initialize when panel is shown
         super.show();
     }
