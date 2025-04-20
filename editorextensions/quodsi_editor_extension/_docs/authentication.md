@@ -12,8 +12,9 @@ The Quodsi Authentication System is a comprehensive solution that enables user a
 4. [Authentication Flow](#authentication-flow)
 5. [iFrame Considerations](#iframe-considerations)
 6. [Session Management](#session-management)
-7. [Troubleshooting](#troubleshooting)
-8. [Further Development](#further-development)
+7. [Panel Visibility and Authentication](#panel-visibility-and-authentication)
+8. [Troubleshooting](#troubleshooting)
+9. [Further Development](#further-development)
 
 ## Architecture Overview
 
@@ -27,7 +28,7 @@ The authentication is based on the following principles:
 - User authentication is handled via Microsoft Entra ID (Azure AD B2C)
 - Authentication state is maintained in session storage for persistence
 - Communication between components uses a messaging system
-- Authentication status affects the visibility of other extension panels
+- Each panel checks authentication status independently when accessed
 
 ## Microsoft Entra ID Integration
 
@@ -67,13 +68,13 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
    - Key features:
      - Session storage management for auth state persistence
      - Message handling for auth events
-     - Panel visibility control based on auth state
      - Session timeout monitoring
 
 2. **extension.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts`
    - Purpose: Initializes extension components including auth and model panels
-   - Coordinates panel visibility based on authentication state
+   - Shows both panel icons regardless of authentication state
+   - Contains handlers for panel navigation messages
 
 ### React Components
 
@@ -84,6 +85,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - React context for auth state management
      - Integration with MSAL library
      - API service initialization with token management
+     - Proper MSAL initialization handling
 
 2. **useAuthentication.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useAuthentication.ts`
@@ -110,6 +112,14 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Sign-in/sign-out buttons
      - Profile management
      - Error display
+     - Loading state during MSAL initialization
+
+5. **index.tsx**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\index.tsx`
+   - Purpose: Application entry point
+   - Features:
+     - Properly initializes MSAL before rendering the application
+     - Ensures authentication is ready before auth operations
 
 ### Shared Components
 
@@ -124,6 +134,8 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - `AUTH_SIGN_OUT`
      - `AUTH_COMPLETED`
      - `AUTH_ERROR`
+     - `SHOW_AUTH_PANEL`
+     - `MODEL_PANEL_FOCUS`
 
 2. **AuthPayloads.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads\AuthPayloads.ts`
@@ -135,8 +147,8 @@ The authentication process follows these steps:
 
 1. **Initialization**:
    - The extension initializes both AuthPanel and ModelPanel
-   - Initially, only AuthPanel is visible
-   - ModelPanel visibility is controlled by authentication state
+   - Both panels are shown in the Lucidchart panel selector
+   - MSAL is properly initialized before any authentication operations
 
 2. **User Authentication**:
    - User clicks "Sign In" button in AuthPanel
@@ -147,7 +159,7 @@ The authentication process follows these steps:
 3. **State Persistence**:
    - Authentication state is stored in session storage
    - Auth status is sent from React to extension
-   - Extension updates its internal state and panel visibility
+   - Extension updates its internal state
 
 4. **Panel Reopening**:
    - When panel is closed and reopened, authentication state is retrieved from storage
@@ -157,7 +169,13 @@ The authentication process follows these steps:
 5. **Sign-out Flow**:
    - User clicks "Sign Out" button
    - React app clears tokens and sends sign-out message
-   - Extension clears session storage and updates panel visibility
+   - Extension clears session storage
+
+6. **Panel Authentication Check**:
+   - When ModelPanel is accessed, it checks authentication status
+   - If not authenticated, it shows a message with a sign-in button
+   - Sign-in button redirects to AuthPanel for authentication
+   - After successful authentication, ModelPanel shows content on next access
 
 ## iFrame Considerations
 
@@ -193,6 +211,11 @@ Working with authentication in iframe environments presents several challenges t
    - Ensures authentication state is properly restored
    - Implemented in `frameLoaded` and `handleReactReady` methods
 
+5. **Proper MSAL Initialization**:
+   - MSAL is initialized before authentication operations
+   - Prevents "uninitialized_public_client_application" errors
+   - Loading state shown during initialization
+
 ## Session Management
 
 The authentication system implements robust session management:
@@ -212,6 +235,33 @@ The authentication system implements robust session management:
    - `quodsi_user_info`: User profile information
    - `quodsi_last_active`: Timestamp for session activity tracking
 
+## Panel Visibility and Authentication
+
+The system implements a user-friendly approach to panel visibility and authentication:
+
+1. **Always Visible Panel Icons**:
+   - Both AuthPanel and ModelPanel icons are always visible in the Lucidchart panel selector
+   - This provides a consistent UI experience for users
+
+2. **Authentication-Based Content**:
+   - Each panel is responsible for checking authentication status
+   - ModelPanel shows authentication message if user is not authenticated
+   - Content is only shown when authenticated
+
+3. **Panel Redirection**:
+   - ModelPanel provides a sign-in button when user is not authenticated
+   - This button sends `SHOW_AUTH_PANEL` message to activate the AuthPanel
+   - After authentication, ModelPanel can be accessed with content
+
+4. **Authentication State Synchronization**:
+   - Authentication state is broadcast to all panels
+   - ModelPanel checks authentication when it receives focus using `MODEL_PANEL_FOCUS` message
+   - This ensures a consistent experience across panels
+
+5. **Loading States**:
+   - Loading spinners shown during MSAL initialization 
+   - Prevents UI flickering and confusion during authentication
+
 ## Troubleshooting
 
 Common authentication issues and their solutions:
@@ -228,9 +278,15 @@ Common authentication issues and their solutions:
    - Check for console errors related to token acquisition
    - Verify the permissions and scopes in the app registration
 
-4. **Incorrect panel shown after authentication**:
-   - Ensure `panelType` is being correctly set in `QuodsiApp.tsx`
-   - Verify message handlers for panel initialization
+4. **MSAL initialization errors**:
+   - Ensure MSAL is properly initialized before authentication operations
+   - Check for "uninitialized_public_client_application" errors in console
+   - Verify that `msalInstance.initialize()` is awaited in index.tsx
+
+5. **Panel not showing authenticated content**:
+   - Ensure authentication state is being properly communicated between panels
+   - Check that `MODEL_PANEL_FOCUS` handler is requesting updated auth status
+   - Verify authentication listeners are properly registered
 
 ## Further Development
 
@@ -251,6 +307,11 @@ Areas for potential enhancement:
 4. **Multi-tenant Support**:
    - Extend authentication to support multiple Microsoft Entra ID tenants
    - Implement tenant selection during sign-in
+
+5. **MSAL Initialization Optimization**:
+   - Add better error handling for MSAL initialization failures
+   - Implement retry logic for intermittent initialization issues
+   - Provide more detailed feedback during initialization
 
 ---
 
