@@ -12,6 +12,7 @@ import {
     profileEditRequest
 } from "../auth/authConfig";
 import { ExtensionMessaging, MessageTypes } from "@quodsi/shared";
+import { quodsiFastApiService, UserSyncResponse } from "../services/QuodsiFastApiService";
 
 interface TokenResponse {
     accessToken: string;
@@ -179,6 +180,22 @@ export function useAuthentication() {
                         
                         setUserInfo(accountInfo);
                         setError(null);
+
+                        // Attempt to sync user with quodsi-fastapi
+                        try {
+                            console.log("[useAuthentication] Syncing user with quodsi-fastapi");
+                            const userSyncResponse = await quodsiFastApiService.syncUser(tokenResponse.accessToken);
+                            
+                            if (userSyncResponse) {
+                                console.log("[useAuthentication] User synced successfully", userSyncResponse);
+                                // We could enhance accountInfo with data from userSyncResponse if needed
+                            } else {
+                                console.warn("[useAuthentication] User sync returned null response");
+                            }
+                        } catch (syncError) {
+                            // Log error but continue with authentication
+                            console.error("[useAuthentication] Error syncing user with quodsi-fastapi", syncError);
+                        }
 
                         // Notify extension about successful auth
                         console.log("[useAuthentication] Sending AUTH_COMPLETED message");
@@ -401,6 +418,28 @@ export function useAuthentication() {
         return accessToken;
     }, [isAuthenticated, accessToken, tokenExpiration, isTokenExpiringSoon, refreshTokenIfNeeded]);
 
+    // Function to sync user with quodsi-fastapi
+    const syncUserWithFastApi = useCallback(async (): Promise<UserSyncResponse | null> => {
+        if (!isAuthenticated) {
+            console.warn("[useAuthentication] Cannot sync user - not authenticated");
+            return null;
+        }
+        
+        // Get token
+        const token = await getAccessToken();
+        if (!token) {
+            console.warn("[useAuthentication] Cannot sync user - no token available");
+            return null;
+        }
+        
+        try {
+            return await quodsiFastApiService.syncUser(token);
+        } catch (error) {
+            console.error("[useAuthentication] Error in syncUserWithFastApi", error);
+            return null;
+        }
+    }, [isAuthenticated, getAccessToken]);
+
     return {
         isAuthenticated,
         userInfo,
@@ -409,6 +448,7 @@ export function useAuthentication() {
         handlePasswordReset,
         handleEditProfile,
         getAccessToken,
+        syncUserWithFastApi, // Add the new function to the return object
         isProcessingAuth,
         error,
     };

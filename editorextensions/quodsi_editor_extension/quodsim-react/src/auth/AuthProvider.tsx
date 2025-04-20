@@ -5,6 +5,9 @@ import { IPublicClientApplication } from '@azure/msal-browser';
 import { useAuthentication } from '../hooks/useAuthentication';
 import { ApiService } from '../services/apiService';
 
+// Import user sync response type
+import { UserSyncResponse } from '../services/QuodsiFastApiService';
+
 // Define the authentication context shape
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -16,6 +19,7 @@ interface AuthContextType {
   handlePasswordReset: () => Promise<void>;
   handleEditProfile: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
+  syncUserWithFastApi: () => Promise<UserSyncResponse | null>; // Add syncUserWithFastApi function
 }
 
 // Create the context with a default value
@@ -29,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   handlePasswordReset: async () => {},
   handleEditProfile: async () => {},
   getAccessToken: async () => null,
+  syncUserWithFastApi: async () => null, // Add default implementation
 });
 
 // Inner provider that uses the MSAL hook
@@ -64,6 +69,7 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         handlePasswordReset: auth.handlePasswordReset,
         handleEditProfile: auth.handleEditProfile,
         getAccessToken: auth.getAccessToken,
+        syncUserWithFastApi: auth.syncUserWithFastApi, // Expose the sync function
       }}
     >
       {children}
