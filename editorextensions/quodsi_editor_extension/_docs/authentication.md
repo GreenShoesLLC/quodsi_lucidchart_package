@@ -23,12 +23,14 @@ The Quodsi authentication system spans multiple projects and integrates with Mic
 1. **Extension Host (quodsi_editor_extension)**: Manages the Lucidchart panel lifecycle and persists authentication state
 2. **React Application (quodsim-react)**: Provides the user interface and handles authentication flows
 3. **Shared Library (@quodsi/shared)**: Contains common types and messaging infrastructure
+4. **Backend API (quodsi-fastapi)**: Handles user synchronization, session management, and activity tracking
 
 The authentication is based on the following principles:
 - User authentication is handled via Microsoft Entra ID (Azure AD B2C)
 - Authentication state is maintained in session storage for persistence
 - Communication between components uses a messaging system
 - Each panel checks authentication status independently when accessed
+- User sessions are tracked in the backend for analytics and security auditing
 
 ## Microsoft Entra ID Integration
 
@@ -95,15 +97,17 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Auth state management
      - Sign-in/sign-out handlers
      - Error handling
+     - User synchronization with backend
+     - Session management
 
-3. **authConfig.ts**
-   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\auth\authConfig.ts`
-   - Purpose: Configuration for MSAL authentication
+3. **Authentication Configuration**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\auth\config\`
+   - Purpose: Modular configuration for authentication system
    - Contains:
-     - Authority URLs
-     - Client ID
-     - Redirect URIs
-     - Authentication scopes
+     - `msalConfig.ts` - MSAL configuration and utility functions
+     - `authPolicies.ts` - Authentication policies and scopes
+     - `apiConfig.ts` - API endpoint configuration
+     - `sessionConfig.ts` - Session timeout and refresh settings
 
 4. **AuthPanel.tsx**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\auth\AuthPanel.tsx`
@@ -111,15 +115,50 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
    - Features:
      - Sign-in/sign-out buttons
      - Profile management
-     - Error display
+     - Error display with recovery options
      - Loading state during MSAL initialization
 
-5. **index.tsx**
-   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\index.tsx`
-   - Purpose: Application entry point
+5. **msalSetup.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\auth\msalSetup.ts`
+   - Purpose: MSAL initialization and configuration
    - Features:
-     - Properly initializes MSAL before rendering the application
-     - Ensures authentication is ready before auth operations
+     - Creates a configured MSAL instance
+     - Sets up event handlers for authentication events
+
+### Service Components
+
+1. **SessionStorageService**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\SessionStorageService.ts`
+   - Purpose: Manages authentication session persistence
+   - Features:
+     - Load/save authentication state
+     - Session timeout detection
+     - MSAL cache management
+
+2. **AuthErrorHandler**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\AuthErrorHandler.ts`
+   - Purpose: Standardizes error handling for authentication
+   - Features:
+     - Categorized error types
+     - User-friendly error messages
+     - Recovery action suggestions
+     - Error retryability assessment
+
+3. **UserSyncService**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\UserSyncService.ts`
+   - Purpose: Synchronizes user data with the backend
+   - Features:
+     - User profile synchronization
+     - Session creation and management
+     - Activity tracking
+
+4. **AuthMessagingService**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\AuthMessagingService.ts`
+   - Purpose: Handles messaging between React and extension
+   - Features:
+     - Authentication status communication
+     - Error reporting
+     - Session state synchronization
 
 ### Shared Components
 
@@ -156,22 +195,29 @@ The authentication process follows these steps:
    - User completes authentication in Microsoft Entra ID
    - Token is acquired and stored
 
-3. **State Persistence**:
-   - Authentication state is stored in session storage
-   - Auth status is sent from React to extension
+3. **Backend Synchronization**:
+   - User information is synchronized with the backend (quodsi-fastapi)
+   - A user session is created in the backend
+   - Session activity is tracked periodically
+
+4. **State Persistence**:
+   - Authentication state is stored in session storage via SessionStorageService
+   - Auth status is sent to the extension via AuthMessagingService
    - Extension updates its internal state
 
-4. **Panel Reopening**:
+5. **Panel Reopening**:
    - When panel is closed and reopened, authentication state is retrieved from storage
    - React app is initialized with correct panel type
    - Authentication state is restored
+   - Backend session is updated
 
-5. **Sign-out Flow**:
+6. **Sign-out Flow**:
    - User clicks "Sign Out" button
+   - Backend session is ended
    - React app clears tokens and sends sign-out message
-   - Extension clears session storage
+   - SessionStorageService clears session state
 
-6. **Panel Authentication Check**:
+7. **Panel Authentication Check**:
    - When ModelPanel is accessed, it checks authentication status
    - If not authenticated, it shows a message with a sign-in button
    - Sign-in button redirects to AuthPanel for authentication
@@ -199,12 +245,12 @@ Working with authentication in iframe environments presents several challenges t
 2. **Session Storage for State**:
    - Session state persisted in browser storage
    - Allows state to survive panel reopening
-   - Implemented in `AuthPanel.ts` with session storage methods
+   - Implemented in `SessionStorageService` with robust error handling
 
 3. **Message-based Communication**:
    - Uses `postMessage` for cross-frame communication
    - Ensures stable communication despite iframe constraints
-   - Implemented in `ExtensionMessaging` class
+   - Implemented in `AuthMessagingService` for standardized messaging
 
 4. **Frame Reinitialize Handling**:
    - Special handling when iframe is reloaded
@@ -220,20 +266,30 @@ Working with authentication in iframe environments presents several challenges t
 
 The authentication system implements robust session management:
 
-1. **Session Timeout**:
+1. **Client-side Session Management**:
+   - Handled by `SessionStorageService`
    - 30-minute inactivity timeout
-   - Configurable via `SESSION_TIMEOUT` constant in `AuthPanel.ts`
+   - Configurable via `SESSION_TIMEOUT_MS` constant in `sessionConfig.ts`
    - Periodically checks for timeout and forces re-login if needed
 
-2. **Token Refresh**:
+2. **Backend Session Tracking**:
+   - Creates a session record in the backend database
+   - Updates session activity periodically
+   - Properly ends sessions on logout
+   - Provides analytics for user activity
+
+3. **Token Refresh**:
    - Automatic token refresh before expiration
    - Implemented in `refreshTokenIfNeeded` in `useAuthentication.ts`
-   - Refreshes tokens 5 minutes before expiration
+   - Refreshes tokens 5 minutes before expiration (configurable via `TOKEN_REFRESH_BUFFER_MS`)
 
-3. **Session Storage Keys**:
+4. **Session Storage Keys**:
+   - Defined in `SESSION_STORAGE_KEYS` in `sessionConfig.ts`
    - `quodsi_auth_state`: Boolean indicating authenticated state
    - `quodsi_user_info`: User profile information
    - `quodsi_last_active`: Timestamp for session activity tracking
+   - `quodsi_access_token`: Current access token
+   - `quodsi_token_expiration`: Token expiration timestamp
 
 ## Panel Visibility and Authentication
 
@@ -254,7 +310,7 @@ The system implements a user-friendly approach to panel visibility and authentic
    - After authentication, ModelPanel can be accessed with content
 
 4. **Authentication State Synchronization**:
-   - Authentication state is broadcast to all panels
+   - Authentication state is broadcast to all panels via AuthMessagingService
    - ModelPanel checks authentication when it receives focus using `MODEL_PANEL_FOCUS` message
    - This ensures a consistent experience across panels
 
@@ -267,24 +323,32 @@ The system implements a user-friendly approach to panel visibility and authentic
 Common authentication issues and their solutions:
 
 1. **Authentication state lost after panel reopening**:
+   - Check SessionStorageService for proper saving and loading
    - Ensure the `frameLoaded` method in `AuthPanel.ts` is properly sending initialization messages
-   - Check that session storage is being correctly accessed
+   - Verify session storage keys match between components
 
 2. **Popup authentication fails**:
+   - Check browser console for AuthErrorHandler messages
    - Verify popup blockers are disabled
    - Ensure the app registration in Microsoft Entra ID has the correct redirect URIs
 
 3. **Token refresh issues**:
+   - Look for specific error codes from AuthErrorHandler
    - Check for console errors related to token acquisition
    - Verify the permissions and scopes in the app registration
 
 4. **MSAL initialization errors**:
    - Ensure MSAL is properly initialized before authentication operations
    - Check for "uninitialized_public_client_application" errors in console
-   - Verify that `msalInstance.initialize()` is awaited in index.tsx
+   - Verify that `msalInstance.initialize()` is awaited in MsalInitializer.tsx
 
-5. **Panel not showing authenticated content**:
-   - Ensure authentication state is being properly communicated between panels
+5. **Backend integration issues**:
+   - Check for validation errors in quodsi-fastapi logs
+   - Verify UserSyncService is formatting requests correctly
+   - Ensure token is being properly passed to backend services
+
+6. **Panel not showing authenticated content**:
+   - Ensure authentication state is being properly communicated via AuthMessagingService
    - Check that `MODEL_PANEL_FOCUS` handler is requesting updated auth status
    - Verify authentication listeners are properly registered
 
@@ -312,6 +376,11 @@ Areas for potential enhancement:
    - Add better error handling for MSAL initialization failures
    - Implement retry logic for intermittent initialization issues
    - Provide more detailed feedback during initialization
+
+6. **Complete Service Refactoring**:
+   - Continue refactoring authentication hook into specialized hooks
+   - Expand service coverage for all authentication features
+   - Complete test coverage for all components
 
 ---
 

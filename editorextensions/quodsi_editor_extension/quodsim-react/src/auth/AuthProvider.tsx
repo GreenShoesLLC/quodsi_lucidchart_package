@@ -4,9 +4,10 @@ import { MsalProvider, useMsal } from '@azure/msal-react';
 import { IPublicClientApplication } from '@azure/msal-browser';
 import { useAuthentication } from '../hooks/useAuthentication';
 import { ApiService } from '../services/apiService';
+import { AuthError } from '../services/AuthErrorHandler';
 
-// Import user sync response type
-import { UserSyncResponse } from '../services/QuodsiFastApiService';
+// Import user sync response type from UserSyncService
+import { UserSyncResponse } from '../services/UserSyncService';
 
 // Define the authentication context shape
 interface AuthContextType {
@@ -19,7 +20,7 @@ interface AuthContextType {
   handlePasswordReset: () => Promise<void>;
   handleEditProfile: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
-  syncUserWithFastApi: () => Promise<UserSyncResponse | null>; // Add syncUserWithFastApi function
+  syncUserWithFastApi: () => Promise<UserSyncResponse | null>;
 }
 
 // Create the context with a default value
@@ -33,12 +34,12 @@ const AuthContext = createContext<AuthContextType>({
   handlePasswordReset: async () => {},
   handleEditProfile: async () => {},
   getAccessToken: async () => null,
-  syncUserWithFastApi: async () => null, // Add default implementation
+  syncUserWithFastApi: async () => null,
 });
 
 // Inner provider that uses the MSAL hook
 const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Always use MSAL authentication, even in iframe environments
+  // Use authentication hook to get auth state and functions
   const auth = useAuthentication();
   const { instance } = useMsal();
   
@@ -52,7 +53,7 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     try {
       ApiService.getInstance(auth.getAccessToken);
     } catch (error) {
-      console.error('Failed to initialize API service', error);
+      console.error('[AuthProvider] Failed to initialize API service', error);
     }
   }, [auth.getAccessToken, instance]);
 
@@ -69,7 +70,7 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         handlePasswordReset: auth.handlePasswordReset,
         handleEditProfile: auth.handleEditProfile,
         getAccessToken: auth.getAccessToken,
-        syncUserWithFastApi: auth.syncUserWithFastApi, // Expose the sync function
+        syncUserWithFastApi: auth.syncUserWithFastApi,
       }}
     >
       {children}
@@ -92,4 +93,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, msalInstan
 };
 
 // Custom hook to use the auth context
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

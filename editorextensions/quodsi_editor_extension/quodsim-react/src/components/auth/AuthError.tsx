@@ -1,8 +1,9 @@
 // src/components/auth/AuthError.tsx
 import React from 'react';
+import { AuthError as AuthErrorType, authErrorHandler, AuthErrorCode } from '../../services/AuthErrorHandler';
 
 interface AuthErrorProps {
-  error: string;
+  error: string | AuthErrorType;
   onDismiss?: () => void;
   onRetry?: () => void;
   onPasswordReset?: () => void;
@@ -14,9 +15,29 @@ export const AuthError: React.FC<AuthErrorProps> = ({
   onRetry,
   onPasswordReset,
 }) => {
-  // Determine if this is a password error
-  const isPasswordError = error.toLowerCase().includes('password') || 
-                          error.toLowerCase().includes('credentials');
+  // Convert string error to AuthErrorType if needed
+  const authError: AuthErrorType = typeof error === 'string'
+    ? authErrorHandler.createGenericError(error)
+    : error;
+
+  // Get the error message to display
+  const errorMessage = authError.message;
+
+  // Determine if this is a password-related error
+  const isPasswordError = 
+    authError.code === AuthErrorCode.TOKEN_INVALID || 
+    errorMessage.toLowerCase().includes('password') || 
+    errorMessage.toLowerCase().includes('credentials');
+
+  // Determine recovery action
+  const recoveryAction = authErrorHandler.getRecoveryAction(authError);
+  
+  // Show retry button based on recovery action
+  const showRetry = onRetry && 
+    (recoveryAction === 'retry' || recoveryAction === 'refresh' || recoveryAction === 'sign_in');
+  
+  // Show password reset based on error type
+  const showPasswordReset = onPasswordReset && isPasswordError;
 
   return (
     <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 mb-4">
@@ -34,7 +55,7 @@ export const AuthError: React.FC<AuthErrorProps> = ({
         <div className="ml-3 flex-1">
           <h3 className="text-sm font-medium">Authentication Error</h3>
           <div className="mt-1 text-sm">
-            <p>{error}</p>
+            <p>{errorMessage}</p>
           </div>
           <div className="mt-3 flex space-x-2">
             {onDismiss && (
@@ -47,17 +68,17 @@ export const AuthError: React.FC<AuthErrorProps> = ({
               </button>
             )}
             
-            {onRetry && (
+            {showRetry && (
               <button
                 type="button"
                 className="py-1 px-3 text-xs font-medium rounded-md bg-red-100 text-red-800 hover:bg-red-200"
                 onClick={onRetry}
               >
-                Try Again
+                {recoveryAction === 'sign_in' ? 'Sign In' : 'Try Again'}
               </button>
             )}
             
-            {isPasswordError && onPasswordReset && (
+            {showPasswordReset && (
               <button
                 type="button"
                 className="py-1 px-3 text-xs font-medium rounded-md bg-red-100 text-red-800 hover:bg-red-200"

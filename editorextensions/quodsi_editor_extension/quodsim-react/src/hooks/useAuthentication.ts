@@ -12,8 +12,12 @@ import {
     profileEditRequest,
     TOKEN_REFRESH_BUFFER_MS
 } from "../auth/config";
-import { ExtensionMessaging, MessageTypes } from "@quodsi/shared";
-import { quodsiFastApiService, UserSyncResponse } from "../services/QuodsiFastApiService";
+
+// Import specialized services
+import { sessionStorageService } from "../services/SessionStorageService";
+import { userSyncService, UserSyncResponse } from "../services/UserSyncService";
+import { authMessagingService } from "../services/AuthMessagingService";
+import { authErrorHandler, AuthErrorCode } from "../services/AuthErrorHandler";
 
 interface TokenResponse {
     accessToken: string;
@@ -32,8 +36,7 @@ export function useAuthentication() {
     const [isProcessingAuth, setIsProcessingAuth] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isMsalInitialized, setIsMsalInitialized] = useState(false);
-    
-    const messaging = ExtensionMessaging.getInstance();
+    const [sessionId, setSessionId] = useState<string | null>(null);
     
     // Track MSAL initialization state
     useEffect(() => {
@@ -48,24 +51,12 @@ export function useAuthentication() {
     // Clear any existing login session data
     const clearExistingSession = useCallback(() => {
         try {
-            // Try to clear sessionStorage
-            sessionStorage.clear();
+            // Use SessionStorageService to clear storage
+            sessionStorageService.clearSessionState();
+            sessionStorageService.clearMsalCache();
             
-            // Try to clear localStorage items related to MSAL
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('msal') || key.includes('login') || key.includes('auth'))) {
-                    localStorage.removeItem(key);
-                }
-            }
-            
-            // Try to clear related cookies
-            document.cookie.split(';').forEach(cookie => {
-                const [name] = cookie.trim().split('=');
-                if (name && (name.includes('msal') || name.includes('login') || name.includes('auth'))) {
-                    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                }
-            });
+            // Clear session ID
+            setSessionId(null);
             
             console.log("[useAuthentication] Cleared existing session data");
         } catch (error) {
@@ -111,7 +102,9 @@ export function useAuthentication() {
                 return null;
             }
             
-            throw error;
+            // Convert to standardized error
+            const authError = authErrorHandler.handleMsalError(error);
+            throw authError;
         }
     }, [instance, accounts, isMsalInitialized]);
 
@@ -139,6 +132,18 @@ export function useAuthentication() {
                 if (tokenResponse) {
                     setAccessToken(tokenResponse.accessToken);
                     setTokenExpiration(tokenResponse.expiresOn);
+                    
+                    // Update session storage
+                    if (userInfo) {
+                        sessionStorageService.saveSessionState({
+                            isAuthenticated: true,
+                            userInfo,
+                            accessToken: tokenResponse.accessToken,
+                            tokenExpiration: tokenResponse.expiresOn,
+                            lastActive: Date.now()
+                        });
+                    }
+                    
                     return true;
                 }
                 return false;
@@ -149,7 +154,7 @@ export function useAuthentication() {
         }
         
         return true; // Token is valid, no need to refresh
-    }, [isAuthenticated, tokenExpiration, isTokenExpiringSoon, acquireTokenSilently]);
+    }, [isAuthenticated, tokenExpiration, isTokenExpiringSoon, acquireTokenSilently, userInfo]);
 
     // Check if user is authenticated on mount and when accounts change
     useEffect(() => {
@@ -181,14 +186,35 @@ export function useAuthentication() {
                         setUserInfo(accountInfo);
                         setError(null);
 
+                        // Save to session storage
+                        sessionStorageService.saveSessionState({
+                            isAuthenticated: true,
+                            userInfo: accountInfo,
+                            accessToken: tokenResponse.accessToken,
+                            tokenExpiration: tokenResponse.expiresOn,
+                            lastActive: Date.now()
+                        });
+
                         // Attempt to sync user with quodsi-fastapi
                         try {
                             console.log("[useAuthentication] Syncing user with quodsi-fastapi");
-                            const userSyncResponse = await quodsiFastApiService.syncUser(tokenResponse.accessToken);
+                            const userSyncResponse = await userSyncService.syncUser(tokenResponse.accessToken);
                             
                             if (userSyncResponse) {
                                 console.log("[useAuthentication] User synced successfully", userSyncResponse);
-                                // We could enhance accountInfo with data from userSyncResponse if needed
+                                
+                                // Create a session if we don't have one
+                                if (!sessionId) {
+                                    try {
+                                        const sessionResponse = await userSyncService.createSession(tokenResponse.accessToken);
+                                        if (sessionResponse) {
+                                            setSessionId(sessionResponse.session_id);
+                                            console.log("[useAuthentication] Created session:", sessionResponse.session_id);
+                                        }
+                                    } catch (sessionError) {
+                                        console.error("[useAuthentication] Failed to create session", sessionError);
+                                    }
+                                }
                             } else {
                                 console.warn("[useAuthentication] User sync returned null response");
                             }
@@ -197,12 +223,8 @@ export function useAuthentication() {
                             console.error("[useAuthentication] Error syncing user with quodsi-fastapi", syncError);
                         }
 
-                        // Notify extension about successful auth
-                        console.log("[useAuthentication] Sending AUTH_COMPLETED message");
-                        messaging.sendMessage(MessageTypes.AUTH_COMPLETED, {
-                            success: true,
-                            userInfo: accountInfo,
-                        });
+                        // Notify extension about successful auth using the messaging service
+                        authMessagingService.sendAuthCompleted(true, accountInfo);
                         
                         console.log("[useAuthentication] Authentication successful", accountInfo);
                     } else {
@@ -212,6 +234,7 @@ export function useAuthentication() {
                         setUserInfo(null);
                         setAccessToken(null);
                         setTokenExpiration(null);
+                        sessionStorageService.clearSessionState();
                     }
                 } catch (error) {
                     console.error("[useAuthentication] Token acquisition failed", error);
@@ -219,12 +242,16 @@ export function useAuthentication() {
                     setUserInfo(null);
                     setAccessToken(null);
                     setTokenExpiration(null);
-                    setError("Failed to authenticate: " + (error instanceof Error ? error.message : String(error)));
+                    
+                    // Convert to standardized error
+                    const authError = authErrorHandler.handleMsalError(error);
+                    setError(authError.message);
+                    
+                    // Clear session storage
+                    sessionStorageService.clearSessionState();
                     
                     // Notify about error
-                    messaging.sendMessage(MessageTypes.AUTH_ERROR, {
-                        error: `Authentication error: ${error}`,
-                    });
+                    authMessagingService.sendAuthError(authError);
                 }
             } else {
                 console.log("[useAuthentication] No accounts found, setting unauthenticated state");
@@ -232,11 +259,12 @@ export function useAuthentication() {
                 setUserInfo(null);
                 setAccessToken(null);
                 setTokenExpiration(null);
+                sessionStorageService.clearSessionState();
             }
         };
 
         checkAuth();
-    }, [accounts, messaging, acquireTokenSilently, isMsalInitialized]);
+    }, [accounts, acquireTokenSilently, isMsalInitialized, sessionId]);
 
     // Set up a token refresh timer
     useEffect(() => {
@@ -257,6 +285,26 @@ export function useAuthentication() {
             return () => clearTimeout(timerId);
         }
     }, [isAuthenticated, tokenExpiration, refreshTokenIfNeeded]);
+
+    // Set up session activity timer
+    useEffect(() => {
+        // If we have an active session, update activity periodically
+        if (isAuthenticated && sessionId && accessToken) {
+            // Update activity every 5 minutes
+            const activityInterval = setInterval(() => {
+                console.log("[useAuthentication] Updating session activity");
+                
+                // Update last active timestamp
+                sessionStorageService.updateLastActive();
+                
+                // Update session activity on backend
+                userSyncService.updateSession(accessToken, sessionId)
+                    .catch(error => console.error("[useAuthentication] Failed to update session activity", error));
+            }, 5 * 60 * 1000); // 5 minutes
+            
+            return () => clearInterval(activityInterval);
+        }
+    }, [isAuthenticated, sessionId, accessToken]);
 
     // Handle sign-in
     const handleSignIn = useCallback(async () => {
@@ -290,7 +338,7 @@ export function useAuthentication() {
             }
 
             // Notify extension that sign-in is starting
-            messaging.sendMessage(MessageTypes.AUTH_SIGN_IN);
+            authMessagingService.sendSignInStarted();
 
             // Clear any existing authentication session
             clearExistingSession();
@@ -304,17 +352,16 @@ export function useAuthentication() {
         } catch (error) {
             console.error("[useAuthentication] Login failed", error);
             
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            setError(`Authentication failed: ${errorMessage}`);
+            // Convert to standardized error
+            const authError = authErrorHandler.handleMsalError(error);
+            setError(authError.message);
 
             // Notify extension about auth error
-            messaging.sendMessage(MessageTypes.AUTH_ERROR, {
-                error: `Authentication failed: ${errorMessage}`,
-            });
+            authMessagingService.sendAuthError(authError);
         } finally {
             setIsProcessingAuth(false);
         }
-    }, [instance, messaging, isProcessingAuth, clearExistingSession, isMsalInitialized, inProgress]);
+    }, [instance, isProcessingAuth, clearExistingSession, isMsalInitialized, inProgress]);
 
     // Handle sign-out
     const handleSignOut = useCallback(async () => {
@@ -324,14 +371,25 @@ export function useAuthentication() {
         setIsProcessingAuth(true);
 
         try {
+            // End session on backend if we have a session ID
+            if (sessionId && accessToken) {
+                try {
+                    await userSyncService.endSession(accessToken, sessionId);
+                    console.log("[useAuthentication] Ended backend session");
+                } catch (sessionError) {
+                    console.error("[useAuthentication] Failed to end backend session", sessionError);
+                }
+            }
+            
             // Clear local state first
             setIsAuthenticated(false);
             setUserInfo(null);
             setAccessToken(null);
             setTokenExpiration(null);
+            setSessionId(null);
             
             // Then notify extension about sign-out
-            messaging.sendMessage(MessageTypes.AUTH_SIGN_OUT);
+            authMessagingService.sendSignOut();
             
             // Clear any cached sessions
             clearExistingSession();
@@ -349,7 +407,7 @@ export function useAuthentication() {
         } finally {
             setIsProcessingAuth(false);
         }
-    }, [instance, messaging, isProcessingAuth, clearExistingSession]);
+    }, [instance, isProcessingAuth, clearExistingSession, sessionId, accessToken]);
 
     // Handle password reset (uses a different policy)
     const handlePasswordReset = useCallback(async () => {
@@ -369,7 +427,12 @@ export function useAuthentication() {
                 // This is the cancel code, just log it
                 console.log("[useAuthentication] User canceled password reset");
             } else {
-                setError(`Password reset failed: ${error instanceof Error ? error.message : String(error)}`);
+                // Convert to standardized error
+                const authError = authErrorHandler.handleMsalError(error);
+                // Only set error if not user cancelled
+                if (authError.code !== AuthErrorCode.USER_CANCELLED) {
+                    setError(authError.message);
+                }
             }
         } finally {
             setIsProcessingAuth(false);
@@ -392,7 +455,12 @@ export function useAuthentication() {
             if (error instanceof Error && error.message.includes("AADB2C90091")) {
                 console.log("[useAuthentication] User canceled profile edit");
             } else {
-                setError(`Profile edit failed: ${error instanceof Error ? error.message : String(error)}`);
+                // Convert to standardized error
+                const authError = authErrorHandler.handleMsalError(error);
+                // Only set error if not user cancelled
+                if (authError.code !== AuthErrorCode.USER_CANCELLED) {
+                    setError(authError.message);
+                }
             }
         } finally {
             setIsProcessingAuth(false);
@@ -415,6 +483,9 @@ export function useAuthentication() {
             }
         }
         
+        // Update session activity timestamp
+        sessionStorageService.updateLastActive();
+        
         return accessToken;
     }, [isAuthenticated, accessToken, tokenExpiration, isTokenExpiringSoon, refreshTokenIfNeeded]);
 
@@ -433,12 +504,38 @@ export function useAuthentication() {
         }
         
         try {
-            return await quodsiFastApiService.syncUser(token);
+            return await userSyncService.syncUser(token);
         } catch (error) {
             console.error("[useAuthentication] Error in syncUserWithFastApi", error);
             return null;
         }
     }, [isAuthenticated, getAccessToken]);
+
+    // Initialize message handlers
+    useEffect(() => {
+        // Handle authentication status requests
+        authMessagingService.onAuthStatusRequest(() => {
+            console.log("[useAuthentication] Handling auth status request");
+            
+            if (isAuthenticated && userInfo) {
+                // Update last active timestamp
+                sessionStorageService.updateLastActive();
+            }
+            
+            // Send current authentication status
+            authMessagingService.sendAuthStatus(isAuthenticated, userInfo);
+        });
+        
+        // Handle showing the auth panel
+        authMessagingService.onShowAuthPanel((data) => {
+            console.log("[useAuthentication] Auth panel shown:", data);
+            
+            // Update last active timestamp if authenticated
+            if (isAuthenticated && userInfo) {
+                sessionStorageService.updateLastActive();
+            }
+        });
+    }, [isAuthenticated, userInfo]);
 
     return {
         isAuthenticated,

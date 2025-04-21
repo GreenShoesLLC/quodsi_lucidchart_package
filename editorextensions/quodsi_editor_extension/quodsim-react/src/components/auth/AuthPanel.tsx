@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 import { AuthError } from "./AuthError";
 import { DebugPanel } from "./DebugPanel";
+import { authErrorHandler } from "../../services/AuthErrorHandler";
 
 export const AuthPanel: React.FC = () => {
   const {
@@ -15,9 +16,13 @@ export const AuthPanel: React.FC = () => {
     handlePasswordReset,
     handleEditProfile,
   } = useAuth();
+  
   const [showError, setShowError] = useState(true);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+
+  // Convert error string to AuthError type if present
+  const authError = error ? authErrorHandler.createGenericError(error) : null;
 
   // Add effect to detect when auth is initialized
   useEffect(() => {
@@ -72,9 +77,9 @@ export const AuthPanel: React.FC = () => {
       </div>
 
       {/* Show error if present and not dismissed */}
-      {error && showError && (
+      {authError && showError && (
         <AuthError
-          error={error}
+          error={authError}
           onDismiss={handleDismissError}
           onRetry={handleSignIn}
           onPasswordReset={handlePasswordReset}
