@@ -89,18 +89,26 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - API service initialization with token management
      - Proper MSAL initialization handling
 
-2. **useAuthentication.ts**
-   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useAuthentication.ts`
-   - Purpose: Custom hook for handling authentication logic
-   - Features:
-     - Token acquisition and refresh
-     - Auth state management
-     - Sign-in/sign-out handlers
-     - Error handling
-     - User synchronization with backend
-     - Session management
+2. **Authentication Hooks**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\auth\`
+   - Purpose: Modular specialized hooks for authentication following Single Responsibility Principle
+   - Components:
+     - `useAuthState.ts` - Manages core authentication state (isAuthenticated, userInfo, etc.)
+     - `useTokenManager.ts` - Handles token acquisition, validation, and refresh
+     - `useAuthOperations.ts` - Implements sign-in, sign-out, password reset functions
+     - `useAuthSession.ts` - Manages session state, timeout detection, and activity tracking
+     - `useBackendSync.ts` - Handles synchronization with quodsi-fastapi backend
+     - `index.ts` - Exports all hooks for easy imports
 
-3. **Authentication Configuration**
+3. **useAuthentication.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useAuthentication.ts`
+   - Purpose: Facade hook that combines specialized hooks
+   - Features:
+     - Maintains backward compatibility with existing components
+     - Delegates to specialized hooks for specific functionality
+     - Provides consistent public interface
+
+4. **Authentication Configuration**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\auth\config\`
    - Purpose: Modular configuration for authentication system
    - Contains:
@@ -109,7 +117,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - `apiConfig.ts` - API endpoint configuration
      - `sessionConfig.ts` - Session timeout and refresh settings
 
-4. **AuthPanel.tsx**
+5. **AuthPanel.tsx**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\auth\AuthPanel.tsx`
    - Purpose: UI component for authentication interactions
    - Features:
@@ -118,7 +126,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Error display with recovery options
      - Loading state during MSAL initialization
 
-5. **msalSetup.ts**
+6. **msalSetup.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\auth\msalSetup.ts`
    - Purpose: MSAL initialization and configuration
    - Features:
@@ -240,7 +248,7 @@ Working with authentication in iframe environments presents several challenges t
 1. **Popup Authentication**: 
    - Uses popup-based authentication rather than redirect flow
    - Avoids issues with third-party cookies in iframes
-   - Implemented in `useAuthentication.ts` with `loginPopup` and `logoutPopup`
+   - Implemented in `useAuthOperations.ts` with `loginPopup` and `logoutPopup`
 
 2. **Session Storage for State**:
    - Session state persisted in browser storage
@@ -267,7 +275,7 @@ Working with authentication in iframe environments presents several challenges t
 The authentication system implements robust session management:
 
 1. **Client-side Session Management**:
-   - Handled by `SessionStorageService`
+   - Handled by `SessionStorageService` and `useAuthSession` hook
    - 30-minute inactivity timeout
    - Configurable via `SESSION_TIMEOUT_MS` constant in `sessionConfig.ts`
    - Periodically checks for timeout and forces re-login if needed
@@ -280,7 +288,7 @@ The authentication system implements robust session management:
 
 3. **Token Refresh**:
    - Automatic token refresh before expiration
-   - Implemented in `refreshTokenIfNeeded` in `useAuthentication.ts`
+   - Implemented in `refreshTokenIfNeeded` in `useTokenManager.ts`
    - Refreshes tokens 5 minutes before expiration (configurable via `TOKEN_REFRESH_BUFFER_MS`)
 
 4. **Session Storage Keys**:
@@ -352,6 +360,11 @@ Common authentication issues and their solutions:
    - Check that `MODEL_PANEL_FOCUS` handler is requesting updated auth status
    - Verify authentication listeners are properly registered
 
+7. **Specialized hook integration issues**:
+   - Check the console for error messages from specific hooks
+   - Verify proper hook dependencies and dependency arrays
+   - Ensure hooks are imported and used correctly
+
 ## Further Development
 
 Areas for potential enhancement:
@@ -377,10 +390,15 @@ Areas for potential enhancement:
    - Implement retry logic for intermittent initialization issues
    - Provide more detailed feedback during initialization
 
-6. **Complete Service Refactoring**:
-   - Continue refactoring authentication hook into specialized hooks
-   - Expand service coverage for all authentication features
-   - Complete test coverage for all components
+6. **Authentication Hook Improvements**:
+   - Add comprehensive unit tests for all specialized hooks
+   - Add additional performance optimizations
+   - Enhance error handling with more detailed error states
+
+7. **Hook Composition Enhancements**:
+   - Add support for selective hook composition for different authentication scenarios
+   - Implement conditional authentication flows based on feature flags
+   - Create specialized hook presets for different authentication requirements
 
 ---
 

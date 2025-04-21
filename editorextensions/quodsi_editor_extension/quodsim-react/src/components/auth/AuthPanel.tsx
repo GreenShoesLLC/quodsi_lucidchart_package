@@ -5,6 +5,12 @@ import { AuthError } from "./AuthError";
 import { DebugPanel } from "./DebugPanel";
 import { authErrorHandler } from "../../services/AuthErrorHandler";
 
+/**
+ * AuthPanel component for authentication UI
+ * 
+ * This component uses the refactored authentication hooks via the AuthProvider
+ * but maintains the same UI and functionality as before
+ */
 export const AuthPanel: React.FC = () => {
   const {
     isAuthenticated,

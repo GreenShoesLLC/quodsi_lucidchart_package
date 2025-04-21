@@ -4,9 +4,6 @@ import { MsalProvider, useMsal } from '@azure/msal-react';
 import { IPublicClientApplication } from '@azure/msal-browser';
 import { useAuthentication } from '../hooks/useAuthentication';
 import { ApiService } from '../services/apiService';
-import { AuthError } from '../services/AuthErrorHandler';
-
-// Import user sync response type from UserSyncService
 import { UserSyncResponse } from '../services/UserSyncService';
 
 // Define the authentication context shape
