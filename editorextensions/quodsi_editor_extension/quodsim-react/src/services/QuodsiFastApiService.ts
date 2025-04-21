@@ -5,7 +5,7 @@
  * This service provides methods for user synchronization and authentication.
  */
 
-import { quodsiFastApiConfig } from '../config/apiConfig';
+import { authApiConfig } from '../auth/config';
 
 /**
  * Interface for user sync response
@@ -30,7 +30,7 @@ export class QuodsiFastApiService {
    * Constructor
    */
   constructor() {
-    this.baseUrl = quodsiFastApiConfig.baseUrl;
+    this.baseUrl = authApiConfig.baseUrl;
   }
 
   /**
@@ -60,7 +60,7 @@ export class QuodsiFastApiService {
 
     try {
       const response = await fetch(
-        `${this.baseUrl}${quodsiFastApiConfig.endpoints.syncUser}`, 
+        `${this.baseUrl}${authApiConfig.endpoints.syncUser}`, 
         {
           method: 'POST',
           headers: this.getAuthHeaders(token),

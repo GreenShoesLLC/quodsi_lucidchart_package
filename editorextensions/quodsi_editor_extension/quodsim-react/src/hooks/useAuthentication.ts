@@ -9,8 +9,9 @@ import {
 import { 
     loginRequest, 
     passwordResetRequest, 
-    profileEditRequest
-} from "../auth/authConfig";
+    profileEditRequest,
+    TOKEN_REFRESH_BUFFER_MS
+} from "../auth/config";
 import { ExtensionMessaging, MessageTypes } from "@quodsi/shared";
 import { quodsiFastApiService, UserSyncResponse } from "../services/QuodsiFastApiService";
 
@@ -114,7 +115,7 @@ export function useAuthentication() {
         }
     }, [instance, accounts, isMsalInitialized]);
 
-    // Check if token is expiring soon (within 5 minutes)
+    // Check if token is expiring soon (within refresh buffer period)
     const isTokenExpiringSoon = useCallback((): boolean => {
         // If there's no token expiration, treat it as if it's expiring
         if (!tokenExpiration) {
@@ -122,8 +123,7 @@ export function useAuthentication() {
         }
         
         const now = new Date();
-        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-        return tokenExpiration.getTime() - now.getTime() < fiveMinutes;
+        return tokenExpiration.getTime() - now.getTime() < TOKEN_REFRESH_BUFFER_MS;
     }, [tokenExpiration]);
 
     // Refresh token if needed
@@ -242,10 +242,10 @@ export function useAuthentication() {
     useEffect(() => {
         // If authenticated and we have a token expiration
         if (isAuthenticated && tokenExpiration) {
-            // Calculate time until we need to refresh (5 minutes before expiration)
+            // Calculate time until we need to refresh (refresh buffer before expiration)
             const now = new Date();
-            const fiveMinutesBeforeExpiry = new Date(tokenExpiration.getTime() - 5 * 60 * 1000);
-            const timeUntilRefresh = Math.max(0, fiveMinutesBeforeExpiry.getTime() - now.getTime());
+            const refreshTime = new Date(tokenExpiration.getTime() - TOKEN_REFRESH_BUFFER_MS);
+            const timeUntilRefresh = Math.max(0, refreshTime.getTime() - now.getTime());
             
             // Set up timer to refresh token
             const timerId = setTimeout(() => {
@@ -448,7 +448,7 @@ export function useAuthentication() {
         handlePasswordReset,
         handleEditProfile,
         getAccessToken,
-        syncUserWithFastApi, // Add the new function to the return object
+        syncUserWithFastApi,
         isProcessingAuth,
         error,
     };

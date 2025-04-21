@@ -1,5 +1,5 @@
 // src/services/apiService.ts
-import { apiConfig } from '../auth/authConfig';
+import { coreApiConfig } from '../auth/config';
 
 /**
  * Service for making authenticated API requests to the Quodsi backend
@@ -47,7 +47,7 @@ export class ApiService {
             throw new Error('No authentication token available');
         }
         
-        const url = `${apiConfig.baseUrl}${endpoint}`;
+        const url = `${coreApiConfig.baseUrl}${endpoint}`;
         
         const headers = {
             'Authorization': `Bearer ${token}`,

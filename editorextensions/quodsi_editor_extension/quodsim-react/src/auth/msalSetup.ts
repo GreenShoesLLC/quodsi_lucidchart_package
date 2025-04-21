@@ -1,6 +1,6 @@
 // src/auth/msalSetup.ts
 import { PublicClientApplication, EventType, IPublicClientApplication } from "@azure/msal-browser";
-import { msalConfig } from "./authConfig";
+import { createMsalConfig, b2cPolicies } from "./config";
 
 /**
  * Creates a configured MSAL instance
@@ -8,6 +8,9 @@ import { msalConfig } from "./authConfig";
  */
 export const createMsalInstance = (): IPublicClientApplication => {
   console.log("[MSAL] Creating MSAL instance...");
+  
+  // Create MSAL configuration with sign-in policy
+  const msalConfig = createMsalConfig(b2cPolicies.signUpSignIn);
   
   // Initialize MSAL instance with the configuration
   const msalInstance = new PublicClientApplication(msalConfig);
