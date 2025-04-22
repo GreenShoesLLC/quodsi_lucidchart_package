@@ -1,0 +1,71 @@
+// src/App.tsx
+import React, { useCallback, useMemo, useState } from "react";
+import { AuthProvider } from "./auth/AuthProvider";
+import MsalInitializer from "./auth/components/MsalInitializer";
+import { createMsalInstance } from "./auth/msalSetup";
+import QuodsiApp from "./QuodsiApp";
+import TestRefactoredApp from "./TestRefactoredApp";
+
+// Environment variable to control showing the refactored app
+// This can be set in the .env file or runtime
+const SHOW_REFACTORED_APP = process.env.REACT_APP_SHOW_REFACTORED_APP === 'true';
+const SHOW_TOGGLE = process.env.REACT_APP_SHOW_APP_TOGGLE === 'true';
+
+/**
+ * Main application component that sets up authentication and the application.
+ * Can toggle between the original and refactored versions for testing.
+ */
+const App: React.FC = () => {
+  // Create MSAL instance once using useMemo to avoid recreating on each render
+  const msalInstance = useMemo(() => createMsalInstance(), []);
+  
+  // State to track which version to show
+  const [showRefactored, setShowRefactored] = useState(SHOW_REFACTORED_APP);
+  
+  // Handle switching between versions
+  const switchToOriginal = useCallback(() => {
+    console.log("[App] Switching to original version");
+    // Force a complete remount by first setting to null
+    setShowRefactored(null as any);
+    // Then set to false after a short delay
+    setTimeout(() => setShowRefactored(false), 50);
+  }, []);
+  
+  const switchToRefactored = useCallback(() => {
+    console.log("[App] Switching to refactored version");
+    // Force a complete remount by first setting to null
+    setShowRefactored(null as any);
+    // Then set to true after a short delay
+    setTimeout(() => setShowRefactored(true), 50);
+  }, []);
+  
+  return (
+    <MsalInitializer msalInstance={msalInstance}>
+      <AuthProvider msalInstance={msalInstance}>
+        {/* Toggle button for switching between versions */}
+        {SHOW_TOGGLE && (
+          <div className="p-2 bg-gray-100 flex items-center space-x-2">
+            <button
+              className={`px-3 py-1 rounded ${!showRefactored ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              onClick={switchToOriginal}
+            >
+              Original
+            </button>
+            <button
+              className={`px-3 py-1 rounded ${showRefactored ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+              onClick={switchToRefactored}
+            >
+              Refactored
+            </button>
+          </div>
+        )}
+        
+        {/* Render either the original or refactored app */}
+        {showRefactored === true && <TestRefactoredApp />}
+        {showRefactored === false && <QuodsiApp />}
+      </AuthProvider>
+    </MsalInitializer>
+  );
+};
+
+export default App;
