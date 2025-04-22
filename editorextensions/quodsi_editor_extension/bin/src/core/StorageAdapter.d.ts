@@ -12,7 +12,6 @@ export declare class StorageAdapter {
     private static readonly LEGACY_KEYS;
     private static readonly DATA_KEY;
     private static readonly META_KEY;
-    private static readonly EXPANDED_NODES_KEY;
     private static readonly SIMULATION_STATUS_KEY;
     private static readonly CURRENT_VERSION;
     private static readonly LOG_PREFIX;
@@ -27,14 +26,6 @@ export declare class StorageAdapter {
      */
     isQuodsiModel(element: ElementProxy): boolean;
     /**
-     * Gets the expanded nodes state for a page
-     */
-    getExpandedNodes(page: ElementProxy): string[];
-    /**
-     * Sets the expanded nodes state for a page
-     */
-    setExpandedNodes(page: ElementProxy, nodeIds: string[]): void;
-    /**
      * Sets the simulation status for a page
      */
     setSimulationStatus(page: ElementProxy, status: PageStatus): void;
@@ -46,10 +37,6 @@ export declare class StorageAdapter {
      * Clears the simulation status for a page
      */
     clearSimulationStatus(page: ElementProxy): void;
-    /**
-     * Clears the expanded nodes state for a page
-     */
-    clearExpandedNodes(page: ElementProxy): void;
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */

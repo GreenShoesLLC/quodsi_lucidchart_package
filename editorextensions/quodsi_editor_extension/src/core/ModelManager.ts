@@ -473,13 +473,6 @@ export class ModelManager {
     public get CURRENT_VERSION(): string {
         return this.storageAdapter.CURRENT_VERSION;
     }
-    public setExpandedNodes(page: PageProxy, nodes: string[]): void {
-        this.storageAdapter.setExpandedNodes(page, nodes);
-    }
-
-    public getExpandedNodes(page: PageProxy): string[] {
-        return this.storageAdapter.getExpandedNodes(page);
-    }
     /**
      * Removes the model from the specified page and clears manager state
      */
@@ -500,26 +493,7 @@ export class ModelManager {
     public getStorageAdapter(): StorageAdapter {
         return this.storageAdapter;
     }
-    public findPathToNode(modelStructure: ModelStructure, nodeId: string): Set<string> {
-        const pathNodes = new Set<string>();
-        this.findPathToNodeRecursive(modelStructure.elements, nodeId, pathNodes);
-        return pathNodes;
-    }
 
-    private findPathToNodeRecursive(elements: ModelElement[], targetId: string, path: Set<string>): boolean {
-        for (const element of elements) {
-            if (element.id === targetId) {
-                return true;
-            }
-            if (element.children?.length) {
-                if (this.findPathToNodeRecursive(element.children, targetId, path)) {
-                    path.add(element.id);
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
     public isUnconvertedElement(element: ElementProxy): boolean {
         return this.getElementData(element) === null;
     }

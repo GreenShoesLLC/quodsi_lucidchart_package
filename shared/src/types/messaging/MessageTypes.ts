@@ -2,7 +2,6 @@ import { AppLifecyclePayloads } from './payloads/AppLifecyclePayloads';
 import { ModelPayloads } from './payloads/ModelPayloads';
 import { ModelItemPayloads } from './payloads/ModelItemPayloads';
 import { ValidationPayloads } from './payloads/ValidationPayloads';
-import { ModelTreePayloads } from './payloads/ModelTreePayloads';
 import { SelectionPayloads } from './payloads';
 import { AuthPayloads } from './payloads/AuthPayloads';
 
@@ -56,12 +55,6 @@ export enum MessageTypes {
     SIMULATION_STATUS_ERROR = 'SIMULATION_STATUS_ERROR',
     OUTPUT_CREATE_PAGE = 'outputCreatePage',
     
-    // Tree View State Management
-    TREE_STATE_UPDATE = 'treeStateUpdate',
-    TREE_NODE_TOGGLE = 'treeNodeToggle',
-    TREE_NODE_EXPAND_PATH = 'treeNodeExpandPath',
-    TREE_STATE_SYNC = 'treeStateSync',
-    
     // Simulation Results Management
     MARK_RESULTS_VIEWED = 'markResultsViewed',
     SIMULATION_RESULTS_ACKNOWLEDGED = 'simulationResultsAcknowledged',
@@ -74,7 +67,6 @@ export interface MessagePayloads extends
     ModelPayloads,
     ModelItemPayloads,
     ValidationPayloads,
-    ModelTreePayloads,
     AuthPayloads { }
 
 export type Message<T extends MessageTypes> = {

@@ -38,7 +38,6 @@ export interface AppState {
   error: string | null;
   documentId: string | null;
   diagramElementType?: DiagramElementType;
-  expandedNodes: Set<string>;
   referenceData: EditorReferenceData;
   isReady: boolean;
   showModelName: boolean;
@@ -72,7 +71,6 @@ const initialState: AppState = {
   isProcessing: false,
   error: null,
   documentId: null,
-  expandedNodes: new Set<string>(),
   referenceData: {
     entities: [],
     resources: [],
@@ -300,7 +298,6 @@ const QuodsiApp: React.FC = () => {
       modelName: state.modelName,
       validationState: state.validationState,
       currentElement: state.currentElement,
-      expandedNodes: state.expandedNodes,
     });
   }, [state]);
 
@@ -412,66 +409,6 @@ const QuodsiApp: React.FC = () => {
     sendMessage(MessageTypes.CONVERT_PAGE);
   }, [sendMessage]);
 
-  const handleTreeNodeToggle = useCallback(
-    (nodeId: string, expanded: boolean) => {
-      console.log("[QuodsiApp] handleTreeNodeToggle called:", {
-        nodeId,
-        expanded,
-        currentExpandedNodes: Array.from(state.expandedNodes),
-      });
-
-      // We need to update local state immediately
-      setState((prev) => {
-        const newExpandedNodes = new Set(prev.expandedNodes);
-        if (expanded) {
-          newExpandedNodes.add(nodeId);
-        } else {
-          newExpandedNodes.delete(nodeId);
-        }
-        return {
-          ...prev,
-          expandedNodes: newExpandedNodes,
-        };
-      });
-
-      // Then send the message
-      sendMessage(MessageTypes.TREE_NODE_TOGGLE, {
-        nodeId,
-        expanded,
-        pageId: state.documentId || "",
-      });
-    },
-    [sendMessage, state.documentId, state.expandedNodes]
-  );
-
-  useEffect(() => {
-    console.log("[QuodsiApp] expandedNodes state changed:", {
-      expandedNodes: Array.from(state.expandedNodes),
-    });
-  }, [state.expandedNodes]);
-
-  const handleTreeStateUpdate = useCallback(
-    (expandedNodes: string[]) => {
-      console.log("[QuodsiApp] Tree state update:", { expandedNodes });
-      sendMessage(MessageTypes.TREE_STATE_UPDATE, {
-        expandedNodes,
-        pageId: state.documentId || "",
-      });
-    },
-    [sendMessage, state.documentId]
-  );
-
-  const handleExpandPath = useCallback(
-    (nodeId: string) => {
-      console.log("[QuodsiApp] Expand path requested:", nodeId);
-      sendMessage(MessageTypes.TREE_NODE_EXPAND_PATH, {
-        nodeId,
-        pageId: state.documentId || "",
-      });
-    },
-    [sendMessage, state.documentId]
-  );
-
   // Handler for viewing results
   const handleViewResults = useCallback(() => {
     console.log("[QuodsiApp] View results requested");
@@ -537,13 +474,9 @@ const QuodsiApp: React.FC = () => {
           currentElement={state.currentElement}
           lastElementUpdate={state.lastElementUpdate}
           diagramElementType={state.diagramElementType}
-          expandedNodes={state.expandedNodes}
           onElementSelect={handleElementSelect}
           onValidate={handleValidate}
           onElementUpdate={handleElementUpdate}
-          onTreeNodeToggle={handleTreeNodeToggle}
-          onTreeStateUpdate={handleTreeStateUpdate}
-          onExpandPath={handleExpandPath}
           referenceData={state.referenceData}
           showModelName={state.showModelName}
           showModelItemName={state.showModelItemName}

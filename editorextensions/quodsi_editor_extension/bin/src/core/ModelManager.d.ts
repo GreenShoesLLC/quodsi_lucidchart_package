@@ -75,15 +75,11 @@ export declare class ModelManager {
     }): void;
     clearElementData(element: ElementProxy): void;
     get CURRENT_VERSION(): string;
-    setExpandedNodes(page: PageProxy, nodes: string[]): void;
-    getExpandedNodes(page: PageProxy): string[];
     /**
      * Removes the model from the specified page and clears manager state
      */
     removeModelFromPage(page: PageProxy): void;
     getStorageAdapter(): StorageAdapter;
-    findPathToNode(modelStructure: ModelStructure, nodeId: string): Set<string>;
-    private findPathToNodeRecursive;
     isUnconvertedElement(element: ElementProxy): boolean;
     /**
      * Handles saving simulation element data and metadata

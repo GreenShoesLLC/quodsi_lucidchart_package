@@ -6,12 +6,10 @@ export declare class ModelPanel extends Panel {
     private static readonly LOG_PREFIX;
     private loggingEnabled;
     private selectionManager;
-    private treeStateManager;
     private messaging;
     private reactAppReady;
     private modelManager;
     private authPanel;
-    private expandedNodes;
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
@@ -33,22 +31,6 @@ export declare class ModelPanel extends Panel {
     private updateModelStructure;
     private createSimulationObjectPayload;
     private handleConvertElement;
-    /**
-     * Handles tree node expansion state changes
-     */
-    private handleTreeNodeToggle;
-    /**
-     * Handles bulk tree state updates
-     */
-    private handleTreeStateUpdate;
-    /**
-     * Expands the path to a specific node
-     */
-    private handleExpandPath;
-    /**
-     * Sends current tree state to React app
-     */
-    private sendTreeStateUpdate;
     private initializeModelManager;
     /**
      * Shows the panel

@@ -43,11 +43,6 @@ var MessageTypes;
     MessageTypes["SIMULATION_STATUS_CHECK"] = "SIMULATION_STATUS_CHECK";
     MessageTypes["SIMULATION_STATUS_ERROR"] = "SIMULATION_STATUS_ERROR";
     MessageTypes["OUTPUT_CREATE_PAGE"] = "outputCreatePage";
-    // Tree View State Management
-    MessageTypes["TREE_STATE_UPDATE"] = "treeStateUpdate";
-    MessageTypes["TREE_NODE_TOGGLE"] = "treeNodeToggle";
-    MessageTypes["TREE_NODE_EXPAND_PATH"] = "treeNodeExpandPath";
-    MessageTypes["TREE_STATE_SYNC"] = "treeStateSync";
     // Simulation Results Management
     MessageTypes["MARK_RESULTS_VIEWED"] = "markResultsViewed";
     MessageTypes["SIMULATION_RESULTS_ACKNOWLEDGED"] = "simulationResultsAcknowledged";

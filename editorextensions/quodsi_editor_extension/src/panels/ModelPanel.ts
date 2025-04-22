@@ -34,7 +34,7 @@ import {
 
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
-import { SelectionManager, TreeStateManager } from '../managers';
+import { SelectionManager } from '../managers';
 import { PageSchemaConversionService } from '../services/conversion/PageSchemaConversionService';
 import { ModelDataSource } from '../data_sources/model/ModelDataSource';
 import { LucidElementFactory } from '../services/LucidElementFactory';
@@ -52,12 +52,10 @@ export class ModelPanel extends Panel {
     private static readonly LOG_PREFIX = '[ModelPanel]';
     private loggingEnabled: boolean = false;
     private selectionManager: SelectionManager;
-    private treeStateManager: TreeStateManager;
     private messaging: ExtensionMessaging;
     private reactAppReady: boolean = false;
     private modelManager: ModelManager;
     private authPanel: AuthPanel;
-    private expandedNodes: Set<string> = new Set();
     private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
         pageId: '',
@@ -83,7 +81,6 @@ export class ModelPanel extends Panel {
         this.modelManager = modelManager;
         this.authPanel = authPanel;
         this.selectionManager = new SelectionManager(modelManager);
-        this.treeStateManager = new TreeStateManager(modelManager);
         // Set up event handlers
         this.setupModelMessageHandlers();
         this.log('Model Panel initialized');
@@ -193,13 +190,6 @@ export class ModelPanel extends Panel {
         this.messaging.onMessage(MessageTypes.UPDATE_ELEMENT_DATA, (data) =>
             this.handleUpdateElementData(data));
 
-        // Tree State Management
-        this.messaging.onMessage(MessageTypes.TREE_NODE_TOGGLE, (data) =>
-            this.handleTreeNodeToggle(data.nodeId, data.expanded));
-        this.messaging.onMessage(MessageTypes.TREE_STATE_UPDATE, (data) =>
-            this.handleTreeStateUpdate(data.expandedNodes));
-        this.messaging.onMessage(MessageTypes.TREE_NODE_EXPAND_PATH, (data) =>
-            this.handleExpandPath(data.nodeId));
         this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
             this.handleOutputCreatePage();
         });
@@ -559,64 +549,6 @@ export class ModelPanel extends Panel {
         }
     }
 
-    /**
-     * Handles tree node expansion state changes
-     */
-    private handleTreeNodeToggle(nodeId: string, expanded: boolean): void {
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        if (!currentPage) return;
-
-        this.treeStateManager.handleNodeToggle(nodeId, expanded, currentPage);
-        this.sendTreeStateUpdate();
-    }
-
-    /**
-     * Handles bulk tree state updates
-     */
-    private handleTreeStateUpdate(expandedNodes: string[]): void {
-        this.log('Tree state update:', { expandedNodes });
-        this.expandedNodes = new Set(expandedNodes);
-
-        // Get current page and save to storage
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        if (currentPage) {
-            this.log('Saving expanded nodes to storage:', expandedNodes);
-            this.modelManager.setExpandedNodes(currentPage, expandedNodes);
-        }
-
-        this.sendTreeStateUpdate();
-    }
-
-    /**
-     * Expands the path to a specific node
-     */
-    private handleExpandPath(nodeId: string): void {
-        if (!this.currentModelStructure) return;
-
-        // Get path nodes from ModelManager
-        const pathNodes = this.modelManager.findPathToNode(this.currentModelStructure, nodeId);
-
-        // Add all nodes in path to expanded set
-        pathNodes.forEach(id => this.expandedNodes.add(id));
-
-        this.sendTreeStateUpdate();
-    }
-
-    /**
-     * Sends current tree state to React app
-     */
-    private sendTreeStateUpdate(): void {
-        const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        if (!currentPage) return;
-
-        this.sendTypedMessage(MessageTypes.TREE_STATE_SYNC, {
-            expandedNodes: Array.from(this.expandedNodes),
-            pageId: currentPage.id
-        });
-    }
     private async initializeModelManager(): Promise<void> {
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -707,14 +639,13 @@ export class ModelPanel extends Panel {
             return;
         }
         const modelStructure = this.currentModelStructure || { elements: [], hierarchy: {} };
-        const expandedNodes = this.treeStateManager.getExpandedNodes();
+
         const validationResult = await this.modelManager.validateModel();
         const document = new DocumentProxy(this.client);
         const documentId = document.id;
         const basePayload = {
             selectionState,
             modelStructure,
-            expandedNodes,
             validationResult,
             documentId
         };

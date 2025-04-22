@@ -19,7 +19,6 @@ export class StorageAdapter {
     ];
     private static readonly DATA_KEY = 'q_data';
     private static readonly META_KEY = 'q_meta';
-    private static readonly EXPANDED_NODES_KEY = 'q_expanded_nodes';
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
@@ -60,44 +59,6 @@ export class StorageAdapter {
         } catch (error) {
             this.logError('Error checking model status:', error);
             return false;
-        }
-    }
-
-    /**
-     * Gets the expanded nodes state for a page
-     */
-    public getExpandedNodes(page: ElementProxy): string[] {
-        try {
-            this.log('Getting expanded nodes for page:', page.id);
-            const expandedNodesStr = page.shapeData.get(StorageAdapter.EXPANDED_NODES_KEY);
-            if (!expandedNodesStr || typeof expandedNodesStr !== 'string') {
-                this.log('No expanded nodes found');
-                return [];
-            }
-            const nodes = JSON.parse(expandedNodesStr);
-            this.log('Retrieved expanded nodes:', nodes);
-            return nodes;
-        } catch (error) {
-            this.logError('Error getting expanded nodes:', error);
-            return [];
-        }
-    }
-
-    /**
-     * Sets the expanded nodes state for a page
-     */
-    public setExpandedNodes(page: ElementProxy, nodeIds: string[]): void {
-        try {
-            this.log('Setting expanded nodes for page:', {
-                pageId: page.id,
-                nodes: nodeIds
-            });
-            const serializedNodes = JSON.stringify(nodeIds);
-            page.shapeData.set(StorageAdapter.EXPANDED_NODES_KEY, serializedNodes);
-            this.log('Successfully set expanded nodes');
-        } catch (error) {
-            this.logError('Error setting expanded nodes:', error);
-            throw error;
         }
     }
 
@@ -147,18 +108,6 @@ export class StorageAdapter {
             this.log('Successfully cleared simulation status');
         } catch (error) {
             this.logError('Error clearing simulation status:', error);
-            throw error;
-        }
-    }
-    /**
-     * Clears the expanded nodes state for a page
-     */
-    public clearExpandedNodes(page: ElementProxy): void {
-        try {
-            page.shapeData.delete(StorageAdapter.EXPANDED_NODES_KEY);
-            this.log('Successfully cleared expanded nodes');
-        } catch (error) {
-            this.logError('Error clearing expanded nodes:', error);
             throw error;
         }
     }
@@ -400,7 +349,7 @@ export class StorageAdapter {
     public clearAllModelData(page: PageProxy): void {
         try {
             // Clear model data from page
-            this.clearExpandedNodes(page);
+
             this.clearElementData(page);
             this.clearSimulationStatus(page); 
 

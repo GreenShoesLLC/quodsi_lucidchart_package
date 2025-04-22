@@ -9,7 +9,6 @@ import {
   SimulationObjectType,
   DiagramElementType,
 } from "@quodsi/shared";
-import { ModelTreeView } from "./ModelTreeView";
 import ElementEditor from "./ElementEditor";
 import { ValidationMessages } from "./ValidationMessages";
 import { Header } from "./Header";
@@ -20,15 +19,11 @@ interface ModelPanelAccordionProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
-  lastElementUpdate: string | null; // Add this line
+  lastElementUpdate: string | null;
   diagramElementType?: DiagramElementType;
-  expandedNodes: Set<string>;
   onElementSelect: (elementId: string) => void;
   onValidate: () => void;
   onElementUpdate: (elementId: string, data: JsonObject) => void;
-  onTreeNodeToggle: (nodeId: string, expanded: boolean) => void;
-  onTreeStateUpdate: (nodes: string[]) => void;
-  onExpandPath: (nodeId: string) => void;
   referenceData: EditorReferenceData;
   showModelName?: boolean;
   showModelItemName?: boolean;
@@ -36,7 +31,7 @@ interface ModelPanelAccordionProps {
     header: boolean;
     validation: boolean;
     editor: boolean;
-    modelTree: boolean;
+    modelTree: boolean; // Keeping this to avoid changing dependent code initially
   };
   onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
@@ -56,13 +51,9 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   currentElement,
   lastElementUpdate,
   diagramElementType,
-  expandedNodes,
   onElementSelect,
   onValidate,
   onElementUpdate,
-  onTreeNodeToggle,
-  onTreeStateUpdate,
-  onExpandPath,
   referenceData,
   showModelName = true,
   showModelItemName = true,
@@ -75,22 +66,15 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onViewResults,
 }) => {
   const [expandedSections, setExpandedSections] = useState({
-    modelTree: !currentElement,
     elementEditor: !!currentElement,
     validation: !!validationState?.summary?.errorCount,
   });
-
-  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
-  };
-
-  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
   };
 
   const handleEditorCancel = () => {
@@ -102,55 +86,6 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     newType: SimulationObjectType
   ) => {
     onElementTypeChange(elementId, newType);
-  };
-
-  const ModelTreeSection = () => {
-    const rootElement = modelStructure?.elements.find((e) => e.id === "0_0");
-
-    console.log("[ModelPanelAccordion] Rendering tree section:", {
-      expandedNodes: Array.from(expandedNodes),
-      modelTreeExpanded: expandedSections.modelTree,
-      rootElement,
-    });
-
-    return (
-      <div className="border-b">
-        <button
-          onClick={() => toggleSection("modelTree")}
-          className="w-full flex items-center justify-between p-3 hover:bg-gray-50"
-        >
-          <span className="font-medium text-sm">Object Explorer</span>
-          {expandedSections.modelTree ? (
-            <ChevronDown className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
-        </button>
-
-        {expandedSections.modelTree && modelStructure && rootElement && (
-          <div className="p-3 border-t">
-            <ModelTreeView
-              element={rootElement}
-              modelStructure={modelStructure}
-              selectedId={currentElement?.id || null}
-              onSelect={(id) => {
-                console.log("[ModelPanelAccordion] Tree node selected:", id);
-                onElementSelect(id);
-              }}
-              expanded={expandedNodes}
-              onToggleExpand={(nodeId, expanded) => {
-                console.log("[ModelPanelAccordion] Tree node toggle:", {
-                  nodeId,
-                  expanded,
-                });
-                onTreeNodeToggle(nodeId, expanded);
-              }}
-              level={0}
-            />
-          </div>
-        )}
-      </div>
-    );
   };
 
   return (
@@ -196,7 +131,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             onToggle={() => toggleSection("validation")}
           />
         )}
-        {visibleSections.modelTree && <ModelTreeSection />}
+        {/* ModelTreeSection has been removed */}
       </div>
     </div>
   );

@@ -39,7 +39,6 @@ export const messageHandlers: Partial<{
             modelStructure: null,
             modelName: "New Model",
             validationState: null,
-            expandedNodes: new Set<string>(),
             // Set visibility states
             showModelName: false,
             showModelItemName: false,
@@ -75,7 +74,6 @@ export const messageHandlers: Partial<{
                 ...prev,
                 currentElement: modelItemData,
                 modelStructure: data.modelStructure,
-                expandedNodes: new Set<string>(data.expandedNodes || Array.from(prev.expandedNodes)),
                 validationState,
                 modelName: modelItemData.name || "Untitled Model",
                 showModelName: true,           // Show model name
@@ -113,7 +111,6 @@ export const messageHandlers: Partial<{
                 // Add a separate lastElementUpdate field
                 lastElementUpdate: new Date().toISOString(),
                 modelStructure: payload.modelStructure,
-                expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
                 referenceData: payload.referenceData || {
                     entities: [],
                     resources: []
@@ -179,7 +176,6 @@ export const messageHandlers: Partial<{
             const convertedPayload: MessagePayloads[MessageTypes.SELECTION_CHANGED_PAGE_WITH_MODEL] = {
                 selectionState: payload.selectionState,
                 modelStructure: payload.modelStructure,
-                expandedNodes: payload.expandedNodes,
                 validationResult: payload.validationResult,
                 pageSelection: {
                     pageId: payload.multipleSelection.pageId
@@ -220,7 +216,6 @@ export const messageHandlers: Partial<{
                 diagramElementType: payload.unconvertedSelection.diagramElementType,
                 currentElement,
                 modelStructure: payload.modelStructure || prev.modelStructure,
-                expandedNodes: new Set<string>(payload.expandedNodes || Array.from(prev.expandedNodes)),
                 showModelName: true,           // Show model name
                 showModelItemName: false,      // Don't show model item name
                 visibleSections: {             // Only show header
