@@ -140,10 +140,17 @@ export class AuthMessagingService {
    */
   public sendAuthCompleted(success: boolean, userInfo: UserInfo | null): void {
     console.log('[AuthMessagingService] Sending AUTH_COMPLETED', { success, userInfo });
+
+    // Send auth completed message
     this.messaging.sendMessage(MessageTypes.AUTH_COMPLETED, {
       success,
       userInfo: userInfo || undefined
     });
+
+    // Also broadcast auth status if successful
+    if (success) {
+      this.broadcastAuthStatus(true, userInfo);
+    }
   }
 
   /**
@@ -164,7 +171,18 @@ export class AuthMessagingService {
       errorCode
     });
   }
+  /**
+   * Broadcasts authentication status to all panels
+   */
+  public broadcastAuthStatus(isAuthenticated: boolean, userInfo: UserInfo | null): void {
+    console.log('[AuthMessagingService] Broadcasting auth status to all panels:', { isAuthenticated });
 
+    // Just send to the global messaging instance - all panels will receive it
+    this.messaging.sendMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+      isAuthenticated,
+      userInfo: userInfo || undefined
+    });
+  }
   /**
    * Send sign-in initiated notification
    */

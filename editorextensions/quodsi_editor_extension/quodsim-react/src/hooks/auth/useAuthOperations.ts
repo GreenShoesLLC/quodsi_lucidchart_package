@@ -109,7 +109,41 @@ export function useAuthOperations(): AuthOperations {
       // ALWAYS use standard MSAL popup flow
       const response = await instance.loginPopup(loginRequest);
       console.log('[useAuthOperations] Login successful', response);
-      
+      // IMPORTANT: After successful login, update the auth state
+      if (response?.account) {
+        const userInfo = {
+          name: response.account.name || response.account.username,
+          email: response.account.username
+        };
+
+        // Update local state
+        updateAuthState({
+          isAuthenticated: true,
+          userInfo,
+          error: null
+        });
+        // Calculate token expiration - handle null case
+        let tokenExpiration: Date;
+        if (response.expiresOn) {
+          // If expiresOn is available, use it
+          tokenExpiration = new Date(response.expiresOn);
+        } else {
+          // Default to 1 hour from now if expiresOn is null
+          tokenExpiration = new Date(Date.now() + 3600 * 1000);
+          console.log('[useAuthOperations] No expiration time in token, using default 1 hour');
+        }
+        // Save to session storage
+        sessionStorageService.saveSessionState({
+          isAuthenticated: true,
+          userInfo,
+          accessToken: response.accessToken,
+          tokenExpiration: tokenExpiration,
+          lastActive: Date.now()
+        });
+
+        // Notify extension about successful auth
+        authMessagingService.sendAuthCompleted(true, userInfo);
+      }
       // Token will be acquired in the useEffect when accounts change
     } catch (error) {
       console.error('[useAuthOperations] Login failed', error);

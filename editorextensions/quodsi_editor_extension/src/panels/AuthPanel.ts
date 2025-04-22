@@ -306,14 +306,20 @@ export class AuthPanel extends Panel {
         this.log('Auth completed:', data);
         this.isAuthenticated = data.success;
         this.userInfo = data.userInfo || null;
-        
+
         // Save the authentication state
         if (data.success) {
             this.saveSessionState();
+
+            // Broadcast authentication state to all panels
+            // This is a workaround since we can't modify extension.ts
+            this.messaging.sendMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+                isAuthenticated: this.isAuthenticated,
+                userInfo: this.userInfo || undefined 
+            });
         } else {
             this.clearSessionState();
         }
-    
     }
     
     /**

@@ -54,6 +54,12 @@ export function useBackendSync(): BackendSync {
         if (userInfo) {
           authMessagingService.sendAuthCompleted(true, userInfo);
         }
+      } else {
+        // Even if sync response is empty but no error was thrown,
+        // we should still consider authentication successful
+        if (userInfo) {
+          authMessagingService.sendAuthCompleted(true, userInfo);
+        }
       }
       
       return syncResponse;
@@ -62,7 +68,12 @@ export function useBackendSync(): BackendSync {
       
       // Convert to standardized error
       const authError = authErrorHandler.createUserSyncError(error);
-      
+      // IMPORTANT: Even with backend sync failure, if we have a valid
+      // MSAL authentication, we should still complete the auth flow
+      if (userInfo) {
+        console.log('[useBackendSync] Backend sync failed but continuing with local auth');
+        authMessagingService.sendAuthCompleted(true, userInfo);
+      }
       // Notify about error (but don't set local error state)
       authMessagingService.sendAuthError(authError);
       

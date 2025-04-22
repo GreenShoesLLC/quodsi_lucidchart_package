@@ -113,6 +113,39 @@ export function useAuthState(): AuthState {
     };
   }, []);
 
+  // Add to useAuthState hook
+  // Add this effect to periodically check auth status when not authenticated
+  useEffect(() => {
+    if (!isAuthenticated && isMsalInitialized) {
+      // If not authenticated, but there's an account, try to fix the state
+      if (accounts.length > 0) {
+        console.log('[useAuthState] Found account but not authenticated, fixing state');
+        const accountInfo = accounts[0];
+        const userInfo = {
+          name: accountInfo.name || accountInfo.username,
+          email: accountInfo.username
+        };
+
+        // Update state
+        setIsAuthenticated(true);
+        setUserInfo(userInfo);
+
+        // Save to session storage
+        sessionStorageService.saveSessionState({
+          isAuthenticated: true,
+          userInfo,
+          accessToken: null, // Will be acquired as needed
+          tokenExpiration: null,
+          lastActive: Date.now()
+        });
+
+        // Broadcast updated state
+        authMessagingService.sendAuthStatus(true, userInfo);
+      }
+    }
+  }, [isAuthenticated, isMsalInitialized, accounts]);
+
+
   // Update user info when accounts change (if authenticated)
   useEffect(() => {
     if (isAuthenticated && accounts.length > 0 && !userInfo) {

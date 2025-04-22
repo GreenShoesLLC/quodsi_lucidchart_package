@@ -15,12 +15,15 @@ export declare class ModelPanel extends Panel {
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
+    private isAuthenticated;
+    private userInfo;
     private versionManager;
     constructor(client: EditorClient, modelManager: ModelManager, authPanel: AuthPanel);
     setLogging(enabled: boolean): void;
     private isLoggingEnabled;
     private log;
     private logError;
+    protected frameLoaded(): void;
     private setupModelMessageHandlers;
     initializeOrUpdateModel(): Promise<import("../data_sources").ModelDefinition | null>;
     private handleOutputCreatePage;
