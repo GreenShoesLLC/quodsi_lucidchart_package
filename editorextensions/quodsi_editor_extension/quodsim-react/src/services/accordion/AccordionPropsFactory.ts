@@ -8,7 +8,6 @@ export const createAccordionProps = (
         onUpdate: (elementId: string, data: any) => void;
     }
 ) => ({
-    modelStructure: state.modelStructure,
     validationState: state.validationState,
     currentElement: state.currentElement,
     selectionState: state.selectionState,

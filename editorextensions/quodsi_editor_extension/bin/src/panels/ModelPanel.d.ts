@@ -29,7 +29,6 @@ export declare class ModelPanel extends Panel {
     private list_blocks;
     private handleSimulationStatusUpdate;
     private updateModelStructure;
-    private createSimulationObjectPayload;
     private handleConvertElement;
     private initializeModelManager;
     /**
@@ -42,10 +41,8 @@ export declare class ModelPanel extends Panel {
     hide(): void;
     handleValidateRequest(): Promise<void>;
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
-    private sendSelectionBasedMessage;
     private handleError;
     private buildModelItemData;
-    private buildModelItemDataArray;
     /**
      * Handles model removal request
      */
@@ -64,10 +61,6 @@ export declare class ModelPanel extends Panel {
      * Handles model validation request
      */
     private handleValidateModel;
-    /**
-     * Handles model saved message
-     */
-    private handleModelSaved;
     protected sendTypedMessage<T extends MessageTypes>(type: T, payload?: MessagePayloads[T]): void;
     protected messageFromFrame(message: any): void;
 }

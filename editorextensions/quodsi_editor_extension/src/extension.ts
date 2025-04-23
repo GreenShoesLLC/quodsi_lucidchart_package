@@ -9,6 +9,7 @@ import { ModelPanel } from './panels/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
 import { AuthPanel } from './panels/AuthPanel';
 import { ExtensionMessaging } from '@quodsi/shared';
+import { SelectionManager } from './managers';
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -19,15 +20,11 @@ const storageAdapter = new StorageAdapter();
 // Initialize core model management with storage adapter
 const modelManager = new ModelManager(storageAdapter);
 
-// Initialize panels
-
-
 console.info('[extension] About to create AuthPanel');
 const authPanel = new AuthPanel(client);
 authPanel.setLogging(true);
 console.info('[extension] Created AuthPanel');
 // authPanel.show();
-
 
 console.info('[extension] About to create ModelPanel');
 const modelPanel = new ModelPanel(client, modelManager, authPanel);

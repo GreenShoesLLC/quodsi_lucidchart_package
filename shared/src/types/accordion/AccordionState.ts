@@ -3,7 +3,6 @@ import { ValidationState } from './ValidationState';
 import { SelectionType } from '../SelectionType';
 
 export interface AccordionState {
-    modelStructure: ModelStructure | null;
     validationState: ValidationState | null;
     currentElement: {
         data: any;

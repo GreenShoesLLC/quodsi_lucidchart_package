@@ -16,11 +16,12 @@ var MessageTypes;
     MessageTypes["SHOW_AUTH_PANEL"] = "SHOW_AUTH_PANEL";
     MessageTypes["MODEL_PANEL_FOCUS"] = "model_panel_focus";
     // Selection Management
-    MessageTypes["SELECTION_CHANGED_PAGE_NO_MODEL"] = "selectionPageNoModel";
-    MessageTypes["SELECTION_CHANGED_PAGE_WITH_MODEL"] = "selectionPageWithModel";
-    MessageTypes["SELECTION_CHANGED_SIMULATION_OBJECT"] = "selectionSimObject";
-    MessageTypes["SELECTION_CHANGED_MULTIPLE"] = "selectionMultiple";
-    MessageTypes["SELECTION_CHANGED_UNCONVERTED"] = "selectionUnconverted";
+    // SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',
+    // SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',
+    // SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject',
+    // SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',
+    // SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',
+    MessageTypes["SELECTION_CHANGED"] = "selectionChanged";
     // Model Conversion
     MessageTypes["CONVERT_PAGE"] = "convertPage";
     MessageTypes["CONVERSION_ERROR"] = "conversionError";

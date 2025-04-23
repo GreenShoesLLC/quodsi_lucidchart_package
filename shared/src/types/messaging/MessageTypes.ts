@@ -21,11 +21,13 @@ export enum MessageTypes {
     MODEL_PANEL_FOCUS = 'model_panel_focus',
 
     // Selection Management
-    SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // Page selected, no model exists
-    SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',   // Page selected, has model
-    SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject', // Single simulation object selected
-    SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',         // Multiple items selected
-    SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
+    // SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',
+    // SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',
+    // SELECTION_CHANGED_SIMULATION_OBJECT = 'selectionSimObject',
+    // SELECTION_CHANGED_MULTIPLE = 'selectionMultiple',
+    // SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',
+
+    SELECTION_CHANGED = 'selectionChanged',
 
     // Model Conversion
     CONVERT_PAGE = 'convertPage',

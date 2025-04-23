@@ -15,7 +15,6 @@ import { Header } from "./Header";
 import { SimulationStatus } from "src/types/SimulationStatus";
 
 interface ModelPanelAccordionProps {
-  modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
@@ -45,7 +44,6 @@ interface ModelPanelAccordionProps {
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
-  modelStructure,
   modelName,
   validationState,
   currentElement,

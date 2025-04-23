@@ -29,7 +29,6 @@ import { useMsal } from "@azure/msal-react";
 
 export interface AppState {
   // Existing properties
-  modelStructure: ModelStructure | null;
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ModelItemData | null;
@@ -63,7 +62,6 @@ export const initialSimulationStatus: SimulationStatus = {
 } as const;
 
 const initialState: AppState = {
-  modelStructure: null,
   modelName: "New Model",
   validationState: null,
   currentElement: null,
@@ -291,24 +289,6 @@ const QuodsiApp: React.FC = () => {
     };
   }, [messaging, sendMessage]);
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log("[QuodsiApp] State updated:", {
-      modelStructure: state.modelStructure,
-      modelName: state.modelName,
-      validationState: state.validationState,
-      currentElement: state.currentElement,
-    });
-  }, [state]);
-
-  // Add debugging for simulationStatus
-  useEffect(() => {
-    console.log(
-      "[QuodsiApp] simulationStatus updated:",
-      state.simulationStatus
-    );
-  }, [state.simulationStatus]);
-
   // Event handlers
   const handleElementSelect = useCallback(
     (elementId: string) => {
@@ -468,7 +448,6 @@ const QuodsiApp: React.FC = () => {
       ) : (
         // Authenticated - show ModelPanelAccordion
         <ModelPanelAccordion
-          modelStructure={state.modelStructure}
           modelName={state.modelName}
           validationState={state.validationState}
           currentElement={state.currentElement}
