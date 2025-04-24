@@ -1,5 +1,5 @@
 import { EditorClient, ItemProxy, Panel } from 'lucid-extension-sdk';
-import { MessagePayloads, MessageTypes } from '@quodsi/shared';
+import { MessagePayloads, MessageTypes, AuthActionType } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { AuthPanel } from './AuthPanel';
 export declare class ModelPanel extends Panel {
@@ -22,6 +22,7 @@ export declare class ModelPanel extends Panel {
     private log;
     private logError;
     protected frameLoaded(): void;
+    protected sendAuthMessage(type: AuthActionType, data?: any): void;
     private setupModelMessageHandlers;
     initializeOrUpdateModel(): Promise<import("../data_sources").ModelDefinition | null>;
     private handleOutputCreatePage;

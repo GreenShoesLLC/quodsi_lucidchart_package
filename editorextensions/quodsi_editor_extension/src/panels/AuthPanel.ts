@@ -9,7 +9,8 @@ import {
     isValidMessage,
     JsonSerializable,
     MessageTypes,
-    UserInfo
+    UserInfo,
+    AuthActionType
 } from '@quodsi/shared';
 
 // Session storage keys
@@ -96,25 +97,37 @@ export class AuthPanel extends Panel {
             this.handleReactReady();
         });
         
-        // Auth-specific message handlers
-        this.messaging.onMessage(MessageTypes.AUTH_STATUS_REQUEST, () => {
-            this.handleAuthStatusRequest();
-        });
-        
-        this.messaging.onMessage(MessageTypes.AUTH_SIGN_IN, () => {
-            this.handleAuthSignIn();
-        });
-        
-        this.messaging.onMessage(MessageTypes.AUTH_SIGN_OUT, () => {
-            this.handleAuthSignOut();
-        });
-        
-        this.messaging.onMessage(MessageTypes.AUTH_COMPLETED, (data) => {
-            this.handleAuthCompleted(data);
-        });
-        
-        this.messaging.onMessage(MessageTypes.AUTH_ERROR, (data) => {
-            this.handleAuthError(data);
+        // Auth message handler for consolidated AUTH message type
+        this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
+            if (!payload || !payload.type) {
+                this.logError('Invalid AUTH message received:', payload);
+                return;
+            }
+            
+            switch (payload.type) {
+                case AuthActionType.STATUS_REQUEST:
+                    this.handleAuthStatusRequest();
+                    break;
+                
+                case AuthActionType.SIGN_IN:
+                    this.handleAuthSignIn();
+                    break;
+                
+                case AuthActionType.SIGN_OUT:
+                    this.handleAuthSignOut();
+                    break;
+                
+                case AuthActionType.COMPLETED:
+                    this.handleAuthCompleted(payload.data);
+                    break;
+                
+                case AuthActionType.ERROR:
+                    this.handleAuthError(payload.data);
+                    break;
+                
+                default:
+                    this.log(`Unhandled AUTH action type: ${payload.type}`);
+            }
         });
     }
 
@@ -213,7 +226,7 @@ export class AuthPanel extends Panel {
     //                     this.clearSessionState();
                         
     //                     // Notify the React app
-    //                     this.sendTypedMessage(MessageTypes.AUTH_ERROR, {
+    //                     this.sendAuthMessage(AuthActionType.ERROR, {
     //                         error: 'Your session has timed out due to inactivity. Please sign in again.',
     //                         errorCode: 'session_timeout'
     //                     });
@@ -248,13 +261,13 @@ export class AuthPanel extends Panel {
         this.reactAppReady = true;
 
         // Tell React this is the AuthPanel
-        this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+        this.sendAuthMessage(AuthActionType.PANEL_INIT, {
             panelType: 'auth'
         });
         
         // Always send the auth status, whether authenticated or not
         // This ensures the React app has the current state
-        this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+        this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
             isAuthenticated: this.isAuthenticated,
             userInfo: this.userInfo || undefined
         });
@@ -271,7 +284,7 @@ export class AuthPanel extends Panel {
     private handleAuthStatusRequest(): void {
         this.log('Auth status requested');
         this.updateLastActive();
-        this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+        this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
             isAuthenticated: this.isAuthenticated,
             userInfo: this.userInfo || undefined
         });
@@ -296,7 +309,6 @@ export class AuthPanel extends Panel {
         
         // Clear session state
         this.clearSessionState();
-    
     }
     
     /**
@@ -313,7 +325,7 @@ export class AuthPanel extends Panel {
 
             // Broadcast authentication state to all panels
             // This is a workaround since we can't modify extension.ts
-            this.messaging.sendMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+            this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
                 isAuthenticated: this.isAuthenticated,
                 userInfo: this.userInfo || undefined 
             });
@@ -337,6 +349,19 @@ export class AuthPanel extends Panel {
             this.userInfo = null;
             this.clearSessionState();
         }
+    }
+    
+    /**
+     * Sends an AUTH message with the specified action type and payload
+     */
+    protected sendAuthMessage(
+        type: AuthActionType,
+        data?: any
+    ): void {
+        this.sendTypedMessage(MessageTypes.AUTH, {
+            type,
+            data: data || null
+        });
     }
     
     /**
@@ -390,13 +415,13 @@ export class AuthPanel extends Panel {
         // Send panel type initialization message immediately when the frame loads
         // This ensures the React app knows which panel it is, even after panel reopening
         if (this.reactAppReady) {
-            this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+            this.sendAuthMessage(AuthActionType.PANEL_INIT, {
                 panelType: 'auth'
             });
             
             // Also send auth status if authenticated
             if (this.isAuthenticated && this.userInfo) {
-                this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+                this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
                     isAuthenticated: this.isAuthenticated,
                     userInfo: this.userInfo
                 });

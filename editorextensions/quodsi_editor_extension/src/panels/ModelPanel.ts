@@ -28,7 +28,8 @@ import {
     SelectionState,
     EditorReferenceData,
     DiagramElementType,
-    ModelSerializerFactory
+    ModelSerializerFactory,
+    AuthActionType
 
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
@@ -112,14 +113,22 @@ export class ModelPanel extends Panel {
         console.log('[ModelPanel] Frame loaded');
 
         // When the frame loads, request the current auth status
-        this.sendTypedMessage(MessageTypes.AUTH_STATUS_REQUEST);
+        this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
 
         // Also send panel initialization
-        this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+        this.sendAuthMessage(AuthActionType.PANEL_INIT, {
             panelType: 'model'
         });
     }
-
+    protected sendAuthMessage(
+        type: AuthActionType,
+        data?: any
+    ): void {
+        this.sendTypedMessage(MessageTypes.AUTH, {
+            type,
+            data: data || null
+        });
+    }
     private setupModelMessageHandlers(): void {
         this.logError('Setting up message handlers START');
         // React App Ready - already handled by BasePanel
@@ -130,54 +139,69 @@ export class ModelPanel extends Panel {
             this.handleReactReady();
         });
 
-        this.messaging.onMessage(MessageTypes.AUTH_STATUS_RESPONSE, (data) => {
-            console.log('[ModelPanel] Received AUTH_STATUS_RESPONSE:', data);
-            if (data && typeof data.isAuthenticated === 'boolean') {
-                this.isAuthenticated = data.isAuthenticated;
-                this.userInfo = data.userInfo || null;
+        // Consolidated AUTH message handler
+        this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
+            console.log('[ModelPanel] Received AUTH message:', payload);
 
-                // If authenticated, notify React app
-                if (this.isAuthenticated && this.reactAppReady) {
-                    this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
-                        isAuthenticated: this.isAuthenticated,
-                        userInfo: this.userInfo
-                    });
-                }
+            if (!payload || !payload.type) {
+                this.logError('Invalid AUTH message received:', payload);
+                return;
+            }
+
+            switch (payload.type) {
+                case AuthActionType.STATUS_RESPONSE:
+                    console.log('[ModelPanel] Processing AUTH status response:', payload.data);
+                    if (payload.data && typeof payload.data.isAuthenticated === 'boolean') {
+                        this.isAuthenticated = payload.data.isAuthenticated;
+                        this.userInfo = payload.data.userInfo || null;
+
+                        // If authenticated, notify React app
+                        if (this.isAuthenticated && this.reactAppReady) {
+                            this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+                                isAuthenticated: this.isAuthenticated,
+                                userInfo: this.userInfo
+                            });
+                        }
+                    }
+                    break;
+
+                case AuthActionType.COMPLETED:
+                    console.log('[ModelPanel] Processing AUTH completed:', payload.data);
+                    if (payload.data && payload.data.success) {
+                        this.isAuthenticated = true;
+                        this.userInfo = payload.data.userInfo || null;
+
+                        // If React app is ready, notify it
+                        if (this.reactAppReady) {
+                            this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+                                isAuthenticated: true,
+                                userInfo: this.userInfo
+                            });
+                        }
+                    }
+                    break;
+
+                case AuthActionType.SHOW_PANEL:
+                    this.log('Processing AUTH show panel request');
+                    // Get the AuthPanel instance and show it
+                    this.authPanel.show();
+                    break;
             }
         });
 
-        this.messaging.onMessage(MessageTypes.AUTH_COMPLETED, (data) => {
-            console.log('[ModelPanel] Received AUTH_COMPLETED:', data);
-            if (data && data.success) {
-                this.isAuthenticated = true;
-                this.userInfo = data.userInfo || null;
-
-                // If React app is ready, notify it
-                if (this.reactAppReady) {
-                    this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
-                        isAuthenticated: true,
-                        userInfo: this.userInfo
-                    });
-                }
-            }
-        });
-        this.messaging.onMessage(MessageTypes.SHOW_AUTH_PANEL, () => {
-            this.log('Showing Auth panel on user request');
-            // Get the AuthPanel instance and show it
-            // We'll need a way to access the AuthPanel instance here
-            // This could be through a global reference or by passing it to ModelPanel
-            this.authPanel.show();  // Access AuthPanel instance somehow
-        });
         this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
             this.logError('VIEW_SIMULATION_RESULTS message received in handler');
             this.handleOutputCreateDashboard(payload, true)
-        })
+        });
+
         this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, (payload) =>
             this.handleSimulateModel(payload)
         );
+
         this.messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, (data) =>
             this.handleSimulationStatusUpdate(data)
         );
+
         // Setup error handler
         this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
             this.logError('Error received:', payload);
@@ -185,8 +209,11 @@ export class ModelPanel extends Panel {
 
         this.messaging.onMessage(MessageTypes.CONVERT_ELEMENT, (data) =>
             this.handleConvertElement(data));
+
         this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
+
         this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handlePageConvertRequest());
+
         this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
 
         // Element Operations
@@ -196,6 +223,7 @@ export class ModelPanel extends Panel {
         this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
             this.handleOutputCreatePage();
         });
+
         this.logError('Setting up message handlers END');
     }
     // Improved model initialization code with better logging and error handling
@@ -547,8 +575,8 @@ export class ModelPanel extends Panel {
         this.log('Current page at show:', currentPage);
 
         // Request current auth status when panel is shown
-        this.sendTypedMessage(MessageTypes.AUTH_STATUS_REQUEST);
-        this.sendTypedMessage(MessageTypes.MODEL_PANEL_FOCUS);
+        this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
+        this.sendAuthMessage(AuthActionType.MODEL_PANEL_FOCUS);
 
         this.initializeModelManager(); // Re-initialize when panel is shown
         super.show();
@@ -680,20 +708,20 @@ export class ModelPanel extends Panel {
             this.log('React app already ready, skipping initialization');
             return;
         }
-   
 
         this.log('reactAppReady = false');
         this.reactAppReady = true;
         this.selectionManager.setReactAppReady(true);
         this.log('reactAppReady = true');
         this.log('reactAppReady = true');
+
         // Send MODEL_PANEL_INIT message to tell React this is ModelPanel
-        this.sendTypedMessage(MessageTypes.AUTH_PANEL_INIT, {
+        this.sendAuthMessage(AuthActionType.PANEL_INIT, {
             panelType: 'model'
         });
 
         // Request current authentication status
-        this.sendTypedMessage(MessageTypes.AUTH_STATUS_REQUEST);
+        this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -707,7 +735,7 @@ export class ModelPanel extends Panel {
         try {
             // If we're already authenticated, send that to React immediately
             if (this.isAuthenticated) {
-                this.sendTypedMessage(MessageTypes.AUTH_STATUS_RESPONSE, {
+                this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
                     isAuthenticated: true,
                     userInfo: this.userInfo
                 });

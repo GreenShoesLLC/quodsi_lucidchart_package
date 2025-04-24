@@ -115,7 +115,7 @@ const QuodsiApp: React.FC = () => {
 
   // Handle redirect to auth panel
   const handleRedirectToAuthPanel = useCallback(() => {
-    sendMessage(MessageTypes.SHOW_AUTH_PANEL);
+    sendMessage(MessageTypes.AUTH);
   }, [sendMessage]);
 
   const documentId = state.documentId;
@@ -149,111 +149,15 @@ const QuodsiApp: React.FC = () => {
 
   console.log("[QuodsiApp] documentId", documentId);
 
-  // Add a handler for MODEL_PANEL_FOCUS
-  useEffect(() => {
-    const handleModelPanelFocus = () => {
-      console.log(
-        "[QuodsiApp] Model panel received focus, checking auth status"
-      );
-      // Request fresh auth status from extension
-      sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
-    };
+  // MODEL_PANEL_FOCUS handler has been moved to authMessageHandlers.ts
 
-    messaging.onMessage(MessageTypes.MODEL_PANEL_FOCUS, handleModelPanelFocus);
+  // AUTH_COMPLETED handler has been moved to authMessageHandlers.ts
 
-    return () => {
-      // Cleanup if needed
-    };
-  }, [messaging, sendMessage]);
-
-  // Add a listener for AUTH_COMPLETED in QuodsiApp.tsx
-  useEffect(() => {
-    const handleAuthCompleted = (data: any) => {
-      console.log("[QuodsiApp] Received AUTH_COMPLETED:", data);
-      // Force a re-render when auth completes
-      if (data.success) {
-        // Small delay to ensure auth state is fully updated
-        setTimeout(() => {
-          console.log("[QuodsiApp] Refreshing UI after auth completion");
-          setState((prev) => ({ ...prev }));
-        }, 500);
-      }
-    };
-
-    messaging.onMessage(MessageTypes.AUTH_COMPLETED, handleAuthCompleted);
-
-    return () => {
-      // Cleanup if needed
-    };
-  }, [messaging]);
-
-  // Add custom message handler for simulation status update that includes new results flag
-  useEffect(() => {
-    const handleSimulationStatusUpdate = (payload: any) => {
-      console.log("[QuodsiApp] Received SIMULATION_STATUS_UPDATE:", payload);
-
-      if (payload.newResultsAvailable) {
-        console.log(
-          "[QuodsiApp] Setting newResultsAvailable to true from message"
-        );
-        setState((prev) => ({
-          ...prev,
-          simulationStatus: {
-            ...prev.simulationStatus,
-            newResultsAvailable: true,
-          },
-        }));
-      }
-
-      // Always update the status even if newResultsAvailable hasn't changed
-      setState((prev) => ({
-        ...prev,
-        simulationStatus: {
-          ...prev.simulationStatus,
-          pageStatus: payload.pageStatus,
-          lastChecked: new Date().toISOString(),
-        },
-      }));
-    };
-
-    messaging.onMessage(
-      MessageTypes.SIMULATION_STATUS_UPDATE,
-      handleSimulationStatusUpdate
-    );
-
-    return () => {
-      // Cleanup if needed
-    };
-  }, [messaging]);
+  // Simulation status update handler has been moved to simulationMessageHandlers.ts
 
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
-
-    // Handler for AUTH_PANEL_INIT
-    const handleAuthPanelInit = (data: any) => {
-      console.log("[QuodsiApp] Received AUTH_PANEL_INIT:", data);
-      setState((prev) => ({
-        ...prev,
-        panelType: data.panelType,
-      }));
-
-      // Delay requesting auth status to ensure MSAL is fully initialized
-      // This fixes the "uninitialized_public_client_application" error
-      if (data.panelType === "auth") {
-        console.log(
-          "[QuodsiApp] Auth panel initialized, scheduling auth status request"
-        );
-        // Use a small delay to ensure MSAL is fully initialized
-        setTimeout(() => {
-          console.log("[QuodsiApp] Now requesting auth status after delay");
-          sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
-        }, 1000);
-      }
-    };
-
-    // Register the handler
-    messaging.onMessage(MessageTypes.AUTH_PANEL_INIT, handleAuthPanelInit);
 
     const deps = {
       setState,

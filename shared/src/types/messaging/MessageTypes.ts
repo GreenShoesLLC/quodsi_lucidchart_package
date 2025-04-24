@@ -10,15 +10,17 @@ export enum MessageTypes {
     REACT_APP_READY = 'reactAppReady',
     
     // Authentication
-    AUTH_PANEL_INIT = 'authPanelInit',
-    AUTH_STATUS_REQUEST = 'authStatusRequest',
-    AUTH_STATUS_RESPONSE = 'authStatusResponse',
-    AUTH_SIGN_IN = 'authSignIn',
-    AUTH_SIGN_OUT = 'authSignOut',
-    AUTH_COMPLETED = 'authCompleted',
-    AUTH_ERROR = 'authError',
-    SHOW_AUTH_PANEL = 'SHOW_AUTH_PANEL',
-    MODEL_PANEL_FOCUS = 'model_panel_focus',
+    // AUTH_PANEL_INIT = 'authPanelInit',
+    // AUTH_STATUS_REQUEST = 'authStatusRequest',
+    // AUTH_STATUS_RESPONSE = 'authStatusResponse',
+    // AUTH_SIGN_IN = 'authSignIn',
+    // AUTH_SIGN_OUT = 'authSignOut',
+    // AUTH_COMPLETED = 'authCompleted',
+    // AUTH_ERROR = 'authError',
+    // SHOW_AUTH_PANEL = 'SHOW_AUTH_PANEL',
+    // MODEL_PANEL_FOCUS = 'model_panel_focus',
+
+    AUTH = 'auth',
 
     // Selection Management
     // SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',

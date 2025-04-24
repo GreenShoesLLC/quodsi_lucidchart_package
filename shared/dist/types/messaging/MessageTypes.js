@@ -15,6 +15,7 @@ var MessageTypes;
     MessageTypes["AUTH_ERROR"] = "authError";
     MessageTypes["SHOW_AUTH_PANEL"] = "SHOW_AUTH_PANEL";
     MessageTypes["MODEL_PANEL_FOCUS"] = "model_panel_focus";
+    MessageTypes["AUTH"] = "auth";
     // Selection Management
     // SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',
     // SELECTION_CHANGED_PAGE_WITH_MODEL = 'selectionPageWithModel',
