@@ -48,6 +48,7 @@ import { AuthPanel } from './AuthPanel';
 import {
     EnumMapper
 } from '@quodsi/shared';
+import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
 
 
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
@@ -494,7 +495,7 @@ export class ModelPanel extends Panel {
             }
 
             if (importResults) {
-                await this.client.performDataAction({
+                await LucidDataActionUtility.performDataAction(this.client, {
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'ImportSimulationResults',
                     actionData: {
@@ -535,7 +536,7 @@ export class ModelPanel extends Panel {
             }
 
             // Mark results as viewed
-            await this.client.performDataAction({
+            await LucidDataActionUtility.performDataAction(this.client, {
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'MarkResultsViewed',
                 actionData: { documentId: documentId, scenarioId: scenarioId },
@@ -1176,7 +1177,7 @@ export class ModelPanel extends Panel {
                 this.log('serializedModel:', JSON.stringify(serializedModel));
 
                 // Trigger simulation using the data connector
-                await this.client.performDataAction({
+                await LucidDataActionUtility.performDataAction(this.client, {
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'SaveAndSubmitSimulation',
                     actionData: {
@@ -1272,7 +1273,7 @@ export class ModelPanel extends Panel {
                         }
 
                         // Make the request to upload the model definition
-                        await this.client.performDataAction({
+                        await LucidDataActionUtility.performDataAction(this.client, {
                             dataConnectorName: 'quodsi_data_connector',
                             actionName: 'UploadModelDefinition',
                             actionData: { documentId: documentId, scenarioId: BASELINE_SCENARIO_ID, model: serializedModel },

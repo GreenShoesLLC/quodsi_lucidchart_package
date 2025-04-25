@@ -26,6 +26,7 @@ import { SelectionManager } from '../managers';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelDataSource } from '../data_sources/model/ModelDataSource';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
+import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
 
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -397,10 +398,10 @@ export class ActionMessageHandler {
             const serializedModel = serializer.serialize(modelDefinition);
             
             // Trigger simulation using the data connector
-            await this.client.performDataAction({
+            await LucidDataActionUtility.performDataAction(this.client, {
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'SaveAndSubmitSimulation',
-                actionData: { 
+                actionData: {
                     'documentId': documentId,
                     scenarioId: BASELINE_SCENARIO_ID,
                     'model': serializedModel,
@@ -513,7 +514,7 @@ export class ActionMessageHandler {
             const importResults = true;
             
             if (importResults) {
-                await this.client.performDataAction({
+                await LucidDataActionUtility.performDataAction(this.client, {
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'ImportSimulationResults',
                     actionData: {
@@ -568,12 +569,12 @@ export class ActionMessageHandler {
         }
         
         try {
-            await this.client.performDataAction({
+            await LucidDataActionUtility.performDataAction(this.client, {
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'MarkResultsViewed',
-                actionData: { 
-                    documentId: request.data.documentId, 
-                    scenarioId: request.data.scenarioId || BASELINE_SCENARIO_ID 
+                actionData: {
+                    documentId: request.data.documentId,
+                    scenarioId: request.data.scenarioId || BASELINE_SCENARIO_ID
                 },
                 asynchronous: true
             });

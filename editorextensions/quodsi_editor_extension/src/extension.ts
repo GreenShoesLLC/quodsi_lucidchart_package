@@ -41,31 +41,31 @@ viewport.hookSelection((items) => {
 /*
     This code needs to be refactoring into the workflow
 */
-const menu = new Menu(client);
-client.registerAction("import", async () => {
-    // Temporary workaround. You must call oauthXhr once before performDataAction will work
-    const triggerOauth = await client.oauthXhr("lucid", {
-        url: "https://api.lucid.co/folders/search",
-        headers: {
-            "Lucid-Api-Version": "1",
-            "Content-Type": "application/json",
-        },
-        data: "{}",
-        method: "POST",
-    });
-    const result = await client.performDataAction({
-        dataConnectorName: "data-connector-1",
-        actionName: "Import",
-        actionData: { message: "ImportFolders" },
-        asynchronous: true,
-    });
-    console.log(result);
-});
+// const menu = new Menu(client);
+// client.registerAction("import", async () => {
+//     // Temporary workaround. You must call oauthXhr once before performDataAction will work
+//     const triggerOauth = await client.oauthXhr("lucid", {
+//         url: "https://api.lucid.co/folders/search",
+//         headers: {
+//             "Lucid-Api-Version": "1",
+//             "Content-Type": "application/json",
+//         },
+//         data: "{}",
+//         method: "POST",
+//     });
+//     const result = await client.performDataAction({
+//         dataConnectorName: "data-connector-1",
+//         actionName: "Import",
+//         actionData: { message: "ImportFolders" },
+//         asynchronous: true,
+//     });
+//     console.log(result);
+// });
 
-menu.addMenuItem({
-    label: "Import",
-    action: "import",
-    menuType: MenuType.Main,
-});
+// menu.addMenuItem({
+//     label: "Import",
+//     action: "import",
+//     menuType: MenuType.Main,
+// });
 
 console.info('[extension] Completed Successfully');
