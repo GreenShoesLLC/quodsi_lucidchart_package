@@ -17,6 +17,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // Platform and core exports
 __exportStar(require("./platform"), exports);
 __exportStar(require("./core/logging/QuodsiLogger"), exports);
+__exportStar(require("./core/logging/ComponentLogger"), exports);
 // Type exports
 __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);

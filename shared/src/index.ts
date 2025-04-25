@@ -1,6 +1,7 @@
 // Platform and core exports
 export * from './platform';
 export * from './core/logging/QuodsiLogger';
+export * from './core/logging/ComponentLogger';
 
 // Type exports
 export * from './types/ActivityRelationships';

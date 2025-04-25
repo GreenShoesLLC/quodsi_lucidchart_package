@@ -5,7 +5,8 @@ import {
     PageStatus, 
     RunState, 
     SimulationObjectType, 
-    ActionType 
+    ActionType,
+    ComponentLogger
 } from '@quodsi/shared';
 import axios from 'axios';
 
@@ -21,11 +22,15 @@ interface EnhancedScenario {
     resultsViewed?: boolean;
 }
 
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useSimulationStatus]';
+
 export const useSimulationStatus = (
     documentId: string,
     intervalSeconds: number = 30
 ) => {
-    console.log("[useSimulationStatus] Starting with:", { documentId, intervalSeconds });
+    ComponentLogger.log(LOG_PREFIX, 'Starting with:', { documentId, intervalSeconds });
+    
     const messaging = ExtensionMessaging.getInstance();
     const disabled = process.env.REACT_APP_DISABLE_SIMULATION_STATUS === 'true';
     const azureFunctionKey = process.env.REACT_APP_AZURE_STATUS_FUNCTION_KEY;
@@ -34,24 +39,24 @@ export const useSimulationStatus = (
     const [newResultsAvailable, setNewResultsAvailable] = useState(false);
 
     const checkStatus = useCallback(async () => {
-        console.log("[useSimulationStatus] checkStatus called with:", { 
+        ComponentLogger.log(LOG_PREFIX, 'checkStatus called with:', { 
             documentId, 
             disabled, 
             hasKey: !!azureFunctionKey 
         });
         
         if (disabled) {
-            console.log("[useSimulationStatus] Status check is disabled");
+            ComponentLogger.log(LOG_PREFIX, 'Status check is disabled');
             return;
         }
 
         if (!documentId) {
-            console.log("[useSimulationStatus] No documentId provided");
+            ComponentLogger.log(LOG_PREFIX, 'No documentId provided');
             return;
         }
 
         if (!azureFunctionKey) {
-            console.error("[useSimulationStatus] Azure Function Key is missing. Check environment variables.");
+            ComponentLogger.error(LOG_PREFIX, 'Azure Function Key is missing. Check environment variables.');
             messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
                 actionType: ActionType.SIMULATION_STATUS_CHECK,
                 data: {
@@ -66,7 +71,7 @@ export const useSimulationStatus = (
         const baseUrl = process.env.REACT_APP_DATA_CONNECTOR_API_URL;
 
         if (!baseUrl) {
-            console.error("[useSimulationStatus] ERROR: REACT_APP_DATA_CONNECTOR_API_URL is not defined!");
+            ComponentLogger.error(LOG_PREFIX, 'ERROR: REACT_APP_DATA_CONNECTOR_API_URL is not defined!');
             messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
                 actionType: ActionType.SIMULATION_STATUS_CHECK,
                 data: {
@@ -79,10 +84,10 @@ export const useSimulationStatus = (
         }
 
         const url = `${baseUrl}status/${documentId}?code=${azureFunctionKey}`; 
-        console.log("[useSimulationStatus] Checking status URL:", url);
+        ComponentLogger.log(LOG_PREFIX, 'Checking status URL:', url);
 
         try {
-            console.log("[useSimulationStatus] Making API request to:", url);
+            ComponentLogger.log(LOG_PREFIX, 'Making API request to:', url);
             const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -92,13 +97,13 @@ export const useSimulationStatus = (
             });
 
             const data = response.data;
-            console.log("[useSimulationStatus] API response:", data);
-            console.log("[useSimulationStatus] Scenarios:", data.scenarios.scenarios);
+            ComponentLogger.log(LOG_PREFIX, 'API response:', data);
+            ComponentLogger.log(LOG_PREFIX, 'Scenarios:', data.scenarios.scenarios);
 
             // DEBUG: Log each scenario's properties
             if (data.scenarios.scenarios) {
                 data.scenarios.scenarios.forEach((s: any, i: number) => {
-                    console.log(`[useSimulationStatus] Scenario ${i}:`, {
+                    ComponentLogger.log(LOG_PREFIX, `Scenario ${i}:`, {
                         id: s.id,
                         name: s.name,
                         runState: s.runState,
@@ -116,7 +121,7 @@ export const useSimulationStatus = (
                 const hasLastImported = !!s.resultsLastImported;
                 const notViewed = s.resultsViewed === false;
                 
-                console.log(`[useSimulationStatus] Scenario ${s.id} check:`, {
+                ComponentLogger.log(LOG_PREFIX, `Scenario ${s.id} check:`, {
                     isCompleted,
                     hasLastUpdated,
                     hasLastImported,
@@ -127,10 +132,10 @@ export const useSimulationStatus = (
                 return isCompleted && hasLastUpdated && hasLastImported && notViewed;
             });
             
-            console.log("[useSimulationStatus] Has new results:", hasNewResults);
+            ComponentLogger.log(LOG_PREFIX, 'Has new results:', hasNewResults);
             
             if (hasNewResults) {
-                console.log("[useSimulationStatus] Setting newResultsAvailable to true");
+                ComponentLogger.log(LOG_PREFIX, 'Setting newResultsAvailable to true');
                 setNewResultsAvailable(true);
             }
 
@@ -160,7 +165,7 @@ export const useSimulationStatus = (
                 statusDateTime: new Date().toISOString()
             };
 
-            console.log("[useSimulationStatus] Sending ACTION_REQUEST for status check:", {
+            ComponentLogger.log(LOG_PREFIX, 'Sending ACTION_REQUEST for status check:', {
                 actionType: ActionType.SIMULATION_STATUS_CHECK,
                 data: {
                     documentId,
@@ -178,7 +183,7 @@ export const useSimulationStatus = (
             });
 
         } catch (error) {
-            console.error("[useSimulationStatus] Error checking status:", error);
+            ComponentLogger.error(LOG_PREFIX, 'Error checking status:', error);
             
             // Safely access error properties
             const errorResponse = axios.isAxiosError(error) && error.response 
@@ -187,8 +192,8 @@ export const useSimulationStatus = (
             
             const errorMessage = error instanceof Error ? error.message : String(error);
             
-            console.error("[useSimulationStatus] Error details:", errorResponse);
-            console.error("[useSimulationStatus] Error message:", errorMessage);
+            ComponentLogger.error(LOG_PREFIX, 'Error details:', errorResponse);
+            ComponentLogger.error(LOG_PREFIX, 'Error message:', errorMessage);
             
             // Send ACTION_REQUEST with error information
             messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
@@ -205,7 +210,7 @@ export const useSimulationStatus = (
     // Function to mark results as viewed
     const acknowledgeResults = useCallback(async (scenarioId?: string) => {
         if (!documentId || !azureFunctionKey) {
-            console.error("[useSimulationStatus] Cannot acknowledge results - missing documentId or function key");
+            ComponentLogger.error(LOG_PREFIX, 'Cannot acknowledge results - missing documentId or function key');
             messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
                 actionType: ActionType.MARK_RESULTS_VIEWED,
                 data: {
@@ -229,7 +234,7 @@ export const useSimulationStatus = (
                 url += `&scenarioId=${scenarioId}`;
             }
 
-            console.log("[useSimulationStatus] Marking results as viewed:", { documentId, scenarioId });
+            ComponentLogger.log(LOG_PREFIX, 'Marking results as viewed:', { documentId, scenarioId });
             
             // Call the mark-viewed endpoint
             const response = await axios.post(url, {}, {
@@ -240,7 +245,7 @@ export const useSimulationStatus = (
             });
 
             if (response.status === 200) {
-                console.log("[useSimulationStatus] Successfully marked results as viewed:", response.data);
+                ComponentLogger.log(LOG_PREFIX, 'Successfully marked results as viewed:', response.data);
                 setNewResultsAvailable(false);
                 
                 // Send ACTION_REQUEST to mark results as viewed
@@ -256,7 +261,7 @@ export const useSimulationStatus = (
                 checkStatus();
                 return true;
             } else {
-                console.error("[useSimulationStatus] Failed to mark results as viewed:", response);
+                ComponentLogger.error(LOG_PREFIX, 'Failed to mark results as viewed:', response);
                 messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
                     actionType: ActionType.MARK_RESULTS_VIEWED,
                     data: {
@@ -270,7 +275,7 @@ export const useSimulationStatus = (
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error("[useSimulationStatus] Error marking results as viewed:", errorMessage);
+            ComponentLogger.error(LOG_PREFIX, 'Error marking results as viewed:', errorMessage);
             
             // Send ACTION_REQUEST with error information
             messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
@@ -289,27 +294,33 @@ export const useSimulationStatus = (
 
     useEffect(() => {
         if (disabled) {
-            console.log("[useSimulationStatus] Status updates are disabled");
+            ComponentLogger.log(LOG_PREFIX, 'Status updates are disabled');
             return;
         }
 
-        console.log("[useSimulationStatus] Setting up interval");
+        ComponentLogger.log(LOG_PREFIX, 'Setting up interval');
         const intervalId = setInterval(checkStatus, intervalSeconds * 1000);
         checkStatus(); // Initial check
 
         return () => {
-            console.log("[useSimulationStatus] Cleaning up interval");
+            ComponentLogger.log(LOG_PREFIX, 'Cleaning up interval');
             clearInterval(intervalId);
         };
     }, [checkStatus, intervalSeconds, disabled]);
     
     // Log the current state whenever it changes
     useEffect(() => {
-        console.log("[useSimulationStatus] State updated:", { newResultsAvailable });
+        ComponentLogger.log(LOG_PREFIX, 'State updated:', { newResultsAvailable });
     }, [newResultsAvailable]);
+    
+    // Expose function to control logging
+    const setLogging = useCallback((enabled: boolean) => {
+        ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+    }, []);
     
     return {
         newResultsAvailable,
-        acknowledgeResults
+        acknowledgeResults,
+        setLogging // Expose a way to enable/disable logging
     };
 };

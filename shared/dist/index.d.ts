@@ -1,5 +1,6 @@
 export * from './platform';
 export * from './core/logging/QuodsiLogger';
+export * from './core/logging/ComponentLogger';
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/ConversionResult';
