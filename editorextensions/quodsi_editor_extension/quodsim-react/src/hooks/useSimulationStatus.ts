@@ -1,5 +1,12 @@
 import { useEffect, useCallback, useState } from 'react';
-import { ExtensionMessaging, MessageTypes, PageStatus, RunState, SimulationObjectType } from '@quodsi/shared';
+import { 
+    ExtensionMessaging, 
+    MessageTypes, 
+    PageStatus, 
+    RunState, 
+    SimulationObjectType, 
+    ActionType 
+} from '@quodsi/shared';
 import axios from 'axios';
 
 // Enhanced scenario type with result fields
@@ -45,6 +52,14 @@ export const useSimulationStatus = (
 
         if (!azureFunctionKey) {
             console.error("[useSimulationStatus] Azure Function Key is missing. Check environment variables.");
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.SIMULATION_STATUS_CHECK,
+                data: {
+                    documentId,
+                    errorMessage: "Azure Function Key is missing",
+                    errorCode: 'MISSING_AZURE_FUNCTION_KEY'
+                }
+            });
             return;
         }
 
@@ -52,7 +67,14 @@ export const useSimulationStatus = (
 
         if (!baseUrl) {
             console.error("[useSimulationStatus] ERROR: REACT_APP_DATA_CONNECTOR_API_URL is not defined!");
-            console.error("[useSimulationStatus] Available env vars:", process.env);
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.SIMULATION_STATUS_CHECK,
+                data: {
+                    documentId,
+                    errorMessage: "Data Connector API URL is not defined",
+                    errorCode: 'MISSING_DATA_CONNECTOR_URL'
+                }
+            });
             return;
         }
 
@@ -138,14 +160,21 @@ export const useSimulationStatus = (
                 statusDateTime: new Date().toISOString()
             };
 
-            console.log("[useSimulationStatus] Sending SIMULATION_STATUS_UPDATE with:", {
-                pageStatus: newStatus,
-                newResultsAvailable: hasNewResults
+            console.log("[useSimulationStatus] Sending ACTION_REQUEST for status check:", {
+                actionType: ActionType.SIMULATION_STATUS_CHECK,
+                data: {
+                    documentId,
+                    pageStatus: newStatus,
+                    newResultsAvailable: hasNewResults
+                }
             });
             
-            messaging.sendMessage(MessageTypes.SIMULATION_STATUS_UPDATE, {
-                pageStatus: newStatus,
-                newResultsAvailable: hasNewResults
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.SIMULATION_STATUS_CHECK,
+                data: {
+                    documentId,
+                    scenarioId: newStatus.scenarios[0]?.id // Optional scenario ID
+                }
             });
 
         } catch (error) {
@@ -161,8 +190,14 @@ export const useSimulationStatus = (
             console.error("[useSimulationStatus] Error details:", errorResponse);
             console.error("[useSimulationStatus] Error message:", errorMessage);
             
-            messaging.sendMessage(MessageTypes.SIMULATION_STATUS_ERROR, {
-                errorMessage: `Failed to check simulation status: ${errorMessage}`
+            // Send ACTION_REQUEST with error information
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.SIMULATION_STATUS_CHECK,
+                data: {
+                    documentId,
+                    errorMessage: `Failed to check simulation status: ${errorMessage}`,
+                    errorCode: 'SIMULATION_STATUS_CHECK_ERROR'
+                }
             });
         }
     }, [documentId, messaging, disabled, azureFunctionKey]);
@@ -171,6 +206,14 @@ export const useSimulationStatus = (
     const acknowledgeResults = useCallback(async (scenarioId?: string) => {
         if (!documentId || !azureFunctionKey) {
             console.error("[useSimulationStatus] Cannot acknowledge results - missing documentId or function key");
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.MARK_RESULTS_VIEWED,
+                data: {
+                    documentId,
+                    errorMessage: "Missing documentId or function key",
+                    errorCode: 'MISSING_CREDENTIALS'
+                }
+            });
             return false;
         }
 
@@ -200,19 +243,49 @@ export const useSimulationStatus = (
                 console.log("[useSimulationStatus] Successfully marked results as viewed:", response.data);
                 setNewResultsAvailable(false);
                 
+                // Send ACTION_REQUEST to mark results as viewed
+                messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                    actionType: ActionType.MARK_RESULTS_VIEWED,
+                    data: {
+                        documentId,
+                        scenarioId
+                    }
+                });
+                
                 // Trigger an immediate status check to refresh the UI
                 checkStatus();
                 return true;
             } else {
                 console.error("[useSimulationStatus] Failed to mark results as viewed:", response);
+                messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                    actionType: ActionType.MARK_RESULTS_VIEWED,
+                    data: {
+                        documentId,
+                        scenarioId,
+                        errorMessage: "Failed to mark results as viewed",
+                        errorCode: 'MARK_RESULTS_VIEWED_FAILED'
+                    }
+                });
                 return false;
             }
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             console.error("[useSimulationStatus] Error marking results as viewed:", errorMessage);
+            
+            // Send ACTION_REQUEST with error information
+            messaging.sendMessage(MessageTypes.ACTION_REQUEST, {
+                actionType: ActionType.MARK_RESULTS_VIEWED,
+                data: {
+                    documentId,
+                    scenarioId,
+                    errorMessage,
+                    errorCode: 'MARK_RESULTS_VIEWED_ERROR'
+                }
+            });
+            
             return false;
         }
-    }, [documentId, azureFunctionKey, checkStatus]);
+    }, [documentId, azureFunctionKey, checkStatus, messaging]);
 
     useEffect(() => {
         if (disabled) {

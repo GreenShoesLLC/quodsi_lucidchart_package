@@ -20,7 +20,6 @@ interface ModelPanelAccordionProps {
   currentElement: ModelItemData | null;
   lastElementUpdate: string | null;
   diagramElementType?: DiagramElementType;
-  onElementSelect: (elementId: string) => void;
   onValidate: () => void;
   onElementUpdate: (elementId: string, data: JsonObject) => void;
   referenceData: EditorReferenceData;
@@ -49,7 +48,6 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   currentElement,
   lastElementUpdate,
   diagramElementType,
-  onElementSelect,
   onValidate,
   onElementUpdate,
   referenceData,

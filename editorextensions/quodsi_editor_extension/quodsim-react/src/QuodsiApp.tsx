@@ -11,6 +11,7 @@ import {
   ModelItemData,
   DiagramElementType,
   RunState,
+  ActionType,
 } from "@quodsi/shared";
 
 import { ModelPanelAccordion } from "./components/ModelPanelAccordion/ModelPanelAccordion";
@@ -149,12 +150,6 @@ const QuodsiApp: React.FC = () => {
 
   console.log("[QuodsiApp] documentId", documentId);
 
-  // MODEL_PANEL_FOCUS handler has been moved to authMessageHandlers.ts
-
-  // AUTH_COMPLETED handler has been moved to authMessageHandlers.ts
-
-  // Simulation status update handler has been moved to simulationMessageHandlers.ts
-
   // Set up message handling
   useEffect(() => {
     console.log("[QuodsiApp] Setting up ExtensionMessaging");
@@ -193,15 +188,7 @@ const QuodsiApp: React.FC = () => {
     };
   }, [messaging, sendMessage]);
 
-  // Event handlers
-  const handleElementSelect = useCallback(
-    (elementId: string) => {
-      console.log("[QuodsiApp] Element selected:", elementId);
-      sendMessage(MessageTypes.GET_ELEMENT_DATA, { elementId });
-    },
-    [sendMessage]
-  );
-
+  // Updated to use ACTION_REQUEST
   const handleElementTypeChange = useCallback(
     (elementId: string, newType: SimulationObjectType) => {
       console.log("[QuodsiApp] Type conversion requested:", {
@@ -210,19 +197,26 @@ const QuodsiApp: React.FC = () => {
       });
       setState((prev) => ({ ...prev, isProcessing: true }));
 
-      sendMessage(MessageTypes.CONVERT_ELEMENT, {
-        elementId,
-        type: newType,
+      sendMessage(MessageTypes.ACTION_REQUEST, {
+        actionType: ActionType.CONVERT_ELEMENT,
+        data: {
+          elementId,
+          type: newType,
+        },
       });
     },
     [sendMessage]
   );
 
+  // Updated to use ACTION_REQUEST
   const handleValidate = useCallback(() => {
     console.log("[QuodsiApp] Validate requested");
-    sendMessage(MessageTypes.VALIDATE_MODEL);
+    sendMessage(MessageTypes.ACTION_REQUEST, {
+      actionType: ActionType.VALIDATE_MODEL,
+    });
   }, [sendMessage]);
 
+  // Updated to use ACTION_REQUEST
   const handleElementUpdate = useCallback(
     (elementId: string, data: any) => {
       console.log("[QuodsiApp] Update requested:", { elementId, data });
@@ -230,20 +224,26 @@ const QuodsiApp: React.FC = () => {
 
       // Handle type conversion
       if (data.type && Object.keys(data).length === 1) {
-        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-          elementId,
-          type: data.type,
-          data: {}, // Empty data for type conversion
+        sendMessage(MessageTypes.ACTION_REQUEST, {
+          actionType: ActionType.UPDATE_ELEMENT_DATA,
+          data: {
+            elementId,
+            type: data.type,
+            data: {}, // Empty data for type conversion
+          },
         });
       } else {
         // Regular update
-        sendMessage(MessageTypes.UPDATE_ELEMENT_DATA, {
-          elementId,
-          type:
-            state.currentElement?.metadata?.type || SimulationObjectType.None,
+        sendMessage(MessageTypes.ACTION_REQUEST, {
+          actionType: ActionType.UPDATE_ELEMENT_DATA,
           data: {
-            ...data,
-            id: elementId,
+            elementId,
+            type:
+              state.currentElement?.metadata?.type || SimulationObjectType.None,
+            data: {
+              ...data,
+              id: elementId,
+            },
           },
         });
       }
@@ -251,10 +251,16 @@ const QuodsiApp: React.FC = () => {
     [sendMessage, state.currentElement?.metadata?.type]
   );
 
+  // Updated to use ACTION_REQUEST
   const handleSimulate = useCallback(
     (scenarioName?: string) => {
       console.log("[QuodsiApp] Simulate requested", { scenarioName });
-      sendMessage(MessageTypes.SIMULATE_MODEL, { scenarioName });
+      sendMessage(MessageTypes.ACTION_REQUEST, {
+        actionType: ActionType.SIMULATE_MODEL,
+        data: {
+          scenarioName,
+        },
+      });
 
       // Set the simulation button to running state
       setState((prev) => ({
@@ -283,24 +289,33 @@ const QuodsiApp: React.FC = () => {
     [sendMessage]
   );
 
+  // Updated to use ACTION_REQUEST
   const handleRemoveModel = useCallback(() => {
     console.log("[QuodsiApp] Remove model requested");
-    sendMessage(MessageTypes.REMOVE_MODEL);
+    sendMessage(MessageTypes.ACTION_REQUEST, {
+      actionType: ActionType.REMOVE_MODEL,
+    });
   }, [sendMessage]);
 
+  // Already updated to use ACTION_REQUEST
   const handleConvertPage = useCallback(() => {
     console.log("[QuodsiApp] Convert page requested");
-    sendMessage(MessageTypes.CONVERT_PAGE);
+    sendMessage(MessageTypes.ACTION_REQUEST, {
+      actionType: ActionType.CONVERT_PAGE,
+    });
   }, [sendMessage]);
 
-  // Handler for viewing results
+  // Updated to use ACTION_REQUEST
   const handleViewResults = useCallback(() => {
     console.log("[QuodsiApp] View results requested");
 
     if (documentId) {
       // Send the message to LucidChart to create the dashboard
-      sendMessage(MessageTypes.VIEW_SIMULATION_RESULTS, {
-        documentId: documentId,
+      sendMessage(MessageTypes.ACTION_REQUEST, {
+        actionType: ActionType.VIEW_SIMULATION_RESULTS,
+        data: {
+          documentId: documentId,
+        },
       });
 
       // Also call acknowledgeResults to mark results as viewed on the server
@@ -357,7 +372,6 @@ const QuodsiApp: React.FC = () => {
           currentElement={state.currentElement}
           lastElementUpdate={state.lastElementUpdate}
           diagramElementType={state.diagramElementType}
-          onElementSelect={handleElementSelect}
           onValidate={handleValidate}
           onElementUpdate={handleElementUpdate}
           referenceData={state.referenceData}

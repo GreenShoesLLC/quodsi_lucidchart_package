@@ -28,8 +28,6 @@ export declare class ModelPanel extends Panel {
     private handleOutputCreatePage;
     private handleOutputCreateDashboard;
     private list_blocks;
-    private handleSimulationStatusUpdate;
-    private updateModelStructure;
     private handleConvertElement;
     private initializeModelManager;
     /**
@@ -42,8 +40,8 @@ export declare class ModelPanel extends Panel {
     hide(): void;
     handleValidateRequest(): Promise<void>;
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
-    private handleError;
-    private buildModelItemData;
+    private handleAuthError;
+    private handleActionResponseError;
     /**
      * Handles model removal request
      */

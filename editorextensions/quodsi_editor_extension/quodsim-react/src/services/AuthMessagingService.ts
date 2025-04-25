@@ -107,12 +107,12 @@ export class AuthMessagingService {
     });
 
     // Still listen for regular error messages (non-auth errors)
-    this.messaging.onMessage(MessageTypes.ERROR, (data) => {
-      console.log('[AuthMessagingService] Received ERROR', data);
-      if (this.errorCallback && data?.error) {
-        this.errorCallback(data.error);
-      }
-    });
+    // this.messaging.onMessage(MessageTypes.ERROR, (data) => {
+    //   console.log('[AuthMessagingService] Received ERROR', data);
+    //   if (this.errorCallback && data?.error) {
+    //     this.errorCallback(data.error);
+    //   }
+    // });
   }
 
   /**

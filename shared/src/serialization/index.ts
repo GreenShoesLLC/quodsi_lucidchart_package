@@ -4,7 +4,7 @@ export { BaseModelDefinitionSerializer } from './BaseModelDefinitionSerializer';
 
 // V1 Serializer
 export { ModelDefinitionSerializerV1 } from './v1/ModelDefinitionSerializerV1';
-
+export { EnumMapper } from './utilities/EnumMapper'
 // Interfaces
 export type { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 export type { ISchemaVersion } from './interfaces/ISchemaVersion';

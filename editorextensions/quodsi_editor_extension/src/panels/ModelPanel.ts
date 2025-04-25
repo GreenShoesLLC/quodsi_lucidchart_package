@@ -10,7 +10,8 @@ import {
     ElementProxy,
     Panel,
     UserProxy,
-    DataProxy
+    DataProxy,
+    JsonObject
 } from 'lucid-extension-sdk';
 import {
     ModelItemData,
@@ -29,7 +30,9 @@ import {
     EditorReferenceData,
     DiagramElementType,
     ModelSerializerFactory,
-    AuthActionType
+    AuthActionType,
+    ActionType,
+    ActionRequest
 
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
@@ -42,7 +45,9 @@ import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
 import { AuthPanel } from './AuthPanel';
-
+import {
+    EnumMapper
+} from '@quodsi/shared';
 
 
 const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
@@ -131,9 +136,8 @@ export class ModelPanel extends Panel {
     }
     private setupModelMessageHandlers(): void {
         this.logError('Setting up message handlers START');
-        // React App Ready - already handled by BasePanel
 
-        // Model Operations
+        // React App Ready - already handled by BasePanel
         this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
             this.logError('REACT_APP_READY message received in handler');
             this.handleReactReady();
@@ -189,40 +193,146 @@ export class ModelPanel extends Panel {
             }
         });
 
-        this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
-            this.logError('VIEW_SIMULATION_RESULTS message received in handler');
-            this.handleOutputCreateDashboard(payload, true)
-        });
-
-        this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, (payload) =>
-            this.handleSimulateModel(payload)
-        );
-
-        this.messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, (data) =>
-            this.handleSimulationStatusUpdate(data)
-        );
-
         // Setup error handler
-        this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
-            this.logError('Error received:', payload);
+        // this.messaging.onMessage(MessageTypes.ERROR, (payload) => {
+        //     this.logError('Error received:', payload);
+        // });
+
+        // NEW: Consolidated ACTION_REQUEST handler
+        this.messaging.onMessage(MessageTypes.ACTION_REQUEST, (payload) => {
+            console.log('[ModelPanel] Received ACTION_REQUEST message:', payload);
+
+            if (!payload || !payload.actionType) {
+                this.logError('Invalid ACTION_REQUEST message received:', payload);
+                return;
+            }
+
+            switch (payload.actionType) {
+                case ActionType.VIEW_SIMULATION_RESULTS:
+                    this.logError('VIEW_SIMULATION_RESULTS action requested');
+                    if (payload.data) {
+                        this.handleOutputCreateDashboard(payload.data, true);
+                    } else {
+                        this.logError('Missing data in VIEW_SIMULATION_RESULTS action');
+                        this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                            actionType: ActionType.VIEW_SIMULATION_RESULTS,
+                            success: false,
+                            data: {
+                                errorMessage: 'Missing data in VIEW_SIMULATION_RESULTS action'
+                            }
+                        });
+                    }
+                    break;
+
+                case ActionType.SIMULATE_MODEL:
+                    if (payload.data) {
+                        this.handleSimulateModel(payload.data);
+                    } else {
+                        this.logError('Missing data in SIMULATE_MODEL action');
+                        this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                            actionType: ActionType.SIMULATE_MODEL,
+                            success: false,
+                            data: {
+                                errorMessage: 'Missing data in SIMULATE_MODEL action'
+                            }
+                        });
+                    }
+                    break;
+
+                // First, update the switch case with a type check:
+                case ActionType.CONVERT_ELEMENT:
+                    if (payload.data &&
+                        typeof payload.data.elementId === 'string' &&
+                        typeof payload.data.type === 'string') {
+                        // Now TypeScript knows these are string values
+                        this.handleConvertElement({
+                            elementId: payload.data.elementId,
+                            type: payload.data.type
+                        });
+                    } else {
+                        this.logError('Missing required data (elementId or type) in CONVERT_ELEMENT action');
+                        this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                            actionType: ActionType.CONVERT_ELEMENT,
+                            success: false,
+                            data: {
+                                errorMessage: 'Missing required data (elementId or type) in CONVERT_ELEMENT action'
+                            }
+                        });
+                    }
+                    break;
+
+                case ActionType.REMOVE_MODEL:
+                    this.handleRemoveModel();
+                    break;
+
+                case ActionType.CONVERT_PAGE:
+                    this.handlePageConvertRequest();
+                    break;
+
+                case ActionType.VALIDATE_MODEL:
+                    this.handleValidateModel();
+                    break;
+
+                case ActionType.UPDATE_ELEMENT_DATA:
+                    if (payload.data &&
+                        typeof payload.data.type === 'string' &&
+                        payload.data.data) {
+                        // Properly construct object with validated properties
+                        this.handleUpdateElementData({
+                            elementId: payload.data.elementId,
+                            type: payload.data.type,
+                            data: payload.data.data
+                        });
+                    } else {
+                        this.logError('Missing required data (type or data) in UPDATE_ELEMENT_DATA action');
+                        this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                            actionType: ActionType.UPDATE_ELEMENT_DATA,
+                            success: false,
+                            data: {
+                                errorMessage: 'Missing required data (type or data) in UPDATE_ELEMENT_DATA action'
+                            }
+                        });
+                    }
+                    break;
+
+                case ActionType.CREATE_RESULTS_PAGE:
+                    this.handleOutputCreatePage();
+                    break;
+
+                default:
+                    this.logError(`Unhandled action type: ${payload.actionType}`);
+            }
         });
 
-        this.messaging.onMessage(MessageTypes.CONVERT_ELEMENT, (data) =>
-            this.handleConvertElement(data));
+        // Keep original handlers during migration
+        // this.messaging.onMessage(MessageTypes.VIEW_SIMULATION_RESULTS, (payload) => {
+        //     this.logError('VIEW_SIMULATION_RESULTS message received in handler');
+        //     this.handleOutputCreateDashboard(payload, true);
+        // });
 
-        this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
+        // this.messaging.onMessage(MessageTypes.SIMULATE_MODEL, (payload) =>
+        //     this.handleSimulateModel(payload)
+        // );
 
-        this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handlePageConvertRequest());
+        // this.messaging.onMessage(MessageTypes.SIMULATION_STATUS_UPDATE, (data) =>
+        //     this.handleSimulationStatusUpdate(data)
+        // );
 
-        this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
+        // this.messaging.onMessage(MessageTypes.CONVERT_ELEMENT, (data) =>
+        //     this.handleConvertElement(data));
 
-        // Element Operations
-        this.messaging.onMessage(MessageTypes.UPDATE_ELEMENT_DATA, (data) =>
-            this.handleUpdateElementData(data));
+        // this.messaging.onMessage(MessageTypes.REMOVE_MODEL, () => this.handleRemoveModel());
 
-        this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
-            this.handleOutputCreatePage();
-        });
+        // this.messaging.onMessage(MessageTypes.CONVERT_PAGE, () => this.handlePageConvertRequest());
+
+        // this.messaging.onMessage(MessageTypes.VALIDATE_MODEL, () => this.handleValidateModel());
+
+        // this.messaging.onMessage(MessageTypes.UPDATE_ELEMENT_DATA, (data) =>
+        //     this.handleUpdateElementData(data));
+
+        // this.messaging.onMessage(MessageTypes.OUTPUT_CREATE_PAGE, (data) => {
+        //     this.handleOutputCreatePage();
+        // });
 
         this.logError('Setting up message handlers END');
     }
@@ -331,40 +441,56 @@ export class ModelPanel extends Panel {
         }
     }
 
-    
     private async handleOutputCreatePage(): Promise<void> {
         console.log('[ModelPanel] Output page creation requested:');
 
         try {
-            //await this.list_blocks();
-            // this.initializeOrUpdateModel()
             const document = new DocumentProxy(this.client);
             this.handleOutputCreateDashboard(
-                { documentId: document.id, scenarioId: BASELINE_SCENARIO_ID},
+                { documentId: document.id, scenarioId: BASELINE_SCENARIO_ID },
                 true,
-            )
-
-
+            );
         } catch (error) {
-            console.error('[SimulationResultsTableGenerator] Error creating output page:', error);
-            this.messaging.sendMessage(MessageTypes.ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error occurred'
-            });
+            this.handleActionResponseError(
+                '[SimulationResultsTableGenerator] Error creating output page',
+                error
+            );
         }
     }
+
     private async handleOutputCreateDashboard(
-        payload: MessagePayloads[MessageTypes.VIEW_SIMULATION_RESULTS],
+        payload: {
+            documentId?: string;
+            scenarioId?: string;
+        },
         importResults: boolean = false
     ): Promise<void> {
         try {
             console.log('[ModelPanel] Creating simulation results dashboard...');
-            if (importResults)
+
+            // Extract data from the payload
+            const documentId = payload.documentId;
+            const scenarioId = payload.scenarioId;
+
+            if (!documentId) {
+                console.error('[ModelPanel] Missing documentId in dashboard creation payload');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.VIEW_SIMULATION_RESULTS,
+                    success: false,
+                    data: {
+                        errorMessage: 'Missing documentId in dashboard creation payload'
+                    }
+                });
+                return;
+            }
+
+            if (importResults) {
                 await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'ImportSimulationResults',
                     actionData: {
-                        documentId: payload.documentId,
-                        scenarioId: payload.scenarioId,
+                        documentId: documentId,
+                        scenarioId: scenarioId,
                         collectionsToImport: [
                             'activity_cross_rep',
                             // 'activity_rep',
@@ -376,6 +502,8 @@ export class ModelPanel extends Panel {
                     },
                     asynchronous: true
                 });
+            }
+
             // Create dashboard instance with default configuration
             const dashboard = new SimulationResultsDashboard(this.client);
 
@@ -396,22 +524,42 @@ export class ModelPanel extends Panel {
                     console.error(`[ModelPanel] Error creating ${err.type} table:`, err.error);
                 });
             }
+
+            // Mark results as viewed
             await this.client.performDataAction({
                 dataConnectorName: 'quodsi_data_connector',
                 actionName: 'MarkResultsViewed',
-                actionData: { documentId: payload.documentId, scenarioId: payload.scenarioId },
+                actionData: { documentId: documentId, scenarioId: scenarioId },
                 asynchronous: true
             });
+
+            // Send success response
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.VIEW_SIMULATION_RESULTS,
+                success: true,
+                data: {
+                    documentId: documentId
+                }
+            });
+
         } catch (error) {
             console.error('[ModelPanel] Error creating simulation results dashboard:', error);
+
+            // Send error response
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.VIEW_SIMULATION_RESULTS,
+                success: false,
+                data: {
+                    errorMessage: `Error creating dashboard: ${error instanceof Error ? error.message : String(error)}`
+                }
+            });
         }
     }
     private async list_blocks(): Promise<void> {
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
-        if (currentPage)
-        {
+        if (currentPage) {
             for (const [blockId, block] of currentPage.allBlocks) {
                 console.log('[ModelPanel] Block of class ' + block.getClassName() + ' (' + blockId + '):')
                 for (const [propertyName, propertyValue] of block.properties) {
@@ -422,88 +570,101 @@ export class ModelPanel extends Panel {
 
     }
 
-    private async handleSimulationStatusUpdate(
-        data: MessagePayloads[MessageTypes.SIMULATION_STATUS_UPDATE]
-    ): Promise<void> {
-        try {
-            const viewport = new Viewport(this.client);
-            const currentPage = viewport.getCurrentPage();
-
-            if (!currentPage) {
-                throw new Error('No active page found');
-            }
-
-            // Update the simulation status using StorageAdapter
-            this.modelManager.getStorageAdapter().setSimulationStatus(currentPage, data.pageStatus);
-
-            // Send a success message back to React
-            this.sendTypedMessage(MessageTypes.SIMULATION_STATUS_UPDATE, {
-                pageStatus: data.pageStatus
-            });
-        } catch (error) {
-            this.logError('Failed to update page status:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: `Failed to update simulation status: ${error instanceof Error ? error.message : String(error)}`
-            });
-        }
-    }
-    private async updateModelStructure(): Promise<void> {
-        // Get model structure from ModelManager
-        this.currentModelStructure = await this.modelManager.getModelStructure();
-        this.log('Model structure updated:', this.currentModelStructure);
-
-        // Validate model
-        const validationResult = await this.modelManager.validateModel();
-        this.log('Model validation result:', validationResult);
-
-        // If we're not in a selection change context, notify the React app of the validation update
-        if (!this.isHandlingSelectionChange) {
-            this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
-        }
-    }
-
     private async handleConvertElement(
-        data: MessagePayloads[MessageTypes.CONVERT_ELEMENT]
+        data: {
+            elementId: string;
+            type: string;
+        }
     ): Promise<void> {
         try {
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
             if (!currentPage) {
-                throw new Error('No active page found');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: 'No active page found'
+                    }
+                });
+                return;
             }
 
             // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
             const element = selectedItems.find(item => item.id === data.elementId);
             if (!element) {
-                throw new Error(`Element not found in selection: ${data.elementId}`);
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: `Element not found in selection: ${data.elementId}`
+                    }
+                });
+                return;
             }
 
             // Get model definition (might be needed by some conversions)
             const modelDef = await this.modelManager.getModelDefinition();
             if (!modelDef) {
-                throw new Error('Model definition not found');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: 'Model definition not found'
+                    }
+                });
+                return;
+            }
+
+            // Convert string type to SimulationObjectType using EnumMapper
+            const enumMapper = new EnumMapper(SimulationObjectType);
+            let elementType: SimulationObjectType;
+
+            try {
+                // Try to convert the string to an enum value
+                elementType = enumMapper.toEnum(data.type);
+            } catch (error) {
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: `Invalid element type: ${data.type}`
+                    }
+                });
+                return;
             }
 
             // Create the platform object with conversion flag
-            // This will handle all the data creation and storage internally
             const elementFactory = new LucidElementFactory(this.modelManager.getStorageAdapter());
             const platformObject = elementFactory.createPlatformObject(
                 element,
-                data.type,
+                elementType,
                 true  // isConversion flag
             );
 
-            await this.updateModelStructure();
-
             if (!this.currentModelStructure) {
-                throw new Error('Failed to update model structure after conversion');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: 'Failed to update model structure after conversion'
+                    }
+                });
+                return;
             }
 
             // Get the metadata from the newly converted element
             const metadata = this.modelManager.getMetadata(element);
             if (!metadata) {
-                throw new Error('No metadata found for newly converted element');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.CONVERT_ELEMENT,
+                    success: false,
+                    data: {
+                        errorMessage: 'No metadata found for newly converted element'
+                    }
+                });
+                return;
             }
 
             // Map the simulation object type to selection type
@@ -522,7 +683,16 @@ export class ModelPanel extends Panel {
             // Create a document proxy to get the document ID
             const document = new DocumentProxy(this.client);
 
-            // Send the consolidated SELECTION_CHANGED message
+            // Send success response for the element conversion
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.CONVERT_ELEMENT,
+                success: true,
+                data: {
+                    elementId: data.elementId
+                }
+            });
+
+            // Send the SELECTION_CHANGED message to update the UI
             this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
                 selectionType: selectionType,
                 documentId: document.id,
@@ -539,8 +709,12 @@ export class ModelPanel extends Panel {
 
         } catch (error) {
             this.logError('Error converting element:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: `Failed to convert element: ${error instanceof Error ? error.message : String(error)}`
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.CONVERT_ELEMENT,
+                success: false,
+                data: {
+                    errorMessage: `Failed to convert element: ${error instanceof Error ? error.message : String(error)}`
+                }
             });
         }
     }
@@ -603,50 +777,35 @@ export class ModelPanel extends Panel {
         await this.selectionManager.handleSelectionChange(this.client, items);
     }
 
-    private handleError(message: string, error: any): void {
+    // Authentication-specific error handler
+    private handleAuthError(message: string, error: any): void {
         this.logError(`${message}`, error);
-        this.sendTypedMessage(MessageTypes.ERROR, {
-            error: error instanceof Error ? error.message : 'Unknown error'
+        this.sendMessage({
+            messagetype: MessageTypes.AUTH,
+            data: {
+                type: AuthActionType.ERROR,
+                data: {
+                    error: error instanceof Error ? error.message : 'Unknown authentication error',
+                    errorCode: 'AUTH_HANDLER_ERROR'
+                }
+            }
         });
     }
-    // Keep this as the primary builder
-    private async buildModelItemData(item: ItemProxy | PageProxy): Promise<ModelItemData> {
-        const rawData = this.modelManager.getElementData(item);
-        const metadata = this.modelManager.getMetadata(item);
 
-        // Determine name based on item type
-        let name: string;
-        if (item instanceof PageProxy) {
-            name = item.getTitle() || 'Untitled Model';
-        } else if (item instanceof BlockProxy) {
-            name = item.id || 'Unnamed Block';
-        } else {
-            name = 'Unnamed Connector';
-        }
-
-        // Ensure metadata has all required fields
-        const defaultMetadata: MetaData = {
-            type: item instanceof PageProxy ? SimulationObjectType.Model : SimulationObjectType.None,
-            version: this.modelManager.CURRENT_VERSION,
-            lastModified: new Date().toISOString(),
-            id: item.id,
-            ...(metadata || {})
-        };
-
-        // Handle unconverted elements
-        if (item instanceof ItemProxy && this.modelManager.isUnconvertedElement(item)) {
-            defaultMetadata.isUnconverted = true;
-        }
-
-        // Convert Lucid JsonObject to shared JsonObject type
-        const convertedData = rawData ? JSON.parse(JSON.stringify(rawData)) as SharedJsonObject : {};
-
-        return {
-            id: item.id,
-            data: convertedData,
-            metadata: defaultMetadata,
-            name
-        };
+    // Action response error handler
+    private handleActionResponseError(message: string, error: any): void {
+        this.logError(`${message}`, error);
+        this.sendMessage({
+            messagetype: MessageTypes.ACTION_RESPONSE,
+            data: {
+                actionType: ActionType.CONVERT_PAGE, // Using a default action type
+                success: false,
+                data: {
+                    errorMessage: error instanceof Error ? error.message : 'Unknown action response error',
+                    errorCode: 'ACTION_RESPONSE_ERROR'
+                }
+            }
+        });
     }
 
     /**
@@ -698,7 +857,7 @@ export class ModelPanel extends Panel {
             });
 
         } catch (error) {
-            this.handleError('Error removing model:', error);
+            this.handleActionResponseError('Error removing model:', error);
         }
     }
 
@@ -752,7 +911,7 @@ export class ModelPanel extends Panel {
             await this.handleSelectionChange(selectedItems);
 
         } catch (error) {
-            this.handleError('Error during React ready initialization:', error);
+            this.handleActionResponseError('Error during React ready initialization: ', error);
         }
     }
     /**
@@ -766,14 +925,18 @@ export class ModelPanel extends Panel {
         const document = new DocumentProxy(this.client);
 
         if (!currentPage) {
-            this.sendTypedMessage(MessageTypes.CONVERSION_ERROR, {
-                error: 'No active page found'
+            // Send an error response using the new ACTION_RESPONSE format
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.CONVERT_PAGE,
+                success: false,
+                data: {
+                    errorMessage: 'No active page found'
+                }
             });
             return;
         }
 
         try {
-
             this.log('Creating dataProxy');
             const dataProxy = new DataProxy(this.client);
             this.log('Creating modelDataSource');
@@ -782,7 +945,6 @@ export class ModelPanel extends Panel {
             const pageSchemaConversionService = new PageSchemaConversionService(modelDataSource);
             this.log('pageSchemaConversionService.convertPage');
 
-
             // const result2 = await pageSchemaConversionService.convertPage(currentPage);
 
             const storageAdapter = new StorageAdapter();
@@ -790,14 +952,27 @@ export class ModelPanel extends Panel {
             const lucidPageConversionService = new LucidPageConversionService(this.modelManager, lucidElementFactory, storageAdapter)
             lucidPageConversionService.convertPage(currentPage)
 
-
             const selectedItems = viewport.getSelectedItems();
             await this.handleSelectionChange(selectedItems);
 
+            // Send a success response (new)
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.CONVERT_PAGE,
+                success: true,
+                data: {
+                    documentId: document.id
+                }
+            });
+
         } catch (error) {
             this.logError('Conversion error:', error);
-            this.sendTypedMessage(MessageTypes.CONVERSION_ERROR, {
-                error: error instanceof Error ? error.message : 'Unknown error'
+            // Send an error response using the new ACTION_RESPONSE format
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.CONVERT_PAGE,
+                success: false,
+                data: {
+                    errorMessage: error instanceof Error ? error.message : 'Unknown error'
+                }
             });
         }
     }
@@ -806,7 +981,11 @@ export class ModelPanel extends Panel {
      * Handles element data update
      */
     private async handleUpdateElementData(
-        updateData: MessagePayloads[MessageTypes.UPDATE_ELEMENT_DATA]
+        updateData: {
+            elementId?: string;
+            type: string;
+            data: JsonObject;
+        }
     ): Promise<void> {
         this.log('Received element update data:', updateData);
 
@@ -814,26 +993,27 @@ export class ModelPanel extends Panel {
             const viewport = new Viewport(this.client);
             const currentPage = viewport.getCurrentPage();
             if (!currentPage) {
-                throw new Error('No active page found');
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.UPDATE_ELEMENT_DATA,
+                    success: false,
+                    data: {
+                        errorMessage: 'No active page found'
+                    }
+                });
+                return;
             }
+
             // Get the element from viewport
             const selectedItems = viewport.getSelectedItems();
-            if (updateData.type == 'Model') {
+
+            if (updateData.type === 'Model') {
                 this.log('Received element type of Model:', updateData.type);
                 this.modelManager.setElementData(
                     currentPage,
                     updateData.data,
                     SimulationObjectType.Model
                 );
-
-                // this.modelManager.updateElement({
-                //     id: currentPage.id,
-                //     type: SimulationObjectType.Model,
-                //     ...updateData.data
-                // });
-            }
-            else {
-
+            } else {
                 // Update current selection first
                 this.currentSelection = {
                     pageId: currentPage.id,
@@ -841,49 +1021,114 @@ export class ModelPanel extends Panel {
                     selectionType: this.currentSelection.selectionType
                 };
 
-                const element = selectedItems.find(item => item.id === updateData.elementId);
-                if (!element) {
-                    throw new Error(`Element not found in selection: ${updateData.elementId}`);
+                if (!updateData.elementId) {
+                    this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                        actionType: ActionType.UPDATE_ELEMENT_DATA,
+                        success: false,
+                        data: {
+                            errorMessage: 'Element ID is required for non-Model updates'
+                        }
+                    });
+                    return;
                 }
 
-                // Save element data using ModelManager
-                await this.modelManager.saveElementData(
-                    element,
-                    updateData.data,
-                    updateData.type,
-                    currentPage
-                );
+                const element = selectedItems.find(item => item.id === updateData.elementId);
+                if (!element) {
+                    this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                        actionType: ActionType.UPDATE_ELEMENT_DATA,
+                        success: false,
+                        data: {
+                            errorMessage: `Element not found in selection: ${updateData.elementId}`
+                        }
+                    });
+                    return;
+                }
+
+                // Convert string type to SimulationObjectType using EnumMapper
+                const enumMapper = new EnumMapper(SimulationObjectType);
+                let elementType: SimulationObjectType | undefined;
+
+                try {
+                    // Try to convert the string to an enum value
+                    elementType = enumMapper.toEnum(updateData.type);
+
+                    // Save element data using ModelManager with the converted enum type
+                    await this.modelManager.saveElementData(
+                        element,
+                        updateData.data,
+                        elementType,
+                        currentPage
+                    );
+                } catch (error) {
+                    // If conversion fails, try using a simple cast as fallback
+                    // This assumes the method can handle the string representation
+                    this.logError(`Type conversion failed for ${updateData.type}, using fallback method`);
+
+                    // Try to use the enum value directly if it exists as a property
+                    const fallbackType = SimulationObjectType[updateData.type as keyof typeof SimulationObjectType];
+
+                    if (fallbackType !== undefined) {
+                        await this.modelManager.saveElementData(
+                            element,
+                            updateData.data,
+                            fallbackType,
+                            currentPage
+                        );
+                    } else {
+                        // Last resort - send an error if we can't convert the type
+                        this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                            actionType: ActionType.UPDATE_ELEMENT_DATA,
+                            success: false,
+                            data: {
+                                errorMessage: `Invalid element type: ${updateData.type}`
+                            }
+                        });
+                        return;
+                    }
+                }
             }
 
             // Send success message
-            this.sendTypedMessage(MessageTypes.UPDATE_SUCCESS, {
-                elementId: updateData.elementId
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.UPDATE_ELEMENT_DATA,
+                success: true,
+                data: {
+                    elementId: updateData.elementId
+                }
             });
+
             // Debug logging
             this.log('Debug - Selection state:', {
                 currentSelectionIds: this.currentSelection.selectedIds,
                 updatedElementId: updateData.elementId,
-                isElementInSelection: this.currentSelection.selectedIds.includes(updateData.elementId),
+                isElementInSelection: updateData.elementId ? this.currentSelection.selectedIds.includes(updateData.elementId) : false,
                 selectedItems: selectedItems.map(item => item.id)
             });
+
             // Update validation and selection state
             await this.modelManager.validateModel();
 
             // Only update selection if this element is selected
-            if (this.currentSelection.selectedIds.includes(updateData.elementId)) {
+            if (updateData.elementId && this.currentSelection.selectedIds.includes(updateData.elementId)) {
                 await this.handleSelectionChange(selectedItems);
             }
 
         } catch (error) {
             this.logError('Error updating element:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: `Failed to update element: ${error instanceof Error ? error.message : String(error)}`
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.UPDATE_ELEMENT_DATA,
+                success: false,
+                data: {
+                    errorMessage: `Failed to update element: ${error instanceof Error ? error.message : String(error)}`
+                }
             });
         }
     }
 
     private async handleSimulateModel(
-        payload: MessagePayloads[MessageTypes.SIMULATE_MODEL]
+        payload: {
+            scenarioName?: string;
+        }
     ): Promise<void> {
         this.log('Handling simulate model request');
 
@@ -892,7 +1137,6 @@ export class ModelPanel extends Panel {
             const documentId = new DocumentProxy(this.client).id;
             const viewport = new Viewport(this.client);
             const userId = new UserProxy(this.client).id;
-            // const activePageProxy = viewport.getCurrentPage();
             const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
 
             let pageId: string = 'undefined';
@@ -902,19 +1146,22 @@ export class ModelPanel extends Panel {
             }
             else {
                 this.log('No active page');
-                this.sendTypedMessage(MessageTypes.ERROR, {
-                    error: `Failed to start simulation: No active page`
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.SIMULATE_MODEL,
+                    success: false,
+                    data: {
+                        errorMessage: 'Failed to start simulation: No active page'
+                    }
                 });
                 return;
             }
-
 
             this.log(`Extension: docId=${documentId}, pageId=${pageId}, userId=${userId}`);
 
             const modelDefinition = await this.modelManager.getModelDefinition();
             if (modelDefinition) {
                 const serializer = ModelSerializerFactory.create(modelDefinition);
-                
+
                 // Attempt serialization
                 const serializedModel = serializer.serialize(modelDefinition);
                 this.log('serializedModel:', JSON.stringify(serializedModel));
@@ -923,25 +1170,33 @@ export class ModelPanel extends Panel {
                 await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
                     actionName: 'SaveAndSubmitSimulation',
-                    actionData: { 
+                    actionData: {
                         'documentId': documentId,
                         scenarioId: BASELINE_SCENARIO_ID,
                         'model': serializedModel,
                         'scenarioName': payload.scenarioName,
-                        // 'applicationId':"LucidQuodsim",
-                        'appVersion':"1.0"
+                        'appVersion': "1.0"
                     },
                     asynchronous: true
                 });
-                // Send success message back to React app
-                this.sendTypedMessage(MessageTypes.SIMULATION_STARTED, {
-                    documentId: documentId
+
+                // Send success message back to React app using the new ACTION_RESPONSE format
+                this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                    actionType: ActionType.SIMULATE_MODEL,
+                    success: true,
+                    data: {
+                        documentId: documentId
+                    }
                 });
             }
         } catch (error) {
             this.logError('Error starting simulation:', error);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`
+            this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
+                actionType: ActionType.SIMULATE_MODEL,
+                success: false,
+                data: {
+                    errorMessage: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`
+                }
             });
         }
     }
@@ -954,8 +1209,27 @@ export class ModelPanel extends Panel {
 
         const validationResult = await this.modelManager.validateModel();
         this.log('validationResult:', validationResult);
-        // Send separate validation result message for explicit validation requests
-        this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
+
+        // Send validation result as an ACTION_REQUEST
+        this.sendTypedMessage(MessageTypes.ACTION_REQUEST, {
+            actionType: ActionType.VALIDATE_MODEL,
+            data: {
+                documentId: new DocumentProxy(this.client).id,
+                elementId: '', // Add if needed
+                type: 'validation', // Optional additional context
+                data: {
+                    isValid: validationResult.isValid,
+                    errorCount: validationResult.messages.filter(m => m.type === 'error').length,
+                    warningCount: validationResult.messages.filter(m => m.type === 'warning').length,
+                    messages: validationResult.messages.map(message => ({
+                        type: message.type,
+                        message: message.message,
+                        elementId: message.elementId ?? null,
+                        code: message.code ?? null
+                    }))
+                }
+            }
+        });
 
         // If validation succeeded, try to serialize
         if (validationResult.isValid || !validationResult.isValid) {
@@ -977,7 +1251,6 @@ export class ModelPanel extends Panel {
                         const documentId = document.id;
                         const viewport = new Viewport(this.client);
                         const user: UserProxy = new UserProxy(this.client);
-                        // const activePageProxy = viewport.getCurrentPage();
                         const activePageProxy: PageProxy | null | undefined = viewport.getCurrentPage();
                         let pageId: string = 'undefined';
                         let userId: string = 'undefined';
@@ -997,20 +1270,8 @@ export class ModelPanel extends Panel {
                             asynchronous: true
                         });
 
-                        // Send a message to the React app about the successful upload
-                        // this.sendTypedMessage(MessageTypes.MODEL_UPLOAD_SUCCESS, {
-                        //     blobUrl: response.data.blobUrl,
-                        //     uploadDateTime: response.data.uploadDateTime,
-                        //     batchJob: response.data.batchJob
-                        // });
-
                     } catch (uploadError) {
                         this.log('Model upload failed:', uploadError);
-
-                        // Send error message to the React app
-                        // this.sendTypedMessage(MessageTypes.MODEL_UPLOAD_ERROR, {
-                        //     error: uploadError.message || 'Failed to upload model'
-                        // });
                     }
 
                     // Log success of serialization
@@ -1041,10 +1302,7 @@ export class ModelPanel extends Panel {
     // Message frame handling
     protected messageFromFrame(message: any): void {
         if (!isValidMessage(message)) {
-            this.logError('Invalid message format:', message);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: 'Invalid message format'
-            });
+            this.handleActionResponseError('Invalid message format', message);
             return;
         }
 

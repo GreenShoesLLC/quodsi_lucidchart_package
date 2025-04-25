@@ -1,14 +1,16 @@
 import React from "react";
 import { FileOutput } from "lucide-react";
-import { ExtensionMessaging, MessageTypes } from "@quodsi/shared";
+import { ActionType, ExtensionMessaging, MessageTypes } from "@quodsi/shared";
 
 const OutputForm = () => {
   const handleCreatePage = () => {
     // Now sending an empty page name - you may need to adjust the backend to handle this
-    ExtensionMessaging.getInstance().sendMessage(
-      MessageTypes.OUTPUT_CREATE_PAGE,
-      { pageName: "Output Page" } // Using a default name instead of user input
-    );
+    ExtensionMessaging.getInstance().sendMessage(MessageTypes.ACTION_REQUEST, {
+      actionType: ActionType.CREATE_RESULTS_PAGE,
+      data: {
+        pageName: "Output Page", // Using a default name instead of user input
+      },
+    });
   };
 
   return (

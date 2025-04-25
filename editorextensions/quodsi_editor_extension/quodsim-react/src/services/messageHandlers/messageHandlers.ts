@@ -6,7 +6,7 @@ import {
 import { AppState } from "../../QuodsiApp";
 import { authMessageHandlers } from "./auth/authMessageHandlers";
 import { selectionMessageHandlers } from "./selection/selectionMessageHandlers";
-import { simulationMessageHandlers } from "./simulation/simulationMessageHandlers";
+
 
 export interface MessageHandlerDependencies {
     setState: React.Dispatch<React.SetStateAction<AppState>>;
@@ -39,7 +39,6 @@ export const messageHandlers: Partial<{
     ...baseMessageHandlers,
     ...authMessageHandlers,
     ...selectionMessageHandlers,
-    ...simulationMessageHandlers
 } as const;
 
 export function registerHandler<T extends MessageTypes>(

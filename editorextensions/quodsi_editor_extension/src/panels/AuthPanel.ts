@@ -385,8 +385,9 @@ export class AuthPanel extends Panel {
     protected messageFromFrame(message: any): void {
         if (!isValidMessage(message)) {
             this.logError('Invalid message format:', message);
-            this.sendTypedMessage(MessageTypes.ERROR, {
-                error: 'Invalid message format'
+            this.sendAuthMessage(AuthActionType.ERROR, {
+                error: 'Invalid message format',
+                errorCode: 'INVALID_MESSAGE_FORMAT'
             });
             return;
         }

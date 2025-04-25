@@ -532,13 +532,26 @@ export class SelectionManager {
     /**
      * Error handling method - migrated from ModelPanel
      */
+    // private handleError(message: string, error: any): void {
+    //     this.logError(`${message}`, error);
+    //     this.sendTypedMessage(MessageTypes.ERROR, {
+    //         error: error instanceof Error ? error.message : 'Unknown error'
+    //     });
+    // }
     private handleError(message: string, error: any): void {
         this.logError(`${message}`, error);
-        this.sendTypedMessage(MessageTypes.ERROR, {
-            error: error instanceof Error ? error.message : 'Unknown error'
+        this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+            selectionType: SelectionType.NONE,
+            selectionState: {
+                pageId: '',
+                selectedIds: [],
+                selectionType: SelectionType.NONE
+            },
+            documentId: '', // Added documentId to satisfy the type requirement
+            error: error instanceof Error ? error.message : 'Unknown selection error',
+            isProcessing: false
         });
     }
-
     /**
      * Helper to send typed messages - migrated from ModelPanel
      */
