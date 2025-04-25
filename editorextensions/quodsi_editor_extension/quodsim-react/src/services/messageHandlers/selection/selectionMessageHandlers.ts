@@ -92,35 +92,91 @@ export const selectionMessageHandlers: Partial<{
                 });
             }
         } else if (payload.selectionType === SelectionType.MULTIPLE) {
-            // Existing handling for multiple selection type (unchanged)
-            // Placeholder comment to remind you to copy the existing implementation
+            // Multiple selection - show no editor
             console.log("[SelectionMessageHandlers] Multiple selection handling");
-            return setState(prev => ({
+            setState(prev => ({
                 ...prev,
+                currentElement: null,
+                showModelName: true,
+                showModelItemName: false,
+                visibleSections: {
+                    ...prev.visibleSections,
+                    editor: false
+                },
                 // Ensure error is null if undefined
                 error: payload.error ?? null,
                 isProcessing
             }));
         } else if (payload.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
-            // Existing handling for unconverted element selection type
-            // Placeholder comment to remind you to copy the existing implementation
+            // Unconverted element - show a special prompt
             console.log("[SelectionMessageHandlers] Unconverted element selection handling");
-            return setState(prev => ({
+            setState(prev => ({
                 ...prev,
+                currentElement: payload.modelItemData ? 
+                    (Array.isArray(payload.modelItemData) ? payload.modelItemData[0] : payload.modelItemData) : 
+                    null,
+                showModelName: true,
+                showModelItemName: true,
+                visibleSections: {
+                    ...prev.visibleSections,
+                    editor: false
+                },
                 // Ensure error is null if undefined
                 error: payload.error ?? null,
                 isProcessing
             }));
+        } else if (payload.selectionType === SelectionType.CONNECTOR) {
+            // Connector element selected
+            console.log("[SelectionMessageHandlers] Connector selection handling");
+            setState(prev => {
+                // Get the connector item data
+                let connectorData: ModelItemData | null = null;
+                if (Array.isArray(payload.modelItemData)) {
+                    connectorData = payload.modelItemData[0] || null;
+                } else if (payload.modelItemData) {
+                    connectorData = payload.modelItemData;
+                }
+
+                return {
+                    ...prev,
+                    currentElement: connectorData,
+                    showModelName: true,
+                    showModelItemName: true,
+                    visibleSections: {
+                        ...prev.visibleSections,
+                        editor: true
+                    },
+                    error: payload.error ?? null,
+                    isProcessing,
+                    documentId: payload.documentId
+                };
+            });
         } else {
-            // Existing handling for simulation object selection
-            // Placeholder comment to remind you to copy the existing implementation
-            console.log("[SelectionMessageHandlers] Simulation object selection handling");
-            return setState(prev => ({
-                ...prev,
-                // Ensure error is null if undefined
-                error: payload.error ?? null,
-                isProcessing
-            }));
+            // Any other simulation object (ACTIVITY, ENTITY, GENERATOR, RESOURCE)
+            console.log(`[SelectionMessageHandlers] ${payload.selectionType} selection handling`);
+            setState(prev => {
+                // Get the item data
+                let itemData: ModelItemData | null = null;
+                if (Array.isArray(payload.modelItemData)) {
+                    itemData = payload.modelItemData[0] || null;
+                } else if (payload.modelItemData) {
+                    itemData = payload.modelItemData;
+                }
+
+                return {
+                    ...prev,
+                    currentElement: itemData,
+                    showModelName: true,
+                    showModelItemName: true,
+                    visibleSections: {
+                        ...prev.visibleSections,
+                        editor: true
+                    },
+                    error: payload.error ?? null,
+                    isProcessing,
+                    documentId: payload.documentId
+                };
+            });
         }
     },
 
