@@ -5,8 +5,11 @@
  * for authentication-related messages.
  */
 
-import { ExtensionMessaging, MessageTypes, UserInfo, AuthActionType } from '@quodsi/shared';
+import { ExtensionMessaging, MessageTypes, UserInfo, AuthActionType, ComponentLogger } from '@quodsi/shared';
 import { AuthError } from './AuthErrorHandler';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[AuthMessagingService]';
 
 /**
  * Callback type for authentication events
@@ -47,7 +50,9 @@ export class AuthMessagingService {
   public static getInstance(): AuthMessagingService {
     if (!AuthMessagingService.instance) {
       AuthMessagingService.instance = new AuthMessagingService();
+      AuthMessagingService.instance.setLogging(true);
     }
+    
     return AuthMessagingService.instance;
   }
 
@@ -56,7 +61,16 @@ export class AuthMessagingService {
    */
   private constructor() {
     this.messaging = ExtensionMessaging.getInstance();
+    // Set logging to disabled by default
+    this.setLogging(false);
     this.setupMessageListeners();
+  }
+
+  /**
+   * Enable or disable logging for this service
+   */
+  public setLogging(enabled: boolean): void {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
   }
 
   /**
@@ -66,49 +80,49 @@ export class AuthMessagingService {
     // Listen for consolidated AUTH messages
     this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
       if (!payload || !payload.type) {
-        console.error('[AuthMessagingService] Received invalid AUTH message:', payload);
+        ComponentLogger.error(LOG_PREFIX, 'Received invalid AUTH message:', payload);
         return;
       }
 
-      console.log(`[AuthMessagingService] Received AUTH message with type: ${payload.type}`);
+      ComponentLogger.log(LOG_PREFIX, `Received AUTH message with type: ${payload.type}`);
 
       switch (payload.type) {
         case AuthActionType.STATUS_REQUEST:
-          console.log('[AuthMessagingService] Processing AUTH status request');
+          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH status request');
           if (this.statusRequestCallback) {
             this.statusRequestCallback();
           }
           break;
 
         case AuthActionType.SHOW_PANEL:
-          console.log('[AuthMessagingService] Processing AUTH show panel request');
+          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH show panel request');
           if (this.showAuthPanelCallback) {
             this.showAuthPanelCallback(payload.data);
           }
           break;
 
         case AuthActionType.MODEL_PANEL_FOCUS:
-          console.log('[AuthMessagingService] Processing AUTH model panel focus');
+          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH model panel focus');
           if (this.modelPanelFocusCallback) {
             this.modelPanelFocusCallback(payload.data);
           }
           break;
 
         case AuthActionType.ERROR:
-          console.log('[AuthMessagingService] Processing AUTH error:', payload.data);
+          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH error:', payload.data);
           if (this.errorCallback && payload.data?.error) {
             this.errorCallback(payload.data.error);
           }
           break;
 
         default:
-          console.log(`[AuthMessagingService] Unhandled AUTH action type: ${payload.type}`);
+          ComponentLogger.log(LOG_PREFIX, `Unhandled AUTH action type: ${payload.type}`);
       }
     });
 
     // Still listen for regular error messages (non-auth errors)
     // this.messaging.onMessage(MessageTypes.ERROR, (data) => {
-    //   console.log('[AuthMessagingService] Received ERROR', data);
+    //   ComponentLogger.log(LOG_PREFIX, 'Received ERROR', data);
     //   if (this.errorCallback && data?.error) {
     //     this.errorCallback(data.error);
     //   }
@@ -147,7 +161,7 @@ export class AuthMessagingService {
    * Send authentication status response
    */
   public sendAuthStatus(isAuthenticated: boolean, userInfo: UserInfo | null): void {
-    console.log('[AuthMessagingService] Sending AUTH status response', { isAuthenticated, userInfo });
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH status response', { isAuthenticated, userInfo });
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.STATUS_RESPONSE,
       data: {
@@ -161,7 +175,7 @@ export class AuthMessagingService {
    * Send authentication completed notification
    */
   public sendAuthCompleted(success: boolean, userInfo: UserInfo | null): void {
-    console.log('[AuthMessagingService] Sending AUTH completed', { success, userInfo });
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH completed', { success, userInfo });
 
     // Send auth completed message
     this.messaging.sendMessage(MessageTypes.AUTH, {
@@ -190,7 +204,7 @@ export class AuthMessagingService {
       ? undefined 
       : error.code;
     
-    console.log('[AuthMessagingService] Sending AUTH error', { errorMessage, errorCode });
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH error', { errorMessage, errorCode });
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.ERROR,
       data: {
@@ -204,7 +218,7 @@ export class AuthMessagingService {
    * Broadcasts authentication status to all panels
    */
   public broadcastAuthStatus(isAuthenticated: boolean, userInfo: UserInfo | null): void {
-    console.log('[AuthMessagingService] Broadcasting auth status to all panels:', { isAuthenticated });
+    ComponentLogger.log(LOG_PREFIX, 'Broadcasting auth status to all panels:', { isAuthenticated });
 
     // Just send to the global messaging instance - all panels will receive it
     this.messaging.sendMessage(MessageTypes.AUTH, {
@@ -220,7 +234,7 @@ export class AuthMessagingService {
    * Send sign-in initiated notification
    */
   public sendSignInStarted(): void {
-    console.log('[AuthMessagingService] Sending AUTH sign in');
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH sign in');
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.SIGN_IN
     });
@@ -230,7 +244,7 @@ export class AuthMessagingService {
    * Send sign-out notification
    */
   public sendSignOut(): void {
-    console.log('[AuthMessagingService] Sending AUTH sign out');
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH sign out');
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.SIGN_OUT
     });
@@ -240,7 +254,7 @@ export class AuthMessagingService {
    * Send show auth panel request
    */
   public sendShowAuthPanel(reason?: string): void {
-    console.log('[AuthMessagingService] Sending AUTH show panel', { reason });
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH show panel', { reason });
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.SHOW_PANEL,
       data: { reason }
@@ -251,7 +265,7 @@ export class AuthMessagingService {
    * Send model panel focus notification
    */
   public sendModelPanelFocus(): void {
-    console.log('[AuthMessagingService] Sending AUTH model panel focus');
+    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH model panel focus');
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.MODEL_PANEL_FOCUS
     });

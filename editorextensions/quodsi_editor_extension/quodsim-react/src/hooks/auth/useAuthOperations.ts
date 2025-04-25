@@ -17,6 +17,20 @@ import { sessionStorageService } from '../../services/SessionStorageService';
 import { authMessagingService } from '../../services/AuthMessagingService';
 import { authErrorHandler, AuthErrorCode } from '../../services/AuthErrorHandler';
 import { useAuthSession } from './useAuthSession';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useAuthOperations]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this hook
+ */
+export const setAuthOperationsLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 // Define the AuthOperations interface
 export interface AuthOperations {
@@ -62,9 +76,9 @@ export function useAuthOperations(): AuthOperations {
       sessionStorageService.clearSessionState();
       sessionStorageService.clearMsalCache();
       
-      console.log('[useAuthOperations] Cleared existing session data');
+      ComponentLogger.log(LOG_PREFIX, 'Cleared existing session data');
     } catch (error) {
-      console.error('[useAuthOperations] Error clearing session data:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error clearing session data:', error);
     }
   }, [updateAuthState, clearTokens]);
 
@@ -72,25 +86,25 @@ export function useAuthOperations(): AuthOperations {
   const handleSignIn = useCallback(async () => {
     if (isProcessingAuth) return;
     
-    console.log('[useAuthOperations] Sign in requested');
+    ComponentLogger.log(LOG_PREFIX, 'Sign in requested');
     setIsProcessingAuth(true);
     setError(null);
 
     try {
       // Check if MSAL is initialized
       if (!isMsalInitialized) {
-        console.log('[useAuthOperations] MSAL not initialized yet, waiting...');
+        ComponentLogger.log(LOG_PREFIX, 'MSAL not initialized yet, waiting...');
         await new Promise(resolve => {
           // Wait for a maximum of 3 seconds for initialization
           const timeout = setTimeout(() => {
-            console.log('[useAuthOperations] MSAL initialization timeout reached');
+            ComponentLogger.log(LOG_PREFIX, 'MSAL initialization timeout reached');
             resolve(null);
           }, 3000);
           
           // Check every 100ms if MSAL is ready
           const checkInterval = setInterval(() => {
             if (inProgress === 'none') {
-              console.log('[useAuthOperations] MSAL is now initialized');
+              ComponentLogger.log(LOG_PREFIX, 'MSAL is now initialized');
               clearTimeout(timeout);
               clearInterval(checkInterval);
               resolve(null);
@@ -105,10 +119,10 @@ export function useAuthOperations(): AuthOperations {
       // Clear any existing authentication session
       clearExistingSession();
 
-      console.log('[useAuthOperations] Initiating loginPopup');
+      ComponentLogger.log(LOG_PREFIX, 'Initiating loginPopup');
       // ALWAYS use standard MSAL popup flow
       const response = await instance.loginPopup(loginRequest);
-      console.log('[useAuthOperations] Login successful', response);
+      ComponentLogger.log(LOG_PREFIX, 'Login successful', response);
       // IMPORTANT: After successful login, update the auth state
       if (response?.account) {
         const userInfo = {
@@ -130,7 +144,7 @@ export function useAuthOperations(): AuthOperations {
         } else {
           // Default to 1 hour from now if expiresOn is null
           tokenExpiration = new Date(Date.now() + 3600 * 1000);
-          console.log('[useAuthOperations] No expiration time in token, using default 1 hour');
+          ComponentLogger.log(LOG_PREFIX, 'No expiration time in token, using default 1 hour');
         }
         // Save to session storage
         sessionStorageService.saveSessionState({
@@ -146,7 +160,7 @@ export function useAuthOperations(): AuthOperations {
       }
       // Token will be acquired in the useEffect when accounts change
     } catch (error) {
-      console.error('[useAuthOperations] Login failed', error);
+      ComponentLogger.error(LOG_PREFIX, 'Login failed', error);
       
       // Convert to standardized error
       const authError = authErrorHandler.handleMsalError(error);
@@ -171,7 +185,7 @@ export function useAuthOperations(): AuthOperations {
   const handleSignOut = useCallback(async () => {
     if (isProcessingAuth) return;
     
-    console.log('[useAuthOperations] Sign out requested');
+    ComponentLogger.log(LOG_PREFIX, 'Sign out requested');
     setIsProcessingAuth(true);
 
     try {
@@ -193,11 +207,11 @@ export function useAuthOperations(): AuthOperations {
       try {
         await instance.logoutPopup();
       } catch (e) {
-        console.log('[useAuthOperations] Popup logout failed, clearing session locally');
+        ComponentLogger.log(LOG_PREFIX, 'Popup logout failed, clearing session locally');
         // If popup logout fails, we've already cleared the local state
       }
     } catch (error) {
-      console.error('[useAuthOperations] Logout failed', error);
+      ComponentLogger.error(LOG_PREFIX, 'Logout failed', error);
       // Even if logout fails, we still want the UI to show logged out state
     } finally {
       setIsProcessingAuth(false);
@@ -217,19 +231,19 @@ export function useAuthOperations(): AuthOperations {
   const handlePasswordReset = useCallback(async () => {
     if (isProcessingAuth) return;
     
-    console.log('[useAuthOperations] Password reset requested');
+    ComponentLogger.log(LOG_PREFIX, 'Password reset requested');
     setIsProcessingAuth(true);
     
     try {
       await instance.loginPopup(passwordResetRequest);
     } catch (error) {
-      console.error('[useAuthOperations] Password reset failed', error);
+      ComponentLogger.error(LOG_PREFIX, 'Password reset failed', error);
       
       // Special case: if the user clicks "Cancel" on the password reset page,
       // we don't want to show an error, just return to the login page
       if (error instanceof Error && error.message.includes('AADB2C90091')) {
         // This is the cancel code, just log it
-        console.log('[useAuthOperations] User canceled password reset');
+        ComponentLogger.log(LOG_PREFIX, 'User canceled password reset');
       } else {
         // Convert to standardized error
         const authError = authErrorHandler.handleMsalError(error);
@@ -247,17 +261,17 @@ export function useAuthOperations(): AuthOperations {
   const handleEditProfile = useCallback(async () => {
     if (isProcessingAuth || !isAuthenticated) return;
     
-    console.log('[useAuthOperations] Profile edit requested');
+    ComponentLogger.log(LOG_PREFIX, 'Profile edit requested');
     setIsProcessingAuth(true);
     
     try {
       await instance.loginPopup(profileEditRequest);
     } catch (error) {
-      console.error('[useAuthOperations] Profile edit failed', error);
+      ComponentLogger.error(LOG_PREFIX, 'Profile edit failed', error);
       
       // Similar to password reset, handle cancel specially
       if (error instanceof Error && error.message.includes('AADB2C90091')) {
-        console.log('[useAuthOperations] User canceled profile edit');
+        ComponentLogger.log(LOG_PREFIX, 'User canceled profile edit');
       } else {
         // Convert to standardized error
         const authError = authErrorHandler.handleMsalError(error);

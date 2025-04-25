@@ -10,6 +10,20 @@ import { useTokenManager } from './useTokenManager';
 import { userSyncService } from '../../services/UserSyncService';
 import { sessionStorageService } from '../../services/SessionStorageService';
 import { SESSION_CHECK_INTERVAL_MS } from '../../auth/config/sessionConfig';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useAuthSession]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this hook
+ */
+export const setAuthSessionLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 // Define the AuthSession interface
 export interface AuthSession {
@@ -33,33 +47,33 @@ export function useAuthSession(): AuthSession {
   // Initialize the session with the backend
   const initializeSession = useCallback(async (): Promise<string | null> => {
     if (!isAuthenticated) {
-      console.log('[useAuthSession] Cannot initialize session: Not authenticated');
+      ComponentLogger.log(LOG_PREFIX, 'Cannot initialize session: Not authenticated');
       return null;
     }
 
     // Get a fresh token
     const token = await getAccessToken();
     if (!token) {
-      console.log('[useAuthSession] Cannot initialize session: No token available');
+      ComponentLogger.log(LOG_PREFIX, 'Cannot initialize session: No token available');
       return null;
     }
 
     try {
-      console.log('[useAuthSession] Creating session with backend');
+      ComponentLogger.log(LOG_PREFIX, 'Creating session with backend');
       const sessionResponse = await userSyncService.createSession(token);
       
       if (sessionResponse) {
         const newSessionId = sessionResponse.session_id;
         setSessionId(newSessionId);
         setIsSessionActive(true);
-        console.log('[useAuthSession] Session created:', newSessionId);
+        ComponentLogger.log(LOG_PREFIX, 'Session created:', newSessionId);
         return newSessionId;
       } else {
-        console.error('[useAuthSession] Failed to create session: Empty response');
+        ComponentLogger.error(LOG_PREFIX, 'Failed to create session: Empty response');
         return null;
       }
     } catch (error) {
-      console.error('[useAuthSession] Error initializing session:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error initializing session:', error);
       return null;
     }
   }, [isAuthenticated, getAccessToken]);
@@ -85,7 +99,7 @@ export function useAuthSession(): AuthSession {
       
       return success;
     } catch (error) {
-      console.error('[useAuthSession] Error updating session activity:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error updating session activity:', error);
       return false;
     }
   }, [isAuthenticated, sessionId, getAccessToken]);
@@ -93,19 +107,19 @@ export function useAuthSession(): AuthSession {
   // End the current session
   const endCurrentSession = useCallback(async (): Promise<boolean> => {
     if (!isAuthenticated || !sessionId) {
-      console.log('[useAuthSession] No active session to end');
+      ComponentLogger.log(LOG_PREFIX, 'No active session to end');
       return false;
     }
 
     // Get fresh token
     const token = await getAccessToken();
     if (!token) {
-      console.log('[useAuthSession] Cannot end session: No token available');
+      ComponentLogger.log(LOG_PREFIX, 'Cannot end session: No token available');
       return false;
     }
 
     try {
-      console.log('[useAuthSession] Ending session:', sessionId);
+      ComponentLogger.log(LOG_PREFIX, 'Ending session:', sessionId);
       const success = await userSyncService.endSession(token, sessionId);
       
       if (success) {
@@ -115,7 +129,7 @@ export function useAuthSession(): AuthSession {
       
       return success;
     } catch (error) {
-      console.error('[useAuthSession] Error ending session:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error ending session:', error);
       return false;
     }
   }, [isAuthenticated, sessionId, getAccessToken]);
@@ -129,7 +143,7 @@ export function useAuthSession(): AuthSession {
     const isTimedOut = sessionStorageService.isSessionTimedOut();
     
     if (isTimedOut) {
-      console.log('[useAuthSession] Session has timed out');
+      ComponentLogger.log(LOG_PREFIX, 'Session has timed out');
       
       // Clear authentication state
       setIsAuthenticated(false);
@@ -174,7 +188,7 @@ export function useAuthSession(): AuthSession {
     if (isAuthenticated && sessionId) {
       // Update activity every 5 minutes
       const activityInterval = setInterval(() => {
-        console.log('[useAuthSession] Updating session activity');
+        ComponentLogger.log(LOG_PREFIX, 'Updating session activity');
         updateSessionActivity();
       }, 5 * 60 * 1000); // 5 minutes
       

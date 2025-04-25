@@ -1,12 +1,15 @@
 import {
     MessagePayloads,
     MessageTypes,
-    ExtensionMessaging
+    ExtensionMessaging,
+    ComponentLogger
 } from "@quodsi/shared";
 import { AppState } from "../../QuodsiApp";
 import { authMessageHandlers } from "./auth/authMessageHandlers";
 import { selectionMessageHandlers } from "./selection/selectionMessageHandlers";
 
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[MessageHandlers]';
 
 export interface MessageHandlerDependencies {
     setState: React.Dispatch<React.SetStateAction<AppState>>;
@@ -24,7 +27,7 @@ const baseMessageHandlers: Partial<{
     [T in MessageTypes]: MessageHandler<T>;
 }> = {
     [MessageTypes.REACT_APP_READY]: (data, { setState }) => {
-        console.log("[MessageHandlers] Processing REACT_APP_READY");
+        ComponentLogger.log(LOG_PREFIX, "Processing REACT_APP_READY");
         setState(prev => ({
             ...prev,
             isReady: true
@@ -40,6 +43,13 @@ export const messageHandlers: Partial<{
     ...authMessageHandlers,
     ...selectionMessageHandlers,
 } as const;
+
+/**
+ * Enable or disable logging for the message handlers
+ */
+export function setMessageHandlersLogging(enabled: boolean): void {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+}
 
 export function registerHandler<T extends MessageTypes>(
     messaging: ExtensionMessaging,
@@ -62,7 +72,7 @@ export function registerHandler<T extends MessageTypes>(
             // Ignore duplicate messages within 200ms window
             if (currentTime - lastProcessed.time < 200 &&
                 lastProcessed.payload === currentPayload) {
-                console.log(`[MessageHandlers] Skipping duplicate ${type} message at ${new Date().toISOString()}`, {
+                ComponentLogger.log(LOG_PREFIX, `Skipping duplicate ${type} message at ${new Date().toISOString()}`, {
                     timeSinceLastMessage: currentTime - lastProcessed.time,
                     messageType: type
                 });
@@ -75,7 +85,7 @@ export function registerHandler<T extends MessageTypes>(
         lastProcessed.payload = currentPayload;
 
         // Add debug logging (safely)
-        console.log(`[MessageHandlers] Processing message ${type} at ${new Date().toISOString()}`);
+        ComponentLogger.log(LOG_PREFIX, `Processing message ${type} at ${new Date().toISOString()}`);
 
         // Process the message
         handler(payload, deps);
@@ -86,6 +96,9 @@ export function registerMessageHandlers(
     messaging: ExtensionMessaging,
     deps: MessageHandlerDependencies
 ): void {
+    // Initialize logging to be disabled by default
+    setMessageHandlersLogging(false);
+    
     (Object.entries(messageHandlers) as [MessageTypes, MessageHandler<MessageTypes>][])
         .forEach(([type, handler]) => {
             registerHandler(messaging, type, handler, deps);

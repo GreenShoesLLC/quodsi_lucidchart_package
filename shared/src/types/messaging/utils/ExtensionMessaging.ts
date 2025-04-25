@@ -1,5 +1,9 @@
 import { JsonObject } from '../JsonTypes';
 import { MessagePayloads, MessageTypes } from "../MessageTypes";
+import { ComponentLogger } from '../../../core/logging/ComponentLogger';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[ExtensionMessaging]';
 
 export class ExtensionMessaging {
     private static instance: ExtensionMessaging;
@@ -10,6 +14,21 @@ export class ExtensionMessaging {
             ExtensionMessaging.instance = new ExtensionMessaging();
         }
         return ExtensionMessaging.instance;
+    }
+
+    /**
+     * Private constructor for singleton pattern
+     */
+    private constructor() {
+        // Set logging to disabled by default
+        this.setLogging(false);
+    }
+
+    /**
+     * Enable or disable logging for this component
+     */
+    public setLogging(enabled: boolean): void {
+        ComponentLogger.setEnabled(LOG_PREFIX, enabled);
     }
 
     /**
@@ -26,18 +45,18 @@ export class ExtensionMessaging {
     }
 
     public handleIncomingMessage(message: any): void {
-        console.log('[ExtensionMessaging] Received incoming message:', message);
+        ComponentLogger.log(LOG_PREFIX, 'Received incoming message:', message);
         if (!message?.messagetype) {
-            console.warn('[ExtensionMessaging] Message missing messagetype:', message);
+            ComponentLogger.warn(LOG_PREFIX, 'Message missing messagetype:', message);
             return;
         }
 
         const handlers = this.handlers.get(message.messagetype);
         if (handlers) {
-            console.log(`[ExtensionMessaging] Found ${handlers.size} handlers for incoming message type: ${message.messagetype}`);
+            ComponentLogger.log(LOG_PREFIX, `Found ${handlers.size} handlers for incoming message type: ${message.messagetype}`);
             handlers.forEach(handler => handler(message.data));
         } else {
-            console.warn(`[ExtensionMessaging] No handlers found for incoming message type: ${message.messagetype}`);
+            ComponentLogger.warn(LOG_PREFIX, `No handlers found for incoming message type: ${message.messagetype}`);
         }
     }
 
@@ -61,7 +80,7 @@ export class ExtensionMessaging {
         type: T,
         payload?: MessagePayloads[T]
     ): void {
-        console.log('[ExtensionMessaging] Sending message:', { type, payload });
+        ComponentLogger.log(LOG_PREFIX, 'Sending message:', { type, payload });
         try {
             // First, notify any local handlers
             const handlers = this.handlers.get(type);
@@ -72,9 +91,9 @@ export class ExtensionMessaging {
             // Then, send to parent window
             const message = this.createSerializableMessage(type, payload);
             window.parent.postMessage(message, "*");
-            console.log('[ExtensionMessaging] Message posted to parent window');
+            ComponentLogger.log(LOG_PREFIX, 'Message posted to parent window');
         } catch (error) {
-            console.error('[ExtensionMessaging] Failed to send message:', error);
+            ComponentLogger.error(LOG_PREFIX, 'Failed to send message:', error);
             throw error;
         }
     }

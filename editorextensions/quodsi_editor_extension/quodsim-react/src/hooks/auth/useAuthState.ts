@@ -9,6 +9,20 @@ import { useMsal } from '@azure/msal-react';
 import { AccountInfo } from '@azure/msal-browser';
 import { sessionStorageService, StoredUserInfo } from '../../services/SessionStorageService';
 import { authMessagingService } from '../../services/AuthMessagingService';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useAuthState]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this hook
+ */
+export const setAuthStateLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 // Define the user info type
 export interface UserInfo {
@@ -52,9 +66,9 @@ export function useAuthState(): AuthState {
   useEffect(() => {
     if (inProgress === 'none') {
       setIsMsalInitialized(true);
-      console.log('[useAuthState] MSAL initialization complete');
+      ComponentLogger.log(LOG_PREFIX, 'MSAL initialization complete');
     } else {
-      console.log('[useAuthState] MSAL initialization in progress:', inProgress);
+      ComponentLogger.log(LOG_PREFIX, 'MSAL initialization in progress:', inProgress);
     }
   }, [inProgress]);
 
@@ -66,18 +80,18 @@ export function useAuthState(): AuthState {
         const storedState = sessionStorageService.loadSessionState();
         
         if (storedState && storedState.isAuthenticated && storedState.userInfo) {
-          console.log('[useAuthState] Loading auth state from session storage');
+          ComponentLogger.log(LOG_PREFIX, 'Loading auth state from session storage');
           setIsAuthenticated(storedState.isAuthenticated);
           setUserInfo(storedState.userInfo);
           setError(null);
         } else if (accounts.length === 0) {
           // Clear state if we don't have a valid session or accounts
-          console.log('[useAuthState] No valid session or accounts found');
+          ComponentLogger.log(LOG_PREFIX, 'No valid session or accounts found');
           setIsAuthenticated(false);
           setUserInfo(null);
         }
       } catch (loadError) {
-        console.error('[useAuthState] Error loading session state:', loadError);
+        ComponentLogger.error(LOG_PREFIX, 'Error loading session state:', loadError);
       }
     }
   }, [isMsalInitialized, accounts.length]);
@@ -119,7 +133,7 @@ export function useAuthState(): AuthState {
     if (!isAuthenticated && isMsalInitialized) {
       // If not authenticated, but there's an account, try to fix the state
       if (accounts.length > 0) {
-        console.log('[useAuthState] Found account but not authenticated, fixing state');
+        ComponentLogger.log(LOG_PREFIX, 'Found account but not authenticated, fixing state');
         const accountInfo = accounts[0];
         const userInfo = {
           name: accountInfo.name || accountInfo.username,

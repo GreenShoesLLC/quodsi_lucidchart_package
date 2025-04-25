@@ -1,10 +1,24 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import { 
     Entity,
-    SimulationObjectType 
+    SimulationObjectType,
+    ComponentLogger
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[EntityLucid]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Enable or disable logging for EntityLucid
+ */
+export const setEntityLucidLogging = (enabled: boolean): void => {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 interface StoredEntityData {
     id: string;
@@ -13,6 +27,7 @@ interface StoredEntityData {
 
 export class EntityLucid extends SimObjectLucid<Entity> {
     constructor(block: BlockProxy, storageAdapter: StorageAdapter) {
+        ComponentLogger.log(LOG_PREFIX, `Constructing EntityLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -21,6 +36,8 @@ export class EntityLucid extends SimObjectLucid<Entity> {
     }
 
     protected createSimObject(): Entity {
+        ComponentLogger.log(LOG_PREFIX, `Creating Entity simulation object for element ID: ${this.platformElementId}`);
+        
         // Create entity with element-specific properties
         const entity = new Entity(
             this.platformElementId,
@@ -31,9 +48,11 @@ export class EntityLucid extends SimObjectLucid<Entity> {
         const storedData = this.storageAdapter.getElementData(this.element) as StoredEntityData;
 
         if (storedData) {
+            ComponentLogger.log(LOG_PREFIX, `Found stored data for element ID: ${this.platformElementId}`, storedData);
             // Only copy name from stored data
             entity.name = storedData.name || this.getElementName('Entity');
         } else {
+            ComponentLogger.log(LOG_PREFIX, `No stored data found for element ID: ${this.platformElementId}, using defaults`);
             entity.name = this.getElementName('Entity');
         }
 
@@ -41,6 +60,8 @@ export class EntityLucid extends SimObjectLucid<Entity> {
     }
 
     public updateFromPlatform(): void {
+        ComponentLogger.log(LOG_PREFIX, `Updating Entity from platform for element ID: ${this.platformElementId}`);
+        
         // Update name only if not already set
         if (!this.simObject.name) {
             this.simObject.name = this.getElementName('Entity');
@@ -52,6 +73,7 @@ export class EntityLucid extends SimObjectLucid<Entity> {
             name: this.simObject.name
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Storing updated data for entity ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -61,16 +83,22 @@ export class EntityLucid extends SimObjectLucid<Entity> {
         if (block.textAreas && block.textAreas.size > 0) {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
-                    return text.trim();
+                    const name = text.trim();
+                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    return name;
                 }
             }
         }
 
         const className = block.getClassName() || 'Block';
-        return `${defaultPrefix} ${className}`;
+        const name = `${defaultPrefix} ${className}`;
+        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        return name;
     }
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): EntityLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid from conversion for block ID: ${block.id}`);
+        
         // Create default entity using the static method from Entity
         const defaultEntity = Entity.createDefault(block.id);
         
@@ -83,6 +111,8 @@ export class EntityLucid extends SimObjectLucid<Entity> {
             name: name  // Use the name from block text instead of default
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted entity, block ID: ${block.id}`, storedData);
+        
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,

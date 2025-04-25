@@ -15,6 +15,20 @@ import { loginRequest, TOKEN_REFRESH_BUFFER_MS } from '../../auth/config';
 import { sessionStorageService } from '../../services/SessionStorageService';
 import { authErrorHandler } from '../../services/AuthErrorHandler';
 import { useAuthState } from './useAuthState';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useTokenManager]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this hook
+ */
+export const setTokenManagerLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 // Define the token response interface
 export interface TokenResponse {
@@ -52,12 +66,12 @@ export function useTokenManager(): TokenManager {
         const storedState = sessionStorageService.loadSessionState();
         
         if (storedState && storedState.accessToken && storedState.tokenExpiration) {
-          console.log('[useTokenManager] Loading token from session storage');
+          ComponentLogger.log(LOG_PREFIX, 'Loading token from session storage');
           setAccessToken(storedState.accessToken);
           setTokenExpiration(new Date(storedState.tokenExpiration));
         }
       } catch (loadError) {
-        console.error('[useTokenManager] Error loading token from session storage:', loadError);
+        ComponentLogger.error(LOG_PREFIX, 'Error loading token from session storage:', loadError);
       }
     }
   }, [isMsalInitialized, isAuthenticated]);
@@ -66,24 +80,24 @@ export function useTokenManager(): TokenManager {
   const acquireTokenSilently = useCallback(async (): Promise<TokenResponse | null> => {
     // Ensure MSAL is initialized before attempting to acquire token
     if (!isMsalInitialized) {
-      console.log('[useTokenManager] MSAL not yet initialized, cannot acquire token');
+      ComponentLogger.log(LOG_PREFIX, 'MSAL not yet initialized, cannot acquire token');
       return null;
     }
   
     if (accounts.length === 0) {
-      console.log('[useTokenManager] No accounts available, cannot acquire token');
+      ComponentLogger.log(LOG_PREFIX, 'No accounts available, cannot acquire token');
       return null;
     }
     
     try {
-      console.log('[useTokenManager] Acquiring token silently');
+      ComponentLogger.log(LOG_PREFIX, 'Acquiring token silently');
       const request: SilentRequest = {
         ...loginRequest,
         account: accounts[0]
       };
       
       const response = await instance.acquireTokenSilent(request);
-      console.log('[useTokenManager] Token acquired successfully');
+      ComponentLogger.log(LOG_PREFIX, 'Token acquired successfully');
       
       // Update state with new token information
       setAccessToken(response.accessToken);
@@ -108,7 +122,7 @@ export function useTokenManager(): TokenManager {
         scopes: response.scopes
       };
     } catch (error) {
-      console.error('[useTokenManager] Silent token acquisition failed', error);
+      ComponentLogger.error(LOG_PREFIX, 'Silent token acquisition failed', error);
       
       // Handle the case where silent authentication fails
       if (error instanceof InteractionRequiredAuthError) {
@@ -149,7 +163,7 @@ export function useTokenManager(): TokenManager {
         }
         return false;
       } catch (error) {
-        console.error('[useTokenManager] Token refresh failed', error);
+        ComponentLogger.error(LOG_PREFIX, 'Token refresh failed', error);
         return false;
       }
     }
@@ -160,7 +174,7 @@ export function useTokenManager(): TokenManager {
   // Function to get a fresh token for API calls
   const getAccessToken = useCallback(async (): Promise<string | null> => {
     if (!isAuthenticated) {
-      console.warn('[useTokenManager] Cannot get token - not authenticated');
+      ComponentLogger.warn(LOG_PREFIX, 'Cannot get token - not authenticated');
       return null;
     }
     
@@ -168,7 +182,7 @@ export function useTokenManager(): TokenManager {
     if (!tokenExpiration || isTokenExpiringSoon()) {
       const refreshed = await refreshTokenIfNeeded();
       if (!refreshed) {
-        console.warn('[useTokenManager] Token refresh failed');
+        ComponentLogger.warn(LOG_PREFIX, 'Token refresh failed');
         return null;
       }
     }
@@ -190,7 +204,7 @@ export function useTokenManager(): TokenManager {
       
       // Set up timer to refresh token
       const timerId = setTimeout(() => {
-        console.log('[useTokenManager] Token refresh timer triggered');
+        ComponentLogger.log(LOG_PREFIX, 'Token refresh timer triggered');
         refreshTokenIfNeeded();
       }, timeUntilRefresh);
       

@@ -9,7 +9,7 @@ import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelLucid } from '../types/ModelLucid';
 
 export class ModelDefinitionPageBuilder {
-    private loggingEnabled: boolean = true;
+    private loggingEnabled: boolean = false;
 
     constructor(
         private storageAdapter: StorageAdapter,

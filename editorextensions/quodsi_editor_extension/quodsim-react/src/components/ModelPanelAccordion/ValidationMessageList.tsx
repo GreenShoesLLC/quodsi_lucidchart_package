@@ -1,12 +1,25 @@
 import React, { useEffect } from "react";
-import { ValidationMessage } from "@quodsi/shared";
+import { ValidationMessage, ComponentLogger } from "@quodsi/shared";
 import ValidationMessageItem from "./ValidationMessageItem";
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[ValidationMessageList]';
 
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
   selectedElementId: string | null;
   showSelectedOnly: boolean;
 }
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this component
+ */
+export const setValidationMessageListLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   messages,
@@ -18,15 +31,16 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
 
   useEffect(() => {
     const renderTime = performance.now() - renderStartTime;
-    console.log(
+    ComponentLogger.log(
+      LOG_PREFIX,
       `ValidationMessageList render time: ${renderTime.toFixed(2)}ms`
     );
   });
 
   // Log component mount and updates
   useEffect(() => {
-    console.group("ValidationMessageList Mount/Update");
-    console.log("Props received:", {
+    ComponentLogger.log(LOG_PREFIX, "Mount/Update");
+    ComponentLogger.log(LOG_PREFIX, "Props received:", {
       totalMessages: messages.length,
       selectedElementId: selectedElementId || "none",
       showSelectedOnly,
@@ -35,12 +49,11 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
         return acc;
       }, {} as Record<string, number>),
     });
-    console.groupEnd();
   }, [messages, selectedElementId, showSelectedOnly]);
 
   // Log when selectedElementId changes
   useEffect(() => {
-    console.log("Selected Element Changed:", {
+    ComponentLogger.log(LOG_PREFIX, "Selected Element Changed:", {
       newSelectedId: selectedElementId,
       timestamp: new Date().toISOString(),
       relevantMessages: messages.filter(
@@ -49,7 +62,7 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
     });
   }, [selectedElementId, messages]);
 
-  console.group("ValidationMessageList Render");
+  ComponentLogger.log(LOG_PREFIX, "Render");
 
   // Filter messages based on selectedElementId if showSelectedOnly is true
   const filteredMessages =
@@ -58,7 +71,7 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
       : messages;
 
   // Log filtering results
-  console.log("Message Filtering:", {
+  ComponentLogger.log(LOG_PREFIX, "Message Filtering:", {
     originalCount: messages.length,
     filteredCount: filteredMessages.length,
     filteringActive: showSelectedOnly && selectedElementId,
@@ -72,7 +85,7 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   });
 
   // Log detailed message analysis
-  console.log("Message Analysis:", {
+  ComponentLogger.log(LOG_PREFIX, "Message Analysis:", {
     errorCount: filteredMessages.filter((m) => m.type === "error").length,
     warningCount: filteredMessages.filter((m) => m.type === "warning").length,
     messagesByType: filteredMessages.reduce((acc, m) => {
@@ -86,7 +99,7 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
       <div className="bg-white rounded-md shadow-sm">
         {filteredMessages.map((message, index) => {
           // Log individual message rendering
-          console.log(`Rendering message ${index}:`, {
+          ComponentLogger.log(LOG_PREFIX, `Rendering message ${index}:`, {
             type: message.type,
             elementId: message.elementId,
             messagePreview:
@@ -105,13 +118,11 @@ export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
     </div>
   );
 
-  console.log("Final Render Output:", {
+  ComponentLogger.log(LOG_PREFIX, "Final Render Output:", {
     renderedMessageCount: filteredMessages.length,
     hasMessages: filteredMessages.length > 0,
     timestamp: new Date().toISOString(),
   });
-
-  console.groupEnd();
 
   return result;
 };

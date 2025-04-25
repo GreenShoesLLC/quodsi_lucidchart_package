@@ -3,11 +3,24 @@ import {
     Connector,
     ConnectType,
     OperationStep,
-    SimulationObjectType 
+    SimulationObjectType,
+    ComponentLogger
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[ConnectorLucid]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Enable or disable logging for ConnectorLucid
+ */
+export const setConnectorLucidLogging = (enabled: boolean): void => {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 interface StoredConnectorData {
     id: string;
@@ -23,7 +36,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
     // private line: LineProxy;
 
     constructor(line: LineProxy, storageAdapter: StorageAdapter) {
-
+        ComponentLogger.log(LOG_PREFIX, `Constructing ConnectorLucid for line ID: ${line.id}`);
         super(line, storageAdapter);
         // this.line = line;
         // Reinitialize the simulation object using the correctly set `this.line`.
@@ -36,7 +49,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
 
     protected createSimObject(): Connector {
         const line = this.element as LineProxy;
-        console.log(`[ConnectorLucid] Line ${line.id} endpoints:`, {
+        ComponentLogger.log(LOG_PREFIX, `Creating simulation object for line ${line.id} endpoints:`, {
             endpoint1: {
                 connectionId: line.getEndpoint1().connection?.id,
                 position: { x: line.getEndpoint1().x, y: line.getEndpoint1().y }
@@ -46,6 +59,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
                 position: { x: line.getEndpoint2().x, y: line.getEndpoint2().y }
             }
         });
+        
         // Create connector with element-specific properties
         const connector = new Connector(
             this.platformElementId,                     // id
@@ -61,10 +75,13 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const storedData = this.storageAdapter.getElementData(this.element) as StoredConnectorData;
 
         if (storedData) {
+            ComponentLogger.log(LOG_PREFIX, `Found stored data for connector ID: ${this.platformElementId}`, storedData);
             // Only copy specific properties we want from stored data
             connector.probability = storedData.probability ?? 1.0;
             connector.connectType = storedData.connectType ?? ConnectType.Probability;
             connector.operationSteps = storedData.operationSteps || [];
+        } else {
+            ComponentLogger.log(LOG_PREFIX, `No stored data found for connector ID: ${this.platformElementId}, using defaults`);
         }
 
         return connector;
@@ -72,6 +89,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
 
 
     public updateFromPlatform(): void {
+        ComponentLogger.log(LOG_PREFIX, `Updating from platform for connector ID: ${this.platformElementId}`);
         const line = this.element as LineProxy;
 
         // Update element-specific properties
@@ -87,6 +105,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             operationSteps: this.simObject.operationSteps
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Storing updated data for connector ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -95,7 +114,9 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const line = this.element as LineProxy;
         for (const [, text] of line.textAreas) {
             if (text && text.trim()) {
-                return text.trim();
+                const name = text.trim();
+                ComponentLogger.log(LOG_PREFIX, `Using text area content as name for line ID ${line.id}: ${name}`);
+                return name;
             }
         }
         
@@ -104,10 +125,14 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const targetName = this.getEndpointName(line.getEndpoint2().connection?.id);
 
         if (sourceName && targetName) {
-            return `${sourceName} → ${targetName}`;
+            const name = `${sourceName} → ${targetName}`;
+            ComponentLogger.log(LOG_PREFIX, `Created name from endpoints for line ID ${line.id}: ${name}`);
+            return name;
         }
 
-        return `${defaultPrefix} ${line.id}`;
+        const name = `${defaultPrefix} ${line.id}`;
+        ComponentLogger.log(LOG_PREFIX, `Using default name for line ID ${line.id}: ${name}`);
+        return name;
     }
 
     private getBlockName(block: BlockProxy): string {
@@ -134,6 +159,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
     }
 
     static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter): ConnectorLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid from conversion for line ID: ${line.id}`);
+        
         // Create default connector using the static method
         const defaultConnector = Connector.createDefault(line.id);
 
@@ -144,10 +171,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         // Set source and target IDs if connections exist
         if (endpoint1 && endpoint1.connection) {
             defaultConnector.sourceId = endpoint1.connection.id;
+            ComponentLogger.log(LOG_PREFIX, `Setting source ID for line ${line.id}: ${endpoint1.connection.id}`);
         }
 
         if (endpoint2 && endpoint2.connection) {
             defaultConnector.targetId = endpoint2.connection.id;
+            ComponentLogger.log(LOG_PREFIX, `Setting target ID for line ${line.id}: ${endpoint2.connection.id}`);
         }
 
         // Custom name using endpoints if available
@@ -162,6 +191,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             const targetName = targetBlock ? ConnectorLucid.getNameFromBlock(targetBlock, 'Target') : 'Target';
 
             name = `${sourceName} → ${targetName}`;
+            ComponentLogger.log(LOG_PREFIX, `Generated name for connector from endpoint names: ${name}`);
         }
         defaultConnector.name = name;
 
@@ -173,6 +203,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             operationSteps: defaultConnector.operationSteps
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Setting element data for connector ID: ${line.id}`, storedData);
+        
         // Set up both data and metadata
         storageAdapter.setElementData(
             line,

@@ -120,6 +120,7 @@ export class ModelManager {
                 Array.from(this.changeTracker.pendingChanges));
 
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
+            lucidElementFactory.setLogging(false);
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);
             try {
                 const newModelDefinition = builder.buildFromConvertedPage(this.currentPage);

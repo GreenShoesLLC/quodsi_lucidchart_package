@@ -6,6 +6,10 @@
  */
 
 import { SESSION_STORAGE_KEYS, SESSION_TIMEOUT_MS } from '../auth/config';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[SessionStorageService]';
 
 /**
  * Interface for stored user information
@@ -38,6 +42,7 @@ export class SessionStorageService {
   public static getInstance(): SessionStorageService {
     if (!SessionStorageService.instance) {
       SessionStorageService.instance = new SessionStorageService();
+      SessionStorageService.instance.setLogging(true);
     }
     return SessionStorageService.instance;
   }
@@ -45,7 +50,17 @@ export class SessionStorageService {
   /**
    * Private constructor for singleton pattern
    */
-  private constructor() {}
+  private constructor() {
+    // Set logging to disabled by default
+    this.setLogging(false);
+  }
+
+  /**
+   * Enable or disable logging for this service
+   */
+  public setLogging(enabled: boolean): void {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+  }
 
   /**
    * Load authentication state from session storage
@@ -60,7 +75,7 @@ export class SessionStorageService {
       const lastActiveStr = sessionStorage.getItem(SESSION_STORAGE_KEYS.LAST_ACTIVE);
       
       if (!authState || !userInfoStr || !accessToken || !tokenExpirationStr || !lastActiveStr) {
-        console.log('[SessionStorageService] No complete session state found in storage');
+        ComponentLogger.log(LOG_PREFIX, 'No complete session state found in storage');
         return null;
       }
       
@@ -71,11 +86,11 @@ export class SessionStorageService {
       
       // Check if the session is still valid (not timed out)
       if (this.isSessionTimedOut(lastActive)) {
-        console.log('[SessionStorageService] Session has timed out, returning null');
+        ComponentLogger.log(LOG_PREFIX, 'Session has timed out, returning null');
         return null;
       }
       
-      console.log('[SessionStorageService] Loaded valid session state');
+      ComponentLogger.log(LOG_PREFIX, 'Loaded valid session state');
       
       return {
         isAuthenticated,
@@ -85,7 +100,7 @@ export class SessionStorageService {
         lastActive
       };
     } catch (error) {
-      console.error('[SessionStorageService] Error loading session state:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error loading session state:', error);
       return null;
     }
   }
@@ -119,9 +134,9 @@ export class SessionStorageService {
       }
       
       this.updateLastActive();
-      console.log('[SessionStorageService] Saved session state to storage');
+      ComponentLogger.log(LOG_PREFIX, 'Saved session state to storage');
     } catch (error) {
-      console.error('[SessionStorageService] Error saving session state:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error saving session state:', error);
     }
   }
 
@@ -133,7 +148,7 @@ export class SessionStorageService {
       const now = Date.now();
       sessionStorage.setItem(SESSION_STORAGE_KEYS.LAST_ACTIVE, now.toString());
     } catch (error) {
-      console.error('[SessionStorageService] Error updating last active timestamp:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error updating last active timestamp:', error);
     }
   }
 
@@ -147,9 +162,9 @@ export class SessionStorageService {
       sessionStorage.removeItem(SESSION_STORAGE_KEYS.ACCESS_TOKEN);
       sessionStorage.removeItem(SESSION_STORAGE_KEYS.TOKEN_EXPIRATION);
       sessionStorage.removeItem(SESSION_STORAGE_KEYS.LAST_ACTIVE);
-      console.log('[SessionStorageService] Cleared session state');
+      ComponentLogger.log(LOG_PREFIX, 'Cleared session state');
     } catch (error) {
-      console.error('[SessionStorageService] Error clearing session state:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error clearing session state:', error);
     }
   }
 
@@ -177,7 +192,7 @@ export class SessionStorageService {
       
       return timeSinceLastActive > timeoutMs;
     } catch (error) {
-      console.error('[SessionStorageService] Error checking session timeout:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error checking session timeout:', error);
       return true; // On error, consider timed out for safety
     }
   }
@@ -211,9 +226,9 @@ export class SessionStorageService {
         }
       });
       
-      console.log('[SessionStorageService] Cleared MSAL cache');
+      ComponentLogger.log(LOG_PREFIX, 'Cleared MSAL cache');
     } catch (error) {
-      console.error('[SessionStorageService] Error clearing MSAL cache:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error clearing MSAL cache:', error);
     }
   }
 }

@@ -11,6 +11,20 @@ import { useAuthSession } from './useAuthSession';
 import { userSyncService, UserSyncResponse, UserProfileResponse } from '../../services/UserSyncService';
 import { authErrorHandler } from '../../services/AuthErrorHandler';
 import { authMessagingService } from '../../services/AuthMessagingService';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[useBackendSync]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Helper function to enable/disable logging for this hook
+ */
+export const setBackendSyncLogging = (enabled: boolean): void => {
+  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 // Define the BackendSync interface
 export interface BackendSync {
@@ -29,23 +43,23 @@ export function useBackendSync(): BackendSync {
   // Sync user with quodsi-fastapi
   const syncUserWithBackend = useCallback(async (): Promise<UserSyncResponse | null> => {
     if (!isAuthenticated) {
-      console.warn('[useBackendSync] Cannot sync user - not authenticated');
+      ComponentLogger.warn(LOG_PREFIX, 'Cannot sync user - not authenticated');
       return null;
     }
     
     // Get token
     const token = await getAccessToken();
     if (!token) {
-      console.warn('[useBackendSync] Cannot sync user - no token available');
+      ComponentLogger.warn(LOG_PREFIX, 'Cannot sync user - no token available');
       return null;
     }
     
     try {
-      console.log('[useBackendSync] Syncing user with quodsi-fastapi');
+      ComponentLogger.log(LOG_PREFIX, 'Syncing user with quodsi-fastapi');
       const syncResponse = await userSyncService.syncUser(token);
       
       if (syncResponse) {
-        console.log('[useBackendSync] User synced successfully:', syncResponse);
+        ComponentLogger.log(LOG_PREFIX, 'User synced successfully:', syncResponse);
         
         // After successful sync, initialize a session if one doesn't exist
         await initializeSession();
@@ -64,14 +78,14 @@ export function useBackendSync(): BackendSync {
       
       return syncResponse;
     } catch (error) {
-      console.error('[useBackendSync] Error syncing user with backend:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error syncing user with backend:', error);
       
       // Convert to standardized error
       const authError = authErrorHandler.createUserSyncError(error);
       // IMPORTANT: Even with backend sync failure, if we have a valid
       // MSAL authentication, we should still complete the auth flow
       if (userInfo) {
-        console.log('[useBackendSync] Backend sync failed but continuing with local auth');
+        ComponentLogger.log(LOG_PREFIX, 'Backend sync failed but continuing with local auth');
         authMessagingService.sendAuthCompleted(true, userInfo);
       }
       // Notify about error (but don't set local error state)
@@ -84,21 +98,21 @@ export function useBackendSync(): BackendSync {
   // Get user profile from backend
   const getUserProfile = useCallback(async (): Promise<UserProfileResponse | null> => {
     if (!isAuthenticated) {
-      console.warn('[useBackendSync] Cannot get profile - not authenticated');
+      ComponentLogger.warn(LOG_PREFIX, 'Cannot get profile - not authenticated');
       return null;
     }
     
     // Get token
     const token = await getAccessToken();
     if (!token) {
-      console.warn('[useBackendSync] Cannot get profile - no token available');
+      ComponentLogger.warn(LOG_PREFIX, 'Cannot get profile - no token available');
       return null;
     }
     
     try {
       return await userSyncService.getUserProfile(token);
     } catch (error) {
-      console.error('[useBackendSync] Error getting user profile:', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error getting user profile:', error);
       return null;
     }
   }, [isAuthenticated, getAccessToken]);

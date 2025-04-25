@@ -6,6 +6,10 @@
 
 import { authApiConfig } from '../auth/config';
 import { authErrorHandler } from './AuthErrorHandler';
+import { ComponentLogger } from '@quodsi/shared';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[UserSyncService]';
 
 /**
  * Interface for user sync response from API
@@ -50,6 +54,7 @@ export class UserSyncService {
   public static getInstance(): UserSyncService {
     if (!UserSyncService.instance) {
       UserSyncService.instance = new UserSyncService();
+      UserSyncService.instance.setLogging(true);
     }
     return UserSyncService.instance;
   }
@@ -59,6 +64,15 @@ export class UserSyncService {
    */
   private constructor() {
     this.baseUrl = authApiConfig.baseUrl;
+    // Set logging to disabled by default
+    this.setLogging(false);
+  }
+
+  /**
+   * Enable or disable logging for this service
+   */
+  public setLogging(enabled: boolean): void {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
   }
 
   /**
@@ -77,12 +91,12 @@ export class UserSyncService {
    */
   public async syncUser(token: string): Promise<UserSyncResponse | null> {
     if (!token) {
-      console.error('[UserSyncService] Cannot sync user: No token provided');
+      ComponentLogger.error(LOG_PREFIX, 'Cannot sync user: No token provided');
       return null;
     }
 
     try {
-      console.log('[UserSyncService] Syncing user with quodsi-fastapi');
+      ComponentLogger.log(LOG_PREFIX, 'Syncing user with quodsi-fastapi');
       
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.syncUser}`, 
@@ -98,8 +112,9 @@ export class UserSyncService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          '[UserSyncService] Failed to sync user with quodsi-fastapi', 
+        ComponentLogger.error(
+          LOG_PREFIX,
+          'Failed to sync user with quodsi-fastapi', 
           `Status: ${response.status}`, 
           errorText
         );
@@ -107,12 +122,12 @@ export class UserSyncService {
       }
 
       const userData: UserSyncResponse = await response.json();
-      console.log('[UserSyncService] User synced successfully', userData);
+      ComponentLogger.log(LOG_PREFIX, 'User synced successfully', userData);
       return userData;
     } catch (error) {
       // Create a standardized error
       const authError = authErrorHandler.createUserSyncError(error);
-      console.error('[UserSyncService] Error syncing user', authError);
+      ComponentLogger.error(LOG_PREFIX, 'Error syncing user', authError);
       return null;
     }
   }
@@ -122,12 +137,12 @@ export class UserSyncService {
    */
   public async getUserProfile(token: string): Promise<UserProfileResponse | null> {
     if (!token) {
-      console.error('[UserSyncService] Cannot get user profile: No token provided');
+      ComponentLogger.error(LOG_PREFIX, 'Cannot get user profile: No token provided');
       return null;
     }
 
     try {
-      console.log('[UserSyncService] Getting user profile from quodsi-fastapi');
+      ComponentLogger.log(LOG_PREFIX, 'Getting user profile from quodsi-fastapi');
       
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.userProfile}`,
@@ -139,8 +154,9 @@ export class UserSyncService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          '[UserSyncService] Failed to get user profile from quodsi-fastapi',
+        ComponentLogger.error(
+          LOG_PREFIX,
+          'Failed to get user profile from quodsi-fastapi',
           `Status: ${response.status}`,
           errorText
         );
@@ -148,10 +164,10 @@ export class UserSyncService {
       }
 
       const profileData: UserProfileResponse = await response.json();
-      console.log('[UserSyncService] User profile retrieved successfully');
+      ComponentLogger.log(LOG_PREFIX, 'User profile retrieved successfully');
       return profileData;
     } catch (error) {
-      console.error('[UserSyncService] Error getting user profile', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error getting user profile', error);
       return null;
     }
   }
@@ -161,12 +177,12 @@ export class UserSyncService {
    */
   public async createSession(token: string): Promise<{ session_id: string } | null> {
     if (!token) {
-      console.error('[UserSyncService] Cannot create session: No token provided');
+      ComponentLogger.error(LOG_PREFIX, 'Cannot create session: No token provided');
       return null;
     }
 
     try {
-      console.log('[UserSyncService] Creating user session');
+      ComponentLogger.log(LOG_PREFIX, 'Creating user session');
       
       // Create a client info string instead of an object
       const clientInfo = `User-Agent: ${navigator.userAgent}, Platform: lucidchart_extension`;
@@ -184,8 +200,9 @@ export class UserSyncService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(
-          '[UserSyncService] Failed to create session',
+        ComponentLogger.error(
+          LOG_PREFIX,
+          'Failed to create session',
           `Status: ${response.status}`,
           errorText
         );
@@ -193,10 +210,10 @@ export class UserSyncService {
       }
 
       const sessionData = await response.json();
-      console.log('[UserSyncService] Session created successfully', sessionData);
+      ComponentLogger.log(LOG_PREFIX, 'Session created successfully', sessionData);
       return sessionData;
     } catch (error) {
-      console.error('[UserSyncService] Error creating session', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error creating session', error);
       return null;
     }
   }
@@ -206,12 +223,12 @@ export class UserSyncService {
    */
   public async updateSession(token: string, sessionId: string): Promise<boolean> {
     if (!token || !sessionId) {
-      console.error('[UserSyncService] Cannot update session: Missing token or session ID');
+      ComponentLogger.error(LOG_PREFIX, 'Cannot update session: Missing token or session ID');
       return false;
     }
 
     try {
-      console.log('[UserSyncService] Updating user session activity');
+      ComponentLogger.log(LOG_PREFIX, 'Updating user session activity');
       
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.updateSession}/${sessionId}`,
@@ -225,8 +242,9 @@ export class UserSyncService {
       );
 
       if (!response.ok) {
-        console.error(
-          '[UserSyncService] Failed to update session',
+        ComponentLogger.error(
+          LOG_PREFIX,
+          'Failed to update session',
           `Status: ${response.status}`
         );
         return false;
@@ -234,7 +252,7 @@ export class UserSyncService {
 
       return true;
     } catch (error) {
-      console.error('[UserSyncService] Error updating session', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error updating session', error);
       return false;
     }
   }
@@ -244,12 +262,12 @@ export class UserSyncService {
    */
   public async endSession(token: string, sessionId: string): Promise<boolean> {
     if (!token || !sessionId) {
-      console.error('[UserSyncService] Cannot end session: Missing token or session ID');
+      ComponentLogger.error(LOG_PREFIX, 'Cannot end session: Missing token or session ID');
       return false;
     }
 
     try {
-      console.log('[UserSyncService] Ending user session');
+      ComponentLogger.log(LOG_PREFIX, 'Ending user session');
       
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.endSession}/${sessionId}`,
@@ -263,8 +281,9 @@ export class UserSyncService {
       );
 
       if (!response.ok) {
-        console.error(
-          '[UserSyncService] Failed to end session',
+        ComponentLogger.error(
+          LOG_PREFIX,
+          'Failed to end session',
           `Status: ${response.status}`
         );
         return false;
@@ -272,7 +291,7 @@ export class UserSyncService {
 
       return true;
     } catch (error) {
-      console.error('[UserSyncService] Error ending session', error);
+      ComponentLogger.error(LOG_PREFIX, 'Error ending session', error);
       return false;
     }
   }

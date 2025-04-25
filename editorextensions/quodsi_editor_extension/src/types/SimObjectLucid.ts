@@ -4,9 +4,23 @@ import {
     PlatformType,
     PlatformMetadata,
     SimulationObject,
-    SimulationObjectType 
+    SimulationObjectType,
+    ComponentLogger
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
+
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[SimObjectLucid]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Enable or disable logging for SimObjectLucid and its subclasses
+ */
+export const setSimObjectLucidLogging = (enabled: boolean): void => {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 /**
  * Base abstract class for Lucid-specific simulation objects.
@@ -19,6 +33,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         protected element: ElementProxy,
         protected storageAdapter: StorageAdapter
     ) {
+        ComponentLogger.log(LOG_PREFIX, `Constructing ${this.constructor.name} for element ID: ${element.id}`);
         this.simObject = this.createSimObject();
     }
 
@@ -46,6 +61,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         element: ElementProxy,
         storageAdapter: StorageAdapter
     ): SimObjectLucid<SimulationObject> {
+        ComponentLogger.log(LOG_PREFIX, `createFromConversion called for element ID: ${element.id}`);
         throw new Error('createFromConversion must be implemented by subclass');
     }
 
@@ -71,21 +87,26 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
      * Validates the Lucid element storage
      */
     public validate(): boolean {
-        return this.storageAdapter.validateStorage(this.element);
+        const isValid = this.storageAdapter.validateStorage(this.element);
+        ComponentLogger.log(LOG_PREFIX, `Validation for element ID ${this.element.id}: ${isValid}`);
+        return isValid;
     }
 
     /**
      * Gets Lucid-specific metadata
      */
     public getMetadata(): PlatformMetadata {
-        return {
+        const metadata = {
             platform: PlatformType.Lucid,
             version: '1.0.0',
             lastModified: new Date().toISOString(),
             elementId: this.element.id,
             elementType: this.type
         };
+        ComponentLogger.log(LOG_PREFIX, `Getting metadata for element ID ${this.element.id}`, metadata);
+        return metadata;
     }
+    
     /**
      * Static utility method to get name from a block's text areas
      */
@@ -99,6 +120,8 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         }
 
         const className = block.getClassName() || 'Block';
-        return `${defaultPrefix} ${className}`;
+        const name = `${defaultPrefix} ${className}`;
+        ComponentLogger.log(LOG_PREFIX, `Generated name for element ID ${block.id}: ${name}`);
+        return name;
     }
 }

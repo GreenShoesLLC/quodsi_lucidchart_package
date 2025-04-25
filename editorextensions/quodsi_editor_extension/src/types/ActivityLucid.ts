@@ -2,11 +2,24 @@ import { BlockProxy } from 'lucid-extension-sdk';
 import {
     Activity,
     OperationStep,
-    SimulationObjectType
+    SimulationObjectType,
+    ComponentLogger
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[ActivityLucid]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Enable or disable logging for ActivityLucid
+ */
+export const setActivityLucidLogging = (enabled: boolean): void => {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 interface StoredActivityData {
     id: string;
@@ -23,6 +36,7 @@ interface StoredActivityData {
  */
 export class ActivityLucid extends SimObjectLucid<Activity> {
     constructor(block: BlockProxy, storageAdapter: StorageAdapter) {
+        ComponentLogger.log(LOG_PREFIX, `Constructing ActivityLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -31,6 +45,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     }
 
     protected createSimObject(): Activity {
+        ComponentLogger.log(LOG_PREFIX, `Creating Activity simulation object for element ID: ${this.platformElementId}`);
+        
         // Always create with element ID
         const activity = new Activity(
             this.platformElementId,  // Always use element ID
@@ -45,6 +61,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         const storedData = this.storageAdapter.getElementData(this.element) as StoredActivityData;
 
         if (storedData) {
+            ComponentLogger.log(LOG_PREFIX, `Found stored data for element ID: ${this.platformElementId}`, storedData);
             // Now TypeScript knows the shape of storedData
             activity.name = storedData.name || this.getElementName('Activity');
             activity.capacity = storedData.capacity ?? 1;
@@ -52,6 +69,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             activity.outputBufferCapacity = storedData.outputBufferCapacity ?? 1;
             activity.operationSteps = storedData.operationSteps || [];
         } else {
+            ComponentLogger.log(LOG_PREFIX, `No stored data found for element ID: ${this.platformElementId}, using defaults`);
             activity.name = this.getElementName('Activity');
         }
 
@@ -59,6 +77,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     }
 
     public updateFromPlatform(): void {
+        ComponentLogger.log(LOG_PREFIX, `Updating Activity from platform for element ID: ${this.platformElementId}`);
+        
         // Update name if not already set
         if (!this.simObject.name) {
             this.simObject.name = this.getElementName('Activity');
@@ -74,6 +94,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             operationSteps: this.simObject.operationSteps
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -83,18 +104,26 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         if (block.textAreas && block.textAreas.size > 0) {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
-                    return text.trim();
+                    const name = text.trim();
+                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    return name;
                 }
             }
         }
 
         const className = block.getClassName() || 'Block';
-        return `${defaultPrefix} ${className}`;
+        const name = `${defaultPrefix} ${className}`;
+        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        return name;
     }
+    
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ActivityLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}`);
+        
         // Create default activity using the static method
         const defaultActivity = Activity.createDefault(block.id);
         const name = SimObjectLucid.getNameFromBlock(block, 'Act');
+        
         // Convert to StoredActivityData format
         const storedData: StoredActivityData = {
             id: defaultActivity.id,
@@ -105,6 +134,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             operationSteps: defaultActivity.operationSteps
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted activity, block ID: ${block.id}`, storedData);
+        
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,
