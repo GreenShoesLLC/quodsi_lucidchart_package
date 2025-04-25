@@ -10,11 +10,12 @@ The Quodsi Authentication System is a comprehensive solution that enables user a
 2. [Microsoft Entra ID Integration](#microsoft-entra-id-integration)
 3. [Key Authentication Components](#key-authentication-components)
 4. [Authentication Flow](#authentication-flow)
-5. [iFrame Considerations](#iframe-considerations)
-6. [Session Management](#session-management)
-7. [Panel Visibility and Authentication](#panel-visibility-and-authentication)
-8. [Troubleshooting](#troubleshooting)
-9. [Further Development](#further-development)
+5. [Consolidated Messaging System](#consolidated-messaging-system)
+6. [iFrame Considerations](#iframe-considerations)
+7. [Session Management](#session-management)
+8. [Panel Visibility and Authentication](#panel-visibility-and-authentication)
+9. [Troubleshooting](#troubleshooting)
+10. [Further Development](#further-development)
 
 ## Architecture Overview
 
@@ -28,7 +29,7 @@ The Quodsi authentication system spans multiple projects and integrates with Mic
 The authentication is based on the following principles:
 - User authentication is handled via Microsoft Entra ID (Azure AD B2C)
 - Authentication state is maintained in session storage for persistence
-- Communication between components uses a messaging system
+- Communication between components uses a consolidated messaging system
 - Each panel checks authentication status independently when accessed
 - User sessions are tracked in the backend for analytics and security auditing
 
@@ -69,7 +70,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
    - Purpose: Manages the authentication panel lifecycle and state persistence
    - Key features:
      - Session storage management for auth state persistence
-     - Message handling for auth events
+     - Consolidated message handling for auth events
      - Session timeout monitoring
 
 2. **extension.ts**
@@ -160,33 +161,29 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Session creation and management
      - Activity tracking
 
-4. **AuthMessagingService**
-   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\AuthMessagingService.ts`
-   - Purpose: Handles messaging between React and extension
+4. **authMessageHandlers.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\auth\authMessageHandlers.ts`
+   - Purpose: Handles authentication-related messages using consolidated approach
    - Features:
-     - Authentication status communication
-     - Error reporting
-     - Session state synchronization
+     - Single handler for all authentication actions
+     - Action type-based routing for different auth operations
+     - State updates based on auth events
 
 ### Shared Components
 
 1. **MessageTypes.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\MessageTypes.ts`
    - Purpose: Defines message types for extension-React communication
-   - Auth-related message types:
-     - `AUTH_PANEL_INIT`
-     - `AUTH_STATUS_REQUEST`
-     - `AUTH_STATUS_RESPONSE`
-     - `AUTH_SIGN_IN`
-     - `AUTH_SIGN_OUT`
-     - `AUTH_COMPLETED`
-     - `AUTH_ERROR`
-     - `SHOW_AUTH_PANEL`
-     - `MODEL_PANEL_FOCUS`
+   - Auth-related message type:
+     - `AUTH` - Consolidated message type for all auth operations
 
 2. **AuthPayloads.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads\AuthPayloads.ts`
    - Purpose: Type definitions for auth message payloads
+   - Features:
+     - `AuthActionType` enum for different auth operations
+     - Consolidated payload structure with action-type discrimination
+     - Typed data for different auth operations
 
 ## Authentication Flow
 
@@ -199,7 +196,8 @@ The authentication process follows these steps:
 
 2. **User Authentication**:
    - User clicks "Sign In" button in AuthPanel
-   - React app triggers MSAL authentication with popup
+   - React app sends `AUTH` message with `SIGN_IN` action type
+   - MSAL authentication is triggered with popup
    - User completes authentication in Microsoft Entra ID
    - Token is acquired and stored
 
@@ -210,8 +208,8 @@ The authentication process follows these steps:
 
 4. **State Persistence**:
    - Authentication state is stored in session storage via SessionStorageService
-   - Auth status is sent to the extension via AuthMessagingService
-   - Extension updates its internal state
+   - Auth status is sent to the extension via `AUTH` message with `COMPLETED` action type
+   - Extension updates its internal state and broadcasts status
 
 5. **Panel Reopening**:
    - When panel is closed and reopened, authentication state is retrieved from storage
@@ -221,15 +219,109 @@ The authentication process follows these steps:
 
 6. **Sign-out Flow**:
    - User clicks "Sign Out" button
+   - React app sends `AUTH` message with `SIGN_OUT` action type
    - Backend session is ended
-   - React app clears tokens and sends sign-out message
-   - SessionStorageService clears session state
+   - React app clears tokens and session state
 
 7. **Panel Authentication Check**:
    - When ModelPanel is accessed, it checks authentication status
    - If not authenticated, it shows a message with a sign-in button
-   - Sign-in button redirects to AuthPanel for authentication
+   - Sign-in button sends `AUTH` message with `SHOW_PANEL` action type
    - After successful authentication, ModelPanel shows content on next access
+
+## Consolidated Messaging System
+
+The Quodsi authentication system has been refactored to use a consolidated messaging approach:
+
+### Key Changes
+
+1. **Single Message Type**:
+   - All auth-related messages now use the single `AUTH` message type
+   - The previous separate message types (`AUTH_PANEL_INIT`, `AUTH_STATUS_REQUEST`, etc.) have been replaced
+
+2. **Action Type Discrimination**:
+   - The `AUTH` message payload includes an `type` field of type `AuthActionType`
+   - This field is used to determine the specific auth operation being performed
+
+3. **Unified Payload Structure**:
+   - The `AUTH` message payload has a standardized structure:
+     ```typescript
+     {
+       type: AuthActionType;
+       data?: {
+         // Operation-specific data
+       }
+     }
+     ```
+
+4. **Consolidated Handlers**:
+   - Both the extension and React app use a single message handler for all auth operations
+   - The handler uses a switch statement on the `type` field to route to specific operation handlers
+
+### Auth Action Types
+
+The `AuthActionType` enum defines all possible authentication operations:
+
+```typescript
+export enum AuthActionType {
+    PANEL_INIT = 'panelInit',
+    STATUS_REQUEST = 'statusRequest',
+    STATUS_RESPONSE = 'statusResponse',
+    SIGN_IN = 'signIn',
+    SIGN_OUT = 'signOut',
+    COMPLETED = 'completed',
+    ERROR = 'error',
+    SHOW_PANEL = 'showPanel',
+    MODEL_PANEL_FOCUS = 'modelPanelFocus'
+}
+```
+
+### Handling Auth Messages
+
+Example of sending an auth message:
+
+```typescript
+// From React app to extension
+sendMessage(MessageTypes.AUTH, {
+    type: AuthActionType.STATUS_REQUEST
+});
+
+// From extension to React app
+this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+    isAuthenticated: this.isAuthenticated,
+    userInfo: this.userInfo || undefined
+});
+```
+
+Example of handling auth messages:
+
+```typescript
+// In React app
+[MessageTypes.AUTH]: (payload, { setState, setError, sendMessage }) => {
+    switch (payload.type) {
+        case AuthActionType.STATUS_RESPONSE:
+            setState((prev) => ({
+                ...prev,
+                isAuthenticated: payload.data?.isAuthenticated || false,
+                userInfo: payload.data?.userInfo || null,
+            }));
+            break;
+        
+        // Other cases...
+    }
+}
+
+// In extension
+this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
+    switch (payload.type) {
+        case AuthActionType.STATUS_REQUEST:
+            this.handleAuthStatusRequest();
+            break;
+        
+        // Other cases...
+    }
+});
+```
 
 ## iFrame Considerations
 
@@ -258,7 +350,7 @@ Working with authentication in iframe environments presents several challenges t
 3. **Message-based Communication**:
    - Uses `postMessage` for cross-frame communication
    - Ensures stable communication despite iframe constraints
-   - Implemented in `AuthMessagingService` for standardized messaging
+   - Now uses consolidated messaging approach for cleaner handling
 
 4. **Frame Reinitialize Handling**:
    - Special handling when iframe is reloaded
@@ -314,12 +406,12 @@ The system implements a user-friendly approach to panel visibility and authentic
 
 3. **Panel Redirection**:
    - ModelPanel provides a sign-in button when user is not authenticated
-   - This button sends `SHOW_AUTH_PANEL` message to activate the AuthPanel
+   - This button sends `AUTH` message with `SHOW_PANEL` action type to activate the AuthPanel
    - After authentication, ModelPanel can be accessed with content
 
 4. **Authentication State Synchronization**:
-   - Authentication state is broadcast to all panels via AuthMessagingService
-   - ModelPanel checks authentication when it receives focus using `MODEL_PANEL_FOCUS` message
+   - Authentication state is broadcast to all panels via consolidated messaging
+   - ModelPanel checks authentication when it receives focus using `AUTH` message with `MODEL_PANEL_FOCUS` action type
    - This ensures a consistent experience across panels
 
 5. **Loading States**:
@@ -356,14 +448,14 @@ Common authentication issues and their solutions:
    - Ensure token is being properly passed to backend services
 
 6. **Panel not showing authenticated content**:
-   - Ensure authentication state is being properly communicated via AuthMessagingService
-   - Check that `MODEL_PANEL_FOCUS` handler is requesting updated auth status
+   - Ensure authentication state is being properly communicated via consolidated messaging
+   - Check that `AUTH` message handler with `MODEL_PANEL_FOCUS` action type is requesting updated auth status
    - Verify authentication listeners are properly registered
 
-7. **Specialized hook integration issues**:
-   - Check the console for error messages from specific hooks
-   - Verify proper hook dependencies and dependency arrays
-   - Ensure hooks are imported and used correctly
+7. **Auth message handling issues**:
+   - Verify that all `AUTH` message payloads include a valid `type` field
+   - Check the switch statement in the message handler to ensure all action types are properly handled
+   - Verify that each action handler updates state correctly
 
 ## Further Development
 
@@ -395,11 +487,11 @@ Areas for potential enhancement:
    - Add additional performance optimizations
    - Enhance error handling with more detailed error states
 
-7. **Hook Composition Enhancements**:
-   - Add support for selective hook composition for different authentication scenarios
-   - Implement conditional authentication flows based on feature flags
-   - Create specialized hook presets for different authentication requirements
+7. **Message Handling Enhancements**:
+   - Add more robust error handling for malformed messages
+   - Implement message validation middleware
+   - Add message tracking and debugging capabilities
 
 ---
 
-This documentation provides a comprehensive overview of the Quodsi authentication system. For more detailed information, refer to the specific code files mentioned in the [Key Authentication Components](#key-authentication-components) section.
+This documentation provides a comprehensive overview of the updated Quodsi authentication system with the consolidated messaging approach. For more detailed information, refer to the specific code files mentioned in the [Key Authentication Components](#key-authentication-components) section.

@@ -98,10 +98,13 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     const { modelName, modelItemData, showModelName, showModelItemName } =
       this.props;
     if (!modelItemData && !showModelName) return null;
+    
+    // Don't show the model name section at all if it's empty
+    if (!modelName && !modelItemData) return null;
 
     return (
       <div className="flex items-center gap-2">
-        {showModelName && (
+        {showModelName && modelName && (
           <span className="text-sm font-medium">{modelName}</span>
         )}
         {showModelItemName && modelItemData && (

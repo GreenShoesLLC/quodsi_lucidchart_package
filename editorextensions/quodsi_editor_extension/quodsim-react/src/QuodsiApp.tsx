@@ -52,6 +52,9 @@ export interface AppState {
 
   // Panel type - determines which panel is shown
   panelType: "auth" | "model" | null;
+  
+  // Flag to track whether the model needs initialization
+  needsInitialization: boolean;
 }
 
 export const initialSimulationStatus: SimulationStatus = {
@@ -63,7 +66,7 @@ export const initialSimulationStatus: SimulationStatus = {
 } as const;
 
 const initialState: AppState = {
-  modelName: "New Model",
+  modelName: "",  // Empty model name to avoid showing "New Model"
   validationState: null,
   currentElement: null,
   lastElementUpdate: null,
@@ -87,6 +90,8 @@ const initialState: AppState = {
   // Set a default panelType based on URL - if it contains 'auth' in the URL path
   // If we can't determine it yet, default to null and wait for panel init message
   panelType: window.location.pathname.includes("auth") ? "auth" : null,
+  // Flag to track whether the model needs initialization
+  needsInitialization: false,
 };
 
 const QuodsiApp: React.FC = () => {
@@ -145,7 +150,21 @@ const QuodsiApp: React.FC = () => {
 
   useEffect(() => {
     console.log("[QuodsiApp] Component mounted");
-    return () => console.log("[QuodsiApp] Component unmounted");
+    
+    // Set isReady to true after a short delay when component mounts
+    // This ensures we won't show loading indefinitely if something goes wrong with messaging
+    const timer = setTimeout(() => {
+      setState(prev => ({
+        ...prev,
+        isReady: true
+      }));
+      console.log("[QuodsiApp] Forced isReady=true after timeout");
+    }, 2000);
+    
+    return () => {
+      clearTimeout(timer);
+      console.log("[QuodsiApp] Component unmounted");
+    };
   }, []);
 
   console.log("[QuodsiApp] documentId", documentId);
@@ -332,20 +351,97 @@ const QuodsiApp: React.FC = () => {
     }
   }, [documentId, sendMessage, acknowledgeResults]);
 
+  // Add a new loading state to track initialization
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Safety timeout to force hide loading if it's stuck
+  useEffect(() => {
+    if (isLoading) {
+      const safetyTimer = setTimeout(() => {
+        console.log("[QuodsiApp] Safety timeout reached - forcing loading to false");
+        setIsLoading(false);
+      }, 5000); // 5 seconds max loading time
+      
+      return () => clearTimeout(safetyTimer);
+    }
+  }, [isLoading]);
+
+  // Effect to try to detect panel type from URL parameters
+  useEffect(() => {
+    // Only run if panelType is not set yet
+    if (!state.panelType) {
+      try {
+        // Try to determine panel type from URL search params
+        const urlParams = new URLSearchParams(window.location.search);
+        const panelParam = urlParams.get('panel');
+        
+        if (panelParam) {
+          // If panel parameter exists, use it
+          const detectedType = panelParam.toLowerCase() === 'auth' ? 'auth' : 'model';
+          console.log(`[QuodsiApp] Detected panel type '${detectedType}' from URL parameter`);
+          
+          setState(prev => ({
+            ...prev,
+            panelType: detectedType
+          }));
+        } else if (window.location.pathname.includes('auth')) {
+          // Fallback to checking URL path
+          console.log('[QuodsiApp] Detected auth panel from URL path');
+          setState(prev => ({
+            ...prev,
+            panelType: 'auth'
+          }));
+        } else {
+          // Default to model panel if we can't determine
+          console.log('[QuodsiApp] Defaulting to model panel');
+          setState(prev => ({
+            ...prev,
+            panelType: 'model'
+          }));
+        }
+      } catch (error) {
+        console.error('[QuodsiApp] Error detecting panel type:', error);
+      }
+    }
+  }, []); // Only run once on mount
+  
+  // Add an effect to hide loading after app is ready and data arrives
+  useEffect(() => {
+    console.log("[QuodsiApp] Panel type or auth state changed:", {
+      panelType: state.panelType,
+      inProgress,
+      isAuthenticated,
+      isReady: state.isReady
+    });
+    
+    // Hide loading in these cases:
+    // 1. We have a panelType and authentication is ready
+    // 2. We definitely know we're in auth panel
+    // 3. We've received any message from the extension (REACT_APP_READY has been processed)
+    // 4. As a fallback, it's been more than 2 seconds since mounting (covered by isReady)
+    if ((state.panelType && inProgress === "none") || 
+        state.panelType === "auth" || 
+        state.isReady) {
+      console.log("[QuodsiApp] Conditions met to hide loading screen");
+      const timer = setTimeout(() => setIsLoading(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [state.panelType, inProgress, isAuthenticated, state.isReady]);
+
   return (
     <div className="flex flex-col h-screen">
       {state.error && <ErrorDisplay error={state.error} />}
 
-      {state.panelType === "auth" ? (
+      {isLoading ? (
+        // Show a loading spinner while initializing
+        <ProcessingIndicator message="Initializing Quodsi..." fullScreen={true} />
+      ) : state.panelType === "auth" ? (
         // Show the Auth Panel when panelType is "auth"
         <AuthPanel />
       ) : // For ModelPanel, check if MSAL is initializing, then check auth status
       inProgress !== "none" ? (
         // Show loading while MSAL is initializing
-        <div className="flex flex-col items-center justify-center h-full p-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-          <p className="text-gray-600">Initializing authentication...</p>
-        </div>
+        <ProcessingIndicator message="Initializing authentication..." fullScreen={true} />
       ) : !isAuthenticated ? (
         // Not authenticated - show sign-in message
         <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-50">
@@ -365,7 +461,13 @@ const QuodsiApp: React.FC = () => {
           </div>
         </div>
       ) : (
-        // Authenticated - show ModelPanelAccordion
+        // Authenticated - show ModelPanelAccordion with processing indicator when needed
+        <>
+          {state.isProcessing && (
+            <div className="absolute top-0 left-0 right-0 z-10">
+              <ProcessingIndicator message="Processing..." />
+            </div>
+          )}
         <ModelPanelAccordion
           modelName={state.modelName}
           validationState={state.validationState}
@@ -384,7 +486,9 @@ const QuodsiApp: React.FC = () => {
           onElementTypeChange={handleElementTypeChange}
           simulationStatus={state.simulationStatus}
           onViewResults={handleViewResults}
+          needsInitialization={state.needsInitialization}
         />
+        </>
       )}
     </div>
   );

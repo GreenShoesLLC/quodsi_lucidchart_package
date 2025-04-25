@@ -87,7 +87,9 @@ export const selectionMessageHandlers: Partial<{
                         isProcessing,
                         // Ensure error is null if undefined
                         error: payload.error ?? null,
-                        documentId: payload.documentId
+                        documentId: payload.documentId,
+                        // Reset needsInitialization flag when a model exists
+                        needsInitialization: false
                     };
                 });
             }
@@ -105,7 +107,9 @@ export const selectionMessageHandlers: Partial<{
                 },
                 // Ensure error is null if undefined
                 error: payload.error ?? null,
-                isProcessing
+                isProcessing,
+                // Reset needsInitialization flag for element selections
+                needsInitialization: false
             }));
         } else if (payload.selectionType === SelectionType.UNCONVERTED_ELEMENT) {
             // Unconverted element - show a special prompt
@@ -123,7 +127,9 @@ export const selectionMessageHandlers: Partial<{
                 },
                 // Ensure error is null if undefined
                 error: payload.error ?? null,
-                isProcessing
+                isProcessing,
+                // Reset needsInitialization flag for element selections
+                needsInitialization: false
             }));
         } else if (payload.selectionType === SelectionType.CONNECTOR) {
             // Connector element selected
@@ -148,7 +154,9 @@ export const selectionMessageHandlers: Partial<{
                     },
                     error: payload.error ?? null,
                     isProcessing,
-                    documentId: payload.documentId
+                    documentId: payload.documentId,
+                    // Reset needsInitialization flag for element selections
+                    needsInitialization: false
                 };
             });
         } else {
@@ -174,7 +182,9 @@ export const selectionMessageHandlers: Partial<{
                     },
                     error: payload.error ?? null,
                     isProcessing,
-                    documentId: payload.documentId
+                    documentId: payload.documentId,
+                    // Reset needsInitialization flag for element selections
+                    needsInitialization: false
                 };
             });
         }

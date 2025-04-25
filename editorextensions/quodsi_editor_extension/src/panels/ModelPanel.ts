@@ -124,6 +124,15 @@ export class ModelPanel extends Panel {
         this.sendAuthMessage(AuthActionType.PANEL_INIT, {
             panelType: 'model'
         });
+        
+        // Set a timeout to send the panel init message again in case the React app wasn't ready
+        // This helps when switching between panels
+        setTimeout(() => {
+            console.log('[ModelPanel] Sending delayed panel init message');
+            this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+                panelType: 'model'
+            });
+        }, 500);
     }
     protected sendAuthMessage(
         type: AuthActionType,

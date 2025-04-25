@@ -105,10 +105,23 @@ export const authMessageHandlers: Partial<{
         switch (payload.type) {
             case AuthActionType.PANEL_INIT:
                 console.log("[AuthMessageHandlers] Processing AUTH panel init:", payload.data);
-                setState((prev: AppState) => ({
-                    ...prev,
-                    panelType: payload.data?.panelType || null,
-                }));
+                setState((prev: AppState) => {
+                    // Only update panel type if it's not already set or if it's different
+                    const newPanelType = payload.data?.panelType || null;
+                    const shouldUpdate = !prev.panelType || prev.panelType !== newPanelType;
+                    
+                    if (shouldUpdate) {
+                        console.log(`[AuthMessageHandlers] Updating panel type from ${prev.panelType} to ${newPanelType}`);
+                        return {
+                            ...prev,
+                            panelType: newPanelType,
+                            // Also reset isProcessing when panel type changes to avoid stuck state
+                            isProcessing: false
+                        };
+                    }
+                    
+                    return prev;
+                });
 
                 // Delay requesting auth status to ensure MSAL is fully initialized
                 if (payload.data?.panelType === "auth") {
