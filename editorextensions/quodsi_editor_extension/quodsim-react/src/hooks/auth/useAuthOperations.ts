@@ -116,13 +116,53 @@ export function useAuthOperations(): AuthOperations {
       // Notify extension that sign-in is starting
       authMessagingService.sendSignInStarted();
 
-      // Clear any existing authentication session
-      clearExistingSession();
+      // Ensure we start with a clean state by:
+      // 1. Check for any existing MSAL accounts
+      const existingAccounts = instance.getAllAccounts();
+      if (existingAccounts.length > 0) {
+        ComponentLogger.log(LOG_PREFIX, `Found ${existingAccounts.length} existing accounts, clearing cache to remove them`);
+        
+        // Clear MSAL cache to remove existing accounts
+        sessionStorageService.clearMsalCache();
+        
+        // Verify accounts were cleared
+        const remainingAccounts = instance.getAllAccounts();
+        if (remainingAccounts.length > 0) {
+          ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain after cache clearing`);
+        } else {
+          ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
+        }
+      }
+      
+      // 2. Clear all session storage and cache
+      sessionStorageService.clearSessionState();
+      sessionStorageService.clearMsalCache();
+      
+      // 3. Reset local state
+      updateAuthState({
+        isAuthenticated: false,
+        userInfo: null,
+        error: null
+      });
+      clearTokens();
 
-      ComponentLogger.log(LOG_PREFIX, 'Initiating loginPopup');
-      // ALWAYS use standard MSAL popup flow
-      const response = await instance.loginPopup(loginRequest);
-      ComponentLogger.log(LOG_PREFIX, 'Login successful', response);
+      // Prepare login options with prompt=login to force fresh authentication
+      const loginOptions = {
+        ...loginRequest,
+        prompt: 'login' // Force login prompt to avoid any cached sessions
+      };
+
+      ComponentLogger.log(LOG_PREFIX, 'Initiating loginPopup with prompt=login');
+      // ALWAYS use standard MSAL popup flow with prompt=login
+      const response = await instance.loginPopup(loginOptions);
+      // Log successful login with redacted info
+      ComponentLogger.log(LOG_PREFIX, 'Login successful', {
+        accessTokenLength: response.accessToken ? response.accessToken.length : 0,
+        idTokenLength: response.idToken ? response.idToken.length : 0,
+        hasAccount: response.account ? 'yes' : 'no',
+        expiresOn: response.expiresOn ? response.expiresOn.toISOString() : 'no expiration'
+      });
+      
       // IMPORTANT: After successful login, update the auth state
       if (response?.account) {
         const userInfo = {
@@ -136,6 +176,7 @@ export function useAuthOperations(): AuthOperations {
           userInfo,
           error: null
         });
+        
         // Calculate token expiration - handle null case
         let tokenExpiration: Date;
         if (response.expiresOn) {
@@ -146,6 +187,7 @@ export function useAuthOperations(): AuthOperations {
           tokenExpiration = new Date(Date.now() + 3600 * 1000);
           ComponentLogger.log(LOG_PREFIX, 'No expiration time in token, using default 1 hour');
         }
+        
         // Save to session storage
         sessionStorageService.saveSessionState({
           isAuthenticated: true,
@@ -157,10 +199,15 @@ export function useAuthOperations(): AuthOperations {
 
         // Notify extension about successful auth
         authMessagingService.sendAuthCompleted(true, userInfo);
+      } else {
+        ComponentLogger.error(LOG_PREFIX, 'Login response missing account information');
+        throw new Error('Login response missing account information');
       }
-      // Token will be acquired in the useEffect when accounts change
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Login failed', error);
+      
+      // Clear any partial state that might have been set
+      clearExistingSession();
       
       // Convert to standardized error
       const authError = authErrorHandler.handleMsalError(error);
@@ -178,7 +225,9 @@ export function useAuthOperations(): AuthOperations {
     inProgress, 
     setIsProcessingAuth, 
     setError,
-    clearExistingSession
+    clearExistingSession,
+    clearTokens,
+    updateAuthState
   ]);
 
   // Handle sign-out
@@ -189,10 +238,10 @@ export function useAuthOperations(): AuthOperations {
     setIsProcessingAuth(true);
 
     try {
-      // End session on backend
+      // End session on backend first
       await endCurrentSession();
       
-      // Clear local state first
+      // Clear local state
       setIsAuthenticated(false);
       setUserInfo(null);
       clearTokens();
@@ -205,14 +254,51 @@ export function useAuthOperations(): AuthOperations {
       
       // Use popup for logout (more reliable in iframe environments)
       try {
-        await instance.logoutPopup();
+        // Force prompt on next login by setting prompt="login" in the logout options
+        await instance.logoutPopup({
+          postLogoutRedirectUri: window.location.origin,
+          mainWindowRedirectUri: window.location.origin,
+        });
+        window.location.reload();
+        ComponentLogger.log(LOG_PREFIX, 'MSAL logout popup completed successfully');
       } catch (e) {
-        ComponentLogger.log(LOG_PREFIX, 'Popup logout failed, clearing session locally');
-        // If popup logout fails, we've already cleared the local state
+        ComponentLogger.error(LOG_PREFIX, 'Popup logout failed, clearing MSAL cache manually', e);
+        // If popup logout fails, we need to make sure MSAL cache is completely cleared
+        try {
+          // MSAL doesn't have a direct removeAccount method, so we'll use the logout methods
+          // and then make sure we clear the cache completely
+          ComponentLogger.log(LOG_PREFIX, 'Failed to logout via popup, using additional cleanup methods');
+          
+          // Force manual clearing of accounts from MSAL cache
+          sessionStorageService.clearMsalCache();
+          sessionStorageService.clearSessionState();
+          window.location.reload();
+          // Log accounts that remain after clearing
+          const remainingAccounts = instance.getAllAccounts();
+          if (remainingAccounts.length > 0) {
+            ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain in MSAL cache after clearing`);
+          } else {
+            ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
+          }
+        } catch (accountError) {
+          ComponentLogger.error(LOG_PREFIX, 'Error during account cleanup', accountError);
+        }
       }
+      
+      // Ensure sessionStorage and localStorage are fully cleared of auth data
+      sessionStorageService.clearMsalCache();
+      
+      // Force reload window.location to ensure clean auth state
+      // Uncomment if issues persist, but this is a last resort that affects UX
+      // window.location.reload();
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Logout failed', error);
       // Even if logout fails, we still want the UI to show logged out state
+      setIsAuthenticated(false);
+      setUserInfo(null);
+      clearTokens();
+      sessionStorageService.clearSessionState();
+      sessionStorageService.clearMsalCache();
     } finally {
       setIsProcessingAuth(false);
     }

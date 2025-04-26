@@ -97,25 +97,81 @@ export class UserSyncService {
 
     try {
       ComponentLogger.log(LOG_PREFIX, 'Syncing user with quodsi-fastapi');
+      ComponentLogger.log(LOG_PREFIX, `Using API endpoint: ${this.baseUrl}${authApiConfig.endpoints.syncUser}`);
+
+      // Validate token before proceeding
+      // Log token information (redacted)
+      const tokenParts = token.split('.');
+      if (tokenParts.length < 2) {
+        ComponentLogger.error(LOG_PREFIX, 'Invalid token format - does not appear to be a valid JWT');
+        return null;
+      }
       
+      // Extract and validate token payload
+      try {
+        const tokenPayload = JSON.parse(atob(tokenParts[1]));
+        
+        // Check for critical token properties
+        if (!tokenPayload.exp || !tokenPayload.aud || !tokenPayload.iss) {
+          ComponentLogger.error(LOG_PREFIX, 'Token missing critical properties (exp, aud, or iss)');
+          return null;
+        }
+        
+        // Check if token is expired
+        const now = Math.floor(Date.now() / 1000); // Current time in seconds
+        if (tokenPayload.exp && tokenPayload.exp < now) {
+          ComponentLogger.error(LOG_PREFIX, 'Token is expired - cannot use for sync');
+          return null;
+        }
+        
+        // Log token payload with sensitive data redacted
+        ComponentLogger.log(LOG_PREFIX, 'Token payload (redacted):', {
+          aud: tokenPayload.aud,
+          iss: tokenPayload.iss,
+          exp: tokenPayload.exp,
+          sub: tokenPayload.sub ? '***redacted***' : 'missing',
+          name: tokenPayload.name ? '***redacted***' : 'missing',
+          preferred_username: tokenPayload.preferred_username ? '***redacted***' : 'missing',
+          tokenIssuedAt: tokenPayload.iat ? new Date(tokenPayload.iat * 1000).toISOString() : 'missing',
+          tokenExpiresAt: tokenPayload.exp ? new Date(tokenPayload.exp * 1000).toISOString() : 'missing',
+        });
+      } catch (e) {
+        ComponentLogger.error(LOG_PREFIX, 'Error parsing token payload:', e);
+        return null; // Cannot proceed with invalid token
+      }
+
+      // Proceed with user sync API call
+      ComponentLogger.log(LOG_PREFIX, 'Sending sync request to backend API');
       const response = await fetch(
-        `${this.baseUrl}${authApiConfig.endpoints.syncUser}`, 
+        `${this.baseUrl}${authApiConfig.endpoints.syncUser}`,
         {
           method: 'POST',
           headers: this.getAuthHeaders(token),
           body: JSON.stringify({
             // The token already contains all necessary user information
             // No additional data needed for basic sync
+            current_time: new Date().toISOString(), // Include current time for debugging
+            client_info: navigator.userAgent // Include client info for debugging
           })
         }
       );
+
+      // Log the response status and headers (TypeScript compatible way)
+      ComponentLogger.log(LOG_PREFIX, `Response status: ${response.status}`);
+
+      // Log headers in a TypeScript compatible way
+      const headerObj: Record<string, string> = {};
+      response.headers.forEach((value, key) => {
+        headerObj[key] = value;
+      });
+      ComponentLogger.log(LOG_PREFIX, `Response headers:`, headerObj);
 
       if (!response.ok) {
         const errorText = await response.text();
         ComponentLogger.error(
           LOG_PREFIX,
-          'Failed to sync user with quodsi-fastapi', 
-          `Status: ${response.status}`, 
+          'Failed to sync user with quodsi-fastapi',
+          `Status: ${response.status}`,
           errorText
         );
         throw new Error(`Sync failed with status ${response.status}: ${errorText}`);
@@ -125,10 +181,17 @@ export class UserSyncService {
       ComponentLogger.log(LOG_PREFIX, 'User synced successfully', userData);
       return userData;
     } catch (error) {
-      // Create a standardized error
+      // Create a standardized error and include original error details
       const authError = authErrorHandler.createUserSyncError(error);
-      ComponentLogger.error(LOG_PREFIX, 'Error syncing user', authError);
-      return null;
+      ComponentLogger.error(LOG_PREFIX, 'Error syncing user', authError, error);
+
+      // Log network errors specifically
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        ComponentLogger.error(LOG_PREFIX, 'Network error - check API connectivity and CORS settings');
+      }
+
+      // Re-throw the error to propagate it up
+      throw error;
     }
   }
 

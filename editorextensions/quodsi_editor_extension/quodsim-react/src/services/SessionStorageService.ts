@@ -202,31 +202,71 @@ export class SessionStorageService {
    */
   public clearMsalCache(): void {
     try {
-      // Try to clear MSAL-related data in sessionStorage
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && key.startsWith('msal.')) {
-          sessionStorage.removeItem(key);
-        }
-      }
+      ComponentLogger.log(LOG_PREFIX, 'Clearing MSAL cache - starting');
       
-      // Try to clear MSAL-related data in localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('msal.')) {
-          localStorage.removeItem(key);
+      // We need to check all possible MSAL-related keys
+      const msalPrefixes = ['msal.', 'login.', 'idtoken', 'accessToken', 'refreshToken', 'authority'];
+      const storages = [sessionStorage, localStorage];
+      
+      // Function to safely remove items from storage
+      const safeRemoveItems = (storage: Storage, keysToRemove: string[]) => {
+        keysToRemove.forEach(key => {
+          try {
+            storage.removeItem(key);
+          } catch (e) {
+            ComponentLogger.error(LOG_PREFIX, `Error removing item ${key}:`, e);
+          }
+        });
+      };
+      
+      // Clear items from both session and local storage
+      storages.forEach(storage => {
+        // We need to collect keys first since removing items changes the length
+        const keysToRemove: string[] = [];
+        
+        // Get all keys that match our MSAL prefixes
+        for (let i = 0; i < storage.length; i++) {
+          const key = storage.key(i);
+          if (key && msalPrefixes.some(prefix => key.toLowerCase().includes(prefix.toLowerCase()))) {
+            keysToRemove.push(key);
+          }
         }
-      }
+        
+        // Log what we're removing
+        if (keysToRemove.length > 0) {
+          ComponentLogger.log(LOG_PREFIX, `Removing ${keysToRemove.length} MSAL-related items from ${storage === sessionStorage ? 'sessionStorage' : 'localStorage'}`);
+        }
+        
+        // Remove the collected keys
+        safeRemoveItems(storage, keysToRemove);
+      });
       
       // Try to clear MSAL-related cookies
+      const cookiesToRemove: string[] = [];
       document.cookie.split(';').forEach(cookie => {
         const [name] = cookie.trim().split('=');
-        if (name && name.includes('msal')) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+        if (name && msalPrefixes.some(prefix => name.toLowerCase().includes(prefix.toLowerCase()))) {
+          cookiesToRemove.push(name);
         }
       });
       
-      ComponentLogger.log(LOG_PREFIX, 'Cleared MSAL cache');
+      // Log what we're removing
+      if (cookiesToRemove.length > 0) {
+        ComponentLogger.log(LOG_PREFIX, `Removing ${cookiesToRemove.length} MSAL-related cookies`);
+      }
+      
+      // Remove the cookies
+      cookiesToRemove.forEach(name => {
+        try {
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=none`;
+          // Also try with different paths in case the cookie was set differently
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}; secure; samesite=none`;
+        } catch (e) {
+          ComponentLogger.error(LOG_PREFIX, `Error clearing cookie ${name}:`, e);
+        }
+      });
+      
+      ComponentLogger.log(LOG_PREFIX, 'MSAL cache clearing completed');
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Error clearing MSAL cache:', error);
     }
