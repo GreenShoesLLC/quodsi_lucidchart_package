@@ -36,7 +36,7 @@ interface ChangeTracker {
 
 export class ModelManager {
     private static readonly LOG_PREFIX = '[ModelManager]';
-    private loggingEnabled: boolean = false;
+    private loggingEnabled: boolean = true;
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
@@ -457,14 +457,50 @@ export class ModelManager {
         type: SimulationObjectType,
         metadata?: { id: string; version: string }
     ): void {
-        // Use the metadata if provided, otherwise use default metadata
-        const actualMetadata = metadata || {
-            id: element.id,
-            version: this.storageAdapter.CURRENT_VERSION
-        };
+        console.log('[ModelManager] setElementData - Start', {
+            elementId: element.id,
+            dataType: typeof data,
+            simulationObjectType: SimulationObjectType[type]
+        });
 
-        this.storageAdapter.setElementData(element, data, type, actualMetadata);
-        this.markModelDirty(element.id);
+        try {
+            // Log basic input details
+            console.log('[ModelManager] Input Data:', {
+                dataKeys: data ? Object.keys(data) : 'No data',
+                metadata: metadata
+            });
+
+            // Determine metadata
+            const actualMetadata = metadata || {
+                id: element.id,
+                version: this.storageAdapter.CURRENT_VERSION
+            };
+
+            console.log('[ModelManager] Metadata:', {
+                id: actualMetadata.id,
+                version: actualMetadata.version,
+                isDefaultUsed: !metadata
+            });
+            console.log('[ModelManager] storageAdapter.setElementData:', {
+                element: element,
+                data: data,
+                type: type
+            });
+            // Call storage adapter
+            this.storageAdapter.setElementData(element, data, type, actualMetadata);
+
+            // Mark model as dirty
+            console.log('[ModelManager] Marking model dirty for element:', element.id);
+            this.markModelDirty(element.id);
+
+            console.log('[ModelManager] setElementData - Completed Successfully');
+        } catch (error) {
+            console.error('[ModelManager] setElementData - Error', {
+                elementId: element.id,
+                errorMessage: error instanceof Error ? error.message : 'Unknown error'
+            });
+            throw error;
+        }
     }
 
     public clearElementData(element: ElementProxy): void {
@@ -508,25 +544,52 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        // Handle conversion to NONE type (removing simulation data)
-        if (type === SimulationObjectType.None) {
-            const existingElement = this.getElementById(element.id);
-            if (existingElement) {
-                this.removeElement(element.id);
+        console.group('[ModelManager] saveElementData');
+        console.log('Input Parameters:', {
+            elementId: element.id,
+            elementType: element.constructor.name,
+            simulationObjectType: type,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Handle conversion to NONE type (removing simulation data)
+            if (type === SimulationObjectType.None) {
+                console.log('Detected NONE type - removing element');
+                const existingElement = this.getElementById(element.id);
+                if (existingElement) {
+                    console.log(`Removing element: ${element.id}`);
+                    this.removeElement(element.id);
+                }
+                console.groupEnd();
+                return;
             }
-            return;
-        }
 
-        // Handle type conversion with no data
-        if (type && (!data || Object.keys(data).length === 0)) {
-            await this.handleTypeConversion(element, type, page);
-            return;
-        }
+            // Log data details for type conversion or update
+            console.log('Incoming Data:', {
+                type: typeof data,
+                keys: data ? Object.keys(data) : 'No data',
+                data: data ? JSON.parse(JSON.stringify(data)) : null
+            });
 
-        // Handle regular data update
-        await this.handleDataUpdate(element, data, type, page);
+            // Handle type conversion with no data
+            if (type && (!data || Object.keys(data).length === 0)) {
+                console.log('Detected type conversion with no data');
+                await this.handleTypeConversion(element, type, page);
+                console.groupEnd();
+                return;
+            }
+
+            // Handle regular data update
+            await this.handleDataUpdate(element, data, type, page);
+            console.groupEnd();
+        } catch (error) {
+            console.error('[ModelManager] Error in saveElementData:', error);
+            console.groupEnd();
+            throw error;
+        }
     }
-
     /**
      * Handles converting an element to a new simulation type
      */
@@ -575,38 +638,83 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        // Ensure model exists
-        if (!this.getModel()) {
-            const model = {
-                id: page.id,
-                name: page.getTitle() || 'New Model',
-                type: SimulationObjectType.Model
-            };
-            await this.initializeModel(model as Model, page);
-        }
+        console.group('[ModelManager] handleDataUpdate');
+        console.log('Input Parameters:', {
+            elementId: element.id,
+            updateDataType: typeof updateData,
+            simulationObjectType: type,
+            pageId: page.id
+        });
 
-        // Preserve or set element name
-        const elementName = this.getDefaultElementName(element);
-        const elementData = {
-            id: element.id,
-            type: type,
-            ...updateData,
-            name: (updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData)
-                ? (updateData as { name?: string }).name || elementName
-                : elementName
-        };
-
-        // Register and save
-        this.registerElement(elementData, element);
-        this.setElementData(
-            element,
-            elementData,
-            type,
-            {
-                id: element.id,
-                version: this.CURRENT_VERSION
+        try {
+            // Check and log model existence
+            const existingModel = this.getModel();
+            if (!existingModel) {
+                console.log('No existing model found. Creating new model.');
+                const model = {
+                    id: page.id,
+                    name: page.getTitle() || 'New Model',
+                    type: SimulationObjectType.Model
+                };
+                console.log('Initializing new model:', model);
+                await this.initializeModel(model as Model, page);
+            } else {
+                console.log('Existing model found:', {
+                    modelId: existingModel.id,
+                    modelName: existingModel.name
+                });
             }
-        );
+
+            // Determine element name
+            const elementName = this.getDefaultElementName(element);
+            console.log('Element name determination:', {
+                defaultElementName: elementName,
+                updateDataContainsName: updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData
+            });
+
+            // Prepare element data
+            const elementData = {
+                id: element.id,
+                type: type,
+                ...updateData,
+                name: (updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData)
+                    ? (updateData as { name?: string }).name || elementName
+                    : elementName
+            };
+
+            console.log('Prepared Element Data:', {
+                id: elementData.id,
+                type: elementData.type,
+                name: elementData.name,
+                additionalKeys: Object.keys(elementData).filter(k => !['id', 'type', 'name'].includes(k))
+            });
+
+            // Register and save
+            console.log('Registering element');
+            this.registerElement(elementData, element);
+
+            console.log('Setting element data', {
+                metadata: {
+                    id: element.id,
+                    version: this.CURRENT_VERSION
+                }
+            });
+            this.setElementData(
+                element,
+                elementData,
+                type,
+                {
+                    id: element.id,
+                    version: this.CURRENT_VERSION
+                }
+            );
+
+            console.groupEnd();
+        } catch (error) {
+            console.error('[ModelManager] Error in handleDataUpdate:', error);
+            console.groupEnd();
+            throw error;
+        }
     }
 
     /**

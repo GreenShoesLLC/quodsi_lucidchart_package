@@ -236,13 +236,21 @@ const QuodsiApp: React.FC = () => {
   }, [sendMessage]);
 
   // Updated to use ACTION_REQUEST
-  const handleElementUpdate = useCallback(
-    (elementId: string, data: any) => {
-      console.log("[QuodsiApp] Update requested:", { elementId, data });
-      setState((prev) => ({ ...prev, isProcessing: true }));
+const handleElementUpdate = useCallback(
+  (elementId: string, data: any) => {
+    // Detailed initial logging
+    console.group("[QuodsiApp] Element Update Request");
+    console.log("Element ID:", elementId);
+    console.log("Incoming Data:", JSON.parse(JSON.stringify(data))); // Deep log without circular references
+    console.log("Current Element Type:", state.currentElement?.metadata?.type);
 
-      // Handle type conversion
+    // Set processing state
+    setState((prev) => ({ ...prev, isProcessing: true }));
+
+    try {
+      // Type conversion scenario
       if (data.type && Object.keys(data).length === 1) {
+        console.log("Detected Type Conversion Request");
         sendMessage(MessageTypes.ACTION_REQUEST, {
           actionType: ActionType.UPDATE_ELEMENT_DATA,
           data: {
@@ -251,8 +259,10 @@ const QuodsiApp: React.FC = () => {
             data: {}, // Empty data for type conversion
           },
         });
+        console.log("Sent Type Conversion Message");
       } else {
-        // Regular update
+        // Regular update scenario
+        console.log("Detected Regular Element Update");
         sendMessage(MessageTypes.ACTION_REQUEST, {
           actionType: ActionType.UPDATE_ELEMENT_DATA,
           data: {
@@ -265,10 +275,17 @@ const QuodsiApp: React.FC = () => {
             },
           },
         });
+        console.log("Sent Regular Update Message");
       }
-    },
-    [sendMessage, state.currentElement?.metadata?.type]
-  );
+    } catch (error) {
+      console.error("[QuodsiApp] Element Update Error:", error);
+      setState((prev) => ({ ...prev, isProcessing: false }));
+    } finally {
+      console.groupEnd();
+    }
+  },
+  [sendMessage, state.currentElement?.metadata?.type]
+);
 
   // Updated to use ACTION_REQUEST
   const handleSimulate = useCallback(

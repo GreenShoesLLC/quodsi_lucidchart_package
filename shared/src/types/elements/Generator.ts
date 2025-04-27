@@ -1,16 +1,20 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { Duration } from "./Duration";
-import { SimulationObject } from "./SimulationObject";
+import { PositionedSimulationObject } from "./PositionedSimulationObject";
 import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
 import { DurationType } from "./DurationType";
 import { ConstantDistribution } from "./distributions";
 
-export class Generator implements SimulationObject {
+export class Generator extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Generator;
 
-    static createDefault(id: string): Generator {
-        return new Generator(
+    static createDefault(
+        id: string, 
+        x: number = 0, 
+        y: number = 0
+    ): Generator {
+        const generator = new Generator(
             id,
             'New Generator',
             '{SomeActivityName}',
@@ -21,6 +25,11 @@ export class Generator implements SimulationObject {
             new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // periodicStartDuration
             999 // maxEntities
         );
+
+        // Set location using inherited method
+        generator.setLocation(x, y);
+
+        return generator;
     }
 
     constructor(
@@ -33,5 +42,11 @@ export class Generator implements SimulationObject {
         public entitiesPerCreation: number = 1,
         public periodicStartDuration: Duration = new Duration(),
         public maxEntities: number = Infinity,
-    ) { }
+        x: number = 0,
+        y: number = 0
+    ) { 
+        super();
+        // Set location using inherited method
+        this.setLocation(x, y);
+    }
 }

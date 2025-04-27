@@ -11,11 +11,28 @@ interface Props {
 const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={{
+      data={{ 
         ...entity,
         type: SimulationObjectType.Entity,
+        // Ensure all Entity methods are available
+        setLocation: (x: number, y: number) => entity.setLocation(x, y),
+        getLocation: () => entity.getLocation(),
+        hasLocation: () => entity.hasLocation(),
+        clone: () => entity.clone(),
+        resetLocation: () => entity.resetLocation(),
+        toJSON: () => entity.toJSON()
       }}
-      onSave={onSave}
+      onSave={(updatedData) => {
+        // Create a new Entity instance to preserve class methods
+        const updatedEntity = new Entity(
+          updatedData.id,
+          updatedData.name,
+          updatedData.x,
+          updatedData.y
+        );
+
+        onSave(updatedEntity);
+      }}
       onCancel={onCancel}
       messageType="entitySaved"
     >

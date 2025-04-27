@@ -38,20 +38,65 @@ const GeneratorEditor: React.FC<Props> = ({
     periodUnit: PeriodUnit,
     distribution: Distribution
   ) => {
-    onSave({
-      ...generator,
-      [name]: {
-        ...generator[name],
-        durationPeriodUnit: periodUnit,
-        distribution,
+    // Create a new Generator instance to preserve class methods
+    const updatedGenerator = new Generator(
+      generator.id,
+      generator.name,
+      generator.activityKeyId,
+      generator.entityId,
+      generator.periodicOccurrences,
+      {
+        ...generator.periodIntervalDuration,
+        ...(name === "periodIntervalDuration" ? { 
+          durationPeriodUnit: periodUnit, 
+          distribution 
+        } : {})
       },
-    });
+      generator.entitiesPerCreation,
+      {
+        ...generator.periodicStartDuration,
+        ...(name === "periodicStartDuration" ? { 
+          durationPeriodUnit: periodUnit, 
+          distribution 
+        } : {})
+      },
+      generator.maxEntities,
+      generator.x,
+      generator.y
+    );
+
+    onSave(updatedGenerator);
   };
 
   return (
     <BaseEditor
-      data={{ ...generator, type: SimulationObjectType.Generator }}
-      onSave={onSave}
+      data={{ 
+        ...generator, 
+        type: SimulationObjectType.Generator,
+        // Ensure all PositionedSimulationObject methods are available
+        setLocation: (x: number, y: number) => generator.setLocation(x, y),
+        getLocation: () => generator.getLocation(),
+        hasLocation: () => generator.hasLocation(),
+        clone: () => generator.clone()
+      }}
+      onSave={(updatedData) => {
+        // Create a new Generator instance to preserve class methods
+        const updatedGenerator = new Generator(
+          updatedData.id,
+          updatedData.name,
+          updatedData.activityKeyId,
+          updatedData.entityId,
+          updatedData.periodicOccurrences,
+          updatedData.periodIntervalDuration,
+          updatedData.entitiesPerCreation,
+          updatedData.periodicStartDuration,
+          updatedData.maxEntities,
+          updatedData.x,
+          updatedData.y
+        );
+
+        onSave(updatedGenerator);
+      }}
       onCancel={onCancel}
       messageType="generatorSaved"
     >

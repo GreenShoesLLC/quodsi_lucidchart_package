@@ -22,6 +22,8 @@ export const setEntityLucidLogging = (enabled: boolean): void => {
 
 interface StoredEntityData {
     id: string;
+    x?: number;  // Added x coordinate
+    y?: number;  // Added y coordinate
     name?: string;
 }
 
@@ -38,48 +40,75 @@ export class EntityLucid extends SimObjectLucid<Entity> {
     protected createSimObject(): Entity {
         ComponentLogger.log(LOG_PREFIX, `Creating Entity simulation object for element ID: ${this.platformElementId}`);
         
-        // Create entity with element-specific properties
-        const entity = new Entity(
-            this.platformElementId,
-            ''  // name will be set below
-        );
-
-        // Get stored custom data
+        // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredEntityData;
 
-        if (storedData) {
-            ComponentLogger.log(LOG_PREFIX, `Found stored data for element ID: ${this.platformElementId}`, storedData);
-            // Only copy name from stored data
-            entity.name = storedData.name || this.getElementName('Entity');
-        } else {
-            ComponentLogger.log(LOG_PREFIX, `No stored data found for element ID: ${this.platformElementId}, using defaults`);
+        // Create entity using stored data or defaults
+        const entity = new Entity(
+            this.platformElementId,
+            storedData?.name || 'New Entity',
+            storedData?.x ?? 0,
+            storedData?.y ?? 0
+        );
+
+        // Update platform-specific fields after creation
+        this.updatePlatformSpecificFields(entity);
+
+        return entity;
+    }
+
+    private updatePlatformSpecificFields(entity: Entity): void {
+        const block = this.element as BlockProxy;
+        
+        // Update location from current platform
+        const location = block.getLocation();
+        entity.setLocation(location.x ?? entity.x, location.y ?? entity.y);
+
+        // Update name if needed
+        if (!entity.name || entity.name === 'New Entity') {
             entity.name = this.getElementName('Entity');
         }
 
-        return entity;
+        ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
+            x: entity.x,
+            y: entity.y,
+            name: entity.name
+        });
     }
 
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Entity from platform for element ID: ${this.platformElementId}`);
         
-        // Update name only if not already set
+        // Extract location from platform
+        const location = (this.element as BlockProxy).getLocation();
+        
+        // Update location
+        this.simObject.setLocation(
+            location.x ?? this.simObject.x, 
+            location.y ?? this.simObject.y
+        );
+
+        // Update name if not already set
         if (!this.simObject.name) {
             this.simObject.name = this.getElementName('Entity');
         }
 
-        // Store custom data properties
-        const dataToStore = {
+        // Store updated data
+        const dataToStore: StoredEntityData = {
             id: this.platformElementId,
+            x: this.simObject.x,     // Store x coordinate
+            y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name
         };
 
-        ComponentLogger.log(LOG_PREFIX, `Storing updated data for entity ID: ${this.platformElementId}`, dataToStore);
+        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
     protected getElementName(defaultPrefix: string): string {
         const block = this.element as BlockProxy;
 
+        // Check for text areas on the block
         if (block.textAreas && block.textAreas.size > 0) {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
@@ -90,6 +119,7 @@ export class EntityLucid extends SimObjectLucid<Entity> {
             }
         }
 
+        // If no text found, use class name
         const className = block.getClassName() || 'Block';
         const name = `${defaultPrefix} ${className}`;
         ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
@@ -99,16 +129,24 @@ export class EntityLucid extends SimObjectLucid<Entity> {
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): EntityLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid from conversion for block ID: ${block.id}`);
         
-        // Create default entity using the static method from Entity
-        const defaultEntity = Entity.createDefault(block.id);
+        // Extract location
+        const location = block.getLocation();
         
-        // Get name from block text if available
+        // Create default entity using the static method with location
+        const defaultEntity = Entity.createDefault(
+            block.id, 
+            location.x ?? 0, 
+            location.y ?? 0
+        );
+        
         const name = SimObjectLucid.getNameFromBlock(block, 'Entity');
 
         // Convert to StoredEntityData format
         const storedData: StoredEntityData = {
             id: defaultEntity.id,
-            name: name  // Use the name from block text instead of default
+            name: name,
+            x: defaultEntity.x,  // Include x coordinate
+            y: defaultEntity.y   // Include y coordinate
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted entity, block ID: ${block.id}`, storedData);

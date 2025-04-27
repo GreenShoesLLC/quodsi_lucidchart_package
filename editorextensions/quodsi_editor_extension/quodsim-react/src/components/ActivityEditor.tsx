@@ -38,15 +38,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const extractActivityData = (act: any): Activity => {
     const data = act.data || act;
-    return {
-      id: data.id || "",
-      name: data.name || "New Activity",
-      type: SimulationObjectType.Activity,
-      capacity: data.capacity || 1,
-      inputBufferCapacity: bufferToDisplay(data.inputBufferCapacity),
-      outputBufferCapacity: bufferToDisplay(data.outputBufferCapacity),
-      operationSteps: data.operationSteps || [],
-    };
+    return new Activity(
+      data.id || "",
+      data.name || "New Activity",
+      data.capacity || 1,
+      bufferToDisplay(data.inputBufferCapacity),
+      bufferToDisplay(data.outputBufferCapacity),
+      data.operationSteps || [],
+      data.x || 0,
+      data.y || 0
+    );
   };
 
   // Create state
@@ -56,24 +57,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   // Handlers
   const handleSave = (updatedActivity: Activity) => {
-    console.log("ActivityEditor - Before Save:", {
-      updatedActivity,
-      operationSteps: updatedActivity.operationSteps,
-    });
-
-    const activityToSave: Activity = {
-      ...updatedActivity,
-      type: SimulationObjectType.Activity,
-      inputBufferCapacity: displayToBuffer(updatedActivity.inputBufferCapacity),
-      outputBufferCapacity: displayToBuffer(
-        updatedActivity.outputBufferCapacity
-      ),
-    };
-
-    console.log("ActivityEditor - After Save Transform:", {
-      activityToSave,
-      operationSteps: activityToSave.operationSteps,
-    });
+    const activityToSave = new Activity(
+      updatedActivity.id,
+      updatedActivity.name,
+      updatedActivity.capacity,
+      displayToBuffer(updatedActivity.inputBufferCapacity),
+      displayToBuffer(updatedActivity.outputBufferCapacity),
+      updatedActivity.operationSteps,
+      updatedActivity.x,
+      updatedActivity.y
+    );
 
     onSave(activityToSave);
   };
@@ -139,8 +132,32 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <BaseEditor
-      data={localActivity}
-      onSave={handleSave}
+      data={{ 
+        ...localActivity, 
+        type: SimulationObjectType.Activity,
+        // Ensure all Activity methods are available
+        setLocation: (x: number, y: number) => localActivity.setLocation(x, y),
+        getLocation: () => localActivity.getLocation(),
+        hasLocation: () => localActivity.hasLocation(),
+        clone: () => localActivity.clone(),
+        resetLocation: () => localActivity.resetLocation(),
+        toJSON: () => localActivity.toJSON()
+      }}
+      onSave={(updatedData) => {
+        // Create a new Activity instance to preserve class methods
+        const updatedActivity = new Activity(
+          updatedData.id,
+          updatedData.name,
+          updatedData.capacity,
+          displayToBuffer(updatedData.inputBufferCapacity),
+          displayToBuffer(updatedData.outputBufferCapacity),
+          updatedData.operationSteps,
+          updatedData.x,
+          updatedData.y
+        );
+
+        onSave(updatedActivity);
+      }}
       onCancel={onCancel}
       messageType="activitySaved"
     >

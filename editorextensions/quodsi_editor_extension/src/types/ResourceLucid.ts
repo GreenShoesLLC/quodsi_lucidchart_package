@@ -1,14 +1,29 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import { 
     Resource,
-    SimulationObjectType 
+    SimulationObjectType,
+    ComponentLogger
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 
+// Define a constant for the logger prefix
+const LOG_PREFIX = '[ResourceLucid]';
+
+// Initialize logging to be disabled by default
+ComponentLogger.setEnabled(LOG_PREFIX, false);
+
+/**
+ * Enable or disable logging for ResourceLucid
+ */
+export const setResourceLucidLogging = (enabled: boolean): void => {
+    ComponentLogger.setEnabled(LOG_PREFIX, enabled);
+};
 
 interface StoredResourceData {
     id: string;
+    x?: number;  // Added x coordinate
+    y?: number;  // Added y coordinate
     name?: string;
     capacity?: number;
 }
@@ -22,7 +37,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         block: BlockProxy, 
         storageAdapter: StorageAdapter
     ) {
-        // Pass the block as the element to the parent constructor
+        ComponentLogger.log(LOG_PREFIX, `Constructing ResourceLucid for block ID: ${block.id}`);
         super(block, storageAdapter);
     }
 
@@ -31,40 +46,72 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
     }
 
     protected createSimObject(): Resource {
-        // Create resource with element-specific properties
-        const resource = new Resource(
-            this.platformElementId,
-            '',  // name will be set below
-            1    // default capacity
-        );
-
-        // Get stored custom data
+        ComponentLogger.log(LOG_PREFIX, `Creating Resource simulation object for element ID: ${this.platformElementId}`);
+        
+        // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredResourceData;
 
-        if (storedData) {
-            // Only copy specific properties from stored data
-            resource.name = storedData.name || this.getElementName('Resource');
-            resource.capacity = storedData.capacity ?? 1;
-        } else {
-            resource.name = this.getElementName('Resource');
-        }
+        // Create resource using stored data or defaults
+        const resource = new Resource(
+            this.platformElementId,
+            storedData?.name || 'New Resource',
+            storedData?.capacity ?? 1,
+            storedData?.x ?? 0,
+            storedData?.y ?? 0
+        );
+
+        // Update platform-specific fields after creation
+        this.updatePlatformSpecificFields(resource);
 
         return resource;
     }
 
+    private updatePlatformSpecificFields(resource: Resource): void {
+        const block = this.element as BlockProxy;
+        
+        // Update location from current platform
+        const location = block.getLocation();
+        resource.setLocation(location.x ?? resource.x, location.y ?? resource.y);
+
+        // Update name if needed
+        if (!resource.name || resource.name === 'New Resource') {
+            resource.name = this.getElementName('Resource');
+        }
+
+        ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
+            x: resource.x,
+            y: resource.y,
+            name: resource.name
+        });
+    }
+
     public updateFromPlatform(): void {
+        ComponentLogger.log(LOG_PREFIX, `Updating Resource from platform for element ID: ${this.platformElementId}`);
+        
+        // Extract location from platform
+        const location = (this.element as BlockProxy).getLocation();
+        
+        // Update location
+        this.simObject.setLocation(
+            location.x ?? this.simObject.x, 
+            location.y ?? this.simObject.y
+        );
+
         // Update name if not already set
         if (!this.simObject.name) {
             this.simObject.name = this.getElementName('Resource');
         }
 
-        // Store only custom data properties
-        const dataToStore = {
+        // Store updated data
+        const dataToStore: StoredResourceData = {
             id: this.platformElementId,
+            x: this.simObject.x,     // Store x coordinate
+            y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name,
             capacity: this.simObject.capacity
         };
 
+        ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         this.storageAdapter.updateElementData(this.element, dataToStore);
     }
 
@@ -75,29 +122,47 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         if (block.textAreas && block.textAreas.size > 0) {
             for (const text of block.textAreas.values()) {
                 if (text && text.trim()) {
-                    return text.trim();
+                    const name = text.trim();
+                    ComponentLogger.log(LOG_PREFIX, `Using text area content as name for element ID ${block.id}: ${name}`);
+                    return name;
                 }
             }
         }
 
         // If no text found, use class name
         const className = block.getClassName() || 'Block';
-        return `${defaultPrefix} ${className}`;
+        const name = `${defaultPrefix} ${className}`;
+        ComponentLogger.log(LOG_PREFIX, `Generated default name for element ID ${block.id}: ${name}`);
+        return name;
     }
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceLucid {
-        // Create default resource using the static method
-        const defaultResource = Resource.createDefault(block.id);
-        // Get name from block text if available
-        const name = SimObjectLucid.getNameFromBlock(block, 'Res');
+        ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}`);
+        
+        // Extract location
+        const location = block.getLocation();
+        
+        // Create default resource using the static method with location
+        const defaultResource = Resource.createDefault(
+            block.id, 
+            location.x ?? 0, 
+            location.y ?? 0
+        );
+        
+        const name = SimObjectLucid.getNameFromBlock(block, 'Resource');
+
         // Convert to StoredResourceData format
         const storedData: StoredResourceData = {
             id: defaultResource.id,
             name: name,
+            x: defaultResource.x,  // Include x coordinate
+            y: defaultResource.y,  // Include y coordinate
             capacity: defaultResource.capacity
         };
 
-        // Set up both data and metadata
+        ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted resource, block ID: ${block.id}`, storedData);
+        
+        // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,
             storedData,
@@ -107,7 +172,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             }
         );
 
-        // Create and return the ResourceLucid instance
+        // Now create the ResourceLucid instance
         return new ResourceLucid(block, storageAdapter);
     }
 }

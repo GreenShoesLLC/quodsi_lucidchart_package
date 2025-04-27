@@ -2,28 +2,17 @@
 import {
     DocumentProxy,
     Viewport,
-    BlockProxy,
-    PageProxy,
-    UserProxy,
     DataProxy,
-    ElementProxy,
-    ItemProxy
 } from 'lucid-extension-sdk';
 import {
     ExtensionMessaging,
-    JsonObject,
     ModelSerializerFactory,
-    DiagramElementType,
-    SimulationObjectType,
-    SelectionType,
     ActionType,
     ActionRequest,
-    ActionResponse,
     MessageTypes
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { SelectionManager } from '../managers';
-import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelDataSource } from '../data_sources/model/ModelDataSource';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
 import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';

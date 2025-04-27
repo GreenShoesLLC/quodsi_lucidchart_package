@@ -1062,19 +1062,32 @@ export class ModelPanel extends Panel {
                     // Try to convert the string to an enum value
                     elementType = enumMapper.toEnum(updateData.type);
 
-                    // Save element data using ModelManager with the converted enum type
+                    // Use LucidElementFactory to get platform-specific data
+                    const storageAdapter = this.modelManager.getStorageAdapter();
+                    const elementFactory = new LucidElementFactory(storageAdapter);
+
+                    // Create a platform object with platform-specific data
+                    const platformObject = elementFactory.createPlatformObject(
+                        element,
+                        elementType,
+                        false  // Not a conversion, just updating
+                    );
+
+                    // Save element data using ModelManager with merged data
                     await this.modelManager.saveElementData(
                         element,
-                        updateData.data,
+                        {
+                            ...updateData.data,
+                            x: platformObject.getSimulationObject().x,
+                            y: platformObject.getSimulationObject().y
+                        },
                         elementType,
                         currentPage
                     );
                 } catch (error) {
-                    // If conversion fails, try using a simple cast as fallback
-                    // This assumes the method can handle the string representation
                     this.logError(`Type conversion failed for ${updateData.type}, using fallback method`);
 
-                    // Try to use the enum value directly if it exists as a property
+                    // Fallback type conversion logic
                     const fallbackType = SimulationObjectType[updateData.type as keyof typeof SimulationObjectType];
 
                     if (fallbackType !== undefined) {
@@ -1085,7 +1098,6 @@ export class ModelPanel extends Panel {
                             currentPage
                         );
                     } else {
-                        // Last resort - send an error if we can't convert the type
                         this.sendTypedMessage(MessageTypes.ACTION_RESPONSE, {
                             actionType: ActionType.UPDATE_ELEMENT_DATA,
                             success: false,
@@ -1105,14 +1117,6 @@ export class ModelPanel extends Panel {
                 data: {
                     elementId: updateData.elementId
                 }
-            });
-
-            // Debug logging
-            this.log('Debug - Selection state:', {
-                currentSelectionIds: this.currentSelection.selectedIds,
-                updatedElementId: updateData.elementId,
-                isElementInSelection: updateData.elementId ? this.currentSelection.selectedIds.includes(updateData.elementId) : false,
-                selectedItems: selectedItems.map(item => item.id)
             });
 
             // Update validation and selection state

@@ -11,28 +11,45 @@ interface Props {
 const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={{ ...connector, type: SimulationObjectType.Connector }}
-      onSave={onSave}
+      data={{ 
+        ...connector, 
+        type: SimulationObjectType.Connector,
+        // Ensure all Connector methods are available
+        setSourceLocation: (x: number, y: number) => connector.setSourceLocation(x, y),
+        setTargetLocation: (x: number, y: number) => connector.setTargetLocation(x, y),
+        setLocation: (x: number, y: number) => connector.setLocation(x, y),
+        getLocation: () => connector.getLocation(),
+        hasLocation: () => connector.hasLocation(),
+        clone: () => connector.clone(),
+        resetLocation: () => connector.resetLocation(),
+        toJSON: () => connector.toJSON()
+      }}
+      onSave={(updatedData) => {
+        // Create a new Connector instance to preserve class methods
+        const updatedConnector = new Connector(
+          updatedData.id,
+          updatedData.name,
+          updatedData.sourceId,
+          updatedData.targetId,
+          updatedData.probability,
+          updatedData.connectType,
+          updatedData.operationSteps,
+          updatedData.sourceX,
+          updatedData.sourceY,
+          updatedData.targetX,
+          updatedData.targetY,
+          updatedData.x,
+          updatedData.y
+        );
+
+        onSave(updatedConnector);
+      }}
       onCancel={onCancel}
       messageType="connectorSaved"
     >
       {(localConnector, handleChange) => (
         <div>
-          {/* <div className="quodsi-field">
-            <label htmlFor="name" className="quodsi-label">
-              Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              className="quodsi-input"
-              value={localConnector.name}
-              onChange={handleChange}
-            />
-          </div> */}
-
-        <div className="quodsi-field">
+          <div className="quodsi-field">
             <label htmlFor="connectType" className="quodsi-label">
               Connect Type
             </label>

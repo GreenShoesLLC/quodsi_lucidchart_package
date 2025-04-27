@@ -11,8 +11,29 @@ interface Props {
 const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={{ ...resource, type: SimulationObjectType.Resource }}
-      onSave={onSave}
+      data={{ 
+        ...resource, 
+        type: SimulationObjectType.Resource,
+        // Ensure all Resource methods are available
+        setLocation: (x: number, y: number) => resource.setLocation(x, y),
+        getLocation: () => resource.getLocation(),
+        hasLocation: () => resource.hasLocation(),
+        clone: () => resource.clone(),
+        resetLocation: () => resource.resetLocation(),
+        toJSON: () => resource.toJSON()
+      }}
+      onSave={(updatedData) => {
+        // Create a new Resource instance to preserve class methods
+        const updatedResource = new Resource(
+          updatedData.id,
+          updatedData.name,
+          updatedData.capacity,
+          updatedData.x,
+          updatedData.y
+        );
+
+        onSave(updatedResource);
+      }}
       onCancel={onCancel}
       messageType="resourceSaved"
     >
