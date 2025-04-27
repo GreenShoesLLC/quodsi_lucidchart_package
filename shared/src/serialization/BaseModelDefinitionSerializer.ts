@@ -82,7 +82,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 id: entity.id,
                 name: entity.name,
-                type: entity.type
+                type: entity.type,
+                x: entity.x,
+                y: entity.y
             };
         } catch (error) {
             throw new SerializationError('Entity', `Failed to serialize entity ${entity.id}`, error instanceof Error ? error : undefined);
@@ -94,29 +96,18 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             if (!activity.id || !activity.name) {
                 throw new InvalidModelError('Activity must have id and name');
             }
-            console.log("[BaseModelDefinitionSerializer]: # of Connectors", modelDefinition.connectors.size())
+
             // Get all connectors where the sourceId matches the activity's id
             const relevantConnectors = modelDefinition.connectors.getAll()
-                .filter(connector => {
-                    // Log values for debugging
-                    console.log(`[BaseModelDefinitionSerializer]: Comparing connector.sourceId: ${connector.sourceId} with activity.id: ${activity.id}`);
-                    return connector.sourceId === activity.id;
-                })
+                .filter(connector => connector.sourceId === activity.id)
                 .map(connector => this.serializeConnector(connector));
-
-            if (relevantConnectors.length > 0)
-            {
-                console.log("[BaseModelDefinitionSerializer]: # of Activity Connectors", relevantConnectors.length)
-            }
-            else{
-                console.log("[BaseModelDefinitionSerializer]: # of Activity Connectors", 0)
-            }
-            
 
             return {
                 id: activity.id,
                 name: activity.name,
                 type: activity.type,
+                x: activity.x,
+                y: activity.y,
                 capacity: activity.capacity,
                 inputBufferCapacity: activity.inputBufferCapacity,
                 outputBufferCapacity: activity.outputBufferCapacity,
@@ -152,11 +143,8 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
     protected serializeDuration(duration: Duration): ISerializedDuration {
         try {
-
             return {
-                // durationLength: duration.durationLength,
                 durationPeriodUnit: duration.durationPeriodUnit,
-                // durationType: duration.durationType,
                 distribution: duration.distribution
             };
         } catch (error) {
@@ -179,6 +167,8 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 id: generator.id,
                 name: generator.name,
                 type: generator.type,
+                x: generator.x,
+                y: generator.y,
                 activityKeyId: generator.activityKeyId,
                 entityId: generator.entityId,
                 periodicOccurrences: generator.periodicOccurrences,
@@ -207,6 +197,8 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 id: resource.id,
                 name: resource.name,
                 type: resource.type,
+                x: resource.x,
+                y: resource.y,
                 capacity: resource.capacity
             };
         } catch (error) {
@@ -275,9 +267,15 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 id: connector.id,
                 name: connector.name,
+                type: connector.type,
                 sourceId: connector.sourceId,
                 targetId: connector.targetId,
-                type: connector.type,
+                sourceX: connector.sourceX,
+                sourceY: connector.sourceY,
+                targetX: connector.targetX,
+                targetY: connector.targetY,
+                x: connector.x,  // Midpoint x
+                y: connector.y,  // Midpoint y
                 probability: connector.probability,
                 connectType: connector.connectType,
                 operationSteps: connector.operationSteps.map(step =>

@@ -6,6 +6,8 @@ export interface ISerializedActivity {
     id: string;
     name: string;
     type: SimulationObjectType;
+    x: number;
+    y: number;
     capacity: number;
     inputBufferCapacity: number;
     outputBufferCapacity: number;

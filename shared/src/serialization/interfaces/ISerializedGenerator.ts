@@ -14,4 +14,6 @@ export interface ISerializedGenerator {
     periodicStartDuration: ISerializedDuration;
     maxEntities: number;
     connectors: ISerializedConnector[];
+    x: number;
+    y: number;
 }
