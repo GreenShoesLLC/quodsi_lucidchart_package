@@ -23,7 +23,7 @@ import { ComponentLogger } from '@quodsi/shared';
 const LOG_PREFIX = '[useAuthOperations]';
 
 // Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
+ComponentLogger.setEnabled(LOG_PREFIX, true);
 
 /**
  * Helper function to enable/disable logging for this hook
@@ -252,14 +252,31 @@ export function useAuthOperations(): AuthOperations {
       // Clear any cached sessions
       clearExistingSession();
       
+      // Import the getRedirectUri function to get the properly configured URI
+      const { getRedirectUri } = await import('../../auth/config/msalConfig');
+      
       // Use popup for logout (more reliable in iframe environments)
       try {
+        // Get the proper redirect URI from the config
+        const redirectUri = getRedirectUri();
+        ComponentLogger.log(LOG_PREFIX, `Using post-logout redirect URI: ${redirectUri}`);
+        
         // Force prompt on next login by setting prompt="login" in the logout options
         await instance.logoutPopup({
-          postLogoutRedirectUri: window.location.origin,
-          mainWindowRedirectUri: window.location.origin,
+          postLogoutRedirectUri: redirectUri,
+          mainWindowRedirectUri: redirectUri,
         });
-        window.location.reload();
+        
+        // Don't immediately reload - let MSAL handle the redirect
+        // Only reload if we don't see a redirect happening within 1 second
+        const reloadTimeout = setTimeout(() => {
+          ComponentLogger.log(LOG_PREFIX, 'No redirect detected after logout, forcing reload');
+          window.location.reload();
+        }, 1000);
+        
+        // Clear the timeout if we navigate away
+        window.addEventListener('unload', () => clearTimeout(reloadTimeout), { once: true });
+        
         ComponentLogger.log(LOG_PREFIX, 'MSAL logout popup completed successfully');
       } catch (e) {
         ComponentLogger.error(LOG_PREFIX, 'Popup logout failed, clearing MSAL cache manually', e);
