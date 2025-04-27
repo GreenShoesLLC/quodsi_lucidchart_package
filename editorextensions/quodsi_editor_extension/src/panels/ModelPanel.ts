@@ -1180,6 +1180,11 @@ export class ModelPanel extends Panel {
                 const serializedModel = serializer.serialize(modelDefinition);
                 this.log('serializedModel:', JSON.stringify(serializedModel));
 
+                // Get SVG representation of the current page
+                this.log('Getting SVG for the current page');
+                const diagramSvg = await activePageProxy.getSvg(undefined, true);
+                this.log('SVG obtained successfully');
+
                 // Trigger simulation using the data connector
                 await LucidDataActionUtility.performDataAction(this.client, {
                     dataConnectorName: 'quodsi_data_connector',
@@ -1189,6 +1194,7 @@ export class ModelPanel extends Panel {
                         scenarioId: BASELINE_SCENARIO_ID,
                         'model': serializedModel,
                         'scenarioName': payload.scenarioName,
+                        'diagramSvg': diagramSvg, // Add SVG to the request
                         'appVersion': "1.0"
                     },
                     asynchronous: true

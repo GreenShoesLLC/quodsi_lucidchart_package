@@ -15,7 +15,8 @@ interface SaveAndSubmitRequest {
     documentId: string;
     scenarioId: string; 
     model: any;
-    scenarioName: string
+    scenarioName: string;
+    diagramSvg?: string; // New field for diagram SVG content
     // applicationId?: string;
     appVersion?: string;
 }
@@ -26,6 +27,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     const metrics = {
         startTime: Date.now(),
         uploadDuration: 0,
+        svgUploadDuration: 0, // New metric for SVG upload
         batchSubmitDuration: 0
     };
 
@@ -40,7 +42,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     try {
         // Extract and validate request data
         const data = action.data as SaveAndSubmitRequest;
-        const { documentId, scenarioId, model, scenarioName, appVersion } = data;
+        const { documentId, scenarioId, model, scenarioName, diagramSvg, appVersion } = data;
         
         // Use default baseline scenario ID if not provided
         // const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
@@ -114,6 +116,30 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             return { success: false };
         }
 
+        // New Phase: Upload diagram SVG if provided
+        if (diagramSvg) {
+            const svgUploadStart = Date.now();
+            const svgBlobName = `${scenarioId}/diagram.svg`;
+            
+            logger.info(`Uploading diagram SVG to blob storage for document: ${documentId}, scenario: ${scenarioId}`);
+            const svgUploadSuccess = await storageService.uploadBlobContent(
+                documentId,
+                svgBlobName,
+                diagramSvg
+            );
+            
+            metrics.svgUploadDuration = Date.now() - svgUploadStart;
+            
+            if (!svgUploadSuccess) {
+                logger.warn('Failed to upload diagram SVG, but continuing with simulation');
+                // Note: We don't fail the whole operation if just the SVG upload fails
+            } else {
+                logger.info('Diagram SVG uploaded successfully');
+            }
+        } else {
+            logger.info('No diagram SVG provided, skipping diagram upload');
+        }
+
         // Phase 2: Submit batch job
         const batchStart = Date.now();
         logger.info('Submitting batch job');
@@ -159,9 +185,11 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         logger.important('Operation completed', {
             totalDuration: `${totalDuration}ms`,
             uploadDuration: `${metrics.uploadDuration}ms`,
+            svgUploadDuration: diagramSvg ? `${metrics.svgUploadDuration}ms` : 'N/A',
             batchSubmitDuration: `${metrics.batchSubmitDuration}ms`,
             documentId,
             scenarioId,
+            diagramSaved: !!diagramSvg,
             jobId: jobIdMatch?.[1],
             taskId: taskIdMatch?.[1],
             blobUrl: `${documentId}/${blobName}`
