@@ -1,6 +1,7 @@
 // src/auth/components/MsalInitializer.tsx
 import React, { useState, useEffect } from "react";
 import { IPublicClientApplication } from "@azure/msal-browser";
+import { handleRedirectAfterInitialization } from "../msalSetup";
 
 /**
  * Props for the MsalInitializer component
@@ -26,9 +27,16 @@ export const MsalInitializer: React.FC<MsalInitializerProps> = ({
   useEffect(() => {
     const initializeMsal = async () => {
       try {
-        // Explicitly initialize MSAL
+        // Step 1: Explicitly initialize MSAL first
         await msalInstance.initialize();
         console.log("[MSAL] Initialization complete");
+        
+        // Step 2: AFTER initialization completes, handle any redirects
+        // This is a critical sequence - handleRedirectPromise must be called
+        // after initialize() completes
+        await handleRedirectAfterInitialization(msalInstance);
+        
+        // Step 3: Mark as initialized
         setIsMsalInitialized(true);
       } catch (error) {
         console.error("[MSAL] Initialization failed:", error);

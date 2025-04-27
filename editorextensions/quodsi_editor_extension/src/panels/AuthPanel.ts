@@ -134,12 +134,86 @@ export class AuthPanel extends Panel {
     /**
      * Loads authentication state from session storage
      */
+    /**
+     * Safely gets an item from sessionStorage with fallbacks
+     * @param key The key to retrieve
+     * @returns The value or null if not available
+     */
+    private getSessionItem(key: string): string | null {
+        try {
+            // Try window.sessionStorage first (most extension environments)
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+                return window.sessionStorage.getItem(key);
+            }
+            
+            // Fallback to global sessionStorage if available
+            if (typeof sessionStorage !== 'undefined') {
+                return sessionStorage.getItem(key);
+            }
+            
+            this.log(`Storage API not available for key: ${key}`);
+            return null;
+        } catch (error) {
+            this.logError(`Error accessing session storage for key: ${key}`, error);
+            return null;
+        }
+    }
+    
+    /**
+     * Safely sets an item in sessionStorage with fallbacks
+     * @param key The key to set
+     * @param value The value to store
+     */
+    private setSessionItem(key: string, value: string): void {
+        try {
+            // Try window.sessionStorage first (most extension environments)
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+                window.sessionStorage.setItem(key, value);
+                return;
+            }
+            
+            // Fallback to global sessionStorage if available
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem(key, value);
+                return;
+            }
+            
+            this.log(`Storage API not available, couldn't save key: ${key}`);
+        } catch (error) {
+            this.logError(`Error setting session storage for key: ${key}`, error);
+        }
+    }
+    
+    /**
+     * Safely removes an item from sessionStorage with fallbacks
+     * @param key The key to remove
+     */
+    private removeSessionItem(key: string): void {
+        try {
+            // Try window.sessionStorage first (most extension environments)
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+                window.sessionStorage.removeItem(key);
+                return;
+            }
+            
+            // Fallback to global sessionStorage if available
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.removeItem(key);
+                return;
+            }
+            
+            this.log(`Storage API not available, couldn't remove key: ${key}`);
+        } catch (error) {
+            this.logError(`Error removing session storage for key: ${key}`, error);
+        }
+    }
+
     private loadSessionState(): void {
         try {
             // Check if we have auth state in session storage
-            const authState = sessionStorage.getItem(SESSION_AUTH_STATE);
-            const userInfoStr = sessionStorage.getItem(SESSION_USER_INFO);
-            const lastActiveStr = sessionStorage.getItem(SESSION_LAST_ACTIVE);
+            const authState = this.getSessionItem(SESSION_AUTH_STATE);
+            const userInfoStr = this.getSessionItem(SESSION_USER_INFO);
+            const lastActiveStr = this.getSessionItem(SESSION_LAST_ACTIVE);
             
             if (authState && userInfoStr && lastActiveStr) {
                 const isAuthenticated = authState === 'true';
@@ -175,8 +249,8 @@ export class AuthPanel extends Panel {
      */
     private saveSessionState(): void {
         try {
-            sessionStorage.setItem(SESSION_AUTH_STATE, this.isAuthenticated.toString());
-            sessionStorage.setItem(SESSION_USER_INFO, this.userInfo ? JSON.stringify(this.userInfo) : '');
+            this.setSessionItem(SESSION_AUTH_STATE, this.isAuthenticated.toString());
+            this.setSessionItem(SESSION_USER_INFO, this.userInfo ? JSON.stringify(this.userInfo) : '');
             this.updateLastActive();
             this.log('Saved session state to storage');
         } catch (error) {
@@ -188,7 +262,7 @@ export class AuthPanel extends Panel {
      * Updates the last active timestamp
      */
     private updateLastActive(): void {
-        sessionStorage.setItem(SESSION_LAST_ACTIVE, Date.now().toString());
+        this.setSessionItem(SESSION_LAST_ACTIVE, Date.now().toString());
     }
 
     /**
@@ -199,9 +273,9 @@ export class AuthPanel extends Panel {
         this.userInfo = null;
         
         try {
-            sessionStorage.removeItem(SESSION_AUTH_STATE);
-            sessionStorage.removeItem(SESSION_USER_INFO);
-            sessionStorage.removeItem(SESSION_LAST_ACTIVE);
+            this.removeSessionItem(SESSION_AUTH_STATE);
+            this.removeSessionItem(SESSION_USER_INFO);
+            this.removeSessionItem(SESSION_LAST_ACTIVE);
             this.log('Cleared session state');
         } catch (error) {
             this.logError('Error clearing session state', error);
