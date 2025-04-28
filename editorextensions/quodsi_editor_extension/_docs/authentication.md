@@ -73,6 +73,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Session storage management for auth state persistence with fallbacks
      - Consolidated message handling for auth events
      - Session timeout monitoring
+     - Processing authentication data from REACT_APP_READY messages
 
 2. **extension.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts`
@@ -124,6 +125,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Authentication state management
      - Model initialization state tracking
      - Handles transitions between different UI states
+     - Sends authentication data with REACT_APP_READY messages for immediate state synchronization
 
 6. **authMessageHandlers.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\auth\authMessageHandlers.ts`
@@ -139,8 +141,9 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
 1. **MessageTypes.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\MessageTypes.ts`
    - Purpose: Defines message types for extension-React communication
-   - Auth-related message type:
+   - Auth-related message types:
      - `AUTH` - Consolidated message type for all auth operations
+     - `REACT_APP_READY` - Now includes authentication data for early state synchronization
 
 2. **AuthPayloads.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads\AuthPayloads.ts`
@@ -149,6 +152,7 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - `AuthActionType` enum for different auth operations
      - Consolidated payload structure with action-type discrimination
      - Typed data for different auth operations
+     - `AuthData` interface used by both AUTH and REACT_APP_READY messages
 
 ## Authentication Flow
 
@@ -159,6 +163,7 @@ The authentication process follows these steps:
    - Both panels are shown in the Lucidchart panel selector
    - MSAL is properly initialized before any authentication operations
    - Initialization sequence ensures MSAL functions are called in proper order
+   - React app now shares authentication state via REACT_APP_READY message
 
 2. **User Authentication**:
    - User clicks "Sign In" button in AuthPanel
@@ -180,7 +185,7 @@ The authentication process follows these steps:
 5. **Panel Reopening**:
    - When panel is closed and reopened, authentication state is retrieved from storage
    - React app is initialized with correct panel type
-   - Authentication state is restored
+   - Authentication state is restored from both session storage and REACT_APP_READY payload
    - Backend session is updated
 
 6. **Sign-out Flow**:
@@ -192,7 +197,7 @@ The authentication process follows these steps:
    - Proper redirect URIs ensure post-logout navigation
 
 7. **Panel Authentication Check**:
-   - When ModelPanel is accessed, it checks authentication status
+   - When ModelPanel is opened, it immediately receives authentication state via REACT_APP_READY
    - If not authenticated, it shows a message with a sign-in button
    - Sign-in button sends `AUTH` message with `SHOW_PANEL` action type
    - After successful authentication, ModelPanel shows content on next access
@@ -226,6 +231,12 @@ The Quodsi authentication system has been refactored to use a consolidated messa
    - Both the extension and React app use a single message handler for all auth operations
    - The handler uses a switch statement on the `type` field to route to specific operation handlers
 
+5. **Early Authentication State Sharing**:
+   - REACT_APP_READY message now includes authentication data
+   - Both panels receive authentication state immediately when React initializes
+   - Eliminates dependency on panel initialization order
+   - Ensures consistent authentication state across panels
+
 ### Auth Action Types
 
 The `AuthActionType` enum defines all possible authentication operations:
@@ -255,6 +266,7 @@ Working with authentication in iframe environments presents several challenges t
 3. **Cross-origin restrictions**: Communication between frames may be limited
 4. **State persistence**: iFrame reloads can cause state loss
 5. **Popup window handling**: Popup windows from iframes face additional security constraints
+6. **Separate JavaScript Contexts**: Each iframe has its own isolated JavaScript execution environment
 
 ### Solutions Implemented
 
@@ -283,6 +295,11 @@ Working with authentication in iframe environments presents several challenges t
    - Proper error state display in UI
    - Provides recovery options when possible
 
+6. **Early Authentication State Sharing**:
+   - REACT_APP_READY includes authentication state as soon as React initializes
+   - Avoids race conditions and timing issues with separate iframes
+   - Each panel updates its local state from shared authentication data
+
 ## Session Management
 
 The authentication system implements robust session management:
@@ -302,6 +319,7 @@ The authentication system implements robust session management:
    - Synchronized authentication state between panels
    - Consolidated messaging system for cleaner communication
    - AUTH status messages to keep panels in sync
+   - REACT_APP_READY message now includes authentication state
 
 ## Panel Visibility and Authentication
 
@@ -330,24 +348,31 @@ The system now properly handles panel initialization regardless of the order in 
    - Sets panel type based on URL or path information
    - Maintains panel type through page reloads
 
-2. **ModelPanel Initialization State**:
-   - When ModelPanel is opened, it checks if a model exists
+2. **Early Authentication State Sharing**:
+   - QuodsiApp immediately shares authentication state via REACT_APP_READY
+   - Both panels receive this information as soon as their React instances initialize
+   - This eliminates dependency on panel initialization order
+   - Authentication state is consistent regardless of which panel was opened first
+
+3. **ModelPanel Initialization State**:
+   - When ModelPanel is opened, it immediately knows authentication state
+   - If authenticated, it checks if a model exists
    - If no model exists or model needs initialization, it shows initialization UI
    - Provides clear "Initialize Quodsi Model" button rather than infinite loading
    - Tracks initialization state to prevent stuck loading indicators
 
-3. **AuthPanel First, ModelPanel Second**:
+4. **AuthPanel First, ModelPanel Second**:
    - When AuthPanel is opened first, authentication state is established
-   - When ModelPanel is subsequently opened, it properly detects if model initialization is needed
+   - When ModelPanel is subsequently opened, it receives authentication state immediately
    - Shows appropriate UI based on model and authentication state
    - Handles transitions between different states cleanly
 
-4. **MSAL Initialization Sequence**:
+5. **MSAL Initialization Sequence**:
    - MSAL is properly initialized before any authentication operations
    - Clear separation between initialization and redirect handling
    - Prevent race conditions in authentication operations
 
-5. **Improved Loading States**:
+6. **Improved Loading States**:
    - Clear loading indicators during initialization
    - Timeouts to prevent infinite loading states
    - User-friendly messages during loading
@@ -368,9 +393,9 @@ Common authentication issues and their solutions:
 
 3. **Panel Initialization Problems**:
    - ModelPanel shows "Initializing..." indefinitely
-   - This indicates issues with panel state detection
-   - Check auth message handlers and panel initialization sequence
-   - Verify AUTH messages with proper panel type are being sent
+   - Check if REACT_APP_READY message includes authentication data
+   - Verify both panels handle authentication data in REACT_APP_READY correctly
+   - Ensure ModelPanel always sends its authentication status in handleReactReady
 
 4. **Logout Redirect Problems**:
    - 404 errors after logout
@@ -382,6 +407,7 @@ Common authentication issues and their solutions:
    - Session not remembered between panel reopening
    - Check the sessionStorage implementation with fallbacks
    - Verify storage keys match between save and load operations
+   - Ensure REACT_APP_READY is properly sending authentication data
 
 ## Further Development
 
@@ -413,6 +439,11 @@ Areas for potential enhancement:
    - Implement message validation middleware
    - Add message tracking and debugging capabilities
 
+7. **Separate Panel React Apps**:
+   - Consider creating separate React applications for each panel
+   - This would make the separation of concerns even clearer
+   - Would eliminate issues with shared state between panels
+
 ---
 
-This documentation provides a comprehensive overview of the updated Quodsi authentication system with the consolidated messaging approach. For more detailed information, refer to the specific code files mentioned in the [Key Authentication Components](#key-authentication-components) section.
+This documentation provides a comprehensive overview of the updated Quodsi authentication system with the consolidated messaging approach and enhanced authentication state sharing. For more detailed information, refer to the specific code files mentioned in the [Key Authentication Components](#key-authentication-components) section.
