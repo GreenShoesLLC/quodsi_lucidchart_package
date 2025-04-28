@@ -24,13 +24,11 @@ console.info('[extension] About to create AuthPanel');
 const authPanel = new AuthPanel(client);
 authPanel.setLogging(true);
 console.info('[extension] Created AuthPanel');
-// authPanel.show();
 
 console.info('[extension] About to create ModelPanel');
-const modelPanel = new ModelPanel(client, modelManager, authPanel);
+const modelPanel = new ModelPanel(client, modelManager);
 modelPanel.setLogging(true);
 console.info('[extension] Created ModelPanel');
-// modelPanel.show();
 
 
 // Hook selection changes

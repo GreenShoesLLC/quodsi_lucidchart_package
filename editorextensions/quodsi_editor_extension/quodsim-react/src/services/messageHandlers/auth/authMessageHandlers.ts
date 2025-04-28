@@ -1,11 +1,10 @@
 import {
-    MessagePayloads,
     MessageTypes,
     AuthActionType,
     ComponentLogger
 } from "@quodsi/shared";
 import { AppState } from "../../../QuodsiApp";
-import { MessageHandlerDependencies, MessageHandler } from "../messageHandlers";
+import { MessageHandler } from "../messageHandlers";
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[AuthMessageHandlers]';
@@ -19,93 +18,6 @@ ComponentLogger.setEnabled(LOG_PREFIX, false);
 export const setAuthMessageHandlersLogging = (enabled: boolean): void => {
   ComponentLogger.setEnabled(LOG_PREFIX, enabled);
 };
-
-/**
- * Auth-specific message handlers - COMMENTED OUT in favor of consolidated AUTH handler
- */
-/*
-export const authMessageHandlers: Partial<{
-    [T in MessageTypes]: MessageHandler<T>;
-}> = {
-    [MessageTypes.AUTH_PANEL_INIT]: (data, { setState, sendMessage }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing AUTH_PANEL_INIT:", data);
-        setState((prev: AppState) => ({
-            ...prev,
-            panelType: data.panelType,
-        }));
-
-        // Delay requesting auth status to ensure MSAL is fully initialized
-        // This fixes the "uninitialized_public_client_application" error
-        if (data.panelType === "auth") {
-            ComponentLogger.log(
-                LOG_PREFIX, "Auth panel initialized, scheduling auth status request"
-            );
-            // Use a small delay to ensure MSAL is fully initialized
-            setTimeout(() => {
-                ComponentLogger.log(LOG_PREFIX, "Now requesting auth status after delay");
-                sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
-            }, 1000);
-        }
-    },
-
-    [MessageTypes.AUTH_STATUS_RESPONSE]: (data, { setState }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing AUTH_STATUS_RESPONSE:", data);
-        setState((prev: AppState) => ({
-            ...prev,
-            isAuthenticated: data.isAuthenticated,
-            userInfo: data.userInfo || null,
-        }));
-    },
-
-    [MessageTypes.AUTH_COMPLETED]: (data, { setState }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing AUTH_COMPLETED:", data);
-        setState((prev: AppState) => ({
-            ...prev,
-            isAuthenticated: data.success,
-            userInfo: data.userInfo || null,
-            isProcessingAuth: false,
-        }));
-
-        // Force a re-render when auth completes
-        if (data.success) {
-            // Small delay to ensure auth state is fully updated
-            setTimeout(() => {
-                ComponentLogger.log(LOG_PREFIX, "Refreshing UI after auth completion");
-                setState((prev) => ({ ...prev }));
-            }, 500);
-        }
-    },
-
-    [MessageTypes.AUTH_ERROR]: (data, { setState, setError }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing AUTH_ERROR:", data);
-        setState((prev: AppState) => ({
-            ...prev,
-            isProcessingAuth: false,
-        }));
-        setError(data.error);
-    },
-
-    [MessageTypes.SHOW_AUTH_PANEL]: (data, { setState }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing SHOW_AUTH_PANEL:", data);
-        setState((prev: AppState) => ({
-            ...prev,
-            showAuthPanel: true,
-        }));
-    },
-
-    [MessageTypes.MODEL_PANEL_FOCUS]: (data, { setState, sendMessage }) => {
-        ComponentLogger.log(LOG_PREFIX, "Processing MODEL_PANEL_FOCUS");
-        setState((prev: AppState) => ({
-            ...prev,
-            showAuthPanel: false,
-        }));
-
-        // Request fresh auth status from extension when model panel receives focus
-        ComponentLogger.log(LOG_PREFIX, "Model panel received focus, checking auth status");
-        sendMessage(MessageTypes.AUTH_STATUS_REQUEST);
-    }
-};
-*/
 
 /**
  * Consolidated AUTH message handler that replaces the individual auth-related handlers
@@ -188,28 +100,6 @@ export const authMessageHandlers: Partial<{
                 if (payload.data?.error) {
                     setError(payload.data.error);
                 }
-                break;
-                
-            case AuthActionType.SHOW_PANEL:
-                ComponentLogger.log(LOG_PREFIX, "Processing AUTH show panel:", payload.data);
-                setState((prev: AppState) => ({
-                    ...prev,
-                    showAuthPanel: true,
-                }));
-                break;
-                
-            case AuthActionType.MODEL_PANEL_FOCUS:
-                ComponentLogger.log(LOG_PREFIX, "Processing AUTH model panel focus");
-                setState((prev: AppState) => ({
-                    ...prev,
-                    showAuthPanel: false,
-                }));
-                
-                // Request fresh auth status from extension when model panel receives focus
-                ComponentLogger.log(LOG_PREFIX, "Model panel received focus, checking auth status");
-                sendMessage(MessageTypes.AUTH, {
-                    type: AuthActionType.STATUS_REQUEST
-                });
                 break;
         }
     }

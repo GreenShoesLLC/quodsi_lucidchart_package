@@ -88,43 +88,66 @@ export class AuthPanel extends Panel {
     /**
      * Sets up message handlers for authentication-related messages
      */
+    // Replace the existing REACT_APP_READY message handler in AuthPanel.ts
+
     private setupMessageHandlers(): void {
-        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            this.log('REACT_APP_READY message received in auth panel');
-            // When the React app is ready, check if we need to reload session state
-            // This ensures we have fresh state when the panel is reopened
-            this.loadSessionState();
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, (payload) => {
+            this.log('REACT_APP_READY message received in auth panel with payload:', payload);
+
+            // Check if the message includes authentication data
+            if (payload && typeof payload.isAuthenticated === 'boolean') {
+                this.log('Received auth state from React app:', {
+                    isAuthenticated: payload.isAuthenticated,
+                    hasUserInfo: !!payload.userInfo
+                });
+
+                // Update our authentication state if needed
+                if (payload.isAuthenticated && !this.isAuthenticated) {
+                    this.log('Updating panel auth state from React app');
+                    this.isAuthenticated = payload.isAuthenticated;
+                    this.userInfo = payload.userInfo || null;
+
+                    // Save the updated state to session storage
+                    this.saveSessionState();
+                }
+            } else {
+                this.log('No auth data in REACT_APP_READY message, loading from session');
+                // When the React app is ready, check if we need to reload session state
+                // This ensures we have fresh state when the panel is reopened
+                this.loadSessionState();
+            }
+
             this.handleReactReady();
         });
-        
+
         // Auth message handler for consolidated AUTH message type
         this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
             if (!payload || !payload.type) {
                 this.logError('Invalid AUTH message received:', payload);
                 return;
             }
-            
+
             switch (payload.type) {
                 case AuthActionType.STATUS_REQUEST:
                     this.handleAuthStatusRequest();
                     break;
-                
+
                 case AuthActionType.SIGN_IN:
                     this.handleAuthSignIn();
                     break;
-                
+
                 case AuthActionType.SIGN_OUT:
                     this.handleAuthSignOut();
                     break;
-                
+
                 case AuthActionType.COMPLETED:
                     this.handleAuthCompleted(payload.data);
                     break;
-                
+
                 case AuthActionType.ERROR:
                     this.handleAuthError(payload.data);
                     break;
-                
+
                 default:
                     this.log(`Unhandled AUTH action type: ${payload.type}`);
             }

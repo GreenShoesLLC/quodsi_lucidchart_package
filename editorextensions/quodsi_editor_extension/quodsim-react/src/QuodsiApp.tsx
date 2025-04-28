@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   MessageTypes,
   MessagePayloads,
-  ModelStructure,
   ValidationState,
   SimulationObjectType,
   EditorReferenceData,
@@ -150,17 +149,17 @@ const QuodsiApp: React.FC = () => {
 
   useEffect(() => {
     console.log("[QuodsiApp] Component mounted");
-    
+
     // Set isReady to true after a short delay when component mounts
     // This ensures we won't show loading indefinitely if something goes wrong with messaging
     const timer = setTimeout(() => {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
-        isReady: true
+        isReady: true,
       }));
       console.log("[QuodsiApp] Forced isReady=true after timeout");
     }, 2000);
-    
+
     return () => {
       clearTimeout(timer);
       console.log("[QuodsiApp] Component unmounted");
@@ -168,6 +167,8 @@ const QuodsiApp: React.FC = () => {
   }, []);
 
   console.log("[QuodsiApp] documentId", documentId);
+
+  // This is the fixed version for QuodsiApp.tsx
 
   // Set up message handling
   useEffect(() => {
@@ -200,12 +201,28 @@ const QuodsiApp: React.FC = () => {
     };
 
     window.addEventListener("message", handleWindowMessage);
-    sendMessage(MessageTypes.REACT_APP_READY);
+
+    // Create the authentication data to include with REACT_APP_READY
+    // Make sure the types exactly match AuthData
+    const authData = {
+      panelType: state.panelType || undefined, // Convert null to undefined to match the type
+      isAuthenticated: isAuthenticated,
+      userInfo: userInfo || undefined,
+    };
+
+    console.log("[QuodsiApp] Sending REACT_APP_READY with auth data:", {
+      panelType: state.panelType || undefined,
+      isAuthenticated: isAuthenticated,
+      hasUserInfo: !!userInfo,
+    });
+
+    // Send the REACT_APP_READY message with auth data
+    sendMessage(MessageTypes.REACT_APP_READY, authData);
 
     return () => {
       window.removeEventListener("message", handleWindowMessage);
     };
-  }, [messaging, sendMessage]);
+  }, [messaging, sendMessage, isAuthenticated, userInfo, state.panelType]);
 
   // Updated to use ACTION_REQUEST
   const handleElementTypeChange = useCallback(
@@ -236,56 +253,60 @@ const QuodsiApp: React.FC = () => {
   }, [sendMessage]);
 
   // Updated to use ACTION_REQUEST
-const handleElementUpdate = useCallback(
-  (elementId: string, data: any) => {
-    // Detailed initial logging
-    console.group("[QuodsiApp] Element Update Request");
-    console.log("Element ID:", elementId);
-    console.log("Incoming Data:", JSON.parse(JSON.stringify(data))); // Deep log without circular references
-    console.log("Current Element Type:", state.currentElement?.metadata?.type);
+  const handleElementUpdate = useCallback(
+    (elementId: string, data: any) => {
+      // Detailed initial logging
+      console.group("[QuodsiApp] Element Update Request");
+      console.log("Element ID:", elementId);
+      console.log("Incoming Data:", JSON.parse(JSON.stringify(data))); // Deep log without circular references
+      console.log(
+        "Current Element Type:",
+        state.currentElement?.metadata?.type
+      );
 
-    // Set processing state
-    setState((prev) => ({ ...prev, isProcessing: true }));
+      // Set processing state
+      setState((prev) => ({ ...prev, isProcessing: true }));
 
-    try {
-      // Type conversion scenario
-      if (data.type && Object.keys(data).length === 1) {
-        console.log("Detected Type Conversion Request");
-        sendMessage(MessageTypes.ACTION_REQUEST, {
-          actionType: ActionType.UPDATE_ELEMENT_DATA,
-          data: {
-            elementId,
-            type: data.type,
-            data: {}, // Empty data for type conversion
-          },
-        });
-        console.log("Sent Type Conversion Message");
-      } else {
-        // Regular update scenario
-        console.log("Detected Regular Element Update");
-        sendMessage(MessageTypes.ACTION_REQUEST, {
-          actionType: ActionType.UPDATE_ELEMENT_DATA,
-          data: {
-            elementId,
-            type:
-              state.currentElement?.metadata?.type || SimulationObjectType.None,
+      try {
+        // Type conversion scenario
+        if (data.type && Object.keys(data).length === 1) {
+          console.log("Detected Type Conversion Request");
+          sendMessage(MessageTypes.ACTION_REQUEST, {
+            actionType: ActionType.UPDATE_ELEMENT_DATA,
             data: {
-              ...data,
-              id: elementId,
+              elementId,
+              type: data.type,
+              data: {}, // Empty data for type conversion
             },
-          },
-        });
-        console.log("Sent Regular Update Message");
+          });
+          console.log("Sent Type Conversion Message");
+        } else {
+          // Regular update scenario
+          console.log("Detected Regular Element Update");
+          sendMessage(MessageTypes.ACTION_REQUEST, {
+            actionType: ActionType.UPDATE_ELEMENT_DATA,
+            data: {
+              elementId,
+              type:
+                state.currentElement?.metadata?.type ||
+                SimulationObjectType.None,
+              data: {
+                ...data,
+                id: elementId,
+              },
+            },
+          });
+          console.log("Sent Regular Update Message");
+        }
+      } catch (error) {
+        console.error("[QuodsiApp] Element Update Error:", error);
+        setState((prev) => ({ ...prev, isProcessing: false }));
+      } finally {
+        console.groupEnd();
       }
-    } catch (error) {
-      console.error("[QuodsiApp] Element Update Error:", error);
-      setState((prev) => ({ ...prev, isProcessing: false }));
-    } finally {
-      console.groupEnd();
-    }
-  },
-  [sendMessage, state.currentElement?.metadata?.type]
-);
+    },
+    [sendMessage, state.currentElement?.metadata?.type]
+  );
 
   // Updated to use ACTION_REQUEST
   const handleSimulate = useCallback(
@@ -370,15 +391,17 @@ const handleElementUpdate = useCallback(
 
   // Add a new loading state to track initialization
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Safety timeout to force hide loading if it's stuck
   useEffect(() => {
     if (isLoading) {
       const safetyTimer = setTimeout(() => {
-        console.log("[QuodsiApp] Safety timeout reached - forcing loading to false");
+        console.log(
+          "[QuodsiApp] Safety timeout reached - forcing loading to false"
+        );
         setIsLoading(false);
       }, 5000); // 5 seconds max loading time
-      
+
       return () => clearTimeout(safetyTimer);
     }
   }, [isLoading]);
@@ -390,55 +413,60 @@ const handleElementUpdate = useCallback(
       try {
         // Try to determine panel type from URL search params
         const urlParams = new URLSearchParams(window.location.search);
-        const panelParam = urlParams.get('panel');
-        
+        const panelParam = urlParams.get("panel");
+
         if (panelParam) {
           // If panel parameter exists, use it
-          const detectedType = panelParam.toLowerCase() === 'auth' ? 'auth' : 'model';
-          console.log(`[QuodsiApp] Detected panel type '${detectedType}' from URL parameter`);
-          
-          setState(prev => ({
+          const detectedType =
+            panelParam.toLowerCase() === "auth" ? "auth" : "model";
+          console.log(
+            `[QuodsiApp] Detected panel type '${detectedType}' from URL parameter`
+          );
+
+          setState((prev) => ({
             ...prev,
-            panelType: detectedType
+            panelType: detectedType,
           }));
-        } else if (window.location.pathname.includes('auth')) {
+        } else if (window.location.pathname.includes("auth")) {
           // Fallback to checking URL path
-          console.log('[QuodsiApp] Detected auth panel from URL path');
-          setState(prev => ({
+          console.log("[QuodsiApp] Detected auth panel from URL path");
+          setState((prev) => ({
             ...prev,
-            panelType: 'auth'
+            panelType: "auth",
           }));
         } else {
           // Default to model panel if we can't determine
-          console.log('[QuodsiApp] Defaulting to model panel');
-          setState(prev => ({
+          console.log("[QuodsiApp] Defaulting to model panel");
+          setState((prev) => ({
             ...prev,
-            panelType: 'model'
+            panelType: "model",
           }));
         }
       } catch (error) {
-        console.error('[QuodsiApp] Error detecting panel type:', error);
+        console.error("[QuodsiApp] Error detecting panel type:", error);
       }
     }
   }, []); // Only run once on mount
-  
+
   // Add an effect to hide loading after app is ready and data arrives
   useEffect(() => {
     console.log("[QuodsiApp] Panel type or auth state changed:", {
       panelType: state.panelType,
       inProgress,
       isAuthenticated,
-      isReady: state.isReady
+      isReady: state.isReady,
     });
-    
+
     // Hide loading in these cases:
     // 1. We have a panelType and authentication is ready
     // 2. We definitely know we're in auth panel
     // 3. We've received any message from the extension (REACT_APP_READY has been processed)
     // 4. As a fallback, it's been more than 2 seconds since mounting (covered by isReady)
-    if ((state.panelType && inProgress === "none") || 
-        state.panelType === "auth" || 
-        state.isReady) {
+    if (
+      (state.panelType && inProgress === "none") ||
+      state.panelType === "auth" ||
+      state.isReady
+    ) {
       console.log("[QuodsiApp] Conditions met to hide loading screen");
       const timer = setTimeout(() => setIsLoading(false), 200);
       return () => clearTimeout(timer);
@@ -451,14 +479,20 @@ const handleElementUpdate = useCallback(
 
       {isLoading ? (
         // Show a loading spinner while initializing
-        <ProcessingIndicator message="Initializing Quodsi..." fullScreen={true} />
+        <ProcessingIndicator
+          message="Initializing Quodsi..."
+          fullScreen={true}
+        />
       ) : state.panelType === "auth" ? (
         // Show the Auth Panel when panelType is "auth"
         <AuthPanel />
       ) : // For ModelPanel, check if MSAL is initializing, then check auth status
       inProgress !== "none" ? (
         // Show loading while MSAL is initializing
-        <ProcessingIndicator message="Initializing authentication..." fullScreen={true} />
+        <ProcessingIndicator
+          message="Initializing authentication..."
+          fullScreen={true}
+        />
       ) : !isAuthenticated ? (
         // Not authenticated - show sign-in message
         <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-50">
@@ -485,26 +519,26 @@ const handleElementUpdate = useCallback(
               <ProcessingIndicator message="Processing..." />
             </div>
           )}
-        <ModelPanelAccordion
-          modelName={state.modelName}
-          validationState={state.validationState}
-          currentElement={state.currentElement}
-          lastElementUpdate={state.lastElementUpdate}
-          diagramElementType={state.diagramElementType}
-          onValidate={handleValidate}
-          onElementUpdate={handleElementUpdate}
-          referenceData={state.referenceData}
-          showModelName={state.showModelName}
-          showModelItemName={state.showModelItemName}
-          visibleSections={state.visibleSections}
-          onSimulate={handleSimulate}
-          onRemoveModel={handleRemoveModel}
-          onConvertPage={handleConvertPage}
-          onElementTypeChange={handleElementTypeChange}
-          simulationStatus={state.simulationStatus}
-          onViewResults={handleViewResults}
-          needsInitialization={state.needsInitialization}
-        />
+          <ModelPanelAccordion
+            modelName={state.modelName}
+            validationState={state.validationState}
+            currentElement={state.currentElement}
+            lastElementUpdate={state.lastElementUpdate}
+            diagramElementType={state.diagramElementType}
+            onValidate={handleValidate}
+            onElementUpdate={handleElementUpdate}
+            referenceData={state.referenceData}
+            showModelName={state.showModelName}
+            showModelItemName={state.showModelItemName}
+            visibleSections={state.visibleSections}
+            onSimulate={handleSimulate}
+            onRemoveModel={handleRemoveModel}
+            onConvertPage={handleConvertPage}
+            onElementTypeChange={handleElementTypeChange}
+            simulationStatus={state.simulationStatus}
+            onViewResults={handleViewResults}
+            needsInitialization={state.needsInitialization}
+          />
         </>
       )}
     </div>

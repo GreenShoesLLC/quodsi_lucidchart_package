@@ -94,20 +94,6 @@ export class AuthMessagingService {
           }
           break;
 
-        case AuthActionType.SHOW_PANEL:
-          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH show panel request');
-          if (this.showAuthPanelCallback) {
-            this.showAuthPanelCallback(payload.data);
-          }
-          break;
-
-        case AuthActionType.MODEL_PANEL_FOCUS:
-          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH model panel focus');
-          if (this.modelPanelFocusCallback) {
-            this.modelPanelFocusCallback(payload.data);
-          }
-          break;
-
         case AuthActionType.ERROR:
           ComponentLogger.log(LOG_PREFIX, 'Processing AUTH error:', payload.data);
           if (this.errorCallback && payload.data?.error) {
@@ -247,27 +233,6 @@ export class AuthMessagingService {
     ComponentLogger.log(LOG_PREFIX, 'Sending AUTH sign out');
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.SIGN_OUT
-    });
-  }
-
-  /**
-   * Send show auth panel request
-   */
-  public sendShowAuthPanel(reason?: string): void {
-    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH show panel', { reason });
-    this.messaging.sendMessage(MessageTypes.AUTH, {
-      type: AuthActionType.SHOW_PANEL,
-      data: { reason }
-    });
-  }
-
-  /**
-   * Send model panel focus notification
-   */
-  public sendModelPanelFocus(): void {
-    ComponentLogger.log(LOG_PREFIX, 'Sending AUTH model panel focus');
-    this.messaging.sendMessage(MessageTypes.AUTH, {
-      type: AuthActionType.MODEL_PANEL_FOCUS
     });
   }
 }

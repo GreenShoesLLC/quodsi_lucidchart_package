@@ -44,7 +44,6 @@ import { LucidPageConversionService } from '../services/conversion/LucidPageConv
 import { StorageAdapter } from '../core/StorageAdapter';
 import LucidVersionManager from '../versioning';
 import { SimulationResultsDashboard } from '../dashboard/SimulationResultsDashboard';
-import { AuthPanel } from './AuthPanel';
 import {
     EnumMapper
 } from '@quodsi/shared';
@@ -60,7 +59,7 @@ export class ModelPanel extends Panel {
     private messaging: ExtensionMessaging;
     private reactAppReady: boolean = false;
     private modelManager: ModelManager;
-    private authPanel: AuthPanel;
+
     private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
         pageId: '',
@@ -72,7 +71,7 @@ export class ModelPanel extends Panel {
     private userInfo: any = null;
     private versionManager: LucidVersionManager;
 
-    constructor(client: EditorClient, modelManager: ModelManager, authPanel: AuthPanel) {
+    constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
             title: 'Quodsi Model',
             url: 'quodsim-react/index.html',
@@ -84,7 +83,6 @@ export class ModelPanel extends Panel {
         // Initialize services and managers but don't perform any operations yet
         this.messaging = ExtensionMessaging.getInstance();
         this.modelManager = modelManager;
-        this.authPanel = authPanel;
         this.selectionManager = new SelectionManager(
             modelManager,
             <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => {
@@ -147,9 +145,24 @@ export class ModelPanel extends Panel {
     private setupModelMessageHandlers(): void {
         this.logError('Setting up message handlers START');
 
-        // React App Ready - already handled by BasePanel
-        this.messaging.onMessage(MessageTypes.REACT_APP_READY, () => {
-            this.logError('REACT_APP_READY message received in handler');
+        this.messaging.onMessage(MessageTypes.REACT_APP_READY, (payload) => {
+            this.log('REACT_APP_READY message received in ModelPanel with payload:', payload);
+            
+            // Check if the message includes authentication data
+            if (payload && typeof payload.isAuthenticated === 'boolean') {
+                this.log('Received auth state from React app:', {
+                    isAuthenticated: payload.isAuthenticated,
+                    hasUserInfo: !!payload.userInfo
+                });
+                
+                // Update our authentication state if needed
+                if (payload.isAuthenticated) {
+                    this.log('Updating panel auth state from React app');
+                    this.isAuthenticated = payload.isAuthenticated;
+                    this.userInfo = payload.userInfo || null;
+                }
+            }
+            
             this.handleReactReady();
         });
 
@@ -193,12 +206,6 @@ export class ModelPanel extends Panel {
                             });
                         }
                     }
-                    break;
-
-                case AuthActionType.SHOW_PANEL:
-                    this.log('Processing AUTH show panel request');
-                    // Get the AuthPanel instance and show it
-                    this.authPanel.show();
                     break;
             }
         });
@@ -760,8 +767,6 @@ export class ModelPanel extends Panel {
 
         // Request current auth status when panel is shown
         this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
-        this.sendAuthMessage(AuthActionType.MODEL_PANEL_FOCUS);
-
         this.initializeModelManager(); // Re-initialize when panel is shown
         super.show();
     }
@@ -882,7 +887,12 @@ export class ModelPanel extends Panel {
         this.reactAppReady = true;
         this.selectionManager.setReactAppReady(true);
         this.log('reactAppReady = true');
-        this.log('reactAppReady = true');
+
+        // Debug current auth state
+        this.log('Current authentication state in handleReactReady:', {
+            isAuthenticated: this.isAuthenticated,
+            hasUserInfo: !!this.userInfo
+        });
 
         // Send MODEL_PANEL_INIT message to tell React this is ModelPanel
         this.sendAuthMessage(AuthActionType.PANEL_INIT, {
@@ -891,6 +901,12 @@ export class ModelPanel extends Panel {
 
         // Request current authentication status
         this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
+
+        // ALWAYS send current auth state, don't make it conditional
+        this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+            isAuthenticated: this.isAuthenticated,
+            userInfo: this.userInfo
+        });
 
         const viewport = new Viewport(this.client);
         const currentPage = viewport.getCurrentPage();
@@ -902,14 +918,6 @@ export class ModelPanel extends Panel {
         }
 
         try {
-            // If we're already authenticated, send that to React immediately
-            if (this.isAuthenticated) {
-                this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
-                    isAuthenticated: true,
-                    userInfo: this.userInfo
-                });
-            }
-
             // Check for and handle any needed version upgrades
             // await this.versionManager.handlePageLoad(currentPage);
             // Now initialize the model in response to a user-triggered event
@@ -947,14 +955,9 @@ export class ModelPanel extends Panel {
         }
 
         try {
-            this.log('Creating dataProxy');
             const dataProxy = new DataProxy(this.client);
-            this.log('Creating modelDataSource');
             const modelDataSource = new ModelDataSource(dataProxy);
-            this.log('Creating pageSchemaConversionService');
             const pageSchemaConversionService = new PageSchemaConversionService(modelDataSource);
-            this.log('pageSchemaConversionService.convertPage');
-
             // const result2 = await pageSchemaConversionService.convertPage(currentPage);
 
             const storageAdapter = new StorageAdapter();

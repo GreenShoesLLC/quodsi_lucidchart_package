@@ -1,4 +1,4 @@
-import { AppLifecyclePayloads } from './payloads/AppLifecyclePayloads';
+
 import { ValidationPayloads } from './payloads/ValidationPayloads';
 import { SelectionPayloads } from './payloads/SelectionPayloads';
 import { AuthPayloads } from './payloads/AuthPayloads';
@@ -16,7 +16,6 @@ export enum MessageTypes {
 }
 
 export interface MessagePayloads extends
-    AppLifecyclePayloads,
     SelectionPayloads,
     ValidationPayloads,
     AuthPayloads {
