@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { AuthProvider } from "./auth/AuthProvider";
 import MsalInitializer from "./auth/components/MsalInitializer";
 import { createMsalInstance } from "./auth/msalSetup";
-import QuodsiApp from "./QuodsiApp";
+import QuodsiApp from "./QuodsiApp_v2";
 
 /**
  * Main application component that sets up authentication and the application

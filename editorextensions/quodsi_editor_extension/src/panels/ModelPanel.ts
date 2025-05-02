@@ -32,7 +32,8 @@ import {
     ModelSerializerFactory,
     AuthActionType,
     ActionType,
-    ActionRequest
+    ActionRequest,
+    AuthData
 
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
@@ -59,7 +60,7 @@ export class ModelPanel extends Panel {
     private messaging: ExtensionMessaging;
     private reactAppReady: boolean = false;
     private modelManager: ModelManager;
-
+    private _isShown: boolean = false;
     private currentModelStructure?: ModelStructure = undefined;
     private currentSelection: SelectionState = {
         pageId: '',
@@ -113,26 +114,27 @@ export class ModelPanel extends Panel {
             console.error(`${ModelPanel.LOG_PREFIX} ${message}`, ...args);
         }
     }
-    protected frameLoaded(): void {
-        console.log('[ModelPanel] Frame loaded');
+    // protected frameLoaded(): void {
+    //     console.log('[ModelPanel] Frame loaded');
 
-        // When the frame loads, request the current auth status
-        this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
+    //     // When the frame loads, request the current auth status
+    //     this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
 
-        // Also send panel initialization
-        this.sendAuthMessage(AuthActionType.PANEL_INIT, {
-            panelType: 'model'
-        });
-        
-        // Set a timeout to send the panel init message again in case the React app wasn't ready
-        // This helps when switching between panels
-        setTimeout(() => {
-            console.log('[ModelPanel] Sending delayed panel init message');
-            this.sendAuthMessage(AuthActionType.PANEL_INIT, {
-                panelType: 'model'
-            });
-        }, 500);
-    }
+    //     // Also send panel initialization
+    //     this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+    //         panelType: 'model'
+    //     });
+
+    //     // Set a timeout to send the panel init message again in case the React app wasn't ready
+    //     // This helps when switching between panels
+    //     setTimeout(() => {
+    //         console.log('[ModelPanel] Sending delayed panel init message');
+    //         this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+    //             panelType: 'model'
+    //         });
+    //     }, 500);
+    // }
+
     protected sendAuthMessage(
         type: AuthActionType,
         data?: any
@@ -146,28 +148,13 @@ export class ModelPanel extends Panel {
         this.logError('Setting up message handlers START');
 
         this.messaging.onMessage(MessageTypes.REACT_APP_READY, (payload) => {
-            this.log('REACT_APP_READY message received in ModelPanel with payload:', payload);
-            
-            // Check if the message includes authentication data
-            if (payload && typeof payload.isAuthenticated === 'boolean') {
-                this.log('Received auth state from React app:', {
-                    isAuthenticated: payload.isAuthenticated,
-                    hasUserInfo: !!payload.userInfo
-                });
-                
-                // Update our authentication state if needed
-                if (payload.isAuthenticated) {
-                    this.log('Updating panel auth state from React app');
-                    this.isAuthenticated = payload.isAuthenticated;
-                    this.userInfo = payload.userInfo || null;
-                }
-            }
-            
-            this.handleReactReady();
+
+
+            this.handleReactReady(payload);
         });
 
         // Consolidated AUTH message handler
-        this.messaging.onMessage(MessageTypes.AUTH, (payload) => {
+        this.messaging.onMessage(MessageTypes.AUTH, async (payload) => {
             console.log('[ModelPanel] Received AUTH message:', payload);
 
             if (!payload || !payload.type) {
@@ -184,10 +171,17 @@ export class ModelPanel extends Panel {
 
                         // If authenticated, notify React app
                         if (this.isAuthenticated && this.reactAppReady) {
-                            this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
-                                isAuthenticated: this.isAuthenticated,
-                                userInfo: this.userInfo
-                            });
+                            // If authenticated, notify React app
+                            if (this.isAuthenticated && this.reactAppReady) {
+                                this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+                                    isAuthenticated: this.isAuthenticated,
+                                    userInfo: this.userInfo
+                                });
+                            }
+                            const viewport = new Viewport(this.client);
+                            await this.initializeModelManager();
+                            const selectedItems = viewport.getSelectedItems();
+                            await this.handleSelectionChange(selectedItems);
                         }
                     }
                     break;
@@ -792,21 +786,6 @@ export class ModelPanel extends Panel {
         await this.selectionManager.handleSelectionChange(this.client, items);
     }
 
-    // Authentication-specific error handler
-    private handleAuthError(message: string, error: any): void {
-        this.logError(`${message}`, error);
-        this.sendMessage({
-            messagetype: MessageTypes.AUTH,
-            data: {
-                type: AuthActionType.ERROR,
-                data: {
-                    error: error instanceof Error ? error.message : 'Unknown authentication error',
-                    errorCode: 'AUTH_HANDLER_ERROR'
-                }
-            }
-        });
-    }
-
     // Action response error handler
     private handleActionResponseError(message: string, error: any): void {
         this.logError(`${message}`, error);
@@ -875,62 +854,117 @@ export class ModelPanel extends Panel {
             this.handleActionResponseError('Error removing model:', error);
         }
     }
+    /**
+     * Called when the iframe has been removed from the DOM
+     * We override this method to clean up resources
+     */
+    protected frameClosed(): void {
+        this.log('ModelPanel frame closed, cleaning up resources');
+        // this.stopSessionMonitoring();
+        super.frameClosed();
+    }
 
-    private async handleReactReady(): Promise<void> {
-        if (this.reactAppReady) {
-            this.selectionManager.setReactAppReady(true);
-            this.log('React app already ready, skipping initialization');
-            return;
+    private async handleReactReady(payload: AuthData): Promise<void> {
+        this.log('REACT_APP_READY message received in ModelPanel with payload:', payload);
+
+        // Check if the message includes authentication data
+        if (payload && typeof payload.isAuthenticated === 'boolean') {
+            // Update our authentication state
+            this.isAuthenticated = payload.isAuthenticated;
+            this.userInfo = payload.isAuthenticated ? (payload.userInfo || null) : null;
+
+            try {
+                this.reactAppReady = true;
+                this.selectionManager.setReactAppReady(true);
+
+                // Always send PANEL_INIT message regardless of authentication state
+                this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+                    panelType: 'model'
+                });
+
+                // If user is authenticated, proceed with full initialization
+                if (this.isAuthenticated) {
+                    const viewport = new Viewport(this.client);
+                    await this.initializeModelManager();
+                    const selectedItems = viewport.getSelectedItems();
+                    await this.handleSelectionChange(selectedItems);
+                } else {
+                    // User is not authenticated - send a status response to tell React app
+                    // This will trigger the "Sign In" UI to be shown
+                    this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+                        isAuthenticated: false,
+                        userInfo: null
+                    });
+
+                    // Also send a base selection message to properly update React's state
+                    // This ensures isLoading is set to false by giving React a selection state
+                    this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
+                        selectionType: SelectionType.NONE,
+                        documentId: new DocumentProxy(this.client).id,
+                        hasModel: false,
+                        selectionState: {
+                            pageId: '',
+                            selectedIds: [],
+                            selectionType: SelectionType.NONE
+                        }
+                    });
+                }
+            } catch (error) {
+                this.handleActionResponseError('Error during React ready initialization: ', error);
+            }
         }
+    }
 
-        this.log('reactAppReady = false');
-        this.reactAppReady = true;
-        this.selectionManager.setReactAppReady(true);
-        this.log('reactAppReady = true');
+    /**
+     * Resets the authentication state for this panel
+     * This can be called when a user logs out or switches accounts
+     */
+    public resetAuthentication(): void {
+        this.log('Resetting authentication state');
+        this.reactAppReady = false;
+        this.isAuthenticated = false;
+        this.userInfo = null;
 
-        // Debug current auth state
-        this.log('Current authentication state in handleReactReady:', {
-            isAuthenticated: this.isAuthenticated,
-            hasUserInfo: !!this.userInfo
-        });
-
-        // Send MODEL_PANEL_INIT message to tell React this is ModelPanel
-        this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+        // Notify the React app about the auth reset
+        this.log('sendAuthMessage RECHECK_AUTH');
+        this.sendAuthMessage(AuthActionType.RECHECK_AUTH, {
+            // isAuthenticated: false,
+            // userInfo: null,
             panelType: 'model'
         });
 
-        // Request current authentication status
-        this.sendAuthMessage(AuthActionType.STATUS_REQUEST);
+        // If the panel is currently visible, re-initialize it
+        if (this.isShown()) {
+            // this.handleReactReady();
+        }
+    }
 
-        // ALWAYS send current auth state, don't make it conditional
-        this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
-            isAuthenticated: this.isAuthenticated,
-            userInfo: this.userInfo
-        });
+    /**
+     * Reset the reactAppReady flag, forcing reinitialization
+     * on the next REACT_APP_READY message
+     */
+    public resetReactAppReady(): void {
+        this.log('Resetting reactAppReady flag');
+        this.reactAppReady = false;
+        this.selectionManager.setReactAppReady(false);
+    }
 
+    /**
+     * Checks if the panel is currently being shown
+     */
+    public isShown(): boolean {
+        return this._isShown;
+    }
+
+    /**
+     * Refreshes the current selection state
+     * This method is used by PanelManager to force a selection refresh
+     */
+    public refreshSelection(): void {
+        this.log('Refreshing selection state');
         const viewport = new Viewport(this.client);
-        const currentPage = viewport.getCurrentPage();
-        const document = new DocumentProxy(this.client);
-
-        if (!currentPage) {
-            this.logError('No active page found during React ready');
-            return;
-        }
-
-        try {
-            // Check for and handle any needed version upgrades
-            // await this.versionManager.handlePageLoad(currentPage);
-            // Now initialize the model in response to a user-triggered event
-            await this.initializeModelManager();
-
-            // Get current selection state and send appropriate message
-            const selectedItems = viewport.getSelectedItems();
-            this.log('handleReactReady: handleSelectionChange');
-            await this.handleSelectionChange(selectedItems);
-
-        } catch (error) {
-            this.handleActionResponseError('Error during React ready initialization: ', error);
-        }
+        const selectedItems = viewport.getSelectedItems();
+        this.handleSelectionChange(selectedItems);
     }
     /**
      * Handles page conversion request

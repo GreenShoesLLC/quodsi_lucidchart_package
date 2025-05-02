@@ -20,6 +20,7 @@ export enum AuthActionType {
     SIGN_OUT = 'signOut',
     COMPLETED = 'completed',
     ERROR = 'error',
+    RECHECK_AUTH = 'recheck_auth'
 }
 
 export interface AuthData {

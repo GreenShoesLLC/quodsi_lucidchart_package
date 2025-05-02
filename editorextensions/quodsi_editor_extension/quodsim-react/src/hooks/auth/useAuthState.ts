@@ -99,6 +99,7 @@ export function useAuthState(): AuthState {
   // Set up listener for auth status requests
   useEffect(() => {
     authMessagingService.onAuthStatusRequest(() => {
+      console.log("[useAuthState] Auth state is:", { isAuthenticated, hasUserInfo: !!userInfo });
       // Send current authentication status
       authMessagingService.sendAuthStatus(isAuthenticated, userInfo);
     });

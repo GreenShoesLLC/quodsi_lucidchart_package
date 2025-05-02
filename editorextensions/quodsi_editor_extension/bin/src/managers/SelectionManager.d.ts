@@ -9,7 +9,6 @@ export declare class SelectionManager {
     private loggingEnabled;
     private isHandlingSelectionChange;
     private reactAppReady;
-    private currentModelStructure?;
     private sendMessageCallback;
     constructor(modelManager: ModelManager, sendMessageCallback: <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => void);
     setLogging(enabled: boolean): void;
@@ -20,10 +19,6 @@ export declare class SelectionManager {
      * Sets the React app ready state - should be called by ModelPanel when REACT_APP_READY is received
      */
     setReactAppReady(ready: boolean): void;
-    /**
-     * Returns whether the React app is ready to receive messages
-     */
-    isReactAppReady(): boolean;
     /**
      * Determines the selection state based on the current page and selected items
      */
@@ -60,10 +55,6 @@ export declare class SelectionManager {
      * Main entry point for handling selection changes - migrated from ModelPanel
      */
     handleSelectionChange(client: EditorClient, items: ItemProxy[]): Promise<void>;
-    /**
-     * Updates the current model structure - migrated from ModelPanel
-     */
-    private updateModelStructure;
     /**
      * Sends the appropriate message based on selection state - migrated from ModelPanel
      */

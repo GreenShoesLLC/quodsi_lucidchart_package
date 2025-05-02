@@ -8,6 +8,7 @@ export declare class ModelPanel extends Panel {
     private messaging;
     private reactAppReady;
     private modelManager;
+    private _isShown;
     private currentModelStructure?;
     private currentSelection;
     private isHandlingSelectionChange;
@@ -19,7 +20,6 @@ export declare class ModelPanel extends Panel {
     private isLoggingEnabled;
     private log;
     private logError;
-    protected frameLoaded(): void;
     protected sendAuthMessage(type: AuthActionType, data?: any): void;
     private setupModelMessageHandlers;
     initializeOrUpdateModel(): Promise<import("../data_sources").ModelDefinition | null>;
@@ -38,13 +38,36 @@ export declare class ModelPanel extends Panel {
     hide(): void;
     handleValidateRequest(): Promise<void>;
     handleSelectionChange(items: ItemProxy[]): Promise<void>;
-    private handleAuthError;
     private handleActionResponseError;
     /**
      * Handles model removal request
      */
     private handleRemoveModel;
+    /**
+     * Called when the iframe has been removed from the DOM
+     * We override this method to clean up resources
+     */
+    protected frameClosed(): void;
     private handleReactReady;
+    /**
+     * Resets the authentication state for this panel
+     * This can be called when a user logs out or switches accounts
+     */
+    resetAuthentication(): void;
+    /**
+     * Reset the reactAppReady flag, forcing reinitialization
+     * on the next REACT_APP_READY message
+     */
+    resetReactAppReady(): void;
+    /**
+     * Checks if the panel is currently being shown
+     */
+    isShown(): boolean;
+    /**
+     * Refreshes the current selection state
+     * This method is used by PanelManager to force a selection refresh
+     */
+    refreshSelection(): void;
     /**
      * Handles page conversion request
      */

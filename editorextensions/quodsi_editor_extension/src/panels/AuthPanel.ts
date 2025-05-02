@@ -12,7 +12,7 @@ import {
     UserInfo,
     AuthActionType
 } from '@quodsi/shared';
-
+import { panelManager } from '../managers/PanelManager';
 // Session storage keys
 const SESSION_AUTH_STATE = 'quodsi_auth_state';
 const SESSION_USER_INFO = 'quodsi_user_info';
@@ -35,7 +35,7 @@ export class AuthPanel extends Panel {
     private isAuthenticated: boolean = false;
     private userInfo: UserInfo | null = null;
     private sessionCheckInterval: any; // For periodic session checking
-
+    private _isShown: boolean = false;
     constructor(client: EditorClient) {
         super(client, {
             title: 'Quodsi',
@@ -154,6 +154,42 @@ export class AuthPanel extends Panel {
         });
     }
 
+    /**
+ * Resets the authentication state for this panel
+ * This can be called when a user logs out or switches accounts
+ */
+    public resetAuthentication(): void {
+        this.log('Resetting authentication state');
+        this.reactAppReady = false;
+        this.isAuthenticated = false;
+        this.userInfo = null;
+
+        // Notify the React app about the auth reset
+        this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+            isAuthenticated: false,
+            userInfo: null
+        });
+
+        // If the panel is currently visible, re-initialize it
+        if (this.isShown()) {
+            this.handleReactReady();
+        }
+    }
+    /**
+     * Reset the reactAppReady flag, forcing reinitialization
+     * on the next REACT_APP_READY message
+     */
+    public resetReactAppReady(): void {
+        this.log('Resetting reactAppReady flag');
+        this.reactAppReady = false;
+    }
+
+    /**
+     * Checks if the panel is currently being shown
+     */
+    public isShown(): boolean {
+        return this._isShown;
+    }
     /**
      * Loads authentication state from session storage
      */
@@ -419,7 +455,8 @@ export class AuthPanel extends Panel {
         // Save the authentication state
         if (data.success) {
             this.saveSessionState();
-
+            // Notify ModelPanel of authentication state change via PanelManager
+            panelManager.resetModelPanelAuthentication();
             // Broadcast authentication state to all panels
             // This is a workaround since we can't modify extension.ts
             this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
@@ -506,24 +543,24 @@ export class AuthPanel extends Panel {
      * Called when the iframe has been constructed and loaded
      * We override this method to set up initial state
      */
-    protected frameLoaded(): void {
-        this.log('AuthPanel frame loaded');
-        super.frameLoaded();
+    // protected frameLoaded(): void {
+    //     this.log('AuthPanel frame loaded');
+    //     super.frameLoaded();
         
-        // Send panel type initialization message immediately when the frame loads
-        // This ensures the React app knows which panel it is, even after panel reopening
-        if (this.reactAppReady) {
-            this.sendAuthMessage(AuthActionType.PANEL_INIT, {
-                panelType: 'auth'
-            });
+    //     // Send panel type initialization message immediately when the frame loads
+    //     // This ensures the React app knows which panel it is, even after panel reopening
+    //     if (this.reactAppReady) {
+    //         this.sendAuthMessage(AuthActionType.PANEL_INIT, {
+    //             panelType: 'auth'
+    //         });
             
-            // Also send auth status if authenticated
-            if (this.isAuthenticated && this.userInfo) {
-                this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
-                    isAuthenticated: this.isAuthenticated,
-                    userInfo: this.userInfo
-                });
-            }
-        }
-    }
+    //         // Also send auth status if authenticated
+    //         if (this.isAuthenticated && this.userInfo) {
+    //             this.sendAuthMessage(AuthActionType.STATUS_RESPONSE, {
+    //                 isAuthenticated: this.isAuthenticated,
+    //                 userInfo: this.userInfo
+    //             });
+    //         }
+    //     }
+    // }
 }

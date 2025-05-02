@@ -5,6 +5,7 @@ import { IPublicClientApplication } from '@azure/msal-browser';
 import { useAuthentication } from '../hooks/useAuthentication';
 import { ApiService } from '../services/apiService';
 import { UserSyncResponse } from '../services/UserSyncService';
+import { setMsalInstanceForHandlers } from './msal-helpers';
 
 // Define the authentication context shape
 interface AuthContextType {
@@ -42,9 +43,11 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   
   // For debugging
   useEffect(() => {
-    console.log('[AuthProvider] Using MSAL authentication');
-  }, []);
-  
+    console.log("[AuthProvider] Current auth state:", {
+      isAuthenticated: auth.isAuthenticated,
+      hasUserInfo: !!auth.userInfo,
+    });
+  }, [auth.isAuthenticated, auth.userInfo]);
   // Initialize API service with the token getter
   useEffect(() => {
     try {
@@ -54,6 +57,17 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   }, [auth.getAccessToken, instance]);
 
+  useEffect(() => {
+    // Make the MSAL instance available to message handlers
+    setMsalInstanceForHandlers(instance);
+
+    // Rest of your initialization code
+    try {
+      ApiService.getInstance(auth.getAccessToken);
+    } catch (error) {
+      console.error("[AuthProvider] Failed to initialize API service", error);
+    }
+  }, [auth.getAccessToken, instance]);
   // Provide the auth state and functions to all child components
   return (
     <AuthContext.Provider

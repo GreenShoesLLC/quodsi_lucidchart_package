@@ -15,8 +15,10 @@ The Quodsi Authentication System is a comprehensive solution that enables user a
 7. [Session Management](#session-management)
 8. [Panel Visibility and Authentication](#panel-visibility-and-authentication)
 9. [Panel Initialization Sequence](#panel-initialization-sequence)
-10. [Troubleshooting](#troubleshooting)
-11. [Further Development](#further-development)
+10. [Local Authentication State in QuodsiApp](#local-authentication-state-in-quodsiapp)
+11. [Auth Messaging Service](#auth-messaging-service)
+12. [Troubleshooting](#troubleshooting)
+13. [Further Development](#further-development)
 
 ## Architecture Overview
 
@@ -75,7 +77,21 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Session timeout monitoring
      - Processing authentication data from REACT_APP_READY messages
 
-2. **extension.ts**
+2. **ModelPanel.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts`
+   - Purpose: Manages the model panel and responds to authentication changes
+   - Key features:
+     - Uses `resetAuthentication()` to check auth state after AuthPanel login
+     - Sends RECHECK_AUTH message to React instance for direct auth verification
+     - Updates UI based on authentication status
+
+3. **PanelManager.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\managers\PanelManager.ts`
+   - Purpose: Manages communication between panels
+   - Key features:
+     - `resetModelPanelAuthentication()` enables AuthPanel to notify ModelPanel of auth state changes
+
+4. **extension.ts**
    - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts`
    - Purpose: Initializes extension components including auth and model panels
    - Shows both panel icons regardless of authentication state
@@ -117,12 +133,13 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - `useAuthSession.ts` - Manages session state, timeout detection, and activity tracking
      - `useBackendSync.ts` - Handles synchronization with quodsi-fastapi backend
 
-5. **QuodsiApp.tsx**
-   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\QuodsiApp.tsx`
+5. **QuodsiApp_v2.tsx**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\QuodsiApp_v2.tsx`
    - Purpose: Main React application component that handles panel rendering and state
    - Features:
      - Panel type detection and switching
-     - Authentication state management
+     - **Local authentication state management** with `userIsAuthenticated` and `localUserInfo`
+     - Direct message event listener for auth status updates
      - Model initialization state tracking
      - Handles transitions between different UI states
      - Sends authentication data with REACT_APP_READY messages for immediate state synchronization
@@ -135,6 +152,15 @@ These flows are configured in the Microsoft Entra ID B2C tenant and referenced i
      - Action type-based routing for different auth operations
      - State updates based on auth events
      - Enhanced panel initialization detection
+
+7. **AuthMessagingService.ts**
+   - Location: `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\AuthMessagingService.ts`
+   - Purpose: Specialized messaging service for authentication
+   - Features:
+     - Handles auth-specific messages including RECHECK_AUTH
+     - Provides direct authentication state verification
+     - Processes auth messages with explicit handler for RECHECK_AUTH
+     - Works with global state update callbacks
 
 ### Shared Components
 
@@ -177,18 +203,30 @@ The authentication process follows these steps:
    - A user session is created in the backend
    - Session activity is tracked periodically
 
-4. **State Persistence**:
+4. **Cross-Panel Authentication Update**:
    - Authentication state is stored in session storage with fallbacks
    - Auth status is sent to the extension via `AUTH` message with `COMPLETED` action type
-   - Extension updates its internal state and broadcasts status
+   - AuthPanel calls `panelManager.resetModelPanelAuthentication()`
+   - ModelPanel sends `RECHECK_AUTH` message to its React instance
+   - React instance checks MSAL for existing accounts and updates state accordingly
+   - ModelPanel updates its UI based on authentication state
 
-5. **Panel Reopening**:
+5. **Model Panel UI Update**:
+   - When authentication state changes, the ModelPanel React instance:
+     - Receives RECHECK_AUTH message
+     - Processes it via AuthMessagingService
+     - Verifies authentication with MSAL instance
+     - Updates local authentication state with `setUserIsAuthenticated`
+     - Re-renders UI based on local auth state instead of global context
+     - Shows model content instead of "Authentication Required" message
+
+6. **Panel Reopening**:
    - When panel is closed and reopened, authentication state is retrieved from storage
    - React app is initialized with correct panel type
    - Authentication state is restored from both session storage and REACT_APP_READY payload
    - Backend session is updated
 
-6. **Sign-out Flow**:
+7. **Sign-out Flow**:
    - User clicks "Sign Out" button
    - React app sends `AUTH` message with `SIGN_OUT` action type
    - Backend session is ended
@@ -196,7 +234,7 @@ The authentication process follows these steps:
    - React app clears tokens and session state
    - Proper redirect URIs ensure post-logout navigation
 
-7. **Panel Authentication Check**:
+8. **Panel Authentication Check**:
    - When ModelPanel is opened, it immediately receives authentication state via REACT_APP_READY
    - If not authenticated, it shows a message with a sign-in button
    - Sign-in button sends `AUTH` message with `SHOW_PANEL` action type
@@ -251,7 +289,8 @@ export enum AuthActionType {
     COMPLETED = 'completed',
     ERROR = 'error',
     SHOW_PANEL = 'showPanel',
-    MODEL_PANEL_FOCUS = 'modelPanelFocus'
+    MODEL_PANEL_FOCUS = 'modelPanelFocus',
+    RECHECK_AUTH = 'recheck_auth'
 }
 ```
 
@@ -299,6 +338,11 @@ Working with authentication in iframe environments presents several challenges t
    - REACT_APP_READY includes authentication state as soon as React initializes
    - Avoids race conditions and timing issues with separate iframes
    - Each panel updates its local state from shared authentication data
+
+7. **Local Authentication State in Components**:
+   - QuodsiApp_v2 uses local state variables for authentication
+   - Prevents reliance on context propagation between iframes
+   - Direct message listeners update component state
 
 ## Session Management
 
@@ -361,21 +405,136 @@ The system now properly handles panel initialization regardless of the order in 
    - Provides clear "Initialize Quodsi Model" button rather than infinite loading
    - Tracks initialization state to prevent stuck loading indicators
 
-4. **AuthPanel First, ModelPanel Second**:
-   - When AuthPanel is opened first, authentication state is established
-   - When ModelPanel is subsequently opened, it receives authentication state immediately
-   - Shows appropriate UI based on model and authentication state
-   - Handles transitions between different states cleanly
+4. **Authentication Verification Process**:
+   - When user signs in via AuthPanel, ModelPanel is notified via PanelManager
+   - ModelPanel sends RECHECK_AUTH message to its React instance
+   - React's AuthMessagingService handles the message and checks MSAL for accounts
+   - If authenticated, local authentication state is updated in component
+   - UI transitions from "Authentication Required" to model content
+   - This flow works regardless of which panel was opened first
 
-5. **MSAL Initialization Sequence**:
-   - MSAL is properly initialized before any authentication operations
-   - Clear separation between initialization and redirect handling
-   - Prevent race conditions in authentication operations
+## Local Authentication State in QuodsiApp
 
-6. **Improved Loading States**:
-   - Clear loading indicators during initialization
-   - Timeouts to prevent infinite loading states
-   - User-friendly messages during loading
+The system has been enhanced to use local authentication state in QuodsiApp_v2:
+
+1. **Local State Variables**:
+   ```typescript
+   const [userIsAuthenticated, setUserIsAuthenticated] = useState<boolean>(false);
+   const [localUserInfo, setLocalUserInfo] = useState<any>(null);
+   ```
+
+2. **Context State Synchronization**:
+   ```typescript
+   // Sync the auth context state to local state
+   useEffect(() => {
+     if (isAuthenticated && userInfo) {
+       setUserIsAuthenticated(true);
+       setLocalUserInfo(userInfo);
+     }
+   }, [isAuthenticated, userInfo]);
+   ```
+
+3. **Direct Message Handling**:
+   ```typescript
+   // Auth message listener for direct state updates
+   useEffect(() => {
+     const handleAuthMessage = (message: any) => {
+       if (message.data?.messagetype === "AUTH" &&
+           message.data.data?.type === "status_response" &&
+           message.data.data?.data?.isAuthenticated) {
+         
+         setUserIsAuthenticated(true);
+         setLocalUserInfo(message.data.data.data.userInfo || null);
+       }
+     };
+     
+     window.addEventListener("message", handleAuthMessage);
+     return () => window.removeEventListener("message", handleAuthMessage);
+   }, []);
+   ```
+
+4. **UI Rendering Based on Local State**:
+   ```typescript
+   // In render logic
+   } : !userIsAuthenticated ? ( // Use local auth state instead of context
+     // Show "Authentication Required" UI
+   ) : (
+     // Show authenticated model panel UI
+   )
+   ```
+
+This approach provides several benefits:
+- Decouples rendering from global auth context propagation
+- Provides multiple update paths for authentication state
+- Simplifies state updates through direct message handling
+- Makes debugging easier with clearer state update tracking
+
+## Auth Messaging Service
+
+The AuthMessagingService has been enhanced to handle RECHECK_AUTH messages:
+
+1. **New Message Handler**:
+   ```typescript
+   case AuthActionType.RECHECK_AUTH:
+     ComponentLogger.log(LOG_PREFIX, 'Handling RECHECK_AUTH message');
+     this.handleRecheckAuth();
+     break;
+   ```
+
+2. **RECHECK_AUTH Handler Implementation**:
+   ```typescript
+   private handleRecheckAuth(): void {
+     // Get MSAL instance
+     const msalInstance = getMsalInstanceFromContext();
+     if (!msalInstance) return;
+     
+     // Check for existing accounts
+     const currentAccounts = msalInstance.getAllAccounts();
+     
+     if (currentAccounts.length > 0) {
+       // User is authenticated, create user info
+       const account = currentAccounts[0];
+       const userInfo = {
+         name: account.name || "Unknown User",
+         email: account.username,
+       };
+       
+       // Update global auth state via callback
+       if (this.authStateUpdateCallback) {
+         this.authStateUpdateCallback(true, userInfo);
+       }
+       
+       // Broadcast auth status to extension
+       this.broadcastAuthStatus(true, userInfo);
+     } else {
+       // No accounts found, user not authenticated
+       if (this.authStateUpdateCallback) {
+         this.authStateUpdateCallback(false, null);
+       }
+       
+       this.broadcastAuthStatus(false, null);
+     }
+   }
+   ```
+
+3. **Auth State Update Callback Registration**:
+   ```typescript
+   // In useAuthentication.ts
+   useEffect(() => {
+     authMessagingService.onAuthStateUpdate((isAuthenticated, userInfo) => {
+       setIsAuthenticated(isAuthenticated);
+       setUserInfo(userInfo);
+     });
+     
+     // Other effect code...
+   }, [isAuthenticated, userInfo, setIsAuthenticated, setUserInfo]);
+   ```
+
+This enhanced AuthMessagingService:
+- Properly handles RECHECK_AUTH messages from ModelPanel
+- Verifies authentication state using MSAL without adding excessive timers
+- Updates global authentication state via callbacks
+- Ensures authentication state is properly synchronized across panels
 
 ## Troubleshooting
 
@@ -386,24 +545,34 @@ Common authentication issues and their solutions:
    - This indicates MSAL functions are being called before initialization is complete
    - Ensure proper sequence in MsalInitializer.tsx - initialize() must be awaited before any other MSAL calls
 
-2. **Session Storage Issues**:
+2. **Authentication State Not Propagating to Model Panel**:
+   - Check if ModelPanel's resetAuthentication is sending RECHECK_AUTH
+   - Verify AuthMessagingService has the RECHECK_AUTH handler implemented
+   - Ensure QuodsiApp_v2 has local authentication state variables and uses them for rendering
+
+3. **Multiple Console Logs Crashing DevTools**:
+   - Reduce logging, especially in timer callbacks
+   - Eliminate unnecessary timer-based checks
+   - Use focused authentication verification rather than interval polling
+
+4. **Session Storage Issues**:
    - Look for "[AuthPanel] Error loading session state" or "sessionStorage is not defined"
    - This indicates the storage API isn't available in the current context
    - Use the enhanced sessionStorage handling with fallbacks
 
-3. **Panel Initialization Problems**:
+5. **Panel Initialization Problems**:
    - ModelPanel shows "Initializing..." indefinitely
    - Check if REACT_APP_READY message includes authentication data
    - Verify both panels handle authentication data in REACT_APP_READY correctly
    - Ensure ModelPanel always sends its authentication status in handleReactReady
 
-4. **Logout Redirect Problems**:
+6. **Logout Redirect Problems**:
    - 404 errors after logout
    - Check that consistent redirect URI logic is being used
    - Ensure the getRedirectUri function is used for both login and logout
    - Verify redirect URIs include the full path to the application entry point
 
-5. **Authentication State Persistence Issues**:
+7. **Authentication State Persistence Issues**:
    - Session not remembered between panel reopening
    - Check the sessionStorage implementation with fallbacks
    - Verify storage keys match between save and load operations
@@ -434,15 +603,15 @@ Areas for potential enhancement:
    - Add additional performance optimizations
    - Enhance error handling with more detailed error states
 
-6. **Message Handling Enhancements**:
-   - Add more robust error handling for malformed messages
-   - Implement message validation middleware
-   - Add message tracking and debugging capabilities
+6. **Message Service Consolidation**:
+   - Merge AuthMessagingService with messageHandlers
+   - Provide a single consistent message handling approach
+   - Eliminate duplicate handlers and message processing paths
 
-7. **Separate Panel React Apps**:
-   - Consider creating separate React applications for each panel
-   - This would make the separation of concerns even clearer
-   - Would eliminate issues with shared state between panels
+7. **Performance Optimizations**:
+   - Reduce unnecessary re-renders in authentication components
+   - Optimize authentication state updates for fewer rerenders
+   - Implement more granular component memoization
 
 ---
 

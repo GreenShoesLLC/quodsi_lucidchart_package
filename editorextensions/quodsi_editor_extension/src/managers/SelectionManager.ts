@@ -26,7 +26,6 @@ export class SelectionManager {
     private loggingEnabled: boolean = false;
     private isHandlingSelectionChange: boolean = false;
     private reactAppReady: boolean = false;
-    private currentModelStructure?: ModelStructure = undefined;
     private sendMessageCallback: <T extends MessageTypes>(type: T, payload?: MessagePayloads[T]) => void;
 
     constructor(modelManager: ModelManager,
@@ -69,13 +68,6 @@ export class SelectionManager {
     public setReactAppReady(ready: boolean): void {
         this.log(`Setting reactAppReady to ${ready}`);
         this.reactAppReady = ready;
-    }
-
-    /**
-     * Returns whether the React app is ready to receive messages
-     */
-    public isReactAppReady(): boolean {
-        return this.reactAppReady;
     }
 
     /**
@@ -253,24 +245,6 @@ export class SelectionManager {
             this.handleError('Error handling selection change:', error);
         } finally {
             this.isHandlingSelectionChange = false;
-        }
-    }
-
-    /**
-     * Updates the current model structure - migrated from ModelPanel
-     */
-    private async updateModelStructure(): Promise<void> {
-        // Get model structure from ModelManager
-        this.currentModelStructure = await this.modelManager.getModelStructure();
-        this.log('Model structure updated:', this.currentModelStructure);
-
-        // Validate model
-        const validationResult = await this.modelManager.validateModel();
-        this.log('Model validation result:', validationResult);
-
-        // If we're not in a selection change context, notify the React app of the validation update
-        if (!this.isHandlingSelectionChange && this.reactAppReady) {
-            this.sendTypedMessage(MessageTypes.VALIDATION_RESULT, validationResult);
         }
     }
 

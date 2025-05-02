@@ -72,4 +72,26 @@ export class ComponentLogger {
             console.debug(`${prefix} ${message}`, ...args);
         }
     }
+
+    /**
+     * Start a new logging group if logging is enabled for the specified component
+     * @param prefix The component prefix
+     * @param label The label for the group
+     * @param args Additional arguments to log
+     */
+    public static group(prefix: string, label: string, ...args: any[]): void {
+        if (ComponentLogger.isEnabled(prefix)) {
+            console.group(`${prefix} ${label}`, ...args);
+        }
+    }
+
+    /**
+     * End a logging group if logging is enabled for the specified component
+     * @param prefix The component prefix
+     */
+    public static groupEnd(prefix: string): void {
+        if (ComponentLogger.isEnabled(prefix)) {
+            console.groupEnd();
+        }
+    }
 }

@@ -7,6 +7,8 @@
 
 import { ExtensionMessaging, MessageTypes, UserInfo, AuthActionType, ComponentLogger } from '@quodsi/shared';
 import { AuthError } from './AuthErrorHandler';
+import { getMsalInstanceFromContext } from '../auth/msal-helpers';
+import { IPublicClientApplication } from '@azure/msal-browser';
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[AuthMessagingService]';
@@ -32,6 +34,11 @@ type PanelMessageCallback = (data?: any) => void;
 type ErrorMessageCallback = (error: string) => void;
 
 /**
+ * Callback type for auth state updates
+ */
+type AuthStateUpdateCallback = (isAuthenticated: boolean, userInfo: UserInfo | null) => void;
+
+/**
  * AuthMessagingService handles communication with the extension host
  */
 export class AuthMessagingService {
@@ -43,6 +50,7 @@ export class AuthMessagingService {
   private showAuthPanelCallback: PanelMessageCallback | null = null;
   private modelPanelFocusCallback: PanelMessageCallback | null = null;
   private errorCallback: ErrorMessageCallback | null = null;
+  private authStateUpdateCallback: AuthStateUpdateCallback | null = null;
 
   /**
    * Get singleton instance
@@ -52,7 +60,7 @@ export class AuthMessagingService {
       AuthMessagingService.instance = new AuthMessagingService();
       AuthMessagingService.instance.setLogging(true);
     }
-    
+
     return AuthMessagingService.instance;
   }
 
@@ -101,6 +109,15 @@ export class AuthMessagingService {
           }
           break;
 
+        case AuthActionType.RECHECK_AUTH:
+          ComponentLogger.log(LOG_PREFIX, 'Processing AUTH recheck request');
+          this.handleRecheckAuth();
+          // setTimeout(() => {
+          //   console.log("[AuthMessagingService] Performing secondary auth check");
+          //   this.checkAndUpdateAuth();
+          // }, 500);
+          break;
+
         default:
           ComponentLogger.log(LOG_PREFIX, `Unhandled AUTH action type: ${payload.type}`);
       }
@@ -115,6 +132,90 @@ export class AuthMessagingService {
     // });
   }
 
+  /**
+   * Handle RECHECK_AUTH message
+   */
+  private handleRecheckAuth(): void {
+    ComponentLogger.log(LOG_PREFIX, 'Handling RECHECK_AUTH message');
+
+    // Function to attempt SSO check with retry logic
+    const attemptSsoCheck = (retries = 3) => {
+      const msalInstance = getMsalInstanceFromContext();
+      if (!msalInstance) {
+        if (retries > 0) {
+          ComponentLogger.log(LOG_PREFIX, "MSAL not ready, retrying in 500ms...");
+          setTimeout(() => attemptSsoCheck(retries - 1), 500);
+        } else {
+          ComponentLogger.error(LOG_PREFIX, "Failed to get MSAL instance after retries");
+          if (this.errorCallback) {
+            this.errorCallback("Failed to verify authentication state");
+          }
+        }
+        return;
+      }
+
+      // Get accounts (if any)
+      const currentAccounts = msalInstance.getAllAccounts();
+
+      if (currentAccounts.length > 0) {
+        // We already have an account, use it directly
+        const account = currentAccounts[0];
+        ComponentLogger.log(LOG_PREFIX, "Found existing account, using directly");
+
+        const userInfo = {
+          name: account.name || "Unknown User",
+          email: account.username,
+        };
+
+        // Update global auth state FIRST
+        if (this.authStateUpdateCallback) {
+          ComponentLogger.log(LOG_PREFIX, "Updating global auth state via callback");
+          this.authStateUpdateCallback(true, userInfo);
+        } else {
+          ComponentLogger.warn(LOG_PREFIX, "No authStateUpdateCallback registered to update global state");
+        }
+
+        // Then broadcast authentication state to the extension
+        ComponentLogger.log(LOG_PREFIX, "Broadcasting authenticated state to extension");
+        this.broadcastAuthStatus(true, userInfo);
+
+        // Dispatch custom event to directly update component state
+        ComponentLogger.log(LOG_PREFIX, "Dispatching direct auth state update event");
+        try {
+          window.dispatchEvent(new CustomEvent('quodsi:auth:statechange', {
+            detail: { isAuthenticated: true, userInfo }
+          }));
+        } catch (error) {
+          ComponentLogger.error(LOG_PREFIX, "Error dispatching custom event:", error);
+        }
+      } else {
+        // No accounts found - user is not authenticated
+        ComponentLogger.log(LOG_PREFIX, "No accounts found during recheck");
+
+        // Update global auth state
+        if (this.authStateUpdateCallback) {
+          this.authStateUpdateCallback(false, null);
+        }
+
+        // Then broadcast unauthenticated state
+        this.broadcastAuthStatus(false, null);
+      }
+    };
+
+    // Start the check process
+    attemptSsoCheck();
+
+    // Schedule additional checks to handle possible race conditions
+    setTimeout(() => {
+      ComponentLogger.log(LOG_PREFIX, "Performing secondary auth check");
+      this.checkAndUpdateAuth();
+    }, 500);
+
+    setTimeout(() => {
+      ComponentLogger.log(LOG_PREFIX, "Performing tertiary auth check");
+      this.checkAndUpdateAuth();
+    }, 1500);
+  }
   /**
    * Register callback for authentication status requests
    */
@@ -141,6 +242,14 @@ export class AuthMessagingService {
    */
   public onError(callback: ErrorMessageCallback): void {
     this.errorCallback = callback;
+  }
+
+  /**
+   * Register callback for auth state updates
+   */
+  public onAuthStateUpdate(callback: AuthStateUpdateCallback): void {
+    ComponentLogger.log(LOG_PREFIX, "Registering auth state update callback");
+    this.authStateUpdateCallback = callback;
   }
 
   /**
@@ -182,14 +291,14 @@ export class AuthMessagingService {
    * Send authentication error notification
    */
   public sendAuthError(error: AuthError | string): void {
-    const errorMessage = typeof error === 'string' 
-      ? error 
+    const errorMessage = typeof error === 'string'
+      ? error
       : error.message;
-    
-    const errorCode = typeof error === 'string' 
-      ? undefined 
+
+    const errorCode = typeof error === 'string'
+      ? undefined
       : error.code;
-    
+
     ComponentLogger.log(LOG_PREFIX, 'Sending AUTH error', { errorMessage, errorCode });
     this.messaging.sendMessage(MessageTypes.AUTH, {
       type: AuthActionType.ERROR,
@@ -200,6 +309,29 @@ export class AuthMessagingService {
     });
   }
 
+  // In AuthMessagingService.ts, add this method
+  public checkAndUpdateAuth(): void {
+    const msalInstance = getMsalInstanceFromContext();
+    if (!msalInstance) {
+      return;
+    }
+
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      const account = accounts[0];
+      const userInfo = {
+        name: account.name || "Unknown User",
+        email: account.username,
+      };
+
+      console.log("[AuthMessagingService] Directly updating auth state with account:", userInfo);
+
+      // Call the update callback
+      if (this.authStateUpdateCallback) {
+        this.authStateUpdateCallback(true, userInfo);
+      }
+    }
+  }
   /**
    * Broadcasts authentication status to all panels
    */

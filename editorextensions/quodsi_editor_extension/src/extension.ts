@@ -10,6 +10,7 @@ import { StorageAdapter } from './core/StorageAdapter';
 import { AuthPanel } from './panels/AuthPanel';
 import { ExtensionMessaging } from '@quodsi/shared';
 import { SelectionManager } from './managers';
+import { panelManager } from './managers/PanelManager';
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -30,6 +31,8 @@ const modelPanel = new ModelPanel(client, modelManager);
 modelPanel.setLogging(true);
 console.info('[extension] Created ModelPanel');
 
+panelManager.registerAuthPanel(authPanel);
+panelManager.registerModelPanel(modelPanel);
 
 // Hook selection changes
 viewport.hookSelection((items) => {

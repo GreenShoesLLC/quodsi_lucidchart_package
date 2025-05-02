@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import {
-  ModelStructure,
   ValidationState,
   EditorReferenceData,
   ModelItemData,
@@ -44,6 +42,8 @@ interface ModelPanelAccordionProps {
 }
 
 export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
+  // Add a console.log statement to log props when the component renders
+
   modelName,
   validationState,
   currentElement,
@@ -63,19 +63,45 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   onViewResults,
   needsInitialization = false,
 }) => {
+  // Log component mounting and updates
+  useEffect(() => {
+    console.log('[ModelPanelAccordion] Component mounted');
+    return () => {
+      console.log('[ModelPanelAccordion] Component unmounted');
+    };
+  }, []);
+
+  // Log when modelName or currentElement changes
+  useEffect(() => {
+    console.log('[ModelPanelAccordion] Content changed:', {
+      modelName,
+      hasCurrentElement: !!currentElement,
+      currentElementId: currentElement?.id,
+      currentElementType: currentElement?.metadata?.type,
+      hasContent: !!(modelName || currentElement),
+      needsInitialization
+    });
+  }, [modelName, currentElement, needsInitialization]);
+
   const [expandedSections, setExpandedSections] = useState({
     elementEditor: !!currentElement,
     validation: !!validationState?.summary?.errorCount,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+    console.log(`[ModelPanelAccordion] Toggling section: ${section}`);
+    setExpandedSections((prev) => {
+      const newState = {
+        ...prev,
+        [section]: !prev[section],
+      };
+      console.log('[ModelPanelAccordion] Section state updated:', newState);
+      return newState;
+    });
   };
 
   const handleEditorCancel = () => {
+    console.log('[ModelPanelAccordion] Editor cancel triggered');
     toggleSection("elementEditor");
   };
 
@@ -83,11 +109,26 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     elementId: string,
     newType: SimulationObjectType
   ) => {
+    console.log('[ModelPanelAccordion] Element type change:', {
+      elementId,
+      newType,
+      previousType: currentElement?.metadata?.type
+    });
     onElementTypeChange(elementId, newType);
   };
 
   // Check if we're in a ready state to show content
   const hasContent = modelName || currentElement;
+
+  // Log the state of modelName and currentElement on every render
+  console.log('[ModelPanelAccordion] Render state:', {
+    modelName,
+    hasCurrentElement: !!currentElement,
+    currentElementId: currentElement?.id,
+    currentElementType: currentElement?.metadata?.type,
+    hasContent,
+    needsInitialization
+  });
   
   return (
     <div className="flex flex-col h-full bg-white">

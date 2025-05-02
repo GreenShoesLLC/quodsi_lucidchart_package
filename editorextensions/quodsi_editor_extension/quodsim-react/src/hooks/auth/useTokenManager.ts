@@ -21,7 +21,7 @@ import { ComponentLogger } from '@quodsi/shared';
 const LOG_PREFIX = '[useTokenManager]';
 
 // Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
+ComponentLogger.setEnabled(LOG_PREFIX, true);
 
 /**
  * Helper function to enable/disable logging for this hook
