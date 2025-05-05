@@ -1,0 +1,76 @@
+import { ElementShape, EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { MessagingAction } from '../reducer';
+import { debugService } from '../utils/debugService';
+
+/**
+ * Maps selection and document context messages to reducer actions
+ * 
+ * @param msg The envelope message to map
+ * @returns A reducer action or null if not handled
+ */
+export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
+  // Skip messages that aren't selection-related
+  if (
+    msg.type !== EnvelopeMessageType.MODEL_CONTEXT &&
+    msg.type !== EnvelopeMessageType.SELECTION_CHANGED
+  ) {
+    return null;
+  }
+
+  debugService.debug(`Selection mapper processing: ${msg.type}`);
+
+  switch (msg.type) {
+    case EnvelopeMessageType.MODEL_CONTEXT:
+      // Extract model context data
+      const contextData = msg.data as {
+        documentId: string;
+        title: string;
+        pageId: string;
+        isQuodsiModel: boolean;
+        metadata?: Record<string, unknown>;
+      };
+
+      // Map to model context update action
+      return {
+        type: 'MODEL_CONTEXT_UPDATE',
+        documentId: contextData.documentId,
+        pageId: contextData.pageId,
+        isQuodsiModel: contextData.isQuodsiModel,
+        title: contextData.title,
+        metadata: contextData.metadata
+      };
+
+    case EnvelopeMessageType.SELECTION_CHANGED:
+      // Extract selection changed data
+      const selectionData = msg.data as {
+        selectionType: string;
+        documentId: string;
+        hasModel: boolean;
+        selectionState: {
+          pageId: string;
+          selectedIds: string[];
+          selectionType: string;
+        };
+        modelItemData?: any;
+        diagramElementType?: string;
+        validationResult?: any;
+      };
+
+      // Map to selection update action
+      return {
+        type: 'SELECTION_UPDATE',
+        documentId: selectionData.documentId,
+        pageId: selectionData.selectionState.pageId,
+        isQuodsiModel: selectionData.hasModel,
+        selectedElements: selectionData.modelItemData 
+          ? [selectionData.modelItemData] as ElementShape[]
+          : [] as ElementShape[],
+        selectionCount: selectionData.selectionState.selectedIds.length,
+        totalElementCount: 0, // This might not be available in the message
+        diagramElementType: selectionData.diagramElementType
+      };
+
+    default:
+      return null;
+  }
+}

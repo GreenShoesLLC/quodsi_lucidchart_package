@@ -35,7 +35,7 @@ interface RoutablePanel {
 
 ```ts
 // router.ts
-import { Envelope, MessageTypes } from "../quodsi-messaging";
+import { Envelope, EnvelopeMessageType } from "../quodsi-messaging";
 import { v4 as uuid } from "uuid";
 
 class MessageRouter {
@@ -69,7 +69,7 @@ class MessageRouter {
   }
 
   receive(msg: Envelope) {
-    if (msg.type === MessageTypes.REACT_APP_READY) {
+    if (msg.type === EnvelopeMessageType.REACT_APP_READY) {
       const role = (msg as any).data.panel as "auth" | "model";
       const ch   = this.channels[role];
       ch.ready   = true;

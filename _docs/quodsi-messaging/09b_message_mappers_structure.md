@@ -27,15 +27,15 @@ Each `*.mapper.ts` exports exactly **one** function: `mapXxx(msg)` returning `Ap
 ## 2  Template for a mapper file
 
 ```ts
-import { MessageTypes, QuodsiMessage } from "quodsi-messaging";
+import { EnvelopeMessageType, QuodsiMessage } from "quodsi-messaging";
 import { AppAction } from "../state";
 
 export function mapSimulation(msg: QuodsiMessage): AppAction | null {
   switch (msg.type) {
-    case MessageTypes.MODEL_RUN_ACK:
+    case EnvelopeMessageType.MODEL_RUN_ACK:
       return { type: "RUN_ACK", jobId: msg.data.jobId, queuedAt: msg.data.queuedAt };
 
-    case MessageTypes.MODEL_RUN_STATUS:
+    case EnvelopeMessageType.MODEL_RUN_STATUS:
       return { type: "RUN_STATUS_UPDATE", status: msg.data };
 
     default:
@@ -93,7 +93,7 @@ qreact/tests/mappers/
 Use a shared helper:
 
 ```ts
-expectMapping(MessageTypes.MODEL_RUN_ACK, mapSimulation, {
+expectMapping(EnvelopeMessageType.MODEL_RUN_ACK, mapSimulation, {
   type: "RUN_ACK",
   jobId: "job‑1",
   queuedAt: "2025‑05‑02T12:00:00Z",

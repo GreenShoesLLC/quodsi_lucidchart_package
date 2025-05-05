@@ -75,3 +75,6 @@ export * from './serialization';
 // Validation exports
 export * from './validation';
 export * from './versioning';
+
+// New Quodsi Messaging Protocol
+export * from './quodsi-messaging';

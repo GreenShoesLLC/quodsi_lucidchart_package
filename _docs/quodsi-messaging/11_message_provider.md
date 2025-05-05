@@ -41,7 +41,7 @@ src/
 
 ```ts
 // state.ts
-import { SelectedItem, ValidationItem, UserInfo } from "quodsi-messaging";
+import { SelectedItem, ValidationItem, QuodsiUserInfo } from "quodsi-messaging";
 
 export interface RunJobEntry {
   jobId: string;
@@ -55,7 +55,7 @@ export interface RunJobEntry {
 export interface AppState {
   auth: {
     isAuthenticated: boolean;
-    user?: UserInfo;
+    user?: QuodsiUserInfo;
     requiredReason?: "not_authenticated" | "session_expired";
   };
   subscription: {
@@ -86,25 +86,25 @@ export const initialState: AppState = {
 
 ```ts
 import { AppState } from "./state";
-import { QuodsiMessage, MessageTypes } from "quodsi-messaging";
+import { QuodsiMessage, EnvelopeMessageType } from "quodsi-messaging";
 
 export function reducer(state: AppState, msg: QuodsiMessage): AppState {
   switch (msg.type) {
-    case MessageTypes.AUTH_STATUS:
+    case EnvelopeMessageType.AUTH_STATUS:
       return { ...state, auth: {
         isAuthenticated: msg.data.isAuthenticated,
         user: msg.data.user,
       }};
-    case MessageTypes.SUBSCRIPTION_STATUS:
+    case EnvelopeMessageType.SUBSCRIPTION_STATUS:
       return { ...state, subscription: { ...msg.data } };
-    case MessageTypes.SELECTION_CHANGED:
+    case EnvelopeMessageType.SELECTION_CHANGED:
       return { ...state, selection: msg.data.selected };
-    case MessageTypes.MODEL_RUN_ACK:
+    case EnvelopeMessageType.MODEL_RUN_ACK:
       return { ...state, runJobs: {
         ...state.runJobs,
         [msg.data.jobId]: { jobId: msg.data.jobId, state: "queued", percent: 0 },
       }};
-    case MessageTypes.MODEL_RUN_STATUS:
+    case EnvelopeMessageType.MODEL_RUN_STATUS:
       return { ...state, runJobs: {
         ...state.runJobs,
         [msg.data.jobId]: { ...state.runJobs[msg.data.jobId], ...msg.data },
@@ -149,7 +149,7 @@ export const MessageProvider: React.FC<{
       const env = e.data;
       dispatch(env as QuodsiMessage);
 
-      if (!readyRef.current && env.type === MessageTypes.MODEL_CONTEXT) {
+      if (!readyRef.current && env.type === EnvelopeMessageType.MODEL_CONTEXT) {
         readyRef.current = true;
         outboundQueue.current.forEach(m => parent.postMessage(m, "*"));
         outboundQueue.current.length = 0;
@@ -196,7 +196,7 @@ UI components import these narrow hooks instead of ploughing through the entire 
 export function buildRunRequest(docId: string, pageId: string, parameters: any): Envelope {
   return {
     id: uuid(),
-    type: MessageTypes.MODEL_RUN_REQUEST,
+    type: EnvelopeMessageType.MODEL_RUN_REQUEST,
     source: "model-iframe",
     target: "host",
     version: "1.0",

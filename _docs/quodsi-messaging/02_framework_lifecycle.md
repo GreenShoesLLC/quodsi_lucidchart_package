@@ -12,7 +12,7 @@ This document details the base‑level messages that bootstrap communication bet
 | ----------------- | ------------------------ | ---------------------------------------------------------------------- |
 | `panel`           | "model" \| "auth"        | Which Lucid panel this iframe represents.                              |
 | `isAuthenticated` | `boolean`                | Initial auth probe result (true = MSAL already holds a valid account). |
-| `user`            |  `UserInfo` \*optional\* | Basic user snapshot if `isAuthenticated` is true.                      |
+| `user`            |  `QuodsiUserInfo` \*optional\* | Basic user snapshot if `isAuthenticated` is true.                      |
 
 **Direction**  `iframe ► host`
 

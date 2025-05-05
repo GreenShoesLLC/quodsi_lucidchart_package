@@ -10,17 +10,17 @@ This spec describes all message types related to user identity and session handl
 
 | `type` constant           | Direction                 | Fired …                                                                                        | `data` payload                                          |
 | ------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| **`AUTH_LOGIN_SUCCESS`**  | `model‑iframe ► host`     | • After MSAL sign‑in **or** sign‑up finishes in popup.                                         | `{ idToken: string; user: UserInfo; newUser: boolean }` |
+| **`AUTH_LOGIN_SUCCESS`**  | `model‑iframe ► host`     | • After MSAL sign‑in **or** sign‑up finishes in popup.                                         | `{ idToken: string; user: QuodsiUserInfo; newUser: boolean }` |
 | **`AUTH_LOGOUT`**         | `model‑iframe ► host`     | • When user clicks **Sign Out**.<br>• When silent token refresh fails and panel forces logout. | `{}`                                                    |
 | **`AUTH_PASSWORD_RESET`** | `model‑iframe ► host`     | • Successful completion of the B2C password‑reset flow.                                        | `{ email: string }`                                     |
-| **`AUTH_STATUS`**         | `host ► any ready iframe` | • Immediately after `REACT_APP_READY`.<br>• Broadcast whenever login / logout occurs.          | `{ isAuthenticated: boolean; user?: UserInfo }`         |
+| **`AUTH_STATUS`**         | `host ► any ready iframe` | • Immediately after `REACT_APP_READY`.<br>• Broadcast whenever login / logout occurs.          | `{ isAuthenticated: boolean; user?: QuodsiUserInfo }`         |
 | **`AUTH_REQUIRED`**       | `host ► model‑iframe`     | • Host blocks an operation because user is unauthenticated.                                    | `{ reason: "not_authenticated" \| "session_expired" }`  |
 | **`AUTH_ERROR`**          | `any ► host`              | • Non‑PII auth failure (popup blocked, invalid token, etc.).                                   | `{ code: string; message: string }`                     |
 
 ### Helper Type
 
 ```ts
-interface UserInfo {
+interface QuodsiUserInfo {
   id: string;            // B2C objectId (sub)
   email: string;         // Primary sign‑in address
   displayName?: string;  // Friendly name (optional)

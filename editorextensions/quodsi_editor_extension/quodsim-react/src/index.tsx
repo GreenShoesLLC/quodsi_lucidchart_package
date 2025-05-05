@@ -1,24 +1,36 @@
-// src/index.tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import "./index.css";
-import "./styles/quodsi-styles.css";
-import reportWebVitals from "./reportWebVitals";
-import App from "./App";
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App_new from './components/new/App_new';
+import { initializeMessaging } from './messaging/initializeMessaging';
+import './index_new.css';
 
-console.log("index.tsx - Application entry point");
+// Initialize the messaging system
+const cleanup = initializeMessaging({
+  enableLogging: true,
+  enableDevTools: true,
+  logPrefix: 'Quodsi [New]'
+});
 
-// Create the root element to render the application
-const root = ReactDOM.createRoot(
-  document.getElementById("root") as HTMLElement
-);
+// Find the new root element, fallback to the standard one if needed
+const rootElement = document.getElementById('root');
 
-// Render the application with StrictMode for better development experience
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+if (!rootElement) {
+  console.error('Could not find root element to mount application');
+} else {
+  // Determine the panel type from URL for direct initialization
+  const urlParams = new URLSearchParams(window.location.search);
+  const panelType = urlParams.get('panel') === 'auth' ? 'auth' : 'model';
 
-// Report web vitals for performance monitoring
-reportWebVitals();
+  // Use the new createRoot API
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
+    <React.StrictMode>
+      <App_new panelType={panelType as 'auth' | 'model'} />
+    </React.StrictMode>
+  );
+}
+
+// Clean up on unload
+window.addEventListener('unload', () => {
+  if (cleanup) cleanup();
+});

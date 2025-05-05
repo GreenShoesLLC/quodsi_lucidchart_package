@@ -83,3 +83,5 @@ __exportStar(require("./serialization"), exports);
 // Validation exports
 __exportStar(require("./validation"), exports);
 __exportStar(require("./versioning"), exports);
+// New Quodsi Messaging Protocol
+__exportStar(require("./quodsi-messaging"), exports);

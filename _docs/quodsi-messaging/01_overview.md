@@ -46,7 +46,7 @@ Each linked markdown file documents **only** the messages that belong to that ca
 
 * Update the per‑category markdown first.
 * Increment the top‑level `version` field only when a payload schema changes in a backward‑incompatible way.
-* Run `npm test` to ensure every `MessageTypes` constant has a matching payload interface and spec entry.
+* Run `npm test` to ensure every `EnvelopeMessageType` constant has a matching payload interface and spec entry.
 
 ---
 

@@ -8,9 +8,17 @@ import { ModelManager } from './core/ModelManager';
 import { ModelPanel } from './panels/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
 import { AuthPanel } from './panels/AuthPanel';
+// Import new panels
+import { ContentDockPanel } from './panels/ContentDockPanel';
+import { RightDockPanel } from './panels/RightDockPanel';
+// Import MessageRouter and initialization function
+import { router, initializeMessaging } from './core/messaging';
 import { ExtensionMessaging } from '@quodsi/shared';
 import { SelectionManager } from './managers';
 import { panelManager } from './managers/PanelManager';
+
+// Toggle to use new messaging implementation
+
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -21,52 +29,42 @@ const storageAdapter = new StorageAdapter();
 // Initialize core model management with storage adapter
 const modelManager = new ModelManager(storageAdapter);
 
-console.info('[extension] About to create AuthPanel');
-const authPanel = new AuthPanel(client);
-authPanel.setLogging(true);
-console.info('[extension] Created AuthPanel');
+// Enable router logging if in new messaging mode
+const useNewMessaging = true; // Set to true to use the new panels with MessageRouter
+if (useNewMessaging) {
+    console.info('[extension] Using new messaging system with ContentDockPanel and RightDockPanel');
+    
+    // Initialize messaging system with logging enabled
+    initializeMessaging(true);
+    
+    let rightDockPanel, contentDoctPanel;
+    console.info('[extension] About to create ContentDockPanel');
+    contentDoctPanel = new ContentDockPanel(client);
+    contentDoctPanel.setLogging(true);
+    console.info('[extension] Created ContentDockPanel');
 
-console.info('[extension] About to create ModelPanel');
-const modelPanel = new ModelPanel(client, modelManager);
-modelPanel.setLogging(true);
-console.info('[extension] Created ModelPanel');
+    console.info('[extension] About to create RightDockPanel');
+    rightDockPanel = new RightDockPanel(client, modelManager);
+    rightDockPanel.setLogging(true);
+    console.info('[extension] Created RightDockPanel');
+} else {
+    let authPanel, modelPanel;
+    console.info('[extension] About to create AuthPanel');
+    authPanel = new AuthPanel(client);
+    authPanel.setLogging(true);
+    console.info('[extension] Created AuthPanel');
 
-panelManager.registerAuthPanel(authPanel);
-panelManager.registerModelPanel(modelPanel);
+    console.info('[extension] About to create ModelPanel');
+    modelPanel = new ModelPanel(client, modelManager);
+    modelPanel.setLogging(true);
+    console.info('[extension] Created ModelPanel');
 
-// Hook selection changes
-viewport.hookSelection((items) => {
-    modelPanel.handleSelectionChange(items);
-});
-
-/*
-    This code needs to be refactoring into the workflow
-*/
-// const menu = new Menu(client);
-// client.registerAction("import", async () => {
-//     // Temporary workaround. You must call oauthXhr once before performDataAction will work
-//     const triggerOauth = await client.oauthXhr("lucid", {
-//         url: "https://api.lucid.co/folders/search",
-//         headers: {
-//             "Lucid-Api-Version": "1",
-//             "Content-Type": "application/json",
-//         },
-//         data: "{}",
-//         method: "POST",
-//     });
-//     const result = await client.performDataAction({
-//         dataConnectorName: "data-connector-1",
-//         actionName: "Import",
-//         actionData: { message: "ImportFolders" },
-//         asynchronous: true,
-//     });
-//     console.log(result);
-// });
-
-// menu.addMenuItem({
-//     label: "Import",
-//     action: "import",
-//     menuType: MenuType.Main,
-// });
+    panelManager.registerAuthPanel(authPanel);
+    panelManager.registerModelPanel(modelPanel);
+    // Hook selection changes - note that both panel types implement handleSelectionChange
+    viewport.hookSelection((items) => {
+        modelPanel.handleSelectionChange(items);
+    });
+}
 
 console.info('[extension] Completed Successfully');

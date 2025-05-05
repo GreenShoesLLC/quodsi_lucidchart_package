@@ -1,0 +1,57 @@
+import { EnvelopeMessageType } from '@quodsi/shared';
+import { useSender } from './useSender';
+
+/**
+ * Custom hook that provides typed functions for sending simulation-related messages
+ * 
+ * @returns Object containing simulation message sender functions
+ */
+export function useSimulationSender() {
+  const send = useSender();
+  
+  /**
+   * Send a MODEL_RUN_REQUEST message
+   * 
+   * @param documentId Document ID to simulate
+   * @param scenarioName Optional scenario name
+   * @param durationDays Optional duration in days
+   * @param repetitions Optional number of repetitions
+   * @param parameters Additional simulation parameters
+   */
+  const requestSimulation = (
+    documentId: string,
+    scenarioName?: string,
+    durationDays?: number,
+    repetitions?: number,
+    parameters?: Record<string, unknown>
+  ) => {
+    send(EnvelopeMessageType.MODEL_RUN_REQUEST, {
+      documentId,
+      scenarioName,
+      durationDays,
+      repetitions,
+      parameters
+    });
+  };
+  
+  /**
+   * Request to view simulation results
+   * 
+   * @param documentId Document ID
+   * @param jobId Optional job ID
+   */
+  const viewResults = (documentId: string, jobId?: string) => {
+    // Use RESULTS_PAGE_CREATE to view results
+    // Since ACTION_REQUEST is not available in EnvelopeMessageType
+    send(EnvelopeMessageType.RESULTS_PAGE_CREATE, {
+      documentId,
+      jobId: jobId || 'current',
+      createDashboard: true // This might need adjustment based on protocol
+    });
+  };
+  
+  return {
+    requestSimulation,
+    viewResults
+  };
+}
