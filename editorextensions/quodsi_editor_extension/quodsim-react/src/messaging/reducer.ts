@@ -1,5 +1,7 @@
 import { QuodsiUserInfo, SubscriptionTier, SubscriptionStatus, ElementShape, SimulationStatus } from '@quodsi/shared';
 import { debugService } from './utils/debugService';
+// Import AuthStorageService
+import { AuthStorageService } from '../services/AuthStorageService';
 
 /**
  * State structure for the messaging system
@@ -199,6 +201,15 @@ export function messagingReducer(state: MessagingState, action: MessagingAction)
     // --------- Auth Actions ---------
     
     case 'AUTH_STATUS_UPDATE':
+      // Persist authentication state to localStorage when it changes
+      if (action.isAuthenticated) {
+        // Only save to storage when authenticated
+        AuthStorageService.saveAuthState(action.isAuthenticated, action.userInfo || null);
+      } else if (!action.isAuthenticated) {
+        // When signing out, clear storage
+        AuthStorageService.clearAuthState();
+      }
+      
       return {
         ...state,
         auth: {

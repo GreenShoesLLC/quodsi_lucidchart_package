@@ -43,21 +43,21 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
         this.registerGlobalReference();
         
         // Set up a periodic state check
-        setInterval(() => {
-            console.log('### DIRECT DEBUG ### ContentDockPanel state check:', {
-                isReady: this.isReady,
-                loggingEnabled: this.loggingEnabled,
-                sendMessageCount: this.sendMessageCount,
-                receiveMessageCount: this.receiveMessageCount,
-                panelVisible: this.isVisible?.() || 'unknown',
-                frameExists: !!this.loaded
-            });
-        }, 10000); // Check every 10 seconds
+        // setInterval(() => {
+        //     console.log('### DIRECT DEBUG ### ContentDockPanel state check:', {
+        //         isReady: this.isReady,
+        //         loggingEnabled: this.loggingEnabled,
+        //         sendMessageCount: this.sendMessageCount,
+        //         receiveMessageCount: this.receiveMessageCount,
+        //         panelVisible: this.isVisible?.() || 'unknown',
+        //         frameExists: !!this.loaded
+        //     });
+        // }, 10000); // Check every 10 seconds
         
         // Run a one-time test to make sure this.sendMessage works
-        setTimeout(() => {
-            this.testSendMessage();
-        }, 5000); // Run after 5 seconds
+        // setTimeout(() => {
+        //     this.testSendMessage();
+        // }, 5000); // Run after 5 seconds
     }
 
     /**

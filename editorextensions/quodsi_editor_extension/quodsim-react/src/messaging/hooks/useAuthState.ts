@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAuth } from '../MessageProvider';
 import { useAuthSender } from '../senders/authSender';
+import { useMessagingDispatch } from '../MessageProvider';
 
 /**
  * Enhanced hook for authentication state that combines state and actions
@@ -10,6 +11,17 @@ import { useAuthSender } from '../senders/authSender';
 export function useAuthState() {
   const auth = useAuth();
   const { sendLogout, sendLoginSuccess } = useAuthSender();
+  const dispatch = useMessagingDispatch();
+  
+  // Add a direct auth sync function that bypasses normal flow
+  const syncAuthStateNow = useCallback((isAuth: boolean, userInfo: any) => {
+    // Update global state through dispatch
+    dispatch({
+      type: 'AUTH_STATUS_UPDATE',
+      isAuthenticated: isAuth,
+      userInfo
+    });
+  }, [dispatch]);
   
   // Combine state and actions into a single object
   const authState = useMemo(() => ({
@@ -22,14 +34,17 @@ export function useAuthState() {
     // Actions
     logout: () => sendLogout(),
     login: (idToken: string, user: any, isNewUser: boolean) => 
-      sendLoginSuccess(idToken, user, isNewUser)
+      sendLoginSuccess(idToken, user, isNewUser),
+    // Add the direct sync function
+    syncAuthStateNow
   }), [
     auth.isAuthenticated, 
     auth.userInfo,
     auth.isLoading,
     auth.error,
     sendLogout,
-    sendLoginSuccess
+    sendLoginSuccess,
+    syncAuthStateNow
   ]);
   
   return authState;

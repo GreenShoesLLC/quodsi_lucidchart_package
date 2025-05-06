@@ -70,7 +70,7 @@ const DebugPanel: React.FC = () => {
  */
 export const AuthPanel: React.FC = () => {
   const { instance, accounts } = useMsal();
-  const { isAuthenticated, userInfo, isLoading, error, login, logout } =
+  const { isAuthenticated, userInfo, isLoading, error, login, logout, syncAuthStateNow } =
     useAuthState();
 
   const [showError, setShowError] = useState(true);
@@ -86,13 +86,42 @@ export const AuthPanel: React.FC = () => {
 
   // Log authentication state for debugging
   useEffect(() => {
-    console.log("### DIRECT DEBUG ### AuthPanel state:", {
-      isAuthenticated,
-      userInfo,
-      isLoading,
-      error,
-    });
-  }, [isAuthenticated, userInfo, isLoading, error]);
+    if (isLoading === false) {
+      console.log("AuthPanel auth state initialized:", {
+        isAuthenticated,
+        hasUserInfo: !!userInfo,
+        isLoading
+      });
+    }
+  }, [isAuthenticated, userInfo, isLoading]);
+
+  // Force sync authentication state with MSAL accounts
+  useEffect(() => {
+    // Only run this if not already authenticated and there are MSAL accounts
+    if (!isAuthenticated && accounts.length > 0 && !isProcessingAuth) {
+      console.log('AuthPanel detected account mismatch - fixing authentication state');
+      
+      // Get the account info
+      const account = accounts[0];
+      
+      // Create user info
+      const user: QuodsiUserInfo = {
+        id: account.localAccountId,
+        email: account.username,
+        displayName: account.name || account.username
+      };
+      
+      // First try to set the active account
+      try {
+        instance.setActiveAccount(account);
+      } catch (e) {
+        console.warn('Failed to set active account:', e);
+      }
+      
+      // Use the direct sync function to immediately update the auth state
+      syncAuthStateNow(true, user);
+    }
+  }, [isAuthenticated, accounts, isProcessingAuth, syncAuthStateNow, instance]);
 
   // Handle sign in process
   const handleSignIn = async () => {

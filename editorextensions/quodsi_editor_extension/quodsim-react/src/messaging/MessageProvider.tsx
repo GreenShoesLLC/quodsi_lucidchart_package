@@ -27,6 +27,9 @@ import {
 } from "./reducer";
 import { mapEnvelopeToAction } from "./mappers";
 
+// Import the silent authentication hook
+import { useSilentAuth } from "../hooks/useSilentAuth";
+
 // Types for the context values
 type MessagingContextValue = MessagingState & {
   sendMessage: <T extends EnvelopeMessageType>(type: T, data?: any) => void;
@@ -62,8 +65,27 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
   // Track if we've already sent REACT_APP_READY to prevent resending
   const hasSentReadyRef = useRef(false);
   
+  // Track if auth has been initialized
+  const authInitializedRef = useRef(false);
+  
   // Track processed message IDs to prevent duplicate processing
   const processedMessageIds = useRef(new Set<string>());
+  
+  // Initialize silent authentication
+  useSilentAuth();
+  
+  // Detect when auth initialization is complete (no longer loading)
+  useEffect(() => {
+    if (state.auth.isLoading === false) {
+      console.log('### DIRECT DEBUG ### Auth initialization complete, state:', {
+        isAuthenticated: state.auth.isAuthenticated,
+        hasUserInfo: !!state.auth.userInfo,
+        isLoading: state.auth.isLoading
+      });
+      
+      authInitializedRef.current = true;
+    }
+  }, [state.auth.isLoading]);
   
   // Detect panel type from URL if not provided
   useEffect(() => {
@@ -186,8 +208,25 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
     // Add message event listener
     window.addEventListener("message", handleMessage);
 
-    // Send REACT_APP_READY when component mounts, but only once
-    if (state.app.initialized && state.app.panelType && !hasSentReadyRef.current) {
+    // Send REACT_APP_READY when all conditions are met:
+    // 1. App is initialized
+    // 2. Panel type is determined
+    // 3. Auth is initialized (no longer loading)
+    // 4. We haven't sent it already
+    if (
+      state.app.initialized && 
+      state.app.panelType && 
+      authInitializedRef.current && 
+      !hasSentReadyRef.current
+    ) {
+      console.log("### DIRECT DEBUG ### All conditions met for sending REACT_APP_READY:", {
+        appInitialized: state.app.initialized,
+        panelType: state.app.panelType,
+        authInitialized: authInitializedRef.current,
+        isAuthenticated: state.auth.isAuthenticated,
+        hasUserInfo: !!state.auth.userInfo
+      });
+      
       sendMessage(EnvelopeMessageType.REACT_APP_READY, {
         panel: state.app.panelType,
         isAuthenticated: state.auth.isAuthenticated,
@@ -197,8 +236,19 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
       // Mark as sent so we don't send it again
       hasSentReadyRef.current = true;
       
-      console.log("### DIRECT DEBUG ### Sent REACT_APP_READY message (first time)");
+      console.log("### DIRECT DEBUG ### Sent REACT_APP_READY message with auth state:", {
+        isAuthenticated: state.auth.isAuthenticated,
+        hasUserInfo: !!state.auth.userInfo
+      });
       debugService.log("Sent REACT_APP_READY message");
+    } else if (!hasSentReadyRef.current) {
+      console.log("### DIRECT DEBUG ### Waiting to send REACT_APP_READY:", {
+        appInitialized: state.app.initialized,
+        panelType: state.app.panelType,
+        authInitialized: authInitializedRef.current,
+        authLoading: state.auth.isLoading,
+        isAuthenticated: state.auth.isAuthenticated
+      });
     }
 
     // Cleanup listener on unmount
@@ -212,6 +262,7 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
     state.auth.isAuthenticated,
     state.auth.userInfo,
     state.app.pendingRequests,
+    state.auth.isLoading, // Add this dependency to trigger when auth loading changes
   ]);
 
   // Create context value with state and utilities
