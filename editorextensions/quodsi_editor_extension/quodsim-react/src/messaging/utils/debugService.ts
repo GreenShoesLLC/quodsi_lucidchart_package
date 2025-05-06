@@ -5,6 +5,28 @@
  */
 export const debugService = {
   /**
+   * Create a component-specific logger
+   */
+  forComponent: (componentName: string) => ({
+    log: (message: string, ...args: any[]) => {
+      if (debugService.isLoggingEnabled) {
+        console.log(`[REACT][${componentName}] ${message}`, ...args);
+      }
+    },
+    error: (message: string, ...args: any[]) => {
+      console.error(`[REACT][${componentName}][ERROR] ${message}`, ...args);
+    },
+    warn: (message: string, ...args: any[]) => {
+      console.warn(`[REACT][${componentName}][WARN] ${message}`, ...args);
+    },
+    debug: (message: string, ...args: any[]) => {
+      if (debugService.isLoggingEnabled) {
+        console.debug(`[REACT][${componentName}][DEBUG] ${message}`, ...args);
+      }
+    }
+  }),
+
+  /**
    * Whether logging is enabled
    */
   isLoggingEnabled: false,
@@ -14,7 +36,7 @@ export const debugService = {
    */
   enableLogging(): void {
     this.isLoggingEnabled = true;
-    console.log('[DebugService] Logging enabled');
+    console.log('[REACT][DebugService] Logging enabled');
   },
   
   /**
@@ -29,7 +51,7 @@ export const debugService = {
    */
   log(message: string, ...args: any[]): void {
     if (this.isLoggingEnabled) {
-      console.log(`[Quodsi] ${message}`, ...args);
+      console.log(`[REACT][DEBUG] ${message}`, ...args);
     }
   },
   
@@ -37,14 +59,14 @@ export const debugService = {
    * Log an error message (always displayed)
    */
   error(message: string, ...args: any[]): void {
-    console.error(`[Quodsi] ${message}`, ...args);
+    console.error(`[REACT][ERROR] ${message}`, ...args);
   },
   
   /**
    * Log a warning message (always displayed)
    */
   warn(message: string, ...args: any[]): void {
-    console.warn(`[Quodsi] ${message}`, ...args);
+    console.warn(`[REACT][WARN] ${message}`, ...args);
   },
   
   /**
@@ -52,7 +74,7 @@ export const debugService = {
    */
   debug(message: string, ...args: any[]): void {
     if (this.isLoggingEnabled) {
-      console.debug(`[Quodsi] ${message}`, ...args);
+      console.debug(`[REACT][DEBUG] ${message}`, ...args);
     }
   },
   
@@ -61,7 +83,7 @@ export const debugService = {
    */
   group(name: string): void {
     if (this.isLoggingEnabled) {
-      console.group(`[Quodsi] ${name}`);
+      console.group(`[REACT][GROUP] ${name}`);
     }
   },
   

@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid';
-import { EnvelopeBase } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
 import { Channel, PanelRole } from './RouterTypes';
 import { RoutablePanel } from './RoutablePanel';
 
@@ -22,16 +22,17 @@ export class ChannelManager {
   
   constructor(logFn: (message: string) => void) {
     this.logFn = logFn;
-    console.log('### DIRECT DEBUG ### ChannelManager constructed');
+    console.log('[EXT][ChannelManager] Constructed');
   }
   
   /**
    * Register a panel with a channel
    */
   public registerChannel(role: PanelRole, panel: RoutablePanel): void {
-    console.log(`### DIRECT DEBUG ### Registering ${role} panel:`, {
+    console.log(`[EXT][ChannelManager] Registering ${role} panel:`, {
       panelExists: !!panel,
       panelType: panel ? panel.constructor.name : 'unknown',
+      panelRole: role, // Add the role explicitly for clarity
       panelMethods: panel ? Object.getOwnPropertyNames(Object.getPrototypeOf(panel)) : []
     });
     
@@ -44,16 +45,17 @@ export class ChannelManager {
    * Mark a channel as ready
    */
   public markChannelReady(role: PanelRole): void {
-    console.log(`### DIRECT DEBUG ### Marking channel ${role} as ready`);
+    console.log(`[EXT][ChannelManager] Marking channel ${role} as ready`);
     const ch = this.channels[role];
     ch.ready = true;
     
     // Add debug check for panel validity
     if (!ch.panel) {
-      console.error(`### DIRECT DEBUG ### Channel ${role} marked ready but has no panel!`);
+      console.error(`[EXT][ChannelManager][ERROR] Channel ${role} marked ready but has no panel!`);
     } else {
-      console.log(`### DIRECT DEBUG ### Channel ${role} has valid panel:`, {
+      console.log(`[EXT][ChannelManager] Channel ${role} has valid panel:`, {
         panelType: ch.panel.constructor.name,
+        panelRole: role, // Add the role explicitly
         queueSize: ch.queue.length
       });
     }
@@ -64,7 +66,7 @@ export class ChannelManager {
    */
   public isChannelReady(role: PanelRole): boolean {
     const isReady = this.channels[role]?.ready || false;
-    console.log(`### DIRECT DEBUG ### Channel ${role} readiness check:`, isReady);
+    console.log(`[EXT][ChannelManager] Channel ${role} readiness check:`, isReady);
     return isReady;
   }
   
@@ -73,10 +75,12 @@ export class ChannelManager {
    */
   public getChannel(role: PanelRole): Channel | undefined {
     const channel = this.channels[role];
-    console.log(`### DIRECT DEBUG ### Getting channel ${role}:`, {
+    console.log(`[EXT][ChannelManager] Getting channel ${role}:`, {
       exists: !!channel,
       ready: channel?.ready,
       hasPanel: !!channel?.panel,
+      panelType: channel?.panel ? channel.panel.constructor.name : 'unknown',
+      panelRole: role, // Add role for clarity
       queueSize: channel?.queue.length
     });
     return channel;
@@ -94,36 +98,47 @@ export class ChannelManager {
    */
   public enqueueOrSend(role: PanelRole, msg: EnvelopeBase): void {
     const ch = this.channels[role];
-    console.log(`### DIRECT DEBUG ### ChannelManager enqueueOrSend for ${role}:`, {
+    console.log(`[EXT][ChannelManager] enqueueOrSend for ${role}:`, {
       isReady: ch.ready,
       hasPanel: !!ch.panel,
       msgType: msg.type,
-      msgId: msg.id
+      msgId: msg.id,
+      msgTarget: msg.target
     });
+    
+    // Special handling for AUTH_STATUS messages - always log them
+    if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
+      console.log(`[EXT][ChannelManager] AUTH_STATUS message for ${role}:`, {
+        authData: msg.data,
+        // isAuthenticated: msg.data?.isAuthenticated,
+        hasTarget: !!msg.target
+      });
+    }
     
     if (ch.ready && ch.panel) {
       try {
-        console.log(`### DIRECT DEBUG ### Attempting to relay message to iframe:`, {
+        console.log(`[EXT][ChannelManager] Attempting to relay message to iframe:`, {
           role,
           msgType: msg.type,
-          panelType: ch.panel.constructor.name
+          panelType: ch.panel.constructor.name,
+          panelRole: role // Add role for clarity
         });
         
         // Test if relayToIframe exists and is callable
         if (typeof ch.panel.relayToIframe !== 'function') {
-          console.error(`### DIRECT DEBUG ### Panel doesn't have a relayToIframe method!`, {
+          console.error(`[EXT][ChannelManager][ERROR] Panel doesn't have a relayToIframe method!`, {
             panelType: ch.panel.constructor.name,
             panelMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(ch.panel))
           });
         } else {
           ch.panel.relayToIframe(msg);
-          console.log(`### DIRECT DEBUG ### Successfully relayed message to iframe:`, {
+          console.log(`[EXT][ChannelManager] Successfully relayed message to iframe:`, {
             role,
             msgType: msg.type
           });
         }
       } catch (err) {
-        console.error(`### DIRECT DEBUG ### Error relaying message to iframe:`, {
+        console.error(`[EXT][ChannelManager][ERROR] Error relaying message to iframe:`, {
           error: err instanceof Error ? err.message : String(err),
           stack: err instanceof Error ? err.stack : undefined,
           role,
@@ -146,7 +161,7 @@ export class ChannelManager {
   public flushQueue(role: PanelRole): void {
     const ch = this.channels[role];
     
-    console.log(`### DIRECT DEBUG ### Flushing queue for ${role}:`, {
+    console.log(`[EXT][ChannelManager] Flushing queue for ${role}:`, {
       queueSize: ch.queue.length,
       hasPanel: !!ch.panel,
       isReady: ch.ready,
@@ -156,18 +171,18 @@ export class ChannelManager {
     this.logFn(`Flushing ${ch.queue.length} queued messages for ${role}`);
     
     if (!ch.panel) {
-      console.error(`### DIRECT DEBUG ### Cannot flush queue: no panel for ${role}`);
+      console.error(`[EXT][ChannelManager][ERROR] Cannot flush queue: no panel for ${role}`);
       return;
     }
     
     if (!ch.ready) {
-      console.warn(`### DIRECT DEBUG ### Flushing queue for channel that's not ready: ${role}`);
+      console.warn(`[EXT][ChannelManager][WARN] Flushing queue for channel that's not ready: ${role}`);
     }
     
     try {
       // Check if relayToIframe is a function
       if (typeof ch.panel.relayToIframe !== 'function') {
-        console.error(`### DIRECT DEBUG ### Cannot flush queue: panel.relayToIframe is not a function`, {
+        console.error(`[EXT][ChannelManager][ERROR] Cannot flush queue: panel.relayToIframe is not a function`, {
           panelType: ch.panel.constructor.name,
           panelMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(ch.panel))
         });
@@ -183,15 +198,25 @@ export class ChannelManager {
       // Process each message
       queueCopy.forEach((m, index) => {
         try {
-          console.log(`### DIRECT DEBUG ### Flushing queued message ${index + 1}/${queueCopy.length}:`, {
+          console.log(`[EXT][ChannelManager] Flushing queued message ${index + 1}/${queueCopy.length}:`, {
             type: m.type,
-            id: m.id
+            id: m.id,
+            target: m.target
           });
           
+          // Special handling for AUTH_STATUS messages - always log them when flushing
+          if (m.type === EnvelopeMessageType.AUTH_STATUS) {
+            console.log(`[EXT][ChannelManager] Flushing AUTH_STATUS message:`, {
+              authData: m.data,
+              // isAuthenticated: m.data?.isAuthenticated,
+              target: m.target
+            });
+          }
+          
           ch.panel!.relayToIframe(m);
-          console.log(`### DIRECT DEBUG ### Successfully flushed message ${index + 1}`);
+          console.log(`[EXT][ChannelManager] Successfully flushed message ${index + 1}`);
         } catch (err) {
-          console.error(`### DIRECT DEBUG ### Error flushing message ${index + 1}:`, {
+          console.error(`[EXT][ChannelManager][ERROR] Error flushing message ${index + 1}:`, {
             error: err instanceof Error ? err.message : String(err),
             stack: err instanceof Error ? err.stack : undefined,
             msgType: m.type
@@ -202,9 +227,14 @@ export class ChannelManager {
         }
       });
       
-      console.log(`### DIRECT DEBUG ### Queue flush complete. Remaining messages:`, ch.queue.length);
+      console.log(`[EXT][ChannelManager] Queue flush complete. Remaining messages: ${ch.queue.length}`);
+      
+      // If queue is empty, double-check panel readiness
+      if (ch.queue.length === 0) {
+        console.log(`[EXT][ChannelManager] Queue for ${role} is now empty. Panel ready: ${ch.ready}`);
+      }
     } catch (err) {
-      console.error(`### DIRECT DEBUG ### Unexpected error in flushQueue:`, {
+      console.error(`[EXT][ChannelManager][ERROR] Unexpected error in flushQueue:`, {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined
       });
@@ -212,5 +242,69 @@ export class ChannelManager {
       // Keep the queue if an error occurred
       // We don't empty the queue here in case of errors
     }
+  }
+
+  /**
+   * Force delivery of a specific message type to a channel
+   * This is a diagnostic method to bypass normal queuing
+   */
+  public forceDeliverMessage(role: PanelRole, msgType: EnvelopeMessageType, data: any = {}): void {
+    const ch = this.channels[role];
+    
+    console.log(`[EXT][ChannelManager] Force delivering ${msgType} to ${role}`, {
+      hasPanel: !!ch.panel,
+      isReady: ch.ready
+    });
+    
+    if (!ch.panel) {
+      console.error(`[EXT][ChannelManager][ERROR] Cannot force deliver: no panel for ${role}`);
+      return;
+    }
+    
+    if (typeof ch.panel.relayToIframe !== 'function') {
+      console.error(`[EXT][ChannelManager][ERROR] Cannot force deliver: panel.relayToIframe is not a function`);
+      return;
+    }
+    
+    try {
+      // Create a diagnostic message
+      const msg: EnvelopeBase = {
+        id: `force_${msgType}_${Date.now()}`,
+        type: msgType,
+        source: 'host',
+        target: `${role}-iframe`,
+        version: '1.0',
+        data
+      };
+      
+      // Force delivery regardless of queue state
+      ch.panel.relayToIframe(msg);
+      console.log(`[EXT][ChannelManager] Successfully force delivered ${msgType} to ${role}`);
+    } catch (err) {
+      console.error(`[EXT][ChannelManager][ERROR] Error force delivering message:`, {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+        msgType
+      });
+    }
+  }
+  
+  /**
+   * Print channel state information for diagnostic purposes
+   * This helps diagnose issues with channel registration
+   */
+  public dumpChannelState(): void {
+    console.log('[EXT][ChannelManager] CHANNEL STATE DUMP:');
+    
+    Object.entries(this.channels).forEach(([role, channel]) => {
+      console.log(`[EXT][ChannelManager] Channel '${role}' state:`, {
+        role,
+        ready: channel.ready,
+        hasPanel: !!channel.panel,
+        panelType: channel.panel ? channel.panel.constructor.name : 'none',
+        queueLength: channel.queue.length,
+        messageTypes: channel.queue.map(m => m.type)
+      });
+    });
   }
 }

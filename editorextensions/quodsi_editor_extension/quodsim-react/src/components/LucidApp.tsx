@@ -5,6 +5,9 @@ import AuthPanel from "./auth/AuthPanel";
 import MessageDebugger from "./debugging/MessageDebugger";
 import StateInspector from "./debugging/StateInspector";
 
+// Create component-specific logger using our debug service
+import { debugService } from "../messaging/utils/debugService";
+const logger = debugService.forComponent('LucidApp');
 
 interface LucidAppProps {
   panelType?: "auth" | "model";
@@ -20,12 +23,57 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
 
   useEffect(() => {
     // Log app initialization
-    console.log(`LucidApp initialized with panel type: ${panelType}`);
+    logger.log(`LucidApp initialized with panel type: ${panelType}`);
 
     // The REACT_APP_READY message is now sent by MessageProvider automatically
     // This is just to record it for our UI
     setLastMessageSent(EnvelopeMessageType.REACT_APP_READY);
   }, [panelType]);
+
+  useEffect(() => {
+    if (auth.lastUpdated) {
+      logger.log(`Auth state updated in ${panelType} panel:`, {
+        isAuthenticated: auth.isAuthenticated,
+        hasUserInfo: !!auth.userInfo,
+        lastUpdated: new Date(auth.lastUpdated).toLocaleTimeString()
+      });
+      
+      // Add a visual indicator for auth changes to make them more obvious
+      const authIndicator = document.getElementById('auth-update-indicator');
+      if (!authIndicator) {
+        // Create a floating indicator element if it doesn't exist
+        const indicator = document.createElement('div');
+        indicator.id = 'auth-update-indicator';
+        indicator.style.position = 'fixed';
+        indicator.style.top = '10px';
+        indicator.style.right = '10px';
+        indicator.style.padding = '8px 16px';
+        indicator.style.backgroundColor = auth.isAuthenticated ? '#4CAF50' : '#F44336';
+        indicator.style.color = 'white';
+        indicator.style.borderRadius = '4px';
+        indicator.style.zIndex = '9999';
+        indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+        indicator.style.transition = 'opacity 0.5s';
+        indicator.style.opacity = '1';
+        indicator.textContent = auth.isAuthenticated 
+          ? `✓ Authenticated in ${panelType} panel` 
+          : `✗ Not authenticated in ${panelType} panel`;
+        
+        document.body.appendChild(indicator);
+        
+        // Fade out after 3 seconds
+        setTimeout(() => {
+          indicator.style.opacity = '0';
+          // Remove after fade out
+          setTimeout(() => {
+            if (indicator.parentNode) {
+              indicator.parentNode.removeChild(indicator);
+            }
+          }, 500);
+        }, 3000);
+      }
+    }
+  }, [auth.lastUpdated, auth.isAuthenticated, panelType]);
 
   // Track when messages are received by watching state updates
   useEffect(() => {
@@ -74,17 +122,29 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
       <div className="app-header">
         <h1>Quodsi Model Panel</h1>
         <div className="panel-info">
+        <span>
+        Panel Type: <strong>{panelType}</strong>
+        </span>
+        <span>
+        Initialized: <strong>{app.initialized ? "Yes" : "No"}</strong>
+        </span>
+        <span>
+        Authenticated:{" "}
+        <strong 
+            style={{
+                color: auth.isAuthenticated ? '#4CAF50' : '#F44336',
+              fontWeight: 'bold'
+            }}
+          >
+            {auth.isAuthenticated ? "Yes" : "No"}
+          </strong>
+        </span>
+        {auth.lastUpdated && (
           <span>
-            Panel Type: <strong>{panelType}</strong>
+            Auth Last Updated: <strong>{new Date(auth.lastUpdated).toLocaleTimeString()}</strong>
           </span>
-          <span>
-            Initialized: <strong>{app.initialized ? "Yes" : "No"}</strong>
-          </span>
-          <span>
-            Authenticated:{" "}
-            <strong>{auth.isAuthenticated ? "Yes" : "No"}</strong>
-          </span>
-        </div>
+        )}
+      </div>
       </div>
 
       <div className="message-status">
@@ -97,6 +157,41 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
             Last message received: <code>{lastMessageReceived || "None"}</code>
           </p>
           <button onClick={handleTestMessage}>Send Test Message</button>
+          <button 
+            onClick={() => {
+              // Manually check and display auth status
+              const authState = auth.isAuthenticated ? 'Authenticated' : 'Not Authenticated';
+              const indicator = document.createElement('div');
+              indicator.style.position = 'fixed';
+              indicator.style.top = '80px';
+              indicator.style.left = '10px';
+              indicator.style.padding = '8px 16px';
+              indicator.style.backgroundColor = '#2196F3';
+              indicator.style.color = 'white';
+              indicator.style.zIndex = '9999';
+              indicator.style.borderRadius = '4px';
+              indicator.style.fontSize = '12px';
+              indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+              indicator.textContent = `Current Auth State: ${authState} in ${panelType} panel`;
+              document.body.appendChild(indicator);
+              setTimeout(() => {
+                if (indicator.parentNode) {
+                  indicator.parentNode.removeChild(indicator);
+                }
+              }, 5000);
+            }}
+            style={{
+              marginLeft: '10px',
+              backgroundColor: '#2196F3',
+              color: 'white',
+              border: 'none',
+              padding: '5px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Check Auth Status
+          </button>
         </div>
       </div>
 

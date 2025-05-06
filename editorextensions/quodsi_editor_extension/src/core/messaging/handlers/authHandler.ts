@@ -12,7 +12,7 @@ export class AuthHandler {
    * @returns Whether the message was handled
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
-    console.info(`[AuthHandler] Checking if can handle message type: ${msg.type}`);
+    console.info(`[EXT][AuthHandler] Checking if can handle message type: ${msg.type}`);
     
     switch (msg.type) {
       case EnvelopeMessageType.AUTH_LOGIN_SUCCESS:
@@ -31,6 +31,55 @@ export class AuthHandler {
   }
   
   /**
+   * Attempt to broadcast auth status directly to panels as a fallback mechanism
+   * This is needed when the normal broadcast mechanism fails
+   */
+  private static attemptDirectPanelBroadcast(): void {
+    console.info('[EXT][AuthHandler] Attempting direct panel broadcast as extra measure');
+    
+    try {
+      if (typeof window !== 'undefined') {
+        // Look for known panel instances in the window
+        const extensionObj = (window as any).quodsiExtension;
+        if (extensionObj && extensionObj.panels) {
+          // Get current auth state from router
+          const authState = router.getAuthState ? router.getAuthState() : null;
+          
+          // If we have auth state and panels, try to send directly
+          if (authState) {
+            // Try to send to both panels
+            ['auth', 'model'].forEach(role => {
+              const panel = extensionObj.panels[role];
+              if (panel && typeof panel.relayToIframe === 'function') {
+                console.info(`[EXT][AuthHandler] Sending auth status directly to ${role} panel`);
+                try {
+                  // Create direct auth status message
+                  const directMsg = {
+                    id: `direct_auth_${Date.now()}`,
+                    type: EnvelopeMessageType.AUTH_STATUS,
+                    source: 'host',
+                    target: `${role}-iframe`,
+                    version: '1.0',
+                    data: authState
+                  };
+                  
+                  // Send directly to panel
+                  panel.relayToIframe(directMsg);
+                  console.info(`[EXT][AuthHandler] Direct auth status sent to ${role} panel`);
+                } catch (err) {
+                  console.error(`[EXT][AuthHandler][ERROR] Error sending direct auth status to ${role} panel:`, err);
+                }
+              }
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[EXT][AuthHandler][ERROR] Error in direct panel broadcast:', err);
+    }
+  }
+  
+  /**
    * Handle successful login
    * 
    * @param msg AUTH_LOGIN_SUCCESS message
@@ -39,8 +88,8 @@ export class AuthHandler {
   private static handleLoginSuccess(msg: EnvelopeBase): boolean {
     const data = msg.data as { idToken: string; user: QuodsiUserInfo; newUser: boolean };
     
-    console.info('[AuthHandler] Processing login success with user:', data.user.email);
-    console.info('[AuthHandler] User info details:', JSON.stringify(data.user));
+    console.info('[EXT][AuthHandler] Processing login success with user:', data.user.email);
+    console.info('[EXT][AuthHandler] User info details:', JSON.stringify(data.user));
     
     // IMPORTANT: Fix panel registration for the source panel
     // This ensures the panel that sent the message is still registered when we broadcast the response
@@ -49,16 +98,16 @@ export class AuthHandler {
       const role: PanelRole = msg.source.includes('auth') ? 'auth' : 'model';
       
       // Get the source panel instance from the source message
-      console.info(`[AuthHandler] Retrieving panel reference for ${role} from message source: ${msg.source}`);
+      console.info(`[EXT][AuthHandler] Retrieving panel reference for ${role} from message source: ${msg.source}`);
       
       // Attempt to get panel reference from the message context
       const sourcePanel = AuthHandler.getPanelFromMessage(msg);
       if (sourcePanel) {
         // Re-register the panel to ensure it's available when broadcasting
-        console.info(`[AuthHandler] Re-registering ${role} panel to ensure valid reference for broadcasting`);
+        console.info(`[EXT][AuthHandler] Re-registering ${role} panel to ensure valid reference for broadcasting`);
         router.registerChannel(role, sourcePanel);
       } else {
-        console.warn(`[AuthHandler] Could not retrieve panel reference from message context for ${role}`);
+        console.warn(`[EXT][AuthHandler][WARN] Could not retrieve panel reference from message context for ${role}`);
         
         // Fallback: Try to access panels through the ContentDockPanel instances
         AuthHandler.attemptPanelRegistrationFallback(role);
@@ -68,14 +117,17 @@ export class AuthHandler {
     // Update the router's auth state using the new public method
     router.updateAuthState(true, data.user);
     
-    console.info('[AuthHandler] Auth state updated, broadcasting to panels');
+    console.info('[EXT][AuthHandler] Auth state updated, broadcasting to panels');
     
     // TODO: Sync with backend using the idToken
-    console.info('[AuthHandler] Login successful. New user?', data.newUser);
+    console.info('[EXT][AuthHandler] Login successful. New user?', data.newUser);
     
     // Broadcast the auth status immediately instead of using setTimeout
     // This is safer in environments where setTimeout may not be available
-    console.info('[AuthHandler] Broadcasting auth status after login');
+    console.info('[EXT][AuthHandler] Broadcasting auth status after login');
+    
+    // Ensure we attempt to reach all panels by accessing them directly as a fallback
+    AuthHandler.attemptDirectPanelBroadcast();
     router.broadcastAuthStatus();
     
     return true;
@@ -87,15 +139,15 @@ export class AuthHandler {
    * @returns True indicating message was handled
    */
   private static handleLogout(): boolean {
-    console.info('[AuthHandler] Processing logout request');
+    console.info('[EXT][AuthHandler] Processing logout request');
     
     // Update router's auth state using the new public method
     router.clearAuthState();
     
-    console.info('[AuthHandler] Auth state cleared, broadcasting to panels');
+    console.info('[EXT][AuthHandler] Auth state cleared, broadcasting to panels');
     
     // Clean up any auth-dependent resources
-    console.info('[AuthHandler] User logged out successfully');
+    console.info('[EXT][AuthHandler] User logged out successfully');
     
     // Update any services that need to know about authentication
     // ...
@@ -112,7 +164,7 @@ export class AuthHandler {
   private static handlePasswordReset(msg: EnvelopeBase): boolean {
     const data = msg.data as { email: string };
     
-    console.info('[AuthHandler] Processing password reset for:', data.email);
+    console.info('[EXT][AuthHandler] Processing password reset for:', data.email);
     
     // No special handling needed for now
     
@@ -142,26 +194,26 @@ export class AuthHandler {
    * Fallback method to attempt panel registration by looking for panels in the DOM
    */
   private static attemptPanelRegistrationFallback(role: PanelRole): void {
-    console.info(`[AuthHandler] Attempting fallback panel registration for ${role}`);
+    console.info(`[EXT][AuthHandler] Attempting fallback panel registration for ${role}`);
     
     try {
       // Try to access the router's channel manager directly
       const routerObj = router as any;
       if (!routerObj.channelManager) {
-        console.warn('[AuthHandler] Router does not have a channelManager property');
+        console.warn('[EXT][AuthHandler][WARN] Router does not have a channelManager property');
         return;
       }
       
       // Get the channel state
       const channel = routerObj.channelManager.getChannel(role);
       if (!channel) {
-        console.warn(`[AuthHandler] Channel for ${role} not found`);
+        console.warn(`[EXT][AuthHandler][WARN] Channel for ${role} not found`);
         return;
       }
       
       // If the channel has a panel but it's somehow not being used
       if (channel.panel) {
-        console.info(`[AuthHandler] Channel ${role} already has a panel, re-registering it`);
+        console.info(`[EXT][AuthHandler] Channel ${role} already has a panel, re-registering it`);
         router.registerChannel(role, channel.panel);
         return;
       }
@@ -176,16 +228,16 @@ export class AuthHandler {
         if (extensionObj && extensionObj.panels) {
           const panel = extensionObj.panels[role];
           if (panel) {
-            console.info(`[AuthHandler] Found ${role} panel in global scope, re-registering it`);
+            console.info(`[EXT][AuthHandler] Found ${role} panel in global scope, re-registering it`);
             router.registerChannel(role, panel);
             return;
           }
         }
       }
       
-      console.warn(`[AuthHandler] Failed to find panel for ${role} in fallback registration`);
+      console.warn(`[EXT][AuthHandler][WARN] Failed to find panel for ${role} in fallback registration`);
     } catch (err) {
-      console.error(`[AuthHandler] Error in fallback panel registration:`, err);
+      console.error(`[EXT][AuthHandler][ERROR] Error in fallback panel registration:`, err);
     }
   }
 }

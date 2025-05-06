@@ -24,7 +24,7 @@ import { SelectionHandler } from '../core/messaging/handlers/selectionHandler';
  * interface to facilitate communication with the iframe content.
  */
 export class RightDockPanel extends Panel implements RoutablePanel {
-    private static readonly LOG_PREFIX = '[RightDockPanel]';
+    private static readonly LOG_PREFIX = '[EXT][RightDockPanel]';
     private loggingEnabled: boolean = false;
     private isReady: boolean = false;
     private modelManager: ModelManager;
@@ -39,7 +39,11 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         });
         
         this.log('RightDockPanel Constructor called');
+        console.log('[EXT][RightDockPanel] Constructor called with role: model');
         this.modelManager = modelManager;
+        
+        // Enable logging for RightDockPanel by default for easier debugging
+        this.loggingEnabled = true;
     }
 
     /**
@@ -48,6 +52,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     protected didMount(): void {
         this.log('didMount called');
+        console.log('[EXT][RightDockPanel] didMount called - registering with router as "model" panel');
         
         // Register with the router
         router.registerChannel('model', this);
@@ -63,11 +68,27 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     public relayToIframe(msg: EnvelopeBase): void {
         this.log(`Relaying message to iframe: ${msg.type}`);
+        console.log(`[EXT][RightDockPanel] relayToIframe called with msg type: ${msg.type}`);
+        
+        // Special logging for auth status
+        if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
+            console.log('[EXT][RightDockPanel] Relaying AUTH_STATUS to iframe:', msg.data);
+        }
 
-        // Use a type assertion to bypass TypeScript's type checking
-        // This is safe because we know EnvelopeBase is designed to be serializable
-        this.sendMessage(msg as unknown as JsonSerializable);
+        try {
+            // Use a type assertion to bypass TypeScript's type checking
+            // This is safe because we know EnvelopeBase is designed to be serializable
+            this.sendMessage(msg as unknown as JsonSerializable);
+            console.log(`[EXT][RightDockPanel] sendMessage completed for ${msg.type}`);
+        } catch (err) {
+            console.error(`[EXT][RightDockPanel][ERROR] Error in sendMessage:`, {
+                error: err instanceof Error ? err.message : String(err),
+                stack: err instanceof Error ? err.stack : undefined,
+                msgType: msg.type
+            });
+        }
     }
+
     /**
      * Process messages from the iframe
      * Route them through the router
@@ -76,6 +97,8 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     protected messageFromFrame(message: unknown): void {
         this.log('Received message from iframe');
+        console.log(`[EXT][RightDockPanel] messageFromFrame called with type:`, 
+            message && typeof message === 'object' && 'type' in message ? (message as any).type : 'unknown');
         
         // Validate that it's a valid envelope
         if (!isEnvelope(message)) {
@@ -88,6 +111,16 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         envelope.source = 'model-iframe';
         envelope.target = 'host';
         
+        // Add a hidden reference to this panel so the handlers can re-register it if needed
+        (envelope as any)._panelRef = this;
+        
+        // Special handling for AUTH_STATUS messages - log them more verbosely
+        if (envelope.type === EnvelopeMessageType.AUTH_STATUS) {
+            console.log('[EXT][RightDockPanel] Received AUTH_STATUS message:', envelope.data);
+        }
+        
+        console.log('[EXT][RightDockPanel] Forwarding message to router:', envelope.type);
+        
         // Forward to the router
         router.receive(envelope);
     }
@@ -97,12 +130,66 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     protected frameLoaded(): void {
         this.log('Frame loaded');
+        console.log('[EXT][RightDockPanel] frameLoaded called');
         
         // Call parent method first to maintain proper behavior
         super.frameLoaded();
         
         // Additional initialization if needed
         this.isReady = true;
+        
+        // Re-register with the router to ensure we have a valid reference
+        console.log('[EXT][RightDockPanel] Re-registering with router as "model" panel');
+        router.registerChannel('model', this);
+        
+        // Dump channel state to diagnose any issues
+        console.log('[EXT][RightDockPanel] Dumping channel state for diagnosis');
+        if (typeof router.dumpChannelState === 'function') {
+            router.dumpChannelState();
+        }
+        
+        // NOTE: We removed the immediate auth state request because it happens before
+        // silent authentication completes. Instead, we rely on the REACT_APP_READY flow.
+        // When the React app completes initialization, it will send REACT_APP_READY, and
+        // the router will send back the current auth state at that point.
+        console.log('[EXT][RightDockPanel] Waiting for REACT_APP_READY from React app for auth status');
+    }
+
+    /**
+     * Request current authentication status
+     * This is a helper method to ensure we get the latest auth state
+     */
+    private requestAuthStatus(): void {
+        console.log('[EXT][RightDockPanel] Requesting current auth state');
+        try {
+            // First try using the channel manager's force deliver method
+            const channelManager = router.getChannelManager();
+            if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
+                console.log('[EXT][RightDockPanel] Using forceDeliverMessage for AUTH_STATUS');
+                const authState = router.getAuthState();
+                channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
+                console.log('[EXT][RightDockPanel] Force delivered auth state:', authState);
+            } else {
+                // Fallback to a direct broadcast request
+                console.log('[EXT][RightDockPanel] Using direct send for AUTH_STATUS');
+                const authState = router.getAuthState();
+                router.send('model', {
+                    id: `auth_status_request_${Date.now()}`,
+                    type: EnvelopeMessageType.AUTH_STATUS,
+                    source: 'host',
+                    target: 'model-iframe',
+                    version: '1.0',
+                    data: authState || { isAuthenticated: false }
+                });
+                
+                console.log('[EXT][RightDockPanel] Direct sent auth state:', authState);
+                
+                // Also broadcast to all panels for redundancy
+                router.broadcastAuthStatus();
+            }
+        } catch (err) {
+            console.error('[EXT][RightDockPanel][ERROR] Error requesting auth state:', err);
+        }
     }
 
     /**
@@ -127,6 +214,10 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         
         // Capture initial selection and document context when panel is shown
         this.initializeModelContext();
+        
+        // When the panel is shown, we rely on the React app's REACT_APP_READY flow
+        // to provide the current auth state, rather than explicitly requesting it
+        console.log('[EXT][RightDockPanel] Panel shown, relying on REACT_APP_READY for auth state');
     }
 
     /**

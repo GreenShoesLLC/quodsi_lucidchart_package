@@ -210,6 +210,43 @@ export function messagingReducer(state: MessagingState, action: MessagingAction)
         AuthStorageService.clearAuthState();
       }
       
+      // Log the auth state update with panel type
+      console.log(`[REACT][Reducer] AUTH_STATUS_UPDATE in ${state.app.panelType || 'unknown'} panel:`, {
+        isAuthenticated: action.isAuthenticated,
+        hasUserInfo: !!action.userInfo,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Add a visual indicator for debugging in the DOM
+      if (typeof document !== 'undefined') {
+        try {
+          // Create a visual indicator element
+          const indicator = document.createElement('div');
+          indicator.style.position = 'fixed';
+          indicator.style.bottom = '10px';
+          indicator.style.right = '10px';
+          indicator.style.padding = '10px';
+          indicator.style.backgroundColor = action.isAuthenticated ? 'green' : 'red';
+          indicator.style.color = 'white';
+          indicator.style.zIndex = '9999';
+          indicator.style.fontSize = '12px';
+          indicator.style.borderRadius = '5px';
+          indicator.textContent = `Auth update in ${state.app.panelType} panel: ${action.isAuthenticated ? 'Authenticated' : 'Not Authenticated'}`;
+          
+          // Add to the DOM
+          document.body.appendChild(indicator);
+          
+          // Remove after 2 seconds
+          setTimeout(() => {
+            if (indicator.parentNode) {
+              indicator.parentNode.removeChild(indicator);
+            }
+          }, 2000);
+        } catch (err) {
+          // Ignore errors from indicator creation
+        }
+      }
+      
       return {
         ...state,
         auth: {

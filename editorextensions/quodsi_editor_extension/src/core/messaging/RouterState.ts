@@ -20,6 +20,7 @@ export class RouterState {
    * Get the current authentication state
    */
   public getAuthState(): AuthState {
+    console.log('[EXT][RouterState] Getting auth state:', { ...this.authState });
     return { ...this.authState };
   }
   
@@ -27,7 +28,12 @@ export class RouterState {
    * Update the authentication state
    */
   public updateAuthState(state: Partial<AuthState>): void {
+    console.log('[EXT][RouterState] Updating auth state:', {
+      current: { ...this.authState },
+      new: state
+    });
     this.authState = { ...this.authState, ...state };
+    console.log('[EXT][RouterState] Auth state updated to:', this.authState);
   }
   
   /**

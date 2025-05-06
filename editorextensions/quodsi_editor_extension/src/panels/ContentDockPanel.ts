@@ -18,7 +18,7 @@ import { router, RoutablePanel } from '../core/messaging';
  * interface to facilitate communication with the iframe content.
  */
 export class ContentDockPanel extends Panel implements RoutablePanel {
-    private static readonly LOG_PREFIX = '[ContentDockPanel]';
+    private static readonly LOG_PREFIX = '[EXT][ContentDockPanel]';
     private loggingEnabled: boolean = true;
     private isReady: boolean = false;
     private sendMessageCount: number = 0;
@@ -34,7 +34,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
         });
         
         this.log('ContentDockPanel Constructor called');
-        console.log('### DIRECT DEBUG ### ContentDockPanel instance created', {
+        console.log('[EXT][ContentDockPanel] Instance created', {
             prototype: Object.getOwnPropertyNames(Object.getPrototypeOf(this)),
             hasRelayToIframe: typeof this.relayToIframe === 'function'
         });
@@ -74,7 +74,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
             
             // Store this panel
             (window as any).quodsiExtension.panels.auth = this;
-            console.log('### DIRECT DEBUG ### Registered panel in global scope for recovery');
+            console.log('[EXT][ContentDockPanel] Registered panel in global scope for recovery');
         }
     }
 
@@ -83,11 +83,11 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
      */
     private testSendMessage(): void {
         try {
-            console.log('### DIRECT DEBUG ### Testing ContentDockPanel.sendMessage directly');
+            console.log('[EXT][ContentDockPanel] Testing sendMessage directly');
             this.sendMessage({ type: 'TEST_MESSAGE', data: { timestamp: Date.now() } } as unknown as JsonSerializable);
-            console.log('### DIRECT DEBUG ### Test message sent successfully!');
+            console.log('[EXT][ContentDockPanel] Test message sent successfully!');
         } catch (err) {
-            console.error('### DIRECT DEBUG ### Error in test message:', err);
+            console.error('[EXT][ContentDockPanel][ERROR] Error in test message:', err);
         }
     }
     
@@ -97,7 +97,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
      */
     protected didMount(): void {
         this.log('didMount called');
-        console.log('### DIRECT DEBUG ### ContentDockPanel.didMount called');
+        console.log('[EXT][ContentDockPanel] didMount called');
         
         // Register with the router
         router.registerChannel('auth', this);
@@ -114,7 +114,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
     public relayToIframe(msg: EnvelopeBase): void {
         this.sendMessageCount++;
         this.log(`Relaying message to iframe: ${msg.type}`);
-        console.log(`### DIRECT DEBUG ### ContentDockPanel.relayToIframe called (${this.sendMessageCount}):`, {
+        console.log(`[EXT][ContentDockPanel] relayToIframe called (${this.sendMessageCount}):`, {
             msgType: msg.type,
             msgId: msg.id,
             msgTarget: msg.target,
@@ -126,9 +126,9 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
             // Use a type assertion to bypass TypeScript's type checking
             // This is safe because we know EnvelopeBase is designed to be serializable
             this.sendMessage(msg as unknown as JsonSerializable);
-            console.log(`### DIRECT DEBUG ### ContentDockPanel.sendMessage completed for ${msg.type}`);
+            console.log(`[EXT][ContentDockPanel] sendMessage completed for ${msg.type}`);
         } catch (err) {
-            console.error(`### DIRECT DEBUG ### Error in ContentDockPanel.sendMessage:`, {
+            console.error(`[EXT][ContentDockPanel][ERROR] Error in sendMessage:`, {
                 error: err instanceof Error ? err.message : String(err),
                 stack: err instanceof Error ? err.stack : undefined,
                 msgType: msg.type
@@ -144,7 +144,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
      */
     protected messageFromFrame(message: unknown): void {
         this.receiveMessageCount++;
-        console.log(`### DIRECT DEBUG ### ContentDockPanel.messageFromFrame called (${this.receiveMessageCount}):`, message);
+        console.log(`[EXT][ContentDockPanel] messageFromFrame called (${this.receiveMessageCount}):`, message);
         this.log('Received message from iframe');
         
         // Validate that it's a valid envelope
@@ -162,7 +162,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
         // This won't be sent to the iframe as it's not part of the standard envelope structure
         (envelope as any)._panelRef = this;
         
-        console.log('### DIRECT DEBUG ### ContentDockPanel forwarding message to router:', envelope.type);
+        console.log('[EXT][ContentDockPanel] Forwarding message to router:', envelope.type);
         
         // Forward to the router
         router.receive(envelope);
@@ -173,7 +173,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
      */
     protected frameLoaded(): void {
         this.log('Frame loaded');
-        console.log('### DIRECT DEBUG ### ContentDockPanel.frameLoaded called');
+        console.log('[EXT][ContentDockPanel] frameLoaded called');
         
         // Call parent method first to maintain proper behavior
         super.frameLoaded();
@@ -190,7 +190,7 @@ export class ContentDockPanel extends Panel implements RoutablePanel {
      */
     protected frameClosed(): void {
         this.log('Frame closed, cleaning up resources');
-        console.log('### DIRECT DEBUG ### ContentDockPanel.frameClosed called');
+        console.log('[EXT][ContentDockPanel] frameClosed called');
         
         // Call parent method to maintain proper behavior
         super.frameClosed();

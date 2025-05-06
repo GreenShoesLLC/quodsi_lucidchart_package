@@ -30,6 +30,9 @@ import { mapEnvelopeToAction } from "./mappers";
 // Import the silent authentication hook
 import { useSilentAuth } from "../hooks/useSilentAuth";
 
+// Create a component-specific logger
+const logger = debugService.forComponent('MessageProvider');
+
 // Types for the context values
 type MessagingContextValue = MessagingState & {
   sendMessage: <T extends EnvelopeMessageType>(type: T, data?: any) => void;
@@ -77,7 +80,7 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
   // Detect when auth initialization is complete (no longer loading)
   useEffect(() => {
     if (state.auth.isLoading === false) {
-      console.log('### DIRECT DEBUG ### Auth initialization complete, state:', {
+      logger.log("Auth initialization complete, state:", {
         isAuthenticated: state.auth.isAuthenticated,
         hasUserInfo: !!state.auth.userInfo,
         isLoading: state.auth.isLoading
@@ -107,7 +110,7 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
         detectedType = "model";
       }
 
-      debugService.log(`Detected panel type: ${detectedType}`);
+      logger.log(`Detected panel type: ${detectedType}`);
       dispatch({ type: "APP_INITIALIZE", panelType: detectedType });
     }
   }, [initialPanelType, state.app.initialized]);
@@ -139,10 +142,10 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
 
       // Send message to parent window
       if (window.parent) {
-        debugService.log(`Sending message: ${type}`, envelope);
+        logger.log(`Sending message: ${type}`, envelope);
         window.parent.postMessage(envelope, "*");
       } else {
-        debugService.error("No parent window found to send message to");
+        logger.error("No parent window found to send message to");
       }
     },
     [state.app.panelType]
@@ -151,19 +154,48 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
   // Set up message listener
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      console.log("### DIRECT DEBUG ### React received raw event:", event);
+      logger.debug("Received raw event:", event);
       const msg = event.data;
-      console.log("### DIRECT DEBUG ### React received message data:", msg);
+      logger.debug("Received message data:", msg);
       
       // Skip processing if not a valid envelope
       if (!isEnvelope(msg)) {
-        debugService.warn("Received invalid message format:", msg);
+        logger.warn("Received invalid message format:", msg);
         return;
       }
       
+      // CRITICAL: Always process AUTH_STATUS messages, never skip them as duplicates
+      // This ensures auth state is always correctly synchronized across panels
+      if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
+        logger.log(`Received AUTH_STATUS message with data:`, msg.data);
+        console.log(`[REACT][MessageProvider] IMPORTANT: Received AUTH_STATUS in ${state.app.panelType} panel:`, {
+          // isAuthenticated: msg.data?.isAuthenticated,
+          // hasUserInfo: !!msg.data?.user,
+          panelType: state.app.panelType,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Generate a unique ID for this AUTH_STATUS message to avoid skipping duplicates
+        // in the case where multiple AUTH_STATUS messages are sent in rapid succession
+        msg.id = `auth_${Date.now()}_${Math.random()}`;
+        
+        // Convert AUTH_STATUS message to action and dispatch immediately
+        const action = mapEnvelopeToAction(msg);
+        if (action) {
+          logger.log("Dispatching AUTH_STATUS action immediately:", action);
+          dispatch(action);
+        } else {
+          logger.error("Failed to map AUTH_STATUS message to action");
+        }
+        
+        // We've handled this specially, return early
+        return;
+      }
+      
+      // For all other message types, check for duplicates
       // Deduplicate messages - skip if we've already processed this message ID
       if (msg.id && processedMessageIds.current.has(msg.id)) {
-        console.log(`### DIRECT DEBUG ### Skipping duplicate message with ID: ${msg.id}`);
+        logger.debug(`Skipping duplicate message with ID: ${msg.id}`);
         return;
       }
       
@@ -179,16 +211,11 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
         }
       }
 
-      debugService.log(`Received message: ${msg.type}`, msg);
+      logger.log(`Received message: ${msg.type}`, msg);
       
-      // Special handling for AUTH_STATUS messages
-      if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-        console.log(`### DIRECT DEBUG ### Received AUTH_STATUS message with data:`, msg.data);
-      }
-
       // If this is a response to a request, clean up the pending request
       if (msg.id && state.app.pendingRequests[msg.id]) {
-        debugService.log(`Received response for request: ${msg.id}`);
+        logger.log(`Received response for request: ${msg.id}`);
         dispatch({
           type: "REMOVE_PENDING_REQUEST",
           id: msg.id,
@@ -200,7 +227,7 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
 
       // Update state if action was produced
       if (action) {
-        debugService.log("Dispatching action:", action);
+        logger.log("Dispatching action:", action);
         dispatch(action);
       }
     };
@@ -219,7 +246,7 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
       authInitializedRef.current && 
       !hasSentReadyRef.current
     ) {
-      console.log("### DIRECT DEBUG ### All conditions met for sending REACT_APP_READY:", {
+      logger.log("All conditions met for sending REACT_APP_READY:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
         authInitialized: authInitializedRef.current,
@@ -236,13 +263,12 @@ export const MessageProvider: React.FC<MessagingProviderProps> = ({
       // Mark as sent so we don't send it again
       hasSentReadyRef.current = true;
       
-      console.log("### DIRECT DEBUG ### Sent REACT_APP_READY message with auth state:", {
+      logger.log("Sent REACT_APP_READY message with auth state:", {
         isAuthenticated: state.auth.isAuthenticated,
         hasUserInfo: !!state.auth.userInfo
       });
-      debugService.log("Sent REACT_APP_READY message");
     } else if (!hasSentReadyRef.current) {
-      console.log("### DIRECT DEBUG ### Waiting to send REACT_APP_READY:", {
+      logger.debug("Waiting to send REACT_APP_READY:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
         authInitialized: authInitializedRef.current,

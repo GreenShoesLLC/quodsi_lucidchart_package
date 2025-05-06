@@ -56,20 +56,36 @@ export class MessageRouter {
   }
   
   /**
+   * Get the current authentication state for external use
+   * Used by direct broadcasting mechanisms
+   */
+  public getAuthState(): any {
+    return this.state.getAuthState();
+  }
+  
+  /**
+   * Get access to the channel manager (for direct diagnostics)
+   * This allows panels to directly interact with the channel manager
+   */
+  public getChannelManager(): ChannelManager {
+    return this.channelManager;
+  }
+  
+  /**
    * Register a panel with the router
    */
   public registerChannel(role: PanelRole, panel: RoutablePanel): void {
-    console.log(`### DIRECT DEBUG ### Router.registerChannel called for ${role}`);
+    console.log(`[EXT][MessageRouter] registerChannel called for ${role}`);
     
     // Before registering, ensure we don't have a null panel
     if (!panel) {
-      console.error(`### DIRECT DEBUG ### Cannot register null panel for ${role}`);
+      console.error(`[EXT][MessageRouter][ERROR] Cannot register null panel for ${role}`);
       return;
     }
     
     // Verify that the panel has the required relayToIframe method
     if (typeof panel.relayToIframe !== 'function') {
-      console.error(`### DIRECT DEBUG ### Panel for ${role} doesn't have relayToIframe method`);
+      console.error(`[EXT][MessageRouter][ERROR] Panel for ${role} doesn't have relayToIframe method`);
       return;
     }
     
@@ -93,7 +109,7 @@ export class MessageRouter {
       
       // Store this panel
       (window as any).quodsiExtension.panels[role] = panel;
-      console.log(`### DIRECT DEBUG ### Stored ${role} panel in global registry`);
+      console.log(`[EXT][MessageRouter] Stored ${role} panel in global registry`);
     }
   }
   
@@ -107,12 +123,12 @@ export class MessageRouter {
       
       const panel = (window as any).quodsiExtension.panels[role];
       if (panel && typeof panel.relayToIframe === 'function') {
-        console.log(`### DIRECT DEBUG ### Retrieved ${role} panel from global registry`);
+        console.log(`[EXT][MessageRouter] Retrieved ${role} panel from global registry`);
         return panel;
       }
     }
     
-    console.log(`### DIRECT DEBUG ### No ${role} panel found in global registry`);
+    console.log(`[EXT][MessageRouter] No ${role} panel found in global registry`);
     return null;
   }
   
@@ -123,13 +139,13 @@ export class MessageRouter {
     // Get the current channel state
     const channel = this.channelManager.getChannel(role);
     if (!channel) {
-      console.error(`### DIRECT DEBUG ### No channel found for ${role}`);
+      console.error(`[EXT][MessageRouter][ERROR] No channel found for ${role}`);
       return false;
     }
     
     // If the channel already has a valid panel, we're good
     if (channel.panel && typeof channel.panel.relayToIframe === 'function') {
-      console.log(`### DIRECT DEBUG ### Channel ${role} already has a valid panel`);
+      console.log(`[EXT][MessageRouter] Channel ${role} already has a valid panel`);
       return true;
     }
     
@@ -140,7 +156,7 @@ export class MessageRouter {
       return true;
     }
     
-    console.error(`### DIRECT DEBUG ### Could not recover panel for ${role}`);
+    console.error(`[EXT][MessageRouter][ERROR] Could not recover panel for ${role}`);
     return false;
   }
   
@@ -181,7 +197,7 @@ export class MessageRouter {
    * Process a message received from an iframe
    */
   public receive(msg: EnvelopeBase): void {
-    console.log('### DIRECT DEBUG ### Router received message:', msg.type, msg);
+    console.log('[EXT][MessageRouter] Received message:', msg.type, msg);
     
     if (!isEnvelope(msg)) {
       this.logDebug(`Received invalid message format`);
@@ -197,14 +213,14 @@ export class MessageRouter {
       // Only register if we don't already have a valid panel
       const channel = this.channelManager.getChannel(role);
       if (!channel || !channel.panel) {
-        console.log(`### DIRECT DEBUG ### Found panel reference in message, registering for ${role}`);
+        console.log(`[EXT][MessageRouter] Found panel reference in message, registering for ${role}`);
         this.registerChannel(role, (msg as any)._panelRef);
       }
     }
 
     // Handle special REACT_APP_READY message
     if (msg.type === EnvelopeMessageType.REACT_APP_READY) {
-      console.log('### DIRECT DEBUG ### Router handling REACT_APP_READY message');
+      console.log('[EXT][MessageRouter] Handling REACT_APP_READY message');
       this.handleReactAppReady(msg);
       return;
     }
@@ -212,16 +228,16 @@ export class MessageRouter {
     // For all other messages, use pre-loaded MessageHandlers
     // Rather than dynamic import which can cause timing issues
     try {
-      console.log('### DIRECT DEBUG ### Router forwarding message to MessageHandlers');
+      console.log('[EXT][MessageRouter] Forwarding message to MessageHandlers');
       if (MessageHandlers.handleMessage(msg)) {
-        console.log('### DIRECT DEBUG ### Message was handled by a handler');
+        console.log('[EXT][MessageRouter] Message was handled by a handler');
         this.logDebug(`Message ${msg.type} handled by MessageHandlers`);
       } else {
-        console.log('### DIRECT DEBUG ### Message was NOT handled by any handler:', msg.type);
+        console.log('[EXT][MessageRouter] Message was NOT handled by any handler:', msg.type);
         this.logDebug(`Unhandled message type: ${msg.type}`);
       }
     } catch (err) {
-      console.error(`### DIRECT DEBUG ### Error handling message:`, err);
+      console.error(`[EXT][MessageRouter][ERROR] Error handling message:`, err);
       this.logDebug(`Error handling message: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
@@ -238,11 +254,11 @@ export class MessageRouter {
       return;
     }
     
-    console.log(`### DIRECT DEBUG ### Marking channel ${role} as ready`);
+    console.log(`[EXT][MessageRouter] Marking channel ${role} as ready`);
     
     // If we have a panel reference in the message, register it
     if ((msg as any)._panelRef) {
-      console.log(`### DIRECT DEBUG ### Registering panel from REACT_APP_READY message for ${role}`);
+      console.log(`[EXT][MessageRouter] Registering panel from REACT_APP_READY message for ${role}`);
       this.registerChannel(role, (msg as any)._panelRef);
     }
     
@@ -258,7 +274,7 @@ export class MessageRouter {
     }
     
     // Ensure the channel has a panel before flushing
-    console.log(`### DIRECT DEBUG ### Flushing queue for ${role}:`, {
+    console.log(`[EXT][MessageRouter] Flushing queue for ${role}:`, {
       queueSize: this.channelManager.getChannel(role)?.queue.length,
       hasPanel: this.ensureChannelHasPanel(role),
       isReady: this.channelManager.isChannelReady(role)
@@ -290,7 +306,7 @@ export class MessageRouter {
    * Broadcast auth status to all panels
    */
   public broadcastAuthStatus(): void {
-    console.log('### DIRECT DEBUG ### Router broadcasting auth status:', this.state.getAuthState());
+    console.log('[EXT][MessageRouter] Broadcasting auth status:', this.state.getAuthState());
     
     // Ensure all channels have panels before broadcasting
     this.channelManager.getAllRoles().forEach(role => {
@@ -367,7 +383,7 @@ export class MessageRouter {
    * @param user User information (if authenticated)
    */
   public updateAuthState(isAuthenticated: boolean, user?: QuodsiUserInfo): void {
-    console.log('### DIRECT DEBUG ### Router.updateAuthState called:', isAuthenticated, user);
+    console.log('[EXT][MessageRouter] updateAuthState called:', isAuthenticated, user);
     
     this.state.updateAuthState({
       isAuthenticated,
@@ -389,7 +405,7 @@ export class MessageRouter {
    * Clear authentication state (for logout) and broadcast to all panels
    */
   public clearAuthState(): void {
-    console.log('### DIRECT DEBUG ### Router.clearAuthState called');
+    console.log('[EXT][MessageRouter] clearAuthState called');
     
     this.state.updateAuthState({
       isAuthenticated: false,
@@ -407,7 +423,7 @@ export class MessageRouter {
    */
   private logDebug(text: string): void {
     if (this.devLogging) {
-      const message = `[MessageRouter] ${text}`;
+      const message = `[EXT][MessageRouter] ${text}`;
       console.log(message);
       
       // Add to ring buffer
@@ -427,7 +443,7 @@ export class MessageRouter {
    * Enable or disable development logging
    */
   public setLogging(enabled: boolean): void {
-    console.log('### DIRECT DEBUG ### Router logging set to:', enabled);
+    console.log('[EXT][MessageRouter] Logging set to:', enabled);
     this.devLogging = enabled;
     
     // Initialize the log buffer in the window for debugging
@@ -436,5 +452,14 @@ export class MessageRouter {
     }
     
     this.logDebug(`Development logging ${enabled ? 'enabled' : 'disabled'}`);
+  }
+  
+  /**
+   * Dump debug information about all channels
+   * This is useful for diagnostics
+   */
+  public dumpChannelState(): void {
+    console.log('[EXT][MessageRouter] Dumping channel state...');
+    this.channelManager.dumpChannelState();
   }
 }

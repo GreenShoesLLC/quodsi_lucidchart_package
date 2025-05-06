@@ -32,21 +32,21 @@ const modelManager = new ModelManager(storageAdapter);
 // Enable router logging if in new messaging mode
 const useNewMessaging = true; // Set to true to use the new panels with MessageRouter
 if (useNewMessaging) {
-    console.info('[extension] Using new messaging system with ContentDockPanel and RightDockPanel');
+    console.info('[EXT][extension] Using new messaging system with ContentDockPanel and RightDockPanel');
     
     // Initialize messaging system with logging enabled
     initializeMessaging(true);
     
     let rightDockPanel, contentDoctPanel;
-    console.info('[extension] About to create ContentDockPanel');
+    console.info('[EXT][extension] About to create ContentDockPanel');
     contentDoctPanel = new ContentDockPanel(client);
     contentDoctPanel.setLogging(true);
-    console.info('[extension] Created ContentDockPanel');
+    console.info('[EXT][extension] Created ContentDockPanel');
 
-    console.info('[extension] About to create RightDockPanel');
+    console.info('[EXT][extension] About to create RightDockPanel');
     rightDockPanel = new RightDockPanel(client, modelManager);
     rightDockPanel.setLogging(true);
-    console.info('[extension] Created RightDockPanel');
+    console.info('[EXT][extension] Created RightDockPanel');
 } else {
     let authPanel, modelPanel;
     console.info('[extension] About to create AuthPanel');
@@ -67,4 +67,4 @@ if (useNewMessaging) {
     });
 }
 
-console.info('[extension] Completed Successfully');
+console.info('[EXT][extension] Completed Successfully');
