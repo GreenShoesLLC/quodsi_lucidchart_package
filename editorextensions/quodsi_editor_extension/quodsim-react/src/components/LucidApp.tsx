@@ -28,7 +28,44 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
     // The REACT_APP_READY message is now sent by MessageProvider automatically
     // This is just to record it for our UI
     setLastMessageSent(EnvelopeMessageType.REACT_APP_READY);
-  }, [panelType]);
+    
+    // For the model panel only: Set up periodic auth status check
+    if (panelType === 'model') {
+      logger.log('Setting up periodic auth status check for model panel');
+      
+      // Check auth status every 5 seconds when not authenticated
+      const authCheckInterval = setInterval(() => {
+        if (!auth.isAuthenticated) {
+          // First check localStorage as a fallback for cross-panel communication
+          try {
+            const storedAuthStatus = localStorage.getItem('quodsi_auth_status');
+            const storedAuthTimestamp = localStorage.getItem('quodsi_auth_timestamp');
+            
+            if (storedAuthStatus === 'true' && storedAuthTimestamp) {
+              const timestamp = parseInt(storedAuthTimestamp, 10);
+              const now = Date.now();
+              
+              // If localStorage indicates authentication within last 30 seconds
+              if (now - timestamp < 30000) {
+                logger.log('Detected auth in localStorage, requesting refresh');
+                console.log('[REACT][LucidApp] Detected authentication in localStorage, requesting refresh');
+                sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+              }
+            }
+          } catch (e) {
+            // Ignore localStorage errors
+          }
+          
+          // Also periodically request auth status directly
+          logger.log('Requesting auth status update from host');
+          sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+        }
+      }, 5000); // Check every 5 seconds
+      
+      // Clean up interval on unmount
+      return () => clearInterval(authCheckInterval);
+    }
+  }, [panelType, auth.isAuthenticated, sendMessage]);
 
   useEffect(() => {
     if (auth.lastUpdated) {

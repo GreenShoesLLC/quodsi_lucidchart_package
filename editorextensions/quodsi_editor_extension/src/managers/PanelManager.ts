@@ -1,6 +1,6 @@
 // PanelManager.ts
-import { AuthPanel } from '../panels/AuthPanel';
-import { ModelPanel } from '../panels/ModelPanel';
+import { AuthPanel } from '../_deprecated/AuthPanel';
+import { ModelPanel } from '../_deprecated/ModelPanel';
 
 /**
  * Singleton class that manages access to panel instances across the extension.

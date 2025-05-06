@@ -149,6 +149,20 @@ export function createAuthStatusMessage(
   );
 }
 
+/**
+ * Create a REQUEST_AUTH_STATUS message
+ * 
+ * @returns A properly formatted REQUEST_AUTH_STATUS message
+ */
+export function createRequestAuthStatusMessage(source: MessageSource = 'model-iframe') {
+  return createBaseMessage(
+    EnvelopeMessageType.REQUEST_AUTH_STATUS,
+    source,
+    'host',
+    {}
+  );
+}
+
 // Subscription message builders
 
 /**

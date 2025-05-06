@@ -131,60 +131,82 @@ export class RightDockPanel extends Panel implements RoutablePanel {
     protected frameLoaded(): void {
         this.log('Frame loaded');
         console.log('[EXT][RightDockPanel] frameLoaded called');
-        
+
         // Call parent method first to maintain proper behavior
         super.frameLoaded();
-        
+
         // Additional initialization if needed
         this.isReady = true;
-        
+
         // Re-register with the router to ensure we have a valid reference
         console.log('[EXT][RightDockPanel] Re-registering with router as "model" panel');
         router.registerChannel('model', this);
         
+        // IMPORTANT: Explicitly mark this channel as ready
+        try {
+            console.log('[EXT][RightDockPanel] Explicitly marking model channel as ready');
+            const channelManager = router.getChannelManager();
+            if (channelManager && typeof channelManager.markChannelReady === 'function') {
+                channelManager.markChannelReady('model');
+                console.log('[EXT][RightDockPanel] Successfully marked model channel as ready');
+            }
+        } catch (err) {
+            console.error('[EXT][RightDockPanel][ERROR] Error marking channel as ready:', err);
+        }
+
         // Dump channel state to diagnose any issues
         console.log('[EXT][RightDockPanel] Dumping channel state for diagnosis');
         if (typeof router.dumpChannelState === 'function') {
             router.dumpChannelState();
         }
-        
-        // NOTE: We removed the immediate auth state request because it happens before
-        // silent authentication completes. Instead, we rely on the REACT_APP_READY flow.
-        // When the React app completes initialization, it will send REACT_APP_READY, and
-        // the router will send back the current auth state at that point.
-        console.log('[EXT][RightDockPanel] Waiting for REACT_APP_READY from React app for auth status');
+
+        // NOTE: Previously we were waiting for REACT_APP_READY, but we should also
+        // set up a delayed auth status request to handle cases where silent auth
+        // completes after the panel initialization
+        console.log('[EXT][RightDockPanel] Setting up delayed auth status request');
+
+        // Request auth status after a short delay to allow silent auth to complete
+        setTimeout(() => {
+            this.requestAuthStatus();
+        }, 3000); // 3 second delay
     }
 
     /**
      * Request current authentication status
      * This is a helper method to ensure we get the latest auth state
      */
-    private requestAuthStatus(): void {
+    public requestAuthStatus(): void {
         console.log('[EXT][RightDockPanel] Requesting current auth state');
         try {
-            // First try using the channel manager's force deliver method
-            const channelManager = router.getChannelManager();
-            if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
-                console.log('[EXT][RightDockPanel] Using forceDeliverMessage for AUTH_STATUS');
-                const authState = router.getAuthState();
-                channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
-                console.log('[EXT][RightDockPanel] Force delivered auth state:', authState);
+            // Get the current auth state from the router
+            const authState = router.getAuthState();
+            console.log('[EXT][RightDockPanel] Current auth state:', authState);
+
+            // If we already have authentication, use it
+            if (authState && authState.isAuthenticated) {
+                // First try using the channel manager's force deliver method
+                const channelManager = router.getChannelManager();
+                if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
+                    console.log('[EXT][RightDockPanel] Using forceDeliverMessage for AUTH_STATUS');
+                    channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
+                    console.log('[EXT][RightDockPanel] Force delivered auth state:', authState);
+                } else {
+                    // Fallback to a direct broadcast request
+                    console.log('[EXT][RightDockPanel] Using direct send for AUTH_STATUS');
+                    router.send('model', {
+                        id: `auth_status_request_${Date.now()}`,
+                        type: EnvelopeMessageType.AUTH_STATUS,
+                        source: 'host',
+                        target: 'model-iframe',
+                        version: '1.0',
+                        data: authState
+                    });
+
+                    console.log('[EXT][RightDockPanel] Direct sent auth state:', authState);
+                }
             } else {
-                // Fallback to a direct broadcast request
-                console.log('[EXT][RightDockPanel] Using direct send for AUTH_STATUS');
-                const authState = router.getAuthState();
-                router.send('model', {
-                    id: `auth_status_request_${Date.now()}`,
-                    type: EnvelopeMessageType.AUTH_STATUS,
-                    source: 'host',
-                    target: 'model-iframe',
-                    version: '1.0',
-                    data: authState || { isAuthenticated: false }
-                });
-                
-                console.log('[EXT][RightDockPanel] Direct sent auth state:', authState);
-                
-                // Also broadcast to all panels for redundancy
+                // No existing auth, broadcast to ensure we get latest state from auth panel
+                console.log('[EXT][RightDockPanel] No auth state found, requesting broadcast');
                 router.broadcastAuthStatus();
             }
         } catch (err) {

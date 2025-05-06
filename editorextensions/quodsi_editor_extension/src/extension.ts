@@ -5,9 +5,9 @@ import {
     Viewport
 } from 'lucid-extension-sdk';
 import { ModelManager } from './core/ModelManager';
-import { ModelPanel } from './panels/ModelPanel';
+import { ModelPanel } from './_deprecated/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
-import { AuthPanel } from './panels/AuthPanel';
+import { AuthPanel } from './_deprecated/AuthPanel';
 // Import new panels
 import { ContentDockPanel } from './panels/ContentDockPanel';
 import { RightDockPanel } from './panels/RightDockPanel';
@@ -33,10 +33,10 @@ const modelManager = new ModelManager(storageAdapter);
 const useNewMessaging = true; // Set to true to use the new panels with MessageRouter
 if (useNewMessaging) {
     console.info('[EXT][extension] Using new messaging system with ContentDockPanel and RightDockPanel');
-    
+
     // Initialize messaging system with logging enabled
     initializeMessaging(true);
-    
+
     let rightDockPanel, contentDoctPanel;
     console.info('[EXT][extension] About to create ContentDockPanel');
     contentDoctPanel = new ContentDockPanel(client);

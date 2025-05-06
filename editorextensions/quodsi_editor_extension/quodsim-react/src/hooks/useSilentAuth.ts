@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { useMsal } from '@azure/msal-react';
-import { useMessagingDispatch } from '../messaging/MessageProvider';
+import { useMessagingDispatch, useMessaging } from '../messaging/MessageProvider';
 import { debugService } from '../messaging/utils/debugService';
 import { AuthStorageService } from '../services/AuthStorageService';
+import { EnvelopeMessageType } from '@quodsi/shared';
 
 /**
  * Hook to handle silent authentication during application initialization
@@ -11,6 +12,7 @@ import { AuthStorageService } from '../services/AuthStorageService';
 export function useSilentAuth(): void {
   const { instance, accounts, inProgress } = useMsal();
   const dispatch = useMessagingDispatch();
+  const { sendMessage, app } = useMessaging();
   
   useEffect(() => {
     // Start with marking auth as loading
@@ -57,6 +59,25 @@ export function useSilentAuth(): void {
               userInfo
             });
             
+            // IMPORTANT: Also notify the extension host about successful authentication
+            // This ensures the router on the extension side knows about the auth state
+            if (app.initialized) {
+              debugService.log('Notifying extension host about successful silent authentication');
+              
+              // Use AUTH_LOGIN_SUCCESS to trigger the same flow as when user logs in directly
+              sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
+                idToken: 'silent-auth', // Just a placeholder, not a real token
+                user: userInfo,
+                newUser: false
+              });
+              
+              // Also send a direct REQUEST_AUTH_STATUS as a backup
+              setTimeout(() => {
+                debugService.log('Sending REQUEST_AUTH_STATUS as backup');
+                sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+              }, 500);
+            }
+            
             debugService.log('Silent authentication successful');
           } else {
             // No MSAL accounts found, check localStorage as fallback
@@ -71,6 +92,24 @@ export function useSilentAuth(): void {
                 isAuthenticated: true,
                 userInfo: storedAuth.userInfo || undefined
               });
+              
+              // Also notify the extension host about restored authentication
+              if (app.initialized && storedAuth.userInfo) {
+                debugService.log('Notifying extension host about restored authentication from localStorage');
+                
+                // Use AUTH_LOGIN_SUCCESS to trigger the same flow as when user logs in directly
+                sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
+                  idToken: 'localStorage-auth', // Just a placeholder, not a real token
+                  user: storedAuth.userInfo,
+                  newUser: false
+                });
+                
+                // Also send a direct REQUEST_AUTH_STATUS as a backup
+                setTimeout(() => {
+                  debugService.log('Sending REQUEST_AUTH_STATUS as backup');
+                  sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+                }, 500);
+              }
               
               debugService.log('Auth state restored from localStorage');
             } else {
@@ -105,5 +144,5 @@ export function useSilentAuth(): void {
       // Run the silent auth check
       attemptSilentAuth();
     }
-  }, [inProgress, accounts, dispatch, instance]);
+  }, [inProgress, accounts, dispatch, instance, sendMessage, app.initialized]);
 }

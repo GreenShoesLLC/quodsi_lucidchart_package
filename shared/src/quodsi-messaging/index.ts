@@ -123,6 +123,7 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.AUTH_STATUS]: AuthStatusMessage['data'];
   [EnvelopeMessageType.AUTH_REQUIRED]: AuthRequiredMessage['data'];
   [EnvelopeMessageType.AUTH_ERROR]: AuthErrorMessage['data'];
+  [EnvelopeMessageType.REQUEST_AUTH_STATUS]: {}; // Empty object as payload
   
   [EnvelopeMessageType.SUBSCRIPTION_STATUS]: SubscriptionStatusMessage['data'];
   [EnvelopeMessageType.SUBSCRIPTION_CHANGE_REQUEST]: SubscriptionChangeRequestMessage['data'];
