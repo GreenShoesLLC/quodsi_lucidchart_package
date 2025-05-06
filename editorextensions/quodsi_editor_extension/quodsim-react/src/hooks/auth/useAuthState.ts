@@ -163,13 +163,39 @@ export function useAuthState(): AuthState {
 
   // Update user info when accounts change (if authenticated)
   useEffect(() => {
-    if (isAuthenticated && accounts.length > 0 && !userInfo) {
+    // More aggressive account status check
+    if (accounts.length > 0) {
+      // We have an account, ensure auth state is correct
       const newUserInfo = extractUserInfoFromAccount(accounts[0]);
-      setUserInfo(newUserInfo);
-    } else if (accounts.length === 0 && isAuthenticated) {
-      // If we have no accounts but are marked as authenticated, reset state
-      setIsAuthenticated(false);
-      setUserInfo(null);
+      
+      // Update state regardless of previous values to ensure consistency
+      if (!isAuthenticated || !userInfo || userInfo.email !== newUserInfo.email) {
+        ComponentLogger.log(LOG_PREFIX, 'Account found but auth state inconsistent, updating state', {
+          hadUserInfoBefore: !!userInfo,
+          wasAuthenticated: isAuthenticated,
+          accountEmail: newUserInfo.email
+        });
+        
+        setIsAuthenticated(true);
+        setUserInfo(newUserInfo);
+        
+        // Save to session storage for persistence
+        sessionStorageService.saveSessionState({
+          isAuthenticated: true,
+          userInfo: newUserInfo,
+          accessToken: null, // Will be acquired as needed
+          tokenExpiration: null,
+          lastActive: Date.now()
+        });
+      }
+    } else if (accounts.length === 0) {
+      // No accounts found, ensure we're showing as logged out
+      if (isAuthenticated || userInfo) {
+        ComponentLogger.log(LOG_PREFIX, 'No accounts found but auth state showed authenticated, resetting');
+        setIsAuthenticated(false);
+        setUserInfo(null);
+        sessionStorageService.clearSessionState();
+      }
     }
   }, [accounts, isAuthenticated, userInfo, extractUserInfoFromAccount]);
 

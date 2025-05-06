@@ -89,6 +89,12 @@ export function useAuthOperations(): AuthOperations {
     ComponentLogger.log(LOG_PREFIX, 'Sign in requested');
     setIsProcessingAuth(true);
     setError(null);
+    
+    // Add extra tracking for this specific scenario - consecutive sign-ins
+    const hasJustSignedOut = window.sessionStorage.getItem('quodsi_just_signed_out') === 'true';
+    if (hasJustSignedOut) {
+      ComponentLogger.log(LOG_PREFIX, 'Detected sign-in attempt after recent sign-out, taking extra precautions');
+    }
 
     try {
       // Check if MSAL is initialized
@@ -116,41 +122,145 @@ export function useAuthOperations(): AuthOperations {
       // Notify extension that sign-in is starting
       authMessagingService.sendSignInStarted();
 
-      // Ensure we start with a clean state by:
-      // 1. Check for any existing MSAL accounts
-      const existingAccounts = instance.getAllAccounts();
-      if (existingAccounts.length > 0) {
-        ComponentLogger.log(LOG_PREFIX, `Found ${existingAccounts.length} existing accounts, clearing cache to remove them`);
+      // Check if this is a sign-in attempt after a recent sign-out
+      const hasJustSignedOut = window.sessionStorage.getItem('quodsi_just_signed_out') === 'true';
+      const signOutTime = parseInt(window.sessionStorage.getItem('quodsi_signout_time') || '0', 10);
+      const timeSinceSignOut = Date.now() - signOutTime;
+      const isRecentSignOut = timeSinceSignOut < 60000; // within 1 minute
+      
+      ComponentLogger.log(LOG_PREFIX, `Pre-sign-in state:`, {
+        hasJustSignedOut,
+        timeSinceSignOut: `${timeSinceSignOut}ms`
+      });
+      
+      // If this is a sign-in after a recent sign-out, we need special handling
+      if (hasJustSignedOut && isRecentSignOut) {
+        // This is our special case that was failing before
+        ComponentLogger.log(LOG_PREFIX, `SPECIAL CASE DETECTED: Sign-in attempt immediately after sign-out`);
         
-        // Clear MSAL cache to remove existing accounts
-        sessionStorageService.clearMsalCache();
-        
-        // Verify accounts were cleared
-        const remainingAccounts = instance.getAllAccounts();
-        if (remainingAccounts.length > 0) {
-          ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain after cache clearing`);
+        // For the special case, force a reload of the page first
+        // This is a more extreme solution, but will ensure we start with a clean state
+        if (window.location.href.indexOf('?quodsi_reset=true') === -1) {
+          // We haven't yet done a reset, so add a flag and reload
+          ComponentLogger.log(LOG_PREFIX, `Forcing page reload to completely reset MSAL state...`);
+          
+          // Add a flag to the URL so we know we've already tried a reload
+          window.sessionStorage.removeItem('quodsi_just_signed_out');
+          window.sessionStorage.removeItem('quodsi_signout_time');
+          
+          // Note: This will interrupt the current sign-in flow, but it's necessary
+          // to completely reset the MSAL state for the problematic case
+          window.location.href = window.location.href + 
+            (window.location.href.indexOf('?') > -1 ? '&' : '?') + 
+            'quodsi_reset=true';
+          
+          // Return early since we're reloading the page
+          return;
         } else {
-          ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
+          // We've already done a reload, but still mark that we're handling the special case
+          ComponentLogger.log(LOG_PREFIX, `Page already reset, continuing with special handling`);
+          
+          // Remove the reset flag from the URL
+          const url = new URL(window.location.href);
+          url.searchParams.delete('quodsi_reset');
+          window.history.replaceState({}, document.title, url.toString());
         }
       }
       
-      // 2. Clear all session storage and cache
-      sessionStorageService.clearSessionState();
-      sessionStorageService.clearMsalCache();
-      
-      // 3. Reset local state
-      updateAuthState({
-        isAuthenticated: false,
-        userInfo: null,
-        error: null
+      // Force a complete reset before attempting sign-in
+      await new Promise<void>(resolve => {
+        // First, forcefully clear the auth state
+        updateAuthState({
+          isAuthenticated: false,
+          userInfo: null,
+          error: null
+        });
+        
+        // Clear all tokens
+        clearTokens();
+        
+        // Clear all storage
+        sessionStorageService.clearSessionState();
+        sessionStorageService.clearMsalCache();
+        
+        // Special handling for the problem case
+        if (hasJustSignedOut && isRecentSignOut) {
+          // Double clear everything with a longer timeout
+          setTimeout(() => {
+            // Try again to clear the cache
+            sessionStorageService.clearMsalCache();
+            sessionStorageService.clearSessionState();
+            
+            // Try to find and remove any MSAL accounts
+            const accounts = instance.getAllAccounts();
+            if (accounts.length > 0) {
+              ComponentLogger.log(LOG_PREFIX, `Extra clearing for ${accounts.length} MSAL accounts`);
+            }
+            
+            // Clear the sign-out flags
+            window.sessionStorage.removeItem('quodsi_just_signed_out');
+            window.sessionStorage.removeItem('quodsi_signout_time');
+            
+            // Continue
+            resolve();
+          }, 500);
+        } else {
+          // Normal case: Give a short delay to ensure all state is cleared before proceeding
+          setTimeout(() => {
+            // Check for any existing MSAL accounts
+            const existingAccounts = instance.getAllAccounts();
+            if (existingAccounts.length > 0) {
+              ComponentLogger.log(LOG_PREFIX, `Found ${existingAccounts.length} existing accounts, forcing additional cache clear`);
+              
+              // If accounts still exist, try more aggressive clearing
+              sessionStorageService.clearMsalCache();
+              
+              // Verify accounts were cleared
+              const remainingAccounts = instance.getAllAccounts();
+              if (remainingAccounts.length > 0) {
+                ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain after aggressive clearing, will continue anyway`);
+              } else {
+                ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
+              }
+            }
+            
+            // Continue with the sign-in process
+            resolve();
+          }, 300);
+        }
       });
-      clearTokens();
+      
+      // Final verification that state is clean before proceeding
+      const currentAccounts = instance.getAllAccounts();
+      ComponentLogger.log(LOG_PREFIX, 'Pre-login state verification:', {
+        isAuthenticated,
+        // hasUserInfoInState: !!userInfo,
+        msalAccountsCount: currentAccounts.length,
+        isPostSignOut: hasJustSignedOut && isRecentSignOut,
+        timeSinceSignOut: hasJustSignedOut ? `${timeSinceSignOut}ms` : 'N/A',
+      });
 
       // Prepare login options with prompt=login to force fresh authentication
       const loginOptions = {
         ...loginRequest,
         prompt: 'login' // Force login prompt to avoid any cached sessions
       };
+
+      // Log the complete login options to diagnose authority issues
+      ComponentLogger.log(LOG_PREFIX, 'Login options:', {
+        scopes: loginOptions.scopes,
+        authority: loginOptions.authority,
+        prompt: loginOptions.prompt,
+        hasLoginHint: !!loginOptions.loginHint
+      });
+      
+      if (!loginOptions.authority) {
+        ComponentLogger.warn(LOG_PREFIX, 'No authority specified in login options! This will likely cause authentication problems.');
+        // Fix by importing directly from auth policies
+        const { buildAuthority, b2cPolicies } = await import('../../auth/config/authPolicies');
+        loginOptions.authority = buildAuthority(b2cPolicies.signUpSignIn);
+        ComponentLogger.log(LOG_PREFIX, 'Added missing authority:', loginOptions.authority);
+      }
 
       ComponentLogger.log(LOG_PREFIX, 'Initiating loginPopup with prompt=login');
       // ALWAYS use standard MSAL popup flow with prompt=login
@@ -200,8 +310,45 @@ export function useAuthOperations(): AuthOperations {
         // Notify extension about successful auth
         authMessagingService.sendAuthCompleted(true, userInfo);
       } else {
-        ComponentLogger.error(LOG_PREFIX, 'Login response missing account information');
-        throw new Error('Login response missing account information');
+        // This is the "No active account found after login" case - try to recover
+        ComponentLogger.warn(LOG_PREFIX, 'No account in response! Checking for accounts in MSAL...');
+        
+        // Check if there are any accounts in MSAL that we can use
+        const accounts = instance.getAllAccounts();
+        if (accounts.length > 0) {
+          // Use the first account we find
+          const account = accounts[0];
+          ComponentLogger.log(LOG_PREFIX, `Found account in MSAL: ${account.username}`);
+          
+          const userInfo = {
+            name: account.name || account.username,
+            email: account.username
+          };
+          
+          // Update local state
+          updateAuthState({
+            isAuthenticated: true,
+            userInfo,
+            error: null
+          });
+          
+          // Save to session storage
+          sessionStorageService.saveSessionState({
+            isAuthenticated: true,
+            userInfo,
+            accessToken: null, // We don't have a token, it will be acquired on demand
+            tokenExpiration: null,
+            lastActive: Date.now()
+          });
+          
+          // Notify extension about successful auth
+          authMessagingService.sendAuthCompleted(true, userInfo);
+          return; // We've recovered, return successfully
+        }
+        
+        // If we get here, we couldn't recover
+        ComponentLogger.error(LOG_PREFIX, 'Login response missing account information and no accounts found in MSAL');
+        throw new Error('No active account found after login');
       }
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Login failed', error);
@@ -236,6 +383,15 @@ export function useAuthOperations(): AuthOperations {
     
     ComponentLogger.log(LOG_PREFIX, 'Sign out requested');
     setIsProcessingAuth(true);
+    
+    // Set a flag in sessionStorage to track the sign-out
+    // This helps us detect consecutive sign-in attempts after sign-out
+    try {
+      window.sessionStorage.setItem('quodsi_just_signed_out', 'true');
+      window.sessionStorage.setItem('quodsi_signout_time', Date.now().toString());
+    } catch (e) {
+      ComponentLogger.error(LOG_PREFIX, 'Failed to set sign-out tracking flags', e);
+    }
 
     try {
       // End session on backend first
@@ -255,54 +411,84 @@ export function useAuthOperations(): AuthOperations {
       // Import the getRedirectUri function to get the properly configured URI
       const { getRedirectUri } = await import('../../auth/config/msalConfig');
       
-      // Use popup for logout (more reliable in iframe environments)
+      // More reliable sign-out process with better state management
       try {
         // Get the proper redirect URI from the config
         const redirectUri = getRedirectUri();
         ComponentLogger.log(LOG_PREFIX, `Using post-logout redirect URI: ${redirectUri}`);
         
-        // Force prompt on next login by setting prompt="login" in the logout options
-        await instance.logoutPopup({
-          postLogoutRedirectUri: redirectUri,
-          mainWindowRedirectUri: redirectUri,
-        });
+        // First, ensure our local state is cleared
+        setIsAuthenticated(false);
+        setUserInfo(null);
+        clearTokens();
+        
+        // Clear session storage and MSAL cache
+        sessionStorageService.clearSessionState();
+        sessionStorageService.clearMsalCache();
+        
+        // Perform the actual MSAL logout
+        try {
+          // Force prompt on next login
+          await instance.logoutPopup({
+            postLogoutRedirectUri: redirectUri,
+            mainWindowRedirectUri: redirectUri,
+          });
+          
+          ComponentLogger.log(LOG_PREFIX, 'MSAL logout popup completed successfully');
+        } catch (logoutError) {
+          // If popup fails, try to log out manually
+          ComponentLogger.error(LOG_PREFIX, 'Popup logout failed, using fallback', logoutError);
+        }
+        
+        // Regardless of logout success, clear all accounts that might remain
+        const remainingAccounts = instance.getAllAccounts();
+        if (remainingAccounts.length > 0) {
+          ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain, forcing additional clearing`);
+          
+          // More aggressive MSAL cache clearing
+          sessionStorageService.clearMsalCache();
+          sessionStorageService.clearSessionState();
+        }
+        
+        // Verify once more
+        const finalAccounts = instance.getAllAccounts();
+        if (finalAccounts.length > 0) {
+          ComponentLogger.warn(LOG_PREFIX, `${finalAccounts.length} accounts still remain after all clearing attempts`);
+        } else {
+          ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
+        }
         
         // Don't immediately reload - let MSAL handle the redirect
         // Only reload if we don't see a redirect happening within 1 second
         const reloadTimeout = setTimeout(() => {
-          ComponentLogger.log(LOG_PREFIX, 'No redirect detected after logout, forcing reload');
-          window.location.reload();
-        }, 1000);
+          ComponentLogger.log(LOG_PREFIX, 'No redirect detected after logout, refreshing page state');
+          // Instead of a full page reload, re-initialize our auth state
+          setIsAuthenticated(false);
+          setUserInfo(null);
+          clearTokens();
+          sessionStorageService.clearSessionState();
+          sessionStorageService.clearMsalCache();
+          
+          // Only force reload as a last resort if still needed
+          if (instance.getAllAccounts().length > 0) {
+            ComponentLogger.log(LOG_PREFIX, 'Accounts still present after all clearing, forcing reload');
+            window.location.reload();
+          }
+        }, 800);
         
         // Clear the timeout if we navigate away
         window.addEventListener('unload', () => clearTimeout(reloadTimeout), { once: true });
-        
-        ComponentLogger.log(LOG_PREFIX, 'MSAL logout popup completed successfully');
       } catch (e) {
-        ComponentLogger.error(LOG_PREFIX, 'Popup logout failed, clearing MSAL cache manually', e);
-        // If popup logout fails, we need to make sure MSAL cache is completely cleared
-        try {
-          // MSAL doesn't have a direct removeAccount method, so we'll use the logout methods
-          // and then make sure we clear the cache completely
-          ComponentLogger.log(LOG_PREFIX, 'Failed to logout via popup, using additional cleanup methods');
-          
-          // Force manual clearing of accounts from MSAL cache
-          sessionStorageService.clearMsalCache();
-          sessionStorageService.clearSessionState();
-          window.location.reload();
-          // Log accounts that remain after clearing
-          const remainingAccounts = instance.getAllAccounts();
-          if (remainingAccounts.length > 0) {
-            ComponentLogger.log(LOG_PREFIX, `${remainingAccounts.length} accounts still remain in MSAL cache after clearing`);
-          } else {
-            ComponentLogger.log(LOG_PREFIX, 'Successfully cleared all MSAL accounts');
-          }
-        } catch (accountError) {
-          ComponentLogger.error(LOG_PREFIX, 'Error during account cleanup', accountError);
-        }
+        ComponentLogger.error(LOG_PREFIX, 'Complete logout process failed', e);
+        // Even if the whole process fails, ensure our state is reset
+        setIsAuthenticated(false);
+        setUserInfo(null);
+        clearTokens();
+        sessionStorageService.clearSessionState();
+        sessionStorageService.clearMsalCache();
       }
       
-      // Ensure sessionStorage and localStorage are fully cleared of auth data
+      // Final safety check - ensure all storage is cleared
       sessionStorageService.clearMsalCache();
       
       // Force reload window.location to ensure clean auth state

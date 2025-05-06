@@ -129,8 +129,57 @@ export const AuthPanel: React.FC = () => {
       } else {
         // Production mode - Use real MSAL authentication
         console.log('### DIRECT DEBUG ### Using production mode authentication with MSAL');
-        // Login with popup using MSAL
-        const result = await instance.loginPopup(loginRequest);
+        
+        // Check if this is a sign-in after a recent sign-out
+        const hasJustSignedOut = window.sessionStorage.getItem('quodsi_just_signed_out') === 'true';
+        const signOutTime = parseInt(window.sessionStorage.getItem('quodsi_signout_time') || '0', 10);
+        const timeSinceSignOut = Date.now() - signOutTime;
+        const isRecentSignOut = timeSinceSignOut < 60000; // Within 1 minute
+        
+        if (hasJustSignedOut && isRecentSignOut) {
+          console.log(`### DIRECT DEBUG ### Detected sign-in attempt ${timeSinceSignOut}ms after sign-out`);
+          
+          // Clear MSAL cache for this special case
+          try {
+            // Try to clear any existing accounts first
+            const existingAccounts = instance.getAllAccounts();
+            if (existingAccounts.length > 0) {
+              console.log(`### DIRECT DEBUG ### Found ${existingAccounts.length} accounts before sign-in, clearing cache`);
+            }
+            
+            // Clear session storage to ensure a clean state
+            Object.keys(sessionStorage).forEach(key => {
+              if (key.startsWith('msal.') || key.includes('login.') || key.includes('authority')) {
+                try {
+                  sessionStorage.removeItem(key);
+                } catch (e) {
+                  console.error(`### DIRECT DEBUG ### Error clearing session storage item: ${key}`, e);
+                }
+              }
+            });
+            
+            // Clear sign-out flags after using them
+            window.sessionStorage.removeItem('quodsi_just_signed_out');
+            window.sessionStorage.removeItem('quodsi_signout_time');
+          } catch (e) {
+            console.error('### DIRECT DEBUG ### Error clearing cache:', e);
+          }
+        }
+        
+        // Login with popup using MSAL - make sure authority is included
+        const authRequest = {
+          ...loginRequest,
+          authority: b2cPolicies.authorities.signUpSignIn.authority,
+          prompt: 'login'
+        };
+        
+        console.log('### DIRECT DEBUG ### Login request:', {
+          scopes: authRequest.scopes,
+          authority: authRequest.authority,
+          prompt: authRequest.prompt
+        });
+        
+        const result = await instance.loginPopup(authRequest);
         console.log('### DIRECT DEBUG ### MSAL login successful, result:', result ? 'Success' : 'No result');
         
         if (result) {
@@ -153,7 +202,39 @@ export const AuthPanel: React.FC = () => {
             console.log('### DIRECT DEBUG ### Sending login success message with user:', user);
             login(result.idToken, user, newUser);
           } else {
-            console.log('### DIRECT DEBUG ### No active account found after login');
+            console.log('### DIRECT DEBUG ### No active account found after login, attempting recovery');
+            
+            // Recovery attempt 1: Look for any accounts in MSAL
+            const allAccounts = instance.getAllAccounts();
+            console.log('### DIRECT DEBUG ### Found', allAccounts.length, 'accounts');
+            
+            if (allAccounts.length > 0) {
+              // Use the first account we find
+              const recoveredAccount = allAccounts[0];
+              console.log('### DIRECT DEBUG ### Using recovered account:', recoveredAccount.username);
+              
+              // Create user info from recovered account
+              const user: QuodsiUserInfo = {
+                id: recoveredAccount.localAccountId,
+                email: recoveredAccount.username,
+                displayName: recoveredAccount.name
+              };
+              
+              // Try to set this as the active account
+              try {
+                instance.setActiveAccount(recoveredAccount);
+                console.log('### DIRECT DEBUG ### Set active account successfully');
+              } catch (setActiveError) {
+                console.warn('### DIRECT DEBUG ### Failed to set active account:', setActiveError);
+              }
+              
+              // Send login success message with the recovered account
+              console.log('### DIRECT DEBUG ### Sending login success message with recovered user');
+              login(result.idToken, user, false);
+            } else {
+              // If recovery failed, throw an error to be caught by the catch block
+              throw new Error('No active account found after login and recovery attempts failed');
+            }
           }
         }
       }
@@ -184,6 +265,15 @@ export const AuthPanel: React.FC = () => {
         // Just send the logout message directly
         logout();
       } else {
+        // Set a flag to remember that we just signed out
+        // This will help us handle the sign-in-after-sign-out case better
+        try {
+          window.sessionStorage.setItem('quodsi_just_signed_out', 'true');
+          window.sessionStorage.setItem('quodsi_signout_time', Date.now().toString());
+        } catch (e) {
+          console.error('### DIRECT DEBUG ### Error setting sign-out flags:', e);
+        }
+        
         // Production mode - Use real MSAL logout
         console.log('### DIRECT DEBUG ### Using production mode logout with MSAL');
         // Sign out of MSAL

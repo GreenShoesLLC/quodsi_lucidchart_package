@@ -73,11 +73,10 @@ export class AuthHandler {
     // TODO: Sync with backend using the idToken
     console.info('[AuthHandler] Login successful. New user?', data.newUser);
     
-    // Add a small delay before broadcasting to allow panel registration to complete
-    setTimeout(() => {
-      console.info('[AuthHandler] Delayed broadcast of auth status after registration update');
-      router.broadcastAuthStatus();
-    }, 100);
+    // Broadcast the auth status immediately instead of using setTimeout
+    // This is safer in environments where setTimeout may not be available
+    console.info('[AuthHandler] Broadcasting auth status after login');
+    router.broadcastAuthStatus();
     
     return true;
   }

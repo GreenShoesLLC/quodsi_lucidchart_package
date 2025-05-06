@@ -19,6 +19,7 @@ interface AuthContextType {
   handleEditProfile: () => Promise<void>;
   getAccessToken: () => Promise<string | null>;
   syncUserWithFastApi: () => Promise<UserSyncResponse | null>;
+  forceUpdateAuthState: (isAuth: boolean, userInfo: { name: string; email: string } | null) => void;
 }
 
 // Create the context with a default value
@@ -33,6 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   handleEditProfile: async () => {},
   getAccessToken: async () => null,
   syncUserWithFastApi: async () => null,
+  forceUpdateAuthState: () => {},
 });
 
 // Inner provider that uses the MSAL hook
@@ -41,13 +43,33 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const auth = useAuthentication();
   const { instance } = useMsal();
   
-  // For debugging
+  // For debugging and state synchronization
   useEffect(() => {
     console.log("[AuthProvider] Current auth state:", {
       isAuthenticated: auth.isAuthenticated,
       hasUserInfo: !!auth.userInfo,
+      msalAccountsCount: instance.getAllAccounts().length,
     });
-  }, [auth.isAuthenticated, auth.userInfo]);
+    
+    // This is a critical fix: ensure auth state is always in sync with MSAL
+    // Sometimes MSAL internal state and our React state can get out of sync
+    const accounts = instance.getAllAccounts();
+    const hasAccounts = accounts.length > 0;
+    
+    // If we have a mismatch between auth state and MSAL accounts, force resync
+    if (hasAccounts && !auth.isAuthenticated) {
+      console.log("[AuthProvider] Detected mismatch: MSAL has account but auth state is not authenticated. Fixing...");
+      // We have an account but aren't showing as authenticated - fix it
+      const account = accounts[0];
+      const userInfo = { name: account.name || account.username, email: account.username };
+      // Force update the auth state
+      auth.forceUpdateAuthState(true, userInfo);
+    } else if (!hasAccounts && auth.isAuthenticated) {
+      console.log("[AuthProvider] Detected mismatch: Auth state is authenticated but MSAL has no accounts. Fixing...");
+      // We're showing as authenticated but have no account - fix it
+      auth.forceUpdateAuthState(false, null);
+    }
+  }, [auth.isAuthenticated, auth.userInfo, instance, auth.forceUpdateAuthState]);
   // Initialize API service with the token getter
   useEffect(() => {
     try {
@@ -82,6 +104,7 @@ const InnerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         handleEditProfile: auth.handleEditProfile,
         getAccessToken: auth.getAccessToken,
         syncUserWithFastApi: auth.syncUserWithFastApi,
+        forceUpdateAuthState: auth.forceUpdateAuthState,
       }}
     >
       {children}
