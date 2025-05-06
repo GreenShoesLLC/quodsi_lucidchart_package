@@ -1,14 +1,14 @@
 // src/services/messageHandlers/action/index.ts
-import { MessageHandler } from '../messageHandlers';
+import { MessageHandler } from '../../../_deprecated/messageHandlers';
 import {
     actionRequestHandler,
     handleActionRequest,
     sendActionRequest
-} from './actionRequestHandlers';
+} from '../../../_deprecated/actionRequestHandlers';
 import {
     actionResponseHandler,
     handleActionResponse
-} from './actionResponseHandlers';
+} from '../../../_deprecated/actionResponseHandlers';
 import { MessageTypes } from '@quodsi/shared';
 
 /**

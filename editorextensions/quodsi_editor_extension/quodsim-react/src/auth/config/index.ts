@@ -12,7 +12,7 @@ export {
   isInIframe,
   getCacheSettings,
   getLoggerOptions
-} from './msalConfig';
+} from '../../_deprecated/msalConfig';
 
 // Authentication Policies
 export {
@@ -24,7 +24,7 @@ export {
   loginRequest,
   passwordResetRequest,
   profileEditRequest
-} from './authPolicies';
+} from '../../_deprecated/authPolicies';
 
 // Session Configuration
 export {
@@ -32,7 +32,7 @@ export {
   TOKEN_REFRESH_BUFFER_MS,
   SESSION_CHECK_INTERVAL_MS,
   SESSION_STORAGE_KEYS
-} from './sessionConfig';
+} from '../../_deprecated/sessionConfig';
 
 // API Configuration
 export {

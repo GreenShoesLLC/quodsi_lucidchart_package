@@ -5,7 +5,7 @@
  */
 
 import { authApiConfig } from '../auth/config';
-import { authErrorHandler } from './AuthErrorHandler';
+import { authErrorHandler } from '../_deprecated/AuthErrorHandler';
 import { ComponentLogger } from '@quodsi/shared';
 
 // Define a constant for the logger prefix
@@ -106,24 +106,24 @@ export class UserSyncService {
         ComponentLogger.error(LOG_PREFIX, 'Invalid token format - does not appear to be a valid JWT');
         return null;
       }
-      
+
       // Extract and validate token payload
       try {
         const tokenPayload = JSON.parse(atob(tokenParts[1]));
-        
+
         // Check for critical token properties
         if (!tokenPayload.exp || !tokenPayload.aud || !tokenPayload.iss) {
           ComponentLogger.error(LOG_PREFIX, 'Token missing critical properties (exp, aud, or iss)');
           return null;
         }
-        
+
         // Check if token is expired
         const now = Math.floor(Date.now() / 1000); // Current time in seconds
         if (tokenPayload.exp && tokenPayload.exp < now) {
           ComponentLogger.error(LOG_PREFIX, 'Token is expired - cannot use for sync');
           return null;
         }
-        
+
         // Log token payload with sensitive data redacted
         ComponentLogger.log(LOG_PREFIX, 'Token payload (redacted):', {
           aud: tokenPayload.aud,
@@ -206,7 +206,7 @@ export class UserSyncService {
 
     try {
       ComponentLogger.log(LOG_PREFIX, 'Getting user profile from quodsi-fastapi');
-      
+
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.userProfile}`,
         {
@@ -246,10 +246,10 @@ export class UserSyncService {
 
     try {
       ComponentLogger.log(LOG_PREFIX, 'Creating user session');
-      
+
       // Create a client info string instead of an object
       const clientInfo = `User-Agent: ${navigator.userAgent}, Platform: lucidchart_extension`;
-      
+
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.createSession}`,
         {
@@ -292,7 +292,7 @@ export class UserSyncService {
 
     try {
       ComponentLogger.log(LOG_PREFIX, 'Updating user session activity');
-      
+
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.updateSession}/${sessionId}`,
         {
@@ -331,7 +331,7 @@ export class UserSyncService {
 
     try {
       ComponentLogger.log(LOG_PREFIX, 'Ending user session');
-      
+
       const response = await fetch(
         `${this.baseUrl}${authApiConfig.endpoints.endSession}/${sessionId}`,
         {

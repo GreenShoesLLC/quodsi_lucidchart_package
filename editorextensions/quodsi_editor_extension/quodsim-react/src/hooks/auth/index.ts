@@ -4,8 +4,8 @@
  * Exports all specialized authentication hooks for easy import
  */
 
-export * from './useAuthState';
-export * from './useTokenManager';
-export * from './useAuthOperations';
-export * from './useAuthSession';
-export * from './useBackendSync';
+export * from '../../_deprecated/useAuthState';
+export * from '../../_deprecated/useTokenManager';
+export * from '../../_deprecated/useAuthOperations';
+export * from '../../_deprecated/useAuthSession';
+export * from '../../_deprecated/useBackendSync';
