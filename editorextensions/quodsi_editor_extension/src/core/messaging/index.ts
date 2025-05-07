@@ -1,7 +1,10 @@
 // Export the router singleton
-import { MessageRouter } from './RouterCore';
-export { MessageRouter } from './RouterCore';
-export { PanelRole } from './RouterTypes';
+
+import { MessageRouter } from './MessageRouter';
+export { MessageRouter } from './MessageRouter';
+
+// Export types from the new location
+export { PanelRole, Channel, AuthState, SubscriptionState, LogEntry } from './types';
 export { RoutablePanel } from './RoutablePanel';
 
 // Re-export handlers for direct access

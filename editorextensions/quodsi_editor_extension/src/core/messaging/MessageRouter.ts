@@ -7,7 +7,7 @@ import {
   SubscriptionStatus,
   QuodsiUserInfo
 } from '@quodsi/shared';
-import { PanelRole, LogEntry } from './RouterTypes';
+import { PanelRole, LogEntry } from './types';
 import { ChannelManager } from './ChannelManager';
 import { RouterState } from './RouterState';
 import { RoutablePanel } from './RoutablePanel';

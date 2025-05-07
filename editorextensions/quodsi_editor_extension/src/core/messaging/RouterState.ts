@@ -1,4 +1,4 @@
-import { AuthState, SubscriptionState } from './RouterTypes';
+import { AuthState, SubscriptionState } from './types';
 
 /**
  * Manages application state within the router
