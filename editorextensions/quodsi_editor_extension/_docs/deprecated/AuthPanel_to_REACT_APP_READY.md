@@ -266,7 +266,7 @@ return (
   <div className="flex flex-col h-screen">
     {state.error && <ErrorDisplay error={state.error} />}
 
-    {isLoading ? (
+    {silentAuthInProgress ? (
       // Show a loading spinner while initializing
       <ProcessingIndicator message="Initializing Quodsi..." fullScreen={true} />
     ) : state.panelType === "auth" ? (

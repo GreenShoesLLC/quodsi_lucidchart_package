@@ -16,7 +16,7 @@ export function useMessageListenerEffect(
   hasSentReadyRef: React.MutableRefObject<boolean>,
   processedMessageIds: React.MutableRefObject<Set<string>>,
   authInitializedRef: React.MutableRefObject<boolean>,
-  authLoadingCycleCompletedRef: React.MutableRefObject<boolean>
+  silentAuthCheckCompletedRef: React.MutableRefObject<boolean>
 ) {
   useEffect(() => {
     const handleMessage = createMessageHandler(state, dispatch, processedMessageIds, sendMessage, ensureAuthState);
@@ -29,7 +29,7 @@ export function useMessageListenerEffect(
     if (
       state.app.initialized && 
       state.app.panelType && 
-      !state.auth.isLoading && 
+      !state.auth.silentAuthInProgress && 
       !hasSentReadyRef.current
     ) {
       // Check for valid auth in localStorage
@@ -39,7 +39,7 @@ export function useMessageListenerEffect(
       logger.log("All conditions met for sending REACT_APP_READY in listener:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
-        authLoading: state.auth.isLoading,
+        authLoading: state.auth.silentAuthInProgress,
         isAuthenticated: isAuthenticated,
         hasUserInfo: !!userInfo
       });
@@ -63,8 +63,8 @@ export function useMessageListenerEffect(
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
         authInitialized: authInitializedRef.current,
-        authLoadingCycleCompleted: authLoadingCycleCompletedRef.current,
-        authLoading: state.auth.isLoading,
+        authLoadingCycleCompleted: silentAuthCheckCompletedRef.current,
+        authLoading: state.auth.silentAuthInProgress,
         authLastUpdated: state.auth.lastUpdated ? new Date(state.auth.lastUpdated).toISOString() : 'not set',
         isAuthenticated: state.auth.isAuthenticated
       });
@@ -74,8 +74,8 @@ export function useMessageListenerEffect(
         if (!authInitializedRef.current) {
           console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: authInitializedRef is false");
         }
-        if (!authLoadingCycleCompletedRef.current) {
-          console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: authLoadingCycleCompletedRef is false");
+        if (!silentAuthCheckCompletedRef.current) {
+          console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: silentAuthCheckCompletedRef is false");
         }
         if (!state.auth.lastUpdated) {
           console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: lastUpdated is not set");
@@ -95,6 +95,6 @@ export function useMessageListenerEffect(
     hasSentReadyRef,
     processedMessageIds,
     authInitializedRef,
-    authLoadingCycleCompletedRef
+    silentAuthCheckCompletedRef
   ]);
 }

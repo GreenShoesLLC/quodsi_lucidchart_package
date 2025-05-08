@@ -68,7 +68,7 @@ function UserProfile() {
     // State
     isAuthenticated,
     userInfo,
-    isLoading,
+    silentAuthInProgress,
     error,
     
     // Actions
@@ -76,7 +76,7 @@ function UserProfile() {
     login
   } = useAuthState();
   
-  if (isLoading) {
+  if (silentAuthInProgress) {
     return <div>Loading...</div>;
   }
   
@@ -194,7 +194,7 @@ import { MessageProvider } from '../MessageProvider';
 const mockState = {
   auth: {
     isAuthenticated: false,
-    isLoading: false
+    silentAuthInProgress: false
   }
 };
 
@@ -210,7 +210,7 @@ test('useAuthState combines state and actions', () => {
   
   // Check initial state
   expect(result.current.isAuthenticated).toBe(false);
-  expect(result.current.isLoading).toBe(false);
+  expect(result.current.silentAuthInProgress).toBe(false);
   expect(typeof result.current.logout).toBe('function');
   
   // Test action

@@ -39,22 +39,22 @@ When LucidChart loads the panel, it creates an iframe with the URL specified abo
 The entry point is `index.tsx`, which:
 
 1. Initializes the messaging system
-2. Identifies the panel type from URL parameters 
+2. Identifies the panel type from URL parameters
 3. Creates the React root and renders the main application component
 
 ```typescript
 // In index.tsx
-const rootElement = document.getElementById('root');
+const rootElement = document.getElementById("root");
 
 // Determine the panel type from URL for direct initialization
 const urlParams = new URLSearchParams(window.location.search);
-const panelType = urlParams.get('panel') === 'auth' ? 'auth' : 'model';
+const panelType = urlParams.get("panel") === "auth" ? "auth" : "model";
 
 // Use the createRoot API
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App_new panelType={panelType as 'auth' | 'model'} />
+    <App_new panelType={panelType as "auth" | "model"} />
   </React.StrictMode>
 );
 ```
@@ -79,6 +79,7 @@ return (
 ```
 
 Key components of the authentication setup:
+
 - Uses the official `MsalProvider` component from `@azure/msal-react`
 - Creates MSAL instance with `PublicClientApplication(msalConfig)`
 - Sets up the message provider for app-wide state management
@@ -95,33 +96,61 @@ export const MessageProvider: React.FC<MessageProviderProps> = ({
 }) => {
   // Initialize state with reducer
   const [state, dispatch] = useReducer(messagingReducer, initialState);
-  
+
   // Initialize refs for tracking state
   const hasSentReadyRef = useRef(false);
   const authInitializedRef = useRef(false);
-  const authLoadingCycleCompletedRef = useRef(false);
-  
+  const silentAuthCheckCompletedRef = useRef(false);
+
   // Initialize hooks
   const { ensureAuthState } = useAuthState({ auth }, dispatch);
   const sendMessage = useSendMessage(state, dispatch);
-  
+
   // Initialize silent auth
   useSilentAuth();
-  
+
   // Initialize effects for various aspects of the system
   useInitialAuthCheckEffect(ensureAuthState);
   useAuthInitializationEffect(state, authInitializedRef);
-  useAuthLoadingCycleEffect(state, authLoadingCycleCompletedRef);
-  useAuthStateChangeEffect(state, ensureAuthState, authInitializedRef, authLoadingCycleCompletedRef);
+  useSilentAuthCompletionEffect(state, silentAuthCheckCompletedRef);
+  useAuthStateChangeEffect(
+    state,
+    ensureAuthState,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
   usePanelTypeDetectionEffect(state, dispatch, initialPanelType);
-  
+
   // Effects responsible for REACT_APP_READY message
-  useReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
-  useEmergencyReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
-  
+  useReactAppReadyEffect(
+    state,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+  useEmergencyReactAppReadyEffect(
+    state,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+
   // Message listener effect
-  useMessageListenerEffect(state, dispatch, sendMessage, ensureAuthState, hasSentReadyRef, processedMessageIds, authInitializedRef, authLoadingCycleCompletedRef);
-  
+  useMessageListenerEffect(
+    state,
+    dispatch,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    processedMessageIds,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+
   // Return the provider component with context
   return (
     <MessagingContext.Provider value={{ ...state, sendMessage }}>
@@ -145,55 +174,57 @@ export function useSilentAuth(): void {
   const { instance, accounts, inProgress } = useMsal();
   const dispatch = useMessagingDispatch();
   const { auth } = useMessaging();
-  
+
   useEffect(() => {
     // First check localStorage immediately as a first step
     const storedAuth = AuthStorageService.loadAuthState();
-    console.log('[REACT][useSilentAuth] Initial localStorage check:', {
+    console.log("[REACT][useSilentAuth] Initial localStorage check:", {
       isAuthStateValid: AuthStorageService.isAuthStateValid(),
       hasStoredAuth: !!storedAuth,
-      isAuthenticated: storedAuth?.isAuthenticated
+      isAuthenticated: storedAuth?.isAuthenticated,
     });
-    
+
     // If valid auth in localStorage, use it immediately
     if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
-      console.log('[REACT][useSilentAuth] Using valid auth from localStorage immediately');
+      console.log(
+        "[REACT][useSilentAuth] Using valid auth from localStorage immediately"
+      );
       dispatch({
-        type: 'AUTH_STATUS_UPDATE',
+        type: "AUTH_STATUS_UPDATE",
         isAuthenticated: true,
-        userInfo: storedAuth.userInfo
+        userInfo: storedAuth.userInfo,
       });
     }
-    
+
     // Mark authentication as loading
     dispatch({
-      type: 'AUTH_LOADING',
-      isLoading: true
+      type: "AUTH_LOADING",
+      silentAuthInProgress: true,
     });
-    
+
     // When MSAL is initialized, attempt silent authentication
-    if (inProgress === 'none') {
+    if (inProgress === "none") {
       const attemptSilentAuth = async () => {
         try {
           // Check if we have any accounts in MSAL cache
           if (accounts.length > 0) {
             const account = accounts[0];
-            
+
             // Set active account and create user info
             instance.setActiveAccount(account);
             const userInfo = {
               id: account.localAccountId,
               email: account.username,
-              displayName: account.name || account.username
+              displayName: account.name || account.username,
             };
-            
+
             // Update auth state and save to localStorage
             dispatch({
-              type: 'AUTH_STATUS_UPDATE',
+              type: "AUTH_STATUS_UPDATE",
               isAuthenticated: true,
-              userInfo
+              userInfo,
             });
-            
+
             // Save to localStorage
             AuthStorageService.saveAuthState(true, userInfo);
           } else {
@@ -201,9 +232,9 @@ export function useSilentAuth(): void {
             // If no accounts were found, update state accordingly
             if (!storedAuth || !storedAuth.isAuthenticated) {
               dispatch({
-                type: 'AUTH_STATUS_UPDATE',
+                type: "AUTH_STATUS_UPDATE",
                 isAuthenticated: false,
-                userInfo: undefined
+                userInfo: undefined,
               });
             }
           }
@@ -212,20 +243,20 @@ export function useSilentAuth(): void {
         } finally {
           // Always mark auth as no longer loading when complete
           dispatch({
-            type: 'AUTH_LOADING',
-            isLoading: false
+            type: "AUTH_LOADING",
+            silentAuthInProgress: false,
           });
-          
+
           // Final AUTH_STATUS_UPDATE to ensure lastUpdated is set
           // The reducer will automatically set lastUpdated
           dispatch({
-            type: 'AUTH_STATUS_UPDATE',
+            type: "AUTH_STATUS_UPDATE",
             isAuthenticated: auth.isAuthenticated || false,
-            userInfo: auth.userInfo
+            userInfo: auth.userInfo,
           });
         }
       };
-      
+
       attemptSilentAuth();
     }
   }, [inProgress, accounts, dispatch, instance, auth]);
@@ -248,30 +279,30 @@ export function useAuthState(
     try {
       const storedAuth = AuthStorageService.loadAuthState();
       if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
-        logger.log('Found valid auth in localStorage');
-        
+        logger.log("Found valid auth in localStorage");
+
         if (!state.auth.isAuthenticated) {
-          logger.log('Forcing local state authentication from localStorage');
-          
+          logger.log("Forcing local state authentication from localStorage");
+
           dispatch({
-            type: 'AUTH_STATUS_UPDATE',
+            type: "AUTH_STATUS_UPDATE",
             isAuthenticated: true,
-            userInfo: storedAuth.userInfo
+            userInfo: storedAuth.userInfo,
           });
         }
-        
+
         return { isAuthenticated: true, userInfo: storedAuth.userInfo };
       }
     } catch (e) {
-      logger.error('Error checking localStorage:', e);
+      logger.error("Error checking localStorage:", e);
     }
-    
-    return { 
-      isAuthenticated: state.auth.isAuthenticated, 
-      userInfo: state.auth.userInfo 
+
+    return {
+      isAuthenticated: state.auth.isAuthenticated,
+      userInfo: state.auth.userInfo,
     };
   }, [state.auth.isAuthenticated, state.auth.userInfo, dispatch]);
-  
+
   return { ensureAuthState };
 }
 ```
@@ -288,42 +319,45 @@ export const useAuthPanelState = () => {
   const { auth } = useMessaging();
   const dispatch = useMessagingDispatch();
   const { ensureAuthState } = useAuthStateBase({ auth }, dispatch);
-  const sendMessage = useSendMessage({ app: { panelType: 'auth' } }, dispatch);
-  
+  const sendMessage = useSendMessage({ app: { panelType: "auth" } }, dispatch);
+
   // Extract auth state from the messaging context
-  const { isAuthenticated, userInfo, isLoading, error } = auth;
-  
+  const { isAuthenticated, userInfo, silentAuthInProgress, error } = auth;
+
   // Function to handle login
-  const login = useCallback((idToken: string, user: any, isNewUser: boolean) => {
-    // Save auth state to localStorage
-    AuthStorageService.saveAuthState(true, user);
-    
-    // Update local state
-    dispatch({
-      type: 'AUTH_STATUS_UPDATE',
-      isAuthenticated: true,
-      userInfo: user
-    });
-    
-    // Send message to host
-    sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
-      idToken,
-      user,
-      newUser: isNewUser
-    });
-  }, [dispatch, sendMessage]);
-  
+  const login = useCallback(
+    (idToken: string, user: any, isNewUser: boolean) => {
+      // Save auth state to localStorage
+      AuthStorageService.saveAuthState(true, user);
+
+      // Update local state
+      dispatch({
+        type: "AUTH_STATUS_UPDATE",
+        isAuthenticated: true,
+        userInfo: user,
+      });
+
+      // Send message to host
+      sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
+        idToken,
+        user,
+        newUser: isNewUser,
+      });
+    },
+    [dispatch, sendMessage]
+  );
+
   // Additional functions for logout, sync, etc.
-  
+
   return {
     isAuthenticated,
     userInfo,
-    isLoading,
+    silentAuthInProgress,
     error,
     login,
     logout,
     syncAuthStateNow,
-    ensureAuthState
+    ensureAuthState,
   };
 };
 ```
@@ -344,44 +378,52 @@ export function useReactAppReadyEffect(
   ensureAuthState,
   hasSentReadyRef,
   authInitializedRef,
-  authLoadingCycleCompletedRef
+  silentAuthCheckCompletedRef
 ) {
-  useEffect(() => {
-    if (
-      !hasSentReadyRef.current && 
-      state.app.initialized && 
-      state.app.panelType && 
-      !state.auth.isLoading
-    ) {
-      // Check for valid auth in localStorage
-      const { isAuthenticated, userInfo } = ensureAuthState();
-      
-      // Force necessary flags if conditions are met
-      if (!authInitializedRef.current && state.auth.lastUpdated) {
-        authInitializedRef.current = true;
-      }
-      
-      if (!authLoadingCycleCompletedRef.current && !state.auth.isLoading) {
-        authLoadingCycleCompletedRef.current = true;
-      }
-      
-      // Send REACT_APP_READY message when all conditions are met
+  useEffect(
+    () => {
       if (
-        state.app.initialized && 
-        state.app.panelType && 
-        !state.auth.isLoading && 
-        !hasSentReadyRef.current
+        !hasSentReadyRef.current &&
+        state.app.initialized &&
+        state.app.panelType &&
+        !state.auth.silentAuthInProgress
       ) {
-        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-          panel: state.app.panelType,
-          isAuthenticated: isAuthenticated,
-          user: userInfo,
-        });
-        
-        hasSentReadyRef.current = true;
+        // Check for valid auth in localStorage
+        const { isAuthenticated, userInfo } = ensureAuthState();
+
+        // Force necessary flags if conditions are met
+        if (!authInitializedRef.current && state.auth.lastUpdated) {
+          authInitializedRef.current = true;
+        }
+
+        if (
+          !silentAuthCheckCompletedRef.current &&
+          !state.auth.silentAuthInProgress
+        ) {
+          silentAuthCheckCompletedRef.current = true;
+        }
+
+        // Send REACT_APP_READY message when all conditions are met
+        if (
+          state.app.initialized &&
+          state.app.panelType &&
+          !state.auth.silentAuthInProgress &&
+          !hasSentReadyRef.current
+        ) {
+          sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+            panel: state.app.panelType,
+            isAuthenticated: isAuthenticated,
+            user: userInfo,
+          });
+
+          hasSentReadyRef.current = true;
+        }
       }
-    }
-  }, [/* dependencies */]);
+    },
+    [
+      /* dependencies */
+    ]
+  );
 }
 ```
 
@@ -395,31 +437,40 @@ export function useEmergencyReactAppReadyEffect(
   ensureAuthState,
   hasSentReadyRef,
   authInitializedRef,
-  authLoadingCycleCompletedRef
+  silentAuthCheckCompletedRef
 ) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!hasSentReadyRef.current && state.app.initialized && state.app.panelType) {
-        // Force refs to true
-        authInitializedRef.current = true;
-        authLoadingCycleCompletedRef.current = true;
-        
-        // Get auth state from localStorage
-        const { isAuthenticated, userInfo } = ensureAuthState();
-        
-        // Force send REACT_APP_READY
-        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-          panel: state.app.panelType,
-          isAuthenticated: isAuthenticated,
-          user: userInfo,
-        });
-        
-        hasSentReadyRef.current = true;
-      }
-    }, 3000); // 3 second timer
-    
-    return () => clearTimeout(timer);
-  }, [/* dependencies */]);
+  useEffect(
+    () => {
+      const timer = setTimeout(() => {
+        if (
+          !hasSentReadyRef.current &&
+          state.app.initialized &&
+          state.app.panelType
+        ) {
+          // Force refs to true
+          authInitializedRef.current = true;
+          silentAuthCheckCompletedRef.current = true;
+
+          // Get auth state from localStorage
+          const { isAuthenticated, userInfo } = ensureAuthState();
+
+          // Force send REACT_APP_READY
+          sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+            panel: state.app.panelType,
+            isAuthenticated: isAuthenticated,
+            user: userInfo,
+          });
+
+          hasSentReadyRef.current = true;
+        }
+      }, 3000); // 3 second timer
+
+      return () => clearTimeout(timer);
+    },
+    [
+      /* dependencies */
+    ]
+  );
 }
 ```
 
@@ -434,23 +485,23 @@ When the React application sends the `REACT_APP_READY` message, the ContentDockP
 private handleReactAppReady(msg: EnvelopeBase): void {
     const data = msg.data as any;
     const role = data.panel as PanelRole;
-    
+
     if (!role) {
         this.logDebug(`Invalid panel role in REACT_APP_READY`);
         return;
     }
-    
+
     console.log(`[EXT][MessageRouter] Marking channel ${role} as ready`);
-    
+
     // If we have a panel reference in the message, register it
     if ((msg as any)._panelRef) {
         console.log(`[EXT][MessageRouter] Registering panel from REACT_APP_READY message for ${role}`);
         this.registerChannel(role, (msg as any)._panelRef);
     }
-    
+
     // Mark channel as ready
     this.channelManager.markChannelReady(role);
-    
+
     // Update auth state if provided
     if (data.isAuthenticated !== undefined) {
         this.state.updateAuthState({
@@ -458,10 +509,10 @@ private handleReactAppReady(msg: EnvelopeBase): void {
             user: data.user
         });
     }
-    
+
     // Flush queued messages
     this.channelManager.flushQueue(role);
-    
+
     // Send current auth and subscription state
     this.sendAuthStatus(role);
     this.sendSubscriptionStatus(role);
@@ -550,22 +601,26 @@ These mechanisms work together to ensure that the panel initializes correctly in
 ## Benefits of the Modular Implementation
 
 1. **Separation of Concerns**:
+
    - Each module has a clear, single responsibility
    - Hooks handle state management
    - Effects handle side effects
    - Handlers process messages
 
 2. **Improved Maintainability**:
+
    - Smaller, focused files are easier to understand and modify
    - Clear dependencies between modules
    - Better organization of related functionality
 
 3. **Enhanced Reliability**:
+
    - Multiple layers of protection against edge cases
    - Better error handling and recovery
    - Clear initialization sequence
 
 4. **Better Testability**:
+
    - Individual modules can be tested in isolation
    - Easier to mock dependencies
    - More focused unit tests

@@ -897,7 +897,7 @@ export class ModelPanel extends Panel {
                     });
 
                     // Also send a base selection message to properly update React's state
-                    // This ensures isLoading is set to false by giving React a selection state
+                    // This ensures silentAuthInProgress is set to false by giving React a selection state
                     this.sendTypedMessage(MessageTypes.SELECTION_CHANGED, {
                         selectionType: SelectionType.NONE,
                         documentId: new DocumentProxy(this.client).id,

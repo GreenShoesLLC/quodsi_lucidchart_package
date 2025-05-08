@@ -27,9 +27,9 @@ constructor(client: EditorClient, modelManager: ModelManager) {
         iconUrl: 'https://lucid.app/favicon.ico',
         width: 300
     });
-    
+
     this.modelManager = modelManager;
-    
+
     // Enable logging for RightDockPanel by default for easier debugging
     this.loggingEnabled = true;
 }
@@ -44,22 +44,22 @@ When LucidChart loads the panel, it creates an iframe with the URL specified abo
 The entry point is `index.tsx`, which:
 
 1. Initializes the messaging system
-2. Identifies the panel type from URL parameters 
+2. Identifies the panel type from URL parameters
 3. Creates the React root and renders the main application component
 
 ```typescript
 // In index.tsx
-const rootElement = document.getElementById('root');
+const rootElement = document.getElementById("root");
 
 // Determine the panel type from URL for direct initialization
 const urlParams = new URLSearchParams(window.location.search);
-const panelType = urlParams.get('panel') === 'auth' ? 'auth' : 'model';
+const panelType = urlParams.get("panel") === "auth" ? "auth" : "model";
 
 // Use the createRoot API
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App_new panelType={panelType as 'auth' | 'model'} />
+    <App_new panelType={panelType as "auth" | "model"} />
   </React.StrictMode>
 );
 ```
@@ -84,6 +84,7 @@ return (
 ```
 
 Key components of the authentication setup:
+
 - Uses the official `MsalProvider` component from `@azure/msal-react`
 - Creates MSAL instance with `PublicClientApplication(msalConfig)`
 - Sets up the message provider for app-wide state management
@@ -100,27 +101,50 @@ export const MessageProvider: React.FC<MessageProviderProps> = ({
 }) => {
   // Initialize state with reducer
   const [state, dispatch] = useReducer(messagingReducer, initialState);
-  
+
   // Initialize refs for tracking state
   const hasSentReadyRef = useRef(false);
   const authInitializedRef = useRef(false);
-  const authLoadingCycleCompletedRef = useRef(false);
-  
+  const silentAuthCheckCompletedRef = useRef(false);
+
   // Initialize hooks
   const { ensureAuthState } = useAuthState({ auth }, dispatch);
   const sendMessage = useSendMessage(state, dispatch);
-  
+
   // Initialize silent auth
   useSilentAuth();
-  
+
   // Initialize effects for various aspects of the system
   useInitialAuthCheckEffect(ensureAuthState);
   useAuthInitializationEffect(state, authInitializedRef);
-  useAuthLoadingCycleEffect(state, authLoadingCycleCompletedRef);
-  useReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
-  useEmergencyReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
-  useMessageListenerEffect(state, dispatch, sendMessage, ensureAuthState, hasSentReadyRef, processedMessageIds, authInitializedRef, authLoadingCycleCompletedRef);
-  
+  useSilentAuthCompletionEffect(state, silentAuthCheckCompletedRef);
+  useReactAppReadyEffect(
+    state,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+  useEmergencyReactAppReadyEffect(
+    state,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+  useMessageListenerEffect(
+    state,
+    dispatch,
+    sendMessage,
+    ensureAuthState,
+    hasSentReadyRef,
+    processedMessageIds,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+
   // Return the provider component with context
   return (
     <MessagingContext.Provider value={{ ...state, sendMessage }}>
@@ -144,53 +168,57 @@ export function useSilentAuth(): void {
   const { instance, accounts, inProgress } = useMsal();
   const dispatch = useMessagingDispatch();
   const { auth } = useMessaging();
-  
+
   useEffect(() => {
     // Mark authentication as loading
     dispatch({
-      type: 'AUTH_LOADING',
-      isLoading: true
+      type: "AUTH_LOADING",
+      silentAuthInProgress: true,
     });
-    
+
     // When MSAL is initialized, attempt silent authentication
-    if (inProgress === 'none') {
+    if (inProgress === "none") {
       const attemptSilentAuth = async () => {
         try {
           // Check if we have any accounts in MSAL cache
           if (accounts.length > 0) {
             const account = accounts[0];
-            
+
             // Set active account
             instance.setActiveAccount(account);
-            
+
             // Create user info
             const userInfo = {
               id: account.localAccountId,
               email: account.username,
-              displayName: account.name || account.username
+              displayName: account.name || account.username,
             };
-            
+
             // Update auth state
             dispatch({
-              type: 'AUTH_STATUS_UPDATE',
+              type: "AUTH_STATUS_UPDATE",
               isAuthenticated: true,
-              userInfo
+              userInfo,
             });
           } else {
             // Check localStorage as fallback
             const storedAuth = AuthStorageService.loadAuthState();
-            
-            if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+
+            if (
+              storedAuth &&
+              storedAuth.isAuthenticated &&
+              storedAuth.userInfo
+            ) {
               dispatch({
-                type: 'AUTH_STATUS_UPDATE',
+                type: "AUTH_STATUS_UPDATE",
                 isAuthenticated: true,
-                userInfo: storedAuth.userInfo
+                userInfo: storedAuth.userInfo,
               });
             } else {
               dispatch({
-                type: 'AUTH_STATUS_UPDATE',
+                type: "AUTH_STATUS_UPDATE",
                 isAuthenticated: false,
-                userInfo: undefined
+                userInfo: undefined,
               });
             }
           }
@@ -199,19 +227,19 @@ export function useSilentAuth(): void {
         } finally {
           // Always mark auth as no longer loading when complete
           dispatch({
-            type: 'AUTH_LOADING',
-            isLoading: false
+            type: "AUTH_LOADING",
+            silentAuthInProgress: false,
           });
-          
+
           // Ensure the auth state has a lastUpdated timestamp
           dispatch({
-            type: 'AUTH_STATUS_UPDATE',
+            type: "AUTH_STATUS_UPDATE",
             isAuthenticated: auth.isAuthenticated || false,
-            userInfo: auth.userInfo
+            userInfo: auth.userInfo,
           });
         }
       };
-      
+
       attemptSilentAuth();
     }
   }, [inProgress, accounts, dispatch, instance, auth]);
@@ -234,32 +262,35 @@ export function useReactAppReadyEffect(
   ensureAuthState,
   hasSentReadyRef,
   authInitializedRef,
-  authLoadingCycleCompletedRef
+  silentAuthCheckCompletedRef
 ) {
   useEffect(() => {
     if (
-      !hasSentReadyRef.current && 
-      state.app.initialized && 
-      state.app.panelType && 
-      !state.auth.isLoading
+      !hasSentReadyRef.current &&
+      state.app.initialized &&
+      state.app.panelType &&
+      !state.auth.silentAuthInProgress
     ) {
       // Check for valid auth in localStorage
       const { isAuthenticated, userInfo } = ensureAuthState();
-      
+
       // Force necessary flags if conditions are met
       if (!authInitializedRef.current && state.auth.lastUpdated) {
         authInitializedRef.current = true;
       }
-      
-      if (!authLoadingCycleCompletedRef.current && !state.auth.isLoading) {
-        authLoadingCycleCompletedRef.current = true;
+
+      if (
+        !silentAuthCheckCompletedRef.current &&
+        !state.auth.silentAuthInProgress
+      ) {
+        silentAuthCheckCompletedRef.current = true;
       }
-      
+
       // Send REACT_APP_READY message when all conditions are met
       if (
-        state.app.initialized && 
-        state.app.panelType && 
-        !state.auth.isLoading && 
+        state.app.initialized &&
+        state.app.panelType &&
+        !state.auth.silentAuthInProgress &&
         !hasSentReadyRef.current
       ) {
         sendMessage(EnvelopeMessageType.REACT_APP_READY, {
@@ -267,11 +298,16 @@ export function useReactAppReadyEffect(
           isAuthenticated: isAuthenticated,
           user: userInfo,
         });
-        
+
         hasSentReadyRef.current = true;
       }
     }
-  }, [state.app.initialized, state.app.panelType, state.auth.lastUpdated, state.auth.isLoading, /* ... */]);
+  }, [
+    state.app.initialized,
+    state.app.panelType,
+    state.auth.lastUpdated,
+    state.auth.silentAuthInProgress /* ... */,
+  ]);
 }
 ```
 
@@ -285,31 +321,40 @@ export function useEmergencyReactAppReadyEffect(
   ensureAuthState,
   hasSentReadyRef,
   authInitializedRef,
-  authLoadingCycleCompletedRef
+  silentAuthCheckCompletedRef
 ) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!hasSentReadyRef.current && state.app.initialized && state.app.panelType) {
-        // Force refs to true
-        authInitializedRef.current = true;
-        authLoadingCycleCompletedRef.current = true;
-        
-        // Get auth state from localStorage
-        const { isAuthenticated, userInfo } = ensureAuthState();
-        
-        // Force send REACT_APP_READY
-        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-          panel: state.app.panelType,
-          isAuthenticated: isAuthenticated,
-          user: userInfo,
-        });
-        
-        hasSentReadyRef.current = true;
-      }
-    }, 3000); // 3 second timer
-    
-    return () => clearTimeout(timer);
-  }, [/* dependencies */]);
+  useEffect(
+    () => {
+      const timer = setTimeout(() => {
+        if (
+          !hasSentReadyRef.current &&
+          state.app.initialized &&
+          state.app.panelType
+        ) {
+          // Force refs to true
+          authInitializedRef.current = true;
+          silentAuthCheckCompletedRef.current = true;
+
+          // Get auth state from localStorage
+          const { isAuthenticated, userInfo } = ensureAuthState();
+
+          // Force send REACT_APP_READY
+          sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+            panel: state.app.panelType,
+            isAuthenticated: isAuthenticated,
+            user: userInfo,
+          });
+
+          hasSentReadyRef.current = true;
+        }
+      }, 3000); // 3 second timer
+
+      return () => clearTimeout(timer);
+    },
+    [
+      /* dependencies */
+    ]
+  );
 }
 ```
 
@@ -324,23 +369,23 @@ When the React application sends the `REACT_APP_READY` message, the RightDockPan
 private handleReactAppReady(msg: EnvelopeBase): void {
     const data = msg.data as any;
     const role = data.panel as PanelRole;
-    
+
     if (!role) {
         this.logDebug(`Invalid panel role in REACT_APP_READY`);
         return;
     }
-    
+
     console.log(`[EXT][MessageRouter] Marking channel ${role} as ready`);
-    
+
     // If we have a panel reference in the message, register it
     if ((msg as any)._panelRef) {
         console.log(`[EXT][MessageRouter] Registering panel from REACT_APP_READY message for ${role}`);
         this.registerChannel(role, (msg as any)._panelRef);
     }
-    
+
     // Mark channel as ready
     this.channelManager.markChannelReady(role);
-    
+
     // Update auth state if provided
     if (data.isAuthenticated !== undefined) {
         this.state.updateAuthState({
@@ -348,17 +393,17 @@ private handleReactAppReady(msg: EnvelopeBase): void {
             user: data.user
         });
     }
-    
+
     // Ensure the channel has a panel before flushing
     console.log(`[EXT][MessageRouter] Flushing queue for ${role}:`, {
         queueSize: this.channelManager.getChannel(role)?.queue.length,
         hasPanel: this.ensureChannelHasPanel(role),
         isReady: this.channelManager.isChannelReady(role)
     });
-    
+
     // Flush queued messages
     this.channelManager.flushQueue(role);
-    
+
     // Send current auth and subscription state
     this.sendAuthStatus(role);
     this.sendSubscriptionStatus(role);

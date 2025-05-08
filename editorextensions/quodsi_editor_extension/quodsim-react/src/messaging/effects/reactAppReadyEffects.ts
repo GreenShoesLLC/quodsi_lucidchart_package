@@ -6,11 +6,29 @@ const logger = debugService.forComponent('ReactAppReadyEffects');
 
 /**
  * Effect for normal REACT_APP_READY sending
+ * 
+ * Purpose:
+ * - Sends the REACT_APP_READY message to the extension host when conditions are met
+ * - This message indicates the React application is initialized and ready to receive messages
+ * - Ensures auth state is properly obtained before sending the message
+ * - Sets flags to prevent sending the message multiple times
+ * 
+ * Trigger Conditions (all must be true):
+ * - hasSentReadyRef.current is false (haven't sent the message yet)
+ * - state.app.initialized is true (app is initialized)
+ * - state.app.panelType is defined (panel type is determined)
+ * - state.auth.silentAuthInProgress is false (silent auth check completed)
+ * 
+ * Key Actions:
+ * - Calls ensureAuthState() to get the current auth state from localStorage
+ * - Force-sets authInitializedRef and silentAuthCheckCompletedRef if conditions are met
+ * - Sends REACT_APP_READY message with panel type and auth state
+ * - Sets hasSentReadyRef.current to true to prevent sending multiple times
  */
 export function useReactAppReadyEffect(
   state: { 
     app: { initialized: boolean; panelType?: 'auth' | 'model' }; 
-    auth: { isLoading: boolean; lastUpdated?: number; isAuthenticated: boolean; userInfo?: any } 
+    auth: { silentAuthInProgress: boolean; lastUpdated?: number; isAuthenticated: boolean; userInfo?: any } 
   },
   sendMessage: (type: EnvelopeMessageType, data?: any) => void,
   ensureAuthState: () => { isAuthenticated: boolean; userInfo: any },
@@ -24,7 +42,7 @@ export function useReactAppReadyEffect(
       !hasSentReadyRef.current && // Haven't sent it yet
       state.app.initialized && // App is initialized
       state.app.panelType && // Panel type is determined
-      !state.auth.isLoading // Auth is not loading
+      !state.auth.silentAuthInProgress // Auth is not loading
     ) {
       // Check for valid auth in localStorage
       const { isAuthenticated, userInfo } = ensureAuthState();
@@ -34,7 +52,7 @@ export function useReactAppReadyEffect(
         panelType: state.app.panelType,
         authInitialized: authInitializedRef.current,
         authLoadingCycleCompleted: authLoadingCycleCompletedRef.current,
-        authLoading: state.auth.isLoading,
+        authLoading: state.auth.silentAuthInProgress,
         isAuthenticated: isAuthenticated,
         hasUserInfo: !!userInfo
       });
@@ -45,7 +63,7 @@ export function useReactAppReadyEffect(
         authInitializedRef.current = true;
       }
       
-      if (!authLoadingCycleCompletedRef.current && !state.auth.isLoading && state.auth.lastUpdated) {
+      if (!authLoadingCycleCompletedRef.current && !state.auth.silentAuthInProgress && state.auth.lastUpdated) {
         console.log("[REACT][ReactAppReadyEffects] Force setting authLoadingCycleCompletedRef=true");
         authLoadingCycleCompletedRef.current = true;
       }
@@ -54,7 +72,7 @@ export function useReactAppReadyEffect(
       if (
         state.app.initialized && 
         state.app.panelType && 
-        !state.auth.isLoading && 
+        !state.auth.silentAuthInProgress && 
         !hasSentReadyRef.current
       ) {
         console.log("[REACT][ReactAppReadyEffects] *** ALL CONDITIONS MET FOR REACT_APP_READY! ***");
@@ -62,7 +80,7 @@ export function useReactAppReadyEffect(
           appInitialized: state.app.initialized,
           panelType: state.app.panelType,
           authInitialized: authInitializedRef.current,
-          authLoading: state.auth.isLoading,
+          authLoading: state.auth.silentAuthInProgress,
           isAuthenticated: isAuthenticated,
           hasUserInfo: !!userInfo
         });
@@ -87,7 +105,7 @@ export function useReactAppReadyEffect(
     state.app.initialized, 
     state.app.panelType, 
     state.auth.lastUpdated, 
-    state.auth.isLoading, 
+    state.auth.silentAuthInProgress, 
     state.auth.isAuthenticated, 
     state.auth.userInfo,
     sendMessage, 
@@ -104,7 +122,7 @@ export function useReactAppReadyEffect(
 export function useEmergencyReactAppReadyEffect(
   state: { 
     app: { initialized: boolean; panelType?: 'auth' | 'model' }; 
-    auth: { isLoading: boolean; isAuthenticated: boolean; userInfo?: any; lastUpdated?: number } 
+    auth: { silentAuthInProgress: boolean; isAuthenticated: boolean; userInfo?: any; lastUpdated?: number } 
   },
   sendMessage: (type: EnvelopeMessageType, data?: any) => void,
   ensureAuthState: () => { isAuthenticated: boolean; userInfo: any },
@@ -128,7 +146,7 @@ export function useEmergencyReactAppReadyEffect(
         console.log("[REACT][ReactAppReadyEffects] EMERGENCY check auth state:", {
           appInitialized: state.app.initialized,
           panelType: state.app.panelType,
-          authLoading: state.auth.isLoading,
+          authLoading: state.auth.silentAuthInProgress,
           isAuthenticated: isAuthenticated,
           hasUserInfo: !!userInfo,
           lastUpdated: state.auth.lastUpdated ? new Date(state.auth.lastUpdated).toISOString() : 'undefined'
@@ -153,7 +171,7 @@ export function useEmergencyReactAppReadyEffect(
   }, [
     state.app.initialized, 
     state.app.panelType,
-    state.auth.isLoading,
+    state.auth.silentAuthInProgress,
     state.auth.lastUpdated,
     state.auth.isAuthenticated,
     state.auth.userInfo,

@@ -25,7 +25,7 @@ import { QuodsiUserInfo } from './types';
  * 
  * @property isAuthenticated - Boolean flag indicating if user is authenticated
  * @property userInfo - Optional user profile information when authenticated
- * @property isLoading - Flag indicating authentication operations in progress
+ * @property silentAuthInProgress - Flag indicating authentication operations in progress
  *                      This is crucial for coordinating async auth operations
  *                      across the messaging system. The MessageProvider uses this
  *                      to know when auth initialization is complete.
@@ -36,7 +36,7 @@ import { QuodsiUserInfo } from './types';
 export interface AuthState {
   isAuthenticated: boolean;
   userInfo?: QuodsiUserInfo;
-  isLoading: boolean;
+  silentAuthInProgress: boolean;
   lastUpdated?: number;
   error?: string;
 }
@@ -45,18 +45,18 @@ export interface AuthState {
  * Initial Authentication State
  * 
  * Default starting state for the auth slice.
- * - isLoading begins as false, and is explicitly set to true when auth operations start
+ * - silentAuthInProgress begins as false, and is explicitly set to true when auth operations start
  * - isAuthenticated begins as false since no user is logged in initially
  * - All other fields are undefined until relevant auth operations occur
  * 
- * NOTE: The useSilentAuth hook will set isLoading to true immediately when it starts
+ * NOTE: The useSilentAuth hook will set silentAuthInProgress to true immediately when it starts
  * checking for existing authentication, and back to false when complete,
  * regardless of whether authentication was successful or not.
  */
 export const initialAuthState: AuthState = {
   isAuthenticated: false,
   userInfo: undefined,
-  isLoading: false, // Starting as not loading - will be set to true during auth operations
+  silentAuthInProgress: false, // Starting as not loading - will be set to true during auth operations
   lastUpdated: undefined,
   error: undefined,
 };
@@ -77,7 +77,7 @@ export const initialAuthState: AuthState = {
  * - Dispatched by:
  *   1. useSilentAuth at start and end of authentication check
  *   2. During explicit login attempts
- * - Effects: Updates only the isLoading flag
+ * - Effects: Updates only the silentAuthInProgress flag
  * - Critical for MessageProvider: When this transitions from true→false,
  *   MessageProvider detects auth initialization completion
  * 
@@ -85,9 +85,9 @@ export const initialAuthState: AuthState = {
  * - Dispatched when authentication operations fail
  * - Effects: Sets error message and updates lastUpdated timestamp
  */
-export type AuthAction = 
+export type AuthAction =
   | { type: 'AUTH_STATUS_UPDATE'; isAuthenticated: boolean; userInfo?: QuodsiUserInfo }
-  | { type: 'AUTH_LOADING'; isLoading: boolean }
+  | { type: 'AUTH_LOADING'; silentAuthInProgress: boolean }
   | { type: 'AUTH_ERROR'; error: string };
 
 /**
@@ -103,10 +103,10 @@ export type AuthAction =
  *      a. MessageProvider uses this to know when auth state has been definitively set
  *      b. UI components use this for detecting state changes to trigger re-renders
  *      c. Used to synchronize state across iframe boundaries
- *    - Does NOT modify isLoading (remains unchanged from previous state)
+ *    - Does NOT modify silentAuthInProgress (remains unchanged from previous state)
  * 
  * 2. AUTH_LOADING:
- *    - Specifically updates only the isLoading flag
+ *    - Specifically updates only the silentAuthInProgress flag
  *    - Key interactions with MessageProvider:
  *      a. When set to true: Signals auth operations are in progress
  *      b. When set to false: Signals auth initialization is complete
@@ -116,7 +116,7 @@ export type AuthAction =
  * 3. AUTH_ERROR:
  *    - Sets error message for failed authentication
  *    - Updates lastUpdated to trigger state change detection
- *    - Does NOT modify isLoading (separate concerns)
+ *    - Does NOT modify silentAuthInProgress (separate concerns)
  * 
  * @param state Current auth state (defaults to initialAuthState if undefined)
  * @param action Action object describing the state change
@@ -136,7 +136,7 @@ export function authReducer(state: AuthState = initialAuthState, action: AuthAct
     case 'AUTH_LOADING':
       return {
         ...state,
-        isLoading: action.isLoading,
+        silentAuthInProgress: action.silentAuthInProgress,
         // Deliberately not updating lastUpdated since this is a transient state
         // and we don't want to trigger UI updates just for loading state changes
       };

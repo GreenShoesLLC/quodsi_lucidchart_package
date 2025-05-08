@@ -75,8 +75,15 @@ const DebugPanel: React.FC = () => {
  */
 export const AuthPanel: React.FC = () => {
   const { instance, accounts } = useMsal();
-  const { isAuthenticated, userInfo, isLoading, error, login, logout, syncAuthStateNow } =
-    useAuthPanelState();
+  const {
+    isAuthenticated,
+    userInfo,
+    silentAuthInProgress,
+    error,
+    login,
+    logout,
+    syncAuthStateNow,
+  } = useAuthPanelState();
 
   const [showError, setShowError] = useState(true);
   const [showDebugPanel, setShowDebugPanel] = useState(true); // Set to true by default for debugging
@@ -91,14 +98,14 @@ export const AuthPanel: React.FC = () => {
 
   // Log authentication state for debugging
   useEffect(() => {
-    if (isLoading === false) {
+    if (silentAuthInProgress === false) {
       logger.log("Auth state initialized", {
         isAuthenticated,
         hasUserInfo: !!userInfo,
-        isLoading
+        silentAuthInProgress,
       });
     }
-  }, [isAuthenticated, userInfo, isLoading]);
+  }, [isAuthenticated, userInfo, silentAuthInProgress]);
 
   // Force sync authentication state with MSAL accounts
   useEffect(() => {

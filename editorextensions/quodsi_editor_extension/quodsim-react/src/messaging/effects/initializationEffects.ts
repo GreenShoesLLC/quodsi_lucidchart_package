@@ -5,6 +5,20 @@ const logger = debugService.forComponent('InitializationEffects');
 
 /**
  * Effect for detecting panel type from URL
+ * 
+ * Purpose:
+ * - Determines the panel type (auth or model) based on URL parameters or path
+ * - Initializes the app state with the correct panel type
+ * - Ensures consistent app initialization even with different entry points
+ * 
+ * Trigger:
+ * - When state.app.initialized is false (only runs during initial app setup)
+ * 
+ * Key Actions:
+ * - Extracts panel type from URL search parameters (e.g., '?panel=auth')
+ * - Falls back to checking URL path or initialPanelType prop
+ * - Defaults to 'model' panel if no type can be determined
+ * - Dispatches APP_INITIALIZE action with the detected panel type
  */
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
@@ -41,7 +55,7 @@ export function usePanelTypeDetectionEffect(
  * Effect for setting up a safety timeout for auth initialization
  */
 export function useAuthTimeoutEffect(
-  state: { auth: { isLoading: boolean; isAuthenticated: boolean; userInfo?: any } },
+  state: { auth: { silentAuthInProgress: boolean; isAuthenticated: boolean; userInfo?: any } },
   dispatch: React.Dispatch<any>,
   ensureAuthState: () => { isAuthenticated: boolean; userInfo: any },
   authTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>,
@@ -64,7 +78,7 @@ export function useAuthTimeoutEffect(
         const { isAuthenticated, userInfo } = ensureAuthState();
         
         console.warn("[REACT][InitializationEffects] Current auth state:", {
-          isLoading: state.auth.isLoading,
+          silentAuthInProgress: state.auth.silentAuthInProgress,
           isAuthenticated: isAuthenticated,
           hasUserInfo: !!userInfo
         });
@@ -74,10 +88,10 @@ export function useAuthTimeoutEffect(
         authLoadingCycleCompletedRef.current = true;
         
         // If auth is loading, force it to not loading
-        if (state.auth.isLoading) {
+        if (state.auth.silentAuthInProgress) {
           dispatch({
             type: 'AUTH_LOADING',
-            isLoading: false
+            silentAuthInProgress: false
           });
           
           // Also ensure lastUpdated is set
@@ -96,5 +110,5 @@ export function useAuthTimeoutEffect(
         clearTimeout(authTimeoutRef.current);
       }
     };
-  }, [ensureAuthState, state.auth.isLoading, dispatch, authTimeoutRef, authLoadingCycleCompletedRef, authInitializedRef]);
+  }, [ensureAuthState, state.auth.silentAuthInProgress, dispatch, authTimeoutRef, authLoadingCycleCompletedRef, authInitializedRef]);
 }

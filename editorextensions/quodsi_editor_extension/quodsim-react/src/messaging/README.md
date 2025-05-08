@@ -224,7 +224,7 @@ export const useAuthPanelState = () => {
   const dispatch = useMessagingDispatch();
   
   // Extract auth state and add component-specific functions
-  const { isAuthenticated, userInfo, isLoading, error } = auth;
+  const { isAuthenticated, userInfo, silentAuthInProgress, error } = auth;
   
   const login = useCallback((idToken, user, isNewUser) => {
     // Implementation...
@@ -237,7 +237,7 @@ export const useAuthPanelState = () => {
   return {
     isAuthenticated,
     userInfo,
-    isLoading,
+    silentAuthInProgress,
     error,
     login,
     logout

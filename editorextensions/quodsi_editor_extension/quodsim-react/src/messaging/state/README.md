@@ -50,7 +50,7 @@ Example:
 export interface AuthState {
   isAuthenticated: boolean;
   userInfo?: QuodsiUserInfo;
-  isLoading: boolean;
+  silentAuthInProgress: boolean;
   lastUpdated?: number;
   error?: string;
 }
@@ -59,7 +59,7 @@ export interface AuthState {
 export const initialAuthState: AuthState = {
   isAuthenticated: false,
   userInfo: undefined,
-  isLoading: false,
+  silentAuthInProgress: false,
   lastUpdated: undefined,
   error: undefined,
 };
@@ -67,7 +67,7 @@ export const initialAuthState: AuthState = {
 // Action types
 export type AuthAction = 
   | { type: 'AUTH_STATUS_UPDATE'; isAuthenticated: boolean; userInfo?: QuodsiUserInfo }
-  | { type: 'AUTH_LOADING'; isLoading: boolean }
+  | { type: 'AUTH_LOADING'; silentAuthInProgress: boolean }
   | { type: 'AUTH_ERROR'; error: string };
 
 // Reducer

@@ -86,7 +86,7 @@ export interface ValidationMessage {
 export interface AuthState {
   isAuthenticated: boolean;
   userInfo?: QuodsiUserInfo;
-  isLoading: boolean;
+  silentAuthInProgress: boolean;
   error?: string;
   logout: () => void;
   login: (idToken: string, user: QuodsiUserInfo, isNewUser: boolean) => void;

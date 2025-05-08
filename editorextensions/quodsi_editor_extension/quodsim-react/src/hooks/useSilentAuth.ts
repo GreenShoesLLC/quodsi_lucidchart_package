@@ -53,9 +53,9 @@ export function useSilentAuth(): void {
     logger.log('Starting silent authentication process');
     dispatch({
       type: 'AUTH_LOADING',
-      isLoading: true
+      silentAuthInProgress: true
     });
-    
+
     // Also ensure auth state is updated at the start
     // Check localStorage immediately as a first step
     const storedAuth = AuthStorageService.loadAuthState();
@@ -65,7 +65,7 @@ export function useSilentAuth(): void {
       isAuthenticated: storedAuth?.isAuthenticated,
       hasUserInfo: !!storedAuth?.userInfo
     });
-    
+
     // If we have valid auth in localStorage, use it immediately
     if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
       console.log('[REACT][useSilentAuth] IMPORTANT: Using valid auth from localStorage immediately');
@@ -122,7 +122,7 @@ export function useSilentAuth(): void {
             // The reducer will automatically set the lastUpdated timestamp
             logger.log(`Dispatching AUTH_STATUS_UPDATE with authenticated=true`);
             console.log(`[REACT][useSilentAuth] SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true`);
-            
+
             // CRITICAL: Force authState to true in local storage
             try {
               AuthStorageService.saveAuthState(true, userInfo);
@@ -130,7 +130,7 @@ export function useSilentAuth(): void {
             } catch (e) {
               console.error(`[REACT][useSilentAuth] Error saving to localStorage:`, e);
             }
-            
+
             dispatch({
               type: 'AUTH_STATUS_UPDATE',
               isAuthenticated: true,
@@ -171,7 +171,7 @@ export function useSilentAuth(): void {
               // The reducer will automatically set the lastUpdated timestamp
               logger.log(`Dispatching AUTH_STATUS_UPDATE from localStorage with authenticated=true`);
               console.log(`[REACT][useSilentAuth] SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true from localStorage`);
-              
+
               // CRITICAL: Re-save the auth state to localStorage to ensure it's fresh
               try {
                 AuthStorageService.saveAuthState(true, storedAuth.userInfo);
@@ -179,7 +179,7 @@ export function useSilentAuth(): void {
               } catch (e) {
                 console.error(`[REACT][useSilentAuth] Error re-saving to localStorage:`, e);
               }
-              
+
               dispatch({
                 type: 'AUTH_STATUS_UPDATE',
                 isAuthenticated: true,
@@ -213,7 +213,7 @@ export function useSilentAuth(): void {
               // This is important to complete the initialization flow
               // The reducer will automatically set the lastUpdated timestamp
               logger.log(`Dispatching AUTH_STATUS_UPDATE with not authenticated`);
-              
+
               dispatch({
                 type: 'AUTH_STATUS_UPDATE',
                 isAuthenticated: false,
@@ -228,7 +228,7 @@ export function useSilentAuth(): void {
           // Even on error, ensure auth state is initialized to prevent UI hanging
           // The reducer will automatically set the lastUpdated timestamp
           logger.log(`Dispatching AUTH_STATUS_UPDATE after error with authenticated=false`);
-          
+
           dispatch({
             type: 'AUTH_STATUS_UPDATE',
             isAuthenticated: false,
@@ -238,29 +238,29 @@ export function useSilentAuth(): void {
           // Regardless of success or failure, mark authentication as no longer loading
           // This signals that the authentication process has completed
           logger.log('Marking auth loading as complete');
-          
+
           // CRITICAL: Ensure we're authenticated if we found an account
           const finalAuthState = auth.isAuthenticated || accounts.length > 0 || AuthStorageService.isAuthStateValid();
           if (finalAuthState) {
             console.log('[REACT][useSilentAuth] IMPORTANT: Setting final auth state to authenticated=true');
           }
-          
+
           dispatch({
             type: 'AUTH_LOADING',
-            isLoading: false
+            silentAuthInProgress: false
           });
-          
+
           // Also ensure an AUTH_STATUS_UPDATE is dispatched to set lastUpdated timestamp
           // This helps MessageProvider know a complete auth cycle has finished
-          // by checking for both isLoading=false and a defined lastUpdated value
+          // by checking for both silentAuthInProgress=false and a defined lastUpdated value
           logger.log(`Final AUTH_STATUS_UPDATE to ensure lastUpdated is set`);
-          
+
           dispatch({
             type: 'AUTH_STATUS_UPDATE',
             isAuthenticated: finalAuthState,
             userInfo: auth.userInfo
           });
-          
+
           // Double check localStorage state
           const finalStoredAuth = AuthStorageService.loadAuthState();
           console.log('[REACT][useSilentAuth] Final localStorage state:', {
