@@ -4,25 +4,28 @@ This module implements the client-side messaging infrastructure for the Quodsi R
 
 ## Architecture
 
-The messaging system follows a React Context-based architecture with state managed through a reducer pattern:
+The messaging system follows a modular, React Context-based architecture with state managed through a reducer pattern:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                      MessageProvider                         │
 │                                                             │
 │  ┌─────────────┐     ┌────────────┐     ┌───────────────┐   │
-│  │ State (useReducer) │    Mapper   │     │ postMessage API │   │
+│  │ Context Provider │   │ State (useReducer) │   │  Effect Orchestration │   │
 │  └─────────────┘     └────────────┘     └───────────────┘   │
-└────────┬─────────────────┬──────────────────────────────────┘
-         │                 │
-         ▼                 ▼
-┌────────────────┐  ┌─────────────────┐
-│                │  │                 │
-│  React Hooks   │  │  Sender Hooks   │
-│                │  │                 │
-└────────────────┘  └─────────────────┘
-         │                 │
-         ▼                 ▼
+└─────────┬──────────────────┬───────────────────┬────────────┘
+          │                  │                   │
+          ▼                  ▼                   ▼
+┌─────────────────┐  ┌────────────────┐  ┌────────────────┐
+│     Hooks       │  │     Effects    │  │    Handlers    │
+│                 │  │                │  │                │
+│ useAuthState    │  │ authEffects    │  │ messageHandlers│
+│ useSendMessage  │  │ appReadyEffects│  │ authHandlers   │
+└────────┬────────┘  └───────┬────────┘  └────────┬───────┘
+         │                   │                    │
+         └───────────────────┼────────────────────┘
+                             │
+                             ▼
 ┌─────────────────────────────────────┐
 │                                     │
 │      React UI Components            │
@@ -30,48 +33,118 @@ The messaging system follows a React Context-based architecture with state manag
 └─────────────────────────────────────┘
 ```
 
+## Directory Structure
+
+The messaging system is organized into logical modules:
+
+```
+messaging/
+├── hooks/               # Reusable hooks for state and actions
+│   ├── useAuthState.ts
+│   ├── useSendMessage.ts
+│   └── index.ts
+│
+├── effects/             # useEffect implementations
+│   ├── authEffects.ts
+│   ├── reactAppReadyEffects.ts
+│   ├── initializationEffects.ts
+│   ├── messageListenerEffect.ts
+│   └── index.ts
+│
+├── handlers/            # Message handling logic
+│   ├── messageHandlers.ts
+│   ├── authStatusHandler.ts
+│   └── index.ts
+│
+├── senders/             # Message sending hooks
+│   ├── authSender.ts
+│   ├── simulationSender.ts
+│   ├── useSender.ts
+│   └── index.ts
+│
+├── mappers/             # Convert messages to actions
+│   ├── auth.mapper.ts
+│   ├── framework.mapper.ts
+│   └── index.ts
+│
+├── state/               # State management
+│   ├── authSlice.ts
+│   ├── index.ts
+│   └── types.ts
+│
+├── utils/               # Utility functions
+│   └── debugService.ts
+│
+├── MessageContext.ts    # Context definitions and hooks
+├── MessageProvider.tsx  # Main provider component
+└── index.ts             # Main entry point
+```
+
 ## Key Components
 
 ### MessageProvider (`MessageProvider.tsx`)
 
 The core provider component that:
+- Orchestrates the effects and hooks
 - Establishes React Context for messaging state
-- Manages the message event listener
-- Handles message sending and receiving
-- Dispatches actions to the reducer
-- Provides hooks for accessing state
+- Composes the modular parts of the messaging system
+- Provides minimal complexity through composition
 
-### State Management (`reducer.ts`)
+### MessageContext (`MessageContext.ts`)
 
-Implements a Redux-like reducer that:
-- Defines the complete application state structure
+Defines the React Context and basic hooks:
+- Creates context for state and dispatch
+- Provides useMessaging, useAuth, etc. hooks
+- Offers type safety for context consumers
+
+### Hooks (`hooks/`)
+
+Reusable hooks that:
+- Encapsulate specific functionality
+- Manage state synchronization (useAuthState)
+- Handle message sending (useSendMessage)
+- Promote separation of concerns
+
+### Effects (`effects/`)
+
+Isolated useEffect implementations:
+- Focus on specific side effects
+- Handle authentication state changes
+- Manage REACT_APP_READY message
+- Process message events
+- Initialize application state
+
+### Handlers (`handlers/`)
+
+Message processing logic:
+- Process incoming messages
+- Handle message deduplication
+- Manage specialized message types
+- Apply business logic to messages
+
+### State Management (`state/`)
+
+Redux-like state management:
+- Defines state structure with domain-specific slices
+- Implements reducers for each slice
 - Processes actions to update state
-- Organizes state into domain slices (auth, subscription, etc.)
 - Maintains timestamp tracking for updates
 
 ### Message Mappers (`mappers/`)
 
-Specialized functions that:
+Transform messages to actions:
 - Convert incoming messages to reducer actions
 - Validate message formats
-- Organize handling by message category
-- Apply business logic for transformations
+- Apply transformations based on message type
+- Organize handling by domain
 
 ### Message Senders (`senders/`)
 
-Custom hooks that:
-- Provide type-safe functions for sending messages
-- Handle specific categories of messages
-- Abstract away envelope creation details
-- Implement domain-specific logic
-
-### State Hooks (`hooks/`)
-
-Enhanced hooks that:
-- Combine state and actions for specific domains
-- Prevent unnecessary re-renders with memoization
-- Simplify component integration
-- Provide intellisense and type safety
+Type-safe message sending:
+- Provide domain-specific sending functions
+- Handle envelope creation and formatting
+- Implement business logic for outgoing messages
+- Abstract away messaging details
 
 ## Usage
 
@@ -93,7 +166,7 @@ function App() {
 
 ### Accessing State
 
-Use the provided hooks to access specific state slices:
+Use the context hooks to access state:
 
 ```tsx
 import { useAuth, useSelection } from './messaging';
@@ -118,10 +191,10 @@ function UserPanel() {
 
 ### Sending Messages
 
-Use the sender hooks to send messages to the host:
+Use sender hooks for outgoing messages:
 
 ```tsx
-import { useAuthSender, useSimulationSender } from './messaging';
+import { useAuthSender, useSimulationSender } from './messaging/senders';
 
 function ActionButtons() {
   const { sendLogout } = useAuthSender();
@@ -136,42 +209,54 @@ function ActionButtons() {
 }
 ```
 
-### Using Enhanced Hooks
+### Component-Specific State Hooks
 
-For components that need both state and actions:
+For components with specialized needs, create custom hooks:
 
 ```tsx
-import { useAuthState, useSimulationState } from './messaging';
+// In components/auth/useAuthPanelState.ts
+import { useMessaging, useMessagingDispatch } from '../../messaging/MessageContext';
+import { useSendMessage } from '../../messaging/hooks';
+import { AuthStorageService } from '../../services/AuthStorageService';
 
-function SimulationPanel() {
-  const { isAuthenticated, logout } = useAuthState();
-  const { status, progress, runSimulation } = useSimulationState();
+export const useAuthPanelState = () => {
+  const { auth } = useMessaging();
+  const dispatch = useMessagingDispatch();
   
-  return (
-    <div>
-      {isAuthenticated && (
-        <>
-          <div>Simulation Status: {status} ({progress}%)</div>
-          <button onClick={() => runSimulation('doc123', 'sim1')}>Run</button>
-          <button onClick={logout}>Logout</button>
-        </>
-      )}
-    </div>
-  );
-}
+  // Extract auth state and add component-specific functions
+  const { isAuthenticated, userInfo, isLoading, error } = auth;
+  
+  const login = useCallback((idToken, user, isNewUser) => {
+    // Implementation...
+  }, [dispatch]);
+  
+  const logout = useCallback(() => {
+    // Implementation...
+  }, [dispatch]);
+  
+  return {
+    isAuthenticated,
+    userInfo,
+    isLoading,
+    error,
+    login,
+    logout
+  };
+};
 ```
 
 ## Message Lifecycle
 
 1. **Outgoing Messages (React → Host)**:
    - Component calls a sender hook function
-   - Sender creates a properly formatted envelope
-   - MessageProvider sends via `postMessage`
+   - Hook creates a properly formatted envelope
+   - sendMessage function sends via `postMessage`
    - Host receives and processes the message
 
 2. **Incoming Messages (Host → React)**:
    - Host sends message via `postMessage` 
-   - MessageProvider's event listener receives the message
+   - messageListenerEffect captures the message
+   - messageHandlers process and deduplicate the message
    - Mapper converts message to an action
    - Reducer updates state based on the action
    - Components re-render with new state
@@ -183,11 +268,12 @@ The messaging system includes a debugging service:
 ```typescript
 import { debugService } from './messaging';
 
-// Enable debug logging
-debugService.enableLogging();
+// Component-specific logger
+const logger = debugService.forComponent('YourComponent');
 
-// Log debug messages
-debugService.debug('Testing message flow');
+// Log messages
+logger.log('Component initialized');
+logger.error('Something went wrong', error);
 ```
 
 ## Extending the System
@@ -195,37 +281,64 @@ debugService.debug('Testing message flow');
 ### Adding New Message Types
 
 1. Define the message type and interface in `@quodsi/shared`
-2. Add a mapper function in the appropriate mapper file
+2. Create or update a mapper function in the appropriate mapper file
 3. Add sender functions to the relevant sender hook
 4. Update the reducer to handle any new actions
-5. Create or update state hooks as needed
+5. Create effects for any side effects related to the new message type
 
-### Creating New Domain Hooks
+### Creating a Custom Component Hook
+
+When a component needs specialized functionality:
 
 ```typescript
-import { useMemo } from 'react';
-import { useFeatureState } from '../MessageProvider';
-import { useFeatureSender } from '../senders/featureSender';
+// components/yourFeature/useFeatureState.ts
+import { useMessaging, useMessagingDispatch } from '../../messaging/MessageContext';
+import { useSendMessage } from '../../messaging/hooks';
 
 export function useFeatureState() {
-  const feature = useFeature();
-  const { sendFeatureAction } = useFeatureSender();
+  const { feature } = useMessaging();
+  const dispatch = useMessagingDispatch();
+  const sendMessage = useSendMessage({ app: { panelType: 'model' }}, dispatch);
   
-  return useMemo(() => ({
-    // State
-    featureEnabled: feature.enabled,
-    
-    // Actions
-    enableFeature: () => sendFeatureAction(true),
-    disableFeature: () => sendFeatureAction(false)
-  }), [feature.enabled, sendFeatureAction]);
+  // Component-specific functions
+  const doSomething = useCallback(() => {
+    // Implementation using sendMessage and dispatch
+  }, [sendMessage, dispatch]);
+  
+  return {
+    ...feature,  // Spread the state
+    doSomething  // Add component-specific functions
+  };
 }
 ```
 
 ## Best Practices
 
-- Use the provided hooks rather than accessing context directly
-- Memoize computed values and callbacks to prevent unnecessary renders
-- Keep UI components focused on presentation, not message handling
-- Use the enhanced state hooks when components need both state and actions
-- Handle loading and error states appropriately
+1. **Separation of Concerns**
+   - Keep state management logic in reducers
+   - Use effects for side effects
+   - Use hooks for reusable logic
+   - Keep handlers focused on message processing
+
+2. **Component Integration**
+   - Create component-specific hooks for specialized needs
+   - Use existing hooks for common functionality
+   - Compose hooks rather than duplicating logic
+
+3. **State Management**
+   - Use the reducer pattern for state updates
+   - Keep state normalized and organized by domain
+   - Track lastUpdated timestamps for synchronization
+   - Avoid direct state mutations
+
+4. **Effect Management**
+   - Keep effects focused on a single responsibility
+   - Minimize effect dependencies
+   - Use cleanup functions for resource management
+   - Document effect behavior and dependencies
+
+5. **Debugging**
+   - Use the debugService for consistent logging
+   - Include relevant context in log messages
+   - Add debug logs at critical state transitions
+   - Use component-specific loggers

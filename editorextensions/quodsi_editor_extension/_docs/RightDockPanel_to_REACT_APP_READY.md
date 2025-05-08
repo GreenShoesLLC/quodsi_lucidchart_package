@@ -66,7 +66,7 @@ root.render(
 
 ### 3. Authentication Provider Setup
 
-The main application component (`App_new.tsx`) sets up authentication with MSAL using the same approach as the ContentDockPanel:
+The main application component (`App_new.tsx`) sets up authentication with MSAL:
 
 ```typescript
 // In App_new.tsx
@@ -88,18 +88,65 @@ Key components of the authentication setup:
 - Creates MSAL instance with `PublicClientApplication(msalConfig)`
 - Sets up the message provider for app-wide state management
 
-### 4. Silent Authentication Process
+### 4. Modular MessageProvider Initialization
 
-The RightDockPanel also uses the silent authentication process:
+The MessageProvider component is now implemented with a modular approach that orchestrates several effects and hooks:
+
+```typescript
+// In MessageProvider.tsx
+export const MessageProvider: React.FC<MessageProviderProps> = ({
+  children,
+  initialPanelType,
+}) => {
+  // Initialize state with reducer
+  const [state, dispatch] = useReducer(messagingReducer, initialState);
+  
+  // Initialize refs for tracking state
+  const hasSentReadyRef = useRef(false);
+  const authInitializedRef = useRef(false);
+  const authLoadingCycleCompletedRef = useRef(false);
+  
+  // Initialize hooks
+  const { ensureAuthState } = useAuthState({ auth }, dispatch);
+  const sendMessage = useSendMessage(state, dispatch);
+  
+  // Initialize silent auth
+  useSilentAuth();
+  
+  // Initialize effects for various aspects of the system
+  useInitialAuthCheckEffect(ensureAuthState);
+  useAuthInitializationEffect(state, authInitializedRef);
+  useAuthLoadingCycleEffect(state, authLoadingCycleCompletedRef);
+  useReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
+  useEmergencyReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
+  useMessageListenerEffect(state, dispatch, sendMessage, ensureAuthState, hasSentReadyRef, processedMessageIds, authInitializedRef, authLoadingCycleCompletedRef);
+  
+  // Return the provider component with context
+  return (
+    <MessagingContext.Provider value={{ ...state, sendMessage }}>
+      <MessagingDispatchContext.Provider value={dispatch}>
+        {children}
+      </MessagingDispatchContext.Provider>
+    </MessagingContext.Provider>
+  );
+};
+```
+
+This modular approach separates concerns and makes the codebase more maintainable.
+
+### 5. Silent Authentication Process
+
+The silent authentication process is handled by the `useSilentAuth` hook:
 
 ```typescript
 // In useSilentAuth.ts
 export function useSilentAuth(): void {
   const { instance, accounts, inProgress } = useMsal();
   const dispatch = useMessagingDispatch();
+  const { auth } = useMessaging();
   
   useEffect(() => {
-    // Start with marking auth as loading
+    // Mark authentication as loading
     dispatch({
       type: 'AUTH_LOADING',
       isLoading: true
@@ -137,7 +184,7 @@ export function useSilentAuth(): void {
               dispatch({
                 type: 'AUTH_STATUS_UPDATE',
                 isAuthenticated: true,
-                userInfo: storedAuth.userInfo || undefined
+                userInfo: storedAuth.userInfo
               });
             } else {
               dispatch({
@@ -148,207 +195,125 @@ export function useSilentAuth(): void {
             }
           }
         } catch (error) {
-          dispatch({
-            type: 'AUTH_STATUS_UPDATE',
-            isAuthenticated: false,
-            userInfo: undefined
-          });
+          // Handle errors
         } finally {
+          // Always mark auth as no longer loading when complete
           dispatch({
             type: 'AUTH_LOADING',
             isLoading: false
+          });
+          
+          // Ensure the auth state has a lastUpdated timestamp
+          dispatch({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: auth.isAuthenticated || false,
+            userInfo: auth.userInfo
           });
         }
       };
       
       attemptSilentAuth();
     }
-  }, [inProgress, accounts, dispatch, instance]);
+  }, [inProgress, accounts, dispatch, instance, auth]);
 }
 ```
 
-This hook is used by the MessageProvider to ensure authentication state is properly initialized when the application loads.
+This hook checks for existing authentication from MSAL or localStorage, and updates the application state accordingly.
 
-### 5. Panel Registration and Message Management
+### 6. REACT_APP_READY Message Sending
 
-When the RightDockPanel is mounted, it registers with the router:
+There are multiple mechanisms to ensure REACT_APP_READY is sent reliably:
 
-```typescript
-// In RightDockPanel.ts
-protected didMount(): void {
-    this.log('didMount called');
-    console.log('[EXT][RightDockPanel] didMount called - registering with router as "model" panel');
-    
-    // Register with the router
-    router.registerChannel('model', this);
-    
-    this.log('Registered with message router');
-}
-```
-
-When the iframe loads, the frameLoaded method is called:
+1. **Primary Effect**: The `useReactAppReadyEffect` handles the normal path:
 
 ```typescript
-// In RightDockPanel.ts
-protected frameLoaded(): void {
-    this.log('Frame loaded');
-    console.log('[EXT][RightDockPanel] frameLoaded called');
-    
-    // Call parent method first to maintain proper behavior
-    super.frameLoaded();
-    
-    // Additional initialization if needed
-    this.isReady = true;
-    
-    // Re-register with the router to ensure we have a valid reference
-    console.log('[EXT][RightDockPanel] Re-registering with router as "model" panel');
-    router.registerChannel('model', this);
-    
-    // Dump channel state to diagnose any issues
-    console.log('[EXT][RightDockPanel] Dumping channel state for diagnosis');
-    if (typeof router.dumpChannelState === 'function') {
-        router.dumpChannelState();
-    }
-    
-    // NOTE: We removed the immediate auth state request because it happens before
-    // silent authentication completes. Instead, we rely on the REACT_APP_READY flow.
-    // When the React app completes initialization, it will send REACT_APP_READY, and
-    // the router will send back the current auth state at that point.
-    console.log('[EXT][RightDockPanel] Waiting for REACT_APP_READY from React app for auth status');
-}
-```
-
-The RightDockPanel has a method to request authentication status, but it is not automatically called:
-
-```typescript
-// In RightDockPanel.ts
-private requestAuthStatus(): void {
-    console.log('[EXT][RightDockPanel] Requesting current auth state');
-    try {
-        // First try using the channel manager's force deliver method
-        const channelManager = router.getChannelManager();
-        if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
-            console.log('[EXT][RightDockPanel] Using forceDeliverMessage for AUTH_STATUS');
-            const authState = router.getAuthState();
-            channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
-            console.log('[EXT][RightDockPanel] Force delivered auth state:', authState);
-        } else {
-            // Fallback to a direct broadcast request
-            console.log('[EXT][RightDockPanel] Using direct send for AUTH_STATUS');
-            const authState = router.getAuthState();
-            router.send('model', {
-                id: `auth_status_request_${Date.now()}`,
-                type: EnvelopeMessageType.AUTH_STATUS,
-                source: 'host',
-                target: 'model-iframe',
-                version: '1.0',
-                data: authState || { isAuthenticated: false }
-            });
-            
-            console.log('[EXT][RightDockPanel] Direct sent auth state:', authState);
-            
-            // Also broadcast to all panels for redundancy
-            router.broadcastAuthStatus();
-        }
-    } catch (err) {
-        console.error('[EXT][RightDockPanel][ERROR] Error requesting auth state:', err);
-    }
-}
-```
-
-The RightDockPanel also has specific handling for `AUTH_STATUS` messages:
-
-```typescript
-// In RightDockPanel.ts
-public relayToIframe(msg: EnvelopeBase): void {
-    this.log(`Relaying message to iframe: ${msg.type}`);
-    console.log(`[EXT][RightDockPanel] relayToIframe called with msg type: ${msg.type}`);
-    
-    // Special logging for auth status
-    if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-        console.log('[EXT][RightDockPanel] Relaying AUTH_STATUS to iframe:', msg.data);
-    }
-
-    try {
-        // Use a type assertion to bypass TypeScript's type checking
-        this.sendMessage(msg as unknown as JsonSerializable);
-        console.log(`[EXT][RightDockPanel] sendMessage completed for ${msg.type}`);
-    } catch (err) {
-        console.error(`[EXT][RightDockPanel][ERROR] Error in sendMessage:`, {
-            error: err instanceof Error ? err.message : String(err),
-            stack: err instanceof Error ? err.stack : undefined,
-            msgType: msg.type
-        });
-    }
-}
-```
-
-### 6. Message Provider Initialization on the React Side
-
-The MessageProvider component in the React application is responsible for sending the `REACT_APP_READY` message when initialization is complete:
-
-```typescript
-// In MessageProvider.tsx
-useEffect(() => {
-  // Add message event listener
-  window.addEventListener("message", handleMessage);
-
-  // Send REACT_APP_READY when all conditions are met:
-  // 1. App is initialized
-  // 2. Panel type is determined
-  // 3. Auth is initialized (no longer loading)
-  // 4. We haven't sent it already
-  if (
-    state.app.initialized && 
-    state.app.panelType && 
-    authInitializedRef.current && 
-    !hasSentReadyRef.current
-  ) {
-    logger.log("All conditions met for sending REACT_APP_READY:", {
-      appInitialized: state.app.initialized,
-      panelType: state.app.panelType,
-      authInitialized: authInitializedRef.current,
-      isAuthenticated: state.auth.isAuthenticated,
-      hasUserInfo: !!state.auth.userInfo
-    });
-    
-    sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-      panel: state.app.panelType,
-      isAuthenticated: state.auth.isAuthenticated,
-      user: state.auth.userInfo,
-    });
-    
-    // Mark as sent so we don't send it again
-    hasSentReadyRef.current = true;
-    
-    logger.log("Sent REACT_APP_READY message with auth state:", {
-      isAuthenticated: state.auth.isAuthenticated,
-      hasUserInfo: !!state.auth.userInfo
-    });
-  } else if (!hasSentReadyRef.current) {
-    logger.debug("Waiting to send REACT_APP_READY:", {
-      appInitialized: state.app.initialized,
-      panelType: state.app.panelType,
-      authInitialized: authInitializedRef.current,
-      authLoading: state.auth.isLoading,
-      isAuthenticated: state.auth.isAuthenticated
-    });
-  }
-
-  // Cleanup listener on unmount
-  return () => {
-    window.removeEventListener("message", handleMessage);
-  };
-}, [
+// In effects/reactAppReadyEffects.ts
+export function useReactAppReadyEffect(
+  state,
   sendMessage,
-  state.app.initialized,
-  state.app.panelType,
-  state.auth.isAuthenticated,
-  state.auth.userInfo,
-  state.app.pendingRequests,
-  state.auth.isLoading, // Add this dependency to trigger when auth loading changes
-]);
+  ensureAuthState,
+  hasSentReadyRef,
+  authInitializedRef,
+  authLoadingCycleCompletedRef
+) {
+  useEffect(() => {
+    if (
+      !hasSentReadyRef.current && 
+      state.app.initialized && 
+      state.app.panelType && 
+      !state.auth.isLoading
+    ) {
+      // Check for valid auth in localStorage
+      const { isAuthenticated, userInfo } = ensureAuthState();
+      
+      // Force necessary flags if conditions are met
+      if (!authInitializedRef.current && state.auth.lastUpdated) {
+        authInitializedRef.current = true;
+      }
+      
+      if (!authLoadingCycleCompletedRef.current && !state.auth.isLoading) {
+        authLoadingCycleCompletedRef.current = true;
+      }
+      
+      // Send REACT_APP_READY message when all conditions are met
+      if (
+        state.app.initialized && 
+        state.app.panelType && 
+        !state.auth.isLoading && 
+        !hasSentReadyRef.current
+      ) {
+        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+          panel: state.app.panelType,
+          isAuthenticated: isAuthenticated,
+          user: userInfo,
+        });
+        
+        hasSentReadyRef.current = true;
+      }
+    }
+  }, [state.app.initialized, state.app.panelType, state.auth.lastUpdated, state.auth.isLoading, /* ... */]);
+}
 ```
+
+2. **Emergency Timer**: A backup mechanism ensures REACT_APP_READY is sent after a timeout:
+
+```typescript
+// In effects/reactAppReadyEffects.ts
+export function useEmergencyReactAppReadyEffect(
+  state,
+  sendMessage,
+  ensureAuthState,
+  hasSentReadyRef,
+  authInitializedRef,
+  authLoadingCycleCompletedRef
+) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasSentReadyRef.current && state.app.initialized && state.app.panelType) {
+        // Force refs to true
+        authInitializedRef.current = true;
+        authLoadingCycleCompletedRef.current = true;
+        
+        // Get auth state from localStorage
+        const { isAuthenticated, userInfo } = ensureAuthState();
+        
+        // Force send REACT_APP_READY
+        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+          panel: state.app.panelType,
+          isAuthenticated: isAuthenticated,
+          user: userInfo,
+        });
+        
+        hasSentReadyRef.current = true;
+      }
+    }, 3000); // 3 second timer
+    
+    return () => clearTimeout(timer);
+  }, [/* dependencies */]);
+}
+```
+
+3. **Message Listener Fallback**: The message listener effect also checks conditions and sends REACT_APP_READY if needed.
 
 ### 7. Extension Side Handling of REACT_APP_READY
 
@@ -402,31 +367,7 @@ private handleReactAppReady(msg: EnvelopeBase): void {
 
 The router responds with the current authentication state by calling `sendAuthStatus(role)`.
 
-## Authentication State Handling Specific to RightDockPanel
-
-Unlike the ContentDockPanel, the RightDockPanel does not have its own specific UI component for handling authentication. Instead, it relies on:
-
-1. Silent authentication through MSAL
-2. Receiving AUTH_STATUS messages from the router
-3. Displaying authentication state in the model panel UI
-
-When the RightDockPanel receives an AUTH_STATUS message, it should update its UI to reflect whether the user is authenticated.
-
-## Waiting Behavior
-
-A key aspect of the RightDockPanel initialization is the explicit note that it waits for the REACT_APP_READY message before attempting to request authentication status:
-
-```typescript
-// NOTE: We removed the immediate auth state request because it happens before
-// silent authentication completes. Instead, we rely on the REACT_APP_READY flow.
-// When the React app completes initialization, it will send REACT_APP_READY, and
-// the router will send back the current auth state at that point.
-console.log('[EXT][RightDockPanel] Waiting for REACT_APP_READY from React app for auth status');
-```
-
-This approach assumes that the router will correctly send the current authentication state after receiving the REACT_APP_READY message.
-
-## Complete RightDockPanel Initialization Flow Diagram
+## Complete Initialization Flow Diagram
 
 ```
 User clicks RightDockPanel icon
@@ -439,18 +380,24 @@ App_new.tsx renders with MsalProvider
     │
     ▼
 MessageProvider initializes
-    │
+    │                    ╭───────────────────╮
+    ▼                    │ Multiple parallel │
+useAuthState initialized ◄───▶ processes run │
+    │                    ╰───────────────────╯
     ▼
 useSilentAuth checks for existing accounts
     │
     ▼
-Authentication state initialized from MSAL or localStorage
+Authentication state initialized (MSAL or localStorage)
     │
     ▼
-APP_INITIALIZE action dispatched
+AUTH_LOADING set to false
     │
     ▼
-state.app.initialized becomes true
+reactAppReadyEffects detects conditions met
+    │
+    ▼
+ensureAuthState checks localStorage for auth state
     │
     ▼
 REACT_APP_READY message sent to extension host
@@ -473,3 +420,15 @@ Router sends current auth & subscription state back to panel
     ▼
 RightDockPanel UI renders with auth state
 ```
+
+## Multi-Layered Reliability
+
+The system now includes multiple mechanisms to ensure REACT_APP_READY is sent reliably:
+
+1. **Normal Path**: When auth initialization completes naturally, useReactAppReadyEffect sends REACT_APP_READY
+2. **Emergency Timer**: After 3 seconds, useEmergencyReactAppReadyEffect force-sends REACT_APP_READY
+3. **Message Listener**: The message listener effect also checks conditions and can send REACT_APP_READY
+4. **Auth State Source of Truth**: ensureAuthState always checks localStorage to ensure correct authentication state
+5. **Manual Refresh**: When needed, the RightDockPanel can send an AUTH_STATUS request
+
+These mechanisms work together to ensure that the panel initializes correctly in all scenarios.

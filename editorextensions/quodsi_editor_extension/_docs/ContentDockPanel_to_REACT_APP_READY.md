@@ -83,18 +83,89 @@ Key components of the authentication setup:
 - Creates MSAL instance with `PublicClientApplication(msalConfig)`
 - Sets up the message provider for app-wide state management
 
-### 4. Authentication State Initialization
+### 4. Modular MessageProvider Initialization
 
-A critical improvement in the authentication flow is the silent authentication process that initializes the app's auth state:
+The MessageProvider is now implemented with a modular approach that orchestrates several effects and hooks:
+
+```typescript
+// In MessageProvider.tsx
+export const MessageProvider: React.FC<MessageProviderProps> = ({
+  children,
+  initialPanelType,
+}) => {
+  // Initialize state with reducer
+  const [state, dispatch] = useReducer(messagingReducer, initialState);
+  
+  // Initialize refs for tracking state
+  const hasSentReadyRef = useRef(false);
+  const authInitializedRef = useRef(false);
+  const authLoadingCycleCompletedRef = useRef(false);
+  
+  // Initialize hooks
+  const { ensureAuthState } = useAuthState({ auth }, dispatch);
+  const sendMessage = useSendMessage(state, dispatch);
+  
+  // Initialize silent auth
+  useSilentAuth();
+  
+  // Initialize effects for various aspects of the system
+  useInitialAuthCheckEffect(ensureAuthState);
+  useAuthInitializationEffect(state, authInitializedRef);
+  useAuthLoadingCycleEffect(state, authLoadingCycleCompletedRef);
+  useAuthStateChangeEffect(state, ensureAuthState, authInitializedRef, authLoadingCycleCompletedRef);
+  usePanelTypeDetectionEffect(state, dispatch, initialPanelType);
+  
+  // Effects responsible for REACT_APP_READY message
+  useReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
+  useEmergencyReactAppReadyEffect(state, sendMessage, ensureAuthState, hasSentReadyRef, authInitializedRef, authLoadingCycleCompletedRef);
+  
+  // Message listener effect
+  useMessageListenerEffect(state, dispatch, sendMessage, ensureAuthState, hasSentReadyRef, processedMessageIds, authInitializedRef, authLoadingCycleCompletedRef);
+  
+  // Return the provider component with context
+  return (
+    <MessagingContext.Provider value={{ ...state, sendMessage }}>
+      <MessagingDispatchContext.Provider value={dispatch}>
+        {children}
+      </MessagingDispatchContext.Provider>
+    </MessagingContext.Provider>
+  );
+};
+```
+
+This modular approach separates concerns and makes the codebase more maintainable.
+
+### 5. Silent Authentication Process
+
+The silent authentication process is handled by the `useSilentAuth` hook:
 
 ```typescript
 // In useSilentAuth.ts
 export function useSilentAuth(): void {
   const { instance, accounts, inProgress } = useMsal();
   const dispatch = useMessagingDispatch();
+  const { auth } = useMessaging();
   
   useEffect(() => {
-    // Start with marking auth as loading
+    // First check localStorage immediately as a first step
+    const storedAuth = AuthStorageService.loadAuthState();
+    console.log('[REACT][useSilentAuth] Initial localStorage check:', {
+      isAuthStateValid: AuthStorageService.isAuthStateValid(),
+      hasStoredAuth: !!storedAuth,
+      isAuthenticated: storedAuth?.isAuthenticated
+    });
+    
+    // If valid auth in localStorage, use it immediately
+    if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+      console.log('[REACT][useSilentAuth] Using valid auth from localStorage immediately');
+      dispatch({
+        type: 'AUTH_STATUS_UPDATE',
+        isAuthenticated: true,
+        userInfo: storedAuth.userInfo
+      });
+    }
+    
+    // Mark authentication as loading
     dispatch({
       type: 'AUTH_LOADING',
       isLoading: true
@@ -108,33 +179,27 @@ export function useSilentAuth(): void {
           if (accounts.length > 0) {
             const account = accounts[0];
             
-            // Set active account
+            // Set active account and create user info
             instance.setActiveAccount(account);
-            
-            // Create user info
             const userInfo = {
               id: account.localAccountId,
               email: account.username,
               displayName: account.name || account.username
             };
             
-            // Update auth state
+            // Update auth state and save to localStorage
             dispatch({
               type: 'AUTH_STATUS_UPDATE',
               isAuthenticated: true,
               userInfo
             });
-          } else {
-            // Check localStorage as fallback
-            const storedAuth = AuthStorageService.loadAuthState();
             
-            if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
-              dispatch({
-                type: 'AUTH_STATUS_UPDATE',
-                isAuthenticated: true,
-                userInfo: storedAuth.userInfo || undefined
-              });
-            } else {
+            // Save to localStorage
+            AuthStorageService.saveAuthState(true, userInfo);
+          } else {
+            // Check localStorage as fallback (already did above)
+            // If no accounts were found, update state accordingly
+            if (!storedAuth || !storedAuth.isAuthenticated) {
               dispatch({
                 type: 'AUTH_STATUS_UPDATE',
                 isAuthenticated: false,
@@ -143,223 +208,226 @@ export function useSilentAuth(): void {
             }
           }
         } catch (error) {
-          dispatch({
-            type: 'AUTH_STATUS_UPDATE',
-            isAuthenticated: false,
-            userInfo: undefined
-          });
+          // Handle errors
         } finally {
+          // Always mark auth as no longer loading when complete
           dispatch({
             type: 'AUTH_LOADING',
             isLoading: false
+          });
+          
+          // Final AUTH_STATUS_UPDATE to ensure lastUpdated is set
+          // The reducer will automatically set lastUpdated
+          dispatch({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: auth.isAuthenticated || false,
+            userInfo: auth.userInfo
           });
         }
       };
       
       attemptSilentAuth();
     }
-  }, [inProgress, accounts, dispatch, instance]);
+  }, [inProgress, accounts, dispatch, instance, auth]);
 }
 ```
 
-This hook is used by the MessageProvider to ensure authentication state is properly initialized when the application loads.
+This hook checks for existing authentication from localStorage and MSAL, and updates the application state accordingly.
 
-### 5. Authentication State Persistence
+### 6. Authentication State Management
 
-To maintain authentication across browser sessions, the authentication state is stored in localStorage:
+The system now includes a dedicated hook for managing auth state synchronization with localStorage:
 
 ```typescript
-// In AuthStorageService.ts
-export class AuthStorageService {
-  static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null | undefined): void {
+// In hooks/useAuthState.ts
+export function useAuthState(
+  state: { auth: { isAuthenticated: boolean; userInfo?: any } },
+  dispatch: React.Dispatch<any>
+) {
+  const ensureAuthState = useCallback(() => {
     try {
-      const authState = {
-        isAuthenticated,
-        userInfo,
-        lastUpdated: Date.now()
-      };
-      
-      localStorage.setItem(STORAGE_KEYS.AUTH_STATE, JSON.stringify(authState));
-      localStorage.setItem(STORAGE_KEYS.LAST_ACTIVE, Date.now().toString());
-    } catch (error) {
-      debugService.error('Error saving auth state to localStorage:', error);
-    }
-  }
-  
-  static loadAuthState(): StoredAuthState | null {
-    try {
-      const authStateJson = localStorage.getItem(STORAGE_KEYS.AUTH_STATE);
-      if (!authStateJson) return null;
-      
-      const authState = JSON.parse(authStateJson) as StoredAuthState;
-      
-      // Check if the stored state has expired
-      const now = Date.now();
-      if (now - authState.lastUpdated > AUTH_EXPIRATION_MS) {
-        this.clearAuthState();
-        return null;
+      const storedAuth = AuthStorageService.loadAuthState();
+      if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+        logger.log('Found valid auth in localStorage');
+        
+        if (!state.auth.isAuthenticated) {
+          logger.log('Forcing local state authentication from localStorage');
+          
+          dispatch({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: true,
+            userInfo: storedAuth.userInfo
+          });
+        }
+        
+        return { isAuthenticated: true, userInfo: storedAuth.userInfo };
       }
-      
-      return authState;
-    } catch (error) {
-      return null;
+    } catch (e) {
+      logger.error('Error checking localStorage:', e);
     }
-  }
+    
+    return { 
+      isAuthenticated: state.auth.isAuthenticated, 
+      userInfo: state.auth.userInfo 
+    };
+  }, [state.auth.isAuthenticated, state.auth.userInfo, dispatch]);
+  
+  return { ensureAuthState };
 }
 ```
 
-The reducer automatically updates localStorage when authentication state changes:
+This hook is used to ensure that the application state is always synchronized with localStorage, which serves as the source of truth for authentication status.
+
+### 7. Component-Specific Auth State Hook
+
+For components with specialized needs like AuthPanel, we create custom hooks that extend the core functionality:
 
 ```typescript
-// In reducer.ts, AUTH_STATUS_UPDATE case
-case 'AUTH_STATUS_UPDATE':
-  // Persist authentication state to localStorage when it changes
-  if (action.isAuthenticated) {
-    AuthStorageService.saveAuthState(action.isAuthenticated, action.userInfo || null);
-  } else if (!action.isAuthenticated) {
-    AuthStorageService.clearAuthState();
-  }
+// In components/auth/useAuthPanelState.ts
+export const useAuthPanelState = () => {
+  const { auth } = useMessaging();
+  const dispatch = useMessagingDispatch();
+  const { ensureAuthState } = useAuthStateBase({ auth }, dispatch);
+  const sendMessage = useSendMessage({ app: { panelType: 'auth' } }, dispatch);
+  
+  // Extract auth state from the messaging context
+  const { isAuthenticated, userInfo, isLoading, error } = auth;
+  
+  // Function to handle login
+  const login = useCallback((idToken: string, user: any, isNewUser: boolean) => {
+    // Save auth state to localStorage
+    AuthStorageService.saveAuthState(true, user);
+    
+    // Update local state
+    dispatch({
+      type: 'AUTH_STATUS_UPDATE',
+      isAuthenticated: true,
+      userInfo: user
+    });
+    
+    // Send message to host
+    sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
+      idToken,
+      user,
+      newUser: isNewUser
+    });
+  }, [dispatch, sendMessage]);
+  
+  // Additional functions for logout, sync, etc.
   
   return {
-    ...state,
-    auth: {
-      ...state.auth,
-      isAuthenticated: action.isAuthenticated,
-      userInfo: action.userInfo,
-      isLoading: false,
-      error: undefined,
-      lastUpdated: Date.now()
-    }
+    isAuthenticated,
+    userInfo,
+    isLoading,
+    error,
+    login,
+    logout,
+    syncAuthStateNow,
+    ensureAuthState
   };
+};
 ```
 
-### 6. Direct Authentication State Synchronization
-
-The AuthPanel component includes a mechanism to ensure UI state stays in sync with MSAL accounts:
-
-```typescript
-// In AuthPanel.tsx
-useEffect(() => {
-  // Only run this if not already authenticated and there are MSAL accounts
-  if (!isAuthenticated && accounts.length > 0 && !isProcessingAuth) {
-    console.log('AuthPanel detected account mismatch - fixing authentication state');
-    
-    // Get the account info and set as active
-    const account = accounts[0];
-    try {
-      instance.setActiveAccount(account);
-    } catch (e) {
-      console.warn('Failed to set active account:', e);
-    }
-    
-    // Create user info
-    const user = {
-      id: account.localAccountId,
-      email: account.username,
-      displayName: account.name || account.username
-    };
-    
-    // Use direct sync to update auth state immediately
-    syncAuthStateNow(true, user);
-  }
-}, [isAuthenticated, accounts, isProcessingAuth, syncAuthStateNow, instance]);
-```
-
-This provides a fallback mechanism to ensure the UI correctly reflects authentication state.
-
-### 7. Message Provider Initialization
-
-The `MessageProvider` component plays a crucial role in the communication process:
-
-1. It maintains the application state through a reducer pattern
-2. It establishes a message channel with the parent window (LucidChart extension)
-3. It processes messages from the extension and dispatches corresponding actions
-4. It initializes the silent authentication process
-
-```typescript
-// In MessageProvider.tsx
-export const MessageProvider: React.FC<MessagingProviderProps> = ({
-  children,
-  initialPanelType,
-}) => {
-  // Initialize state with reducer
-  const [state, dispatch] = useReducer(messagingReducer, initialState);
-  
-  // Track if we've already sent REACT_APP_READY to prevent resending
-  const hasSentReadyRef = useRef(false);
-  
-  // Track if auth has been initialized
-  const authInitializedRef = useRef(false);
-  
-  // Initialize silent authentication
-  useSilentAuth();
-  
-  // Detect when auth initialization is complete
-  useEffect(() => {
-    if (state.auth.isLoading === false) {
-      authInitializedRef.current = true;
-    }
-  }, [state.auth.isLoading]);
-  
-  // Detect panel type from URL if not provided
-  useEffect(() => {
-    if (!state.app.initialized) {
-      // Determine panel type from URL parameters...
-      dispatch({ type: "APP_INITIALIZE", panelType: detectedType });
-    }
-  }, [initialPanelType, state.app.initialized]);
-
-  // ... other code ...
-}
-```
+This pattern allows components to access custom functionality while still leveraging the core hooks for basic operations.
 
 ### 8. REACT_APP_READY Message Sending
 
-The `REACT_APP_READY` message is sent when all initialization conditions are met:
+There are multiple mechanisms to ensure REACT_APP_READY is sent reliably:
+
+1. **Primary Effect**: The `useReactAppReadyEffect` handles the normal path:
 
 ```typescript
-// In MessageProvider.tsx
-useEffect(() => {
-  // ... message handling code ...
-
-  // Send REACT_APP_READY when all conditions are met:
-  // 1. App is initialized
-  // 2. Panel type is determined
-  // 3. Auth is initialized (no longer loading)
-  // 4. We haven't sent it already
-  if (
-    state.app.initialized && 
-    state.app.panelType && 
-    authInitializedRef.current && 
-    !hasSentReadyRef.current
-  ) {
-    sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-      panel: state.app.panelType,
-      isAuthenticated: state.auth.isAuthenticated,
-      user: state.auth.userInfo,
-    });
-    
-    // Mark as sent so we don't send it again
-    hasSentReadyRef.current = true;
-  }
-  
-  // ... cleanup code ...
-}, [
+// In effects/reactAppReadyEffects.ts
+export function useReactAppReadyEffect(
+  state,
   sendMessage,
-  state.app.initialized,
-  state.app.panelType,
-  state.auth.isAuthenticated,
-  state.auth.userInfo,
-  state.app.pendingRequests,
-  state.auth.isLoading, // Important dependency to ensure auth is initialized
-]);
+  ensureAuthState,
+  hasSentReadyRef,
+  authInitializedRef,
+  authLoadingCycleCompletedRef
+) {
+  useEffect(() => {
+    if (
+      !hasSentReadyRef.current && 
+      state.app.initialized && 
+      state.app.panelType && 
+      !state.auth.isLoading
+    ) {
+      // Check for valid auth in localStorage
+      const { isAuthenticated, userInfo } = ensureAuthState();
+      
+      // Force necessary flags if conditions are met
+      if (!authInitializedRef.current && state.auth.lastUpdated) {
+        authInitializedRef.current = true;
+      }
+      
+      if (!authLoadingCycleCompletedRef.current && !state.auth.isLoading) {
+        authLoadingCycleCompletedRef.current = true;
+      }
+      
+      // Send REACT_APP_READY message when all conditions are met
+      if (
+        state.app.initialized && 
+        state.app.panelType && 
+        !state.auth.isLoading && 
+        !hasSentReadyRef.current
+      ) {
+        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+          panel: state.app.panelType,
+          isAuthenticated: isAuthenticated,
+          user: userInfo,
+        });
+        
+        hasSentReadyRef.current = true;
+      }
+    }
+  }, [/* dependencies */]);
+}
 ```
 
-This ensures the REACT_APP_READY message includes the correct authentication state.
+2. **Emergency Timer**: A backup mechanism ensures REACT_APP_READY is sent after a timeout:
+
+```typescript
+// In effects/reactAppReadyEffects.ts
+export function useEmergencyReactAppReadyEffect(
+  state,
+  sendMessage,
+  ensureAuthState,
+  hasSentReadyRef,
+  authInitializedRef,
+  authLoadingCycleCompletedRef
+) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!hasSentReadyRef.current && state.app.initialized && state.app.panelType) {
+        // Force refs to true
+        authInitializedRef.current = true;
+        authLoadingCycleCompletedRef.current = true;
+        
+        // Get auth state from localStorage
+        const { isAuthenticated, userInfo } = ensureAuthState();
+        
+        // Force send REACT_APP_READY
+        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+          panel: state.app.panelType,
+          isAuthenticated: isAuthenticated,
+          user: userInfo,
+        });
+        
+        hasSentReadyRef.current = true;
+      }
+    }, 3000); // 3 second timer
+    
+    return () => clearTimeout(timer);
+  }, [/* dependencies */]);
+}
+```
+
+3. **Message Listener Fallback**: The message listener effect also checks conditions and sends REACT_APP_READY if needed.
 
 ### 9. Extension Side Handling of REACT_APP_READY
 
-When the React application sends the REACT_APP_READY message, the ContentDockPanel forwards it to the router, which processes it and responds with the current authentication state:
+When the React application sends the `REACT_APP_READY` message, the ContentDockPanel forwards it to the router, which processes it and responds with the current authentication state:
 
 ```typescript
 // In RouterCore.ts
@@ -372,10 +440,18 @@ private handleReactAppReady(msg: EnvelopeBase): void {
         return;
     }
     
-    // Mark channel as ready using ChannelManager
+    console.log(`[EXT][MessageRouter] Marking channel ${role} as ready`);
+    
+    // If we have a panel reference in the message, register it
+    if ((msg as any)._panelRef) {
+        console.log(`[EXT][MessageRouter] Registering panel from REACT_APP_READY message for ${role}`);
+        this.registerChannel(role, (msg as any)._panelRef);
+    }
+    
+    // Mark channel as ready
     this.channelManager.markChannelReady(role);
     
-    // Update auth state if provided using RouterState
+    // Update auth state if provided
     if (data.isAuthenticated !== undefined) {
         this.state.updateAuthState({
             isAuthenticated: data.isAuthenticated,
@@ -383,7 +459,7 @@ private handleReactAppReady(msg: EnvelopeBase): void {
         });
     }
     
-    // Flush queued messages using ChannelManager
+    // Flush queued messages
     this.channelManager.flushQueue(role);
     
     // Send current auth and subscription state
@@ -392,30 +468,17 @@ private handleReactAppReady(msg: EnvelopeBase): void {
 }
 ```
 
+The router responds with the current authentication state by calling `sendAuthStatus(role)`.
+
 ## Authentication Persistence Flow
 
-A key improvement to the original implementation is the authentication persistence across browser sessions. Here's how it works:
+The authentication state is persisted across browser sessions using a multi-layered approach:
 
-1. **User Signs In for the First Time**:
-   - User authenticates with MSAL
-   - Auth state is stored in both MSAL's cache and localStorage
-   - REACT_APP_READY is sent with isAuthenticated=true
+1. **MSAL Cache**: The primary storage for authentication tokens and account information
+2. **localStorage**: A secondary storage for authentication state that persists across browser sessions
+3. **ensureAuthState**: A utility function that synchronizes state between localStorage and the application
 
-2. **User Exits LucidChart Without Signing Out**:
-   - Auth state remains in localStorage
-   - MSAL accounts remain in browser storage
-
-3. **User Returns to LucidChart**:
-   - React app initializes
-   - useSilentAuth finds the existing MSAL account
-   - Auth state is restored from MSAL or localStorage
-   - REACT_APP_READY is sent with isAuthenticated=true
-   - ContentDockPanel shows the authenticated view
-
-4. **If Auth State Gets Out of Sync**:
-   - AuthPanel's direct sync mechanism detects MSAL accounts
-   - Updates UI state to match MSAL state
-   - Ensures a consistent user experience
+This ensures that users remain authenticated even after closing and reopening LucidChart, providing a seamless experience.
 
 ## Complete Authentication Flow Diagram
 
@@ -427,21 +490,27 @@ LucidChart creates iframe with React app
     │
     ▼
 App_new.tsx renders with MsalProvider
+    │                    ╭───────────────────╮
+    ▼                    │ Multiple parallel │
+MessageProvider initializes ◄─▶ processes run │
+    │                    ╰───────────────────╯
+    ▼
+Initial localStorage auth check
     │
     ▼
-MessageProvider initializes
+useSilentAuth attempts authentication
     │
     ▼
-useSilentAuth checks for existing accounts
+Authentication state initialized (localStorage + MSAL)
     │
     ▼
-Authentication state initialized from MSAL or localStorage
+AUTH_LOADING set to false
     │
     ▼
-APP_INITIALIZE action dispatched
+reactAppReadyEffects detects conditions met
     │
     ▼
-state.app.initialized becomes true
+ensureAuthState checks localStorage for auth state
     │
     ▼
 REACT_APP_READY message sent to extension host
@@ -462,50 +531,46 @@ Router updates auth state and marks channel as ready
 Router sends current auth & subscription state back to panel
     │
     ▼
-AuthPanel UI renders with correct authentication state
+AuthPanel UI renders with authenticated state
 ```
 
-## Benefits of the Enhanced Implementation
+## Multi-Layered Reliability
 
-1. **Persistent Authentication**:
-   - Uses localStorage for state persistence across browser sessions
-   - Multi-layered approach with MSAL and localStorage for reliability
+The system now includes multiple mechanisms to ensure REACT_APP_READY is sent reliably:
 
-2. **Direct State Synchronization**:
-   - AuthPanel can force-sync authentication state if inconsistencies occur
-   - Ensures UI always matches actual authentication status
+1. **Normal Path**: When auth initialization completes naturally, useReactAppReadyEffect sends REACT_APP_READY
+2. **Emergency Timer**: After 3 seconds, useEmergencyReactAppReadyEffect force-sends REACT_APP_READY
+3. **Message Listener**: The message listener effect also checks conditions and can send REACT_APP_READY
+4. **Auth State Source of Truth**: ensureAuthState always checks localStorage to ensure correct authentication state
+5. **Silent Authentication**: useSilentAuth checks both MSAL and localStorage for existing authentication
+6. **Component-Specific Hooks**: Components like AuthPanel have specialized hooks for additional reliability
 
-3. **Robust Initialization Sequence**:
-   - REACT_APP_READY is only sent after authentication is fully initialized
-   - Proper dependencies ensure correct execution order
+These mechanisms work together to ensure that the panel initializes correctly in all scenarios.
 
-4. **Better Error Handling**:
-   - Clear fallback paths ensure authentication always reaches a resolved state
-   - Multiple layers of protection against race conditions
+## Benefits of the Modular Implementation
 
-5. **Maintainable Code Structure**:
-   - Clear separation of concerns between auth initialization, persistence, and UI
-   - Reduced logging improves code readability while maintaining diagnostics
+1. **Separation of Concerns**:
+   - Each module has a clear, single responsibility
+   - Hooks handle state management
+   - Effects handle side effects
+   - Handlers process messages
 
-## Best Practices for Authentication in LucidChart Extensions
+2. **Improved Maintainability**:
+   - Smaller, focused files are easier to understand and modify
+   - Clear dependencies between modules
+   - Better organization of related functionality
 
-1. **Use Official MSAL Integration**:
-   - Leverage the `@azure/msal-react` package's components and hooks
-   - Follow Microsoft's best practices for authentication flows
+3. **Enhanced Reliability**:
+   - Multiple layers of protection against edge cases
+   - Better error handling and recovery
+   - Clear initialization sequence
 
-2. **Implement Multi-layered Storage**:
-   - Use MSAL's cache as primary authentication store
-   - Add localStorage fallback for reliability
-   - Include auth verification mechanisms at runtime
+4. **Better Testability**:
+   - Individual modules can be tested in isolation
+   - Easier to mock dependencies
+   - More focused unit tests
 
-3. **Handle Edge Cases**:
-   - Prepare for scenarios like browser refreshes, session expiration, etc.
-   - Implement direct state synchronization for handling inconsistent states
-
-4. **Coordinate Message Timing**:
-   - Ensure REACT_APP_READY is sent after authentication is initialized
-   - Track initialization states with refs to prevent race conditions
-
-5. **Maintain Clean Diagnostic Logging**:
-   - Include sufficient logging for troubleshooting
-   - Avoid excessive verbosity that can obscure important messages
+5. **Simplified Debugging**:
+   - Clear logging points in each module
+   - Easier to trace through the execution flow
+   - Better error reporting and handling
