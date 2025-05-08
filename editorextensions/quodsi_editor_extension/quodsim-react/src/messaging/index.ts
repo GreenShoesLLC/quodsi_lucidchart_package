@@ -10,14 +10,10 @@ export {
   useValidation
 } from './MessageProvider';
 
-// Export enhanced state hooks
+// Export hooks we've implemented
 export { 
-  useMessagingState,
   useAuthState,
-  useSubscriptionState,
-  useSelectionState,
-  useSimulationState,
-  useValidationState
+  useSendMessage
 } from './hooks';
 
 // Export message senders
@@ -31,19 +27,19 @@ export {
 } from './senders';
 
 // Export mapping functions
-export { 
-  mapEnvelopeToAction,
-  mapFramework,
-  mapAuth,
-  mapSubscription,
-  mapSelection,
-  mapSimulation,
-  mapModelOps,
-  mapStorage
-} from './mappers';
+export { mapEnvelopeToAction } from './mappers';
+
+// Export individual mappers directly from their source files to avoid any re-export issues
+export { mapFramework } from './mappers/framework.mapper';
+export { mapAuth } from './mappers/auth.mapper';
+export { mapSubscription } from './mappers/subscription.mapper';
+export { mapSelection } from './mappers/selection.mapper';
+export { mapSimulation } from './mappers/simulation.mapper';
+export { mapModelOps } from './mappers/modelOps.mapper';
+export { mapStorage } from './mappers/storage.mapper';
 
 // Export the reducer
-export { messagingReducer, initialState } from './reducer';
+export { messagingReducer, initialState } from './state';
 
 // Export debug service
 export { debugService } from './utils/debugService';
@@ -52,4 +48,4 @@ export { debugService } from './utils/debugService';
 export { initializeMessaging, type MessagingInitOptions } from './initializeMessaging';
 
 // Export types
-export * from './types';
+export * from './state';

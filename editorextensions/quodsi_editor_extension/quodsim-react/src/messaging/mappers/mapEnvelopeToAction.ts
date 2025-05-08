@@ -1,5 +1,4 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
 import { mapFramework } from './framework.mapper';
 import { mapAuth } from './auth.mapper';
 import { mapSubscription } from './subscription.mapper';
@@ -8,6 +7,7 @@ import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
 import { mapStorage } from './storage.mapper';
 import { debugService } from '../utils/debugService';
+import { MessagingAction } from '../state/types';
 
 // Create a component-specific logger
 const logger = debugService.forComponent('MessageMapper');

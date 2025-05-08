@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useValidation } from '../MessageProvider';
 import { useModelOpsSender } from '../senders/modelOpsSender';
+import { ValidationError } from '../state/validationSlice';
 
 /**
  * Enhanced hook for validation state that combines state and actions
@@ -12,38 +13,44 @@ export function useValidationState() {
   const { validateModel } = useModelOpsSender();
   
   // Combine state and actions into a single object
-  const validationState = useMemo(() => ({
-    // State
-    isValid: validation.isValid,
-    errorCount: validation.errorCount,
-    warningCount: validation.warningCount,
-    infoCount: validation.infoCount,
-    messages: validation.messages,
-    lastValidated: validation.lastValidated,
+  const validationState = useMemo(() => {
+    // Calculate counts based on error types
+    const errorCount = validation.errors.filter(e => e.severity === 'error').length;
+    const warningCount = validation.errors.filter(e => e.severity === 'warning').length;
+    const infoCount = validation.errors.filter(e => e.severity === 'info').length;
     
-    // Computed properties
-    hasIssues: validation.errorCount > 0 || validation.warningCount > 0,
-    hasErrors: validation.errorCount > 0,
-    hasWarnings: validation.warningCount > 0,
-    
-    // Filtered messages
-    errors: validation.messages.filter(msg => msg.type === 'error'),
-    warnings: validation.messages.filter(msg => msg.type === 'warning'),
-    infos: validation.messages.filter(msg => msg.type === 'info'),
-    
-    // Message utilities
-    getMessagesForElement: (elementId: string) => 
-      validation.messages.filter(msg => msg.elementId === elementId),
-    
-    // Actions
-    validate: (documentId: string) => validateModel(documentId)
-  }), [
+    return {
+      // State
+      isValid: validation.isValid,
+      errors: validation.errors || [],
+      lastUpdated: validation.lastUpdated,
+      
+      // Computed counts (derived from errors array)
+      errorCount,
+      warningCount,
+      infoCount,
+      
+      // Computed properties
+      hasIssues: errorCount > 0 || warningCount > 0,
+      hasErrors: errorCount > 0,
+      hasWarnings: warningCount > 0,
+      
+      // Filtered messages
+      errorMessages: validation.errors.filter(msg => msg.severity === 'error'),
+      warningMessages: validation.errors.filter(msg => msg.severity === 'warning'),
+      infoMessages: validation.errors.filter(msg => msg.severity === 'info'),
+      
+      // Message utilities
+      getMessagesForElement: (elementId: string) => 
+        validation.errors.filter(msg => msg.elementId === elementId),
+      
+      // Actions
+      validate: (documentId: string) => validateModel(documentId)
+    };
+  }, [
     validation.isValid,
-    validation.errorCount,
-    validation.warningCount,
-    validation.infoCount,
-    validation.messages,
-    validation.lastValidated,
+    validation.errors,
+    validation.lastUpdated,
     validateModel
   ]);
   

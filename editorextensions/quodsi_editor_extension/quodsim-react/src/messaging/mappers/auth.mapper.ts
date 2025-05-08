@@ -1,6 +1,6 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
 import { debugService } from '../utils/debugService';
+import { MessagingAction } from '../state/types';
 
 // Create a component-specific logger
 const logger = debugService.forComponent('AuthMapper');

@@ -1,51 +1,51 @@
-import { useMemo, useCallback } from 'react';
-import { useAuth } from '../MessageProvider';
-import { useAuthSender } from '../senders/authSender';
-import { useMessagingDispatch } from '../MessageProvider';
+import { useCallback } from 'react';
+import { AuthStorageService } from '../../services/AuthStorageService';
+import { debugService } from '../utils/debugService';
+import { MessagingAction } from '../state';
+
+const logger = debugService.forComponent('useAuthState');
 
 /**
- * Enhanced hook for authentication state that combines state and actions
- * 
- * @returns Auth state and auth-related actions
+ * Hook for managing auth state synchronization with localStorage
  */
-export function useAuthState() {
-  const auth = useAuth();
-  const { sendLogout, sendLoginSuccess } = useAuthSender();
-  const dispatch = useMessagingDispatch();
-  
-  // Add a direct auth sync function that bypasses normal flow
-  const syncAuthStateNow = useCallback((isAuth: boolean, userInfo: any) => {
-    // Update global state through dispatch
-    dispatch({
-      type: 'AUTH_STATUS_UPDATE',
-      isAuthenticated: isAuth,
-      userInfo
-    });
-  }, [dispatch]);
-  
-  // Combine state and actions into a single object
-  const authState = useMemo(() => ({
-    // State
-    isAuthenticated: auth.isAuthenticated,
-    userInfo: auth.userInfo,
-    isLoading: auth.isLoading,
-    error: auth.error,
+export function useAuthState(
+  state: { auth: { isAuthenticated: boolean; userInfo?: any } },
+  dispatch: React.Dispatch<any>
+) {
+  /**
+   * Ensures the component auth state is synchronized with localStorage
+   * Returns the effective auth state (from localStorage if available, or component state as fallback)
+   */
+  const ensureAuthState = useCallback(() => {
+    try {
+      const storedAuth = AuthStorageService.loadAuthState();
+      if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+        logger.log('Found valid auth in localStorage');
+        console.log('[REACT][useAuthState] Found valid auth in localStorage! User:', storedAuth.userInfo.email);
+        
+        if (!state.auth.isAuthenticated) {
+          logger.log('Forcing local state authentication from localStorage');
+          console.log('[REACT][useAuthState] IMPORTANT: Forcing local state authentication from localStorage');
+          
+          dispatch({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: true,
+            userInfo: storedAuth.userInfo
+          });
+        }
+        
+        return { isAuthenticated: true, userInfo: storedAuth.userInfo };
+      }
+    } catch (e) {
+      logger.error('Error checking localStorage:', e);
+      console.error('[REACT][useAuthState] Error checking localStorage:', e);
+    }
     
-    // Actions
-    logout: () => sendLogout(),
-    login: (idToken: string, user: any, isNewUser: boolean) => 
-      sendLoginSuccess(idToken, user, isNewUser),
-    // Add the direct sync function
-    syncAuthStateNow
-  }), [
-    auth.isAuthenticated, 
-    auth.userInfo,
-    auth.isLoading,
-    auth.error,
-    sendLogout,
-    sendLoginSuccess,
-    syncAuthStateNow
-  ]);
+    return { 
+      isAuthenticated: state.auth.isAuthenticated, 
+      userInfo: state.auth.userInfo 
+    };
+  }, [state.auth.isAuthenticated, state.auth.userInfo, dispatch]);
   
-  return authState;
+  return { ensureAuthState };
 }

@@ -39,10 +39,10 @@ export const MessageDebugger: React.FC = () => {
             ...prev,
             {
               id: key,
-              type: req.type,
+              type: req.requestType, // Use requestType instead of type
               direction: "out",
               timestamp: req.timestamp,
-              data: { type: req.type }, // We don't have full data here
+              data: { type: req.requestType }, // Use requestType here too
             },
           ]);
         }

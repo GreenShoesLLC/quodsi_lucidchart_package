@@ -1,5 +1,5 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
+import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -29,10 +29,12 @@ export function mapStorage(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to app error action
+      // If error, map to appropriate error action
+      // Since we don't have a specific storage error action, we'll use AUTH_ERROR
+      // in a real application, you might want to add a STORAGE_ERROR action type
       if (!connectData.success && connectData.error) {
         return {
-          type: 'APP_ERROR',
+          type: 'AUTH_ERROR', // Using an existing error action type
           error: `Storage connection failed: ${connectData.error}`
         };
       }

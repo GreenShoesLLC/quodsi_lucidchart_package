@@ -1,0 +1,100 @@
+import { useEffect } from 'react';
+import { debugService } from '../utils/debugService';
+
+const logger = debugService.forComponent('InitializationEffects');
+
+/**
+ * Effect for detecting panel type from URL
+ */
+export function usePanelTypeDetectionEffect(
+  state: { app: { initialized: boolean } },
+  dispatch: React.Dispatch<any>,
+  initialPanelType?: 'auth' | 'model'
+) {
+  useEffect(() => {
+    if (!state.app.initialized) {
+      // Try to determine panel type from URL search params
+      const urlParams = new URLSearchParams(window.location.search);
+      const panelParam = urlParams.get("panel");
+
+      let detectedType: "auth" | "model" | undefined = initialPanelType;
+
+      if (panelParam) {
+        // If panel parameter exists, use it
+        detectedType = panelParam.toLowerCase() === "auth" ? "auth" : "model";
+      } else if (window.location.pathname.includes("auth")) {
+        // Fallback to checking URL path
+        detectedType = "auth";
+      } else if (!detectedType) {
+        // Default to model panel if we can't determine
+        detectedType = "model";
+      }
+
+      logger.log(`Detected panel type: ${detectedType}`);
+      console.log(`[REACT][InitializationEffects] Detected panel type: ${detectedType}`);
+      dispatch({ type: "APP_INITIALIZE", panelType: detectedType });
+    }
+  }, [initialPanelType, state.app.initialized, dispatch]);
+}
+
+/**
+ * Effect for setting up a safety timeout for auth initialization
+ */
+export function useAuthTimeoutEffect(
+  state: { auth: { isLoading: boolean; isAuthenticated: boolean; userInfo?: any } },
+  dispatch: React.Dispatch<any>,
+  ensureAuthState: () => { isAuthenticated: boolean; userInfo: any },
+  authTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>,
+  authLoadingCycleCompletedRef: React.MutableRefObject<boolean>,
+  authInitializedRef: React.MutableRefObject<boolean>
+) {
+  useEffect(() => {
+    // Clear any existing timeout
+    if (authTimeoutRef.current) {
+      clearTimeout(authTimeoutRef.current);
+    }
+    
+    // Set up new timeout - If auth hasn't completed within 10 seconds, proceed anyway
+    authTimeoutRef.current = setTimeout(() => {
+      if (!authLoadingCycleCompletedRef.current) {
+        logger.warn("Auth initialization timeout reached. Forcing auth initialized state to proceed.");
+        console.warn("[REACT][InitializationEffects] Auth initialization timeout reached after 10 seconds!");
+        
+        // Check for valid auth
+        const { isAuthenticated, userInfo } = ensureAuthState();
+        
+        console.warn("[REACT][InitializationEffects] Current auth state:", {
+          isLoading: state.auth.isLoading,
+          isAuthenticated: isAuthenticated,
+          hasUserInfo: !!userInfo
+        });
+        
+        // Force auth to be considered initialized
+        authInitializedRef.current = true;
+        authLoadingCycleCompletedRef.current = true;
+        
+        // If auth is loading, force it to not loading
+        if (state.auth.isLoading) {
+          dispatch({
+            type: 'AUTH_LOADING',
+            isLoading: false
+          });
+          
+          // Also ensure lastUpdated is set
+          dispatch({
+            type: 'AUTH_STATUS_UPDATE',
+            isAuthenticated: isAuthenticated,
+            userInfo: userInfo
+          });
+        }
+      }
+    }, 10000); // 10 seconds timeout
+    
+    // Clean up timeout on unmount
+    return () => {
+      if (authTimeoutRef.current) {
+        clearTimeout(authTimeoutRef.current);
+      }
+    };
+  }, [ensureAuthState, state.auth.isLoading, dispatch, authTimeoutRef, authLoadingCycleCompletedRef, authInitializedRef]);
+}

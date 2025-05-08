@@ -21,96 +21,96 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
     null
   );
 
-  useEffect(() => {
-    // Log app initialization
-    logger.log(`LucidApp initialized with panel type: ${panelType}`);
+  // useEffect(() => {
+  //   // Log app initialization
+  //   logger.log(`LucidApp initialized with panel type: ${panelType}`);
 
-    // The REACT_APP_READY message is now sent by MessageProvider automatically
-    // This is just to record it for our UI
-    setLastMessageSent(EnvelopeMessageType.REACT_APP_READY);
+  //   // The REACT_APP_READY message is now sent by MessageProvider automatically
+  //   // This is just to record it for our UI
+  //   setLastMessageSent(EnvelopeMessageType.REACT_APP_READY);
     
-    // For the model panel only: Set up periodic auth status check
-    if (panelType === 'model') {
-      logger.log('Setting up periodic auth status check for model panel');
+  //   // For the model panel only: Set up periodic auth status check
+  //   if (panelType === 'model') {
+  //     logger.log('Setting up periodic auth status check for model panel');
       
-      // Check auth status every 5 seconds when not authenticated
-      const authCheckInterval = setInterval(() => {
-        if (!auth.isAuthenticated) {
-          // First check localStorage as a fallback for cross-panel communication
-          try {
-            const storedAuthStatus = localStorage.getItem('quodsi_auth_status');
-            const storedAuthTimestamp = localStorage.getItem('quodsi_auth_timestamp');
+  //     // Check auth status every 5 seconds when not authenticated
+  //     const authCheckInterval = setInterval(() => {
+  //       if (!auth.isAuthenticated) {
+  //         // First check localStorage as a fallback for cross-panel communication
+  //         try {
+  //           const storedAuthStatus = localStorage.getItem('quodsi_auth_status');
+  //           const storedAuthTimestamp = localStorage.getItem('quodsi_auth_timestamp');
             
-            if (storedAuthStatus === 'true' && storedAuthTimestamp) {
-              const timestamp = parseInt(storedAuthTimestamp, 10);
-              const now = Date.now();
+  //           if (storedAuthStatus === 'true' && storedAuthTimestamp) {
+  //             const timestamp = parseInt(storedAuthTimestamp, 10);
+  //             const now = Date.now();
               
-              // If localStorage indicates authentication within last 30 seconds
-              if (now - timestamp < 30000) {
-                logger.log('Detected auth in localStorage, requesting refresh');
-                console.log('[REACT][LucidApp] Detected authentication in localStorage, requesting refresh');
-                sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
-              }
-            }
-          } catch (e) {
-            // Ignore localStorage errors
-          }
+  //             // If localStorage indicates authentication within last 30 seconds
+  //             if (now - timestamp < 30000) {
+  //               logger.log('Detected auth in localStorage, requesting refresh');
+  //               console.log('[REACT][LucidApp] Detected authentication in localStorage, requesting refresh');
+  //               sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+  //             }
+  //           }
+  //         } catch (e) {
+  //           // Ignore localStorage errors
+  //         }
           
-          // Also periodically request auth status directly
-          logger.log('Requesting auth status update from host');
-          sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
-        }
-      }, 5000); // Check every 5 seconds
+  //         // Also periodically request auth status directly
+  //         logger.log('Requesting auth status update from host');
+  //         sendMessage(EnvelopeMessageType.REQUEST_AUTH_STATUS, {});
+  //       }
+  //     }, 5000); // Check every 5 seconds
       
-      // Clean up interval on unmount
-      return () => clearInterval(authCheckInterval);
-    }
-  }, [panelType, auth.isAuthenticated, sendMessage]);
+  //     // Clean up interval on unmount
+  //     return () => clearInterval(authCheckInterval);
+  //   }
+  // }, [panelType, auth.isAuthenticated, sendMessage]);
 
-  useEffect(() => {
-    if (auth.lastUpdated) {
-      logger.log(`Auth state updated in ${panelType} panel:`, {
-        isAuthenticated: auth.isAuthenticated,
-        hasUserInfo: !!auth.userInfo,
-        lastUpdated: new Date(auth.lastUpdated).toLocaleTimeString()
-      });
+  // useEffect(() => {
+  //   if (auth.lastUpdated) {
+  //     logger.log(`Auth state updated in ${panelType} panel:`, {
+  //       isAuthenticated: auth.isAuthenticated,
+  //       hasUserInfo: !!auth.userInfo,
+  //       lastUpdated: new Date(auth.lastUpdated).toLocaleTimeString()
+  //     });
       
-      // Add a visual indicator for auth changes to make them more obvious
-      const authIndicator = document.getElementById('auth-update-indicator');
-      if (!authIndicator) {
-        // Create a floating indicator element if it doesn't exist
-        const indicator = document.createElement('div');
-        indicator.id = 'auth-update-indicator';
-        indicator.style.position = 'fixed';
-        indicator.style.top = '10px';
-        indicator.style.right = '10px';
-        indicator.style.padding = '8px 16px';
-        indicator.style.backgroundColor = auth.isAuthenticated ? '#4CAF50' : '#F44336';
-        indicator.style.color = 'white';
-        indicator.style.borderRadius = '4px';
-        indicator.style.zIndex = '9999';
-        indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-        indicator.style.transition = 'opacity 0.5s';
-        indicator.style.opacity = '1';
-        indicator.textContent = auth.isAuthenticated 
-          ? `✓ Authenticated in ${panelType} panel` 
-          : `✗ Not authenticated in ${panelType} panel`;
+  //     // Add a visual indicator for auth changes to make them more obvious
+  //     const authIndicator = document.getElementById('auth-update-indicator');
+  //     if (!authIndicator) {
+  //       // Create a floating indicator element if it doesn't exist
+  //       const indicator = document.createElement('div');
+  //       indicator.id = 'auth-update-indicator';
+  //       indicator.style.position = 'fixed';
+  //       indicator.style.top = '10px';
+  //       indicator.style.right = '10px';
+  //       indicator.style.padding = '8px 16px';
+  //       indicator.style.backgroundColor = auth.isAuthenticated ? '#4CAF50' : '#F44336';
+  //       indicator.style.color = 'white';
+  //       indicator.style.borderRadius = '4px';
+  //       indicator.style.zIndex = '9999';
+  //       indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  //       indicator.style.transition = 'opacity 0.5s';
+  //       indicator.style.opacity = '1';
+  //       indicator.textContent = auth.isAuthenticated 
+  //         ? `✓ Authenticated in ${panelType} panel` 
+  //         : `✗ Not authenticated in ${panelType} panel`;
         
-        document.body.appendChild(indicator);
+  //       document.body.appendChild(indicator);
         
-        // Fade out after 3 seconds
-        setTimeout(() => {
-          indicator.style.opacity = '0';
-          // Remove after fade out
-          setTimeout(() => {
-            if (indicator.parentNode) {
-              indicator.parentNode.removeChild(indicator);
-            }
-          }, 500);
-        }, 3000);
-      }
-    }
-  }, [auth.lastUpdated, auth.isAuthenticated, panelType]);
+  //       // Fade out after 3 seconds
+  //       setTimeout(() => {
+  //         indicator.style.opacity = '0';
+  //         // Remove after fade out
+  //         setTimeout(() => {
+  //           if (indicator.parentNode) {
+  //             indicator.parentNode.removeChild(indicator);
+  //           }
+  //         }, 500);
+  //       }, 3000);
+  //     }
+  //   }
+  // }, [auth.lastUpdated, auth.isAuthenticated, panelType]);
 
   // Track when messages are received by watching state updates
   useEffect(() => {

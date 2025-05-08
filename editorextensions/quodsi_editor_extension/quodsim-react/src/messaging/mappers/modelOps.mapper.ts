@@ -1,5 +1,5 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
+import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -42,19 +42,20 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         };
       };
 
+      // Convert issues to the expected format for VALIDATION_RESULT
+      const errors = validationData.issues.map(issue => ({
+        id: issue.id,
+        elementId: issue.elementId,
+        type: issue.code,
+        message: issue.message,
+        severity: issue.severity as 'error' | 'warning' | 'info'
+      }));
+
       // Map to validation result action
       return {
         type: 'VALIDATION_RESULT',
         isValid: validationData.isValid,
-        errorCount: validationData.summary.errorCount,
-        warningCount: validationData.summary.warningCount,
-        infoCount: validationData.summary.infoCount,
-        messages: validationData.issues.map(issue => ({
-          type: issue.severity,
-          message: issue.message,
-          elementId: issue.elementId,
-          code: issue.code
-        }))
+        errors: errors
       };
 
     case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
@@ -65,10 +66,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to app error action
+      // If error, map to auth error action since we don't have a dedicated app error
       if (!conversionData.success && conversionData.error) {
         return {
-          type: 'APP_ERROR',
+          type: 'AUTH_ERROR',
           error: `Conversion failed: ${conversionData.error}`
         };
       }
@@ -83,10 +84,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to app error action
+      // If error, map to auth error action
       if (!removeData.success && removeData.error) {
         return {
-          type: 'APP_ERROR',
+          type: 'AUTH_ERROR',
           error: `Model removal failed: ${removeData.error}`
         };
       }
@@ -102,10 +103,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to app error action
+      // If error, map to auth error action
       if (!resultsPageData.success && resultsPageData.error) {
         return {
-          type: 'APP_ERROR',
+          type: 'AUTH_ERROR',
           error: `Results page creation failed: ${resultsPageData.error}`
         };
       }

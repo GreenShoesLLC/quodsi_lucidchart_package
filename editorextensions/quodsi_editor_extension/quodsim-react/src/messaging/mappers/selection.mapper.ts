@@ -1,5 +1,5 @@
 import { ElementShape, EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
+import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -30,13 +30,13 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         metadata?: Record<string, unknown>;
       };
 
-      // Map to model context update action
+      // Map to document context update action
       return {
-        type: 'MODEL_CONTEXT_UPDATE',
+        type: 'DOCUMENT_CONTEXT_UPDATE',
         documentId: contextData.documentId,
         pageId: contextData.pageId,
+        documentTitle: contextData.title,
         isQuodsiModel: contextData.isQuodsiModel,
-        title: contextData.title,
         metadata: contextData.metadata
       };
 
@@ -56,18 +56,16 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         validationResult?: any;
       };
 
+      // Create elements array from model item data
+      const elements = selectionData.modelItemData 
+        ? [selectionData.modelItemData] as ElementShape[]
+        : [] as ElementShape[];
+
       // Map to selection update action
       return {
         type: 'SELECTION_UPDATE',
-        documentId: selectionData.documentId,
-        pageId: selectionData.selectionState.pageId,
-        isQuodsiModel: selectionData.hasModel,
-        selectedElements: selectionData.modelItemData 
-          ? [selectionData.modelItemData] as ElementShape[]
-          : [] as ElementShape[],
-        selectionCount: selectionData.selectionState.selectedIds.length,
-        totalElementCount: 0, // This might not be available in the message
-        diagramElementType: selectionData.diagramElementType
+        elements: elements,
+        totalElements: selectionData.selectionState.selectedIds.length || 0
       };
 
     default:

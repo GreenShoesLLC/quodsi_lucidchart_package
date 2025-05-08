@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
-import { useAuthState } from "../../messaging/hooks/useAuthState";
+import { useAuthPanelState } from "./useAuthPanelState";
 import { QuodsiUserInfo } from "@quodsi/shared";
 import { loginRequest, b2cPolicies } from "../../auth/msalConfig";
 
@@ -46,7 +46,8 @@ const AuthError: React.FC<{
  * Debug panel for development
  */
 const DebugPanel: React.FC = () => {
-  const { isAuthenticated, userInfo } = useAuthState();
+  // Extract just what we need from the auth state
+  const { isAuthenticated, userInfo } = useAuthPanelState();
 
   return (
     <div className="mb-4 p-2 bg-gray-100 rounded text-xs font-mono overflow-auto max-h-40">
@@ -71,7 +72,7 @@ const DebugPanel: React.FC = () => {
 export const AuthPanel: React.FC = () => {
   const { instance, accounts } = useMsal();
   const { isAuthenticated, userInfo, isLoading, error, login, logout, syncAuthStateNow } =
-    useAuthState();
+    useAuthPanelState();
 
   const [showError, setShowError] = useState(true);
   const [showDebugPanel, setShowDebugPanel] = useState(true); // Set to true by default for debugging

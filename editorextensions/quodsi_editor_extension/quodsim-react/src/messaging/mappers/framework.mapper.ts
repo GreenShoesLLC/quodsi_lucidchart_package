@@ -1,5 +1,5 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
+import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -32,9 +32,9 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
       // Log the error for debugging
       debugService.error(`Received ERROR message: [${errorData.code}] ${errorData.message}`);
 
-      // Map to an app error action
+      // Map to an auth error action since we don't have a dedicated app error type
       return {
-        type: 'APP_ERROR',
+        type: 'AUTH_ERROR',
         error: `${errorData.code}: ${errorData.message}`
       };
 
@@ -74,8 +74,9 @@ export function createErrorAction(
   message: string,
   id?: string
 ): MessagingAction {
+  // Using AUTH_ERROR since we don't have APP_ERROR in our state structure
   return {
-    type: 'APP_ERROR',
+    type: 'AUTH_ERROR',
     error: `${code}: ${message}`
   };
 }

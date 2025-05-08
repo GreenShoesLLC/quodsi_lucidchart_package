@@ -1,0 +1,71 @@
+import React, { createContext, useContext } from 'react';
+import { 
+  initialState, 
+  MessagingState, 
+  MessagingAction 
+} from './state';
+import { EnvelopeMessageType } from '@quodsi/shared';
+
+// Context types
+export type MessagingContextValue = MessagingState & {
+  sendMessage: <T extends EnvelopeMessageType>(type: T, data?: any) => void;
+};
+
+export type MessagingDispatch = React.Dispatch<MessagingAction>;
+
+// Create the contexts
+export const MessagingContext = createContext<MessagingContextValue>({
+  ...initialState,
+  sendMessage: () => {},
+});
+
+export const MessagingDispatchContext = createContext<MessagingDispatch>(() => {});
+
+// Hook exports for consuming contexts
+export function useMessaging() {
+  return useContext(MessagingContext);
+}
+
+export function useMessagingDispatch() {
+  return useContext(MessagingDispatchContext);
+}
+
+/**
+ * Hook to access authentication state
+ */
+export function useAuth() {
+  const { auth } = useMessaging();
+  return auth;
+}
+
+/**
+ * Hook to access subscription state
+ */
+export function useSubscription() {
+  const { subscription } = useMessaging();
+  return subscription;
+}
+
+/**
+ * Hook to access selection state
+ */
+export function useSelection() {
+  const { selection } = useMessaging();
+  return selection;
+}
+
+/**
+ * Hook to access simulation state
+ */
+export function useSimulation() {
+  const { simulation } = useMessaging();
+  return simulation;
+}
+
+/**
+ * Hook to access validation state
+ */
+export function useValidation() {
+  const { validation } = useMessaging();
+  return validation;
+}

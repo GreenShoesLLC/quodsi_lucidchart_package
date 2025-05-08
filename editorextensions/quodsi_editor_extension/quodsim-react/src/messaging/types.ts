@@ -9,7 +9,9 @@ import {
   StorageProvider,
   ConnectionStatus
 } from '@quodsi/shared';
-import { MessagingAction, MessagingState } from './reducer';
+import { MessagingAction } from './state/types';
+import { MessagingState } from './state/rootReducer';
+
 
 /**
  * Type for a function that maps an envelope message to an action

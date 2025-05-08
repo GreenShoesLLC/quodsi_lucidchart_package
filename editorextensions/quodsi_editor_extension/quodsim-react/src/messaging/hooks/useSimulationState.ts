@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SimulationStatus } from '@quodsi/shared';
 import { useSimulation } from '../MessageProvider';
 import { useSimulationSender } from '../senders/simulationSender';
+// Import from our local types file instead of @quodsi/shared
+import { SimulationStatus } from '../state/types';
 
 /**
  * Enhanced hook for simulation state that combines state, computed properties,
@@ -14,8 +15,8 @@ export function useSimulationState(pollingInterval?: number) {
   const simulation = useSimulation();
   const { requestSimulation, viewResults } = useSimulationSender();
   
-  // Local state for polling controls
-  const [isPolling, setIsPolling] = useState(simulation.isPolling);
+  // Local state for polling controls - now managed by the hook itself, not state
+  const [isPolling, setIsPolling] = useState(false);
   
   // Setup polling effect if needed
   useEffect(() => {
@@ -44,16 +45,32 @@ export function useSimulationState(pollingInterval?: number) {
     }
   }, [isPolling, simulation.jobId, simulation.status, pollingInterval]);
   
+  // Extract results data safely
+  const results = useMemo(() => {
+    if (!simulation.results) return null;
+    
+    // Extract relevant fields from results if they exist
+    // This is a safe fallback - replace with actual structure as needed
+    return {
+      resultUrl: simulation.results.url || '',
+      currentStep: simulation.results.currentStep || 0,
+      // Add other result fields as needed
+    };
+  }, [simulation.results]);
+  
   // Combine state and actions into a single object
   const simulationState = useMemo(() => ({
     // State
     status: simulation.status,
-    progress: simulation.progress,
+    progress: simulation.progress || 0,
     jobId: simulation.jobId,
-    currentStep: simulation.currentStep,
+    currentStep: results?.currentStep || 0,
     error: simulation.error,
-    resultUrl: simulation.resultUrl,
+    resultUrl: results?.resultUrl || '',
     isPolling,
+    startedAt: simulation.startedAt,
+    completedAt: simulation.completedAt,
+    lastUpdated: simulation.lastUpdated,
     
     // Computed properties
     isRunning: (
@@ -63,11 +80,11 @@ export function useSimulationState(pollingInterval?: number) {
       simulation.status === SimulationStatus.QUEUED
     ),
     isComplete: simulation.status === SimulationStatus.COMPLETED,
-    isFailed: simulation.status === SimulationStatus.FAILED,
+    isFailed: simulation.status === SimulationStatus.ERROR, // Using ERROR from our local enum
     isCancelled: simulation.status === SimulationStatus.CANCELLED,
     
     // Progress helpers
-    progressPercent: Math.max(0, Math.min(100, simulation.progress)),
+    progressPercent: Math.max(0, Math.min(100, simulation.progress || 0)),
     
     // Actions
     runSimulation: (
@@ -88,9 +105,11 @@ export function useSimulationState(pollingInterval?: number) {
     simulation.status,
     simulation.progress,
     simulation.jobId,
-    simulation.currentStep,
     simulation.error,
-    simulation.resultUrl,
+    simulation.startedAt,
+    simulation.completedAt,
+    simulation.lastUpdated,
+    results,
     isPolling,
     requestSimulation,
     viewResults

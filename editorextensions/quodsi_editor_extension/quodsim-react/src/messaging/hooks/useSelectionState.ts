@@ -16,36 +16,57 @@ export function useSelectionState() {
   } = useModelOpsSender();
   
   // Combine state and actions into a single object
-  const selectionState = useMemo(() => ({
-    // State
-    documentId: selection.documentId,
-    pageId: selection.pageId,
-    isQuodsiModel: selection.isQuodsiModel,
-    selectedElements: selection.selectedElements,
-    selectionCount: selection.selectionCount,
-    totalElementCount: selection.totalElementCount,
-    diagramElementType: selection.diagramElementType,
+  const selectionState = useMemo(() => {
+    // Extract document context safely
+    const documentContext = selection.documentContext || {
+      documentId: '',
+      pageId: '',
+      documentTitle: '',
+      isQuodsiModel: false,
+      totalElements: 0,
+      metadata: {}
+    };
+
+    // Calculate selection-related values
+    const selectionCount = selection.selectedElements?.length || 0;
+    const hasSelection = selectionCount > 0;
+    const selectedElementIds = selection.selectedElements?.map(el => el.id) || [];
+    const selectedElement = hasSelection ? selection.selectedElements[0] : undefined;
     
-    // Computed properties
-    hasSelection: selection.selectionCount > 0,
-    selectedElementIds: selection.selectedElements.map(el => el.id),
-    selectedElement: selection.selectedElements[0],
+    // Get diagram element type from metadata if available
+    const diagramElementType = documentContext.metadata?.diagramElementType || 'unknown';
     
-    // Actions
-    updateElement: (elementId: string, type: string, data: any) => 
-      updateElementData(elementId, type, data),
-    convertElementToType: (elementId: string, type: string) => 
-      convertElement(elementId, type),
-    convertCurrentPage: () => 
-      convertPage()
-  }), [
-    selection.documentId,
-    selection.pageId,
-    selection.isQuodsiModel,
+    return {
+      // Document context properties
+      documentId: documentContext.documentId,
+      pageId: documentContext.pageId,
+      documentTitle: documentContext.documentTitle || 'Untitled Document',
+      isQuodsiModel: documentContext.isQuodsiModel || false,
+      
+      // Selection properties
+      selectedElements: selection.selectedElements || [],
+      selectionCount,
+      totalElementCount: documentContext.totalElements || 0,
+      diagramElementType,
+      lastUpdated: selection.lastUpdated,
+      
+      // Computed properties
+      hasSelection,
+      selectedElementIds,
+      selectedElement,
+      
+      // Actions
+      updateElement: (elementId: string, type: string, data: any) => 
+        updateElementData(elementId, type, data),
+      convertElementToType: (elementId: string, type: string) => 
+        convertElement(elementId, type),
+      convertCurrentPage: () => 
+        convertPage()
+    };
+  }, [
     selection.selectedElements,
-    selection.selectionCount,
-    selection.totalElementCount,
-    selection.diagramElementType,
+    selection.documentContext,
+    selection.lastUpdated,
     updateElementData,
     convertElement,
     convertPage

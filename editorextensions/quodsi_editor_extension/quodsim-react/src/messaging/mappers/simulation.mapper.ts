@@ -1,5 +1,6 @@
-import { EnvelopeBase, EnvelopeMessageType, SimulationStatus } from '@quodsi/shared';
-import { MessagingAction } from '../reducer';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { MessagingAction } from '../state/types';
+import { SimulationStatus } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -29,25 +30,17 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
         estimatedCompletionTime?: string;
       };
 
-      // Multiple actions needed for this message:
-      // 1. Start polling
-      // 2. Update simulation status
-      
-      // We can only return one action, so let's return the most important one
-      // The polling will need to be handled by a side effect in a component
+      // Map to simulation start action
       return {
-        type: 'SIMULATION_STATUS_UPDATE',
-        status: SimulationStatus.QUEUED,
-        progress: 0,
-        jobId: ackData.jobId,
-        currentStep: 'Simulation queued'
+        type: 'SIMULATION_START',
+        jobId: ackData.jobId
       };
 
     case EnvelopeMessageType.MODEL_RUN_STATUS:
       // Extract run status data
       const statusData = msg.data as {
         jobId: string;
-        status: SimulationStatus;
+        status: string;
         progress: number;
         currentStep?: string;
         error?: string;
@@ -55,34 +48,47 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
         details?: Record<string, unknown>;
       };
 
-      // Map to simulation status update action
+      // Map to different simulation actions based on status
+      if (statusData.status === 'error' || statusData.error) {
+        return {
+          type: 'SIMULATION_ERROR',
+          error: statusData.error || 'Unknown simulation error'
+        };
+      } else if (statusData.status === 'completed') {
+        // Create a results object with all relevant data
+        const results = {
+          jobId: statusData.jobId,
+          resultUrl: statusData.resultUrl,
+          currentStep: statusData.currentStep,
+          details: statusData.details,
+          // Include any other result data you want to capture
+        };
+        
+        return {
+          type: 'SIMULATION_COMPLETE',
+          results
+        };
+      } else if (statusData.status === 'running' || statusData.status === 'processing') {
+        return {
+          type: 'SIMULATION_PROGRESS',
+          progress: statusData.progress || 0
+        };
+      }
+      
+      // For other statuses, we don't have an explicit action,
+      // so we'll use progress with 0 as a fallback
       return {
-        type: 'SIMULATION_STATUS_UPDATE',
-        status: statusData.status,
-        progress: statusData.progress,
-        jobId: statusData.jobId,
-        currentStep: statusData.currentStep,
-        error: statusData.error,
-        resultUrl: statusData.resultUrl
+        type: 'SIMULATION_PROGRESS',
+        progress: 0
       };
 
     case EnvelopeMessageType.MODEL_RUN_REQUEST:
       // This message is usually sent from the panel to the host
-      // But if we receive it, map it to start a simulation
-      const requestData = msg.data as {
-        documentId: string;
-        scenarioName?: string;
-        durationDays?: number;
-        repetitions?: number;
-        parameters?: Record<string, unknown>;
-      };
-
-      // Map to simulation starting state
+      // But if we receive it, we can treat it as a simulation start
+      // Note: Since we don't have a jobId yet, we'll generate a temporary one
       return {
-        type: 'SIMULATION_STATUS_UPDATE',
-        status: SimulationStatus.QUEUED,
-        progress: 0,
-        currentStep: 'Preparing simulation'
+        type: 'SIMULATION_START',
+        jobId: `pending-${Date.now()}`
       };
 
     default:
