@@ -1,6 +1,9 @@
 import { QuodsiUserInfo } from '@quodsi/shared';
 import { debugService } from '../messaging/utils/debugService';
 
+// Create a dedicated logger for AuthStorageService
+const logger = debugService.forComponent('AuthStorageService');
+
 // Keys for local storage
 const STORAGE_KEYS = {
   AUTH_STATE: 'quodsi_auth_state',
@@ -36,14 +39,12 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
       localStorage.setItem(STORAGE_KEYS.AUTH_STATE, JSON.stringify(authState));
       localStorage.setItem(STORAGE_KEYS.LAST_ACTIVE, Date.now().toString());
       
-      debugService.log('Saved auth state to localStorage');
-      console.log('Auth state saved:', { 
+      logger.log('Saved auth state to localStorage', { 
         isAuthenticated, 
         hasUserInfo: !!userInfo 
       });
     } catch (error) {
-      debugService.error('Error saving auth state to localStorage:', error);
-      console.error('### DIRECT DEBUG ### Error saving auth state:', error);
+      logger.error('Error saving auth state to localStorage:', error);
     }
   }
   
@@ -54,7 +55,7 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
     try {
       const authStateJson = localStorage.getItem(STORAGE_KEYS.AUTH_STATE);
       if (!authStateJson) {
-        debugService.log('No auth state found in localStorage');
+        logger.log('No auth state found in localStorage');
         return null;
       }
       
@@ -63,8 +64,7 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
       // Check if the stored state has expired
       const now = Date.now();
       if (now - authState.lastUpdated > AUTH_EXPIRATION_MS) {
-        debugService.log('Stored auth state has expired');
-        console.log('### DIRECT DEBUG ### Stored auth state has expired');
+        logger.log('Stored auth state has expired');
         this.clearAuthState();
         return null;
       }
@@ -72,8 +72,7 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
       // Update last active timestamp
       localStorage.setItem(STORAGE_KEYS.LAST_ACTIVE, now.toString());
       
-      debugService.log('Loaded auth state from localStorage');
-      console.log('### DIRECT DEBUG ### Loaded auth state from localStorage:', {
+      logger.log('Loaded auth state from localStorage', {
         isAuthenticated: authState.isAuthenticated,
         hasUserInfo: !!authState.userInfo,
         age: Math.round((now - authState.lastUpdated) / 1000 / 60) + ' minutes'
@@ -81,8 +80,7 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
       
       return authState;
     } catch (error) {
-      debugService.error('Error loading auth state from localStorage:', error);
-      console.error('### DIRECT DEBUG ### Error loading auth state:', error);
+      logger.error('Error loading auth state from localStorage:', error);
       return null;
     }
   }
@@ -96,11 +94,9 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
       localStorage.removeItem(STORAGE_KEYS.USER_INFO);
       localStorage.removeItem(STORAGE_KEYS.LAST_ACTIVE);
       
-      debugService.log('Cleared auth state from localStorage');
-      console.log('### DIRECT DEBUG ### Cleared auth state from localStorage');
+      logger.log('Cleared auth state from localStorage');
     } catch (error) {
-      debugService.error('Error clearing auth state from localStorage:', error);
-      console.error('### DIRECT DEBUG ### Error clearing auth state:', error);
+      logger.error('Error clearing auth state from localStorage:', error);
     }
   }
   
@@ -122,11 +118,10 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
         now - authState.lastUpdated <= AUTH_EXPIRATION_MS
       );
       
-      debugService.log(`Auth state validity check: ${isValid}`);
+      logger.log(`Auth state validity check: ${isValid}`);
       return isValid;
     } catch (error) {
-      debugService.error('Error checking auth state validity:', error);
-      console.error('### DIRECT DEBUG ### Error checking auth state validity:', error);
+      logger.error('Error checking auth state validity:', error);
       return false;
     }
   }
@@ -147,9 +142,9 @@ static saveAuthState(isAuthenticated: boolean, userInfo: QuodsiUserInfo | null |
         localStorage.setItem(STORAGE_KEYS.AUTH_STATE, JSON.stringify(authState));
       }
       
-      debugService.log('Updated last active timestamp');
+      logger.log('Updated last active timestamp');
     } catch (error) {
-      debugService.error('Error updating last active timestamp:', error);
+      logger.error('Error updating last active timestamp:', error);
     }
   }
 }

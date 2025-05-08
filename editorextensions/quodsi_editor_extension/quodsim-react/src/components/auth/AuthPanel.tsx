@@ -3,6 +3,10 @@ import { useMsal } from "@azure/msal-react";
 import { useAuthPanelState } from "./useAuthPanelState";
 import { QuodsiUserInfo } from "@quodsi/shared";
 import { loginRequest, b2cPolicies } from "../../auth/msalConfig";
+import { debugService } from "../../messaging/utils/debugService";
+
+// Create dedicated logger for AuthPanel
+const logger = debugService.forComponent('AuthPanel');
 
 /**
  * Error component for displaying authentication errors
@@ -88,7 +92,7 @@ export const AuthPanel: React.FC = () => {
   // Log authentication state for debugging
   useEffect(() => {
     if (isLoading === false) {
-      console.log("AuthPanel auth state initialized:", {
+      logger.log("Auth state initialized", {
         isAuthenticated,
         hasUserInfo: !!userInfo,
         isLoading
@@ -100,7 +104,7 @@ export const AuthPanel: React.FC = () => {
   useEffect(() => {
     // Only run this if not already authenticated and there are MSAL accounts
     if (!isAuthenticated && accounts.length > 0 && !isProcessingAuth) {
-      console.log('AuthPanel detected account mismatch - fixing authentication state');
+      logger.log('Detected account mismatch - fixing authentication state');
       
       // Get the account info
       const account = accounts[0];
@@ -126,7 +130,7 @@ export const AuthPanel: React.FC = () => {
 
   // Handle sign in process
   const handleSignIn = async () => {
-    console.log("### DIRECT DEBUG ### handleSignIn called");
+    logger.log("handleSignIn called");
 
     if (isProcessingAuth) return;
 
@@ -138,9 +142,7 @@ export const AuthPanel: React.FC = () => {
         !window.location.href.includes("localhost:9900");
 
       if (isDevelopment) {
-        console.log(
-          "### DIRECT DEBUG ### Using development mode authentication"
-        );
+        logger.log("Using development mode authentication");
         // Simulate login success with mock data
         const mockUser: QuodsiUserInfo = {
           id: "dev-user-123",
@@ -152,13 +154,11 @@ export const AuthPanel: React.FC = () => {
         const mockToken = "dev-token-" + Date.now();
 
         // Send login success message
-        console.log("### DIRECT DEBUG ### Sending mock login success message");
+        logger.log("Sending mock login success message");
         login(mockToken, mockUser, false);
       } else {
         // Production mode - Use real MSAL authentication
-        console.log(
-          "### DIRECT DEBUG ### Using production mode authentication with MSAL"
-        );
+        logger.log("Using production mode authentication with MSAL");
 
         // Check if this is a sign-in after a recent sign-out
         const hasJustSignedOut =
@@ -171,18 +171,14 @@ export const AuthPanel: React.FC = () => {
         const isRecentSignOut = timeSinceSignOut < 60000; // Within 1 minute
 
         if (hasJustSignedOut && isRecentSignOut) {
-          console.log(
-            `### DIRECT DEBUG ### Detected sign-in attempt ${timeSinceSignOut}ms after sign-out`
-          );
+          logger.log(`Detected sign-in attempt ${timeSinceSignOut}ms after sign-out`);
 
           // Clear MSAL cache for this special case
           try {
             // Try to clear any existing accounts first
             const existingAccounts = instance.getAllAccounts();
             if (existingAccounts.length > 0) {
-              console.log(
-                `### DIRECT DEBUG ### Found ${existingAccounts.length} accounts before sign-in, clearing cache`
-              );
+              logger.log(`Found ${existingAccounts.length} accounts before sign-in, clearing cache`);
             }
 
             // Clear session storage to ensure a clean state
@@ -195,10 +191,7 @@ export const AuthPanel: React.FC = () => {
                 try {
                   sessionStorage.removeItem(key);
                 } catch (e) {
-                  console.error(
-                    `### DIRECT DEBUG ### Error clearing session storage item: ${key}`,
-                    e
-                  );
+                  logger.error(`Error clearing session storage item: ${key}`, e);
                 }
               }
             });
@@ -207,7 +200,7 @@ export const AuthPanel: React.FC = () => {
             window.sessionStorage.removeItem("quodsi_just_signed_out");
             window.sessionStorage.removeItem("quodsi_signout_time");
           } catch (e) {
-            console.error("### DIRECT DEBUG ### Error clearing cache:", e);
+            logger.error("Error clearing cache:", e);
           }
         }
 
@@ -218,15 +211,15 @@ export const AuthPanel: React.FC = () => {
           prompt: "login",
         };
 
-        console.log("### DIRECT DEBUG ### Login request:", {
+        logger.log("Login request:", {
           scopes: authRequest.scopes,
           authority: authRequest.authority,
           prompt: authRequest.prompt,
         });
 
         const result = await instance.loginPopup(authRequest);
-        console.log(
-          "### DIRECT DEBUG ### MSAL login successful, result:",
+        logger.log(
+          "MSAL login successful, result:",
           result ? "Success" : "No result"
         );
 
@@ -235,7 +228,7 @@ export const AuthPanel: React.FC = () => {
           const account =
             instance.getActiveAccount() ||
             (accounts.length > 0 ? accounts[0] : null);
-          console.log("### DIRECT DEBUG ### Active account:", account);
+          logger.log("Active account:", account);
 
           if (account) {
             const newUser = accounts.length === 1; // Assume first login means new user
@@ -248,31 +241,19 @@ export const AuthPanel: React.FC = () => {
             };
 
             // Send login success message
-            console.log(
-              "### DIRECT DEBUG ### Sending login success message with user:",
-              user
-            );
+            logger.log("Sending login success message with user:", user);
             login(result.idToken, user, newUser);
           } else {
-            console.log(
-              "### DIRECT DEBUG ### No active account found after login, attempting recovery"
-            );
+            logger.log("No active account found after login, attempting recovery");
 
             // Recovery attempt 1: Look for any accounts in MSAL
             const allAccounts = instance.getAllAccounts();
-            console.log(
-              "### DIRECT DEBUG ### Found",
-              allAccounts.length,
-              "accounts"
-            );
+            logger.log("Found", allAccounts.length, "accounts");
 
             if (allAccounts.length > 0) {
               // Use the first account we find
               const recoveredAccount = allAccounts[0];
-              console.log(
-                "### DIRECT DEBUG ### Using recovered account:",
-                recoveredAccount.username
-              );
+              logger.log("Using recovered account:", recoveredAccount.username);
 
               // Create user info from recovered account
               const user: QuodsiUserInfo = {
@@ -284,20 +265,13 @@ export const AuthPanel: React.FC = () => {
               // Try to set this as the active account
               try {
                 instance.setActiveAccount(recoveredAccount);
-                console.log(
-                  "### DIRECT DEBUG ### Set active account successfully"
-                );
+                logger.log("Set active account successfully");
               } catch (setActiveError) {
-                console.warn(
-                  "### DIRECT DEBUG ### Failed to set active account:",
-                  setActiveError
-                );
+                logger.warn("Failed to set active account:", setActiveError);
               }
 
               // Send login success message with the recovered account
-              console.log(
-                "### DIRECT DEBUG ### Sending login success message with recovered user"
-              );
+              logger.log("Sending login success message with recovered user");
               login(result.idToken, user, false);
             } else {
               // If recovery failed, throw an error to be caught by the catch block
@@ -309,7 +283,7 @@ export const AuthPanel: React.FC = () => {
         }
       }
     } catch (err: any) {
-      console.error("### DIRECT DEBUG ### Login error:", err);
+      logger.error("Login error:", err);
       // If using B2C and it's a password reset, redirect to reset experience
       if (err.errorMessage && err.errorMessage.includes("AADB2C90118")) {
         handlePasswordReset();
@@ -321,7 +295,7 @@ export const AuthPanel: React.FC = () => {
 
   // Handle sign out process
   const handleSignOut = async () => {
-    console.log("### DIRECT DEBUG ### handleSignOut called");
+    logger.log("handleSignOut called");
 
     if (isProcessingAuth) return;
 
@@ -333,7 +307,7 @@ export const AuthPanel: React.FC = () => {
         !window.location.href.includes("localhost:9900");
 
       if (isDevelopment) {
-        console.log("### DIRECT DEBUG ### Using development mode logout");
+        logger.log("Using development mode logout");
         // Just send the logout message directly
         logout();
       } else {
@@ -346,27 +320,22 @@ export const AuthPanel: React.FC = () => {
             Date.now().toString()
           );
         } catch (e) {
-          console.error(
-            "### DIRECT DEBUG ### Error setting sign-out flags:",
-            e
-          );
+          logger.error("Error setting sign-out flags:", e);
         }
 
         // Production mode - Use real MSAL logout
-        console.log(
-          "### DIRECT DEBUG ### Using production mode logout with MSAL"
-        );
+        logger.log("Using production mode logout with MSAL");
         // Sign out of MSAL
         await instance.logoutPopup({
           postLogoutRedirectUri: window.location.origin,
         });
 
         // Send logout message through messaging system
-        console.log("### DIRECT DEBUG ### Sending logout message");
+        logger.log("Sending logout message");
         logout();
       }
     } catch (err: any) {
-      console.error("### DIRECT DEBUG ### Logout error:", err);
+      logger.error("Logout error:", err);
     } finally {
       setIsProcessingAuth(false);
     }
@@ -396,7 +365,7 @@ export const AuthPanel: React.FC = () => {
         });
       }
     } catch (err: any) {
-      console.error("Password reset error:", err);
+      logger.error("Password reset error:", err);
     } finally {
       setIsProcessingAuth(false);
     }
@@ -428,7 +397,7 @@ export const AuthPanel: React.FC = () => {
         });
       }
     } catch (err: any) {
-      console.error("Edit profile error:", err);
+      logger.error("Edit profile error:", err);
     } finally {
       setIsProcessingAuth(false);
     }
@@ -444,10 +413,7 @@ export const AuthPanel: React.FC = () => {
     setShowDebugPanel((prev) => !prev);
   };
 
-  console.log(
-    "### DIRECT DEBUG ### AuthPanel rendering, isAuthenticated:",
-    isAuthenticated
-  );
+  logger.log("AuthPanel rendering, isAuthenticated:", isAuthenticated);
 
   // Display the authentication UI
   return (
