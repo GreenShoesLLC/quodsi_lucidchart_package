@@ -1,0 +1,94 @@
+import { 
+  EditorClient, 
+  ItemProxy, 
+  ElementProxy,
+  PageProxy
+} from 'lucid-extension-sdk';
+import { SelectionType, ValidationResult } from '@quodsi/shared';
+import { BaseSelectionProcessor } from './BaseSelectionProcessor';
+import { ModelManager } from '../../../../../core/ModelManager';
+import { SelectionStateData } from '../types';
+import { itemDataBuilder } from '../utils/itemDataBuilder';
+import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+/**
+ * Processor for connector selection
+ */
+export class ConnectorProcessor extends BaseSelectionProcessor {
+  /**
+   * Process a connector selection
+   * @param client The editor client
+   * @param currentPage The current page
+   * @param items The selected items (should be single connector)
+   * @param selectionType The selection type (should be CONNECTOR)
+   * @param modelManager The model manager
+   * @returns The message data
+   */
+  async process(
+    client: EditorClient,
+    currentPage: PageProxy,
+    items: ItemProxy[],
+    selectionType: SelectionType,
+    modelManager: ModelManager
+  ): Promise<Partial<SelectionStateData>> {
+    console.log('[ConnectorProcessor] Processing connector selection');
+    
+    const documentId = this.getDocumentId(client);
+    const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
+    
+    // Create the base message
+    const messageData = this.createBaseMessageData(
+      items,
+      currentPage,
+      selectionType,
+      documentId,
+      isQuodsiModel
+    );
+    
+    // If this isn't a Quodsi model or we don't have exactly one item, return basic info
+    if (!isQuodsiModel || items.length !== 1) {
+      console.log('[ConnectorProcessor] Not a Quodsi model or multiple items selected');
+      return messageData;
+    }
+    
+    // Get validation result
+    const validationResult = await this.getValidationResult(modelManager);
+    messageData.validationResult = validationResult;
+    
+    const item = items[0];
+    const metadata = modelManager.getMetadata(item);
+    
+    if (metadata) {
+      try {
+        // Get model item data
+        messageData.modelItemData = await itemDataBuilder.buildModelItemData(
+          item, 
+          modelManager
+        );
+        
+        // Get resource reference data
+        messageData.referenceData = await referenceDataBuilder.buildResourceReferenceData(
+          modelManager
+        );
+        
+        // Set diagram element type
+        messageData.diagramElementType = this.getDiagramElementType(item);
+        
+        console.log('[ConnectorProcessor] Processed connector data:', {
+          id: item.id,
+          hasModelData: messageData.modelItemData ? 'yes' : 'no',
+          hasRefData: messageData.referenceData ? 'yes' : 'no',
+          diagramElementType: messageData.diagramElementType
+        });
+      } catch (error) {
+        console.error('[ConnectorProcessor] Error processing connector:', error);
+        messageData.error = 'Error processing connector data';
+      }
+    } else {
+      console.error('[ConnectorProcessor] No metadata found for connector');
+      messageData.error = 'No metadata found for connector';
+    }
+    
+    return messageData;
+  }
+}

@@ -35,7 +35,7 @@ The messaging system implements a central router pattern with specialized handle
 
 ### Core Components
 
-#### Router (`RouterCore.ts`)
+#### Router (`MessageRouter.ts`)
 
 The `MessageRouter` is implemented as a singleton that:
 - Coordinates all message routing between components

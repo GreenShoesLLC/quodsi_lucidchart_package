@@ -2,10 +2,11 @@ import { EnvelopeBase } from '@quodsi/shared';
 import { AuthHandler } from './authHandler';
 import { SubscriptionHandler } from './subscriptionHandler';
 import { FrameworkHandler } from './frameworkHandler';
-import { SelectionHandler } from './selectionHandler';
+
 import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
 import { StorageHandler } from './storageHandler';
+import { SelectionHandler } from './selection';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler

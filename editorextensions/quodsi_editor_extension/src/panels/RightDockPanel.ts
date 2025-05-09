@@ -16,7 +16,8 @@ import {
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
-import { SelectionHandler } from '../core/messaging/handlers/selectionHandler';
+import { SelectionHandler } from '../core/messaging/handlers';
+
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -283,11 +284,19 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             
             if (currentPage) {
                 // Set the selection state using the handler
-                SelectionHandler.setSelectionState(elementShapes, currentPage.allBlocks.size + currentPage.allLines.size);
+                SelectionHandler.setSelectionState({
+                    selectedElements: elementShapes,
+                    selectionCount: elementShapes.length,
+                    totalElementCount: currentPage.allBlocks.size + currentPage.allLines.size
+                });
             }
         } else {
             // No selection - set empty selection state
-            SelectionHandler.setSelectionState([], 0);
+            SelectionHandler.setSelectionState({
+                selectedElements: [],
+                selectionCount: 0,
+                totalElementCount: 0
+            });
         }
     }
 

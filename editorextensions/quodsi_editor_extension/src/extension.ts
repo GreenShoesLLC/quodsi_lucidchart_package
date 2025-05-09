@@ -15,6 +15,7 @@ import { RightDockPanel } from './panels/RightDockPanel';
 import { router, initializeMessaging } from './core/messaging';
 import { ExtensionMessaging } from '@quodsi/shared';
 import { SelectionManager } from './managers';
+import { SelectionHandler } from './core/messaging/handlers/selection';
 import { panelManager } from './managers/PanelManager';
 
 // Toggle to use new messaging implementation
@@ -47,6 +48,15 @@ if (useNewMessaging) {
     rightDockPanel = new RightDockPanel(client, modelManager);
     rightDockPanel.setLogging(true);
     console.info('[EXT][extension] Created RightDockPanel');
+
+    // Initialize the SelectionHandler with model manager
+    SelectionHandler.setModelManager(modelManager);
+
+    // Hook selection changes to SelectionHandler
+    viewport.hookSelection((items) => {
+        SelectionHandler.handleLucidSelectionEvent(client, items);
+    });
+    console.info('[EXT][extension] Selection handler hooked');
 } else {
     let authPanel, modelPanel;
     console.info('[extension] About to create AuthPanel');
