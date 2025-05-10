@@ -62,12 +62,21 @@ export function createMessageHandler(
     }
 
     // Convert envelope to action using mappers
-    const action = mapEnvelopeToAction(msg);
+    const actionResult = mapEnvelopeToAction(msg);
 
-    // Update state if action was produced
-    if (action) {
-      logger.log("Dispatching action:", action);
-      dispatch(action);
+    // Handle multiple actions if returned as an array
+    if (Array.isArray(actionResult)) {
+      logger.log("Dispatching multiple actions:", actionResult);
+      actionResult.forEach(action => {
+        if (action) {
+          dispatch(action);
+        }
+      });
+    } 
+    // Update state if a single action was produced
+    else if (actionResult) {
+      logger.log("Dispatching action:", actionResult);
+      dispatch(actionResult);
     }
   };
 }

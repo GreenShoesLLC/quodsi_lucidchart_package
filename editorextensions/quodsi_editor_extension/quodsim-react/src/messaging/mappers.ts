@@ -19,6 +19,8 @@ import {
 } from "./state";
 import { debugService } from "./utils/debugService";
 
+const logger = debugService.forComponent('MessageMappers');
+
 /**
  * Maps envelope messages received from the extension host to reducer actions
  * @param envelope The message envelope to map
@@ -28,6 +30,8 @@ export function mapEnvelopeToAction(envelope: EnvelopeBase): MessagingAction | n
   try {
     // Use safe access to data with defaults to prevent TypeScript errors
     const data = envelope.data || {};
+    
+    logger.log(`Mapping envelope to action, type: ${envelope.type}`, data);
     
     switch (envelope.type) {
       // Authentication messages
@@ -67,11 +71,64 @@ export function mapEnvelopeToAction(envelope: EnvelopeBase): MessagingAction | n
         
       // Selection and context messages
       case EnvelopeMessageType.SELECTION_CHANGED: {
-        const selectionData = data as { elements?: any[]; totalElements?: number };
+        logger.log('Processing SELECTION_CHANGED', data);
+        
+        // Handle both selection and document context from the same message
+        const selectionData = data as { 
+          elements?: any[]; 
+          selectedElements?: any[];
+          totalElements?: number;
+          selectionCount?: number;
+          documentId?: string;
+          hasModel?: boolean;
+          modelItemData?: any;
+          documentContext?: {
+            documentId?: string;
+            pageId?: string;
+            documentTitle?: string;
+            isQuodsiModel?: boolean;
+          }
+        };
+        
+        // Use either elements array or selectedElements array
+        const elements = selectionData.selectedElements || selectionData.elements || [];
+        const totalElements = selectionData.totalElements || selectionData.selectionCount || 0;
+        
+        logger.log('Found elements:', elements);
+        
+        // If we have document context info in the message, update that too
+        if (selectionData.documentContext) {
+          logger.log('Document context found in SELECTION_CHANGED', selectionData.documentContext);
+          
+          // Dispatch document context update
+          const contextAction: SelectionAction = {
+            type: 'DOCUMENT_CONTEXT_UPDATE',
+            documentId: selectionData.documentContext.documentId || selectionData.documentId || '',
+            pageId: selectionData.documentContext.pageId || '',
+            documentTitle: selectionData.documentContext.documentTitle || 'Untitled Document',
+            isQuodsiModel: selectionData.documentContext.isQuodsiModel || selectionData.hasModel || false,
+            metadata: {
+              // Add any relevant metadata here
+              modelItemData: selectionData.modelItemData
+            }
+          };
+          
+          // Return array of actions to dispatch both
+          return [
+            contextAction,
+            {
+              type: 'SELECTION_UPDATE',
+              elements,
+              totalElements
+            } as SelectionAction
+          ] as unknown as MessagingAction;
+        }
+        
+        // If we don't have document context, just update the selection
         return {
           type: 'SELECTION_UPDATE',
-          elements: selectionData.elements || [],
-          totalElements: selectionData.totalElements || 0
+          elements,
+          totalElements
         } as SelectionAction;
       }
         
@@ -83,6 +140,8 @@ export function mapEnvelopeToAction(envelope: EnvelopeBase): MessagingAction | n
           isQuodsiModel?: boolean;
           metadata?: any;
         };
+        
+        logger.log('Processing MODEL_CONTEXT', contextData);
         
         return {
           type: 'DOCUMENT_CONTEXT_UPDATE',
