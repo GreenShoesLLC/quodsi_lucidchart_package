@@ -51,6 +51,15 @@ export function useSubscription() {
  */
 export function useSelection() {
   const { selection } = useMessaging();
+  
+  // Add enhanced logging
+  console.log('[useSelection] Selection state retrieved:', {
+    selectedElementsCount: selection?.selectedElements?.length || 0,
+    hasDocumentContext: !!selection?.documentContext,
+    lastUpdated: selection?.lastUpdated,
+    documentContextIsQuodsiModel: selection?.documentContext?.isQuodsiModel
+  });
+  
   return selection;
 }
 

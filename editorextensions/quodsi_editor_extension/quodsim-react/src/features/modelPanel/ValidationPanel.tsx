@@ -58,21 +58,21 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
       switch (type.toLowerCase()) {
         case "error":
           return {
-            container: "bg-red-50 border-l-4 border-red-500 p-4 mb-2",
+            container: "bg-red-50 border-l-4 border-red-500 p-4 mb-3 rounded-r-md",
             icon: <XCircle className="h-5 w-5 text-red-500" />,
-            text: "text-red-700",
+            text: "text-red-700 font-medium",
           };
         case "warning":
           return {
-            container: "bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-2",
+            container: "bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-3 rounded-r-md",
             icon: <AlertTriangle className="h-5 w-5 text-yellow-500" />,
-            text: "text-yellow-700",
+            text: "text-yellow-700 font-medium",
           };
         default:
           return {
-            container: "bg-blue-50 border-l-4 border-blue-500 p-4 mb-2",
+            container: "bg-blue-50 border-l-4 border-blue-500 p-4 mb-3 rounded-r-md",
             icon: <Info className="h-5 w-5 text-blue-500" />,
-            text: "text-blue-700",
+            text: "text-blue-700 font-medium",
           };
       }
     };
@@ -80,11 +80,14 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
     const style = getMessageStyle(message.type);
 
     return (
-      <div key={`validation-${index}`} className={style.container}>
+      <div key={`validation-${index}`} className={`${style.container} shadow-sm`}>
         <div className="flex">
           <div className="flex-shrink-0">{style.icon}</div>
-          <div className="ml-3">
-            <p className={`text-sm ${style.text}`}>{message.message}</p>
+          <div className="ml-3 flex-1">
+            <p className={`text-sm ${style.text} leading-5`}>{message.message}</p>
+            {message.elementId && (
+              <p className="text-xs text-gray-500 mt-1">Element ID: {message.elementId}</p>
+            )}
           </div>
         </div>
       </div>
@@ -102,11 +105,20 @@ export const ValidationPanel: React.FC<ValidationPanelProps> = ({
       onToggle={onToggle}
     >
       {filteredMessages.length === 0 ? (
-        <div className="text-sm text-gray-500 p-2">
-          No validation issues found for the current selection.
+        <div className="flex items-center justify-center p-6 text-center">
+          <div className="bg-green-50 border border-green-100 rounded-lg p-4 inline-block">
+            <div className="text-green-500 mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-green-700">
+              No validation issues found for the current selection.
+            </p>
+          </div>
         </div>
       ) : (
-        <div className="validation-message-list">
+        <div className="validation-message-list px-1 py-2">
           {filteredMessages.map((message, index) => 
             renderValidationMessage(message, index)
           )}

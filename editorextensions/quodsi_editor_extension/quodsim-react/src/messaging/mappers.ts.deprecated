@@ -31,7 +31,7 @@ export function mapEnvelopeToAction(envelope: EnvelopeBase): MessagingAction | n
     // Use safe access to data with defaults to prevent TypeScript errors
     const data = envelope.data || {};
     
-    logger.log(`Mapping envelope to action, type: ${envelope.type}`, data);
+    logger.log(`OLDDDDD Mapping envelope to action, type: ${envelope.type}`, data);
     
     switch (envelope.type) {
       // Authentication messages

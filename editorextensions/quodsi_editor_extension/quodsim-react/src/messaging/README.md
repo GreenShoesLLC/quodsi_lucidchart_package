@@ -52,7 +52,7 @@ messaging/
 │   └── index.ts
 │
 ├── handlers/            # Message handling logic
-│   ├── messageHandlers.ts
+│   ├── rxMessageHandlers.ts
 │   ├── authStatusHandler.ts
 │   └── index.ts
 │

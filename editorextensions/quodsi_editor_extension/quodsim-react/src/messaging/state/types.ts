@@ -61,6 +61,16 @@ import { SubscriptionAction } from './subscriptionSlice';
 import { SimulationAction } from './simulationSlice';
 import { ValidationAction } from './validationSlice';
 
+// Re-export the action types
+export type { 
+  AppAction,
+  AuthAction,
+  SelectionAction,
+  SubscriptionAction,
+  SimulationAction,
+  ValidationAction 
+};
+
 // Union type that encompasses all possible actions
 export type MessagingAction = 
   | AppAction

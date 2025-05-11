@@ -10,11 +10,12 @@ import { SimulationStatus } from '../../types/SimulationStatus';
 import { SimulationComponentSelector } from '../../components/SimulationComponentSelector';
 import { StatusIndicator } from '../shared/StatusIndicator';
 import { getSimulationState } from '../../utils/simulationState';
+import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 interface PanelHeaderProps {
   modelName: string;
   validationState: ValidationState | null;
-  currentElement: ModelItemData | null;
+  currentElement: ExtendedModelItemData | null;
   onValidate: () => void;
   onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
@@ -58,7 +59,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   }, [simulationStatus]);
   
   // Helper to get display name for the element
-  const getDisplayName = (modelItemData: ModelItemData | null): string => {
+  const getDisplayName = (modelItemData: ExtendedModelItemData | null): string => {
     if (!modelItemData) return "No Selection";
 
     // Try to get name from the data object first (SimulationObject data)
@@ -91,12 +92,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     return (
       <div className="flex items-center gap-2">
         {modelName && (
-          <span className="text-sm font-medium">{modelName}</span>
+          <span className="text-lg font-semibold text-gray-800">{modelName}</span>
         )}
         {currentElement && (
-          <span className="text-xs text-gray-500">
-            Item {getDisplayName(currentElement)}
-          </span>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-sm text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
+              {getDisplayName(currentElement)}
+            </span>
+          </div>
         )}
       </div>
     );
@@ -110,14 +113,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     if (!isModel) return null;
 
     return (
-      <div className="flex items-center mb-2">
-        <label htmlFor="scenario-name" className="text-xs mr-2">
+      <div className="flex items-center space-x-3">
+        <label htmlFor="scenario-name" className="text-sm text-gray-600 font-medium w-32">
           Scenario Name:
         </label>
         <input
           id="scenario-name"
           type="text"
-          className="text-xs p-1 border rounded flex-grow"
+          className="text-sm p-2 border border-gray-300 rounded-md flex-grow shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
           value={scenarioName}
           onChange={(e) => setScenarioName(e.target.value)}
           disabled={isSimulating}
@@ -128,24 +131,19 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   
   // Render action buttons based on context
   const renderButtons = () => {
-    // Define fixed width for buttons
-    const buttonStyle = {
-      minWidth: "110px",
-      width: "33%",
-      textAlign: "center" as const,
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "32px",
-    };
+    // Button style classes instead of inline styles
+    const buttonBaseClasses = "px-3 py-2 min-w-[110px] w-1/3 flex justify-center items-center h-9 text-sm font-medium rounded-md shadow-sm transition-colors";
+    const primaryButtonClasses = `${buttonBaseClasses} bg-blue-600 hover:bg-blue-700 text-white`;
+    const simulateButtonClasses = `${buttonBaseClasses} bg-green-600 hover:bg-green-700 text-white`;
+    const dangerButtonClasses = `${buttonBaseClasses} bg-red-600 hover:bg-red-700 text-white`;
+    const disabledButtonClasses = `${buttonBaseClasses} bg-blue-400 text-white cursor-not-allowed`;
 
     // Handle case when no currentElement exists
     if (!currentElement) {
       return (
         onRemoveModel && (
           <button
-            style={buttonStyle}
-            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            className={dangerButtonClasses}
             onClick={onRemoveModel}
           >
             Remove Model
@@ -159,15 +157,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     // Handle Model type buttons
     if (elementType === SimulationObjectType.Model) {
       return (
-        <div className="flex items-center justify-between gap-2 w-full">
+        <div className="flex items-center justify-between gap-3 w-full">
           {onSimulate && (
             <button
-              style={buttonStyle}
-              className={`px-2 py-1 text-xs ${
-                isSimulating
-                  ? "bg-blue-500 cursor-not-allowed"
-                  : "bg-green-500 hover:bg-green-600"
-              } text-white rounded`}
+              className={isSimulating ? disabledButtonClasses : simulateButtonClasses}
               onClick={handleSimulateClick}
               disabled={isSimulating}
             >
@@ -181,8 +174,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
           {onRemoveModel && (
             <button
-              style={buttonStyle}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+              className={dangerButtonClasses}
               onClick={onRemoveModel}
             >
               Remove Model
@@ -250,18 +242,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   };
 
   return (
-    <div className="p-2 space-y-2 border-b">
+    <div className="p-4 space-y-3 border-b bg-gradient-to-r from-blue-50 to-white shadow-sm">
       {renderModelName()}
       <div className="flex items-center justify-between">
         {renderValidationIndicators()}
         <button
-          className="text-xs px-2 py-1 text-blue-600 hover:text-blue-800"
+          className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 rounded-md transition-colors border border-blue-100 flex items-center gap-1 font-medium"
           onClick={onValidate}
         >
           Validate
         </button>
       </div>
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-3">
         {renderScenarioNameInput()}
         {renderButtons()}
       </div>

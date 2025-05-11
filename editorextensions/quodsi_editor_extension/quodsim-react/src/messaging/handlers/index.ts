@@ -1,2 +1,2 @@
-export * from './messageHandlers';
+export * from './rxMessageHandlers';
 export * from './authStatusHandler';

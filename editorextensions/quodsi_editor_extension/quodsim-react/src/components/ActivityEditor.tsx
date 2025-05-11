@@ -37,10 +37,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     value >= 999999 ? Infinity : value;
 
   const extractActivityData = (act: any): Activity => {
+    // Handle completely missing data case
+    if (!act) {
+      console.error('[ActivityEditor] No activity data provided');
+      return new Activity(
+        '', // Empty ID
+        'New Activity', 
+        1, // Default capacity
+        bufferToDisplay(null), 
+        bufferToDisplay(null),
+        [],
+        0,
+        0
+      );
+    }
+
+    // Extract data safely
     const data = act.data || act;
+    
+    // Ensure ID is present
+    const id = data.id || act.id || '';
+    if (!id) {
+      console.warn('[ActivityEditor] Activity missing ID');
+    }
+    
     return new Activity(
-      data.id || "",
-      data.name || "New Activity",
+      id,
+      data.name || 'New Activity',
       data.capacity || 1,
       bufferToDisplay(data.inputBufferCapacity),
       bufferToDisplay(data.outputBufferCapacity),
@@ -126,7 +149,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   if (!localActivity?.id) {
     return (
-      <div className="p-2 text-sm text-red-600">Invalid activity data</div>
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md shadow-sm">
+        <div className="text-red-600 font-medium mb-2">Invalid activity data</div>
+        <div className="text-sm text-red-500">
+          The activity data is missing required properties. Try selecting a different element or re-converting this element.
+        </div>
+      </div>
     );
   }
 

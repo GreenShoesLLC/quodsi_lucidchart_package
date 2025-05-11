@@ -1,29 +1,27 @@
 /* Styles for EnhancedDurationEditor */
 
 .duration-editor {
-  padding: 8px;
-  border-radius: 4px;
+  padding: 12px;
+  border-radius: 6px;
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
 }
 
 .duration-editor.compact {
-  padding: 4px;
+  padding: 8px;
 }
 
 .duration-editor .parameters-editor {
   background-color: white;
-  border-radius: 4px;
-  padding: 8px;
+  border-radius: 6px;
+  padding: 12px;
   border: 1px solid #e5e7eb;
+  margin-bottom: 12px;
 }
 
 .duration-editor.compact .parameters-editor {
-  padding: 4px;
-}
-
-.duration-editor label {
-  font-weight: 500;
+  padding: 8px;
+  margin-bottom: 8px;
 }
 
 .duration-editor input[type="number"] {
@@ -39,28 +37,4 @@
 
 .duration-editor input[type="number"] {
   -moz-appearance: textfield;
-}
-
-/* Spacing adjustments for compact mode */
-.duration-editor.compact .text-sm {
-  font-size: 0.8125rem;
-}
-
-.duration-editor.compact .mb-1 {
-  margin-bottom: 0.125rem;
-}
-
-.duration-editor.compact .mb-2 {
-  margin-bottom: 0.25rem;
-}
-
-.duration-editor.compact .space-y-2 > * + * {
-  margin-top: 0.25rem;
-}
-
-.duration-editor.compact input,
-.duration-editor.compact select {
-  padding-top: 0.125rem;
-  padding-bottom: 0.125rem;
-  height: 1.75rem;
 }

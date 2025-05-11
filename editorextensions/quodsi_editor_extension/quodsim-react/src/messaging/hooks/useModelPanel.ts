@@ -6,6 +6,7 @@ import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationStatus } from '../../types/SimulationStatus';
 import { ModelItemData } from '@quodsi/shared';
+import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 /**
  * Custom hook that brings together all the data and actions needed for the ModelPanel component.
@@ -14,18 +15,29 @@ import { ModelItemData } from '@quodsi/shared';
  * @returns An object containing all data and actions needed by the ModelPanel
  */
 export function useModelPanel() {
+  const messagingState = useMessaging();
   const { 
     selection, 
     validation, 
     simulation,
     app: { initialized }
-  } = useMessaging();
+  } = messagingState;
+  
+  // Enhanced logging for debugging messaging state
+  console.log('[useModelPanel] Full messaging state overview:', {
+    hasSelection: !!selection,
+    hasValidation: !!validation,
+    hasSimulation: !!simulation,
+    isInitialized: initialized,
+    selectionElementsCount: selection?.selectedElements?.length || 0,
+    hasDocumentContext: !!selection?.documentContext
+  });
   
   // Get sender hooks
   const modelOpsSender = useModelOpsSender();
   const simulationSender = useSimulationSender();
 
-  // Extract document context safely
+  // Extract document context safely with detailed logging
   const documentContext = selection.documentContext || {
     documentId: '',
     pageId: '',
@@ -34,17 +46,31 @@ export function useModelPanel() {
     totalElements: 0
   };
 
-  console.log('[useModelPanel] Document context:', documentContext);
-  console.log('[useModelPanel] Selection state:', selection);
+  console.log('[useModelPanel] Document context (raw):', selection.documentContext);
+  console.log('[useModelPanel] Document context (with fallback):', documentContext);
+  console.log('[useModelPanel] Selection state details:', {
+    selectedElements: selection.selectedElements,
+    selectedCount: selection.selectedElements?.length,
+    hasDocContext: !!selection.documentContext,
+    lastUpdated: selection.lastUpdated,
+    firstElementId: selection.selectedElements?.[0]?.id,
+    firstElementType: selection.selectedElements?.[0]?.type
+  });
+  
+  // Log if we're using the fallback document context
+  if (!selection.documentContext) {
+    console.warn('[useModelPanel] Using fallback document context - original is undefined/null');
+  }
   
   // Extract current element based on appropriate case
-  let modelItemData: ModelItemData | null = null;
+  let modelItemData: ExtendedModelItemData | null = null;
   
   if (selection.selectedElements && selection.selectedElements.length > 0) {
     // If elements are selected, use the first one
     const selectedElement = selection.selectedElements[0];
-    console.log('[useModelPanel] Using selected element:', selectedElement);
+    console.log('[useModelPanel] Using selected element (before transform):', selectedElement);
     modelItemData = transformToModelItemData(selectedElement);
+    console.log('[useModelPanel] Transformed modelItemData result:', modelItemData);
   } else if (documentContext.isQuodsiModel) {
     // If no element is selected but we have a Quodsi model, 
     // check if we have modelItemData in the metadata
@@ -71,6 +97,22 @@ export function useModelPanel() {
     }
   }
   
+  // Log important flags about modelItemData
+  if (modelItemData) {
+    console.log('[useModelPanel] ModelItemData details:', {
+      id: modelItemData.id,
+      name: modelItemData.name,
+      hasData: !!modelItemData.data,
+      hasMetadata: !!modelItemData.metadata,
+      metadataType: modelItemData.metadata?.type,
+      hasQMeta: !!modelItemData.q_meta,
+      qMetaType: modelItemData.q_meta?.type,
+      isUnconverted: modelItemData.isUnconverted
+    });
+  } else {
+    console.warn('[useModelPanel] No modelItemData created or found');
+  }
+  
   // Transform validation data
   const validationState = transformToValidationState(validation.errors ? {
     summary: {
@@ -85,11 +127,19 @@ export function useModelPanel() {
     }))
   } : null);
   
-  // Determine loading and initialization states
+  // Determine loading and initialization states with enhanced logging
   const isLoading = !initialized || !documentContext;
   const needsInitialization = documentContext 
     ? !documentContext.isQuodsiModel 
     : false;
+    
+  console.log('[useModelPanel] UI State determination:', {
+    isLoading,
+    needsInitialization,
+    initialized,
+    hasDocumentContext: !!documentContext,
+    isQuodsiModel: documentContext?.isQuodsiModel
+  });
   
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
@@ -144,14 +194,44 @@ export function useModelPanel() {
   };
   
   // Convert the string diagramElementType to the proper enum value if possible
-  let typedDiagramElementType: DiagramElementType | undefined;
+  let typedDiagramElementType = DiagramElementType.BLOCK; // Default to BLOCK
   if (selection.selectedElements?.[0]?.type) {
     // Convert string type to DiagramElementType enum
-    if (selection.selectedElements[0].type.toLowerCase() === 'block') {
+    const elementType = selection.selectedElements[0].type.toLowerCase();
+    if (elementType === 'block') {
       typedDiagramElementType = DiagramElementType.BLOCK;
-    } else if (selection.selectedElements[0].type.toLowerCase() === 'line') {
+      console.log('[useModelPanel] Detected BLOCK diagram element type');
+    } else if (elementType === 'line') {
       typedDiagramElementType = DiagramElementType.LINE;
+      console.log('[useModelPanel] Detected LINE diagram element type');
     }
+  }
+  
+  // Ensure the modelItemData has a proper type value if needed
+  if (modelItemData && (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None)) {
+    // First check if q_meta contains type information
+    if (modelItemData.q_meta && modelItemData.q_meta.type) {
+      console.log('[useModelPanel] Using q_meta type:', modelItemData.q_meta.type);
+      modelItemData.metadata = modelItemData.metadata || {
+        type: SimulationObjectType.None,
+        version: '1.0',
+        lastModified: new Date().toISOString(),
+        id: modelItemData.id
+      };
+      modelItemData.metadata.type = modelItemData.q_meta.type as SimulationObjectType;
+    }
+    // Only if no q_meta, then use diagram type to determine Connector (but not Activity)
+    else if (typedDiagramElementType === DiagramElementType.LINE) {
+      console.log('[useModelPanel] Setting missing type to Connector for line element');
+      modelItemData.metadata = modelItemData.metadata || {
+        type: SimulationObjectType.None,
+        version: '1.0',
+        lastModified: new Date().toISOString(),
+        id: modelItemData.id
+      };
+      modelItemData.metadata.type = SimulationObjectType.Connector;
+    }
+    // Do not automatically set Activity for blocks - allow user to choose
   }
   
   // Create a proxy SimulationStatus object to match the expected interface
@@ -164,13 +244,34 @@ export function useModelPanel() {
     newResultsAvailable: false  // Default value
   };
   
+  // Create the return values object for logging
+  const returnValues = {
+    // Model and document data
+    modelName: documentContext.documentTitle || '',
+    documentId: documentContext.documentId,
+    
+    // Element data
+    currentElement: modelItemData, // Log the full object
+    currentElementId: modelItemData?.id,
+    currentElementType: modelItemData?.metadata?.type,
+    lastElementUpdate: selection.lastUpdated?.toString(),
+    diagramElementType: typedDiagramElementType,
+    
+    // UI state
+    isLoading,
+    needsInitialization,
+    isQuodsiModel: documentContext?.isQuodsiModel
+  };
+  
+  console.log('[useModelPanel] Final return values (key properties):', returnValues);
+  
   return {
     // Model and document data
     modelName: documentContext.documentTitle || '',
     documentId: documentContext.documentId,
     
     // Element data
-    currentElement: modelItemData,
+    currentElement: modelItemData as ExtendedModelItemData,
     lastElementUpdate: selection.lastUpdated?.toString(),
     diagramElementType: typedDiagramElementType,
     

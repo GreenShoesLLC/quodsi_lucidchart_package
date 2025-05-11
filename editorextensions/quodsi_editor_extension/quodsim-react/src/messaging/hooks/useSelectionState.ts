@@ -17,6 +17,12 @@ export function useSelectionState() {
   
   // Combine state and actions into a single object
   const selectionState = useMemo(() => {
+    console.log('[useSelectionState] Processing selection state update', {
+      hasDocumentContext: !!selection.documentContext,
+      hasSelectedElements: !!selection.selectedElements?.length,
+      selectionLastUpdated: selection.lastUpdated
+    });
+    
     // Extract document context safely
     const documentContext = selection.documentContext || {
       documentId: '',
@@ -26,6 +32,13 @@ export function useSelectionState() {
       totalElements: 0,
       metadata: {}
     };
+    
+    if (!selection.documentContext) {
+      console.warn('[useSelectionState] Using fallback document context - original is missing');
+    } else {
+      console.log('[useSelectionState] Using actual document context with isQuodsiModel:', 
+        selection.documentContext.isQuodsiModel);
+    }
 
     // Calculate selection-related values
     const selectionCount = selection.selectedElements?.length || 0;
@@ -36,7 +49,7 @@ export function useSelectionState() {
     // Get diagram element type from metadata if available
     const diagramElementType = documentContext.metadata?.diagramElementType || 'unknown';
     
-    return {
+    const result = {
       // Document context properties
       documentId: documentContext.documentId,
       pageId: documentContext.pageId,
@@ -63,6 +76,18 @@ export function useSelectionState() {
       convertCurrentPage: () => 
         convertPage()
     };
+    
+    console.log('[useSelectionState] Returning selection state:', {
+      documentId: result.documentId,
+      documentTitle: result.documentTitle,
+      isQuodsiModel: result.isQuodsiModel,
+      selectionCount: result.selectionCount,
+      hasSelection: result.hasSelection,
+      diagramElementType: result.diagramElementType,
+      selectedElementId: result.selectedElement?.id
+    });
+    
+    return result;
   }, [
     selection.selectedElements,
     selection.documentContext,

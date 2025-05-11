@@ -68,16 +68,19 @@ const BaseEditor = <T extends BaseSimulationElement>({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="quodsi-form">
+    <form onSubmit={handleSubmit} className="w-full">
       {children(localData, handleChange)}
-      <div className="quodsi-button-group">
-        <button type="submit" className="quodsi-button quodsi-button-primary">
+      <div className="flex space-x-3 mt-4 justify-end">
+        <button 
+          type="submit" 
+          className="px-3 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        >
           Save
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="quodsi-button quodsi-button-secondary"
+          className="px-3 py-2 bg-white text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         >
           Cancel
         </button>

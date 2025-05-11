@@ -87,19 +87,19 @@ export const SimulationComponentSelector: React.FC<
 
   return (
     <div className="space-y-2 p-2">
-      {/* <div className="flex items-center gap-1 mb-1">
-        <Settings className="w-4 h-4 text-blue-500" />
-        <span className="text-xs font-medium text-gray-700">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Settings className="w-4 h-4 text-blue-600" />
+        <span className="text-sm font-medium text-gray-700">
           Component Type
         </span>
-      </div> */}
+      </div>
       <select
         value={selectedType}
         onChange={(e) =>
           onTypeChange(e.target.value as SimulationObjectType, elementId)
         }
         disabled={disabled}
-        className="w-full px-2 py-1 text-sm border rounded"
+        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
       >
         {validTypes.map(({ type, displayName, description }) => (
           <option key={type} value={type} title={description}>

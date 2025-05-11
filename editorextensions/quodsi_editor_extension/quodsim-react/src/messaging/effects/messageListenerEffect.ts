@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { EnvelopeMessageType } from '@quodsi/shared';
-import { createMessageHandler } from '../handlers';
+import { createRxMessageHandler } from '../handlers';
 import { debugService } from '../utils/debugService';
 
 const logger = debugService.forComponent('MessageListenerEffect');
@@ -19,22 +19,31 @@ export function useMessageListenerEffect(
   silentAuthCheckCompletedRef: React.MutableRefObject<boolean>
 ) {
   useEffect(() => {
-    const handleMessage = createMessageHandler(state, dispatch, processedMessageIds, sendMessage, ensureAuthState);
-    
+    // Log selection state on each effect run to help diagnose selection issues
+    console.log('[REACT][MessageListenerEffect] Current selection state:', {
+      hasSelectedElements: state.selection.selectedElements?.length > 0,
+      selectedElementCount: state.selection.selectedElements?.length || 0,
+      firstElementId: state.selection.selectedElements?.[0]?.id,
+      hasDocumentContext: !!state.selection.documentContext,
+      isQuodsiModel: state.selection.documentContext?.isQuodsiModel,
+      lastUpdated: state.selection.lastUpdated
+    });
+    const handleMessage = createRxMessageHandler(state, dispatch, processedMessageIds, sendMessage, ensureAuthState);
+
     // Add message event listener
     window.addEventListener("message", handleMessage);
-    
+
     // For backward compatibility - handle REACT_APP_READY through the original method as well
     // This handles edge cases where the dedicated effect might have missed a state change
     if (
-      state.app.initialized && 
-      state.app.panelType && 
-      !state.auth.silentAuthInProgress && 
+      state.app.initialized &&
+      state.app.panelType &&
+      !state.auth.silentAuthInProgress &&
       !hasSentReadyRef.current
     ) {
       // Check for valid auth in localStorage
       const { isAuthenticated, userInfo } = ensureAuthState();
-      
+
       console.log("[REACT][MessageListenerEffect] *** ALL CONDITIONS MET FOR REACT_APP_READY IN LISTENER! ***");
       logger.log("All conditions met for sending REACT_APP_READY in listener:", {
         appInitialized: state.app.initialized,
@@ -43,16 +52,16 @@ export function useMessageListenerEffect(
         isAuthenticated: isAuthenticated,
         hasUserInfo: !!userInfo
       });
-      
+
       sendMessage(EnvelopeMessageType.REACT_APP_READY, {
         panel: state.app.panelType,
         isAuthenticated: isAuthenticated,
         user: userInfo,
       });
-      
+
       // Mark as sent so we don't send it again
       hasSentReadyRef.current = true;
-      
+
       logger.log("Sent REACT_APP_READY message with auth state from listener:", {
         isAuthenticated: isAuthenticated,
         hasUserInfo: !!userInfo
@@ -68,7 +77,7 @@ export function useMessageListenerEffect(
         authLastUpdated: state.auth.lastUpdated ? new Date(state.auth.lastUpdated).toISOString() : 'not set',
         isAuthenticated: state.auth.isAuthenticated
       });
-      
+
       // Enhanced logging to track which conditions are preventing REACT_APP_READY
       if (state.app.initialized && state.app.panelType) {
         if (!authInitializedRef.current) {

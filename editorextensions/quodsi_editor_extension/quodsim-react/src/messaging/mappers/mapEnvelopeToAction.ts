@@ -34,6 +34,7 @@ const mappers = [
  */
 export function mapEnvelopeToAction(msg: EnvelopeBase): MessagingAction | null {
   // Add special handling for AUTH_STATUS messages
+  logger.log('MODULAR Mapping envelope to action, type:', msg.type, msg.data);
   if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
     logger.log('Priority handling for AUTH_STATUS message:', msg);
     // Always try auth mapper first for AUTH_STATUS messages
