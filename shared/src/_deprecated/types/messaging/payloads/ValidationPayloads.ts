@@ -1,5 +1,5 @@
 import { MessageTypes } from '../MessageTypes';
-import { ValidationResult } from '../../validation/ValidationTypes';
+import { ValidationResult } from '../../../../types/validation/ValidationTypes';
 
 export interface ValidationPayloads {
     // [MessageTypes.VALIDATE_MODEL]: undefined;

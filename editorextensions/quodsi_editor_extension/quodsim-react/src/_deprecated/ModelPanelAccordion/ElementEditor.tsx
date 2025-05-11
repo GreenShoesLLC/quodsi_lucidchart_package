@@ -4,9 +4,10 @@ import { SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
 import ActivityEditor from "../ActivityEditor";
 import GeneratorEditor from "../GeneratorEditor";
 import ResourceEditor from "../ResourceEditor";
+
+import ModelEditor from "../ModelEditor";
 import EntityEditor from "../EntityEditor";
 import ConnectorEditor from "../ConnectorEditor";
-import ModelEditor from "../ModelEditor";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | "Model";

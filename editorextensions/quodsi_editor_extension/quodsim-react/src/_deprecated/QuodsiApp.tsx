@@ -1,21 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  MessageTypes,
-  MessagePayloads,
   ValidationState,
   SimulationObjectType,
   EditorReferenceData,
-  ExtensionMessaging,
-  isValidMessage,
-  ModelItemData,
   DiagramElementType,
   RunState,
-  ActionType,
 } from "@quodsi/shared";
 
-import { ModelPanelAccordion } from "../components/ModelPanelAccordion/ModelPanelAccordion";
-import { ErrorDisplay } from "../components/ui/ErrorDisplay";
-import { ProcessingIndicator } from "../components/ui/ProcessingIndicator";
+
+import { ErrorDisplay } from "./ErrorDisplay";
+import { ProcessingIndicator } from "./ProcessingIndicator";
 import {
   MessageHandler,
   messageHandlers,
@@ -26,6 +20,8 @@ import { SimulationStatus } from "../types/SimulationStatus";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
 import { useMsal } from "@azure/msal-react";
+import { ModelPanelAccordion } from "./ModelPanelAccordion/ModelPanelAccordion";
+import { ActionType, ExtensionMessaging, isValidMessage, MessagePayloads, MessageTypes, ModelItemData } from "@quodsi/shared/src/types";
 
 export interface AppState {
   // Existing properties

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ModelEditor from "./ModelEditor";
+import ModelEditor from "../_deprecated/ModelEditor";
 import ExperimentEditor from "./ExperimentEditor";
 import { OutputViewer } from "./OutputViewer";
 import { Model, ModelUtils } from "@quodsi/shared";
@@ -56,32 +56,46 @@ export const ModelTabs: React.FC<ModelTabsProps> = ({ initialModel }) => {
       <div className="quodsi-button-group">
         <button
           onClick={() => setActiveTab("model")}
-          className={`quodsi-button ${activeTab === "model" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
+          className={`quodsi-button ${
+            activeTab === "model"
+              ? "quodsi-button-primary"
+              : "quodsi-button-secondary"
+          }`}
         >
           Model
         </button>
         <button
           onClick={() => setActiveTab("experiments")}
-          className={`quodsi-button ${activeTab === "experiments" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
+          className={`quodsi-button ${
+            activeTab === "experiments"
+              ? "quodsi-button-primary"
+              : "quodsi-button-secondary"
+          }`}
         >
           Experiments
         </button>
         <button
           onClick={() => setActiveTab("output")}
-          className={`quodsi-button ${activeTab === "output" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
+          className={`quodsi-button ${
+            activeTab === "output"
+              ? "quodsi-button-primary"
+              : "quodsi-button-secondary"
+          }`}
         >
           Output
         </button>
         <button
           onClick={() => setActiveTab("utilities")}
-          className={`quodsi-button ${activeTab === "utilities" ? 'quodsi-button-primary' : 'quodsi-button-secondary'}`}
+          className={`quodsi-button ${
+            activeTab === "utilities"
+              ? "quodsi-button-primary"
+              : "quodsi-button-secondary"
+          }`}
         >
           Utilities
         </button>
       </div>
-      <div className="quodsi-field">
-        {renderTabContent()}
-      </div>
+      <div className="quodsi-field">{renderTabContent()}</div>
     </div>
   );
 };

@@ -1,12 +1,13 @@
 import React from 'react';
 import { SimulationObjectType } from "@quodsi/shared";
 import { SimComponentType } from "@quodsi/shared";
-import ActivityEditor from "../../components/ActivityEditor";
-import EntityEditor from "../../components/EntityEditor";
-import ConnectorEditor from "../../components/ConnectorEditor";
-import GeneratorEditor from "../../components/GeneratorEditor";
-import ResourceEditor from "../../components/ResourceEditor";
+import ActivityEditor from "../../_deprecated/ActivityEditor";
+
+import GeneratorEditor from "../../_deprecated/GeneratorEditor";
+import ResourceEditor from "../../_deprecated/ResourceEditor";
 import { EditorReferenceData } from '@quodsi/shared';
+import EntityEditor from 'src/_deprecated/EntityEditor';
+import ConnectorEditor from 'src/_deprecated/ConnectorEditor';
 
 interface EditorHandlers {
   onSave: (data: any) => void;

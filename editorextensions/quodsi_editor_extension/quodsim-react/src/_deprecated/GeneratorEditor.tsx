@@ -9,7 +9,7 @@ import {
   Distribution,
 } from "@quodsi/shared";
 import { Clock, Users, Timer, PlayCircle } from "lucide-react";
-import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import { EnhancedDurationEditor } from "../components/EnhancedDurationEditor";
 
 interface Props {
   generator: Generator;
@@ -47,18 +47,22 @@ const GeneratorEditor: React.FC<Props> = ({
       generator.periodicOccurrences,
       {
         ...generator.periodIntervalDuration,
-        ...(name === "periodIntervalDuration" ? { 
-          durationPeriodUnit: periodUnit, 
-          distribution 
-        } : {})
+        ...(name === "periodIntervalDuration"
+          ? {
+              durationPeriodUnit: periodUnit,
+              distribution,
+            }
+          : {}),
       },
       generator.entitiesPerCreation,
       {
         ...generator.periodicStartDuration,
-        ...(name === "periodicStartDuration" ? { 
-          durationPeriodUnit: periodUnit, 
-          distribution 
-        } : {})
+        ...(name === "periodicStartDuration"
+          ? {
+              durationPeriodUnit: periodUnit,
+              distribution,
+            }
+          : {}),
       },
       generator.maxEntities,
       generator.x,
@@ -70,14 +74,14 @@ const GeneratorEditor: React.FC<Props> = ({
 
   return (
     <BaseEditor
-      data={{ 
-        ...generator, 
+      data={{
+        ...generator,
         type: SimulationObjectType.Generator,
         // Ensure all PositionedSimulationObject methods are available
         setLocation: (x: number, y: number) => generator.setLocation(x, y),
         getLocation: () => generator.getLocation(),
         hasLocation: () => generator.hasLocation(),
-        clone: () => generator.clone()
+        clone: () => generator.clone(),
       }}
       onSave={(updatedData) => {
         // Create a new Generator instance to preserve class methods

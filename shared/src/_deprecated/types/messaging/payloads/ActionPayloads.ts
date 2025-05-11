@@ -1,7 +1,7 @@
 // src/types/messaging/payloads/ActionPayloads.ts
 import { JsonObject } from '../JsonTypes';
-import { ValidationResult } from '../../validation/ValidationTypes';
-import { PageStatus } from '../../PageStatus';
+import { ValidationResult } from '../../../../types/validation/ValidationTypes';
+import { PageStatus } from '../../../../types/PageStatus';
 
 /**
  * Enum defining all possible action types in the application.

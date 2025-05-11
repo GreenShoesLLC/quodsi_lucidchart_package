@@ -10,9 +10,9 @@ import {
   DistributionType,
 } from "@quodsi/shared";
 import { Settings, Clock } from "lucide-react";
-import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import { EnhancedDurationEditor } from "../components/EnhancedDurationEditor";
 import BaseEditor from "./BaseEditor";
-import OutputForm from "./OutputForm";
+import OutputForm from "../components/OutputForm";
 
 interface Props {
   model: Model;
@@ -138,29 +138,33 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
           {/* Basic Settings */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-2">
-            <Settings className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-gray-700">Basic Settings</span>
+              <Settings className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">
+                Basic Settings
+              </span>
             </div>
             <input
-            type="text"
-            name="name"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            value={localModel.name}
-            placeholder="Model Name"
-            onChange={handleChange}
+              type="text"
+              name="name"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+              value={localModel.name}
+              placeholder="Model Name"
+              onChange={handleChange}
             />
             <div className="grid grid-cols-2 gap-3">
-            <div>
-            <label className="block text-sm text-gray-600 font-medium mb-1">Reps</label>
-            <input
-            type="number"
-            name="reps"
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            value={localModel.reps}
-            onChange={handleChange}
-            min="1"
-            />
-            </div>
+              <div>
+                <label className="block text-sm text-gray-600 font-medium mb-1">
+                  Reps
+                </label>
+                <input
+                  type="number"
+                  name="reps"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  value={localModel.reps}
+                  onChange={handleChange}
+                  min="1"
+                />
+              </div>
               {/* Seed field removed as requested */}
             </div>
           </div>
@@ -169,7 +173,9 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-2">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-gray-700">Time Settings</span>
+              <span className="text-sm font-medium text-gray-700">
+                Time Settings
+              </span>
             </div>
 
             <div className="space-y-3">

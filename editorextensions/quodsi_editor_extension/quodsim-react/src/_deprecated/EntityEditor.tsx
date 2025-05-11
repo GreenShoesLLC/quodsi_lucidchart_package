@@ -1,5 +1,5 @@
 import React from "react";
-import BaseEditor from "./BaseEditor";
+import BaseEditor from "../_deprecated/BaseEditor";
 import { Entity, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
 const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={{ 
+      data={{
         ...entity,
         type: SimulationObjectType.Entity,
         // Ensure all Entity methods are available
@@ -20,7 +20,7 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
         hasLocation: () => entity.hasLocation(),
         clone: () => entity.clone(),
         resetLocation: () => entity.resetLocation(),
-        toJSON: () => entity.toJSON()
+        toJSON: () => entity.toJSON(),
       }}
       onSave={(updatedData) => {
         // Create a new Entity instance to preserve class methods

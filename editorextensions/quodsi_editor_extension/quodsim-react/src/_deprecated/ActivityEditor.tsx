@@ -13,7 +13,7 @@ import {
   DurationType,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
-import { OperationStepEditor } from "./OperationStepEditor";
+import { OperationStepEditor } from "../components/OperationStepEditor";
 
 // Main Activity Editor Component
 interface ActivityEditorProps {
@@ -39,12 +39,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const extractActivityData = (act: any): Activity => {
     // Handle completely missing data case
     if (!act) {
-      console.error('[ActivityEditor] No activity data provided');
+      console.error("[ActivityEditor] No activity data provided");
       return new Activity(
-        '', // Empty ID
-        'New Activity', 
+        "", // Empty ID
+        "New Activity",
         1, // Default capacity
-        bufferToDisplay(null), 
+        bufferToDisplay(null),
         bufferToDisplay(null),
         [],
         0,
@@ -54,16 +54,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Extract data safely
     const data = act.data || act;
-    
+
     // Ensure ID is present
-    const id = data.id || act.id || '';
+    const id = data.id || act.id || "";
     if (!id) {
-      console.warn('[ActivityEditor] Activity missing ID');
+      console.warn("[ActivityEditor] Activity missing ID");
     }
-    
+
     return new Activity(
       id,
-      data.name || 'New Activity',
+      data.name || "New Activity",
       data.capacity || 1,
       bufferToDisplay(data.inputBufferCapacity),
       bufferToDisplay(data.outputBufferCapacity),
@@ -98,20 +98,27 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     index: number,
     updatedStep: OperationStep,
     localData: Activity,
-    handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
+    handleChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => void
   ) => {
     const newOperationSteps = [...localData.operationSteps];
     newOperationSteps[index] = updatedStep;
-    
+
     handleChange({
       target: {
         name: "operationSteps",
-        value: newOperationSteps
-      }
+        value: newOperationSteps,
+      },
     } as any);
   };
 
-  const handleAddOperationStep = (localData: Activity, handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void) => {
+  const handleAddOperationStep = (
+    localData: Activity,
+    handleChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => void
+  ) => {
     // Create a new operation step with a default constant distribution
     const newStep = createOperationStep(
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
@@ -121,8 +128,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     handleChange({
       target: {
         name: "operationSteps",
-        value: newOperationSteps
-      }
+        value: newOperationSteps,
+      },
     } as any);
   };
 
@@ -150,9 +157,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   if (!localActivity?.id) {
     return (
       <div className="p-4 bg-red-50 border border-red-200 rounded-md shadow-sm">
-        <div className="text-red-600 font-medium mb-2">Invalid activity data</div>
+        <div className="text-red-600 font-medium mb-2">
+          Invalid activity data
+        </div>
         <div className="text-sm text-red-500">
-          The activity data is missing required properties. Try selecting a different element or re-converting this element.
+          The activity data is missing required properties. Try selecting a
+          different element or re-converting this element.
         </div>
       </div>
     );
@@ -160,8 +170,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <BaseEditor
-      data={{ 
-        ...localActivity, 
+      data={{
+        ...localActivity,
         type: SimulationObjectType.Activity,
         // Ensure all Activity methods are available
         setLocation: (x: number, y: number) => localActivity.setLocation(x, y),
@@ -169,7 +179,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         hasLocation: () => localActivity.hasLocation(),
         clone: () => localActivity.clone(),
         resetLocation: () => localActivity.resetLocation(),
-        toJSON: () => localActivity.toJSON()
+        toJSON: () => localActivity.toJSON(),
       }}
       onSave={(updatedData) => {
         // Create a new Activity instance to preserve class methods
@@ -299,7 +309,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   step={step}
                   index={index}
                   onChange={(updatedStep) =>
-                    handleOperationStepChange(index, updatedStep, localData, handleChange)
+                    handleOperationStepChange(
+                      index,
+                      updatedStep,
+                      localData,
+                      handleChange
+                    )
                   }
                   onDelete={() =>
                     handleOperationStepDelete(index, localData, handleChange)

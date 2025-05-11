@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
-  MessageTypes,
-  MessagePayloads,
   ValidationState,
-  SimulationObjectType,
   EditorReferenceData,
-  isValidMessage,
-  ModelItemData,
   DiagramElementType,
-  RunState,
-  AuthActionType,
 } from "@quodsi/shared";
 
-import { ModelPanelAccordion } from "../components/ModelPanelAccordion/ModelPanelAccordion";
-import { ErrorDisplay } from "../components/ui/ErrorDisplay";
-import { ProcessingIndicator } from "../components/ui/ProcessingIndicator";
+import { ErrorDisplay } from "./ErrorDisplay";
+import { ProcessingIndicator } from "./ProcessingIndicator";
 import { useSimulationStatus } from "../hooks/useSimulationStatus";
 import { SimulationStatus } from "../types/SimulationStatus";
 import { useAuth } from "./AuthProvider";
@@ -24,6 +16,8 @@ import { useMsal } from "@azure/msal-react";
 // Import the new services
 import { getMessageService } from "./messageService";
 import { createActionHandlers } from "./actionHandlers";
+import { ModelPanelAccordion } from "./ModelPanelAccordion/ModelPanelAccordion";
+import { AuthActionType, MessageTypes, ModelItemData } from "@quodsi/shared/src/types";
 
 export interface AppState {
   // Existing properties

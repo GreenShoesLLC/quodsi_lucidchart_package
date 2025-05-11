@@ -1,6 +1,6 @@
 import { JsonObject } from '../JsonTypes';
 import { MessagePayloads, MessageTypes } from "../MessageTypes";
-import { ComponentLogger } from '../../../core/logging/ComponentLogger';
+import { ComponentLogger } from '../../../../core/logging/ComponentLogger';
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[ExtensionMessaging]';

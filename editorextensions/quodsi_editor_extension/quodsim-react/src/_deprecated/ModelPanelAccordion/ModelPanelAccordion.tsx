@@ -2,15 +2,15 @@ import React, { useState, useEffect } from "react";
 import {
   ValidationState,
   EditorReferenceData,
-  ModelItemData,
-  JsonObject,
   SimulationObjectType,
   DiagramElementType,
 } from "@quodsi/shared";
-import ElementEditor from "./ElementEditor";
-import { ValidationMessages } from "./ValidationMessages";
-import { Header } from "./Header";
+import ElementEditor from "../../_deprecated/ModelPanelAccordion/ElementEditor";
+// import { ValidationMessages } from "./ValidationMessages";
+import { Header } from "../../_deprecated/ModelPanelAccordion/Header";
 import { SimulationStatus } from "src/types/SimulationStatus";
+import { ValidationMessages } from "src/_deprecated/ValidationMessages";
+import { JsonObject, ModelItemData } from "@quodsi/shared/src/types";
 
 interface ModelPanelAccordionProps {
   modelName: string;
@@ -65,21 +65,21 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
 }) => {
   // Log component mounting and updates
   useEffect(() => {
-    console.log('[ModelPanelAccordion] Component mounted');
+    console.log("[ModelPanelAccordion] Component mounted");
     return () => {
-      console.log('[ModelPanelAccordion] Component unmounted');
+      console.log("[ModelPanelAccordion] Component unmounted");
     };
   }, []);
 
   // Log when modelName or currentElement changes
   useEffect(() => {
-    console.log('[ModelPanelAccordion] Content changed:', {
+    console.log("[ModelPanelAccordion] Content changed:", {
       modelName,
       hasCurrentElement: !!currentElement,
       currentElementId: currentElement?.id,
       currentElementType: currentElement?.metadata?.type,
       hasContent: !!(modelName || currentElement),
-      needsInitialization
+      needsInitialization,
     });
   }, [modelName, currentElement, needsInitialization]);
 
@@ -95,13 +95,13 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
         ...prev,
         [section]: !prev[section],
       };
-      console.log('[ModelPanelAccordion] Section state updated:', newState);
+      console.log("[ModelPanelAccordion] Section state updated:", newState);
       return newState;
     });
   };
 
   const handleEditorCancel = () => {
-    console.log('[ModelPanelAccordion] Editor cancel triggered');
+    console.log("[ModelPanelAccordion] Editor cancel triggered");
     toggleSection("elementEditor");
   };
 
@@ -109,10 +109,10 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
     elementId: string,
     newType: SimulationObjectType
   ) => {
-    console.log('[ModelPanelAccordion] Element type change:', {
+    console.log("[ModelPanelAccordion] Element type change:", {
       elementId,
       newType,
-      previousType: currentElement?.metadata?.type
+      previousType: currentElement?.metadata?.type,
     });
     onElementTypeChange(elementId, newType);
   };
@@ -121,15 +121,15 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
   const hasContent = modelName || currentElement;
 
   // Log the state of modelName and currentElement on every render
-  console.log('[ModelPanelAccordion] Render state:', {
+  console.log("[ModelPanelAccordion] Render state:", {
     modelName,
     hasCurrentElement: !!currentElement,
     currentElementId: currentElement?.id,
     currentElementType: currentElement?.metadata?.type,
     hasContent,
-    needsInitialization
+    needsInitialization,
   });
-  
+
   return (
     <div className="flex flex-col h-full bg-white">
       {/* If we need initialization, show just the button */}
@@ -142,8 +142,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             Initialize Quodsi Model
           </button>
         </div>
-      ) : 
-      /* If we're waiting for data (not in initialization state and no content), show loading */
+      ) : /* If we're waiting for data (not in initialization state and no content), show loading */
       !hasContent ? (
         <div className="h-full w-full flex items-center justify-center p-4">
           <div className="text-center">

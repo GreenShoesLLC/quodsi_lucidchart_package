@@ -14,8 +14,8 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-__exportStar(require("./ModelItemData"), exports);
-__exportStar(require("./ValidationPayloads"), exports);
-__exportStar(require("./SelectionPayloads"), exports);
-__exportStar(require("./AuthPayloads"), exports);
-__exportStar(require("./ActionPayloads"), exports);
+__exportStar(require("../../../_deprecated/ModelItemData"), exports);
+__exportStar(require("../../../_deprecated/ValidationPayloads"), exports);
+__exportStar(require("../../../_deprecated/SelectionPayloads"), exports);
+__exportStar(require("../../../_deprecated/AuthPayloads"), exports);
+__exportStar(require("../../../_deprecated/ActionPayloads"), exports);

@@ -8,7 +8,8 @@ export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
-export * from './types/messaging';  // This exports JsonTypes, MessageTypes, and utils
+
+export * from './_deprecated/types/messaging';
 export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';

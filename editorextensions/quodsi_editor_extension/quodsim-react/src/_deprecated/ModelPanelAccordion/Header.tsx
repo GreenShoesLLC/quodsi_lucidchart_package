@@ -1,12 +1,13 @@
 import React from "react";
 import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
 import { ValidationState } from "@quodsi/shared/dist/types/accordion/ValidationState";
-import { ModelItemData } from "@quodsi/shared/dist/types/messaging/payloads/ModelItemData";
-import { SimulationComponentSelector } from "../SimulationComponentSelector";
-import { SimulationStatusMonitor } from "../SimulationStatusMonitor";
+
+import { SimulationComponentSelector } from "../../components/SimulationComponentSelector";
+import { SimulationStatusMonitor } from "../../components/SimulationStatusMonitor";
 import { Trash2 } from "lucide-react";
 import { getSimulationState } from "src/utils/simulationState";
 import { SimulationStatus } from "src/types/SimulationStatus";
+import { ModelItemData } from "@quodsi/shared/src/types";
 
 interface HeaderProps {
   modelName: string;
@@ -98,7 +99,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     const { modelName, modelItemData, showModelName, showModelItemName } =
       this.props;
     if (!modelItemData && !showModelName) return null;
-    
+
     // Don't show the model name section at all if it's empty
     if (!modelName && !modelItemData) return null;
 

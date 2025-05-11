@@ -23,7 +23,7 @@ __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);
 __exportStar(require("./types/ConversionResult"), exports);
 __exportStar(require("./types/EditorReferenceData"), exports);
-__exportStar(require("./types/messaging"), exports); // This exports JsonTypes, MessageTypes, and utils
+__exportStar(require("./_deprecated/types/messaging"), exports);
 __exportStar(require("./types/PageStatus"), exports);
 __exportStar(require("./types/ProcessAnalysisResult"), exports);
 __exportStar(require("./types/SelectionState"), exports);

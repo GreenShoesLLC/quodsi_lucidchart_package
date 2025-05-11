@@ -12,9 +12,7 @@ import { AuthPanel } from './_deprecated/AuthPanel';
 import { ContentDockPanel } from './panels/ContentDockPanel';
 import { RightDockPanel } from './panels/RightDockPanel';
 // Import MessageRouter and initialization function
-import { router, initializeMessaging } from './core/messaging';
-import { ExtensionMessaging } from '@quodsi/shared';
-import { SelectionManager } from './managers';
+import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
 import { panelManager } from './managers/PanelManager';
 

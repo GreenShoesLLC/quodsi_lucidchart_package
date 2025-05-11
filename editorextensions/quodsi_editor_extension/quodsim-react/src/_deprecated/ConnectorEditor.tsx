@@ -1,5 +1,5 @@
 import React from "react";
-import BaseEditor from "./BaseEditor";
+import BaseEditor from "../_deprecated/BaseEditor";
 import { Connector, ConnectType, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
@@ -11,18 +11,20 @@ interface Props {
 const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
   return (
     <BaseEditor
-      data={{ 
-        ...connector, 
+      data={{
+        ...connector,
         type: SimulationObjectType.Connector,
         // Ensure all Connector methods are available
-        setSourceLocation: (x: number, y: number) => connector.setSourceLocation(x, y),
-        setTargetLocation: (x: number, y: number) => connector.setTargetLocation(x, y),
+        setSourceLocation: (x: number, y: number) =>
+          connector.setSourceLocation(x, y),
+        setTargetLocation: (x: number, y: number) =>
+          connector.setTargetLocation(x, y),
         setLocation: (x: number, y: number) => connector.setLocation(x, y),
         getLocation: () => connector.getLocation(),
         hasLocation: () => connector.hasLocation(),
         clone: () => connector.clone(),
         resetLocation: () => connector.resetLocation(),
-        toJSON: () => connector.toJSON()
+        toJSON: () => connector.toJSON(),
       }}
       onSave={(updatedData) => {
         // Create a new Connector instance to preserve class methods

@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { ValidationMessage, ComponentLogger } from "@quodsi/shared";
-import ValidationMessageItem from "./ValidationMessageItem";
+import ValidationMessageItem from "../components/ModelPanelAccordion/ValidationMessageItem";
 
 // Define a constant for the logger prefix
-const LOG_PREFIX = '[ValidationMessageList]';
+const LOG_PREFIX = "[ValidationMessageList]";
 
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
