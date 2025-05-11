@@ -3,6 +3,7 @@ import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/message-types';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
+import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunAckMessage, ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
@@ -90,6 +91,15 @@ export {
   ModelOpsMessage
 } from './modelOps/messages';
 
+// Export element operations messages
+export {
+  ElementUpdateMessage,
+  ElementUpdateResultMessage,
+  ElementConvertMessage,
+  ElementConvertResultMessage,
+  ElementOpsMessage
+} from './elementOps/messages';
+
 // Export storage messages
 export {
   StorageProvider,
@@ -109,6 +119,7 @@ export type QuodsiMessage =
   | SelectionMessage
   | SimulationMessage
   | ModelOpsMessage
+  | ElementOpsMessage
   | StorageMessage;
 
 // Define payload type mapping
@@ -145,6 +156,11 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.MODEL_REMOVE_RESULT]: ModelRemoveResultMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE]: ResultsPageCreateMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT]: ResultsPageCreateResultMessage['data'];
+  
+  [EnvelopeMessageType.ELEMENT_UPDATE]: ElementUpdateMessage['data'];
+  [EnvelopeMessageType.ELEMENT_UPDATE_RESULT]: ElementUpdateResultMessage['data'];
+  [EnvelopeMessageType.ELEMENT_CONVERT]: ElementConvertMessage['data'];
+  [EnvelopeMessageType.ELEMENT_CONVERT_RESULT]: ElementConvertResultMessage['data'];
   
   [EnvelopeMessageType.STORAGE_CONNECT_REQUEST]: StorageConnectRequestMessage['data'];
   [EnvelopeMessageType.STORAGE_CONNECT_RESULT]: StorageConnectResultMessage['data'];

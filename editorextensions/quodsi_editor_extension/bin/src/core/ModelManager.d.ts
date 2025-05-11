@@ -1,6 +1,6 @@
 import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult, MetaData, ModelStructure } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { ElementProxy, PageProxy } from "lucid-extension-sdk";
+import { ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
 export declare class ModelManager {
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -9,6 +9,26 @@ export declare class ModelManager {
     private currentPage;
     private validationService;
     private currentValidationResult;
+    private static instance;
+    private static editorClient;
+    /**
+     * Get the singleton instance of ModelManager
+     * @returns ModelManager instance
+     * @throws Error if not initialized
+     */
+    static getInstance(): ModelManager;
+    /**
+     * Get the EditorClient reference
+     * @returns EditorClient instance
+     * @throws Error if not initialized
+     */
+    static getClient(): EditorClient;
+    /**
+     * Initialize the ModelManager singleton with client and storage adapter
+     * @param client EditorClient instance
+     * @param storageAdapter StorageAdapter instance
+     */
+    static initialize(client: EditorClient, storageAdapter: StorageAdapter): void;
     private changeTracker;
     private static readonly VALIDATION_CACHE_TIMEOUT;
     private static readonly MODEL_DEF_CACHE_TIMEOUT;

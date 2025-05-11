@@ -23,7 +23,16 @@ __exportStar(require("./types/ActivityRelationships"), exports);
 __exportStar(require("./types/BlockAnalysis"), exports);
 __exportStar(require("./types/ConversionResult"), exports);
 __exportStar(require("./types/EditorReferenceData"), exports);
-__exportStar(require("./_deprecated/types/messaging"), exports);
+// Some deprecated messaging types are still needed
+__exportStar(require("./_deprecated/types/messaging/JsonTypes"), exports);
+__exportStar(require("./_deprecated/types/messaging/MessageTypes"), exports);
+__exportStar(require("./_deprecated/types/messaging/payloads/ActionPayloads"), exports);
+__exportStar(require("./_deprecated/types/messaging/payloads/AuthPayloads"), exports);
+__exportStar(require("./_deprecated/types/messaging/payloads/SelectionPayloads"), exports);
+__exportStar(require("./_deprecated/types/messaging/payloads/ValidationPayloads"), exports);
+__exportStar(require("./_deprecated/types/messaging/payloads/ModelItemData"), exports);
+__exportStar(require("./_deprecated/types/messaging/utils/MessageValidation"), exports);
+__exportStar(require("./_deprecated/types/messaging/utils/ExtensionMessaging"), exports);
 __exportStar(require("./types/PageStatus"), exports);
 __exportStar(require("./types/ProcessAnalysisResult"), exports);
 __exportStar(require("./types/SelectionState"), exports);

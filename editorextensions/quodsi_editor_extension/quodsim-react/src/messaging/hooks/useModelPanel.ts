@@ -5,7 +5,7 @@ import { JsonObject, SimulationObjectType, DiagramElementType } from '@quodsi/sh
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationStatus } from '../../types/SimulationStatus';
-import { ModelItemData } from '@quodsi/shared';
+
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 /**

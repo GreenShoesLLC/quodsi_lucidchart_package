@@ -81,14 +81,14 @@ export function useModelOpsSender() {
     type: string,
     data: Record<string, any>
   ) => {
-    // Use legacy approach for updating element data
-    // We can't use ACTION_REQUEST as it's not defined in EnvelopeMessageType
-    // This will need to be updated when the protocol is updated
-    send(EnvelopeMessageType.MODEL_CONVERT, {
-      documentId: elementId, // This might need adjustment based on the actual protocol
+    // Use the new ELEMENT_UPDATE message type 
+    send(EnvelopeMessageType.ELEMENT_UPDATE, {
       elementId,
-      targetType: type,
-      data
+      type,
+      data: {
+        ...data,
+        id: elementId  // Ensure ID is included in the data
+      }
     });
   };
   
@@ -102,10 +102,10 @@ export function useModelOpsSender() {
     elementId: string,
     type: string
   ) => {
-    // Use MODEL_CONVERT for converting elements
-    send(EnvelopeMessageType.MODEL_CONVERT, {
+    // Use ELEMENT_CONVERT for converting elements
+    send(EnvelopeMessageType.ELEMENT_CONVERT, {
       elementId,
-      targetType: type
+      newType: type
     });
   };
   

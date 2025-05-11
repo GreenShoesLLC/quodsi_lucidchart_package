@@ -25,8 +25,9 @@ const viewport = new Viewport(client);
 // Initialize storage adapter
 const storageAdapter = new StorageAdapter();
 
-// Initialize core model management with storage adapter
-const modelManager = new ModelManager(storageAdapter);
+// Initialize core model management with storage adapter using singleton pattern
+ModelManager.initialize(client, storageAdapter);
+const modelManager = ModelManager.getInstance();
 
 // Enable router logging if in new messaging mode
 const useNewMessaging = true; // Set to true to use the new panels with MessageRouter

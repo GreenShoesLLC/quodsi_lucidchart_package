@@ -20,7 +20,7 @@ import {
     ValidationMessages
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { BlockProxy, ElementProxy, PageProxy } from "lucid-extension-sdk";
+import { BlockProxy, ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -43,6 +43,45 @@ export class ModelManager {
     private validationService: ModelValidationService;
     private currentValidationResult: ValidationResult | null = null;
 
+    // Singleton instance and client reference
+    private static instance: ModelManager | null = null;
+    private static editorClient: EditorClient | null = null;
+
+    /**
+     * Get the singleton instance of ModelManager
+     * @returns ModelManager instance
+     * @throws Error if not initialized
+     */
+    public static getInstance(): ModelManager {
+        if (!ModelManager.instance) {
+            throw new Error('ModelManager not initialized');
+        }
+        return ModelManager.instance;
+    }
+
+    /**
+     * Get the EditorClient reference
+     * @returns EditorClient instance
+     * @throws Error if not initialized
+     */
+    public static getClient(): EditorClient {
+        if (!ModelManager.editorClient) {
+            throw new Error('EditorClient not initialized');
+        }
+        return ModelManager.editorClient;
+    }
+
+    /**
+     * Initialize the ModelManager singleton with client and storage adapter
+     * @param client EditorClient instance
+     * @param storageAdapter StorageAdapter instance
+     */
+    public static initialize(client: EditorClient, storageAdapter: StorageAdapter): void {
+        ModelManager.editorClient = client;
+        ModelManager.instance = new ModelManager(storageAdapter);
+        console.log(`${ModelManager.LOG_PREFIX} Initialized singleton instance`);
+    }
+
     // Change tracking
     private changeTracker: ChangeTracker = {
         modelDefinitionDirty: false,
@@ -59,7 +98,7 @@ export class ModelManager {
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
         this.validationService = new ModelValidationService();
-        this.log('ModelManager initialized');
+        this.log('ModelManager instance created');
     }
     public setLogging(enabled: boolean): void {
         this.loggingEnabled = enabled;

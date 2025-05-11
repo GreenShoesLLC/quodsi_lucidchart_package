@@ -5,6 +5,7 @@ import { FrameworkHandler } from './frameworkHandler';
 
 import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
+import { ElementOpsHandler } from './elementOpsHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 
@@ -55,6 +56,11 @@ export class MessageHandlers {
       return true;
     }
     
+    // Element operations messages
+    if (ElementOpsHandler.handleMessage(msg)) {
+      return true;
+    }
+    
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -74,5 +80,6 @@ export {
   SelectionHandler,
   SimulationHandler,
   ModelOpsHandler,
+  ElementOpsHandler,
   StorageHandler
 };

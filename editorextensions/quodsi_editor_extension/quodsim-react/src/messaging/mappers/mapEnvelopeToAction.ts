@@ -5,6 +5,7 @@ import { mapSubscription } from './subscription.mapper';
 import { mapSelection } from './selection.mapper';
 import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
+import { mapElementOps } from './elementOps.mapper';
 import { mapStorage } from './storage.mapper';
 import { debugService } from '../utils/debugService';
 import { MessagingAction } from '../state/types';
@@ -23,6 +24,7 @@ const mappers = [
   mapSelection,
   mapSimulation,
   mapModelOps,
+  mapElementOps,
   mapStorage
 ];
 
