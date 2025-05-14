@@ -1,10 +1,10 @@
 # Element Editor Save Flow
 
-This document outlines the current messaging flow when a user modifies and attempts to save changes in an Element Editor (Resource, Activity, Connector, etc.) in the Quodsi LucidChart extension.
+This document outlines the current messaging flow when a user modifies and saves changes in an Element Editor (Activity, Resource, Connector, etc.) in the Quodsi LucidChart extension.
 
 ## Overview
 
-When a user selects a mapped element in the LucidChart document, the appropriate editor is displayed in the right dock panel. After making changes and clicking the "Save" button, a series of messages are exchanged between the React application and the extension host. This document captures the current state of this messaging flow, identifying potential issues in the process.
+When a user selects a mapped element in the LucidChart document, the appropriate editor is displayed in the right dock panel. After making changes and clicking the "Save" button, a series of messages are exchanged between the React application and the extension host to persist changes back to the LucidChart document.
 
 ## Message Flow Sequence
 
@@ -12,38 +12,36 @@ When a user selects a mapped element in the LucidChart document, the appropriate
 
 When a user selects an element in the LucidChart document:
 
-1. The selection event is captured by the extension host
-2. The extension identifies the element type (Activity, Resource, etc.)
-3. A `MODEL_CONVERT` message is sent to the React application
-4. React displays the appropriate editor component based on the element type
+1. Selection event is captured by the extension host via the Viewport.hookSelection callback
+2. SelectionHandler.handleLucidSelectionEvent processes the selection
+3. Determines element type (Activity, Resource, etc.) and builds context
+4. Sends a SELECTION_CHANGED message to the React application
+5. React displays the appropriate editor component based on the element type
 
 ```
-[REACT][LucidCoreMessage] Sending message: MODEL_CONVERT , {id: "7mb9d7f-d7d9-467-a0a0-034c03f7d00", type: "MODEL_CONVERT", source: "model-iframe", target: "host", version: "1.0", …}
-[SelectionReducer] Received action: ADD_PENDING_REQUEST { {type: "ADD_PENDING_REQUEST", id: "7mb9d7f-d7d9-467-a0a0-034c03f7d00", requestType: "MODEL_CONVERT"} }
+[EXT][SelectionHandler] Handling selection change { itemCount: 1, items: ['516WmQPd4fw'] }
+[REACT][SelectionReducer] Received action: SELECTION_UPDATE { selectedElements: [...], documentContext: {...} }
 ```
 
 ### 2. Editor Rendering
 
 The React application processes the element data:
 
-1. Element metadata is extracted from the `MODEL_CONVERT` message
-2. The editor type is determined based on the element type
-3. The appropriate editor component is rendered (ActivityEditor, ResourceEditor, etc.)
+1. Element metadata is extracted from the SELECTION_CHANGED message
+2. useModelPanel hook prepares the data for the editor
+3. ModelPanel component renders ElementEditor with the appropriate data
+4. ElementEditor determines which specific editor to render (ActivityEditor, ResourceEditor, etc.)
 
 For a Resource:
 ```
 [ElementEditor] Element data: {"id":"516WmQPd4fw","x":386,"y":286,"name":"LATR","capacity":"5"}
-[ElementEditor] EDITOR SELECTION - Detailed type info: { {currentElementType: "Resource", currentElementType: undefined, currentElementMetadataType: "Resource", currentElementMetadataType: undefined, elementEditorType: undefined, …} }
-[ElementEditor] Resource detected from elementType prop
-[ElementEditor] Resource detection result: { {isResource: true, resourceDetectionSource: "elementType prop"} }
-[ElementEditor] Editor type determination: { {currentElementType: "Resource", isResource: true, editorElementType: "Resource", metadataType: false, finalEditorType: "Resource"} }
-[ElementEditor] Rendering ResourceEditor because isResource flag is true : {elementId: "516WmQPd4fw", resourceDetectionSource: "elementType prop"}
+[ElementEditor] Rendering ResourceEditor: {elementId: "516WmQPd4fw", resourceDetectionSource: "elementType prop"}
 ```
 
 For an Activity:
 ```
-[ElementEditor] Element data: {"id":"qyodDym0W8","x":1108,"y":146,"name":"Low Activity","capacity":"60%","inputBufferCapacity":1,"outputBufferCapacity":1,"spreadLength":[[{"parameterID":"116UqQvVx","quantity":2,"duration":{"durationPerUnit":1,"MINUTES","distribution":{"distributionType":"uniform","parameters":{"low":22,"high":30},"description":""}}}}]]}
-[ElementEditor] Rendering ActivityEditor for type: Activity : {elementId: "qyodDym0W8", elementName: "Low Activity", finalEditorType: false}
+[ElementEditor] Element data: {"id":"qyodDym0W8","x":1108,"y":146,"name":"Low Activity",...}
+[ElementEditor] Rendering ActivityEditor for type: Activity: {elementId: "qyodDym0W8"}
 ```
 
 ### 3. User Modifications
@@ -54,74 +52,140 @@ The user makes changes to the element properties (e.g., changing a Resource's ca
 
 When the user clicks the "Save" button:
 
-1. The React application prepares a `MODEL_CONVERT` message with the updated element data
-2. The message is sent to the extension host
+1. The editor's onSave callback is triggered
+2. The callback propagates up through the component hierarchy:
+   - BaseEditor → ElementEditor → ModelPanel → useModelPanel
+3. useModelPanel calls modelOpsSender.updateElementData()
+4. This creates an ELEMENT_UPDATE message with the updated element data
+5. The message is sent to the extension host
 
 ```
-[REACT][MessageListenerEffect] Current selection state: { {possibleConnector: true, selectedElementCount: 1, firstElementId: "516WmQPd4fw", hasDocumentContext: true, isQuodsiModel: true, …} }
-[EXT][RightDockPanel] Received message from iframe
-[EXT][RightDockPanel] Message type: MODEL_CONVERT
-[EXT][MessageRouter] Forwarding message to router: MODEL_CONVERT
-```
-
-### 5. Model Conversion Request
-
-The extension host processes the save request:
-
-1. The `MODEL_CONVERT` message is received by the MessageRouter
-2. The message is forwarded to MessageHandlers
-3. The ModelOpsHandler processes the request
-4. An attempt is made to update the element's shape data
-
-```
-[EXT][MessageRouter] Received message: MODEL_CONVERT from model-iframe
-[EXT][ChannelManager] Getting channel model: { {exists: true, ready: true, hasPanel: true, panelType: "RightDockPanel", panelRole: "model", …} }
+[REACT] modelOpsSender.updateElementData called with: { 
+  elementId: "516WmQPd4fw", 
+  type: "Resource", 
+  data: { id: "516WmQPd4fw", name: "LATR", capacity: "5" } 
+}
+[EXT][RightDockPanel] Received message from iframe: ELEMENT_UPDATE
 [EXT][MessageRouter] Forwarding message to MessageHandlers
-[MessageHandlers] Handling message type: MODEL_CONVERT
-[AuthHandler] Checking if can handle message type: MODEL_CONVERT
-[ModelOpsHandler] Model conversion requested : {elementId: "516WmQPd4fw", elementId: "516WmQPd4fw", targetType: "Resource"}
 ```
 
-### 6. Error in Save Process
+### 5. Element Update Handling in Extension
 
-Currently, the save process encounters an error:
+The extension processes the save request:
+
+1. The ELEMENT_UPDATE message is received by MessageRouter
+2. MessageRouter forwards the message to MessageHandlers
+3. MessageHandlers identifies ElementOpsHandler as the appropriate handler
+4. ElementOpsHandler.handleMessage starts the async handleElementUpdate process
+5. handleElementUpdate:
+   - Gets client and ModelManager instances using the singleton pattern
+   - Gets the current page from the viewport
+   - Finds the element by ID
+   - Converts the string type to SimulationObjectType
+   - Uses ModelManager.saveElementData to persist changes to LucidChart's shape data
+   - Validates the model after the update
+   - Refreshes the selection to update the UI
+   - Sends an ELEMENT_UPDATE_RESULT message back to React
 
 ```
-[EXT][MessageRouter][ERROR] Error handling message: { {type: "ModelConversion", message: "'setElement' is not defined", source: "    at handleConvert (input:228)in    at handleOps.ts (input:46)in    at anonymous (input:83)in"} }
+[EXT][ElementOpsHandler] Element update requested { elementId: "516WmQPd4fw", type: "Resource" }
+[EXT][ModelManager] saveElementData - Input Parameters: { 
+  elementId: "516WmQPd4fw", 
+  elementType: "BlockProxy", 
+  simulationObjectType: "Resource" 
+}
+[EXT][ElementOpsHandler] Sending ELEMENT_UPDATE_RESULT { success: true, elementId: "516WmQPd4fw" }
 ```
 
-The error indicates that the `setElement` function is not defined, suggesting an implementation issue in the model conversion handler.
+### 6. Update Confirmation
 
-## Key Issues Identified
+The React application receives and processes the confirmation:
 
-Based on the message flow observed in the logs:
+1. The ELEMENT_UPDATE_RESULT message is received
+2. The elementOps.mapper processes the message
+3. If successful, the UI may be updated or a success notification may be shown
+4. If there was an error, error handling is triggered
 
-1. **Missing Implementation**: The `setElement` function referenced in the ModelOpsHandler is not defined, preventing the save operation from completing successfully.
+```
+[REACT][MessageListenerEffect] Received message: ELEMENT_UPDATE_RESULT
+[REACT] Element update result: { success: true, elementId: "516WmQPd4fw" }
+```
 
-2. **Incomplete Connection**: The messaging flow from the React application to the extension host works correctly, but the final step to persist the changes back to the LucidChart document is not implemented.
+## Key Components in the Save Flow
 
-3. **Error Handling**: The current implementation lacks proper error handling for the save operation, resulting in unhandled exceptions.
+### React Application Components
 
-## Expected Correct Flow
+1. **ElementEditor**: Determines which specific editor to render based on element type
+2. **Specific Editors** (ActivityEditor, ResourceEditor, etc.): Provide UI for editing element properties
+3. **ModelPanel**: Contains the ElementEditor and manages the editor state
+4. **useModelPanel Hook**: Connects the UI to the messaging system
+5. **modelOpsSender**: Creates and sends the ELEMENT_UPDATE message
 
-The expected correct flow for saving element changes should include:
+### Extension Components
 
-1. User makes changes in the editor and clicks "Save"
-2. React application sends updated element data via a `MODEL_CONVERT` message
-3. Extension host receives and validates the data
-4. Extension host uses LucidChart API to update the element's shape data
-5. A success response is sent back to the React application
-6. React application updates its local state to reflect the saved changes
-7. Visual feedback is provided to the user that the save was successful
+1. **MessageRouter**: Routes messages between React and the extension
+2. **MessageHandlers**: Dispatches messages to the appropriate handler
+3. **ElementOpsHandler**: Handles element-level operation messages
+4. **ModelManager**: Handles persistence of element data to LucidChart
+5. **Viewport**: Provides access to the LucidChart document and selection
 
-## Next Steps
+## Message Types
 
-To resolve the identified issues:
+The save flow primarily uses these message types:
 
-1. Implement the missing `setElement` function in the ModelOpsHandler
-2. Establish the proper connection between the model conversion handler and the LucidChart API
-3. Add error handling and status reporting for the save operation
-4. Update the React application to handle save success/failure responses
-5. Provide user feedback on save status
+1. **SELECTION_CHANGED**: Sent when an element is selected, contains element data
+2. **ELEMENT_UPDATE**: Sent when saving changes, contains updated element data
+3. **ELEMENT_UPDATE_RESULT**: Sent after processing save, contains success/error information
 
-By addressing these issues, the save functionality in the Element Editor will be properly implemented, allowing users to persist their changes back to the LucidChart document.
+## Data Flow Diagram
+
+```
+┌─────────────────┐     Selection     ┌────────────────┐
+│                 │◄─────Event─────────┤                │
+│  LucidChart     │                   │   Extension    │
+│  Document       │                   │   Host         │
+│                 │     Update        │                │
+│                 │◄────Element────────┤                │
+└─────────────────┘                   └────────┬───────┘
+                                              │
+                   SELECTION_CHANGED          │
+                           ▼                  │
+                  ┌──────────────────┐        │
+                  │                  │        │
+                  │  React           │        │
+                  │  Application     │        │
+                  │                  │        │
+                  └───────┬──────────┘        │
+                          │                   │
+                          │ ELEMENT_UPDATE    │
+                          └───────────────────►
+                                              │
+                   ELEMENT_UPDATE_RESULT      │
+                           ▲                  │
+                           └──────────────────┘
+```
+
+## Element Type Conversion
+
+The extension also supports converting elements from one type to another (e.g., Activity to Generator) using a similar flow but with the ELEMENT_CONVERT message type. The implementation follows the same pattern:
+
+1. React sends an ELEMENT_CONVERT message with elementId and newType
+2. ElementOpsHandler processes the conversion using ModelManager
+3. Extension sends an ELEMENT_CONVERT_RESULT message back to React
+
+## Error Handling
+
+The save flow includes error handling at several levels:
+
+1. **React Application**: Processes error responses and may display notifications
+2. **ElementOpsHandler**: Catches exceptions during processing and sends error information in ELEMENT_UPDATE_RESULT
+3. **ModelManager**: Validates the model after updates and logs detailed error information
+
+## Next Steps and Improvements
+
+Potential areas for future enhancement:
+
+1. Add more detailed error information in result messages
+2. Implement progress indicators for long-running operations
+3. Add batch operations for updating multiple elements
+4. Enhance type safety and validation in the messaging system

@@ -1,5 +1,10 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType } from '@quodsi/shared';
 import { router } from '../index';
+import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
+import { ModelManager } from '../../ModelManager';
+import { StorageAdapter } from '../../StorageAdapter';
+import { LucidElementFactory } from '../../../services/LucidElementFactory';
+import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
@@ -29,7 +34,10 @@ export class ModelOpsHandler {
         return ModelOpsHandler.handleValidationResult(msg);
         
       case EnvelopeMessageType.MODEL_CONVERT:
-        return ModelOpsHandler.handleConvert(msg);
+        // Start async process but return true immediately
+        ModelOpsHandler.handleConvert(msg)
+          .catch(err => console.error('[ModelOpsHandler] Error handling MODEL_CONVERT:', err));
+        return true;
         
       case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
         return ModelOpsHandler.handleConversionResult(msg);
@@ -157,37 +165,119 @@ export class ModelOpsHandler {
    * @param msg MODEL_CONVERT message
    * @returns True indicating message was handled
    */
-  private static handleConvert(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      documentId: string;
-      elementId?: string;
-      targetType?: string;
-    };
-    
-    console.log('[ModelOpsHandler] Model conversion requested', {
-      documentId: data.documentId,
-      elementId: data.elementId,
-      targetType: data.targetType
-    });
-    
-    // TODO: Perform actual conversion
-    // For now, send a mock conversion result
-    setTimeout(() => {
-      // Send conversion result
+  private static async handleConvert(msg: EnvelopeBase): Promise<boolean> {
+    try {
+      const data = msg.data as {
+        documentId?: string;
+        elementId?: string;
+        targetType?: string;
+      };
+      
+      console.log('[ModelOpsHandler] Model conversion requested', {
+        documentId: data.documentId,
+        elementId: data.elementId,
+        targetType: data.targetType
+      });
+      
+      // Get the necessary instances
+      const client = ModelManager.getClient();
+      const modelManager = ModelManager.getInstance();
+      
+      // Get the viewport and current page
+      const viewport = new Viewport(client);
+      const currentPage = viewport.getCurrentPage();
+      const document = new DocumentProxy(client);
+      
+      if (!currentPage) {
+        throw new Error('Current page not available');
+      }
+      
+      // Check if this is a page conversion request (no elementId)
+      if (!data.elementId) {
+        console.log('[ModelOpsHandler] Converting page to Quodsi model');
+        
+        try {
+          // Set up required services
+          const storageAdapter = new StorageAdapter();
+          const lucidElementFactory = new LucidElementFactory(storageAdapter);
+          const pageConversionService = new LucidPageConversionService(
+            modelManager,
+            lucidElementFactory,
+            storageAdapter
+          );
+          
+          // Check if page can be converted
+          if (!pageConversionService.canConvertPage(currentPage)) {
+            throw new Error('Page cannot be converted to a model');
+          }
+          
+          // Convert the page
+          const result = await pageConversionService.convertPage(currentPage);
+          console.log('[ModelOpsHandler] Page conversion successful:', result);
+          
+          // Send success response
+          router.send('model', {
+            id: msg.id, // Use same ID for correlation
+            type: EnvelopeMessageType.MODEL_CONVERSION_RESULT,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: {
+              success: true,
+              convertedElementIds: [] // No specific elements for page conversion
+            }
+          });
+          
+          // Update the current selection to refresh the UI
+          const selectedItems = viewport.getSelectedItems();
+          viewport.setSelectedItems(selectedItems);
+          
+          return true;
+        } catch (error) {
+          console.error('[ModelOpsHandler] Page conversion error:', error);
+          throw error; // rethrow to be caught by outer catch
+        }
+      }
+      
+      // Handle element-specific conversion (if we have an elementId)
+      // This is now handled by ElementOpsHandler.handleElementConvert
+      // But we'll keep a basic implementation here for backward compatibility
+      console.log('[ModelOpsHandler] Element conversion not implemented here, use ELEMENT_CONVERT');
+      
+      // Send response indicating we're not handling element conversion here
       router.send('model', {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
         type: EnvelopeMessageType.MODEL_CONVERSION_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
         data: {
-          success: true,
-          convertedElementIds: data.elementId ? [data.elementId] : ['element-1', 'element-2', 'element-3']
+          success: false,
+          convertedElementIds: [],
+          error: 'Element conversion should use ELEMENT_CONVERT message type'
         }
       });
-    }, 1000);
-    
-    return true;
+      
+      return false;
+    } catch (error) {
+      console.error('[ModelOpsHandler] Error in model conversion:', error);
+      
+      // Send error response
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_CONVERSION_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: false,
+          convertedElementIds: [],
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+      
+      return false;
+    }
   }
   
   /**
