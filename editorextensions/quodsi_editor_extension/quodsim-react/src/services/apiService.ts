@@ -1,5 +1,5 @@
 // src/services/apiService.ts
-import { coreApiConfig } from '../auth/config';
+import { coreApiConfig } from '../config';
 
 /**
  * Service for making authenticated API requests to the Quodsi backend
@@ -19,11 +19,11 @@ export class ApiService {
         if (!ApiService.instance && getAccessToken) {
             ApiService.instance = new ApiService(getAccessToken);
         }
-        
+
         if (!ApiService.instance) {
             throw new Error('ApiService not initialized. Call with getAccessToken first.');
         }
-        
+
         return ApiService.instance;
     }
 
@@ -42,19 +42,19 @@ export class ApiService {
         options: RequestInit = {}
     ): Promise<Response> {
         const token = await this.getAccessTokenCallback();
-        
+
         if (!token) {
             throw new Error('No authentication token available');
         }
-        
+
         const url = `${coreApiConfig.baseUrl}${endpoint}`;
-        
+
         const headers = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
             ...options.headers,
         };
-        
+
         return fetch(url, {
             ...options,
             headers,
@@ -70,7 +70,7 @@ export class ApiService {
     ): Promise<T> {
         try {
             const response = await this.fetchWithAuth(endpoint, options);
-            
+
             if (!response.ok) {
                 // Try to get error details from the response
                 let errorDetail = '';
@@ -80,15 +80,15 @@ export class ApiService {
                 } catch {
                     errorDetail = await response.text() || `HTTP ${response.status}`;
                 }
-                
+
                 throw new Error(`API request failed: ${errorDetail}`);
             }
-            
+
             // For 204 No Content responses, return an empty object
             if (response.status === 204) {
                 return {} as T;
             }
-            
+
             return await response.json();
         } catch (error) {
             console.error(`API error for ${endpoint}:`, error);
@@ -136,7 +136,7 @@ export class ApiService {
     public async checkConnection(): Promise<{ status: string }> {
         return this.get<{ status: string }>('/api/status');
     }
-    
+
     /**
      * Get user profile from API
      */

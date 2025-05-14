@@ -4,7 +4,7 @@
  * Handles synchronization of user information with the quodsi-fastapi backend.
  */
 
-import { authApiConfig } from '../auth/config';
+import { authApiConfig } from '../config';
 import { authErrorHandler } from '../_deprecated/AuthErrorHandler';
 import { ComponentLogger } from '@quodsi/shared';
 

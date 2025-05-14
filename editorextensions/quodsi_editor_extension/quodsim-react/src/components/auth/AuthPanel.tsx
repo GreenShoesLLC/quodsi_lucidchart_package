@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
 import { useAuthPanelState } from "./useAuthPanelState";
 import { QuodsiUserInfo } from "@quodsi/shared";
-import { loginRequest, b2cPolicies } from "../../auth/msalConfig";
+import { loginRequest, b2cPolicies } from "../../config/msalConfig";
 import { debugService } from "../../messaging/utils/debugService";
 
 // Create dedicated logger for AuthPanel
-const logger = debugService.forComponent('AuthPanel');
+const logger = debugService.forComponent("AuthPanel");
 
 /**
  * Error component for displaying authentication errors
@@ -111,25 +111,25 @@ export const AuthPanel: React.FC = () => {
   useEffect(() => {
     // Only run this if not already authenticated and there are MSAL accounts
     if (!isAuthenticated && accounts.length > 0 && !isProcessingAuth) {
-      logger.log('Detected account mismatch - fixing authentication state');
-      
+      logger.log("Detected account mismatch - fixing authentication state");
+
       // Get the account info
       const account = accounts[0];
-      
+
       // Create user info
       const user: QuodsiUserInfo = {
         id: account.localAccountId,
         email: account.username,
-        displayName: account.name || account.username
+        displayName: account.name || account.username,
       };
-      
+
       // First try to set the active account
       try {
         instance.setActiveAccount(account);
       } catch (e) {
-        console.warn('Failed to set active account:', e);
+        console.warn("Failed to set active account:", e);
       }
-      
+
       // Use the direct sync function to immediately update the auth state
       syncAuthStateNow(true, user);
     }
@@ -178,14 +178,18 @@ export const AuthPanel: React.FC = () => {
         const isRecentSignOut = timeSinceSignOut < 60000; // Within 1 minute
 
         if (hasJustSignedOut && isRecentSignOut) {
-          logger.log(`Detected sign-in attempt ${timeSinceSignOut}ms after sign-out`);
+          logger.log(
+            `Detected sign-in attempt ${timeSinceSignOut}ms after sign-out`
+          );
 
           // Clear MSAL cache for this special case
           try {
             // Try to clear any existing accounts first
             const existingAccounts = instance.getAllAccounts();
             if (existingAccounts.length > 0) {
-              logger.log(`Found ${existingAccounts.length} accounts before sign-in, clearing cache`);
+              logger.log(
+                `Found ${existingAccounts.length} accounts before sign-in, clearing cache`
+              );
             }
 
             // Clear session storage to ensure a clean state
@@ -198,7 +202,10 @@ export const AuthPanel: React.FC = () => {
                 try {
                   sessionStorage.removeItem(key);
                 } catch (e) {
-                  logger.error(`Error clearing session storage item: ${key}`, e);
+                  logger.error(
+                    `Error clearing session storage item: ${key}`,
+                    e
+                  );
                 }
               }
             });
@@ -251,7 +258,9 @@ export const AuthPanel: React.FC = () => {
             logger.log("Sending login success message with user:", user);
             login(result.idToken, user, newUser);
           } else {
-            logger.log("No active account found after login, attempting recovery");
+            logger.log(
+              "No active account found after login, attempting recovery"
+            );
 
             // Recovery attempt 1: Look for any accounts in MSAL
             const allAccounts = instance.getAllAccounts();

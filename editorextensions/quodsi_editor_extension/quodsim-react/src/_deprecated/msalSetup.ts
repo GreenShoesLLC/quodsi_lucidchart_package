@@ -1,6 +1,6 @@
 // src/auth/msalSetup.ts
 import { PublicClientApplication, EventType, IPublicClientApplication } from "@azure/msal-browser";
-import { createMsalConfig, b2cPolicies } from "../auth/config";
+import { createMsalConfig, b2cPolicies } from "../config";
 
 /**
  * Creates a configured MSAL instance

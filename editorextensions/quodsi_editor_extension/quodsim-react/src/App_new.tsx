@@ -3,7 +3,7 @@ import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { MessageProvider } from "./messaging/MessageProvider";
 
-import { msalConfig } from "./auth/msalConfig";
+import { msalConfig } from "./config/msalConfig";
 import "./App_new.css";
 import LucidAppNew from "./components/LucidAppNew";
 

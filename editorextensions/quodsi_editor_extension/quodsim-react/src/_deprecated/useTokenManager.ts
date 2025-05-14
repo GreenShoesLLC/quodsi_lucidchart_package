@@ -11,7 +11,7 @@ import {
   SilentRequest,
   AccountInfo
 } from '@azure/msal-browser';
-import { loginRequest, TOKEN_REFRESH_BUFFER_MS } from '../auth/config';
+import { loginRequest, TOKEN_REFRESH_BUFFER_MS } from '../config';
 import { sessionStorageService } from './SessionStorageService';
 import { authErrorHandler } from './AuthErrorHandler';
 import { useAuthState } from './useAuthState';

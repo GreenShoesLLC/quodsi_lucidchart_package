@@ -10,7 +10,7 @@ import {
   loginRequest,
   passwordResetRequest,
   profileEditRequest
-} from '../auth/config';
+} from '../config';
 import { useAuthState } from './useAuthState';
 import { useTokenManager } from './useTokenManager';
 import { sessionStorageService } from './SessionStorageService';
@@ -257,7 +257,7 @@ export function useAuthOperations(): AuthOperations {
       if (!loginOptions.authority) {
         ComponentLogger.warn(LOG_PREFIX, 'No authority specified in login options! This will likely cause authentication problems.');
         // Fix by importing directly from auth policies
-        const { buildAuthority, b2cPolicies } = await import('./authPolicies');
+        const { buildAuthority, b2cPolicies } = await import('../config/authPolicies');
         loginOptions.authority = buildAuthority(b2cPolicies.signUpSignIn);
         ComponentLogger.log(LOG_PREFIX, 'Added missing authority:', loginOptions.authority);
       }

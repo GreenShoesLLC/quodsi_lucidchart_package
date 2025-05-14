@@ -9,7 +9,7 @@ import { useAuthState } from './useAuthState';
 import { useTokenManager } from './useTokenManager';
 import { userSyncService } from '../services/UserSyncService';
 import { sessionStorageService } from './SessionStorageService';
-import { SESSION_CHECK_INTERVAL_MS } from './sessionConfig';
+import { SESSION_CHECK_INTERVAL_MS } from '../config/sessionConfig';
 import { ComponentLogger } from '@quodsi/shared';
 
 // Define a constant for the logger prefix

@@ -5,7 +5,7 @@
  * and timeout detection.
  */
 
-import { SESSION_STORAGE_KEYS, SESSION_TIMEOUT_MS } from '../auth/config';
+import { SESSION_STORAGE_KEYS, SESSION_TIMEOUT_MS } from '../config';
 import { ComponentLogger } from '@quodsi/shared';
 
 // Define a constant for the logger prefix
@@ -73,25 +73,25 @@ export class SessionStorageService {
       const accessToken = sessionStorage.getItem(SESSION_STORAGE_KEYS.ACCESS_TOKEN);
       const tokenExpirationStr = sessionStorage.getItem(SESSION_STORAGE_KEYS.TOKEN_EXPIRATION);
       const lastActiveStr = sessionStorage.getItem(SESSION_STORAGE_KEYS.LAST_ACTIVE);
-      
+
       if (!authState || !userInfoStr || !accessToken || !tokenExpirationStr || !lastActiveStr) {
         ComponentLogger.log(LOG_PREFIX, 'No complete session state found in storage');
         return null;
       }
-      
+
       const isAuthenticated = authState === 'true';
       const userInfo = JSON.parse(userInfoStr) as StoredUserInfo;
       const tokenExpiration = new Date(tokenExpirationStr);
       const lastActive = parseInt(lastActiveStr, 10);
-      
+
       // Check if the session is still valid (not timed out)
       if (this.isSessionTimedOut(lastActive)) {
         ComponentLogger.log(LOG_PREFIX, 'Session has timed out, returning null');
         return null;
       }
-      
+
       ComponentLogger.log(LOG_PREFIX, 'Loaded valid session state');
-      
+
       return {
         isAuthenticated,
         userInfo,
@@ -111,28 +111,28 @@ export class SessionStorageService {
   public saveSessionState(state: SessionState): void {
     try {
       sessionStorage.setItem(SESSION_STORAGE_KEYS.AUTH_STATE, state.isAuthenticated.toString());
-      
+
       if (state.userInfo) {
         sessionStorage.setItem(SESSION_STORAGE_KEYS.USER_INFO, JSON.stringify(state.userInfo));
       } else {
         sessionStorage.removeItem(SESSION_STORAGE_KEYS.USER_INFO);
       }
-      
+
       if (state.accessToken) {
         sessionStorage.setItem(SESSION_STORAGE_KEYS.ACCESS_TOKEN, state.accessToken);
       } else {
         sessionStorage.removeItem(SESSION_STORAGE_KEYS.ACCESS_TOKEN);
       }
-      
+
       if (state.tokenExpiration) {
         sessionStorage.setItem(
-          SESSION_STORAGE_KEYS.TOKEN_EXPIRATION, 
+          SESSION_STORAGE_KEYS.TOKEN_EXPIRATION,
           state.tokenExpiration.toISOString()
         );
       } else {
         sessionStorage.removeItem(SESSION_STORAGE_KEYS.TOKEN_EXPIRATION);
       }
-      
+
       this.updateLastActive();
       ComponentLogger.log(LOG_PREFIX, 'Saved session state to storage');
     } catch (error) {
@@ -174,7 +174,7 @@ export class SessionStorageService {
    * @param timeoutMs Timeout duration in milliseconds (defaults to SESSION_TIMEOUT_MS)
    */
   public isSessionTimedOut(
-    lastActive?: number, 
+    lastActive?: number,
     timeoutMs: number = SESSION_TIMEOUT_MS
   ): boolean {
     try {
@@ -186,28 +186,28 @@ export class SessionStorageService {
         }
         lastActive = parseInt(lastActiveStr, 10);
       }
-      
+
       const now = Date.now();
       const timeSinceLastActive = now - lastActive;
-      
+
       return timeSinceLastActive > timeoutMs;
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Error checking session timeout:', error);
       return true; // On error, consider timed out for safety
     }
   }
-  
+
   /**
    * Clear all MSAL-related data in storage
    */
   public clearMsalCache(): void {
     try {
       ComponentLogger.log(LOG_PREFIX, 'Clearing MSAL cache - starting');
-      
+
       // We need to check all possible MSAL-related keys
       const msalPrefixes = ['msal.', 'login.', 'idtoken', 'accessToken', 'refreshToken', 'authority'];
       const storages = [sessionStorage, localStorage];
-      
+
       // Function to safely remove items from storage
       const safeRemoveItems = (storage: Storage, keysToRemove: string[]) => {
         keysToRemove.forEach(key => {
@@ -218,12 +218,12 @@ export class SessionStorageService {
           }
         });
       };
-      
+
       // Clear items from both session and local storage
       storages.forEach(storage => {
         // We need to collect keys first since removing items changes the length
         const keysToRemove: string[] = [];
-        
+
         // Get all keys that match our MSAL prefixes
         for (let i = 0; i < storage.length; i++) {
           const key = storage.key(i);
@@ -231,16 +231,16 @@ export class SessionStorageService {
             keysToRemove.push(key);
           }
         }
-        
+
         // Log what we're removing
         if (keysToRemove.length > 0) {
           ComponentLogger.log(LOG_PREFIX, `Removing ${keysToRemove.length} MSAL-related items from ${storage === sessionStorage ? 'sessionStorage' : 'localStorage'}`);
         }
-        
+
         // Remove the collected keys
         safeRemoveItems(storage, keysToRemove);
       });
-      
+
       // Try to clear MSAL-related cookies
       const cookiesToRemove: string[] = [];
       document.cookie.split(';').forEach(cookie => {
@@ -249,12 +249,12 @@ export class SessionStorageService {
           cookiesToRemove.push(name);
         }
       });
-      
+
       // Log what we're removing
       if (cookiesToRemove.length > 0) {
         ComponentLogger.log(LOG_PREFIX, `Removing ${cookiesToRemove.length} MSAL-related cookies`);
       }
-      
+
       // Remove the cookies
       cookiesToRemove.forEach(name => {
         try {
@@ -265,7 +265,7 @@ export class SessionStorageService {
           ComponentLogger.error(LOG_PREFIX, `Error clearing cookie ${name}:`, e);
         }
       });
-      
+
       ComponentLogger.log(LOG_PREFIX, 'MSAL cache clearing completed');
     } catch (error) {
       ComponentLogger.error(LOG_PREFIX, 'Error clearing MSAL cache:', error);

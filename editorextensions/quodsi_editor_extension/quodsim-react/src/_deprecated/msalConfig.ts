@@ -6,7 +6,7 @@
  */
 
 import { Configuration } from '@azure/msal-browser';
-import { tenantConfig } from './authPolicies';
+import { tenantConfig } from '../config/authPolicies';
 
 /**
  * Get the redirect URI configuration based on the current environment
