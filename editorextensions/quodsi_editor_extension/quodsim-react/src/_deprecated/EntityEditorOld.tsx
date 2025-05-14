@@ -1,5 +1,5 @@
 import React from "react";
-import BaseEditor from "../_deprecated/BaseEditor";
+import BaseEditorOld from "./BaseEditorOld";
 import { Entity, SimulationObjectType } from "@quodsi/shared";
 
 interface Props {
@@ -8,9 +8,9 @@ interface Props {
   onCancel: () => void;
 }
 
-const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
+const EntityEditorOld: React.FC<Props> = ({ entity, onSave, onCancel }) => {
   return (
-    <BaseEditor
+    <BaseEditorOld
       data={{
         ...entity,
         type: SimulationObjectType.Entity,
@@ -53,8 +53,8 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
           </div>
         </div>
       )}
-    </BaseEditor>
+    </BaseEditorOld>
   );
 };
 
-export default React.memo(EntityEditor);
+export default React.memo(EntityEditorOld);

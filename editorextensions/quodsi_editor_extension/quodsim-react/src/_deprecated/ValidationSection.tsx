@@ -3,7 +3,6 @@ import { ValidationSummary } from "./ValidationSummary";
 import { ValidationMessageList } from "./ValidationMessageList";
 import { ValidationResult } from "@quodsi/shared";
 
-
 interface ValidationSectionProps {
   validationResult: ValidationResult;
   selectedElementId: string | null;

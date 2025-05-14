@@ -6,7 +6,7 @@ import {
 } from "@quodsi/shared";
 import { AppState } from "./QuodsiApp";
 import { authMessageHandlers } from "./authMessageHandlers";
-import { selectionMessageHandlers } from "./selectionMessageHandlers";
+import { selectionMessageHandlersOld } from "./selectionMessageHandlersOld";
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[MessageHandlers]';
@@ -41,7 +41,7 @@ export const messageHandlers: Partial<{
 }> = {
     ...baseMessageHandlers,
     ...authMessageHandlers,
-    ...selectionMessageHandlers,
+    ...selectionMessageHandlersOld,
 } as const;
 
 /**

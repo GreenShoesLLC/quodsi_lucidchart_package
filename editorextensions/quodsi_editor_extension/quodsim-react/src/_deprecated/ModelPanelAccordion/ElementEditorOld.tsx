@@ -1,13 +1,13 @@
 import React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
-import ActivityEditor from "../ActivityEditor";
-import GeneratorEditor from "../GeneratorEditor";
-import ResourceEditor from "../ResourceEditor";
+import ActivityEditorOld from "../ActivityEditorOld";
+import GeneratorEditorOld from "../GeneratorEditorOld";
+import ResourceEditorOld from "../ResourceEditorOld";
 
-import ModelEditor from "../ModelEditor";
-import EntityEditor from "../EntityEditor";
-import ConnectorEditor from "../ConnectorEditor";
+import ModelEditorOld from "../ModelEditorOld";
+import EntityEditorOld from "../EntityEditorOld";
+import ConnectorEditorOld from "../ConnectorEditorOld";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | "Model";
@@ -19,7 +19,7 @@ interface ElementEditorProps {
   onToggle: () => void;
 }
 
-const ElementEditor: React.FC<ElementEditorProps> = ({
+const ElementEditorOld: React.FC<ElementEditorProps> = ({
   elementType,
   elementData,
   onSave,
@@ -39,7 +39,11 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
   const renderEditor = () => {
     if (elementType === "Model") {
       return (
-        <ModelEditor model={elementData} onSave={onSave} onCancel={onCancel} />
+        <ModelEditorOld
+          model={elementData}
+          onSave={onSave}
+          onCancel={onCancel}
+        />
       );
     }
 
@@ -52,7 +56,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
     switch (elementType) {
       case SimulationObjectType.Activity:
         return (
-          <ActivityEditor
+          <ActivityEditorOld
             activity={elementData}
             onSave={onSave}
             onCancel={onCancel}
@@ -61,7 +65,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
         );
       case SimulationObjectType.Generator:
         return (
-          <GeneratorEditor
+          <GeneratorEditorOld
             generator={elementData}
             onSave={onSave}
             onCancel={onCancel}
@@ -70,7 +74,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
         );
       case SimulationObjectType.Resource:
         return (
-          <ResourceEditor
+          <ResourceEditorOld
             resource={elementData}
             onSave={onSave}
             onCancel={onCancel}
@@ -78,7 +82,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
         );
       case SimulationObjectType.Entity:
         return (
-          <EntityEditor
+          <EntityEditorOld
             entity={elementData}
             onSave={onSave}
             onCancel={onCancel}
@@ -86,7 +90,7 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
         );
       case SimulationObjectType.Connector:
         return (
-          <ConnectorEditor
+          <ConnectorEditorOld
             connector={elementData}
             onSave={onSave}
             onCancel={onCancel}
@@ -119,4 +123,4 @@ const ElementEditor: React.FC<ElementEditorProps> = ({
   );
 };
 
-export default ElementEditor;
+export default ElementEditorOld;

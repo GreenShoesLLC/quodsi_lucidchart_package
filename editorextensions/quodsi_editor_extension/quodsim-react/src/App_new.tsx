@@ -5,7 +5,7 @@ import { MessageProvider } from "./messaging/MessageProvider";
 
 import { msalConfig } from "./config/msalConfig";
 import "./App_new.css";
-import LucidAppNew from "./components/LucidAppNew";
+import LucidAppNew from "./features/LucidAppNew";
 
 // Create the MSAL instance
 const msalInstance = new PublicClientApplication(msalConfig);

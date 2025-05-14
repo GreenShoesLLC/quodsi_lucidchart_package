@@ -1,6 +1,7 @@
 import React from "react";
-import BaseEditor from "./BaseEditor";
+
 import { Resource, SimulationObjectType } from "@quodsi/shared";
+import BaseEditor from "./BaseEditor";
 
 interface Props {
   resource: Resource;

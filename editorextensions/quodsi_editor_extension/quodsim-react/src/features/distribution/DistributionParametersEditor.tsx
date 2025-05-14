@@ -22,16 +22,14 @@ interface DistributionParametersEditorProps {
   disabled?: boolean;
 }
 
-export const DistributionParametersEditor: React.FC<DistributionParametersEditorProps> = ({
-  distribution,
-  distributionType,
-  onChange,
-  disabled = false,
-}) => {
+export const DistributionParametersEditor: React.FC<
+  DistributionParametersEditorProps
+> = ({ distribution, distributionType, onChange, disabled = false }) => {
   // If distribution is null or has a different type, create a new default distribution
-  const effectiveDistribution = distribution?.distributionType === distributionType
-    ? distribution
-    : createDefaultDistribution(distributionType);
+  const effectiveDistribution =
+    distribution?.distributionType === distributionType
+      ? distribution
+      : createDefaultDistribution(distributionType);
 
   // Handler for parameter updates
   const handleParameterUpdate = (updatedParameters: any) => {
@@ -66,7 +64,9 @@ export const DistributionParametersEditor: React.FC<DistributionParametersEditor
       case DistributionType.TRIANGULAR:
         return (
           <TriangularParameterEditor
-            parameters={effectiveDistribution.parameters as TriangularParameters}
+            parameters={
+              effectiveDistribution.parameters as TriangularParameters
+            }
             onChange={handleParameterUpdate}
             disabled={disabled}
           />
@@ -88,9 +88,5 @@ export const DistributionParametersEditor: React.FC<DistributionParametersEditor
     }
   };
 
-  return (
-    <div className="parameters-editor">
-      {renderParameterEditor()}
-    </div>
-  );
+  return <div className="parameters-editor">{renderParameterEditor()}</div>;
 };

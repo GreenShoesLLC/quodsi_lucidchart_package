@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 
-import { ValidationMessageList } from "./ValidationMessageList";
+import { ValidationMessageListOld } from "./ValidationMessageListOld";
 import { ValidationState } from "@quodsi/shared";
 
 interface ValidationMessagesProps {
@@ -10,7 +10,7 @@ interface ValidationMessagesProps {
   onToggle: () => void;
 }
 
-export const ValidationMessages: React.FC<ValidationMessagesProps> = ({
+export const ValidationMessagesOld: React.FC<ValidationMessagesProps> = ({
   validationState,
   currentElementId,
   isExpanded,
@@ -86,7 +86,7 @@ export const ValidationMessages: React.FC<ValidationMessagesProps> = ({
         <span>{isExpanded ? "▼" : "▶"} Validation</span>
       </div>
       {isExpanded && (
-        <ValidationMessageList
+        <ValidationMessageListOld
           messages={messages}
           selectedElementId={currentElementId || null}
           showSelectedOnly={true}

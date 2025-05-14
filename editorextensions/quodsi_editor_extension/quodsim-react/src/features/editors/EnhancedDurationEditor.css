@@ -1,0 +1,40 @@
+/* Styles for EnhancedDurationEditor */
+
+.duration-editor {
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+.duration-editor.compact {
+  padding: 8px;
+}
+
+.duration-editor .parameters-editor {
+  background-color: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+
+.duration-editor.compact .parameters-editor {
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.duration-editor input[type="number"] {
+  text-align: right;
+}
+
+/* Remove up/down arrows from number inputs */
+.duration-editor input[type="number"]::-webkit-inner-spin-button,
+.duration-editor input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.duration-editor input[type="number"] {
+  -moz-appearance: textfield;
+}

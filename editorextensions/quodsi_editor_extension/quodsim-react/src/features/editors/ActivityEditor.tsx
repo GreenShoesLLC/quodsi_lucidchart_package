@@ -4,16 +4,15 @@ import {
   Activity,
   OperationStep,
   PeriodUnit,
-  DistributionType,
   SimulationObjectType,
   createOperationStep,
   ConstantDistribution,
   EditorReferenceData,
   Duration,
-  DurationType,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
-import { OperationStepEditor } from "../components/OperationStepEditor";
+import { OperationStepEditor } from "./OperationStepEditor";
+
 
 // Main Activity Editor Component
 interface ActivityEditorProps {

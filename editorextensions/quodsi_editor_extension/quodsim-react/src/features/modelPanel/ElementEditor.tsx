@@ -5,14 +5,16 @@ import {
   DiagramElementType,
 } from "@quodsi/shared";
 import { AccordionSection } from "../shared/AccordionSection";
-import ActivityEditor from "../../_deprecated/ActivityEditor";
-import GeneratorEditor from "../../_deprecated/GeneratorEditor";
-import ResourceEditor from "../../_deprecated/ResourceEditor";
 
-import ModelEditor from "../../_deprecated/ModelEditor";
+
+
 import { ExtendedModelItemData } from "../../types/ModelItemData";
-import EntityEditor from "src/_deprecated/EntityEditor";
-import ConnectorEditor from "src/_deprecated/ConnectorEditor";
+import EntityEditorOld from "src/_deprecated/EntityEditorOld";
+import ConnectorEditorOld from "src/_deprecated/ConnectorEditorOld";
+import ModelEditor from "../editors/ModelEditor";
+import ActivityEditor from "../editors/ActivityEditor";
+import GeneratorEditor from "../editors/GeneratorEditor";
+import ResourceEditor from "../editors/ResourceEditor";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | string;
@@ -331,7 +333,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           safeElementType
         );
         return (
-          <EntityEditor
+          <EntityEditorOld
             entity={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
@@ -345,7 +347,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           safeElementType
         );
         return (
-          <ConnectorEditor
+          <ConnectorEditorOld
             connector={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}

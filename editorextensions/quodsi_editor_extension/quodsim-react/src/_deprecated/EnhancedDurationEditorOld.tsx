@@ -8,8 +8,8 @@ import {
 } from "@quodsi/shared";
 
 import "./EnhancedDurationEditor.css";
-import { DistributionTypeSelector } from "./distribution/DistributionTypeSelector";
-import { DistributionParametersEditor } from "./distribution/DistributionParametersEditor";
+import { DistributionTypeSelector } from "src/features/distribution/DistributionTypeSelector";
+import { DistributionParametersEditor } from "src/features/distribution/DistributionParametersEditor";
 
 interface EnhancedDurationEditorProps {
   periodUnit: PeriodUnit;
@@ -20,7 +20,9 @@ interface EnhancedDurationEditorProps {
   allowedDistributionTypes?: DistributionType[];
 }
 
-export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
+export const EnhancedDurationEditorOld: React.FC<
+  EnhancedDurationEditorProps
+> = ({
   periodUnit,
   distribution,
   onChange,
@@ -67,16 +69,17 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     distribution?.distributionType || DistributionType.CONSTANT;
 
   // Check if we have only one allowed distribution type that matches the current type
-  const isFixedDistribution = allowedDistributionTypes && 
-                            allowedDistributionTypes.length === 1 && 
-                            allowedDistributionTypes[0] === distributionType;
+  const isFixedDistribution =
+    allowedDistributionTypes &&
+    allowedDistributionTypes.length === 1 &&
+    allowedDistributionTypes[0] === distributionType;
 
   return (
     <div className={`duration-editor ${compact ? "compact" : ""}`}>
       {/* Label - enhanced to include distribution type info when fixed */}
       <div className="text-sm font-medium text-gray-700 mb-1">
         {isFixedDistribution && distributionType === DistributionType.CONSTANT
-          ? `${label}` 
+          ? `${label}`
           : label}
       </div>
 

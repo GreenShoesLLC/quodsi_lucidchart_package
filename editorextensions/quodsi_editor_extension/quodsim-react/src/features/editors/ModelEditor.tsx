@@ -10,9 +10,10 @@ import {
   DistributionType,
 } from "@quodsi/shared";
 import { Settings, Clock } from "lucide-react";
-import { EnhancedDurationEditor } from "../components/EnhancedDurationEditor";
 import BaseEditor from "./BaseEditor";
-import OutputForm from "../components/OutputForm";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import OutputForm from "./OutputForm";
+
 
 interface Props {
   model: Model;

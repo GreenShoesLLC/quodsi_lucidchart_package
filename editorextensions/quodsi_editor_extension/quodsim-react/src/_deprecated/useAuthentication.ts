@@ -1,15 +1,19 @@
 // src/hooks/useAuthentication.ts
 import { useCallback, useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
-import {
-  useAuthState,
-  useTokenManager,
-  useAuthOperations,
-  useAuthSession,
-  useBackendSync
-} from "../hooks/auth";
+// import {
+//   useAuthState,
+//   useTokenManager,
+//   useAuthOperations,
+//   useAuthSession,
+//   useBackendSync
+// } from "../hooks/auth";
 import { authMessagingService } from "./AuthMessagingService";
 import { sessionStorageService } from "src/_deprecated/SessionStorageService";
+import { useTokenManager } from "./useTokenManager";
+import { useAuthState } from "./useAuthState";
+import { useAuthOperations } from "./useAuthOperations";
+import { useBackendSync } from "./useBackendSync";
 
 /**
  * Main authentication hook that combines specialized hooks

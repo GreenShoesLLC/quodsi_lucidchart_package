@@ -9,7 +9,8 @@ import {
   Distribution,
 } from "@quodsi/shared";
 import { Clock, Users, Timer, PlayCircle } from "lucide-react";
-import { EnhancedDurationEditor } from "../components/EnhancedDurationEditor";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+
 
 interface Props {
   generator: Generator;

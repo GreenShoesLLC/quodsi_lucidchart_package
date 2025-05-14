@@ -10,7 +10,7 @@ import { MessageHandler } from "./messageHandlers";
 /**
  * Selection-specific message handlers
  */
-export const selectionMessageHandlers: Partial<{
+export const selectionMessageHandlersOld: Partial<{
     [T in MessageTypes]: MessageHandler<T>;
 }> = {
     [MessageTypes.SELECTION_CHANGED]: (payload, { setState, setError }) => {

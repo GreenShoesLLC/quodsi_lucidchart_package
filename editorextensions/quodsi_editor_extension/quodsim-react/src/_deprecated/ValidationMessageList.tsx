@@ -1,9 +1,8 @@
-import React, { useEffect } from "react";
-import { ValidationMessage, ComponentLogger } from "@quodsi/shared";
-import ValidationMessageItem from "../components/ModelPanelAccordion/ValidationMessageItem";
+import React from "react";
+import { ValidationMessage } from "@quodsi/shared";
 
-// Define a constant for the logger prefix
-const LOG_PREFIX = "[ValidationMessageList]";
+import _ from "lodash";
+import ValidationMessageItem from "./ValidationMessageItem";
 
 interface ValidationMessageListProps {
   messages: ValidationMessage[];
@@ -11,118 +10,72 @@ interface ValidationMessageListProps {
   showSelectedOnly: boolean;
 }
 
-// Initialize logging to be disabled by default
-ComponentLogger.setEnabled(LOG_PREFIX, false);
-
-/**
- * Helper function to enable/disable logging for this component
- */
-export const setValidationMessageListLogging = (enabled: boolean): void => {
-  ComponentLogger.setEnabled(LOG_PREFIX, enabled);
-};
-
 export const ValidationMessageList: React.FC<ValidationMessageListProps> = ({
   messages,
   selectedElementId,
   showSelectedOnly,
 }) => {
-  // Performance tracking
-  const renderStartTime = performance.now();
+  // Create a unique key for messages that captures all relevant properties
+  const getMessageKey = (message: ValidationMessage): string => {
+    return `${message.type}_${message.elementId || ""}_${message.message}`;
+  };
 
-  useEffect(() => {
-    const renderTime = performance.now() - renderStartTime;
-    ComponentLogger.log(
-      LOG_PREFIX,
-      `ValidationMessageList render time: ${renderTime.toFixed(2)}ms`
+  // Get severity rank for sorting
+  const getSeverityRank = (type: string): number => {
+    switch (type.toLowerCase()) {
+      case "error":
+        return 0;
+      case "warning":
+        return 1;
+      default:
+        return 2;
+    }
+  };
+
+  // Process messages
+  const processedMessages = React.useMemo(() => {
+    // First deduplicate messages using a more thorough comparison
+    const uniqueMessages = _.uniqWith(
+      messages,
+      (a, b) =>
+        a.type === b.type &&
+        a.message === b.message &&
+        a.elementId === b.elementId
     );
-  });
 
-  // Log component mount and updates
-  useEffect(() => {
-    ComponentLogger.log(LOG_PREFIX, "Mount/Update");
-    ComponentLogger.log(LOG_PREFIX, "Props received:", {
-      totalMessages: messages.length,
-      selectedElementId: selectedElementId || "none",
-      showSelectedOnly,
-      messageTypes: messages.reduce((acc, m) => {
-        acc[m.type] = (acc[m.type] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
+    // Then filter if needed
+    const filtered =
+      showSelectedOnly && selectedElementId && selectedElementId !== "0_0"
+        ? uniqueMessages.filter(
+            (message) => message.elementId === selectedElementId
+          )
+        : uniqueMessages;
+
+    // Sort by severity (errors first, then warnings, then others)
+    return [...filtered].sort((a, b) => {
+      return getSeverityRank(a.type) - getSeverityRank(b.type);
     });
   }, [messages, selectedElementId, showSelectedOnly]);
 
-  // Log when selectedElementId changes
-  useEffect(() => {
-    ComponentLogger.log(LOG_PREFIX, "Selected Element Changed:", {
-      newSelectedId: selectedElementId,
-      timestamp: new Date().toISOString(),
-      relevantMessages: messages.filter(
-        (m) => m.elementId === selectedElementId
-      ).length,
+  // Debug logging
+  React.useEffect(() => {
+    console.log("ValidationMessageList processing:", {
+      originalCount: messages.length,
+      afterDeduplication: processedMessages.length,
+      selectedElementId,
     });
-  }, [selectedElementId, messages]);
+  }, [messages, processedMessages.length, selectedElementId]);
 
-  ComponentLogger.log(LOG_PREFIX, "Render");
-
-  // Filter messages based on selectedElementId if showSelectedOnly is true
-  const filteredMessages =
-    showSelectedOnly && selectedElementId && selectedElementId !== "0_0"
-      ? messages.filter((message) => message.elementId === selectedElementId)
-      : messages;
-
-  // Log filtering results
-  ComponentLogger.log(LOG_PREFIX, "Message Filtering:", {
-    originalCount: messages.length,
-    filteredCount: filteredMessages.length,
-    filteringActive: showSelectedOnly && selectedElementId,
-    selectedElementId: selectedElementId || "none",
-    removedMessages: messages.length - filteredMessages.length,
-    filterReason: showSelectedOnly
-      ? selectedElementId
-        ? "Showing selected element only"
-        : "No element selected"
-      : "Showing all messages",
-  });
-
-  // Log detailed message analysis
-  ComponentLogger.log(LOG_PREFIX, "Message Analysis:", {
-    errorCount: filteredMessages.filter((m) => m.type === "error").length,
-    warningCount: filteredMessages.filter((m) => m.type === "warning").length,
-    messagesByType: filteredMessages.reduce((acc, m) => {
-      acc[m.type] = (acc[m.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-  });
-
-  const result = (
-    <div className="validation-message-list">
-      <div className="bg-white rounded-md shadow-sm">
-        {filteredMessages.map((message, index) => {
-          // Log individual message rendering
-          ComponentLogger.log(LOG_PREFIX, `Rendering message ${index}:`, {
-            type: message.type,
-            elementId: message.elementId,
-            messagePreview:
-              message.message.substring(0, 50) +
-              (message.message.length > 50 ? "..." : ""),
-          });
-
-          return (
-            <ValidationMessageItem
-              key={`${message.elementId}-${index}`}
-              message={message}
-            />
-          );
-        })}
-      </div>
+  return (
+    <div className="space-y-2 p-4">
+      {processedMessages.map((message) => (
+        <ValidationMessageItem key={getMessageKey(message)} message={message} />
+      ))}
+      {processedMessages.length === 0 && (
+        <div className="text-gray-500 text-sm py-2 text-center">
+          No validation messages to display
+        </div>
+      )}
     </div>
   );
-
-  ComponentLogger.log(LOG_PREFIX, "Final Render Output:", {
-    renderedMessageCount: filteredMessages.length,
-    hasMessages: filteredMessages.length > 0,
-    timestamp: new Date().toISOString(),
-  });
-
-  return result;
 };

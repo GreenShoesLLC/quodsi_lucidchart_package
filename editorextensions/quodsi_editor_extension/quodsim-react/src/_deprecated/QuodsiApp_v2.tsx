@@ -7,7 +7,7 @@ import {
 
 import { ErrorDisplay } from "./ErrorDisplay";
 import { ProcessingIndicator } from "./ProcessingIndicator";
-import { useSimulationStatus } from "../hooks/useSimulationStatus";
+import { useSimulationStatus } from "./useSimulationStatus";
 import { SimulationStatus } from "../types/SimulationStatus";
 import { useAuth } from "./AuthProvider";
 import { AuthPanel } from "./AuthPanel";
@@ -17,7 +17,11 @@ import { useMsal } from "@azure/msal-react";
 import { getMessageService } from "./messageService";
 import { createActionHandlers } from "./actionHandlers";
 import { ModelPanelAccordion } from "./ModelPanelAccordion/ModelPanelAccordion";
-import { AuthActionType, MessageTypes, ModelItemData } from "@quodsi/shared/src/types";
+import {
+  AuthActionType,
+  MessageTypes,
+  ModelItemData,
+} from "@quodsi/shared/src/types";
 
 export interface AppState {
   // Existing properties

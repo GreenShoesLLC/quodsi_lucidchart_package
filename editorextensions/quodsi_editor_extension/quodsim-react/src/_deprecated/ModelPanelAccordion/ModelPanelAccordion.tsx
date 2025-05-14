@@ -5,11 +5,11 @@ import {
   SimulationObjectType,
   DiagramElementType,
 } from "@quodsi/shared";
-import ElementEditor from "../../_deprecated/ModelPanelAccordion/ElementEditor";
+import ElementEditorOld from "./ElementEditorOld";
 // import { ValidationMessages } from "./ValidationMessages";
 import { Header } from "../../_deprecated/ModelPanelAccordion/Header";
 import { SimulationStatus } from "src/types/SimulationStatus";
-import { ValidationMessages } from "src/_deprecated/ValidationMessages";
+import { ValidationMessagesOld } from "src/_deprecated/ValidationMessagesOld";
 import { JsonObject, ModelItemData } from "@quodsi/shared/src/types";
 
 interface ModelPanelAccordionProps {
@@ -174,7 +174,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
             {visibleSections.editor &&
               !currentElement?.isUnconverted &&
               currentElement && (
-                <ElementEditor
+                <ElementEditorOld
                   key={`${currentElement.id}-${lastElementUpdate}`}
                   elementData={currentElement.data}
                   elementType={currentElement.metadata.type}
@@ -186,7 +186,7 @@ export const ModelPanelAccordion: React.FC<ModelPanelAccordionProps> = ({
                 />
               )}
             {visibleSections.validation && (
-              <ValidationMessages
+              <ValidationMessagesOld
                 validationState={validationState}
                 currentElementId={currentElement?.id}
                 isExpanded={expandedSections.validation}

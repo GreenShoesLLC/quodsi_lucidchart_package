@@ -1,6 +1,6 @@
 import React from "react";
-import BaseEditor from "../_deprecated/BaseEditor";
 import { Connector, ConnectType, SimulationObjectType } from "@quodsi/shared";
+import BaseEditor from "./BaseEditor";
 
 interface Props {
   connector: Connector;

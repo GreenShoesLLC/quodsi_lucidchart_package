@@ -2,8 +2,8 @@ import React from "react";
 import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
 import { ValidationState } from "@quodsi/shared/dist/types/accordion/ValidationState";
 
-import { SimulationComponentSelector } from "../../components/SimulationComponentSelector";
-import { SimulationStatusMonitor } from "../../components/SimulationStatusMonitor";
+import { SimulationComponentSelectorOld } from "../SimulationComponentSelectorOld";
+import { SimulationStatusMonitorOld } from "../SimulationStatusMonitorOld";
 import { Trash2 } from "lucide-react";
 import { getSimulationState } from "src/utils/simulationState";
 import { SimulationStatus } from "src/types/SimulationStatus";
@@ -233,7 +233,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     // Handle unconverted items (Component Selector)
     if (modelItemData.isUnconverted) {
       return (
-        <SimulationComponentSelector
+        <SimulationComponentSelectorOld
           elementId={modelItemData.id}
           selectedType={elementType}
           diagramElementType={diagramElementType}
@@ -245,7 +245,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
     // Handle converted items (Component Selector and Remove button)
     return (
       <div className="flex items-center gap-2">
-        <SimulationComponentSelector
+        <SimulationComponentSelectorOld
           elementId={modelItemData.id}
           selectedType={elementType}
           diagramElementType={diagramElementType}
@@ -280,7 +280,7 @@ export class Header extends React.Component<HeaderProps, HeaderState> {
           {isModel && (
             <>
               <div className="border-t my-2" />
-              <SimulationStatusMonitor
+              <SimulationStatusMonitorOld
                 status={simulationStatus.pageStatus}
                 isPollingSimState={simulationStatus.isPollingSimState}
                 error={simulationStatus.errorMessage}

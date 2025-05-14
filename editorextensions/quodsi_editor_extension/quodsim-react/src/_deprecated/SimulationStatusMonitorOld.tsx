@@ -11,12 +11,12 @@ interface Props {
   onViewResults?: () => void;
 }
 
-export const SimulationStatusMonitor: React.FC<Props> = ({
+export const SimulationStatusMonitorOld: React.FC<Props> = ({
   status,
   isPollingSimState,
   error,
   newResultsAvailable = false,
-  onViewResults
+  onViewResults,
 }) => {
   // Add debugging to log all props when they change
   useEffect(() => {
@@ -25,24 +25,29 @@ export const SimulationStatusMonitor: React.FC<Props> = ({
       isPollingSimState,
       error,
       newResultsAvailable,
-      hasOnViewResults: !!onViewResults
+      hasOnViewResults: !!onViewResults,
     });
-    
+
     // Log scenarios details if available
     if (status?.scenarios) {
       console.log("[SimulationStatusMonitor] Scenarios:", status.scenarios);
-      
+
       // Check for completed scenarios
-      const completedScenarios = status.scenarios.filter(s => s.runState === RunState.RanSuccessfully);
-      console.log("[SimulationStatusMonitor] Completed scenarios:", completedScenarios);
-      
+      const completedScenarios = status.scenarios.filter(
+        (s) => s.runState === RunState.RanSuccessfully
+      );
+      console.log(
+        "[SimulationStatusMonitor] Completed scenarios:",
+        completedScenarios
+      );
+
       // Check for viewed status
       status.scenarios.forEach((s, i) => {
         console.log(`[SimulationStatusMonitor] Scenario ${i}:`, {
           id: s.id,
           name: s.name,
           runState: s.runState,
-          resultsViewed: s.resultsViewed
+          resultsViewed: s.resultsViewed,
         });
       });
     }
@@ -53,27 +58,29 @@ export const SimulationStatusMonitor: React.FC<Props> = ({
   }
 
   const { statusText } = getSimulationState(status, isPollingSimState);
-  
+
   // Check if there are any completed scenarios
   const hasCompletedScenario = status?.scenarios?.some(
-    s => s.runState === RunState.RanSuccessfully
+    (s) => s.runState === RunState.RanSuccessfully
   );
 
   // Check if any scenarios have already been viewed
-  const resultsAlreadyViewed = status?.scenarios?.some(s => s.resultsViewed === true);
-  
+  const resultsAlreadyViewed = status?.scenarios?.some(
+    (s) => s.resultsViewed === true
+  );
+
   // Show the button if there are completed scenarios and either:
   // 1. There are new results available, or
   // 2. Results haven't been viewed yet
-  const showViewResultsButton = hasCompletedScenario && 
-    (newResultsAvailable || !resultsAlreadyViewed);
-    
+  const showViewResultsButton =
+    hasCompletedScenario && (newResultsAvailable || !resultsAlreadyViewed);
+
   // Log the calculation
   console.log("[SimulationStatusMonitor] Button visibility calculation:", {
     hasCompletedScenario,
     newResultsAvailable,
     resultsAlreadyViewed,
-    showViewResultsButton
+    showViewResultsButton,
   });
 
   return (
@@ -84,10 +91,10 @@ export const SimulationStatusMonitor: React.FC<Props> = ({
           <span className="font-medium">Simulation Status:</span>
           <span className={getStatusClass(statusText)}>{statusText}</span>
         </div>
-        
+
         {/* Notification indicator when new results are available */}
         {newResultsAvailable && (
-          <div 
+          <div
             className="relative w-6 h-6 bg-blue-500 rounded-full animate-pulse cursor-pointer flex items-center justify-center text-white"
             onClick={onViewResults}
             title="New results available"
@@ -100,21 +107,21 @@ export const SimulationStatusMonitor: React.FC<Props> = ({
       {status && (
         <div className="space-y-1 text-sm">
           <div>Updated: {new Date(status.statusDateTime).toLocaleString()}</div>
-          
+
           {/* DEBUG: Always show what triggered the button visibility decision */}
           {/* <div className="text-xs text-gray-500">
             Debug: Complete={hasCompletedScenario ? 'Y' : 'N'}, 
             New={newResultsAvailable ? 'Y' : 'N'}, 
             Viewed={resultsAlreadyViewed ? 'Y' : 'N'}
           </div> */}
-          
+
           {/* Show View Results button only when needed */}
           {showViewResultsButton && (
             <button
               onClick={onViewResults}
               className={`mt-2 px-2 py-1 text-xs rounded text-white ${
-                newResultsAvailable 
-                  ? "bg-blue-500 animate-pulse hover:bg-blue-600" 
+                newResultsAvailable
+                  ? "bg-blue-500 animate-pulse hover:bg-blue-600"
                   : "bg-green-500 hover:bg-green-600"
               }`}
             >
