@@ -82,8 +82,6 @@ __exportStar(require("./types/accordion/ModelElement"), exports);
 __exportStar(require("./types/accordion/ModelStructure"), exports);
 __exportStar(require("./types/accordion/ValidationState"), exports);
 __exportStar(require("./types/accordion/AccordionState"), exports);
-// Factory exports
-__exportStar(require("./factories/SimulationObjectTypeFactory"), exports);
 // Service exports
 __exportStar(require("./services/lucidApi"), exports);
 __exportStar(require("./utils/csvUtils"), exports);

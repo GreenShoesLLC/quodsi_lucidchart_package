@@ -60,7 +60,6 @@ export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 export * from './types/accordion/AccordionState';
-export * from './factories/SimulationObjectTypeFactory';
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
 export * from './serialization';

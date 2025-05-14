@@ -73,9 +73,6 @@ export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 export * from './types/accordion/AccordionState';
 
-// Factory exports
-export * from './factories/SimulationObjectTypeFactory';
-
 // Service exports
 export * from './services/lucidApi';
 export * from './utils/csvUtils';

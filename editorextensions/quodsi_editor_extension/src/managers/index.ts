@@ -1,1 +1,1 @@
-export * from './SelectionManager';
+export * from '../_deprecated/SelectionManager';
