@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /**
  * User information structure shared across auth messages
@@ -7,10 +7,10 @@ import { EnvelopeMessageType } from '../envelope/message-types';
 export interface QuodsiUserInfo {
   /** B2C objectId (sub) */
   id: string;
-  
+
   /** Primary sign-in address */
   email: string;
-  
+
   /** Friendly name (optional) */
   displayName?: string;
 }
@@ -23,10 +23,10 @@ export interface AuthLoginSuccessMessage extends EnvelopeBase {
   data: {
     /** JWT token from MSAL authentication */
     idToken: string;
-    
+
     /** User information */
     user: QuodsiUserInfo;
-    
+
     /** Flag indicating if this is a new user registration */
     newUser: boolean;
   };
@@ -59,7 +59,7 @@ export interface AuthStatusMessage extends EnvelopeBase {
   data: {
     /** Whether the user is currently authenticated */
     isAuthenticated: boolean;
-    
+
     /** User information if authenticated */
     user?: QuodsiUserInfo;
   };
@@ -84,14 +84,14 @@ export interface AuthErrorMessage extends EnvelopeBase {
   data: {
     /** Error code */
     code: string;
-    
+
     /** Error message */
     message: string;
   };
 }
 
 /** Union type of all auth messages */
-export type AuthMessage = 
+export type AuthMessage =
   | AuthLoginSuccessMessage
   | AuthLogoutMessage
   | AuthPasswordResetMessage

@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { JsonObject } from '../../_deprecated/types/messaging/JsonTypes';
 
 /**
@@ -10,10 +10,10 @@ export interface ElementUpdateMessage extends EnvelopeBase {
   data: {
     /** Element ID to update */
     elementId: string;
-    
+
     /** Element type as string (SimulationObjectType) */
     type: string;
-    
+
     /** Element data (properties) */
     data: JsonObject;
   };
@@ -27,10 +27,10 @@ export interface ElementUpdateResultMessage extends EnvelopeBase {
   data: {
     /** Success flag */
     success: boolean;
-    
+
     /** Element ID that was updated */
     elementId: string;
-    
+
     /** Error message if update failed */
     errorMessage?: string;
   };
@@ -44,10 +44,10 @@ export interface ElementConvertMessage extends EnvelopeBase {
   data: {
     /** Element ID to convert */
     elementId: string;
-    
+
     /** New type to convert to (SimulationObjectType as string) */
     newType: string;
-    
+
     /** Optional data to apply during conversion */
     data?: JsonObject;
   };
@@ -61,17 +61,17 @@ export interface ElementConvertResultMessage extends EnvelopeBase {
   data: {
     /** Success flag */
     success: boolean;
-    
+
     /** Element ID that was converted */
     elementId: string;
-    
+
     /** Error message if conversion failed */
     errorMessage?: string;
   };
 }
 
 /** Union type of all element operations messages */
-export type ElementOpsMessage = 
+export type ElementOpsMessage =
   | ElementUpdateMessage
   | ElementUpdateResultMessage
   | ElementConvertMessage

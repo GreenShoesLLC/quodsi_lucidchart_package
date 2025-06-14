@@ -1,0 +1,127 @@
+import React, { useEffect, useState } from "react";
+import { EnvelopeMessageType } from "@quodsi/shared";
+import { useMessaging } from "src/messaging";
+import AuthPanel from "./contentDockPanel/AuthPanel";
+import { ModelPanel } from "./modelPanel";
+import MessageDebugger from "./debugging/MessageDebugger";
+import StateInspector from "./debugging/StateInspector";
+
+// Create component-specific logger using our debug service
+import { debugService } from "../messaging/utils/debugService";
+const logger = debugService.forComponent("LucidAppNew");
+
+interface LucidAppProps {
+  panelType?: "auth" | "model";
+}
+
+/**
+ * LucidApp component that serves as the main container for the application.
+ * Can render either the auth panel or the model panel based on the panelType prop.
+ */
+export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
+  const { auth, app, sendMessage } = useMessaging();
+  const [lastMessageSent, setLastMessageSent] = useState<string | null>(null);
+  const [lastMessageReceived, setLastMessageReceived] = useState<string | null>(
+    null
+  );
+  const [showDebugTools, setShowDebugTools] = useState<boolean>(false);
+  
+  // Only show debug features in development
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  // Track when the component mounts (only in development)
+  useEffect(() => {
+    if (isDevelopment) {
+      logger.log(`LucidAppNew initialized with panel type: ${panelType}`);
+      return () => logger.log("LucidApp unmounted");
+    }
+  }, [panelType, isDevelopment]);
+
+  // Handle test message sending
+  const handleTestMessage = () => {
+    sendMessage(EnvelopeMessageType.LOG, {
+      level: "info",
+      text: `Test message from ${panelType} panel`,
+    });
+    setLastMessageSent(EnvelopeMessageType.LOG);
+  };
+
+  // Toggle debug tools visibility
+  const toggleDebugTools = () => {
+    setShowDebugTools((prev) => !prev);
+  };
+
+  // Show different content based on panel type
+  if (panelType === "auth") {
+    return (
+      <div className="lucid-app">
+        <AuthPanel />
+      </div>
+    );
+  }
+
+  // Model panel content
+  return (
+    <div className="lucid-app h-full flex flex-col">
+      {/* Only show debug status bar in development */}
+      {isDevelopment && (
+        <div className="flex-none p-2 bg-gray-50 border-b flex justify-between items-center">
+          <div className="text-xs text-gray-600">
+            <span className="mr-4">
+              Auth: <strong className={auth.isAuthenticated ? "text-green-600" : "text-red-600"}>
+                {auth.isAuthenticated ? "✓" : "✗"}
+              </strong>
+            </span>
+            <span>
+              Ready: <strong>{app.initialized ? "✓" : "..."}</strong>
+            </span>
+          </div>
+          <button
+            onClick={toggleDebugTools}
+            className="text-xs px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
+          >
+            {showDebugTools ? "Hide Debug" : "Debug"}
+          </button>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-auto">
+        <ModelPanel />
+      </div>
+
+      {/* Debug tools - only available in development */}
+      {isDevelopment && showDebugTools && (
+        <div className="debug-tools border-t p-3 bg-gray-50">
+          <div className="message-status mb-3">
+            <h3 className="text-xs font-semibold text-gray-700 mb-1">Message Status</h3>
+            <p className="text-xs text-gray-600">
+              Last sent: <code className="bg-gray-200 px-1">{lastMessageSent || "None"}</code>
+            </p>
+            <p className="text-xs text-gray-600">
+              Last received: <code className="bg-gray-200 px-1">{lastMessageReceived || "None"}</code>
+            </p>
+            <button
+              onClick={handleTestMessage}
+              className="text-xs px-2 py-1 bg-blue-500 text-white rounded mt-2 hover:bg-blue-600"
+            >
+              Send Test Message
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-700 mb-1">State Inspector</h3>
+              <StateInspector />
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-gray-700 mb-1">Message Debugger</h3>
+              <MessageDebugger />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default LucidApp;

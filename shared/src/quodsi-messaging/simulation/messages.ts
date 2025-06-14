@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /**
  * Simulation status enum
@@ -22,16 +22,16 @@ export interface ModelRunRequestMessage extends EnvelopeBase {
   data: {
     /** Document ID to simulate */
     documentId: string;
-    
+
     /** Scenario name */
     scenarioName?: string;
-    
+
     /** Duration in simulation days */
     durationDays?: number;
-    
+
     /** Number of simulation repetitions */
     repetitions?: number;
-    
+
     /** Additional simulation parameters */
     parameters?: Record<string, unknown>;
   };
@@ -45,10 +45,10 @@ export interface ModelRunAckMessage extends EnvelopeBase {
   data: {
     /** Unique job ID assigned by the backend */
     jobId: string;
-    
+
     /** Timestamp when the job was queued */
     queuedAt: string; // ISO timestamp
-    
+
     /** Estimated completion time */
     estimatedCompletionTime?: string; // ISO timestamp
   };
@@ -62,29 +62,29 @@ export interface ModelRunStatusMessage extends EnvelopeBase {
   data: {
     /** Job ID */
     jobId: string;
-    
+
     /** Current status */
     status: SimulationStatus;
-    
+
     /** Progress percentage (0-100) */
     progress: number;
-    
+
     /** Current step description */
     currentStep?: string;
-    
+
     /** Error message if status is FAILED */
     error?: string;
-    
+
     /** Result URL if status is COMPLETED */
     resultUrl?: string;
-    
+
     /** Additional status details */
     details?: Record<string, unknown>;
   };
 }
 
 /** Union type of all simulation messages */
-export type SimulationMessage = 
+export type SimulationMessage =
   | ModelRunRequestMessage
   | ModelRunAckMessage
   | ModelRunStatusMessage;

@@ -1,1 +1,0 @@
-{"version":3,"file":"AppLifecyclePayloads.d.ts","sourceRoot":"","sources":["../../../../src/types/messaging/payloads/AppLifecyclePayloads.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,iBAAiB,CAAC;AAE/C,MAAM,WAAW,oBAAoB;IACjC,CAAC,YAAY,CAAC,eAAe,CAAC,EAAE,SAAS,CAAC;CAI7C"}

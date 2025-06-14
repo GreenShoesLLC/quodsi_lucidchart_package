@@ -280,7 +280,7 @@ The tests demonstrate various usage patterns and edge cases:
 Developers can refer to these tests for usage examples and to understand expected behavior when extending the system.
 #### Test Fixtures
 Common test fixtures and helper functions are provided in:
-Copyshared/tests/serialization/fixtures/
+Copyshared/tests/serialization/__fixtures__/
 These fixtures include sample model definitions at various levels of complexity that can be used for testing or as reference implementations.
 
 

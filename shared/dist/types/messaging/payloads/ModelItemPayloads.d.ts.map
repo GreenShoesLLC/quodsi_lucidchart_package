@@ -1,1 +1,0 @@
-{"version":3,"file":"ModelItemPayloads.d.ts","sourceRoot":"","sources":["../../../../src/types/messaging/payloads/ModelItemPayloads.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,YAAY,EAAE,MAAM,iBAAiB,CAAC;AAK/C,MAAM,WAAW,iBAAiB;IAY9B,CAAC,YAAY,CAAC,cAAc,CAAC,EAAE;QAC3B,SAAS,EAAE,MAAM,CAAC;KACrB,CAAC;CACL"}

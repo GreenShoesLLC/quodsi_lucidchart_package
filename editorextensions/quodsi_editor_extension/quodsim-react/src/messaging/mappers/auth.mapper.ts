@@ -19,30 +19,6 @@ if (typeof window !== 'undefined') {
         userInfo: isAuthenticated ? { id: 'Debug', email: 'debug@example.com', displayName: 'Debug User' } : undefined
       };
       
-      // Create a visual indicator
-      try {
-        const indicator = document.createElement('div');
-        indicator.style.position = 'fixed';
-        indicator.style.top = '50px';
-        indicator.style.left = '10px';
-        indicator.style.padding = '8px 16px';
-        indicator.style.backgroundColor = 'purple';
-        indicator.style.color = 'white';
-        indicator.style.zIndex = '9999';
-        indicator.style.borderRadius = '4px';
-        indicator.style.fontSize = '12px';
-        indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-        indicator.textContent = `MANUAL AUTH UPDATE: ${isAuthenticated ? 'Authenticated' : 'Not authenticated'}`;
-        
-        document.body.appendChild(indicator);
-        
-        setTimeout(() => {
-          if (indicator.parentNode) {
-            indicator.parentNode.removeChild(indicator);
-          }
-        }, 5000);
-      } catch (err) {}
-      
       return action;
     },
     checkAuthStatus: () => {
@@ -116,44 +92,7 @@ export function mapAuth(msg: EnvelopeBase): MessagingAction | null {
         panelType: window.location.search.includes('panel=auth') ? 'auth' : 'model',
         timestamp: new Date().toISOString()
       });
-      
-      // Debug flag to force visible UI updates
-      // This helps ensure the UI visibly changes when auth status updates
-      const forceVisibleChange = true;
-      
-      // Add a visual indicator for debugging
-      if (typeof document !== 'undefined') {
-        try {
-          // Create a visual indicator
-          const indicator = document.createElement('div');
-          indicator.style.position = 'fixed';
-          indicator.style.top = '10px';
-          indicator.style.left = '10px';
-          indicator.style.padding = '8px 16px';
-          indicator.style.backgroundColor = statusData.isAuthenticated ? 'green' : 'red';
-          indicator.style.color = 'white';
-          indicator.style.zIndex = '9999';
-          indicator.style.borderRadius = '4px';
-          indicator.style.fontSize = '12px';
-          indicator.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-          indicator.textContent = statusData.isAuthenticated
-            ? `✓ AUTH_STATUS: Authenticated in ${window.location.search.includes('panel=auth') ? 'auth' : 'model'} panel`
-            : `✗ AUTH_STATUS: Not authenticated in ${window.location.search.includes('panel=auth') ? 'auth' : 'model'} panel`;
-          
-          // Add to DOM
-          document.body.appendChild(indicator);
-          
-          // Remove after 5 seconds
-          setTimeout(() => {
-            if (indicator.parentNode) {
-              indicator.parentNode.removeChild(indicator);
-            }
-          }, 5000);
-        } catch (err) {
-          // Ignore errors
-        }
-      }
-      
+
       return {
         type: 'AUTH_STATUS_UPDATE',
         isAuthenticated: statusData.isAuthenticated,

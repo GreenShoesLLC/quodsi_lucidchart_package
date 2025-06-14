@@ -1,4 +1,4 @@
-import { EnvelopeMessageType } from './message-types';
+import { EnvelopeMessageType } from './envelopeMessageTypes';
 
 /**
  * Source context for a message
@@ -17,19 +17,19 @@ export type MessageTarget = 'host' | 'model-iframe' | 'auth-iframe' | 'broadcast
 export interface EnvelopeBase {
   /** Unique ID (UUID) that correlates request ↔ response. */
   id: string;
-  
+
   /** Message type discriminant that selects the payload schema. */
   type: EnvelopeMessageType;
-  
+
   /** Originating context. */
   source: MessageSource;
-  
+
   /** Intended recipient. */
   target: MessageTarget;
-  
+
   /** Protocol version. */
   version: '1.0';
-  
+
   /** Payload whose structure depends on the message type. */
   data: unknown;
 }
@@ -39,17 +39,17 @@ export interface EnvelopeBase {
  */
 export function isEnvelope(value: unknown): value is EnvelopeBase {
   if (!value || typeof value !== 'object') return false;
-  
+
   const msg = value as Partial<EnvelopeBase>;
-  
+
   return (
     typeof msg.id === 'string' && msg.id.length > 0 &&
     typeof msg.type === 'string' && msg.type.length > 0 &&
-    typeof msg.source === 'string' && 
-      (msg.source === 'host' || msg.source === 'model-iframe' || msg.source === 'auth-iframe') &&
-    typeof msg.target === 'string' && 
-      (msg.target === 'host' || msg.target === 'model-iframe' || 
-       msg.target === 'auth-iframe' || msg.target === 'broadcast') &&
+    typeof msg.source === 'string' &&
+    (msg.source === 'host' || msg.source === 'model-iframe' || msg.source === 'auth-iframe') &&
+    typeof msg.target === 'string' &&
+    (msg.target === 'host' || msg.target === 'model-iframe' ||
+      msg.target === 'auth-iframe' || msg.target === 'broadcast') &&
     msg.version === '1.0' &&
     msg.data !== undefined
   );

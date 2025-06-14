@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /**
  * Basic shape information for diagram elements
@@ -7,22 +7,22 @@ import { EnvelopeMessageType } from '../envelope/message-types';
 export interface ElementShape {
   /** Element ID in Lucid */
   id: string;
-  
+
   /** Element type in Lucid */
   type: string;
-  
+
   /** Text content */
   text?: string;
-  
+
   /** X coordinate */
   x?: number;
-  
+
   /** Y coordinate */
   y?: number;
-  
+
   /** Width */
   width?: number;
-  
+
   /** Height */
   height?: number;
 }
@@ -35,16 +35,16 @@ export interface ModelContextMessage extends EnvelopeBase {
   data: {
     /** Unique ID of the Lucid document */
     documentId: string;
-    
+
     /** Document title */
     title: string;
-    
+
     /** Page ID within the document */
     pageId: string;
-    
+
     /** Whether the document is a Quodsi model */
     isQuodsiModel: boolean;
-    
+
     /** Additional document metadata */
     metadata?: Record<string, unknown>;
   };
@@ -58,16 +58,16 @@ export interface SelectionChangedMessage extends EnvelopeBase {
   data: {
     /** Currently selected elements */
     selectedElements: ElementShape[];
-    
+
     /** Number of elements selected */
     selectionCount: number;
-    
+
     /** Total number of elements on the page */
     totalElementCount: number;
   };
 }
 
 /** Union type of all selection messages */
-export type SelectionMessage = 
+export type SelectionMessage =
   | ModelContextMessage
   | SelectionChangedMessage;

@@ -1,6 +1,6 @@
 import { AuthErrorMessage, AuthLoginSuccessMessage, AuthLogoutMessage, AuthMessage, AuthPasswordResetMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
 import { isEnvelope } from './envelope/envelope';
-import { EnvelopeMessageType } from './envelope/message-types';
+import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
 import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage } from './elementOps/messages';
@@ -10,14 +10,14 @@ import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisco
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
 
 // Export message types enum
-export { EnvelopeMessageType } from './envelope/message-types';
+export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 
 // Export envelope base
-export { 
+export {
   EnvelopeBase,
   MessageSource,
   MessageTarget,
-  isEnvelope 
+  isEnvelope
 } from './envelope/envelope';
 
 // Export guard utilities
@@ -112,7 +112,7 @@ export {
 } from './storage/messages';
 
 // Define the union type of all possible messages
-export type QuodsiMessage = 
+export type QuodsiMessage =
   | FrameworkMessage
   | AuthMessage
   | SubscriptionMessage
@@ -127,7 +127,7 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.REACT_APP_READY]: ReactAppReadyMessage['data'];
   [EnvelopeMessageType.ERROR]: ErrorMessage['data'];
   [EnvelopeMessageType.LOG]: LogMessage['data'];
-  
+
   [EnvelopeMessageType.AUTH_LOGIN_SUCCESS]: AuthLoginSuccessMessage['data'];
   [EnvelopeMessageType.AUTH_LOGOUT]: AuthLogoutMessage['data'];
   [EnvelopeMessageType.AUTH_PASSWORD_RESET]: AuthPasswordResetMessage['data'];
@@ -135,19 +135,19 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.AUTH_REQUIRED]: AuthRequiredMessage['data'];
   [EnvelopeMessageType.AUTH_ERROR]: AuthErrorMessage['data'];
   [EnvelopeMessageType.REQUEST_AUTH_STATUS]: {}; // Empty object as payload
-  
+
   [EnvelopeMessageType.SUBSCRIPTION_STATUS]: SubscriptionStatusMessage['data'];
   [EnvelopeMessageType.SUBSCRIPTION_CHANGE_REQUEST]: SubscriptionChangeRequestMessage['data'];
   [EnvelopeMessageType.SUBSCRIPTION_CHANGE_RESULT]: SubscriptionChangeResultMessage['data'];
   [EnvelopeMessageType.SUBSCRIPTION_ERROR]: SubscriptionErrorMessage['data'];
-  
+
   [EnvelopeMessageType.MODEL_CONTEXT]: ModelContextMessage['data'];
   [EnvelopeMessageType.SELECTION_CHANGED]: SelectionChangedMessage['data'];
-  
+
   [EnvelopeMessageType.MODEL_RUN_REQUEST]: ModelRunRequestMessage['data'];
   [EnvelopeMessageType.MODEL_RUN_ACK]: ModelRunAckMessage['data'];
   [EnvelopeMessageType.MODEL_RUN_STATUS]: ModelRunStatusMessage['data'];
-  
+
   [EnvelopeMessageType.MODEL_VALIDATE]: ModelValidateMessage['data'];
   [EnvelopeMessageType.MODEL_VALIDATION_RESULT]: ModelValidationResultMessage['data'];
   [EnvelopeMessageType.MODEL_CONVERT]: ModelConvertMessage['data'];
@@ -156,12 +156,12 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.MODEL_REMOVE_RESULT]: ModelRemoveResultMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE]: ResultsPageCreateMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT]: ResultsPageCreateResultMessage['data'];
-  
+
   [EnvelopeMessageType.ELEMENT_UPDATE]: ElementUpdateMessage['data'];
   [EnvelopeMessageType.ELEMENT_UPDATE_RESULT]: ElementUpdateResultMessage['data'];
   [EnvelopeMessageType.ELEMENT_CONVERT]: ElementConvertMessage['data'];
   [EnvelopeMessageType.ELEMENT_CONVERT_RESULT]: ElementConvertResultMessage['data'];
-  
+
   [EnvelopeMessageType.STORAGE_CONNECT_REQUEST]: StorageConnectRequestMessage['data'];
   [EnvelopeMessageType.STORAGE_CONNECT_RESULT]: StorageConnectResultMessage['data'];
   [EnvelopeMessageType.STORAGE_DISCONNECT]: StorageDisconnectMessage['data'];

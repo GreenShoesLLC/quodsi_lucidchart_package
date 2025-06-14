@@ -1,14 +1,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App_new from "./App_new";
+import App from "./App";
 import { initializeMessaging } from "./messaging/initializeMessaging";
 import "./index_new.css";
 
 // Initialize the messaging system
 const cleanup = initializeMessaging({
-  enableLogging: true,
-  enableDevTools: true,
-  logPrefix: "Quodsi [New]",
+  enableLogging: process.env.NODE_ENV === 'development',
+  enableDevTools: process.env.NODE_ENV === 'development',
+  logPrefix: "Quodsi",
 });
 
 // Find the new root element, fallback to the standard one if needed
@@ -25,7 +25,7 @@ if (!rootElement) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App_new panelType={panelType as "auth" | "model"} />
+      <App panelType={panelType as "auth" | "model"} />
     </React.StrictMode>
   );
 }

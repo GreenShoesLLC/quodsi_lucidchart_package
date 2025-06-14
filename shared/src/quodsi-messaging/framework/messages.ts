@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { QuodsiUserInfo } from '../auth/messages';
 
 /**
@@ -11,10 +11,10 @@ export interface ReactAppReadyMessage extends EnvelopeBase {
   data: {
     /** Which Lucid panel this iframe represents. */
     panel: 'model' | 'auth';
-    
+
     /** Initial auth probe result (true = MSAL already holds a valid account). */
     isAuthenticated: boolean;
-    
+
     /** Basic user snapshot if isAuthenticated is true. */
     user?: QuodsiUserInfo;
   };
@@ -28,10 +28,10 @@ export interface ErrorMessage extends EnvelopeBase {
   data: {
     /** Short machine-readable identifier. */
     code: string;
-    
+
     /** Human-readable summary (no PII). */
     message: string;
-    
+
     /** The id of the request that triggered this error (correlation). */
     id?: string;
   };
@@ -46,14 +46,14 @@ export interface LogMessage extends EnvelopeBase {
   data: {
     /** Log severity. */
     level: 'debug' | 'info';
-    
+
     /** Log content. */
     text: string;
   };
 }
 
 /** Union type of all framework messages */
-export type FrameworkMessage = 
+export type FrameworkMessage =
   | ReactAppReadyMessage
   | ErrorMessage
   | LogMessage;

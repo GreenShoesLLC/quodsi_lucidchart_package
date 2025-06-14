@@ -4,9 +4,8 @@
 **/.pnp.js
 
 # Build directories
-/shared/dist/*
+/shared/dist/
 !/shared/dist/**/*.d.ts
-!/shared/dist/**/*.d.ts.map
 /editorextensions/quodsi_editor_extension/bin
 /editorextensions/quodsi_editor_extension/quodsim-react/build
 
@@ -55,3 +54,4 @@ connections.config
 # Azure CLI and PowerShell logs
 .azure/
 infrastructure/*.log
+screenshots/

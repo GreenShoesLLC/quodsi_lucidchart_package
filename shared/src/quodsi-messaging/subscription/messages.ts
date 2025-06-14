@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /** Subscription tier types */
 export type SubscriptionTier = 'free' | 'pro' | 'enterprise';
@@ -15,14 +15,14 @@ export interface SubscriptionStatusMessage extends EnvelopeBase {
   data: {
     /** Commercial plan that controls feature gating */
     tier: SubscriptionTier;
-    
+
     /** Billing health: active (paid), in_grace (payment failed but grace period active), 
      * expired (features disabled until payment) */
     status: SubscriptionStatus;
-    
+
     /** ISO timestamp when grace period ends. Present only for in_grace status */
     expiresAt?: string;
-    
+
     /** Optional dictionary pushed by backend to enable/disable fine-grained features per tier */
     featureFlags?: Record<string, boolean>;
   };
@@ -36,7 +36,7 @@ export interface SubscriptionChangeRequestMessage extends EnvelopeBase {
   data: {
     /** The tier the user wants to upgrade/downgrade to */
     requestedTier: 'pro' | 'enterprise';
-    
+
     /** Optional URL to return to after the payment flow completes */
     returnUrl?: string;
   };
@@ -50,10 +50,10 @@ export interface SubscriptionChangeResultMessage extends EnvelopeBase {
   data: {
     /** Whether the change was successful */
     success: boolean;
-    
+
     /** The new tier if the change was successful */
     tier?: SubscriptionTier;
-    
+
     /** Error message if the change failed */
     errorMsg?: string;
   };
@@ -67,14 +67,14 @@ export interface SubscriptionErrorMessage extends EnvelopeBase {
   data: {
     /** Error code */
     code: string;
-    
+
     /** Error message */
     message: string;
   };
 }
 
 /** Union type of all subscription messages */
-export type SubscriptionMessage = 
+export type SubscriptionMessage =
   | SubscriptionStatusMessage
   | SubscriptionChangeRequestMessage
   | SubscriptionChangeResultMessage

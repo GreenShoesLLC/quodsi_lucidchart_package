@@ -86,8 +86,11 @@ export const AuthPanel: React.FC = () => {
   } = useAuthPanelState();
 
   const [showError, setShowError] = useState(true);
-  const [showDebugPanel, setShowDebugPanel] = useState(true); // Set to true by default for debugging
+  const [showDebugPanel, setShowDebugPanel] = useState(false); // Hide by default
   const [isProcessingAuth, setIsProcessingAuth] = useState(false);
+  
+  // Only show debug features in development
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Reset error visibility when the error changes
   useEffect(() => {
@@ -434,20 +437,6 @@ export const AuthPanel: React.FC = () => {
   // Display the authentication UI
   return (
     <div className="flex flex-col h-full p-4">
-      <div className="mb-4 flex justify-between items-center">
-        <div>
-          <h1 className="text-lg font-bold">Quodsi</h1>
-          <p className="text-sm mt-1">Simulation Modeling for Lucidchart</p>
-        </div>
-        <button
-          onClick={toggleDebugPanel}
-          className="text-xs text-gray-500 hover:text-gray-700"
-          title="Toggle Debug Panel"
-        >
-          {showDebugPanel ? "Hide Debug" : "Debug"}
-        </button>
-      </div>
-
       {/* Show error if present and not dismissed */}
       {error && showError && (
         <AuthError
@@ -457,9 +446,6 @@ export const AuthPanel: React.FC = () => {
           onPasswordReset={handlePasswordReset}
         />
       )}
-
-      {/* Show debug panel if enabled */}
-      {showDebugPanel && <DebugPanel />}
 
       {isAuthenticated ? (
         // Authenticated view
@@ -554,6 +540,25 @@ export const AuthPanel: React.FC = () => {
               analyze performance and identify bottlenecks.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Debug controls at bottom (development only) */}
+      {isDevelopment && (
+        <div className="mt-4 pt-3 border-t border-gray-200">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-xs text-gray-500">Debug Tools</span>
+            <button
+              onClick={toggleDebugPanel}
+              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+              title="Toggle Debug Panel"
+            >
+              {showDebugPanel ? "Hide" : "Show"}
+            </button>
+          </div>
+          
+          {/* Debug panel */}
+          {showDebugPanel && <DebugPanel />}
         </div>
       )}
     </div>

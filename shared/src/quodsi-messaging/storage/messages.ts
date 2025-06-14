@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /**
  * Storage provider type
@@ -19,7 +19,7 @@ export interface StorageConnectRequestMessage extends EnvelopeBase {
   data: {
     /** Storage provider to connect to */
     provider: StorageProvider;
-    
+
     /** Additional connection parameters */
     params?: Record<string, unknown>;
   };
@@ -33,13 +33,13 @@ export interface StorageConnectResultMessage extends EnvelopeBase {
   data: {
     /** Storage provider */
     provider: StorageProvider;
-    
+
     /** Success flag */
     success: boolean;
-    
+
     /** User name/email of the connected account */
     userIdentifier?: string;
-    
+
     /** Error message if connection failed */
     error?: string;
   };
@@ -66,16 +66,16 @@ export interface StorageStatusMessage extends EnvelopeBase {
     googleDrive: {
       /** Connection status */
       status: ConnectionStatus;
-      
+
       /** Connected user if status is 'connected' */
       user?: string;
     };
-    
+
     /** Connection status for OneDrive */
     oneDrive: {
       /** Connection status */
       status: ConnectionStatus;
-      
+
       /** Connected user if status is 'connected' */
       user?: string;
     };
@@ -83,7 +83,7 @@ export interface StorageStatusMessage extends EnvelopeBase {
 }
 
 /** Union type of all storage messages */
-export type StorageMessage = 
+export type StorageMessage =
   | StorageConnectRequestMessage
   | StorageConnectResultMessage
   | StorageDisconnectMessage

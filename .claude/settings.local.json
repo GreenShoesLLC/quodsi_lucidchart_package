@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "WebFetch(domain:developer.lucid.co)",
+      "Bash(rg:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install:*)",
+      "Bash(git rm:*)"
+    ],
+    "deny": []
+  }
+}

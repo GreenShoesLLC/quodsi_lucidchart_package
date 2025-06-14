@@ -1,5 +1,5 @@
 import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/message-types';
+import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 
 /**
  * Validation severity levels
@@ -16,19 +16,19 @@ export enum ValidationSeverity {
 export interface ValidationIssue {
   /** Unique issue ID */
   id: string;
-  
+
   /** Element ID the issue relates to */
   elementId?: string;
-  
+
   /** Severity level */
   severity: ValidationSeverity;
-  
+
   /** Error code */
   code: string;
-  
+
   /** Human-readable message */
   message: string;
-  
+
   /** Additional context */
   context?: Record<string, unknown>;
 }
@@ -52,18 +52,18 @@ export interface ModelValidationResultMessage extends EnvelopeBase {
   data: {
     /** Is the model valid */
     isValid: boolean;
-    
+
     /** List of validation issues */
     issues: ValidationIssue[];
-    
+
     /** Summary of validation */
     summary: {
       /** Count of error severity issues */
       errorCount: number;
-      
+
       /** Count of warning severity issues */
       warningCount: number;
-      
+
       /** Count of info severity issues */
       infoCount: number;
     };
@@ -78,10 +78,10 @@ export interface ModelConvertMessage extends EnvelopeBase {
   data: {
     /** Document ID to convert */
     documentId: string;
-    
+
     /** Element ID to convert (if converting a single element) */
     elementId?: string;
-    
+
     /** Target type to convert to */
     targetType?: string;
   };
@@ -95,10 +95,10 @@ export interface ModelConversionResultMessage extends EnvelopeBase {
   data: {
     /** Success flag */
     success: boolean;
-    
+
     /** List of converted element IDs */
     convertedElementIds: string[];
-    
+
     /** Error message if conversion failed */
     error?: string;
   };
@@ -123,7 +123,7 @@ export interface ModelRemoveResultMessage extends EnvelopeBase {
   data: {
     /** Success flag */
     success: boolean;
-    
+
     /** Error message if removal failed */
     error?: string;
   };
@@ -137,10 +137,10 @@ export interface ResultsPageCreateMessage extends EnvelopeBase {
   data: {
     /** Job ID of the completed simulation */
     jobId: string;
-    
+
     /** Document ID to create results page in */
     documentId: string;
-    
+
     /** Optional page title */
     pageTitle?: string;
   };
@@ -154,17 +154,17 @@ export interface ResultsPageCreateResultMessage extends EnvelopeBase {
   data: {
     /** Success flag */
     success: boolean;
-    
+
     /** Created page ID */
     pageId?: string;
-    
+
     /** Error message if creation failed */
     error?: string;
   };
 }
 
 /** Union type of all model operations messages */
-export type ModelOpsMessage = 
+export type ModelOpsMessage =
   | ModelValidateMessage
   | ModelValidationResultMessage
   | ModelConvertMessage

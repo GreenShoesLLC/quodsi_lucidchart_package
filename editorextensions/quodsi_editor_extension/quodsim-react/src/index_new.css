@@ -30,7 +30,8 @@ code {
   flex-direction: column;
 }
 
-/* Debug banner for the new implementation */
+/* Debug banner for the new implementation - REMOVED */
+/*
 body::before {
   content: 'New Messaging Implementation';
   display: block;
@@ -46,3 +47,4 @@ body::before {
   font-size: 0.8rem;
   z-index: 9999;
 }
+*/

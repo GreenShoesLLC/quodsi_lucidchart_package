@@ -54,7 +54,7 @@ When the user clicks the "Save" button:
 
 1. The editor's onSave callback is triggered
 2. The callback propagates up through the component hierarchy:
-   - BaseEditor → ElementEditor → ModelPanel → useModelPanel
+   - Specific Editor (ResourceEditor, ActivityEditor, etc.) → ElementEditor → ModelPanel → useModelPanel
 3. useModelPanel calls modelOpsSender.updateElementData()
 4. This creates an ELEMENT_UPDATE message with the updated element data
 5. The message is sent to the extension host
@@ -74,10 +74,9 @@ When the user clicks the "Save" button:
 The extension processes the save request:
 
 1. The ELEMENT_UPDATE message is received by MessageRouter
-2. MessageRouter forwards the message to MessageHandlers
-3. MessageHandlers identifies ElementOpsHandler as the appropriate handler
-4. ElementOpsHandler.handleMessage starts the async handleElementUpdate process
-5. handleElementUpdate:
+2. MessageRouter forwards the message to ElementOpsHandler
+3. ElementOpsHandler.handleMessage starts the async handleElementUpdate process
+4. handleElementUpdate:
    - Gets client and ModelManager instances using the singleton pattern
    - Gets the current page from the viewport
    - Finds the element by ID
@@ -115,19 +114,19 @@ The React application receives and processes the confirmation:
 
 ### React Application Components
 
-1. **ElementEditor**: Determines which specific editor to render based on element type
-2. **Specific Editors** (ActivityEditor, ResourceEditor, etc.): Provide UI for editing element properties
-3. **ModelPanel**: Contains the ElementEditor and manages the editor state
-4. **useModelPanel Hook**: Connects the UI to the messaging system
-5. **modelOpsSender**: Creates and sends the ELEMENT_UPDATE message
+1. **ElementEditor** (`src/features/modelPanel/ElementEditor.tsx`): Determines which specific editor to render based on element type
+2. **Specific Editors** (`src/features/editors/ActivityEditor.tsx`, `ResourceEditor.tsx`, etc.): Provide UI for editing element properties
+3. **ModelPanel** (`src/features/modelPanel/ModelPanel.tsx`): Contains the ElementEditor and manages the editor state
+4. **useModelPanel Hook** (`src/messaging/hooks/useModelPanel.ts`): Connects the UI to the messaging system
+5. **modelOpsSender** (`src/messaging/senders/modelOpsSender.ts`): Creates and sends the ELEMENT_UPDATE message
 
 ### Extension Components
 
-1. **MessageRouter**: Routes messages between React and the extension
-2. **MessageHandlers**: Dispatches messages to the appropriate handler
-3. **ElementOpsHandler**: Handles element-level operation messages
-4. **ModelManager**: Handles persistence of element data to LucidChart
-5. **Viewport**: Provides access to the LucidChart document and selection
+1. **MessageRouter** (`src/core/messaging/MessageRouter.ts`): Routes messages between React and the extension
+2. **ElementOpsHandler** (`src/core/messaging/handlers/elementOpsHandler.ts`): Handles element-level operation messages
+3. **SelectionHandler** (`src/core/messaging/handlers/selection/SelectionHandler.ts`): Handles selection change events
+4. **ModelManager** (`src/core/ModelManager.ts`): Handles persistence of element data to LucidChart
+5. **Viewport** (`lucid-extension-sdk`): Provides access to the LucidChart document and selection
 
 ## Message Types
 

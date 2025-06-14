@@ -353,6 +353,6 @@ if (activity && activity.operationSteps.length > 0) {
 For more details on serialization, validation, and platform integration, refer to:
 
 - Serialization: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\serialization`
-- LucidChart Extension: `C:\_source\Greenshoes\quodsi_lucidchart_package\_docs\prompts\LucidChart Extension Panel Lifecycle Guide.md`
+- LucidChart Extension: `C:\_source\Greenshoes\quodsi_lucidchart_package\_docs\LucidChart Extension Panel Lifecycle Guide.md`
 - Validation: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\validation\services\ModelValidationService.ts`
 - Python Engine: `C:\_source\Greenshoes\quodsim\_docs\model-definition-docs.md`

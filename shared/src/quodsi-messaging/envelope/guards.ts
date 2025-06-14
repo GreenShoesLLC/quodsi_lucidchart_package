@@ -1,5 +1,5 @@
 import { EnvelopeBase } from './envelope';
-import { EnvelopeMessageType } from './message-types';
+import { EnvelopeMessageType } from './envelopeMessageTypes';
 
 /**
  * Type guard factory that creates a specialized type guard for a specific message type.
@@ -20,7 +20,7 @@ export function createMessageTypeGuard<T extends EnvelopeMessageType>(type: T) {
  * @returns A type guard function checking if the message is from the specified source
  */
 export function isFromSource(source: 'host' | 'model-iframe' | 'auth-iframe') {
-  return function(msg: EnvelopeBase): boolean {
+  return function (msg: EnvelopeBase): boolean {
     return msg.source === source;
   };
 }
@@ -32,7 +32,7 @@ export function isFromSource(source: 'host' | 'model-iframe' | 'auth-iframe') {
  * @returns A type guard function checking if the message is for the specified target
  */
 export function isForTarget(target: 'host' | 'model-iframe' | 'auth-iframe' | 'broadcast') {
-  return function(msg: EnvelopeBase): boolean {
+  return function (msg: EnvelopeBase): boolean {
     return msg.target === target;
   };
 }
@@ -44,11 +44,11 @@ export function isForTarget(target: 'host' | 'model-iframe' | 'auth-iframe' | 'b
  * @returns A type guard function checking if all required fields are present
  */
 export function hasRequiredDataFields(requiredFields: string[]) {
-  return function(msg: EnvelopeBase): boolean {
+  return function (msg: EnvelopeBase): boolean {
     if (!msg.data || typeof msg.data !== 'object') {
       return false;
     }
-    
+
     const data = msg.data as Record<string, unknown>;
     return requiredFields.every(field => field in data);
   };
