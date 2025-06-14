@@ -6,7 +6,9 @@
       "Bash(rg:*)",
       "Bash(mkdir:*)",
       "Bash(npm install:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)"
     ],
     "deny": []
   }
