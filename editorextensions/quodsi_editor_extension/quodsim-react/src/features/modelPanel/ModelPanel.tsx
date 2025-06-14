@@ -39,64 +39,79 @@ export const ModelPanel: React.FC = () => {
     simulation: false
   });
 
+  // Only show debug features in development
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   // Toggle accordion sections
   const toggleSection = (section: keyof typeof expandedSections) => {
-    console.log(`[ModelPanel] Toggling section: ${section}`);
+    if (isDevelopment) {
+      console.log(`[ModelPanel] Toggling section: ${section}`);
+    }
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
 
-  // Log important state changes for debugging
+  // Log important state changes for debugging (development only)
   useEffect(() => {
-    console.log('[ModelPanel] Component mounted');
-    return () => console.log('[ModelPanel] Component unmounted');
-  }, []);
+    if (isDevelopment) {
+      console.log('[ModelPanel] Component mounted');
+      return () => console.log('[ModelPanel] Component unmounted');
+    }
+  }, [isDevelopment]);
   
-  // Log all key prop changes for better debugging
+  // Log all key prop changes for better debugging (development only)
   useEffect(() => {
-    console.log('[ModelPanel] Render with key props:', {
-      modelName,
-      hasCurrentElement: !!currentElement,
-      currentElementId: currentElement?.id,
-      currentElementType: currentElement?.metadata?.type,
-      hasValidation: !!validationState,
-      validationErrors: validationState?.summary?.errorCount,
-      validationWarnings: validationState?.summary?.warningCount,
-      isLoading,
-      needsInitialization,
-      diagramElementType,
-      simulationStatus: simulationStatus ? {
-        errorMessage: simulationStatus.errorMessage,
-        lastChecked: simulationStatus.lastChecked
-      } : null
-    });
-  }, [modelName, currentElement, validationState, isLoading, needsInitialization, diagramElementType, simulationStatus]);
+    if (isDevelopment) {
+      console.log('[ModelPanel] Render with key props:', {
+        modelName,
+        hasCurrentElement: !!currentElement,
+        currentElementId: currentElement?.id,
+        currentElementType: currentElement?.metadata?.type,
+        hasValidation: !!validationState,
+        validationErrors: validationState?.summary?.errorCount,
+        validationWarnings: validationState?.summary?.warningCount,
+        isLoading,
+        needsInitialization,
+        diagramElementType,
+        simulationStatus: simulationStatus ? {
+          errorMessage: simulationStatus.errorMessage,
+          lastChecked: simulationStatus.lastChecked
+        } : null
+      });
+    }
+  }, [modelName, currentElement, validationState, isLoading, needsInitialization, diagramElementType, simulationStatus, isDevelopment]);
 
   useEffect(() => {
-    console.log('[ModelPanel] Model or selection changed - DETAILED:', {
-      modelName,
-      hasCurrentElement: !!currentElement,
-      currentElementId: currentElement?.id,
-      currentElementType: currentElement?.metadata?.type,
-      elementType: currentElement?.type,  // Direct type property
-      metadata: currentElement?.metadata,
-      metadataType: currentElement?.metadata?.type,
-      q_meta: currentElement?.q_meta,
-      qMetaType: currentElement?.q_meta?.type,
-      isModelType: currentElement?.metadata?.type === SimulationObjectType.Model,
-      diagramElementType,
-      isUnconverted: currentElement?.isUnconverted
-    });
+    if (isDevelopment) {
+      console.log('[ModelPanel] Model or selection changed - DETAILED:', {
+        modelName,
+        hasCurrentElement: !!currentElement,
+        currentElementId: currentElement?.id,
+        currentElementType: currentElement?.metadata?.type,
+        elementType: currentElement?.type,  // Direct type property
+        metadata: currentElement?.metadata,
+        metadataType: currentElement?.metadata?.type,
+        q_meta: currentElement?.q_meta,
+        qMetaType: currentElement?.q_meta?.type,
+        isModelType: currentElement?.metadata?.type === SimulationObjectType.Model,
+        diagramElementType,
+        isUnconverted: currentElement?.isUnconverted
+      });
+    }
     
-    // Extra debug to check element type issues
+    // Handle element type issues (keep this logic for functionality)
     if (currentElement && (!currentElement.metadata?.type || currentElement.metadata.type === SimulationObjectType.None)) {
-      console.warn('[ModelPanel] Current element has no valid type:', currentElement);
+      if (isDevelopment) {
+        console.warn('[ModelPanel] Current element has no valid type:', currentElement);
+      }
       
       // Try to check for q_meta type if metadata type is missing
       if (currentElement.q_meta?.type) {
-        console.log('[ModelPanel] Using type from q_meta:', currentElement.q_meta.type);
+        if (isDevelopment) {
+          console.log('[ModelPanel] Using type from q_meta:', currentElement.q_meta.type);
+        }
         if (!currentElement.metadata) {
           currentElement.metadata = {
             type: SimulationObjectType.None,
@@ -109,7 +124,9 @@ export const ModelPanel: React.FC = () => {
       }
       // Only if we don't have metadata or q_meta, then auto-map line to connector
       else if (diagramElementType === DiagramElementType.LINE) {
-        console.log('[ModelPanel] Setting missing type to Connector for line element');
+        if (isDevelopment) {
+          console.log('[ModelPanel] Setting missing type to Connector for line element');
+        }
         currentElement.metadata = currentElement.metadata || {
           type: SimulationObjectType.None,
           version: '1.0',
@@ -121,22 +138,23 @@ export const ModelPanel: React.FC = () => {
       // For blocks, we do not automatically assign Activity type
       // Leave it to the user to select the appropriate type
     }
-  }, [modelName, currentElement, diagramElementType]);
+  }, [modelName, currentElement, diagramElementType, isDevelopment]);
 
-  // Debug UI state decision making
-  console.log('[ModelPanel] UI state decision:', {
-    needsInitialization,
-    isLoading,
-    hasContent: !!(modelName || currentElement),
-    renderingInitializationScreen: needsInitialization,
-    renderingLoadingScreen: isLoading,
-    renderingNoContentScreen: !needsInitialization && !isLoading && !(modelName || currentElement),
-    renderingMainContent: !needsInitialization && !isLoading && !!(modelName || currentElement)
-  });
+  // Debug UI state decision making (development only)
+  if (isDevelopment) {
+    console.log('[ModelPanel] UI state decision:', {
+      needsInitialization,
+      isLoading,
+      hasContent: !!(modelName || currentElement),
+      renderingInitializationScreen: needsInitialization,
+      renderingLoadingScreen: isLoading,
+      renderingNoContentScreen: !needsInitialization && !isLoading && !(modelName || currentElement),
+      renderingMainContent: !needsInitialization && !isLoading && !!(modelName || currentElement)
+    });
+  }
   
   // Handle initialization state
   if (needsInitialization) {
-    console.log('[ModelPanel] Rendering initialization screen');
     return (
       <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
         <div className="text-center p-8 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
@@ -155,7 +173,6 @@ export const ModelPanel: React.FC = () => {
 
   // Handle loading state
   if (isLoading) {
-    console.log('[ModelPanel] Rendering loading screen');
     return (
       <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
         <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -174,7 +191,6 @@ export const ModelPanel: React.FC = () => {
   const hasContent = modelName || currentElement;
   
   if (!hasContent) {
-    console.log('[ModelPanel] Rendering no content screen');
     return (
       <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
         <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -194,7 +210,6 @@ export const ModelPanel: React.FC = () => {
   const isModelElement = currentElement?.metadata?.type === SimulationObjectType.Model;
 
   // Main content render
-  console.log('[ModelPanel] Rendering main content');
   return (
     <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
       <PanelHeader
