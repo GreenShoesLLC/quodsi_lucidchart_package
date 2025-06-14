@@ -94,64 +94,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     }
   };
 
-  // Render the model/element name section
-  const renderModelName = () => {
-    if (!currentElement && !modelName) return null;
-
-    return (
-      <div className="flex items-center gap-2">
-        {modelName && (
-          <span className="text-lg font-semibold text-gray-800">
-            {modelName}
-          </span>
-        )}
-        {currentElement && (
-          <div className="flex items-center gap-1.5 mt-1">
-            <span className="text-sm text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full">
-              {getDisplayName(currentElement)}
-            </span>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Add a scenario name input field for Model type
-  const renderScenarioNameInput = () => {
-    const isModel =
-      currentElement?.metadata?.type === SimulationObjectType.Model;
-
-    if (!isModel) return null;
-
-    return (
-      <div className="flex items-center space-x-3">
-        <label
-          htmlFor="scenario-name"
-          className="text-sm text-gray-600 font-medium w-32"
-        >
-          Scenario Name:
-        </label>
-        <input
-          id="scenario-name"
-          type="text"
-          className="text-sm p-2 border border-gray-300 rounded-md flex-grow shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-          value={scenarioName}
-          onChange={(e) => setScenarioName(e.target.value)}
-          disabled={isSimulating}
-        />
-      </div>
-    );
-  };
 
   // Render action buttons based on context
   const renderButtons = () => {
-    // Button style classes instead of inline styles
+    // Compact button style classes
     const buttonBaseClasses =
-      "px-3 py-2 min-w-[110px] w-1/3 flex justify-center items-center h-9 text-sm font-medium rounded-md shadow-sm transition-colors";
+      "px-2 py-1 text-xs font-medium rounded transition-colors flex-1";
     const primaryButtonClasses = `${buttonBaseClasses} bg-blue-600 hover:bg-blue-700 text-white`;
     const simulateButtonClasses = `${buttonBaseClasses} bg-green-600 hover:bg-green-700 text-white`;
     const dangerButtonClasses = `${buttonBaseClasses} bg-red-600 hover:bg-red-700 text-white`;
-    const disabledButtonClasses = `${buttonBaseClasses} bg-blue-400 text-white cursor-not-allowed`;
+    const disabledButtonClasses = `${buttonBaseClasses} bg-gray-400 text-white cursor-not-allowed`;
 
     // Handle case when no currentElement exists
     if (!currentElement) {
@@ -170,7 +122,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     // Handle Model type buttons
     if (elementType === SimulationObjectType.Model) {
       return (
-        <div className="flex items-center justify-between gap-3 w-full">
+        <>
           {onSimulate && (
             <button
               className={
@@ -189,10 +141,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
           {onRemoveModel && (
             <button className={dangerButtonClasses} onClick={onRemoveModel}>
-              Remove Model
+              Remove
             </button>
           )}
-        </div>
+        </>
       );
     }
 
@@ -210,14 +162,12 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     // Handle converted items (Component Selector)
     return (
-      <div className="flex items-center gap-2">
-        <SimulationComponentSelector
-          elementId={currentElement.id}
-          selectedType={elementType as SimulationObjectType}
-          diagramElementType={diagramElementType}
-          onTypeChange={handleTypeChange}
-        />
-      </div>
+      <SimulationComponentSelector
+        elementId={currentElement.id}
+        selectedType={elementType as SimulationObjectType}
+        diagramElementType={diagramElementType}
+        onTypeChange={handleTypeChange}
+      />
     );
   };
 
@@ -228,42 +178,69 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     const { errorCount, warningCount } = validationState.summary;
 
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {errorCount > 0 && (
-          <StatusIndicator
-            type="error"
-            count={errorCount}
-            text={`${errorCount} Error${errorCount !== 1 ? "s" : ""}`}
-          />
+          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+            {errorCount}E
+          </span>
         )}
         {warningCount > 0 && (
-          <StatusIndicator
-            type="warning"
-            count={warningCount}
-            text={`${warningCount} Warning${warningCount !== 1 ? "s" : ""}`}
-          />
+          <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">
+            {warningCount}W
+          </span>
         )}
         {errorCount === 0 && warningCount === 0 && (
-          <StatusIndicator type="success" text="Valid" />
+          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+            ✓
+          </span>
         )}
       </div>
     );
   };
 
   return (
-    <div className="p-4 space-y-3 border-b bg-gradient-to-r from-blue-50 to-white shadow-sm">
-      {renderModelName()}
+    <div className="p-2 border-b bg-gray-50 shadow-sm space-y-2">
+      {/* Row 1: Model name and validation status */}
       <div className="flex items-center justify-between">
-        {renderValidationIndicators()}
-        <button
-          className="text-xs px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-800 rounded-md transition-colors border border-blue-100 flex items-center gap-1 font-medium"
-          onClick={onValidate}
-        >
-          Validate
-        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          {modelName && (
+            <span className="text-sm font-semibold text-gray-800 truncate">
+              {modelName}
+            </span>
+          )}
+          {currentElement && (
+            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded truncate">
+              {getDisplayName(currentElement)}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {renderValidationIndicators()}
+          <button
+            className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded transition-colors"
+            onClick={onValidate}
+          >
+            Validate
+          </button>
+        </div>
       </div>
-      <div className="flex flex-col space-y-3">
-        {renderScenarioNameInput()}
+      
+      {/* Row 2: Scenario name (only for Model type) */}
+      {currentElement?.metadata?.type === SimulationObjectType.Model && (
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-gray-600 whitespace-nowrap">Scenario:</label>
+          <input
+            type="text"
+            className="text-xs p-1 border border-gray-300 rounded flex-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            value={scenarioName}
+            onChange={(e) => setScenarioName(e.target.value)}
+            disabled={isSimulating}
+          />
+        </div>
+      )}
+      
+      {/* Row 3: Action buttons */}
+      <div className="flex gap-2">
         {renderButtons()}
       </div>
     </div>
