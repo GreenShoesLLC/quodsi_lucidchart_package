@@ -235,12 +235,10 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         this.log('Show called');
         super.show();
         
-        // Capture initial selection and document context when panel is shown
-        this.initializeModelContext();
-        
-        // When the panel is shown, we rely on the React app's REACT_APP_READY flow
-        // to provide the current auth state, rather than explicitly requesting it
-        console.log('[EXT][RightDockPanel] Panel shown, relying on REACT_APP_READY for auth state');
+        // Don't send MODEL_CONTEXT here - wait for REACT_APP_READY
+        // The React app will send REACT_APP_READY when it's ready to receive messages
+        // Then MessageRouter will call our sendModelContext() method
+        console.log('[EXT][RightDockPanel] Panel shown, waiting for REACT_APP_READY to send MODEL_CONTEXT');
     }
 
     /**
@@ -301,6 +299,16 @@ export class RightDockPanel extends Panel implements RoutablePanel {
     }
 
     /**
+     * Send MODEL_CONTEXT message to the React app
+     * This is called by MessageRouter after AUTH and SUBSCRIPTION messages
+     */
+    public sendModelContext(): void {
+        this.log('sendModelContext called - sending MODEL_CONTEXT after AUTH/SUBSCRIPTION');
+        console.log('[EXT][RightDockPanel] sendModelContext called to establish document context');
+        this.initializeModelContext();
+    }
+    
+    /**
      * Initialize the model context with document and page information
      */
     private initializeModelContext(): void {
@@ -312,6 +320,14 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             if (document && currentPage) {
                 // Determine if this is a Quodsi model
                 const isQuodsiModel = this.modelManager.isQuodsiModel(currentPage);
+                
+                console.log('[EXT][RightDockPanel] Model context determined:', {
+                    documentId: document.id,
+                    pageId: currentPage.id,
+                    title: document.getTitle() || 'Untitled Document',
+                    isQuodsiModel: isQuodsiModel,
+                    timestamp: new Date().toISOString()
+                });
                 
                 // Set the document context using the handler
                 SelectionHandler.setDocumentContext(

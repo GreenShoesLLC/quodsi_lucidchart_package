@@ -73,7 +73,13 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         modelItemData?: any;
         diagramElementType?: string;
         validationResult?: any;
-        isQuodsiModel?: boolean; // Add this to extract isQuodsiModel if present
+        documentContext?: {
+          documentId: string;
+          pageId: string;
+          title: string;
+          isQuodsiModel: boolean;
+          metadata?: Record<string, unknown>;
+        };
       };
       
       console.log('[REACT][Selection Mapper] SELECTION_CHANGED details:', {
@@ -84,8 +90,21 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         hasModelItemData: !!selectionData.modelItemData,
         diagramElementType: selectionData.diagramElementType,
         hasValidationResult: !!selectionData.validationResult,
-        isQuodsiModel: selectionData.isQuodsiModel
+        hasDocumentContext: !!selectionData.documentContext,
+        documentContextIsQuodsiModel: selectionData.documentContext?.isQuodsiModel
       });
+      
+      // Check if we have embedded document context that needs to be processed
+      let hasEmbeddedContext = false;
+      if (selectionData.documentContext) {
+        console.log('[REACT][Selection Mapper] Found embedded documentContext in SELECTION_CHANGED', {
+          documentId: selectionData.documentContext.documentId,
+          pageId: selectionData.documentContext.pageId,
+          title: selectionData.documentContext.title,
+          isQuodsiModel: selectionData.documentContext.isQuodsiModel
+        });
+        hasEmbeddedContext = true;
+      }
       
       // If we have document information in the selection, update the document context first
       if (selectionData.documentId) {
@@ -193,14 +212,26 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
       const selectionAction = {
         type: 'SELECTION_UPDATE' as const,
         elements: elements as unknown as ElementShape[],
-        totalElements: selectionData.selectionState.selectedIds.length || 0
+        totalElements: selectionData.selectionState.selectedIds.length || 0,
+        // Include document context if embedded
+        ...(hasEmbeddedContext && selectionData.documentContext ? {
+          documentContext: {
+            documentId: selectionData.documentContext.documentId,
+            pageId: selectionData.documentContext.pageId,
+            documentTitle: selectionData.documentContext.title,
+            isQuodsiModel: selectionData.documentContext.isQuodsiModel,
+            metadata: selectionData.documentContext.metadata
+          }
+        } : {})
       };
       
       console.log('[REACT][Selection mapper] Returning SELECTION_UPDATE action:', {
         elementCount: selectionAction.elements.length,
         firstElementId: selectionAction.elements[0]?.id,
         firstElementType: (selectionAction.elements[0] as any)?.metadata?.type,
-        totalElements: selectionAction.totalElements
+        totalElements: selectionAction.totalElements,
+        hasEmbeddedContext: hasEmbeddedContext,
+        documentContextIsQuodsiModel: hasEmbeddedContext ? selectionData.documentContext?.isQuodsiModel : undefined
       });
       
       return selectionAction;

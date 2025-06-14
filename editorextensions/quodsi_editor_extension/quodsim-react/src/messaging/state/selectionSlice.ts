@@ -28,7 +28,7 @@ export const initialSelectionState: SelectionState = {
 
 // Action types
 export type SelectionAction = 
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> } }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -42,23 +42,33 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
   });
   switch (action.type) {
     case 'SELECTION_UPDATE':
-      // If the first element has document information, create/update document context
-      const firstElement = action.elements[0];
+      // Prioritize embedded document context if present, otherwise use existing or create from selection
       let documentContext = state.documentContext;
       
-      // Check if we have a document ID in the data and need to create a document context
-      if (firstElement && !documentContext) {
-        console.log('[selectionReducer] Creating document context from selection data');
-        // Create a new document context from the selection data
-        // This is the key fix - we need to create a document context with isQuodsiModel=true
+      // If we have embedded document context in the action, use it
+      if (action.documentContext) {
+        console.log('[selectionReducer] Using embedded document context from SELECTION_UPDATE action');
         documentContext = {
-          documentId: firstElement.id.split('-')[0], // Use the first part of ID as document ID
-          pageId: '', // Empty for now, will be updated later if available
-          documentTitle: 'Document', // Default title
-          isQuodsiModel: true, // CRITICAL: Force isQuodsiModel to true since we have an element
-          totalElements: action.totalElements,
-          metadata: {}
+          ...action.documentContext,
+          totalElements: action.totalElements, // Update total elements from selection
         };
+      }
+      // Otherwise, if the first element has document information and we don't have context, create it
+      else {
+        const firstElement = action.elements[0];
+        if (firstElement && !documentContext) {
+          console.log('[selectionReducer] Creating document context from selection data');
+          // Create a new document context from the selection data
+          // This is the key fix - we need to create a document context with isQuodsiModel=true
+          documentContext = {
+            documentId: firstElement.id.split('-')[0], // Use the first part of ID as document ID
+            pageId: '', // Empty for now, will be updated later if available
+            documentTitle: 'Document', // Default title
+            isQuodsiModel: true, // CRITICAL: Force isQuodsiModel to true since we have an element
+            totalElements: action.totalElements,
+            metadata: {}
+          };
+        }
       }
       
       const updatedState = {
@@ -78,7 +88,11 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         firstElementId: updatedState.selectedElements[0]?.id,
         firstElementType: updatedState.selectedElements[0]?.type,
         hasDocumentContext: !!updatedState.documentContext,
-        isQuodsiModel: updatedState.documentContext?.isQuodsiModel
+        isQuodsiModel: updatedState.documentContext?.isQuodsiModel,
+        documentId: updatedState.documentContext?.documentId,
+        documentTitle: updatedState.documentContext?.documentTitle,
+        hasEmbeddedContext: !!action.documentContext,
+        embeddedContextIsQuodsiModel: action.documentContext?.isQuodsiModel
       });
       
       return updatedState;

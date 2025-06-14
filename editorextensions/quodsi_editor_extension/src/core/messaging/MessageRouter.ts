@@ -286,6 +286,11 @@ export class MessageRouter {
     // Send current auth and subscription state
     this.sendAuthStatus(role);
     this.sendSubscriptionStatus(role);
+    
+    // Request the panel to send MODEL_CONTEXT
+    // This ensures proper ordering: AUTH -> SUBSCRIPTION -> MODEL_CONTEXT
+    console.log(`[EXT][MessageRouter] About to request MODEL_CONTEXT for ${role}`);
+    this.requestModelContext(role);
   }
   
   /**
@@ -354,6 +359,33 @@ export class MessageRouter {
         version: '1.0',
         data: this.state.getSubscriptionState()
       });
+    }
+  }
+  
+  /**
+   * Request the panel to send MODEL_CONTEXT
+   * This is called after AUTH and SUBSCRIPTION messages to ensure proper ordering
+   */
+  private requestModelContext(role: PanelRole): void {
+    console.log(`[EXT][MessageRouter] Requesting MODEL_CONTEXT from ${role} panel`);
+    
+    // Get the channel to access the panel
+    const channel = this.channelManager.getChannel(role);
+    if (!channel || !channel.panel) {
+      console.error(`[EXT][MessageRouter] Cannot request MODEL_CONTEXT - no panel found for ${role}`);
+      return;
+    }
+    
+    // Check if the panel has a method to send model context
+    const panel = channel.panel as any;
+    if (panel && typeof panel.sendModelContext === 'function') {
+      console.log(`[EXT][MessageRouter] Calling sendModelContext on ${role} panel`);
+      panel.sendModelContext();
+    } else if (panel && typeof panel.initializeModelContext === 'function') {
+      console.log(`[EXT][MessageRouter] Calling initializeModelContext on ${role} panel`);
+      panel.initializeModelContext();
+    } else {
+      console.warn(`[EXT][MessageRouter] Panel for ${role} does not have sendModelContext or initializeModelContext method`);
     }
   }
   
