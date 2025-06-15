@@ -5,6 +5,8 @@ import { ModelManager } from '../../ModelManager';
 import { StorageAdapter } from '../../StorageAdapter';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
+import { SimulationResultsDashboard } from '../../../dashboard/SimulationResultsDashboard';
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
@@ -371,32 +373,123 @@ export class ModelOpsHandler {
       jobId: string;
       documentId: string;
       pageTitle?: string;
+      createDashboard?: boolean;
     };
     
     console.log('[ModelOpsHandler] Results page creation requested', {
       jobId: data.jobId,
       documentId: data.documentId,
-      pageTitle: data.pageTitle
+      pageTitle: data.pageTitle,
+      createDashboard: data.createDashboard
     });
     
-    // TODO: Create actual results page
-    // For now, send a mock creation result
-    setTimeout(() => {
-      // Send creation result
+    // Start async process but return true immediately
+    ModelOpsHandler.createResultsPage(msg, data)
+      .catch(err => console.error('[ModelOpsHandler] Error creating results page:', err));
+    
+    return true;
+  }
+  
+  /**
+   * Async method to create the results page
+   */
+  private static async createResultsPage(msg: EnvelopeBase, data: {
+    jobId: string;
+    documentId: string;
+    pageTitle?: string;
+    createDashboard?: boolean;
+  }): Promise<void> {
+    try {
+      console.log('[ModelOpsHandler] Creating simulation results dashboard...');
+      
+      const client = ModelManager.getClient();
+      
+      // Import results if needed
+      if (data.createDashboard) {
+        await LucidDataActionUtility.performDataAction(client, {
+          dataConnectorName: 'quodsi_data_connector',
+          actionName: 'ImportSimulationResults',
+          actionData: {
+            documentId: data.documentId,
+            scenarioId: data.jobId || '00000000-0000-0000-0000-000000000000',
+            collectionsToImport: [
+              'activity_cross_rep',
+              'entity_cross_rep',
+              'resource_cross_rep',
+            ]
+          },
+          asynchronous: true
+        });
+      }
+      
+      // Create dashboard instance
+      const dashboard = new SimulationResultsDashboard(client);
+      
+      // Generate a dashboard with the current date/time in the name
+      const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
+      const pageName = data.pageTitle || `Quodsi - ${timestamp}`;
+      const result = await dashboard.createDashboard(pageName);
+      
+      console.log(`[ModelOpsHandler] Dashboard created with ${result.tables.length} tables`);
+      
+      // Check for issues
+      if (result.emptyDataTypes.length > 0) {
+        console.log(`[ModelOpsHandler] The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
+      }
+      
+      if (result.errors.length > 0) {
+        console.warn(`[ModelOpsHandler] ${result.errors.length} errors occurred while creating the dashboard`);
+        result.errors.forEach(err => {
+          console.error(`[ModelOpsHandler] Error creating ${err.type} table:`, err.error);
+        });
+      }
+      
+      // Mark results as viewed
+      await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_data_connector',
+        actionName: 'MarkResultsViewed',
+        actionData: { 
+          documentId: data.documentId, 
+          scenarioId: data.jobId || '00000000-0000-0000-0000-000000000000' 
+        },
+        asynchronous: true
+      });
+      
+      // Send success response
       router.send('model', {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
         type: EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
         data: {
           success: true,
-          pageId: `page-${Date.now()}`
+          pageId: result.page.id,
+          tablesCreated: result.tables.length,
+          emptyDataTypes: result.emptyDataTypes,
+          errors: result.errors.map(err => ({
+            type: err.type,
+            message: err.error instanceof Error ? err.error.message : String(err.error)
+          }))
         }
       });
-    }, 1500);
-    
-    return true;
+      
+    } catch (error) {
+      console.error('[ModelOpsHandler] Error creating simulation results dashboard:', error);
+      
+      // Send error response
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
   }
   
   /**

@@ -10,6 +10,7 @@ func start --debug --verbose
 # Create a new terminal in VS Code
 cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Npx react-scripts start
+npm start
 
 # Create a new terminal in VS Code
 npx lucid-package@latest test-editor-extension quodsi_editor_extension

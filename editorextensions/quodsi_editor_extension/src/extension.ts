@@ -22,6 +22,9 @@ import { panelManager } from './managers/PanelManager';
 const client = new EditorClient();
 const viewport = new Viewport(client);
 
+// Store client globally as a fallback for handlers
+(globalThis as any).lucidEditorClient = client;
+
 // Initialize storage adapter
 const storageAdapter = new StorageAdapter();
 
