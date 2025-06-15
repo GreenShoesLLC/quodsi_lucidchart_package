@@ -281,7 +281,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col bg-white">
       <div className="border-b bg-gray-50">
         <div className="flex">
           <button
