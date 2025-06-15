@@ -24,17 +24,6 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   onChange,
   resourceRequirements = [],
 }) => {
-  // Debug logging
-  React.useEffect(() => {
-    console.log("OperationStepEditor Debug:", {
-      stepRequirementId: step.requirementId,
-      availableRequirements:
-        resourceRequirements?.map((r) => ({ id: r.id, name: r.name })) || [],
-      requirementFound: resourceRequirements?.some(
-        (r) => r.id === step.requirementId
-      ),
-    });
-  }, [step.requirementId, resourceRequirements]);
 
   // Updated to handle separate periodUnit and distribution within existing Duration
   const handleDurationChange = (
@@ -68,19 +57,18 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   };
 
   return (
-    <div className="bg-white rounded mb-2 p-2 border">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium">Step {index + 1}</span>
+    <div className="bg-gray-50 rounded p-1 border border-gray-200">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs font-medium text-gray-700">Step {index + 1}</span>
         <button
           onClick={() => onDelete(index)}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-gray-400 hover:text-red-500 p-0.5"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3 h-3" />
         </button>
       </div>
 
-      <div className="space-y-2">
-        {/* Updated Duration Editor */}
+      <div className="space-y-1">
         <EnhancedDurationEditor
           periodUnit={step.duration.durationPeriodUnit}
           distribution={step.duration.distribution}
@@ -89,38 +77,36 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
           compact={true}
         />
 
-        {/* Resource Requirement Selection */}
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">
-            Resource Requirement
-          </label>
-          <select
-            value={step.requirementId || ""}
-            onChange={handleRequirementChange}
-            className="w-full px-2 py-1 text-sm border rounded"
-          >
-            <option value="">None</option>
-            {resourceRequirements.map((req) => (
-              <option key={req.id} value={req.id}>
-                {req.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Quantity input - only show if requirement is selected */}
-        {step.requirementId && (
+        <div className="grid grid-cols-2 gap-1">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Quantity</label>
-            <input
-              type="number"
-              value={step.quantity}
-              onChange={handleQuantityChange}
-              min="1"
-              className="w-full px-2 py-1 text-sm border rounded"
-            />
+            <label className="block text-xs text-gray-600">Resource</label>
+            <select
+              value={step.requirementId || ""}
+              onChange={handleRequirementChange}
+              className="w-full px-1 py-0.5 text-xs border rounded"
+            >
+              <option value="">None</option>
+              {resourceRequirements.map((req) => (
+                <option key={req.id} value={req.id}>
+                  {req.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+          
+          {step.requirementId && (
+            <div>
+              <label className="block text-xs text-gray-600">Qty</label>
+              <input
+                type="number"
+                value={step.quantity}
+                onChange={handleQuantityChange}
+                min="1"
+                className="w-full px-1 py-0.5 text-xs border rounded"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

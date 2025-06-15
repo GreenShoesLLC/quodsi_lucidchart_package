@@ -50,15 +50,12 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
       messageType="connectorSaved"
     >
       {(localConnector, handleChange) => (
-        <div>
-          <div className="quodsi-field">
-            <label htmlFor="connectType" className="quodsi-label">
-              Connect Type
-            </label>
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Connect Type</label>
             <select
-              id="connectType"
               name="connectType"
-              className="quodsi-select"
+              className="w-full px-2 py-1 text-xs border rounded bg-white"
               value={localConnector.connectType}
               onChange={handleChange}
             >
@@ -73,20 +70,18 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel }) => {
             </select>
           </div>
 
-          <div className="quodsi-field">
-            <label htmlFor="probability" className="quodsi-label">
-              Probability
-            </label>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Probability</label>
             <input
               type="number"
-              id="probability"
               name="probability"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-xs border rounded"
               value={localConnector.probability}
               onChange={handleChange}
               step="0.01"
               min="0"
               max="1"
+              placeholder="0.0 - 1.0"
             />
           </div>
         </div>

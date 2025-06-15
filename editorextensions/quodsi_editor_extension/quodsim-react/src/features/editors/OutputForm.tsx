@@ -14,16 +14,16 @@ const OutputForm = () => {
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="flex items-center gap-2 text-blue-600">
-        <FileOutput className="w-5 h-5" />
-        <h2 className="font-medium">Simulation Results</h2>
+    <div className="p-2 space-y-2">
+      <div className="flex items-center gap-1 text-blue-600">
+        <FileOutput className="w-3 h-3" />
+        <h2 className="text-xs font-medium">Simulation Results</h2>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-2">
         <button
           onClick={handleCreatePage}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          className="w-full flex items-center justify-center gap-1 bg-blue-600 text-white px-2 py-1 rounded shadow-sm hover:bg-blue-700 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           Create Page
         </button>

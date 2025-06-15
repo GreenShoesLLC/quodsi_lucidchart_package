@@ -39,32 +39,28 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
       messageType="resourceSaved"
     >
       {(localResource, handleChange) => (
-        <div>
-          <div className="quodsi-field">
-            <label htmlFor="name" className="quodsi-label">
-              Name
-            </label>
+        <div className="space-y-2">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Name</label>
             <input
               type="text"
-              id="name"
               name="name"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-xs border rounded"
               value={localResource.name}
               onChange={handleChange}
+              placeholder="Resource Name"
             />
           </div>
 
-          <div className="quodsi-field">
-            <label htmlFor="capacity" className="quodsi-label">
-              Capacity
-            </label>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Capacity</label>
             <input
               type="number"
-              id="capacity"
               name="capacity"
-              className="quodsi-input"
+              className="w-full px-2 py-1 text-xs border rounded"
               value={localResource.capacity}
               onChange={handleChange}
+              min="1"
             />
           </div>
         </div>

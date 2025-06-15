@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { SimulationObjectType } from "@quodsi/shared";
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 interface BaseSimulationElement {
   id: string;
   type: SimulationObjectType;
@@ -29,7 +31,9 @@ const BaseEditor = <T extends BaseSimulationElement>({
   const [localData, setLocalData] = useState<T>(data);
 
   useEffect(() => {
-    console.log("BaseEditor useEffect - new data:", data);
+    if (isDevelopment) {
+      console.log("BaseEditor useEffect - new data:", data);
+    }
     setLocalData(data);
   }, [data]);
 
@@ -38,7 +42,9 @@ const BaseEditor = <T extends BaseSimulationElement>({
   ) => {
     const { name, value } = e.target;
     setLocalData((prev) => {
-      console.log("BaseEditor handleChange:", { prev, name, value });
+      if (isDevelopment) {
+        console.log("BaseEditor handleChange:", { prev, name, value });
+      }
       return {
         ...prev,
         [name]: value,
@@ -47,7 +53,9 @@ const BaseEditor = <T extends BaseSimulationElement>({
   };
 
   const handleSave = () => {
-    console.log("BaseEditor handleSave:", localData);
+    if (isDevelopment) {
+      console.log("BaseEditor handleSave:", localData);
+    }
     if (localData.type === SimulationObjectType.Activity) {
       onSave({
         ...localData,
@@ -70,17 +78,17 @@ const BaseEditor = <T extends BaseSimulationElement>({
   return (
     <form onSubmit={handleSubmit} className="w-full">
       {children(localData, handleChange)}
-      <div className="flex space-x-3 mt-4 justify-end">
+      <div className="flex space-x-2 mt-2 justify-end">
         <button 
           type="submit" 
-          className="px-3 py-2 bg-blue-600 text-white rounded-md shadow-sm hover:bg-blue-700 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          className="px-2 py-1 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           Save
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="px-3 py-2 bg-white text-gray-700 border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           Cancel
         </button>

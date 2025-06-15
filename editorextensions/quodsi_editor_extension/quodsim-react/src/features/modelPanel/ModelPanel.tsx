@@ -225,7 +225,7 @@ export const ModelPanel: React.FC = () => {
         onViewResults={onViewResults}
       />
       
-      <div className="flex-1 overflow-auto bg-gray-50">
+      <div className="flex-1 bg-gray-50">
         {/* If current element exists and is either not unconverted or is a Model type */}
         {currentElement && ((!currentElement.isUnconverted) || isModelElement) && (
           <ElementEditor

@@ -38,7 +38,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const extractActivityData = (act: any): Activity => {
     // Handle completely missing data case
     if (!act) {
-      console.error("[ActivityEditor] No activity data provided");
       return new Activity(
         "", // Empty ID
         "New Activity",
@@ -53,12 +52,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Extract data safely
     const data = act.data || act;
-
-    // Ensure ID is present
     const id = data.id || act.id || "";
-    if (!id) {
-      console.warn("[ActivityEditor] Activity missing ID");
-    }
 
     return new Activity(
       id,
@@ -155,14 +149,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   if (!localActivity?.id) {
     return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-md shadow-sm">
-        <div className="text-red-600 font-medium mb-2">
-          Invalid activity data
-        </div>
-        <div className="text-sm text-red-500">
-          The activity data is missing required properties. Try selecting a
-          different element or re-converting this element.
-        </div>
+      <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
+        <div className="text-red-600 font-medium">Invalid activity data</div>
+        <div className="text-xs text-red-500 mt-1">Activity data missing required properties</div>
       </div>
     );
   }
@@ -199,109 +188,87 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       messageType="activitySaved"
     >
       {(localData, handleChange) => (
-        <div className="space-y-4 p-2">
-          {/* Basic Info Section */}
-          <div className="space-y-2">
+        <div className="space-y-2">
+          {/* Basic Info */}
+          <div>
             <div className="flex items-center gap-1 mb-1">
-              <Settings className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-medium text-gray-700">
-                Basic Settings
-              </span>
+              <Settings className="w-3 h-3 text-blue-500" />
+              <span className="text-xs font-medium text-gray-700">Basic Settings</span>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="col-span-2">
-                <input
-                  type="text"
-                  name="name"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  value={localData.name}
-                  onChange={handleChange}
-                  placeholder="Activity Name"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Capacity
-                </label>
-                <input
-                  type="number"
-                  name="capacity"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  value={localData.capacity}
-                  onChange={handleChange}
-                  min="1"
-                />
+            <div className="space-y-1">
+              <input
+                type="text"
+                name="name"
+                className="w-full px-2 py-1 text-xs border rounded"
+                value={localData.name}
+                onChange={handleChange}
+                placeholder="Activity Name"
+              />
+              <div className="grid grid-cols-3 gap-1">
+                <div>
+                  <label className="block text-xs text-gray-600">Capacity</label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    className="w-full px-1 py-0.5 text-xs border rounded"
+                    value={localData.capacity}
+                    onChange={handleChange}
+                    min="1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Input Buf</label>
+                  <input
+                    type="number"
+                    name="inputBufferCapacity"
+                    className="w-full px-1 py-0.5 text-xs border rounded"
+                    value={
+                      localData.inputBufferCapacity === Infinity
+                        ? 999999
+                        : localData.inputBufferCapacity
+                    }
+                    onChange={handleChange}
+                    min="0"
+                    max="999999"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600">Output Buf</label>
+                  <input
+                    type="number"
+                    name="outputBufferCapacity"
+                    className="w-full px-1 py-0.5 text-xs border rounded"
+                    value={
+                      localData.outputBufferCapacity === Infinity
+                        ? 999999
+                        : localData.outputBufferCapacity
+                    }
+                    onChange={handleChange}
+                    min="0"
+                    max="999999"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Buffer Section */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-1 mb-1">
-              <Layout className="w-4 h-4 text-blue-500" />
-              <span className="text-xs font-medium text-gray-700">
-                Buffer Capacities
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Input
-                </label>
-                <input
-                  type="number"
-                  name="inputBufferCapacity"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  value={
-                    localData.inputBufferCapacity === Infinity
-                      ? 999999
-                      : localData.inputBufferCapacity
-                  }
-                  onChange={handleChange}
-                  min="0"
-                  max="999999"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Output
-                </label>
-                <input
-                  type="number"
-                  name="outputBufferCapacity"
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  value={
-                    localData.outputBufferCapacity === Infinity
-                      ? 999999
-                      : localData.outputBufferCapacity
-                  }
-                  onChange={handleChange}
-                  min="0"
-                  max="999999"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Operation Steps Section */}
-          <div className="space-y-2">
+          {/* Operation Steps */}
+          <div>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1">
-                <Layers className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-medium text-gray-700">
-                  Operation Steps
-                </span>
+                <Layers className="w-3 h-3 text-blue-500" />
+                <span className="text-xs font-medium text-gray-700">Operation Steps</span>
               </div>
               <button
                 type="button"
                 onClick={() => handleAddOperationStep(localData, handleChange)}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
+                className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
               >
                 <Plus className="w-3 h-3" />
-                Add Step
+                Add
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               {localData.operationSteps.map((step, index) => (
                 <OperationStepEditor
                   key={index}

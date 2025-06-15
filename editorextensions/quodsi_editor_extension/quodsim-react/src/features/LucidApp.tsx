@@ -63,7 +63,7 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
   // Model panel content
   return (
     <div className="lucid-app h-full flex flex-col">
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
         <ModelPanel />
       </div>
 

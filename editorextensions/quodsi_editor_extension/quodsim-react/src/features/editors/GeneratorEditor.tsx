@@ -106,18 +106,16 @@ const GeneratorEditor: React.FC<Props> = ({
       messageType="generatorSaved"
     >
       {(localGenerator, handleChange) => (
-        <div className="space-y-3 p-2">
+        <div className="space-y-2">
           {/* Entity Selection */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-1">
-              <Users className="w-4 h-4 text-blue-500" />
-              <label className="text-xs font-medium text-gray-700">
-                Entity to Generate
-              </label>
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <Users className="w-3 h-3 text-blue-500" />
+              <label className="text-xs font-medium text-gray-700">Entity</label>
             </div>
             <select
               name="entityId"
-              className="w-full px-2 py-1 text-sm border rounded"
+              className="w-full px-2 py-1 text-xs border rounded"
               value={localGenerator.entityId}
               onChange={handleChange}
             >
@@ -130,44 +128,44 @@ const GeneratorEditor: React.FC<Props> = ({
           </div>
 
           {/* Generation Settings */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Timer className="w-4 h-4 text-blue-500" />
-                <label className="text-xs font-medium text-gray-700">
-                  Entity Qty
-                </label>
-              </div>
+          <div className="grid grid-cols-3 gap-1">
+            <div>
+              <label className="block text-xs text-gray-600">Qty</label>
               <input
                 type="number"
                 name="entitiesPerCreation"
-                className="w-full px-2 py-1 text-sm border rounded"
+                className="w-full px-1 py-0.5 text-xs border rounded"
                 value={localGenerator.entitiesPerCreation}
                 onChange={handleChange}
                 min="1"
               />
             </div>
-
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Clock className="w-4 h-4 text-blue-500" />
-                <label className="text-xs font-medium text-gray-700">
-                  Occurrences
-                </label>
-              </div>
+            <div>
+              <label className="block text-xs text-gray-600">Occur</label>
               <input
                 type="number"
                 name="periodicOccurrences"
-                className="w-full px-2 py-1 text-sm border rounded"
+                className="w-full px-1 py-0.5 text-xs border rounded"
                 value={localGenerator.periodicOccurrences}
                 onChange={handleChange}
                 min="0"
               />
             </div>
+            <div>
+              <label className="block text-xs text-gray-600">Max</label>
+              <input
+                type="number"
+                name="maxEntities"
+                className="w-full px-1 py-0.5 text-xs border rounded"
+                value={localGenerator.maxEntities}
+                onChange={handleChange}
+                min="1"
+              />
+            </div>
           </div>
 
           {/* Timing Settings */}
-          <div className="space-y-3 pt-1">
+          <div className="space-y-1">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
                 Interarrival Time
@@ -209,21 +207,6 @@ const GeneratorEditor: React.FC<Props> = ({
                 compact={true}
               />
             </div>
-          </div>
-
-          {/* Max Entities */}
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700">
-              Max Entities
-            </label>
-            <input
-              type="number"
-              name="maxEntities"
-              className="w-full px-2 py-1 text-sm border rounded"
-              value={localGenerator.maxEntities}
-              onChange={handleChange}
-              min="1"
-            />
           </div>
         </div>
       )}

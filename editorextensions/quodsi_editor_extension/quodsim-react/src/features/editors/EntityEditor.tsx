@@ -39,19 +39,15 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
     >
       {(localEntity, handleChange) => (
         <div>
-          <div className="quodsi-field">
-            <label htmlFor="name" className="quodsi-label">
-              Entity Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              className="quodsi-input"
-              value={localEntity.name}
-              onChange={handleChange}
-            />
-          </div>
+          <label className="block text-xs text-gray-600 mb-1">Entity Name</label>
+          <input
+            type="text"
+            name="name"
+            className="w-full px-2 py-1 text-xs border rounded"
+            value={localEntity.name}
+            onChange={handleChange}
+            placeholder="Entity Name"
+          />
         </div>
       )}
     </BaseEditor>
