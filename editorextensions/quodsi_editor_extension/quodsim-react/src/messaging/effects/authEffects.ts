@@ -24,7 +24,7 @@ export function useAuthInitializationEffect(
   useEffect(() => {
     if (!authInitializedRef.current && state.auth.lastUpdated) {
       logger.log("Setting authInitializedRef based on lastUpdated presence");
-      console.log("[REACT][AuthEffects] Setting authInitializedRef=true based on lastUpdated presence");
+      logger.debug("Setting authInitializedRef=true based on lastUpdated presence");
       authInitializedRef.current = true;
     }
   }, [state.auth.lastUpdated, authInitializedRef]);
@@ -52,7 +52,7 @@ export function useSilentAuthCompletionEffect(
   useEffect(() => {
     if (!silentAuthCheckCompletedRef.current && state.auth.silentAuthInProgress === false && state.auth.lastUpdated) {
       logger.log("Setting silentAuthCheckCompletedRef based on silentAuthInProgress=false and lastUpdated presence");
-      console.log("[REACT][AuthEffects] Setting silentAuthCheckCompletedRef=true based on silentAuthInProgress=false and lastUpdated");
+      logger.debug("Setting silentAuthCheckCompletedRef=true based on silentAuthInProgress=false and lastUpdated");
       silentAuthCheckCompletedRef.current = true;
     }
   }, [state.auth.silentAuthInProgress, state.auth.lastUpdated, silentAuthCheckCompletedRef]);
@@ -91,7 +91,7 @@ export function useAuthStateChangeEffect(
       lastUpdated: state.auth.lastUpdated
     });
 
-    console.log("[REACT][AuthEffects] Auth loading state changed:", {
+    logger.debug("Auth loading state changed:", {
       silentAuthInProgress: state.auth.silentAuthInProgress,
       isAuthenticated: state.auth.isAuthenticated,
       hasUserInfo: !!state.auth.userInfo,
@@ -108,7 +108,7 @@ export function useAuthStateChangeEffect(
         lastUpdated: new Date(state.auth.lastUpdated).toISOString()
       });
 
-      console.log("[REACT][AuthEffects] Auth initialization cycle complete!", {
+      logger.debug("Auth initialization cycle complete!", {
         isAuthenticated: state.auth.isAuthenticated,
         hasUserInfo: !!state.auth.userInfo,
         silentAuthInProgress: state.auth.silentAuthInProgress,
@@ -127,7 +127,7 @@ export function useAuthStateChangeEffect(
         authLoadingCycleCompleted: silentAuthCheckCompletedRef.current
       });
 
-      console.log("[REACT][AuthEffects] Auth refs updated:", {
+      logger.debug("Auth refs updated:", {
         authInitialized: authInitializedRef.current,
         authLoadingCycleCompleted: silentAuthCheckCompletedRef.current
       });
@@ -154,7 +154,7 @@ export function useInitialAuthCheckEffect(
   ensureAuthState: () => { isAuthenticated: boolean; userInfo: any }
 ) {
   useEffect(() => {
-    console.log("[REACT][AuthEffects] Performing initial auth state check");
+    logger.log("Performing initial auth state check");
     ensureAuthState();
   }, [ensureAuthState]);
 }

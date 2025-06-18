@@ -15,7 +15,7 @@ export function handleAuthStatus(
   dispatch: React.Dispatch<any>
 ) {
   logger.log(`Received AUTH_STATUS message with data:`, msg.data);
-  console.log(`[REACT][AuthStatusHandler] IMPORTANT: Received AUTH_STATUS in ${state.app.panelType} panel:`, {
+  logger.log(`IMPORTANT: Received AUTH_STATUS in ${state.app.panelType} panel:`, {
     panelType: state.app.panelType,
     isAuthenticated: msg.data && typeof msg.data === 'object' && 'isAuthenticated' in msg.data 
       ? (msg.data as any).isAuthenticated 
@@ -44,9 +44,9 @@ export function handleAuthStatus(
     ) {
       try {
         AuthStorageService.saveAuthState(true, (msg.data as any).user);
-        console.log(`[REACT][AuthStatusHandler] Saved AUTH_STATUS to localStorage with authenticated=true`);
+        logger.log(`Saved AUTH_STATUS to localStorage with authenticated=true`);
       } catch (e) {
-        console.error(`[REACT][AuthStatusHandler] Error saving AUTH_STATUS to localStorage:`, e);
+        logger.error(`Error saving AUTH_STATUS to localStorage:`, e);
       }
     }
   } else {

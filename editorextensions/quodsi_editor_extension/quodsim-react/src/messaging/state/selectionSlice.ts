@@ -4,6 +4,10 @@
  */
 
 import { ElementShape } from './types';
+import { debugService } from '../utils/debugService';
+
+// Create component-specific logger
+const logger = debugService.forComponent('SelectionSlice');
 
 // State shape
 export interface SelectionState {
@@ -33,8 +37,8 @@ export type SelectionAction =
 
 // Reducer
 export function selectionReducer(state: SelectionState = initialSelectionState, action: SelectionAction): SelectionState {
-  console.log('[selectionReducer] Received action:', action.type, action);
-  console.log('[selectionReducer] Current state:', {
+  logger.debug('Received action:', action.type, action);
+  logger.debug('Current state:', {
     hasSelectedElements: state.selectedElements?.length > 0,
     firstSelectedElementId: state.selectedElements[0]?.id,
     hasDocumentContext: !!state.documentContext,
@@ -47,7 +51,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
       
       // If we have embedded document context in the action, use it
       if (action.documentContext) {
-        console.log('[selectionReducer] Using embedded document context from SELECTION_UPDATE action');
+        logger.debug('Using embedded document context from SELECTION_UPDATE action');
         documentContext = {
           ...action.documentContext,
           totalElements: action.totalElements, // Update total elements from selection
@@ -57,14 +61,14 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
       else {
         const firstElement = action.elements[0];
         if (firstElement && !documentContext) {
-          console.log('[selectionReducer] Creating document context from selection data');
+          logger.debug('Creating document context from selection data');
           // Create a new document context from the selection data
-          // This is the key fix - we need to create a document context with isQuodsiModel=true
+          // Don't assume isQuodsiModel=true just because an element exists
           documentContext = {
             documentId: firstElement.id.split('-')[0], // Use the first part of ID as document ID
             pageId: '', // Empty for now, will be updated later if available
             documentTitle: 'Document', // Default title
-            isQuodsiModel: true, // CRITICAL: Force isQuodsiModel to true since we have an element
+            isQuodsiModel: false, // Default to false - will be set correctly by MODEL_CONTEXT message
             totalElements: action.totalElements,
             metadata: {}
           };
@@ -83,7 +87,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         lastUpdated: Date.now(),
       };
       
-      console.log('[selectionReducer] SELECTION_UPDATE - Updated state:', {
+      logger.log('SELECTION_UPDATE - Updated state:', {
         selectedElementsCount: updatedState.selectedElements.length,
         firstElementId: updatedState.selectedElements[0]?.id,
         firstElementType: updatedState.selectedElements[0]?.type,
@@ -110,7 +114,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         lastUpdated: Date.now(),
       };
       
-      console.log('[selectionReducer] DOCUMENT_CONTEXT_UPDATE - Updated state:', {
+      logger.log('DOCUMENT_CONTEXT_UPDATE - Updated state:', {
         documentId: updatedContextState.documentContext.documentId,
         documentTitle: updatedContextState.documentContext.documentTitle,
         isQuodsiModel: updatedContextState.documentContext.isQuodsiModel,
@@ -121,7 +125,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
       return updatedContextState;
     default:
       // Type assertion to handle the 'never' type in the default case
-      console.log('[selectionReducer] Unhandled action type:', (action as any).type);
+      logger.warn('Unhandled action type:', (action as any).type);
       return state;
   }
 }

@@ -59,7 +59,7 @@ export function useSilentAuth(): void {
     // Also ensure auth state is updated at the start
     // Check localStorage immediately as a first step
     const storedAuth = AuthStorageService.loadAuthState();
-    console.log('[REACT][useSilentAuth] Initial localStorage check:', {
+    logger.debug('Initial localStorage check:', {
       isAuthStateValid: AuthStorageService.isAuthStateValid(),
       hasStoredAuth: !!storedAuth,
       isAuthenticated: storedAuth?.isAuthenticated,
@@ -68,7 +68,7 @@ export function useSilentAuth(): void {
 
     // If we have valid auth in localStorage, use it immediately
     if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
-      console.log('[REACT][useSilentAuth] IMPORTANT: Using valid auth from localStorage immediately');
+      logger.debug('IMPORTANT: Using valid auth from localStorage immediately');
       dispatch({
         type: 'AUTH_STATUS_UPDATE',
         isAuthenticated: true,
@@ -121,14 +121,14 @@ export function useSilentAuth(): void {
             // Update auth state in the messaging system to reflect successful authentication
             // The reducer will automatically set the lastUpdated timestamp
             logger.log(`Dispatching AUTH_STATUS_UPDATE with authenticated=true`);
-            console.log(`[REACT][useSilentAuth] SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true`);
+            logger.debug('SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true');
 
             // CRITICAL: Force authState to true in local storage
             try {
               AuthStorageService.saveAuthState(true, userInfo);
-              console.log(`[REACT][useSilentAuth] Saved authenticated=true to localStorage`);
+              logger.debug('Saved authenticated=true to localStorage');
             } catch (e) {
-              console.error(`[REACT][useSilentAuth] Error saving to localStorage:`, e);
+              logger.error('Error saving to localStorage:', e);
             }
 
             dispatch({
@@ -170,14 +170,14 @@ export function useSilentAuth(): void {
               // Update auth state in the messaging system
               // The reducer will automatically set the lastUpdated timestamp
               logger.log(`Dispatching AUTH_STATUS_UPDATE from localStorage with authenticated=true`);
-              console.log(`[REACT][useSilentAuth] SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true from localStorage`);
+              logger.debug('SUCCESS: Dispatching AUTH_STATUS_UPDATE with authenticated=true from localStorage');
 
               // CRITICAL: Re-save the auth state to localStorage to ensure it's fresh
               try {
                 AuthStorageService.saveAuthState(true, storedAuth.userInfo);
-                console.log(`[REACT][useSilentAuth] Re-saved authenticated=true to localStorage`);
+                logger.debug('Re-saved authenticated=true to localStorage');
               } catch (e) {
-                console.error(`[REACT][useSilentAuth] Error re-saving to localStorage:`, e);
+                logger.error('Error re-saving to localStorage:', e);
               }
 
               dispatch({
@@ -242,7 +242,7 @@ export function useSilentAuth(): void {
           // CRITICAL: Ensure we're authenticated if we found an account
           const finalAuthState = auth.isAuthenticated || accounts.length > 0 || AuthStorageService.isAuthStateValid();
           if (finalAuthState) {
-            console.log('[REACT][useSilentAuth] IMPORTANT: Setting final auth state to authenticated=true');
+            logger.debug('IMPORTANT: Setting final auth state to authenticated=true');
           }
 
           dispatch({
@@ -263,7 +263,7 @@ export function useSilentAuth(): void {
 
           // Double check localStorage state
           const finalStoredAuth = AuthStorageService.loadAuthState();
-          console.log('[REACT][useSilentAuth] Final localStorage state:', {
+          logger.debug('Final localStorage state:', {
             isAuthStateValid: AuthStorageService.isAuthStateValid(),
             hasStoredAuth: !!finalStoredAuth,
             isAuthenticated: finalStoredAuth?.isAuthenticated,

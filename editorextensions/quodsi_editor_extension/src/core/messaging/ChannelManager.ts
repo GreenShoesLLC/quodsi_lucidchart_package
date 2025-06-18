@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
 import { Channel, PanelRole } from './types';
 import { RoutablePanel } from './RoutablePanel';
+import { ExtensionDebugService } from '../logging/ExtensionDebugService';
 
 /**
  * Manages communication channels with panels
@@ -16,20 +17,25 @@ export class ChannelManager {
   };
   
   /**
-   * Debug logger function
+   * Debug logger function (legacy)
    */
   private logFn: (message: string) => void;
   
+  /**
+   * Debug service for this component
+   */
+  private debug = ExtensionDebugService.forComponent('ChannelManager');
+  
   constructor(logFn: (message: string) => void) {
     this.logFn = logFn;
-    console.log('[EXT][ChannelManager] Constructed');
+    this.debug.log('Constructed');
   }
   
   /**
    * Register a panel with a channel
    */
   public registerChannel(role: PanelRole, panel: RoutablePanel): void {
-    console.log(`[EXT][ChannelManager] Registering ${role} panel:`, {
+    this.debug.log(`Registering ${role} panel:`, {
       panelExists: !!panel,
       panelType: panel ? panel.constructor.name : 'unknown',
       panelRole: role, // Add the role explicitly for clarity
@@ -45,15 +51,15 @@ export class ChannelManager {
    * Mark a channel as ready
    */
   public markChannelReady(role: PanelRole): void {
-    console.log(`[EXT][ChannelManager] Marking channel ${role} as ready`);
+    this.debug.log(`Marking channel ${role} as ready`);
     const ch = this.channels[role];
     ch.ready = true;
     
     // Add debug check for panel validity
     if (!ch.panel) {
-      console.error(`[EXT][ChannelManager][ERROR] Channel ${role} marked ready but has no panel!`);
+      this.debug.error(`Channel ${role} marked ready but has no panel!`);
     } else {
-      console.log(`[EXT][ChannelManager] Channel ${role} has valid panel:`, {
+      this.debug.log(`Channel ${role} has valid panel:`, {
         panelType: ch.panel.constructor.name,
         panelRole: role, // Add the role explicitly
         queueSize: ch.queue.length
@@ -66,7 +72,7 @@ export class ChannelManager {
    */
   public isChannelReady(role: PanelRole): boolean {
     const isReady = this.channels[role]?.ready || false;
-    console.log(`[EXT][ChannelManager] Channel ${role} readiness check:`, isReady);
+    this.debug.debug(`Channel ${role} readiness check:`, isReady);
     return isReady;
   }
   
@@ -75,7 +81,7 @@ export class ChannelManager {
    */
   public getChannel(role: PanelRole): Channel | undefined {
     const channel = this.channels[role];
-    console.log(`[EXT][ChannelManager] Getting channel ${role}:`, {
+    this.debug.debug(`Getting channel ${role}:`, {
       exists: !!channel,
       ready: channel?.ready,
       hasPanel: !!channel?.panel,
@@ -98,7 +104,7 @@ export class ChannelManager {
    */
   public enqueueOrSend(role: PanelRole, msg: EnvelopeBase): void {
     const ch = this.channels[role];
-    console.log(`[EXT][ChannelManager] enqueueOrSend for ${role}:`, {
+    this.debug.log(`enqueueOrSend for ${role}:`, {
       isReady: ch.ready,
       hasPanel: !!ch.panel,
       msgType: msg.type,
@@ -108,7 +114,7 @@ export class ChannelManager {
     
     // Special handling for AUTH_STATUS messages - always log them
     if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-      console.log(`[EXT][ChannelManager] AUTH_STATUS message for ${role}:`, {
+      this.debug.log(`AUTH_STATUS message for ${role}:`, {
         authData: msg.data,
         // isAuthenticated: msg.data?.isAuthenticated,
         hasTarget: !!msg.target
@@ -117,7 +123,7 @@ export class ChannelManager {
     
     if (ch.ready && ch.panel) {
       try {
-        console.log(`[EXT][ChannelManager] Attempting to relay message to iframe:`, {
+        this.debug.debug(`Attempting to relay message to iframe:`, {
           role,
           msgType: msg.type,
           panelType: ch.panel.constructor.name,
@@ -126,19 +132,19 @@ export class ChannelManager {
         
         // Test if relayToIframe exists and is callable
         if (typeof ch.panel.relayToIframe !== 'function') {
-          console.error(`[EXT][ChannelManager][ERROR] Panel doesn't have a relayToIframe method!`, {
+          this.debug.error(`Panel doesn't have a relayToIframe method!`, {
             panelType: ch.panel.constructor.name,
             panelMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(ch.panel))
           });
         } else {
           ch.panel.relayToIframe(msg);
-          console.log(`[EXT][ChannelManager] Successfully relayed message to iframe:`, {
+          this.debug.debug(`Successfully relayed message to iframe:`, {
             role,
             msgType: msg.type
           });
         }
       } catch (err) {
-        console.error(`[EXT][ChannelManager][ERROR] Error relaying message to iframe:`, {
+        this.debug.error(`Error relaying message to iframe:`, {
           error: err instanceof Error ? err.message : String(err),
           stack: err instanceof Error ? err.stack : undefined,
           role,
@@ -161,7 +167,7 @@ export class ChannelManager {
   public flushQueue(role: PanelRole): void {
     const ch = this.channels[role];
     
-    console.log(`[EXT][ChannelManager] Flushing queue for ${role}:`, {
+    this.debug.log(`Flushing queue for ${role}:`, {
       queueSize: ch.queue.length,
       hasPanel: !!ch.panel,
       isReady: ch.ready,
@@ -171,18 +177,18 @@ export class ChannelManager {
     this.logFn(`Flushing ${ch.queue.length} queued messages for ${role}`);
     
     if (!ch.panel) {
-      console.error(`[EXT][ChannelManager][ERROR] Cannot flush queue: no panel for ${role}`);
+      this.debug.error(`Cannot flush queue: no panel for ${role}`);
       return;
     }
     
     if (!ch.ready) {
-      console.warn(`[EXT][ChannelManager][WARN] Flushing queue for channel that's not ready: ${role}`);
+      this.debug.warn(`Flushing queue for channel that's not ready: ${role}`);
     }
     
     try {
       // Check if relayToIframe is a function
       if (typeof ch.panel.relayToIframe !== 'function') {
-        console.error(`[EXT][ChannelManager][ERROR] Cannot flush queue: panel.relayToIframe is not a function`, {
+        this.debug.error(`Cannot flush queue: panel.relayToIframe is not a function`, {
           panelType: ch.panel.constructor.name,
           panelMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(ch.panel))
         });
@@ -198,7 +204,7 @@ export class ChannelManager {
       // Process each message
       queueCopy.forEach((m, index) => {
         try {
-          console.log(`[EXT][ChannelManager] Flushing queued message ${index + 1}/${queueCopy.length}:`, {
+          this.debug.debug(`Flushing queued message ${index + 1}/${queueCopy.length}:`, {
             type: m.type,
             id: m.id,
             target: m.target
@@ -206,7 +212,7 @@ export class ChannelManager {
           
           // Special handling for AUTH_STATUS messages - always log them when flushing
           if (m.type === EnvelopeMessageType.AUTH_STATUS) {
-            console.log(`[EXT][ChannelManager] Flushing AUTH_STATUS message:`, {
+            this.debug.log(`Flushing AUTH_STATUS message:`, {
               authData: m.data,
               // isAuthenticated: m.data?.isAuthenticated,
               target: m.target
@@ -214,9 +220,9 @@ export class ChannelManager {
           }
           
           ch.panel!.relayToIframe(m);
-          console.log(`[EXT][ChannelManager] Successfully flushed message ${index + 1}`);
+          this.debug.debug(`Successfully flushed message ${index + 1}`);
         } catch (err) {
-          console.error(`[EXT][ChannelManager][ERROR] Error flushing message ${index + 1}:`, {
+          this.debug.error(`Error flushing message ${index + 1}:`, {
             error: err instanceof Error ? err.message : String(err),
             stack: err instanceof Error ? err.stack : undefined,
             msgType: m.type
@@ -227,14 +233,14 @@ export class ChannelManager {
         }
       });
       
-      console.log(`[EXT][ChannelManager] Queue flush complete. Remaining messages: ${ch.queue.length}`);
+      this.debug.log(`Queue flush complete. Remaining messages: ${ch.queue.length}`);
       
       // If queue is empty, double-check panel readiness
       if (ch.queue.length === 0) {
-        console.log(`[EXT][ChannelManager] Queue for ${role} is now empty. Panel ready: ${ch.ready}`);
+        this.debug.log(`Queue for ${role} is now empty. Panel ready: ${ch.ready}`);
       }
     } catch (err) {
-      console.error(`[EXT][ChannelManager][ERROR] Unexpected error in flushQueue:`, {
+      this.debug.error(`Unexpected error in flushQueue:`, {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined
       });
@@ -251,18 +257,18 @@ export class ChannelManager {
   public forceDeliverMessage(role: PanelRole, msgType: EnvelopeMessageType, data: any = {}): void {
     const ch = this.channels[role];
     
-    console.log(`[EXT][ChannelManager] Force delivering ${msgType} to ${role}`, {
+    this.debug.log(`Force delivering ${msgType} to ${role}`, {
       hasPanel: !!ch.panel,
       isReady: ch.ready
     });
     
     if (!ch.panel) {
-      console.error(`[EXT][ChannelManager][ERROR] Cannot force deliver: no panel for ${role}`);
+      this.debug.error(`Cannot force deliver: no panel for ${role}`);
       return;
     }
     
     if (typeof ch.panel.relayToIframe !== 'function') {
-      console.error(`[EXT][ChannelManager][ERROR] Cannot force deliver: panel.relayToIframe is not a function`);
+      this.debug.error(`Cannot force deliver: panel.relayToIframe is not a function`);
       return;
     }
     
@@ -279,9 +285,9 @@ export class ChannelManager {
       
       // Force delivery regardless of queue state
       ch.panel.relayToIframe(msg);
-      console.log(`[EXT][ChannelManager] Successfully force delivered ${msgType} to ${role}`);
+      this.debug.log(`Successfully force delivered ${msgType} to ${role}`);
     } catch (err) {
-      console.error(`[EXT][ChannelManager][ERROR] Error force delivering message:`, {
+      this.debug.error(`Error force delivering message:`, {
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
         msgType
@@ -294,10 +300,10 @@ export class ChannelManager {
    * This helps diagnose issues with channel registration
    */
   public dumpChannelState(): void {
-    console.log('[EXT][ChannelManager] CHANNEL STATE DUMP:');
+    this.debug.log('CHANNEL STATE DUMP:');
     
     Object.entries(this.channels).forEach(([role, channel]) => {
-      console.log(`[EXT][ChannelManager] Channel '${role}' state:`, {
+      this.debug.log(`Channel '${role}' state:`, {
         role,
         ready: channel.ready,
         hasPanel: !!channel.panel,

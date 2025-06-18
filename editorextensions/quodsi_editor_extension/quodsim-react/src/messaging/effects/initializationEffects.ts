@@ -45,7 +45,7 @@ export function usePanelTypeDetectionEffect(
       }
 
       logger.log(`Detected panel type: ${detectedType}`);
-      console.log(`[REACT][InitializationEffects] Detected panel type: ${detectedType}`);
+      logger.debug(`Detected panel type: ${detectedType}`);
       dispatch({ type: "APP_INITIALIZE", panelType: detectedType });
     }
   }, [initialPanelType, state.app.initialized, dispatch]);
@@ -72,12 +72,12 @@ export function useAuthTimeoutEffect(
     authTimeoutRef.current = setTimeout(() => {
       if (!authLoadingCycleCompletedRef.current) {
         logger.warn("Auth initialization timeout reached. Forcing auth initialized state to proceed.");
-        console.warn("[REACT][InitializationEffects] Auth initialization timeout reached after 10 seconds!");
+        logger.warn("Auth initialization timeout reached after 10 seconds!");
         
         // Check for valid auth
         const { isAuthenticated, userInfo } = ensureAuthState();
         
-        console.warn("[REACT][InitializationEffects] Current auth state:", {
+        logger.warn("Current auth state:", {
           silentAuthInProgress: state.auth.silentAuthInProgress,
           isAuthenticated: isAuthenticated,
           hasUserInfo: !!userInfo

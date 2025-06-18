@@ -10,7 +10,7 @@ const logger = debugService.forComponent('AuthMapper');
 if (typeof window !== 'undefined') {
   (window as any).QUODSI_DEBUG = {
     forceAuthUpdate: (isAuthenticated: boolean = true) => {
-      console.log('[REACT][AuthMapper] MANUAL: Forcing auth update:', { isAuthenticated });
+      logger.log('MANUAL: Forcing auth update:', { isAuthenticated });
       
       // Create a fake auth status action
       const action: MessagingAction = {
@@ -26,14 +26,23 @@ if (typeof window !== 'undefined') {
         // Get current auth state from reducer if possible
         const state = (window as any).__QUODSI_STATE__;
         if (state && state.auth) {
-          console.log('[REACT][AuthMapper] Current auth state:', state.auth);
+          logger.log('Current auth state:', state.auth);
           return state.auth;
         }
         return 'Auth state not found';
       } catch (err) {
+        logger.error('Error checking auth state:', err);
         return 'Error checking auth state';
       }
-    }
+    },
+    // Add methods to control debug logging
+    enableLogging: () => debugService.enableLogging(),
+    disableLogging: () => debugService.disableLogging(),
+    isLoggingEnabled: () => debugService.isLoggingEnabled,
+    // Component-specific logging control
+    disableComponent: (name: string) => debugService.disableComponent(name),
+    enableComponent: (name: string) => debugService.enableComponent(name),
+    listDisabledComponents: () => debugService.listDisabledComponents()
   };
   
   // Store a reference to window.__QUODSI_STATE__ for debugging
@@ -86,7 +95,7 @@ export function mapAuth(msg: EnvelopeBase): MessagingAction | null {
 
       // Map to auth status update action
       logger.log('Processing AUTH_STATUS message:', statusData);
-      console.log('[REACT][AuthMapper] Processing AUTH_STATUS with data:', {
+      logger.debug('Processing AUTH_STATUS with data:', {
         isAuthenticated: statusData.isAuthenticated,
         hasUser: !!statusData.user,
         panelType: window.location.search.includes('panel=auth') ? 'auth' : 'model',

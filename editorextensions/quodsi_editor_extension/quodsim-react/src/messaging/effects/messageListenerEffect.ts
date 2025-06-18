@@ -20,7 +20,7 @@ export function useMessageListenerEffect(
 ) {
   useEffect(() => {
     // Log selection state on each effect run to help diagnose selection issues
-    console.log('[REACT][MessageListenerEffect] Current selection state:', {
+    logger.debug('Current selection state:', {
       hasSelectedElements: state.selection.selectedElements?.length > 0,
       selectedElementCount: state.selection.selectedElements?.length || 0,
       firstElementId: state.selection.selectedElements?.[0]?.id,
@@ -44,7 +44,7 @@ export function useMessageListenerEffect(
       // Check for valid auth in localStorage
       const { isAuthenticated, userInfo } = ensureAuthState();
 
-      console.log("[REACT][MessageListenerEffect] *** ALL CONDITIONS MET FOR REACT_APP_READY IN LISTENER! ***");
+      logger.log("*** ALL CONDITIONS MET FOR REACT_APP_READY IN LISTENER! ***");
       logger.log("All conditions met for sending REACT_APP_READY in listener:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
@@ -66,7 +66,7 @@ export function useMessageListenerEffect(
         isAuthenticated: isAuthenticated,
         hasUserInfo: !!userInfo
       });
-      console.log(`[REACT][MessageListenerEffect] Successfully sent REACT_APP_READY from listener with isAuthenticated=${isAuthenticated}!`);
+      logger.log(`Successfully sent REACT_APP_READY from listener with isAuthenticated=${isAuthenticated}!`);
     } else if (!hasSentReadyRef.current) {
       logger.debug("Waiting to send REACT_APP_READY:", {
         appInitialized: state.app.initialized,
@@ -81,13 +81,13 @@ export function useMessageListenerEffect(
       // Enhanced logging to track which conditions are preventing REACT_APP_READY
       if (state.app.initialized && state.app.panelType) {
         if (!authInitializedRef.current) {
-          console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: authInitializedRef is false");
+          logger.debug("REACT_APP_READY blocked: authInitializedRef is false");
         }
         if (!silentAuthCheckCompletedRef.current) {
-          console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: silentAuthCheckCompletedRef is false");
+          logger.debug("REACT_APP_READY blocked: silentAuthCheckCompletedRef is false");
         }
         if (!state.auth.lastUpdated) {
-          console.log("[REACT][MessageListenerEffect] REACT_APP_READY blocked: lastUpdated is not set");
+          logger.debug("REACT_APP_READY blocked: lastUpdated is not set");
         }
       }
     }

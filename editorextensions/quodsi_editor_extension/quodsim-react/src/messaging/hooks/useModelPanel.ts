@@ -5,8 +5,12 @@ import { JsonObject, SimulationObjectType, DiagramElementType } from '@quodsi/sh
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationStatus } from '../../types/SimulationStatus';
+import { debugService } from '../utils/debugService';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
+
+// Create component-specific logger
+const logger = debugService.forComponent('useModelPanel');
 
 /**
  * Custom hook that brings together all the data and actions needed for the ModelPanel component.
@@ -24,7 +28,7 @@ export function useModelPanel() {
   } = messagingState;
   
   // Enhanced logging for debugging messaging state
-  console.log('[useModelPanel] Full messaging state overview:', {
+  logger.debug('Full messaging state overview:', {
     hasSelection: !!selection,
     hasValidation: !!validation,
     hasSimulation: !!simulation,
@@ -46,9 +50,9 @@ export function useModelPanel() {
     totalElements: 0
   };
 
-  console.log('[useModelPanel] Document context (raw):', selection.documentContext);
-  console.log('[useModelPanel] Document context (with fallback):', documentContext);
-  console.log('[useModelPanel] Selection state details:', {
+  logger.debug('Document context (raw):', selection.documentContext);
+  logger.debug('Document context (with fallback):', documentContext);
+  logger.debug('Selection state details:', {
     selectedElements: selection.selectedElements,
     selectedCount: selection.selectedElements?.length,
     hasDocContext: !!selection.documentContext,
@@ -59,7 +63,7 @@ export function useModelPanel() {
   
   // Log if we're using the fallback document context
   if (!selection.documentContext) {
-    console.warn('[useModelPanel] Using fallback document context - original is undefined/null');
+    logger.warn('Using fallback document context - original is undefined/null');
   }
   
   // Extract current element based on appropriate case
@@ -68,18 +72,18 @@ export function useModelPanel() {
   if (selection.selectedElements && selection.selectedElements.length > 0) {
     // If elements are selected, use the first one
     const selectedElement = selection.selectedElements[0];
-    console.log('[useModelPanel] Using selected element (before transform):', selectedElement);
+    logger.debug('Using selected element (before transform):', selectedElement);
     modelItemData = transformToModelItemData(selectedElement);
-    console.log('[useModelPanel] Transformed modelItemData result:', modelItemData);
+    logger.debug('Transformed modelItemData result:', modelItemData);
   } else if (documentContext.isQuodsiModel) {
     // If no element is selected but we have a Quodsi model, 
     // check if we have modelItemData in the metadata
     if (documentContext.metadata?.modelItemData) {
-      console.log('[useModelPanel] Using modelItemData from metadata:', documentContext.metadata.modelItemData);
+      logger.debug('Using modelItemData from metadata:', documentContext.metadata.modelItemData);
       modelItemData = documentContext.metadata.modelItemData;
     } else {
       // Create a Model element from the page - similar to buildModelItemData in old code
-      console.log('[useModelPanel] Creating Model element from page');
+      logger.debug('Creating Model element from page');
       
       modelItemData = {
         id: documentContext.documentId,
@@ -93,13 +97,13 @@ export function useModelPanel() {
         name: documentContext.documentTitle || 'Untitled Model'
       };
       
-      console.log('[useModelPanel] Created Model element:', modelItemData);
+      logger.debug('Created Model element:', modelItemData);
     }
   }
   
   // Log important flags about modelItemData
   if (modelItemData) {
-    console.log('[useModelPanel] ModelItemData details:', {
+    logger.debug('ModelItemData details:', {
       id: modelItemData.id,
       name: modelItemData.name,
       hasData: !!modelItemData.data,
@@ -110,7 +114,7 @@ export function useModelPanel() {
       isUnconverted: modelItemData.isUnconverted
     });
   } else {
-    console.warn('[useModelPanel] No modelItemData created or found');
+    logger.warn('No modelItemData created or found');
   }
   
   // Transform validation data
@@ -133,7 +137,7 @@ export function useModelPanel() {
     ? !documentContext.isQuodsiModel 
     : false;
     
-  console.log('[useModelPanel] UI State determination:', {
+  logger.debug('UI State determination:', {
     isLoading,
     needsInitialization,
     initialized,
@@ -143,11 +147,11 @@ export function useModelPanel() {
   
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
-    console.log(`[useModelPanel] Updating element ${elementId} with data:`, data);
+    logger.log(`Updating element ${elementId} with data:`, data);
     
     // For model type, we need special handling
     if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
-      console.log('[useModelPanel] Updating model properties');
+      logger.log('Updating model properties');
       // Use the model update method
       modelOpsSender.updateElementData(elementId, 'Model', data);
     } else {
@@ -158,32 +162,32 @@ export function useModelPanel() {
   };
   
   const onElementTypeChange = (elementId: string, newType: SimulationObjectType) => {
-    console.log(`[useModelPanel] Changing element ${elementId} to type ${newType}`);
+    logger.log(`Changing element ${elementId} to type ${newType}`);
     modelOpsSender.convertElement(elementId, newType);
   };
   
   const onValidate = () => {
-    console.log('[useModelPanel] Validating model');
+    logger.log('Validating model');
     modelOpsSender.validateModel(documentContext.documentId);
   };
   
   const onSimulate = (scenarioName?: string) => {
-    console.log(`[useModelPanel] Simulating model with scenario name: ${scenarioName}`);
+    logger.log(`Simulating model with scenario name: ${scenarioName}`);
     simulationSender.requestSimulation(documentContext.documentId, scenarioName);
   };
   
   const onRemoveModel = () => {
-    console.log('[useModelPanel] Removing model');
+    logger.log('Removing model');
     modelOpsSender.removeModel(documentContext.documentId);
   };
   
   const onConvertPage = () => {
-    console.log('[useModelPanel] Converting page to Quodsi model');
+    logger.log('Converting page to Quodsi model');
     modelOpsSender.convertPage();
   };
   
   const onViewResults = () => {
-    console.log('[useModelPanel] Viewing simulation results');
+    logger.log('Viewing simulation results');
     simulationSender.viewResults(documentContext.documentId, simulation.jobId);
   };
   
@@ -200,10 +204,10 @@ export function useModelPanel() {
     const elementType = selection.selectedElements[0].type.toLowerCase();
     if (elementType === 'block') {
       typedDiagramElementType = DiagramElementType.BLOCK;
-      console.log('[useModelPanel] Detected BLOCK diagram element type');
+      logger.debug('Detected BLOCK diagram element type');
     } else if (elementType === 'line') {
       typedDiagramElementType = DiagramElementType.LINE;
-      console.log('[useModelPanel] Detected LINE diagram element type');
+      logger.debug('Detected LINE diagram element type');
     }
   }
   
@@ -211,7 +215,7 @@ export function useModelPanel() {
   if (modelItemData && (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None)) {
     // First check if q_meta contains type information
     if (modelItemData.q_meta && modelItemData.q_meta.type) {
-      console.log('[useModelPanel] Using q_meta type:', modelItemData.q_meta.type);
+      logger.debug('Using q_meta type:', modelItemData.q_meta.type);
       modelItemData.metadata = modelItemData.metadata || {
         type: SimulationObjectType.None,
         version: '1.0',
@@ -222,7 +226,7 @@ export function useModelPanel() {
     }
     // Only if no q_meta, then use diagram type to determine Connector (but not Activity)
     else if (typedDiagramElementType === DiagramElementType.LINE) {
-      console.log('[useModelPanel] Setting missing type to Connector for line element');
+      logger.debug('Setting missing type to Connector for line element');
       modelItemData.metadata = modelItemData.metadata || {
         type: SimulationObjectType.None,
         version: '1.0',
@@ -263,7 +267,7 @@ export function useModelPanel() {
     isQuodsiModel: documentContext?.isQuodsiModel
   };
   
-  console.log('[useModelPanel] Final return values (key properties):', returnValues);
+  logger.debug('Final return values (key properties):', returnValues);
   
   return {
     // Model and document data

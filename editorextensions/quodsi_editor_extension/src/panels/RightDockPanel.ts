@@ -17,6 +17,7 @@ import {
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler } from '../core/messaging/handlers';
+import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 
 
 /**
@@ -25,8 +26,7 @@ import { SelectionHandler } from '../core/messaging/handlers';
  * interface to facilitate communication with the iframe content.
  */
 export class RightDockPanel extends Panel implements RoutablePanel {
-    private static readonly LOG_PREFIX = '[EXT][RightDockPanel]';
-    private loggingEnabled: boolean = false;
+    private debug = ExtensionDebugService.forComponent('RightDockPanel');
     private isReady: boolean = false;
     private modelManager: ModelManager;
 
@@ -39,12 +39,8 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             width: 300
         });
         
-        this.log('RightDockPanel Constructor called');
-        console.log('[EXT][RightDockPanel] Constructor called with role: model');
+        this.debug.log('Constructor called with role: model');
         this.modelManager = modelManager;
-        
-        // Enable logging for RightDockPanel by default for easier debugging
-        this.loggingEnabled = true;
     }
 
     /**
@@ -52,13 +48,12 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Register with the router as a model panel
      */
     protected didMount(): void {
-        this.log('didMount called');
-        console.log('[EXT][RightDockPanel] didMount called - registering with router as "model" panel');
+        this.debug.log('didMount called - registering with router as "model" panel');
         
         // Register with the router
         router.registerChannel('model', this);
         
-        this.log('Registered with message router');
+        this.debug.log('Registered with message router');
     }
 
     /**
@@ -68,21 +63,20 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * @param msg The envelope to deliver to the iframe
      */
     public relayToIframe(msg: EnvelopeBase): void {
-        this.log(`Relaying message to iframe: ${msg.type}`);
-        console.log(`[EXT][RightDockPanel] relayToIframe called with msg type: ${msg.type}`);
+        this.debug.log(`relayToIframe called with msg type: ${msg.type}`);
         
         // Special logging for auth status
         if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-            console.log('[EXT][RightDockPanel] Relaying AUTH_STATUS to iframe:', msg.data);
+            this.debug.log('Relaying AUTH_STATUS to iframe:', msg.data);
         }
 
         try {
             // Use a type assertion to bypass TypeScript's type checking
             // This is safe because we know EnvelopeBase is designed to be serializable
             this.sendMessage(msg as unknown as JsonSerializable);
-            console.log(`[EXT][RightDockPanel] sendMessage completed for ${msg.type}`);
+            this.debug.debug(`sendMessage completed for ${msg.type}`);
         } catch (err) {
-            console.error(`[EXT][RightDockPanel][ERROR] Error in sendMessage:`, {
+            this.debug.error(`Error in sendMessage:`, {
                 error: err instanceof Error ? err.message : String(err),
                 stack: err instanceof Error ? err.stack : undefined,
                 msgType: msg.type
@@ -97,13 +91,12 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * @param message The message from the iframe
      */
     protected messageFromFrame(message: unknown): void {
-        this.log('Received message from iframe');
-        console.log(`[EXT][RightDockPanel] messageFromFrame called with type:`, 
+        this.debug.debug(`messageFromFrame called with type:`, 
             message && typeof message === 'object' && 'type' in message ? (message as any).type : 'unknown');
         
         // Validate that it's a valid envelope
         if (!isEnvelope(message)) {
-            this.logError('Invalid message format:', message);
+            this.debug.error('Invalid message format:', message);
             return;
         }
         
@@ -117,10 +110,10 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         
         // Special handling for AUTH_STATUS messages - log them more verbosely
         if (envelope.type === EnvelopeMessageType.AUTH_STATUS) {
-            console.log('[EXT][RightDockPanel] Received AUTH_STATUS message:', envelope.data);
+            this.debug.log('Received AUTH_STATUS message:', envelope.data);
         }
         
-        console.log('[EXT][RightDockPanel] Forwarding message to router:', envelope.type);
+        this.debug.debug('Forwarding message to router:', envelope.type);
         
         // Forward to the router
         router.receive(envelope);
@@ -130,8 +123,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Called when the iframe has been constructed and loaded
      */
     protected frameLoaded(): void {
-        this.log('Frame loaded');
-        console.log('[EXT][RightDockPanel] frameLoaded called');
+        this.debug.log('frameLoaded called');
 
         // Call parent method first to maintain proper behavior
         super.frameLoaded();
@@ -140,23 +132,23 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         this.isReady = true;
 
         // Re-register with the router to ensure we have a valid reference
-        console.log('[EXT][RightDockPanel] Re-registering with router as "model" panel');
+        this.debug.log('Re-registering with router as "model" panel');
         router.registerChannel('model', this);
         
         // IMPORTANT: Explicitly mark this channel as ready
         try {
-            console.log('[EXT][RightDockPanel] Explicitly marking model channel as ready');
+            this.debug.log('Explicitly marking model channel as ready');
             const channelManager = router.getChannelManager();
             if (channelManager && typeof channelManager.markChannelReady === 'function') {
                 channelManager.markChannelReady('model');
-                console.log('[EXT][RightDockPanel] Successfully marked model channel as ready');
+                this.debug.log('Successfully marked model channel as ready');
             }
         } catch (err) {
-            console.error('[EXT][RightDockPanel][ERROR] Error marking channel as ready:', err);
+            this.debug.error('Error marking channel as ready:', err);
         }
 
         // Dump channel state to diagnose any issues
-        console.log('[EXT][RightDockPanel] Dumping channel state for diagnosis');
+        this.debug.debug('Dumping channel state for diagnosis');
         if (typeof router.dumpChannelState === 'function') {
             router.dumpChannelState();
         }
@@ -164,7 +156,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         // NOTE: Previously we were waiting for REACT_APP_READY, but we should also
         // set up a delayed auth status request to handle cases where silent auth
         // completes after the panel initialization
-        console.log('[EXT][RightDockPanel] Setting up delayed auth status request');
+        this.debug.log('Setting up delayed auth status request');
 
         // Request auth status after a short delay to allow silent auth to complete
         setTimeout(() => {
@@ -177,23 +169,23 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * This is a helper method to ensure we get the latest auth state
      */
     public requestAuthStatus(): void {
-        console.log('[EXT][RightDockPanel] Requesting current auth state');
+        this.debug.log('Requesting current auth state');
         try {
             // Get the current auth state from the router
             const authState = router.getAuthState();
-            console.log('[EXT][RightDockPanel] Current auth state:', authState);
+            this.debug.log('Current auth state:', authState);
 
             // If we already have authentication, use it
             if (authState && authState.isAuthenticated) {
                 // First try using the channel manager's force deliver method
                 const channelManager = router.getChannelManager();
                 if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
-                    console.log('[EXT][RightDockPanel] Using forceDeliverMessage for AUTH_STATUS');
+                    this.debug.log('Using forceDeliverMessage for AUTH_STATUS');
                     channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
-                    console.log('[EXT][RightDockPanel] Force delivered auth state:', authState);
+                    this.debug.log('Force delivered auth state:', authState);
                 } else {
                     // Fallback to a direct broadcast request
-                    console.log('[EXT][RightDockPanel] Using direct send for AUTH_STATUS');
+                    this.debug.log('Using direct send for AUTH_STATUS');
                     router.send('model', {
                         id: `auth_status_request_${Date.now()}`,
                         type: EnvelopeMessageType.AUTH_STATUS,
@@ -203,15 +195,15 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                         data: authState
                     });
 
-                    console.log('[EXT][RightDockPanel] Direct sent auth state:', authState);
+                    this.debug.log('Direct sent auth state:', authState);
                 }
             } else {
                 // No existing auth, broadcast to ensure we get latest state from auth panel
-                console.log('[EXT][RightDockPanel] No auth state found, requesting broadcast');
+                this.debug.log('No auth state found, requesting broadcast');
                 router.broadcastAuthStatus();
             }
         } catch (err) {
-            console.error('[EXT][RightDockPanel][ERROR] Error requesting auth state:', err);
+            this.debug.error('Error requesting auth state:', err);
         }
     }
 
@@ -219,7 +211,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Called when the iframe has been removed from the DOM
      */
     protected frameClosed(): void {
-        this.log('Frame closed, cleaning up resources');
+        this.debug.log('Frame closed, cleaning up resources');
         
         // Call parent method to maintain proper behavior
         super.frameClosed();
@@ -232,13 +224,13 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Shows the panel
      */
     public show(): void {
-        this.log('Show called');
+        this.debug.log('Show called');
         super.show();
         
         // Don't send MODEL_CONTEXT here - wait for REACT_APP_READY
         // The React app will send REACT_APP_READY when it's ready to receive messages
         // Then MessageRouter will call our sendModelContext() method
-        console.log('[EXT][RightDockPanel] Panel shown, waiting for REACT_APP_READY to send MODEL_CONTEXT');
+        this.debug.log('Panel shown, waiting for REACT_APP_READY to send MODEL_CONTEXT');
     }
 
     /**
@@ -247,7 +239,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * @param items The selected items
      */
     public handleSelectionChange(items: ItemProxy[]): void {
-        this.log(`Selection changed: ${items.length} items selected`);
+        this.debug.debug(`Selection changed: ${items.length} items selected`);
         
         // Use the SelectionHandler to update the selection state
         if (items.length > 0) {
@@ -303,8 +295,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * This is called by MessageRouter after AUTH and SUBSCRIPTION messages
      */
     public sendModelContext(): void {
-        this.log('sendModelContext called - sending MODEL_CONTEXT after AUTH/SUBSCRIPTION');
-        console.log('[EXT][RightDockPanel] sendModelContext called to establish document context');
+        this.debug.log('sendModelContext called to establish document context');
         this.initializeModelContext();
     }
     
@@ -321,7 +312,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 // Determine if this is a Quodsi model
                 const isQuodsiModel = this.modelManager.isQuodsiModel(currentPage);
                 
-                console.log('[EXT][RightDockPanel] Model context determined:', {
+                this.debug.log('Model context determined:', {
                     documentId: document.id,
                     pageId: currentPage.id,
                     title: document.getTitle() || 'Untitled Document',
@@ -343,7 +334,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 this.handleSelectionChange(selectedItems);
             }
         } catch (error) {
-            this.logError('Error initializing model context:', error);
+            this.debug.error('Error initializing model context:', error);
         }
     }
 
@@ -351,23 +342,13 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Enables or disables logging
      */
     public setLogging(enabled: boolean): void {
-        this.loggingEnabled = enabled;
-        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
-    }
-
-    /**
-     * Log a message if logging is enabled
-     */
-    private log(message: string, ...args: any[]): void {
-        if (this.loggingEnabled) {
-            console.log(`${RightDockPanel.LOG_PREFIX} ${message}`, ...args);
+        // This method is kept for backward compatibility but now delegates to the debug service
+        const debugService = ExtensionDebugService.getInstance();
+        if (enabled) {
+            debugService.enableComponent('RightDockPanel');
+        } else {
+            debugService.disableComponent('RightDockPanel');
         }
-    }
-
-    /**
-     * Log an error message always
-     */
-    private logError(message: string, ...args: any[]): void {
-        console.error(`${RightDockPanel.LOG_PREFIX} ${message}`, ...args);
+        this.debug.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
     }
 }

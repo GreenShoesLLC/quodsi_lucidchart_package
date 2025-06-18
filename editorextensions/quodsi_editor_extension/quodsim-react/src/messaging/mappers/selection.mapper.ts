@@ -3,6 +3,9 @@ import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
+// Create component-specific logger
+const logger = debugService.forComponent('SelectionMapper');
+
 /**
  * Maps selection and document context messages to reducer actions
  * 
@@ -18,8 +21,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
     return null;
   }
 
-  debugService.debug(`Selection mapper processing: ${msg.type}`);
-  console.log(`[REACT][Selection Mapper] Processing message: ${msg.type}`, {
+  logger.debug(`Processing message: ${msg.type}`, {
     msgType: msg.type,
     msgId: msg.id,
     msgSource: msg.source,
@@ -38,7 +40,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         metadata?: Record<string, unknown>;
       };
 
-      console.log('[REACT][Selection Mapper] MODEL_CONTEXT details:', {
+      logger.log('MODEL_CONTEXT details:', {
         documentId: contextData.documentId,
         title: contextData.title,
         pageId: contextData.pageId,
@@ -56,7 +58,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         metadata: contextData.metadata
       };
       
-      console.log('[REACT][Selection Mapper] Returning DOCUMENT_CONTEXT_UPDATE action:', contextAction);
+      logger.debug('Returning DOCUMENT_CONTEXT_UPDATE action:', contextAction);
       return contextAction;
 
     case EnvelopeMessageType.SELECTION_CHANGED:
@@ -82,7 +84,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         };
       };
       
-      console.log('[REACT][Selection Mapper] SELECTION_CHANGED details:', {
+      logger.log('SELECTION_CHANGED details:', {
         selectionType: selectionData.selectionType,
         documentId: selectionData.documentId,
         hasModel: selectionData.hasModel,
@@ -97,7 +99,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
       // Check if we have embedded document context that needs to be processed
       let hasEmbeddedContext = false;
       if (selectionData.documentContext) {
-        console.log('[REACT][Selection Mapper] Found embedded documentContext in SELECTION_CHANGED', {
+        logger.debug('Found embedded documentContext in SELECTION_CHANGED', {
           documentId: selectionData.documentContext.documentId,
           pageId: selectionData.documentContext.pageId,
           title: selectionData.documentContext.title,
@@ -108,14 +110,14 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
       
       // If we have document information in the selection, update the document context first
       if (selectionData.documentId) {
-        console.log('[REACT][Selection Mapper] Document info found in selection data', {
+        logger.debug('Document info found in selection data', {
           documentId: selectionData.documentId,
           hasModel: selectionData.hasModel
         });
       }
       
       if (selectionData.modelItemData) {
-        console.log('[REACT][Selection Mapper] ModelItemData details:', {
+        logger.debug('ModelItemData details:', {
           id: selectionData.modelItemData.id,
           name: selectionData.modelItemData.name,
           type: selectionData.modelItemData.type,
@@ -135,8 +137,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         
         // Check if modelItemData has q_meta data or type data
         if (modelItemData.q_meta && modelItemData.q_meta.type) {
-          debugService.debug('[Selection mapper] Using q_meta type:', modelItemData.q_meta.type);
-          console.log('[REACT][Selection mapper] Found q_meta type:', {
+          logger.debug('Using q_meta type:', modelItemData.q_meta.type);
+          logger.debug('Found q_meta type:', {
             qMetaType: modelItemData.q_meta.type,
             elementId: modelItemData.id,
             creatingMetadata: !modelItemData.metadata
@@ -148,11 +150,11 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
             id: modelItemData.id || ''
           };
           modelItemData.metadata.type = modelItemData.q_meta.type as SimulationObjectType;
-          debugService.debug('[Selection mapper] Set type from q_meta:', modelItemData.q_meta.type);
+          logger.debug('Set type from q_meta:', modelItemData.q_meta.type);
         }
         // Check if the modelItemData itself has a type property
         else if (modelItemData.type === 'Resource') {
-          console.log('[REACT][Selection mapper] Found direct type property: Resource', {
+          logger.debug('Found direct type property: Resource', {
             elementId: modelItemData.id,
             creatingMetadata: !modelItemData.metadata
           });
@@ -163,7 +165,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
             id: modelItemData.id || ''
           };
           modelItemData.metadata.type = SimulationObjectType.Resource;
-          debugService.debug('[Selection mapper] Set type from direct property: Resource');
+          logger.debug('Set type from direct property: Resource');
         }
         // Only map diagram to connector, not block to activity
         else if (selectionData.diagramElementType && 
@@ -175,8 +177,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           // Only map line to connector, don't default block to activity
           if (diagramType === 'line') {
             simulationType = SimulationObjectType.Connector;
-            debugService.debug('[Selection mapper] Mapping line to Connector');
-            console.log('[REACT][Selection mapper] Mapping line to Connector', {
+            logger.debug('Mapping line to Connector');
+            logger.debug('Mapping line to Connector details:', {
               elementId: modelItemData.id,
               hasMetadata: !!modelItemData.metadata,
               originalMetadataType: modelItemData.metadata?.type
@@ -192,12 +194,12 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
               id: modelItemData.id || ''
             };
             modelItemData.metadata.type = simulationType;
-            debugService.debug('[Selection mapper] Set simulation type:', simulationType);
+            logger.debug('Set simulation type:', simulationType);
           }
         }
         
         elements = [modelItemData as ExtendedModelItemData];
-        console.log('[REACT][Selection mapper] Final processed element:', {
+        logger.debug('Final processed element:', {
           id: modelItemData.id,
           type: modelItemData.type,
           finalMetadataType: modelItemData.metadata?.type,
@@ -205,7 +207,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           isUnconverted: modelItemData.isUnconverted
         });
       } else {
-        console.log('[REACT][Selection mapper] No modelItemData available in selection');
+        logger.debug('No modelItemData available in selection');
       }
 
       // Map to selection update action
@@ -225,7 +227,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         } : {})
       };
       
-      console.log('[REACT][Selection mapper] Returning SELECTION_UPDATE action:', {
+      logger.log('Returning SELECTION_UPDATE action:', {
         elementCount: selectionAction.elements.length,
         firstElementId: selectionAction.elements[0]?.id,
         firstElementType: (selectionAction.elements[0] as any)?.metadata?.type,
@@ -237,7 +239,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
       return selectionAction;
 
     default:
-      console.log('[REACT][Selection mapper] Unhandled message type:', msg.type);
+      logger.warn('Unhandled message type:', msg.type);
       return null;
   }
 }

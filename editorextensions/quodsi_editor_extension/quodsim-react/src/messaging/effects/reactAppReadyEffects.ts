@@ -47,7 +47,7 @@ export function useReactAppReadyEffect(
       // Check for valid auth in localStorage
       const { isAuthenticated, userInfo } = ensureAuthState();
       
-      console.log("[REACT][ReactAppReadyEffects] Conditions for REACT_APP_READY check:", {
+      logger.debug("Conditions for REACT_APP_READY check:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType,
         authInitialized: authInitializedRef.current,
@@ -59,12 +59,12 @@ export function useReactAppReadyEffect(
       
       // Force these refs to true if other conditions are met
       if (!authInitializedRef.current && state.auth.lastUpdated) {
-        console.log("[REACT][ReactAppReadyEffects] Force setting authInitializedRef=true");
+        logger.debug("Force setting authInitializedRef=true");
         authInitializedRef.current = true;
       }
       
       if (!authLoadingCycleCompletedRef.current && !state.auth.silentAuthInProgress && state.auth.lastUpdated) {
-        console.log("[REACT][ReactAppReadyEffects] Force setting authLoadingCycleCompletedRef=true");
+        logger.debug("Force setting authLoadingCycleCompletedRef=true");
         authLoadingCycleCompletedRef.current = true;
       }
       
@@ -75,7 +75,7 @@ export function useReactAppReadyEffect(
         !state.auth.silentAuthInProgress && 
         !hasSentReadyRef.current
       ) {
-        console.log("[REACT][ReactAppReadyEffects] *** ALL CONDITIONS MET FOR REACT_APP_READY! ***");
+        logger.log("*** ALL CONDITIONS MET FOR REACT_APP_READY! ***");
         logger.log("All conditions met for sending REACT_APP_READY:", {
           appInitialized: state.app.initialized,
           panelType: state.app.panelType,
@@ -98,7 +98,7 @@ export function useReactAppReadyEffect(
           isAuthenticated: isAuthenticated,
           hasUserInfo: !!userInfo
         });
-        console.log(`[REACT][ReactAppReadyEffects] Successfully sent REACT_APP_READY message with isAuthenticated=${isAuthenticated}!`);
+        logger.log(`Successfully sent REACT_APP_READY message with isAuthenticated=${isAuthenticated}!`);
       }
     }
   }, [
@@ -134,7 +134,7 @@ export function useEmergencyReactAppReadyEffect(
     // Create a timer to force send REACT_APP_READY after authentication
     const timer = setTimeout(() => {
       if (!hasSentReadyRef.current && state.app.initialized && state.app.panelType) {
-        console.log("[REACT][ReactAppReadyEffects] EMERGENCY: Forcing REACT_APP_READY after timer");
+        logger.warn("EMERGENCY: Forcing REACT_APP_READY after timer");
         
         // Force refs to true
         authInitializedRef.current = true;
@@ -143,7 +143,7 @@ export function useEmergencyReactAppReadyEffect(
         // Check localStorage for authentication
         const { isAuthenticated, userInfo } = ensureAuthState();
         
-        console.log("[REACT][ReactAppReadyEffects] EMERGENCY check auth state:", {
+        logger.warn("EMERGENCY check auth state:", {
           appInitialized: state.app.initialized,
           panelType: state.app.panelType,
           authLoading: state.auth.silentAuthInProgress,
@@ -162,7 +162,7 @@ export function useEmergencyReactAppReadyEffect(
         // Mark as sent
         hasSentReadyRef.current = true;
         
-        console.log(`[REACT][ReactAppReadyEffects] EMERGENCY: Successfully forced REACT_APP_READY with isAuthenticated=${isAuthenticated}`);
+        logger.warn(`EMERGENCY: Successfully forced REACT_APP_READY with isAuthenticated=${isAuthenticated}`);
       }
     }, 3000); // 3 second timer
     

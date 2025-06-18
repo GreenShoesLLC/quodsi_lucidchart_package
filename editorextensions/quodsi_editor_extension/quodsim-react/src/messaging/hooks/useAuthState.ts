@@ -21,11 +21,11 @@ export function useAuthState(
       const storedAuth = AuthStorageService.loadAuthState();
       if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
         logger.log('Found valid auth in localStorage');
-        console.log('[REACT][useAuthState] Found valid auth in localStorage! User:', storedAuth.userInfo.email);
+        logger.debug('Found valid auth in localStorage! User:', storedAuth.userInfo.email);
         
         if (!state.auth.isAuthenticated) {
           logger.log('Forcing local state authentication from localStorage');
-          console.log('[REACT][useAuthState] IMPORTANT: Forcing local state authentication from localStorage');
+          logger.debug('IMPORTANT: Forcing local state authentication from localStorage');
           
           dispatch({
             type: 'AUTH_STATUS_UPDATE',
@@ -38,7 +38,6 @@ export function useAuthState(
       }
     } catch (e) {
       logger.error('Error checking localStorage:', e);
-      console.error('[REACT][useAuthState] Error checking localStorage:', e);
     }
     
     return { 

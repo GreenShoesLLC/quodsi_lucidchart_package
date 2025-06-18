@@ -9,7 +9,7 @@ export const debugService = {
    */
   forComponent: (componentName: string) => ({
     log: (message: string, ...args: any[]) => {
-      if (debugService.isLoggingEnabled) {
+      if (debugService.isLoggingEnabled && !debugService.disabledComponents.has(componentName)) {
         console.log(`[REACT][${componentName}] ${message}`, ...args);
       }
     },
@@ -20,7 +20,7 @@ export const debugService = {
       console.warn(`[REACT][${componentName}][WARN] ${message}`, ...args);
     },
     debug: (message: string, ...args: any[]) => {
-      if (debugService.isLoggingEnabled) {
+      if (debugService.isLoggingEnabled && !debugService.disabledComponents.has(componentName)) {
         console.debug(`[REACT][${componentName}][DEBUG] ${message}`, ...args);
       }
     }
@@ -30,6 +30,33 @@ export const debugService = {
    * Whether logging is enabled
    */
   isLoggingEnabled: false,
+  
+  /**
+   * Set of components with disabled logging
+   * Pre-populated with commonly noisy components
+   */
+  disabledComponents: new Set<string>([
+    'useSilentAuth',      // Silent auth checks can be very verbose
+    'useAuthState',       // Auth state checks happen frequently
+    'MessageProvider',    // Message provider can be chatty with every message
+    'ElementOpsMapper',
+    'AuthMapper',
+    'useSendMessage',
+    'RxMessageHandlers',
+    'AuthStatusHandler',
+    'ReactAppReadyEffects',
+    'MessageListenerEffect',
+    'InitializationEffects',
+    'AuthEffects',
+    'AuthPanel',
+    'LucidAppNew',
+    'MessageMapper',
+    'AuthStorageService',
+    'useModelPanel',
+    'SelectionMapper',
+    'SelectionSlice'
+    // Add more components here as needed
+  ]),
   
   /**
    * Enable logging
@@ -94,5 +121,35 @@ export const debugService = {
     if (this.isLoggingEnabled) {
       console.groupEnd();
     }
+  },
+  
+  /**
+   * Disable logging for a specific component
+   */
+  disableComponent(componentName: string): void {
+    this.disabledComponents.add(componentName);
+    console.log(`[REACT][DebugService] Logging disabled for component: ${componentName}`);
+  },
+  
+  /**
+   * Enable logging for a specific component
+   */
+  enableComponent(componentName: string): void {
+    this.disabledComponents.delete(componentName);
+    console.log(`[REACT][DebugService] Logging enabled for component: ${componentName}`);
+  },
+  
+  /**
+   * Check if a component has logging disabled
+   */
+  isComponentDisabled(componentName: string): boolean {
+    return this.disabledComponents.has(componentName);
+  },
+  
+  /**
+   * List all disabled components
+   */
+  listDisabledComponents(): string[] {
+    return Array.from(this.disabledComponents);
   }
 };
