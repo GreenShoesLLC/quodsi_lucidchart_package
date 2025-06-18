@@ -55,6 +55,7 @@ export const debugService = {
     'useModelPanel',
     'SelectionMapper',
     'SelectionSlice'
+    // ModelOpsMapper intentionally NOT disabled so we can see conversion logs
     // Add more components here as needed
   ]),
   

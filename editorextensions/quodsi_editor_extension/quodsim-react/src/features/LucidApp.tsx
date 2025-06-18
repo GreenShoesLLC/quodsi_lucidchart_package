@@ -39,11 +39,15 @@ export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
     );
   }
 
+  // Get messaging state to force re-render on document context changes
+  const { selection } = useMessaging();
+  const documentKey = `${selection.documentContext?.documentId}-${selection.documentContext?.isQuodsiModel}`;
+  
   // Model panel content
   return (
     <div className="lucid-app h-full flex flex-col">
       <div className="flex-1">
-        <ModelPanel />
+        <ModelPanel key={documentKey} />
       </div>
 
       {/* Debug controls at bottom (development only) */}

@@ -23,7 +23,9 @@ export const initialAppState: AppState = {
 export type AppAction = 
   | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' }
   | { type: 'ADD_PENDING_REQUEST'; id: string; requestType: string }
-  | { type: 'REMOVE_PENDING_REQUEST'; id: string };
+  | { type: 'REMOVE_PENDING_REQUEST'; id: string }
+  | { type: 'MODEL_CONVERSION_SUCCESS'; success: boolean }
+  | { type: 'MODEL_REMOVAL_SUCCESS'; success: boolean };
 
 // Reducer
 export function appReducer(state: AppState = initialAppState, action: AppAction): AppState {
@@ -52,6 +54,20 @@ export function appReducer(state: AppState = initialAppState, action: AppAction)
         pendingRequests: remaining,
       };
     }
+    case 'MODEL_CONVERSION_SUCCESS':
+      // For now, just return the current state but this triggers a re-render
+      // which should help the UI transition properly after conversion
+      return {
+        ...state,
+        // Could add a conversion success flag here if needed
+      };
+    case 'MODEL_REMOVAL_SUCCESS':
+      // For now, just return the current state but this triggers a re-render
+      // which should help the UI transition properly after removal
+      return {
+        ...state,
+        // Could add a removal success flag here if needed
+      };
     default:
       return state;
   }

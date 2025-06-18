@@ -7,11 +7,16 @@ import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 import { SimulationResultsDashboard } from '../../../dashboard/SimulationResultsDashboard';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
+// Simple ID generator for extension context (crypto.getRandomValues not available)
+const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
  */
 export class ModelOpsHandler {
+  private static logger = ExtensionDebugService.forComponent('ModelOpsHandler');
+
   /**
    * Last validation results by document ID
    */
@@ -38,7 +43,7 @@ export class ModelOpsHandler {
       case EnvelopeMessageType.MODEL_CONVERT:
         // Start async process but return true immediately
         ModelOpsHandler.handleConvert(msg)
-          .catch(err => console.error('[ModelOpsHandler] Error handling MODEL_CONVERT:', err));
+          .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_CONVERT:', err));
         return true;
         
       case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
@@ -71,13 +76,13 @@ export class ModelOpsHandler {
   private static handleValidate(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
     
-    console.log('[ModelOpsHandler] Model validation requested', {
+    ModelOpsHandler.logger.log('Model validation requested', {
       documentId: data.documentId
     });
     
     // TODO: Perform actual validation
     // For now, send a mock validation result
-    setTimeout(() => {
+    Promise.resolve().then(() => {
       // Generate some mock issues
       const issues: ValidationIssue[] = [
         {
@@ -126,7 +131,7 @@ export class ModelOpsHandler {
           }
         }
       });
-    }, 1000);
+    });
     
     return true;
   }
@@ -148,7 +153,7 @@ export class ModelOpsHandler {
       };
     };
     
-    console.log('[ModelOpsHandler] Validation result received', {
+    ModelOpsHandler.logger.log('Validation result received', {
       isValid: data.isValid,
       errorCount: data.summary.errorCount,
       warningCount: data.summary.warningCount,
@@ -175,7 +180,7 @@ export class ModelOpsHandler {
         targetType?: string;
       };
       
-      console.log('[ModelOpsHandler] Model conversion requested', {
+      ModelOpsHandler.logger.log('Model conversion requested', {
         documentId: data.documentId,
         elementId: data.elementId,
         targetType: data.targetType
@@ -196,7 +201,7 @@ export class ModelOpsHandler {
       
       // Check if this is a page conversion request (no elementId)
       if (!data.elementId) {
-        console.log('[ModelOpsHandler] Converting page to Quodsi model');
+        ModelOpsHandler.logger.log('Converting page to Quodsi model');
         
         try {
           // Set up required services
@@ -215,7 +220,7 @@ export class ModelOpsHandler {
           
           // Convert the page
           const result = await pageConversionService.convertPage(currentPage);
-          console.log('[ModelOpsHandler] Page conversion successful:', result);
+          ModelOpsHandler.logger.log('Page conversion successful:', result);
           
           // Send success response
           router.send('model', {
@@ -230,13 +235,86 @@ export class ModelOpsHandler {
             }
           });
           
-          // Update the current selection to refresh the UI
-          const selectedItems = viewport.getSelectedItems();
-          viewport.setSelectedItems(selectedItems);
+          // Send both MODEL_CONTEXT and SELECTION_CHANGED messages to force UI refresh
+          // Use immediate Promise execution since timing functions may not be available
+          Promise.resolve().then(() => {
+            const documentId = document.id;
+            const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
+            const title = document.getTitle() || 'Untitled Document';
+            
+            // Debug: Check what data is actually stored on the page
+            const pageData = currentPage.shapeData.get('q_data');
+            const pageMeta = currentPage.shapeData.get('q_meta');
+            
+            ModelOpsHandler.logger.log('Storage debug after conversion:', {
+              documentId,
+              pageId: currentPage.id,
+              title,
+              isQuodsiModel,
+              hasPageData: !!pageData,
+              hasPageMeta: !!pageMeta,
+              pageData: pageData && typeof pageData === 'string' ? JSON.parse(pageData) : pageData,
+              pageMeta: pageMeta && typeof pageMeta === 'string' ? JSON.parse(pageMeta) : pageMeta
+            });
+            
+            ModelOpsHandler.logger.log('Sending context refresh messages after conversion:', {
+              documentId,
+              pageId: currentPage.id,
+              title,
+              isQuodsiModel,
+              hasValidModel: isQuodsiModel
+            });
+            
+            // Send MODEL_CONTEXT message
+            router.send('model', {
+              id: generateId(),
+              type: EnvelopeMessageType.MODEL_CONTEXT,
+              source: 'host',
+              target: 'model-iframe',
+              version: '1.0',
+              data: {
+                documentId,
+                title,
+                pageId: currentPage.id,
+                isQuodsiModel,
+                hasValidModel: isQuodsiModel
+              }
+            });
+            
+            // Send SELECTION_CHANGED message with embedded document context to force complete refresh
+            router.send('model', {
+              id: generateId(),
+              type: EnvelopeMessageType.SELECTION_CHANGED,
+              source: 'host',
+              target: 'model-iframe',
+              version: '1.0',
+              data: {
+                selectionType: 'page',
+                documentId: documentId,
+                hasModel: true,
+                selectionState: {
+                  pageId: currentPage.id,
+                  selectedIds: [],
+                  selectionType: 'page'
+                },
+                documentContext: {
+                  documentId,
+                  pageId: currentPage.id,
+                  title,
+                  isQuodsiModel,
+                  metadata: {}
+                }
+              }
+            });
+            
+            ModelOpsHandler.logger.log('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
+          }).catch(error => {
+            ModelOpsHandler.logger.error('Error sending context refresh messages:', error);
+          });
           
           return true;
         } catch (error) {
-          console.error('[ModelOpsHandler] Page conversion error:', error);
+          ModelOpsHandler.logger.error('Page conversion error:', error);
           throw error; // rethrow to be caught by outer catch
         }
       }
@@ -244,7 +322,7 @@ export class ModelOpsHandler {
       // Handle element-specific conversion (if we have an elementId)
       // This is now handled by ElementOpsHandler.handleElementConvert
       // But we'll keep a basic implementation here for backward compatibility
-      console.log('[ModelOpsHandler] Element conversion not implemented here, use ELEMENT_CONVERT');
+      ModelOpsHandler.logger.log('Element conversion not implemented here, use ELEMENT_CONVERT');
       
       // Send response indicating we're not handling element conversion here
       router.send('model', {
@@ -262,7 +340,7 @@ export class ModelOpsHandler {
       
       return false;
     } catch (error) {
-      console.error('[ModelOpsHandler] Error in model conversion:', error);
+      ModelOpsHandler.logger.error('Error in model conversion:', error);
       
       // Send error response
       router.send('model', {
@@ -295,7 +373,7 @@ export class ModelOpsHandler {
       error?: string;
     };
     
-    console.log('[ModelOpsHandler] Conversion result received', {
+    ModelOpsHandler.logger.log('Conversion result received', {
       success: data.success,
       convertedCount: data.convertedElementIds.length,
       error: data.error
@@ -316,16 +394,41 @@ export class ModelOpsHandler {
   private static handleRemove(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
     
-    console.log('[ModelOpsHandler] Model removal requested', {
+    ModelOpsHandler.logger.log('Model removal requested', {
       documentId: data.documentId
     });
     
-    // TODO: Perform actual model removal
-    // For now, send a mock removal result
-    setTimeout(() => {
-      // Send removal result
+    // Start async process but return true immediately
+    ModelOpsHandler.performRemove(msg, data)
+      .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_REMOVE:', err));
+    
+    return true;
+  }
+
+  /**
+   * Perform the actual model removal
+   */
+  private static async performRemove(msg: EnvelopeBase, data: { documentId: string }): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      const currentPage = viewport.getCurrentPage();
+      
+      if (!currentPage) {
+        throw new Error('No current page available for model removal');
+      }
+      
+      ModelOpsHandler.logger.log('Removing model from current page');
+      
+      // Perform the actual model removal
+      const modelManager = ModelManager.getInstance();
+      modelManager.removeModelFromPage(currentPage);
+      
+      ModelOpsHandler.logger.log('Model removal successful');
+      
+      // Send success response
       router.send('model', {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
         type: EnvelopeMessageType.MODEL_REMOVE_RESULT,
         source: 'host',
         target: 'model-iframe',
@@ -334,9 +437,87 @@ export class ModelOpsHandler {
           success: true
         }
       });
-    }, 1000);
-    
-    return true;
+      
+      // Send both MODEL_CONTEXT and SELECTION_CHANGED messages to force UI refresh
+      // Use immediate Promise execution since timing functions may not be available
+      Promise.resolve().then(() => {
+        const client = ModelManager.getClient();
+        const document = new DocumentProxy(client);
+        const documentId = document.id;
+        const title = document.getTitle() || 'Untitled Document';
+        const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
+        
+        ModelOpsHandler.logger.log('Sending context refresh messages after removal:', {
+          documentId,
+          pageId: currentPage.id,
+          title,
+          isQuodsiModel,
+          hasValidModel: isQuodsiModel
+        });
+        
+        // Send MODEL_CONTEXT message
+        router.send('model', {
+          id: generateId(),
+          type: EnvelopeMessageType.MODEL_CONTEXT,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            documentId,
+            title,
+            pageId: currentPage.id,
+            isQuodsiModel,
+            hasValidModel: isQuodsiModel
+          }
+        });
+        
+        // Send SELECTION_CHANGED message with embedded document context to force complete refresh
+        router.send('model', {
+          id: generateId(),
+          type: EnvelopeMessageType.SELECTION_CHANGED,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            selectionType: 'page',
+            documentId: documentId,
+            hasModel: false,
+            selectionState: {
+              pageId: currentPage.id,
+              selectedIds: [],
+              selectionType: 'page'
+            },
+            documentContext: {
+              documentId,
+              pageId: currentPage.id,
+              title,
+              isQuodsiModel,
+              metadata: {}
+            }
+          }
+        });
+        
+        ModelOpsHandler.logger.log('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
+      }).catch(error => {
+        ModelOpsHandler.logger.error('Error sending context refresh messages after removal:', error);
+      });
+      
+    } catch (error) {
+      ModelOpsHandler.logger.error('Error removing model:', error);
+      
+      // Send error response
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_REMOVE_RESULT,
+        source: 'host', 
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
   }
   
   /**
@@ -351,7 +532,7 @@ export class ModelOpsHandler {
       error?: string;
     };
     
-    console.log('[ModelOpsHandler] Removal result received', {
+    ModelOpsHandler.logger.log('Removal result received', {
       success: data.success,
       error: data.error
     });
@@ -376,7 +557,7 @@ export class ModelOpsHandler {
       createDashboard?: boolean;
     };
     
-    console.log('[ModelOpsHandler] Results page creation requested', {
+    ModelOpsHandler.logger.log('Results page creation requested', {
       jobId: data.jobId,
       documentId: data.documentId,
       pageTitle: data.pageTitle,
@@ -385,7 +566,7 @@ export class ModelOpsHandler {
     
     // Start async process but return true immediately
     ModelOpsHandler.createResultsPage(msg, data)
-      .catch(err => console.error('[ModelOpsHandler] Error creating results page:', err));
+      .catch(err => ModelOpsHandler.logger.error('Error creating results page:', err));
     
     return true;
   }
@@ -400,7 +581,7 @@ export class ModelOpsHandler {
     createDashboard?: boolean;
   }): Promise<void> {
     try {
-      console.log('[ModelOpsHandler] Creating simulation results dashboard...');
+      ModelOpsHandler.logger.log('Creating simulation results dashboard...');
       
       const client = ModelManager.getClient();
       
@@ -430,17 +611,17 @@ export class ModelOpsHandler {
       const pageName = data.pageTitle || `Quodsi - ${timestamp}`;
       const result = await dashboard.createDashboard(pageName);
       
-      console.log(`[ModelOpsHandler] Dashboard created with ${result.tables.length} tables`);
+      ModelOpsHandler.logger.log(`Dashboard created with ${result.tables.length} tables`);
       
       // Check for issues
       if (result.emptyDataTypes.length > 0) {
-        console.log(`[ModelOpsHandler] The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
+        ModelOpsHandler.logger.log(`The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
       }
       
       if (result.errors.length > 0) {
-        console.warn(`[ModelOpsHandler] ${result.errors.length} errors occurred while creating the dashboard`);
+        ModelOpsHandler.logger.warn(`${result.errors.length} errors occurred while creating the dashboard`);
         result.errors.forEach(err => {
-          console.error(`[ModelOpsHandler] Error creating ${err.type} table:`, err.error);
+          ModelOpsHandler.logger.error(`Error creating ${err.type} table:`, err.error);
         });
       }
       
@@ -475,7 +656,7 @@ export class ModelOpsHandler {
       });
       
     } catch (error) {
-      console.error('[ModelOpsHandler] Error creating simulation results dashboard:', error);
+      ModelOpsHandler.logger.error('Error creating simulation results dashboard:', error);
       
       // Send error response
       router.send('model', {
@@ -505,7 +686,7 @@ export class ModelOpsHandler {
       error?: string;
     };
     
-    console.log('[ModelOpsHandler] Results page creation result received', {
+    ModelOpsHandler.logger.log('Results page creation result received', {
       success: data.success,
       pageId: data.pageId,
       error: data.error

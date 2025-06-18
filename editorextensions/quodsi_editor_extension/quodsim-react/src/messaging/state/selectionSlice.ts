@@ -81,8 +81,8 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         documentContext: documentContext ? {
           ...documentContext,
           totalElements: action.totalElements,
-          // CRITICAL: Always ensure isQuodsiModel is true when we have selected elements
-          isQuodsiModel: true
+          // Preserve the actual isQuodsiModel value from the document context
+          isQuodsiModel: documentContext.isQuodsiModel
         } : undefined,
         lastUpdated: Date.now(),
       };
@@ -124,8 +124,12 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
       
       return updatedContextState;
     default:
-      // Type assertion to handle the 'never' type in the default case
-      logger.warn('Unhandled action type:', (action as any).type);
+      // Silently ignore actions that aren't selection-related
+      // Only log warnings for actions that should be handled by this slice
+      const actionType = (action as any).type;
+      if (actionType && (actionType.includes('SELECTION') || actionType.includes('DOCUMENT_CONTEXT'))) {
+        logger.warn('Unhandled selection action type:', actionType);
+      }
       return state;
   }
 }

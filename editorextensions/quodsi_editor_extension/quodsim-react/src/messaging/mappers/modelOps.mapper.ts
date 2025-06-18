@@ -2,6 +2,9 @@ import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
+// Create component-specific logger
+const logger = debugService.forComponent('ModelOpsMapper');
+
 /**
  * Maps model operations messages to reducer actions
  * Handles validation, conversion, model removal, and results page creation
@@ -74,8 +77,12 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         };
       }
 
-      // Success doesn't require state changes - selection update will follow
-      return null;
+      // Success - trigger a UI refresh to ensure proper state transition
+      logger.log('Model conversion successful, dispatching MODEL_CONVERSION_SUCCESS action');
+      return {
+        type: 'MODEL_CONVERSION_SUCCESS',
+        success: true
+      };
 
     case EnvelopeMessageType.MODEL_REMOVE_RESULT:
       // Extract remove result data
@@ -84,16 +91,23 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
+      logger.log('Processing MODEL_REMOVE_RESULT:', removeData);
+
       // If error, map to auth error action
       if (!removeData.success && removeData.error) {
+        logger.error('Model removal failed:', removeData.error);
         return {
           type: 'AUTH_ERROR',
           error: `Model removal failed: ${removeData.error}`
         };
       }
 
-      // Success doesn't require state changes - selection update will follow
-      return null;
+      // Success - trigger a UI refresh to ensure proper state transition
+      logger.log('Model removal successful, dispatching MODEL_REMOVAL_SUCCESS action');
+      return {
+        type: 'MODEL_REMOVAL_SUCCESS',
+        success: true
+      };
 
     case EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT:
       // Extract results page create result data
