@@ -29,18 +29,37 @@ const BaseEditor = <T extends BaseSimulationElement>({
   messageType,
 }: BaseEditorProps<T>) => {
   const [localData, setLocalData] = useState<T>(data);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   useEffect(() => {
     if (isDevelopment) {
       console.log("BaseEditor useEffect - new data:", data);
     }
-    setLocalData(data);
-  }, [data]);
+    
+    // Don't update during save operation or when there are unsaved changes
+    if (!hasUnsavedChanges && !isSaving) {
+      setLocalData(data);
+    }
+  }, [data, hasUnsavedChanges, isSaving]);
+
+  // Clear the saving flag after a short delay to allow for the new data to arrive
+  useEffect(() => {
+    if (isSaving) {
+      const timer = setTimeout(() => {
+        setIsSaving(false);
+        setHasUnsavedChanges(false);
+      }, 500); // Give the parent component time to update
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isSaving]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    setHasUnsavedChanges(true);
     setLocalData((prev) => {
       if (isDevelopment) {
         console.log("BaseEditor handleChange:", { prev, name, value });
@@ -56,6 +75,10 @@ const BaseEditor = <T extends BaseSimulationElement>({
     if (isDevelopment) {
       console.log("BaseEditor handleSave:", localData);
     }
+    
+    // Mark as saving to prevent updates during save operation
+    setIsSaving(true);
+    
     if (localData.type === SimulationObjectType.Activity) {
       onSave({
         ...localData,
@@ -68,6 +91,14 @@ const BaseEditor = <T extends BaseSimulationElement>({
         type: localData.type || data.type,
       });
     }
+  };
+
+  const handleCancel = () => {
+    // Reset to original data and clear all flags
+    setLocalData(data);
+    setHasUnsavedChanges(false);
+    setIsSaving(false);
+    onCancel();
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -87,7 +118,7 @@ const BaseEditor = <T extends BaseSimulationElement>({
         </button>
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
           Cancel

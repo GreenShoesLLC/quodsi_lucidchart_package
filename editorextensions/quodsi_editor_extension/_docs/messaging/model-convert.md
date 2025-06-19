@@ -28,7 +28,7 @@ Model convert messages handle the transformation of a regular LucidChart page in
 - File: `src/core/messaging/handlers/modelOpsHandler.ts`
 - Function: `ModelOpsHandler.handleModelConvert`
 
-**Response:** `MODEL_CONVERSION_RESULT`
+**Response:** `MODEL_CONVERSION_RESULT` + `MODEL_CONTEXT` + `SELECTION_CHANGED`
 
 ---
 
@@ -42,15 +42,8 @@ Model convert messages handle the transformation of a regular LucidChart page in
 ```typescript
 {
   success: boolean,
-  documentId: string,
-  errorMessage?: string,
-  warnings?: string[],
-  statistics?: {
-    shapesAnalyzed: number,
-    elementsCreated: number,
-    connectionsCreated: number,
-    unconvertedShapes: number
-  }
+  convertedElementIds: string[],
+  error?: string
 }
 ```
 
@@ -60,28 +53,35 @@ Model convert messages handle the transformation of a regular LucidChart page in
 
 **Handler:**
 - File: `quodsim-react/src/messaging/mappers/modelOps.mapper.ts`
-- Function: `modelOps.mapper.mapMessageToAction`
+- Function: `mapModelOps`
 
 ## Handler Analysis
 
 | Message Type | React Sender | Extension Handler | Extension Sender | React Handler |
 |--------------|--------------|-------------------|------------------|---------------|
-| MODEL_CONVERT | ✅ modelOpsSender.convertPage | ✅ ModelOpsHandler.handleModelConvert | ➖ N/A | ➖ N/A |
-| MODEL_CONVERSION_RESULT | ➖ N/A | ➖ N/A | ✅ ModelOpsHandler.handleModelConvert | ✅ modelOps.mapper.mapMessageToAction |
+| MODEL_CONVERT | ✅ modelOpsSender.convertPage | ✅ ModelOpsHandler.handleConvert | ➖ N/A | ➖ N/A |
+| MODEL_CONVERSION_RESULT | ➖ N/A | ➖ N/A | ✅ ModelOpsHandler.handleConvert | ✅ mapModelOps |
 
 ## Conversion Sequence
 
 1. User has diagram with Quodsi shapes (not yet a model)
-2. User clicks "Convert to Model" button
+2. User clicks "Initialize Model" button
 3. **MODEL_CONVERT** sent to extension
-4. Extension analyzes page:
-   - Identifies Quodsi shape library shapes
-   - Extracts shape properties
-   - Analyzes connections
-   - Creates model structure
-5. Extension initializes ModelManager with converted data
-6. **MODEL_CONVERSION_RESULT** sent to React
-7. React shows conversion summary
+4. Extension performs page conversion:
+   - Uses LucidPageConversionService to convert page
+   - Creates Model object and initializes ModelManager
+   - Converts blocks to simulation elements (Activities, Resources, Generators)
+   - Converts lines to Connectors with probability calculations
+   - Stores all data via StorageAdapter
+5. Extension sends three messages:
+   - **MODEL_CONVERSION_RESULT** (success/failure notification)
+   - **MODEL_CONTEXT** (document context update)
+   - **SELECTION_CHANGED** (triggers UI state refresh)
+6. React processes messages:
+   - Maps MODEL_CONVERSION_RESULT to MODEL_CONVERSION_SUCCESS action
+   - Updates document context with isQuodsiModel: true
+   - Refreshes selection state to trigger UI update
+7. UI transitions from "Initialize Model" to ModelEditor interface
 8. Page now functions as simulation model
 
 ## Conversion Process
@@ -125,121 +125,245 @@ Model convert messages handle the transformation of a regular LucidChart page in
 
 ### Conversion Handler
 ```typescript
-async handleModelConvert(msg: EnvelopeBase): Promise<void> {
+private static async handleConvert(msg: EnvelopeBase): Promise<boolean> {
     try {
-        const { documentId } = msg.data;
+        // Get necessary instances
+        const client = ModelManager.getClient();
+        const modelManager = ModelManager.getInstance();
         
-        // Get current page
-        const page = await this.client.getCurrentPage();
-        const shapes = await page.getAllShapes();
+        // Get viewport and current page
+        const viewport = new Viewport(client);
+        const currentPage = viewport.getCurrentPage();
+        const document = new DocumentProxy(client);
         
-        // Initialize conversion service
-        const converter = new PageToModelConverter(this.client);
-        const conversionResult = await converter.convertPage(page, shapes);
-        
-        if (conversionResult.elements.length === 0) {
-            throw new Error('No convertible shapes found on page');
+        if (!currentPage) {
+            throw new Error('Current page not available');
         }
         
-        // Create model from conversion
-        const model = new ModelDefinition();
-        model.loadFromConversion(conversionResult);
-        
-        // Initialize ModelManager with new model
-        this.modelManager.setModel(model);
-        
-        // Store model data
-        await this.storageAdapter.saveModel(model);
-        
-        // Send success response
-        this.router.sendToChannel(
-            msg.source,
-            EnvelopeMessageType.MODEL_CONVERSION_RESULT,
-            {
-                success: true,
-                documentId: documentId,
-                warnings: conversionResult.warnings,
-                statistics: {
-                    shapesAnalyzed: shapes.length,
-                    elementsCreated: conversionResult.elements.length,
-                    connectionsCreated: conversionResult.connections.length,
-                    unconvertedShapes: conversionResult.skippedShapes.length
-                }
+        // Check if this is a page conversion request (no elementId)
+        if (!data.elementId) {
+            // Set up required services
+            const storageAdapter = new StorageAdapter();
+            const lucidElementFactory = new LucidElementFactory(storageAdapter);
+            const pageConversionService = new LucidPageConversionService(
+                modelManager,
+                lucidElementFactory,
+                storageAdapter
+            );
+            
+            // Check if page can be converted
+            if (!pageConversionService.canConvertPage(currentPage)) {
+                throw new Error('Page cannot be converted to a model');
             }
-        );
+            
+            // Convert the page
+            const result = await pageConversionService.convertPage(currentPage);
+            
+            // Send success response
+            router.send('model', {
+                id: msg.id,
+                type: EnvelopeMessageType.MODEL_CONVERSION_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: {
+                    success: true,
+                    convertedElementIds: []
+                }
+            });
+            
+            // Send context refresh messages to update UI
+            Promise.resolve().then(() => {
+                const documentId = document.id;
+                const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
+                const title = document.getTitle() || 'Untitled Document';
+                
+                // Send MODEL_CONTEXT message
+                router.send('model', {
+                    id: generateId(),
+                    type: EnvelopeMessageType.MODEL_CONTEXT,
+                    source: 'host',
+                    target: 'model-iframe',
+                    version: '1.0',
+                    data: {
+                        documentId,
+                        title,
+                        pageId: currentPage.id,
+                        isQuodsiModel,
+                        hasValidModel: isQuodsiModel
+                    }
+                });
+                
+                // Send SELECTION_CHANGED message with embedded document context
+                router.send('model', {
+                    id: generateId(),
+                    type: EnvelopeMessageType.SELECTION_CHANGED,
+                    source: 'host',
+                    target: 'model-iframe',
+                    version: '1.0',
+                    data: {
+                        selectionType: 'page',
+                        documentId: documentId,
+                        hasModel: true,
+                        selectionState: {
+                            pageId: currentPage.id,
+                            selectedIds: [],
+                            selectionType: 'page'
+                        },
+                        documentContext: {
+                            documentId,
+                            pageId: currentPage.id,
+                            title,
+                            isQuodsiModel,
+                            metadata: {}
+                        }
+                    }
+                });
+            });
+            
+            return true;
+        }
         
     } catch (error) {
-        this.router.sendToChannel(
-            msg.source,
-            EnvelopeMessageType.MODEL_CONVERSION_RESULT,
-            {
+        ModelOpsHandler.logger.error('Error in model conversion:', error);
+        
+        // Send error response
+        router.send('model', {
+            id: msg.id,
+            type: EnvelopeMessageType.MODEL_CONVERSION_RESULT,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: {
                 success: false,
-                documentId: msg.data.documentId,
-                errorMessage: error.message
+                convertedElementIds: [],
+                error: error instanceof Error ? error.message : String(error)
             }
-        );
+        });
+        
+        return false;
     }
 }
 ```
 
-### Conversion Algorithm
+### Conversion Flow (LucidPageConversionService)
 ```typescript
-class PageToModelConverter {
-    async convertPage(page: PageProxy, shapes: ShapeProxy[]): Promise<ConversionResult> {
-        const result = {
-            elements: [],
-            connections: [],
-            warnings: [],
-            skippedShapes: []
+export class LucidPageConversionService {
+    public async convertPage(page: PageProxy): Promise<ConversionResult> {
+        // First, remove any existing model data
+        if (this.storageAdapter.isQuodsiModel(page)) {
+            this.modelManager.removeModelFromPage(page);
+        }
+        
+        // Create model using LucidElementFactory
+        const modelLucid = this.elementFactory.createPlatformObject(
+            page,
+            SimulationObjectType.Model,
+            true // isConversion
+        );
+        
+        // Get the model object and initialize in ModelManager
+        const model = modelLucid.getSimulationObject();
+        await this.modelManager.initializeModel(model, page);
+        
+        // Analyze the page to determine element types
+        const analysis = this.pageAnalyzer.analyzePage(page);
+        
+        // Convert blocks and connections
+        const convertedBlocks = await this.convertBlocks(page, analysis);
+        const convertedConnectors = await this.convertConnections(page, analysis);
+        
+        // Validate the converted model
+        const validationResult = await this.modelManager.validateModel();
+        
+        return {
+            success: true,
+            modelId: page.id,
+            elementCount: {
+                activities: convertedBlocks.activities,
+                generators: convertedBlocks.generators,
+                resources: convertedBlocks.resources,
+                connectors: convertedConnectors
+            }
         };
-        
-        // Phase 1: Convert shapes to elements
-        for (const shape of shapes) {
-            const element = await this.convertShape(shape);
-            if (element) {
-                result.elements.push(element);
-            } else {
-                result.skippedShapes.push(shape.id);
-                result.warnings.push(`Shape "${shape.text}" could not be converted`);
-            }
-        }
-        
-        // Phase 2: Convert lines to connections
-        const lines = await page.getAllLines();
-        for (const line of lines) {
-            const connection = await this.convertLine(line, result.elements);
-            if (connection) {
-                result.connections.push(connection);
-            }
-        }
-        
-        // Phase 3: Validate conversion
-        this.validateConversion(result);
-        
-        return result;
     }
     
-    private async convertShape(shape: ShapeProxy): Promise<SimulationElement | null> {
-        // Check if shape is from Quodsi library
-        if (!this.isQuodsiShape(shape)) {
-            return null;
+    private async convertBlocks(page: PageProxy, analysis: ProcessAnalysisResult) {
+        let activities = 0, generators = 0, resources = 0;
+        
+        for (const [blockId, block] of page.allBlocks) {
+            const blockAnalysis = analysis.blockAnalysis.get(blockId);
+            if (!blockAnalysis?.elementType) continue;
+            
+            // Create platform object using factory with conversion flag
+            const platformObject = this.elementFactory.createPlatformObject(
+                block,
+                blockAnalysis.elementType,
+                true // isConversion
+            );
+            
+            // Get simulation object and register with model manager
+            const element = platformObject.getSimulationObject();
+            await this.modelManager.registerElement(element, block);
+            
+            // Update counts
+            switch (blockAnalysis.elementType) {
+                case SimulationObjectType.Activity: activities++; break;
+                case SimulationObjectType.Generator: generators++; break;
+                case SimulationObjectType.Resource: resources++; break;
+            }
         }
         
-        // Extract type from shape
-        const type = this.getShapeType(shape);
+        return { activities, generators, resources };
+    }
+    
+    private async convertConnections(page: PageProxy, analysis: ProcessAnalysisResult) {
+        let connectorCount = 0;
         
-        // Create appropriate element
-        switch (type) {
-            case 'Activity':
-                return this.createActivity(shape);
-            case 'Resource':
-                return this.createResource(shape);
-            case 'Generator':
-                return this.createGenerator(shape);
-            // ... other types
-            default:
-                return null;
+        // Calculate outgoing connections per block for probability calculation
+        const outgoingConnectionCounts = new Map<string, number>();
+        for (const [lineId, line] of page.allLines) {
+            const endpoint1 = line.getEndpoint1();
+            if (endpoint1?.connection) {
+                const sourceId = endpoint1.connection.id;
+                outgoingConnectionCounts.set(
+                    sourceId,
+                    (outgoingConnectionCounts.get(sourceId) || 0) + 1
+                );
+            }
         }
+        
+        for (const [lineId, line] of page.allLines) {
+            const endpoint1 = line.getEndpoint1();
+            const endpoint2 = line.getEndpoint2();
+            
+            if (!endpoint1?.connection || !endpoint2?.connection) continue;
+            
+            const sourceId = endpoint1.connection.id;
+            const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
+            const probability = 1.0 / outgoingCount;
+            
+            // Create platform object using factory
+            const platformObject = this.elementFactory.createPlatformObject(
+                line,
+                SimulationObjectType.Connector,
+                true // isConversion
+            );
+            
+            // Configure connector properties
+            const connector = platformObject.getSimulationObject() as Connector;
+            connector.sourceId = sourceId;
+            connector.targetId = endpoint2.connection.id;
+            connector.probability = probability;
+            connector.connectType = ConnectType.Probability;
+            
+            // Update platform object and register
+            platformObject.updateFromPlatform();
+            await this.modelManager.registerElement(connector, line);
+            connectorCount++;
+        }
+        
+        return connectorCount;
     }
 }
 ```
@@ -335,8 +459,92 @@ const ConversionSummary = ({ result }) => (
 - Warnings indicate skipped elements
 - Model may be incomplete but usable
 
+## UI State Management
+
+### React Action Flow
+After successful conversion, the extension sends three messages to ensure proper UI update:
+
+1. **MODEL_CONVERSION_RESULT** → Maps to `MODEL_CONVERSION_SUCCESS` action in AppSlice
+2. **MODEL_CONTEXT** → Maps to `DOCUMENT_CONTEXT_UPDATE` action in SelectionSlice  
+3. **SELECTION_CHANGED** → Maps to `SELECTION_UPDATE` action in SelectionSlice with embedded document context
+
+### State Synchronization
+```typescript
+// modelOps.mapper.ts
+case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
+    if (conversionData.success) {
+        return {
+            type: 'MODEL_CONVERSION_SUCCESS',
+            success: true
+        };
+    }
+
+// selection.mapper.ts  
+case EnvelopeMessageType.MODEL_CONTEXT:
+    return {
+        type: 'DOCUMENT_CONTEXT_UPDATE',
+        documentId: contextData.documentId,
+        pageId: contextData.pageId,
+        documentTitle: contextData.title,
+        isQuodsiModel: contextData.isQuodsiModel,
+        metadata: contextData.metadata
+    };
+
+case EnvelopeMessageType.SELECTION_CHANGED:
+    return {
+        type: 'SELECTION_UPDATE',
+        elements: elements,
+        totalElements: selectionData.selectionState.selectedIds.length || 0,
+        // Include embedded document context for immediate UI refresh
+        documentContext: selectionData.documentContext
+    };
+```
+
+### UI Transition Flow
+```
+Before Conversion:
+- isQuodsiModel: false
+- UI shows "Initialize Model" button
+- Component: InitializeModelButton
+
+After Conversion:
+- MODEL_CONVERSION_SUCCESS triggers re-render
+- DOCUMENT_CONTEXT_UPDATE sets isQuodsiModel: true  
+- SELECTION_UPDATE refreshes selection state
+- UI transitions to ModelEditor interface
+- Component: ModelPanel with simulation controls
+```
+
+## Debugging Tips
+
+### Common Issues
+1. **Warning: "Unhandled action type: MODEL_CONVERSION_SUCCESS"**
+   - Fixed: SelectionSlice now ignores non-selection actions
+   - SelectionSlice only warns for SELECTION_* and DOCUMENT_CONTEXT_* actions
+
+2. **Error: "crypto.getRandomValues() not supported"**
+   - Fixed: Replaced uuid library with simple ID generator
+   - Uses `generateId()` function compatible with extension context
+
+3. **UI doesn't refresh after conversion**
+   - Ensure all three messages are sent: MODEL_CONVERSION_RESULT, MODEL_CONTEXT, SELECTION_CHANGED
+   - Check that document context isQuodsiModel is properly set to true
+   - Verify React component has key prop for forced re-renders
+
+### Logging
+```typescript
+// Extension logging (ModelOpsHandler)
+ModelOpsHandler.logger.log('Model conversion successful');
+ModelOpsHandler.logger.log('Sending context refresh messages after conversion');
+
+// React logging (mappers)
+logger.log('Model conversion successful, dispatching MODEL_CONVERSION_SUCCESS action');
+logger.log('DOCUMENT_CONTEXT_UPDATE - Updated state:', { isQuodsiModel: true });
+```
+
 ## Related Messages
-- **MODEL_VALIDATE** - Run after conversion
-- **MODEL_REMOVE** - Opposite operation
-- **ELEMENT_CONVERT** - Individual element conversion
-- **SELECTION_CHANGED** - Updates after conversion
+- **MODEL_VALIDATE** - Run after conversion for validation
+- **MODEL_REMOVE** - Opposite operation (converts model back to diagram)
+- **ELEMENT_CONVERT** - Individual element conversion operations
+- **MODEL_CONTEXT** - Document context updates (sent after conversion)
+- **SELECTION_CHANGED** - Selection and state updates (sent after conversion)

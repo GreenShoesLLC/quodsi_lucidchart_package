@@ -66,10 +66,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     );
   };
 
-  // Create state
-  const [localActivity, setLocalActivity] = React.useState<Activity>(
-    extractActivityData(activity)
-  );
+  // Extract and prepare activity data for BaseEditor
+  const extractedActivity = React.useMemo(() => extractActivityData(activity), [activity]);
 
   // Handlers
   const handleSave = (updatedActivity: Activity) => {
@@ -147,7 +145,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     []
   );
 
-  if (!localActivity?.id) {
+  if (!extractedActivity?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
         <div className="text-red-600 font-medium">Invalid activity data</div>
@@ -159,15 +157,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   return (
     <BaseEditor
       data={{
-        ...localActivity,
+        ...extractedActivity,
         type: SimulationObjectType.Activity,
         // Ensure all Activity methods are available
-        setLocation: (x: number, y: number) => localActivity.setLocation(x, y),
-        getLocation: () => localActivity.getLocation(),
-        hasLocation: () => localActivity.hasLocation(),
-        clone: () => localActivity.clone(),
-        resetLocation: () => localActivity.resetLocation(),
-        toJSON: () => localActivity.toJSON(),
+        setLocation: (x: number, y: number) => extractedActivity.setLocation(x, y),
+        getLocation: () => extractedActivity.getLocation(),
+        hasLocation: () => extractedActivity.hasLocation(),
+        clone: () => extractedActivity.clone(),
+        resetLocation: () => extractedActivity.resetLocation(),
+        toJSON: () => extractedActivity.toJSON(),
       }}
       onSave={(updatedData) => {
         // Create a new Activity instance to preserve class methods
