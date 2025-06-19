@@ -191,11 +191,22 @@ export function useModelPanel() {
     simulationSender.viewResults(documentContext.documentId, simulation.jobId);
   };
   
-  // Use an empty default for reference data
-  const referenceData = {
+  // Use reference data from selection state or provide empty default
+  const referenceData = selection.referenceData || {
+    activities: [],
     entities: [],
-    resources: []
+    resources: [],
+    resourceRequirements: []
   };
+  
+  // Debug log the reference data to track the fix
+  logger.debug('Reference data from selection state:', {
+    hasReferenceData: !!selection.referenceData,
+    activitiesCount: referenceData.activities?.length || 0,
+    resourcesCount: referenceData.resources?.length || 0,
+    entitiesCount: referenceData.entities?.length || 0,
+    resourceRequirementsCount: referenceData.resourceRequirements?.length || 0
+  });
   
   // Convert the string diagramElementType to the proper enum value if possible
   let typedDiagramElementType = DiagramElementType.BLOCK; // Default to BLOCK

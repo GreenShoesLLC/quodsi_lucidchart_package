@@ -9,11 +9,13 @@ import {
   SimulationObjectType
 } from '@quodsi/shared';
 import { ModelManager } from '../../../../../core/ModelManager';
+import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
 
 /**
  * Utility functions for building model item data
  */
 export const itemDataBuilder = {
+  debug: ExtensionDebugService.forComponent('ItemDataBuilder'),
   /**
    * Gets name from a block's text areas
    * @param block The block proxy
@@ -45,7 +47,7 @@ export const itemDataBuilder = {
     item: ItemProxy | PageProxy,
     modelManager: ModelManager
   ): Promise<ModelItemData> {
-    console.log('[itemDataBuilder] Building model item data for', {
+    this.debug.log('Building model item data for', {
       itemId: item.id,
       isPage: item instanceof PageProxy
     });
@@ -88,7 +90,7 @@ export const itemDataBuilder = {
       name
     };
     
-    console.log('[itemDataBuilder] Built model item data', {
+    this.debug.log('Built model item data', {
       id: result.id,
       name: result.name,
       type: result.metadata.type
@@ -107,7 +109,7 @@ export const itemDataBuilder = {
     items: ItemProxy[],
     modelManager: ModelManager
   ): Promise<ModelItemData[]> {
-    console.log('[itemDataBuilder] Building multiple model item data for', {
+    this.debug.log('Building multiple model item data for', {
       itemCount: items.length
     });
     

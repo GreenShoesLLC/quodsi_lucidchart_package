@@ -75,6 +75,12 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         modelItemData?: any;
         diagramElementType?: string;
         validationResult?: any;
+        referenceData?: {
+          activities?: Array<{ id: string; name: string }>;
+          resources?: Array<{ id: string; name: string }>;
+          entities?: Array<{ id: string; name: string }>;
+          resourceRequirements?: any[];
+        };
         documentContext?: {
           documentId: string;
           pageId: string;
@@ -93,7 +99,14 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         diagramElementType: selectionData.diagramElementType,
         hasValidationResult: !!selectionData.validationResult,
         hasDocumentContext: !!selectionData.documentContext,
-        documentContextIsQuodsiModel: selectionData.documentContext?.isQuodsiModel
+        documentContextIsQuodsiModel: selectionData.documentContext?.isQuodsiModel,
+        hasReferenceData: !!selectionData.referenceData,
+        referenceDataSummary: selectionData.referenceData ? {
+          activities: selectionData.referenceData.activities?.length || 0,
+          resources: selectionData.referenceData.resources?.length || 0,
+          entities: selectionData.referenceData.entities?.length || 0,
+          resourceRequirements: selectionData.referenceData.resourceRequirements?.length || 0
+        } : 'none'
       });
       
       // Check if we have embedded document context that needs to be processed
@@ -224,6 +237,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
             isQuodsiModel: selectionData.documentContext.isQuodsiModel,
             metadata: selectionData.documentContext.metadata
           }
+        } : {}),
+        // Include reference data if present
+        ...(selectionData.referenceData ? {
+          referenceData: selectionData.referenceData
         } : {})
       };
       
@@ -233,7 +250,13 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         firstElementType: (selectionAction.elements[0] as any)?.metadata?.type,
         totalElements: selectionAction.totalElements,
         hasEmbeddedContext: hasEmbeddedContext,
-        documentContextIsQuodsiModel: hasEmbeddedContext ? selectionData.documentContext?.isQuodsiModel : undefined
+        documentContextIsQuodsiModel: hasEmbeddedContext ? selectionData.documentContext?.isQuodsiModel : undefined,
+        hasReferenceData: !!(selectionAction as any).referenceData,
+        referenceDataSummary: (selectionAction as any).referenceData ? {
+          activities: (selectionAction as any).referenceData.activities?.length || 0,
+          resources: (selectionAction as any).referenceData.resources?.length || 0,
+          entities: (selectionAction as any).referenceData.entities?.length || 0
+        } : 'none'
       });
       
       return selectionAction;

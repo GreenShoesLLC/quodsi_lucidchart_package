@@ -75,6 +75,10 @@ export declare class ModelManager {
     validateModel(): Promise<ValidationResult>;
     private findElementProxy;
     getModel(): Model | null;
+    /**
+     * Sets the current page for model definition building
+     */
+    setCurrentPage(page: PageProxy): void;
     getModelDefinition(): Promise<ModelDefinition | null>;
     getCurrentValidation(): ValidationResult | null;
     /**

@@ -7,11 +7,12 @@ import {
 import { AccordionSection } from "../shared/AccordionSection";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import EntityEditorOld from "src/_deprecated/EntityEditorOld";
-import ConnectorEditorOld from "src/_deprecated/ConnectorEditorOld";
+
 import ModelEditor from "../editors/ModelEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
+import ConnectorEditor from "../editors/ConnectorEditor";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | string;
@@ -165,10 +166,11 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
       case "Connector":
       case DiagramElementType.LINE:
         return (
-          <ConnectorEditorOld
+          <ConnectorEditor
             connector={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
+            referenceData={referenceData}
           />
         );
 

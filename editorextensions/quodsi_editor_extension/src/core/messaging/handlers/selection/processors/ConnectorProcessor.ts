@@ -51,6 +51,19 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
       return messageData;
     }
     
+    // Ensure ModelManager knows about the current page for model definition building
+    console.log('[ConnectorProcessor] Setting current page on ModelManager:', {
+      pageId: currentPage.id,
+      pageTitle: currentPage.getTitle(),
+      hasSetCurrentPageMethod: typeof modelManager.setCurrentPage === 'function'
+    });
+    
+    if (modelManager.setCurrentPage) {
+      modelManager.setCurrentPage(currentPage);
+    } else {
+      console.error('[ConnectorProcessor] ModelManager does not have setCurrentPage method');
+    }
+    
     // Get validation result
     const validationResult = await this.getValidationResult(modelManager);
     messageData.validationResult = validationResult;
@@ -66,8 +79,8 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
           modelManager
         );
         
-        // Get resource reference data
-        messageData.referenceData = await referenceDataBuilder.buildResourceReferenceData(
+        // Get complete reference data for connectors (includes all elements)
+        messageData.referenceData = await referenceDataBuilder.buildCompleteReferenceData(
           modelManager
         );
         
@@ -78,8 +91,28 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
-          diagramElementType: messageData.diagramElementType
+          diagramElementType: messageData.diagramElementType,
+          refDataSummary: {
+            activities: messageData.referenceData?.activities?.length || 0,
+            resources: messageData.referenceData?.resources?.length || 0,
+            entities: messageData.referenceData?.entities?.length || 0,
+            hasMarker: !!(messageData.referenceData as any)?._debugMarker
+          }
         });
+        
+        // Test JSON serialization of the entire message data to see if it survives
+        try {
+          const serialized = JSON.stringify(messageData);
+          const deserialized = JSON.parse(serialized);
+          console.log('[ConnectorProcessor] CHECKPOINT_3: Message serialization test', {
+            originalSize: serialized.length,
+            deserializedHasRefData: !!deserialized.referenceData,
+            deserializedActivitiesLength: deserialized.referenceData?.activities?.length,
+            hasMarkerAfterSerialization: !!deserialized.referenceData?._debugMarker
+          });
+        } catch (serError) {
+          console.error('[ConnectorProcessor] CHECKPOINT_3: Message serialization failed:', serError);
+        }
       } catch (error) {
         console.error('[ConnectorProcessor] Error processing connector:', error);
         messageData.error = 'Error processing connector data';

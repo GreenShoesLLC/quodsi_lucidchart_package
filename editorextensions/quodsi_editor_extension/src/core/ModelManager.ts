@@ -411,6 +411,15 @@ export class ModelManager {
         return this.modelDefinition?.model ?? null;
     }
 
+    /**
+     * Sets the current page for model definition building
+     */
+    public setCurrentPage(page: PageProxy): void {
+        this.currentPage = page;
+        // Mark model as dirty so it gets rebuilt with the new page context
+        this.markModelDirty();
+    }
+
     public async getModelDefinition(): Promise<ModelDefinition | null> {
         return await this.ensureModelDefinition();
     }

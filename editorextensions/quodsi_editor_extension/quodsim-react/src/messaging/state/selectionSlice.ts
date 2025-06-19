@@ -20,6 +20,12 @@ export interface SelectionState {
     totalElements: number;
     metadata?: Record<string, any>;
   };
+  referenceData?: {
+    activities?: Array<{ id: string; name: string }>;
+    resources?: Array<{ id: string; name: string }>;
+    entities?: Array<{ id: string; name: string }>;
+    resourceRequirements?: any[];
+  };
   lastUpdated?: number;
 }
 
@@ -27,12 +33,13 @@ export interface SelectionState {
 export const initialSelectionState: SelectionState = {
   selectedElements: [],
   documentContext: undefined,
+  referenceData: undefined,
   lastUpdated: undefined,
 };
 
 // Action types
 export type SelectionAction = 
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> } }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; } }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -84,6 +91,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
           // Preserve the actual isQuodsiModel value from the document context
           isQuodsiModel: documentContext.isQuodsiModel
         } : undefined,
+        referenceData: action.referenceData || state.referenceData,
         lastUpdated: Date.now(),
       };
       
@@ -96,7 +104,13 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         documentId: updatedState.documentContext?.documentId,
         documentTitle: updatedState.documentContext?.documentTitle,
         hasEmbeddedContext: !!action.documentContext,
-        embeddedContextIsQuodsiModel: action.documentContext?.isQuodsiModel
+        embeddedContextIsQuodsiModel: action.documentContext?.isQuodsiModel,
+        hasReferenceData: !!updatedState.referenceData,
+        referenceDataSummary: updatedState.referenceData ? {
+          activities: updatedState.referenceData.activities?.length || 0,
+          resources: updatedState.referenceData.resources?.length || 0,
+          entities: updatedState.referenceData.entities?.length || 0
+        } : 'none'
       });
       
       return updatedState;
