@@ -24,6 +24,7 @@ import { BlockProxy, ElementProxy, PageProxy, EditorClient } from "lucid-extensi
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
+import { ExtensionDebugService } from "./logging/ExtensionDebugService";
 
 
 interface ChangeTracker {
@@ -35,8 +36,7 @@ interface ChangeTracker {
 }
 
 export class ModelManager {
-    private static readonly LOG_PREFIX = '[ModelManager]';
-    private loggingEnabled: boolean = true;
+    private debug = ExtensionDebugService.forComponent('ModelManager');
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
@@ -79,7 +79,9 @@ export class ModelManager {
     public static initialize(client: EditorClient, storageAdapter: StorageAdapter): void {
         ModelManager.editorClient = client;
         ModelManager.instance = new ModelManager(storageAdapter);
-        console.log(`${ModelManager.LOG_PREFIX} Initialized singleton instance`);
+        // Use a static debug instance for the static method
+        const staticDebug = ExtensionDebugService.forComponent('ModelManager');
+        staticDebug.log('Initialized singleton instance');
     }
 
     // Change tracking
@@ -98,27 +100,7 @@ export class ModelManager {
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
         this.validationService = new ModelValidationService();
-        this.log('ModelManager instance created');
-    }
-    public setLogging(enabled: boolean): void {
-        this.loggingEnabled = enabled;
-        this.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
-    }
-
-    private isLoggingEnabled(): boolean {
-        return this.loggingEnabled;
-    }
-
-    private log(message: string, ...args: any[]): void {
-        if (this.isLoggingEnabled()) {
-            console.log(`${ModelManager.LOG_PREFIX} ${message}`, ...args);
-        }
-    }
-
-    private logError(message: string, ...args: any[]): void {
-        if (this.isLoggingEnabled()) {
-            console.error(`${ModelManager.LOG_PREFIX} ${message}`, ...args);
-        }
+        this.debug.log('ModelManager instance created');
     }
     /**
      * Marks the model as needing rebuild and validation
@@ -155,8 +137,10 @@ export class ModelManager {
         this.checkCacheTimeouts();
 
         if (this.changeTracker.modelDefinitionDirty && this.currentPage) {
-            this.log('Rebuilding ModelDefinition due to pending changes:',
-                Array.from(this.changeTracker.pendingChanges));
+            this.debug.log('Rebuilding ModelDefinition due to pending changes:', {
+                pendingChanges: Array.from(this.changeTracker.pendingChanges),
+                changeCount: this.changeTracker.pendingChanges.size
+            });
 
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
             lucidElementFactory.setLogging(false);
@@ -191,7 +175,7 @@ export class ModelManager {
                 return this.modelDefinition;
 
             } catch (error) {
-                this.logError('Error ensuring ModelDefinition:', error);
+                this.debug.error('Error ensuring ModelDefinition:', error);
                 throw error;
             }
         }
@@ -332,7 +316,7 @@ export class ModelManager {
 
         const elementProxy = this.findElementProxy(elementId);
         if (!elementProxy) {
-            console.warn(`No element found for ID: ${elementId}`);
+            this.debug.warn('No element found for ID:', elementId);
             return;
         }
 
@@ -505,7 +489,7 @@ export class ModelManager {
         type: SimulationObjectType,
         metadata?: { id: string; version: string }
     ): void {
-        console.log('[ModelManager] setElementData - Start', {
+        this.debug.log('setElementData - Start', {
             elementId: element.id,
             dataType: typeof data,
             simulationObjectType: SimulationObjectType[type]
@@ -513,7 +497,7 @@ export class ModelManager {
 
         try {
             // Log basic input details
-            console.log('[ModelManager] Input Data:', {
+            this.debug.debug('Input Data:', {
                 dataKeys: data ? Object.keys(data) : 'No data',
                 metadata: metadata
             });
@@ -524,26 +508,22 @@ export class ModelManager {
                 version: this.storageAdapter.CURRENT_VERSION
             };
 
-            console.log('[ModelManager] Metadata:', {
+            this.debug.debug('Metadata:', {
                 id: actualMetadata.id,
                 version: actualMetadata.version,
                 isDefaultUsed: !metadata
             });
-            console.log('[ModelManager] storageAdapter.setElementData:', {
-                element: element,
-                data: data,
-                type: type
-            });
+
             // Call storage adapter
             this.storageAdapter.setElementData(element, data, type, actualMetadata);
 
             // Mark model as dirty
-            console.log('[ModelManager] Marking model dirty for element:', element.id);
+            this.debug.debug('Marking model dirty for element:', element.id);
             this.markModelDirty(element.id);
 
-            console.log('[ModelManager] setElementData - Completed Successfully');
+            this.debug.log('setElementData - Completed Successfully');
         } catch (error) {
-            console.error('[ModelManager] setElementData - Error', {
+            this.debug.error('setElementData - Error', {
                 elementId: element.id,
                 errorMessage: error instanceof Error ? error.message : 'Unknown error'
             });
@@ -571,7 +551,7 @@ export class ModelManager {
             // Clear all internal state
             this.clear();
         } catch (error) {
-            this.logError('[ModelManager] Error removing model:', error);
+            this.debug.error('Error removing model:', error);
             throw new Error(`Failed to remove model: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
@@ -592,8 +572,7 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        console.group('[ModelManager] saveElementData');
-        console.log('Input Parameters:', {
+        this.debug.log('saveElementData - Start', {
             elementId: element.id,
             elementType: element.constructor.name,
             simulationObjectType: type,
@@ -604,18 +583,17 @@ export class ModelManager {
         try {
             // Handle conversion to NONE type (removing simulation data)
             if (type === SimulationObjectType.None) {
-                console.log('Detected NONE type - removing element');
+                this.debug.log('Detected NONE type - removing element');
                 const existingElement = this.getElementById(element.id);
                 if (existingElement) {
-                    console.log(`Removing element: ${element.id}`);
+                    this.debug.log('Removing element:', element.id);
                     this.removeElement(element.id);
                 }
-                console.groupEnd();
                 return;
             }
 
             // Log data details for type conversion or update
-            console.log('Incoming Data:', {
+            this.debug.debug('Incoming Data:', {
                 type: typeof data,
                 keys: data ? Object.keys(data) : 'No data',
                 data: data ? JSON.parse(JSON.stringify(data)) : null
@@ -623,18 +601,15 @@ export class ModelManager {
 
             // Handle type conversion with no data
             if (type && (!data || Object.keys(data).length === 0)) {
-                console.log('Detected type conversion with no data');
+                this.debug.log('Detected type conversion with no data');
                 await this.handleTypeConversion(element, type, page);
-                console.groupEnd();
                 return;
             }
 
             // Handle regular data update
             await this.handleDataUpdate(element, data, type, page);
-            console.groupEnd();
         } catch (error) {
-            console.error('[ModelManager] Error in saveElementData:', error);
-            console.groupEnd();
+            this.debug.error('Error in saveElementData:', error);
             throw error;
         }
     }
@@ -686,8 +661,7 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        console.group('[ModelManager] handleDataUpdate');
-        console.log('Input Parameters:', {
+        this.debug.log('handleDataUpdate - Start', {
             elementId: element.id,
             updateDataType: typeof updateData,
             simulationObjectType: type,
@@ -698,16 +672,16 @@ export class ModelManager {
             // Check and log model existence
             const existingModel = this.getModel();
             if (!existingModel) {
-                console.log('No existing model found. Creating new model.');
+                this.debug.log('No existing model found. Creating new model.');
                 const model = {
                     id: page.id,
                     name: page.getTitle() || 'New Model',
                     type: SimulationObjectType.Model
                 };
-                console.log('Initializing new model:', model);
+                this.debug.log('Initializing new model:', model);
                 await this.initializeModel(model as Model, page);
             } else {
-                console.log('Existing model found:', {
+                this.debug.debug('Existing model found:', {
                     modelId: existingModel.id,
                     modelName: existingModel.name
                 });
@@ -715,7 +689,7 @@ export class ModelManager {
 
             // Determine element name
             const elementName = this.getDefaultElementName(element);
-            console.log('Element name determination:', {
+            this.debug.debug('Element name determination:', {
                 defaultElementName: elementName,
                 updateDataContainsName: updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData
             });
@@ -730,7 +704,7 @@ export class ModelManager {
                     : elementName
             };
 
-            console.log('Prepared Element Data:', {
+            this.debug.debug('Prepared Element Data:', {
                 id: elementData.id,
                 type: elementData.type,
                 name: elementData.name,
@@ -738,10 +712,10 @@ export class ModelManager {
             });
 
             // Register and save
-            console.log('Registering element');
+            this.debug.debug('Registering element');
             this.registerElement(elementData, element);
 
-            console.log('Setting element data', {
+            this.debug.debug('Setting element data', {
                 metadata: {
                     id: element.id,
                     version: this.CURRENT_VERSION
@@ -757,10 +731,9 @@ export class ModelManager {
                 }
             );
 
-            console.groupEnd();
+            this.debug.log('handleDataUpdate - Completed Successfully');
         } catch (error) {
-            console.error('[ModelManager] Error in handleDataUpdate:', error);
-            console.groupEnd();
+            this.debug.error('Error in handleDataUpdate:', error);
             throw error;
         }
     }

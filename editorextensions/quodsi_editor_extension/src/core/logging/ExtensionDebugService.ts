@@ -33,16 +33,30 @@ export class ExtensionDebugService {
   private componentStates: Map<string, boolean> = new Map();
   private componentLoggers: Map<string, ComponentLogger> = new Map();
 
-  // Components that are typically noisy
+  // Components that are typically noisy - comment/uncomment to control console output
   private readonly noisyComponents = [
+    // Core messaging and routing (usually very verbose)
     'MessageRouter',
+    'ChannelManager',
+    
+    // Model management (can be verbose during operations)
+    'ModelManager',
+    
+    // Panel management
+    'RightDockPanel',
+    
+    // Data builders (verbose during selection changes)
+    'ReferenceDataBuilder',
+    'ItemDataBuilder',
+    
+    // Model operations handler
+    'ModelOpsHandler',
+    
+    // Legacy components (may not be in use)
     'SelectionManager',
     'StorageAdapter',
-    'ModelManager',
     'PanelManager',
-    'LucidApiService',
-    'ChannelManager',
-    'RightDockPanel'
+    'LucidApiService'
   ];
 
   private constructor() {

@@ -35,13 +35,31 @@ const BaseEditor = <T extends BaseSimulationElement>({
   useEffect(() => {
     if (isDevelopment) {
       console.log("BaseEditor useEffect - new data:", data);
+      console.log("BaseEditor current state:", {
+        localDataId: localData.id,
+        newDataId: data.id,
+        hasUnsavedChanges,
+        isSaving,
+        willUpdate: !hasUnsavedChanges && !isSaving
+      });
+    }
+    
+    // Reset unsaved changes if we're switching to a different element
+    if (localData.id !== data.id) {
+      if (isDevelopment) {
+        console.log("BaseEditor: Element changed, resetting unsaved changes flag");
+      }
+      setHasUnsavedChanges(false);
+      setIsSaving(false);
+      setLocalData(data);
+      return;
     }
     
     // Don't update during save operation or when there are unsaved changes
     if (!hasUnsavedChanges && !isSaving) {
       setLocalData(data);
     }
-  }, [data, hasUnsavedChanges, isSaving]);
+  }, [data, hasUnsavedChanges, isSaving, localData.id]);
 
   // Clear the saving flag after a short delay to allow for the new data to arrive
   useEffect(() => {
