@@ -1,5 +1,5 @@
 import { BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     ConstantDistribution,
     Distribution,
     Duration,
@@ -8,7 +8,8 @@ import {
     ModelDefaults,
     PeriodUnit,
     SimulationObjectType,
-    ComponentLogger 
+    ComponentLogger,
+    StateModification
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -44,6 +45,7 @@ interface StoredGeneratorData {
         distribution: Distribution;
     };
     maxEntities?: number;
+    initialStateModifications?: any[];
 }
 
 /**
@@ -76,16 +78,16 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             storedData?.activityKeyId || '',
             storedData?.entityId || ModelDefaults.DEFAULT_ENTITY_ID,
             storedData?.periodicOccurrences ?? Infinity,
-            storedData?.periodIntervalDuration 
+            storedData?.periodIntervalDuration
                 ? new Duration(
-                    storedData.periodIntervalDuration.durationPeriodUnit, 
+                    storedData.periodIntervalDuration.durationPeriodUnit,
                     storedData.periodIntervalDuration.distribution
-                ) 
+                )
                 : new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
             storedData?.entitiesPerCreation ?? 1,
             storedData?.periodicStartDuration
                 ? new Duration(
-                    storedData.periodicStartDuration.durationPeriodUnit, 
+                    storedData.periodicStartDuration.durationPeriodUnit,
                     storedData.periodicStartDuration.distribution
                 )
                 : new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
@@ -93,6 +95,13 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        // Deserialize initial state modifications
+        if (storedData?.initialStateModifications) {
+            generator.initialStateModifications = storedData.initialStateModifications.map(
+                (data: any) => StateModification.fromJSON(data)
+            );
+        }
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(generator);
@@ -154,7 +163,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
                 durationPeriodUnit: this.simObject.periodicStartDuration.durationPeriodUnit,
                 distribution: this.simObject.periodicStartDuration.distribution
             },
-            maxEntities: this.simObject.maxEntities
+            maxEntities: this.simObject.maxEntities,
+            initialStateModifications: this.simObject.initialStateModifications.map(m => m.toJSON())
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
@@ -215,7 +225,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
                 durationPeriodUnit: defaultGenerator.periodicStartDuration.durationPeriodUnit,
                 distribution: defaultGenerator.periodicStartDuration.distribution
             },
-            maxEntities: defaultGenerator.maxEntities
+            maxEntities: defaultGenerator.maxEntities,
+            initialStateModifications: defaultGenerator.initialStateModifications.map(m => m.toJSON())
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted generator, block ID: ${block.id}`, storedData);

@@ -7,7 +7,6 @@ import ResourceEditorOld from "../ResourceEditorOld";
 
 import ModelEditorOld from "../ModelEditorOld";
 import EntityEditorOld from "../EntityEditorOld";
-import ConnectorEditorOld from "../ConnectorEditorOld";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | "Model";
@@ -84,14 +83,6 @@ const ElementEditorOld: React.FC<ElementEditorProps> = ({
         return (
           <EntityEditorOld
             entity={elementData}
-            onSave={onSave}
-            onCancel={onCancel}
-          />
-        );
-      case SimulationObjectType.Connector:
-        return (
-          <ConnectorEditorOld
-            connector={elementData}
             onSave={onSave}
             onCancel={onCancel}
           />

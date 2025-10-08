@@ -1,7 +1,8 @@
 import { SimulationObjectType } from "./SimulationObjectType";
-import { ConnectType } from "./ConnectType";
 import { OperationStep } from "./OperationStep";
 import { PositionedSimulationObject } from "./PositionedSimulationObject";
+import { StateCondition } from "./StateCondition";
+import { StateModification } from "./StateModification";
 
 export class Connector extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Connector;
@@ -11,6 +12,21 @@ export class Connector extends PositionedSimulationObject {
     sourceY: number = 0;
     targetX: number = 0;
     targetY: number = 0;
+
+    /**
+     * Entity template routing - optional field for ENTITY_TEMPLATE ConnectType
+     */
+    entityTemplateUniqueId?: string;
+
+    /**
+     * State condition routing - optional field for STATE_CONDITION ConnectType
+     */
+    stateCondition?: StateCondition;
+
+    /**
+     * State modifications during routing
+     */
+    stateModifications: StateModification[] = [];
 
     static createDefault(
         id: string, 
@@ -25,7 +41,6 @@ export class Connector extends PositionedSimulationObject {
             '', // sourceId
             '', // targetId
             1.0, // probability
-            ConnectType.Probability, // connectType
             [] // operationSteps
         );
 
@@ -50,7 +65,6 @@ export class Connector extends PositionedSimulationObject {
         public sourceId: string,
         public targetId: string,
         public probability: number = 1.0,
-        public connectType: ConnectType = ConnectType.Probability,
         public operationSteps: OperationStep[] = [],
         sourceX: number = 0,
         sourceY: number = 0,

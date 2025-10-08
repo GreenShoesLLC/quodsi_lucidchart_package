@@ -5,9 +5,15 @@ import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
 import { DurationType } from "./DurationType";
 import { ConstantDistribution } from "./distributions";
+import { StateModification } from "./StateModification";
 
 export class Generator extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Generator;
+
+    /**
+     * Initial state modifications for created entities
+     */
+    initialStateModifications: StateModification[] = [];
 
     static createDefault(
         id: string, 

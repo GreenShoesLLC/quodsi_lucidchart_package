@@ -9,6 +9,7 @@ import {
   ConstantDistribution,
   EditorReferenceData,
   Duration,
+  ConnectType,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
@@ -38,7 +39,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const extractActivityData = (act: any): Activity => {
     // Handle completely missing data case
     if (!act) {
-      return new Activity(
+      const activity = new Activity(
         "", // Empty ID
         "New Activity",
         1, // Default capacity
@@ -48,13 +49,15 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         0,
         0
       );
+      activity.connectType = ConnectType.Probability; // Set default
+      return activity;
     }
 
     // Extract data safely
     const data = act.data || act;
     const id = data.id || act.id || "";
 
-    return new Activity(
+    const activity = new Activity(
       id,
       data.name || "New Activity",
       data.capacity || 1,
@@ -64,6 +67,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       data.x || 0,
       data.y || 0
     );
+
+    // Preserve connectType if it exists, otherwise use default
+    activity.connectType = data.connectType || ConnectType.Probability;
+
+    return activity;
   };
 
   // Extract and prepare activity data for BaseEditor
@@ -81,6 +89,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       updatedActivity.x,
       updatedActivity.y
     );
+
+    // Preserve connectType
+    activityToSave.connectType = updatedActivity.connectType;
 
     onSave(activityToSave);
   };
@@ -180,6 +191,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           updatedData.y
         );
 
+        // Preserve connectType
+        updatedActivity.connectType = updatedData.connectType || ConnectType.Probability;
+
         onSave(updatedActivity);
       }}
       onCancel={onCancel}
@@ -246,6 +260,38 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     max="999999"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Routing Settings */}
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <Layout className="w-3 h-3 text-blue-500" />
+              <span className="text-xs font-medium text-gray-700">Routing Settings</span>
+            </div>
+            <div className="space-y-1">
+              <div>
+                <label className="block text-xs text-gray-600">Routing Type</label>
+                <select
+                  name="connectType"
+                  className="w-full px-2 py-1 text-xs border rounded bg-white"
+                  value={localData.connectType}
+                  onChange={handleChange}
+                >
+                  <option value={ConnectType.Probability}>
+                    Probability - Route based on connector probabilities
+                  </option>
+                  <option value={ConnectType.StateCondition}>
+                    State Condition - Route based on state values
+                  </option>
+                  <option value={ConnectType.EntityTemplate}>
+                    Entity Template - Route based on entity type
+                  </option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Controls how entities are routed through outgoing connectors
+                </p>
               </div>
             </div>
           </div>

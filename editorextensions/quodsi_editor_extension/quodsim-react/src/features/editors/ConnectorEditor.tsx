@@ -1,5 +1,5 @@
 import React from "react";
-import { Connector, ConnectType, SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
+import { Connector, SimulationObjectType, EditorReferenceData } from "@quodsi/shared";
 import { Link2, Settings } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 
@@ -106,7 +106,6 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel, referen
           updatedData.sourceId,
           updatedData.targetId,
           updatedData.probability,
-          updatedData.connectType,
           updatedData.operationSteps,
           updatedData.sourceX,
           updatedData.sourceY,
@@ -158,20 +157,6 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel, referen
             </div>
             <div className="space-y-1">
               <div>
-                <label className="block text-xs text-gray-600">Connection Type</label>
-                <select
-                  name="connectType"
-                  className="w-full px-1 py-0.5 text-xs border rounded bg-white"
-                  value={localConnector.connectType}
-                  onChange={handleChange}
-                  disabled
-                >
-                  <option value={ConnectType.Probability}>
-                    Probability
-                  </option>
-                </select>
-              </div>
-              <div>
                 <label className="block text-xs text-gray-600">Probability</label>
                 <input
                   type="number"
@@ -184,6 +169,9 @@ const ConnectorEditor: React.FC<Props> = ({ connector, onSave, onCancel, referen
                   max="1"
                   placeholder="0.0 - 1.0"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Note: Routing type is controlled by the source Activity
+                </p>
               </div>
             </div>
           </div>

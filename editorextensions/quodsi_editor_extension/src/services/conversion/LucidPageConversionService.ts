@@ -222,7 +222,6 @@ export class LucidPageConversionService extends QuodsiLogger {
                 connector.sourceId = sourceId;
                 connector.targetId = endpoint2.connection.id;
                 connector.probability = probability;
-                connector.connectType = ConnectType.Probability;
 
                 // Update the platform object to save changes
                 platformObject.updateFromPlatform();

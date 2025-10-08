@@ -10,7 +10,11 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "WebFetch(domain:docs.anthropic.com)"
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(md5sum:*)",
+      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/model_definition/**)",
+      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/enums/**)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }

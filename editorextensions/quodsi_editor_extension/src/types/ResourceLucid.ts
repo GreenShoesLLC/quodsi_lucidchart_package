@@ -1,8 +1,9 @@
 import { BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     Resource,
     SimulationObjectType,
-    ComponentLogger
+    ComponentLogger,
+    ResourceFinancialProperties
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -26,6 +27,7 @@ interface StoredResourceData {
     y?: number;  // Added y coordinate
     name?: string;
     capacity?: number;
+    financialProperties?: any;
 }
 
 /**
@@ -59,6 +61,11 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        // Deserialize financial properties
+        if (storedData?.financialProperties) {
+            resource.financialProperties = ResourceFinancialProperties.fromJSON(storedData.financialProperties);
+        }
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(resource);
@@ -108,7 +115,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             x: this.simObject.x,     // Store x coordinate
             y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name,
-            capacity: this.simObject.capacity
+            capacity: this.simObject.capacity,
+            financialProperties: this.simObject.financialProperties?.toJSON()
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
@@ -157,7 +165,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             name: name,
             x: defaultResource.x,  // Include x coordinate
             y: defaultResource.y,  // Include y coordinate
-            capacity: defaultResource.capacity
+            capacity: defaultResource.capacity,
+            financialProperties: defaultResource.financialProperties?.toJSON()
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted resource, block ID: ${block.id}`, storedData);

@@ -3,7 +3,10 @@ import {
     Activity,
     OperationStep,
     SimulationObjectType,
-    ComponentLogger
+    ComponentLogger,
+    StateModification,
+    ActivityFinancialProperties,
+    ConnectType
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -30,6 +33,10 @@ interface StoredActivityData {
     inputBufferCapacity?: number;
     outputBufferCapacity?: number;
     operationSteps?: OperationStep[];
+    preProcessingStateModifications?: any[];
+    postProcessingStateModifications?: any[];
+    financialProperties?: any;
+    connectType?: string;
 }
 
 /**
@@ -48,7 +55,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
     protected createSimObject(): Activity {
         ComponentLogger.log(LOG_PREFIX, `Creating Activity simulation object for element ID: ${this.platformElementId}`);
-        
+
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredActivityData;
 
@@ -63,6 +70,29 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        // Deserialize state modifications
+        if (storedData?.preProcessingStateModifications) {
+            activity.preProcessingStateModifications = storedData.preProcessingStateModifications.map(
+                (data: any) => StateModification.fromJSON(data)
+            );
+        }
+
+        if (storedData?.postProcessingStateModifications) {
+            activity.postProcessingStateModifications = storedData.postProcessingStateModifications.map(
+                (data: any) => StateModification.fromJSON(data)
+            );
+        }
+
+        // Deserialize financial properties
+        if (storedData?.financialProperties) {
+            activity.financialProperties = ActivityFinancialProperties.fromJSON(storedData.financialProperties);
+        }
+
+        // Restore connectType
+        if (storedData?.connectType) {
+            activity.connectType = storedData.connectType as ConnectType;
+        }
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(activity);
@@ -115,7 +145,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             capacity: this.simObject.capacity,
             inputBufferCapacity: this.simObject.inputBufferCapacity,
             outputBufferCapacity: this.simObject.outputBufferCapacity,
-            operationSteps: this.simObject.operationSteps
+            operationSteps: this.simObject.operationSteps,
+            preProcessingStateModifications: this.simObject.preProcessingStateModifications.map(m => m.toJSON()),
+            postProcessingStateModifications: this.simObject.postProcessingStateModifications.map(m => m.toJSON()),
+            financialProperties: this.simObject.financialProperties?.toJSON(),
+            connectType: this.simObject.connectType
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
@@ -167,7 +201,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             capacity: defaultActivity.capacity,
             inputBufferCapacity: defaultActivity.inputBufferCapacity,
             outputBufferCapacity: defaultActivity.outputBufferCapacity,
-            operationSteps: defaultActivity.operationSteps
+            operationSteps: defaultActivity.operationSteps,
+            preProcessingStateModifications: defaultActivity.preProcessingStateModifications.map(m => m.toJSON()),
+            postProcessingStateModifications: defaultActivity.postProcessingStateModifications.map(m => m.toJSON()),
+            financialProperties: defaultActivity.financialProperties?.toJSON(),
+            connectType: defaultActivity.connectType
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted activity, block ID: ${block.id}`, storedData);

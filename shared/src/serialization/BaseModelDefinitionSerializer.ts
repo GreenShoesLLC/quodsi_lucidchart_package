@@ -277,10 +277,12 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 x: connector.x,  // Midpoint x
                 y: connector.y,  // Midpoint y
                 probability: connector.probability,
-                connectType: connector.connectType,
                 operationSteps: connector.operationSteps.map(step =>
                     this.serializeOperationStep(step)
-                )
+                ),
+                entityTemplateUniqueId: connector.entityTemplateUniqueId,
+                stateCondition: connector.stateCondition?.toJSON(),
+                stateModifications: connector.stateModifications.map(m => m.toJSON())
             };
         } catch (error) {
             throw new SerializationError(

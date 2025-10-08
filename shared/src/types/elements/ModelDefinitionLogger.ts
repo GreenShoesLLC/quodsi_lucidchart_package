@@ -119,7 +119,6 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Source ID: ${connector.sourceId || "Not defined"}`);
         this.log(`    Target ID: ${connector.targetId || "Not defined"}`);
         this.log(`    Probability: ${connector.probability !== undefined ? connector.probability : "Not defined"}`);
-        this.log(`    Connection Type: ${connector.connectType || "Not defined"}`);
 
         const operationSteps = connector.operationSteps;
         this.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);

@@ -19,12 +19,11 @@ export class ConnectorValidation extends ValidationRule {
         connectors.forEach(connector => {
             this.validateConnectorEndpoints(connector, state, messages);
             this.validateConnectorData(connector, messages);
-            this.validateConnectorType(connector, messages);
         });
 
         this.log("Validating probability distributions for connector groups.");
         connectorsBySource.forEach((sourceConnectors, sourceId) => {
-            this.validateProbabilityGroup(sourceId, sourceConnectors, messages);
+            this.validateProbabilityGroup(sourceId, sourceConnectors, state, messages);
         });
 
         this.log("Detecting circular references in connectors.");
@@ -119,26 +118,12 @@ export class ConnectorValidation extends ValidationRule {
         }
     }
 
-    private validateConnectorType(connector: Connector, messages: ValidationMessage[]): void {
-        /**
-         * Validates the type of the connector to ensure it is a valid `ConnectType`.
-         */
-
-        this.log(`Validating type for Connector ID: ${connector.id}`);
-
-        if (!Object.values(ConnectType).includes(connector.connectType)) {
-            this.log(`Connector ID ${connector.id} has an invalid connect type: ${connector.connectType}`);
-            messages.push({
-                type: 'error',
-                message: `Connector ${connector.id} has invalid connect type: ${connector.connectType}`,
-                elementId: connector.id
-            });
-        }
-    }
+    // Note: validateConnectorType removed - connectType is now on Activity, not Connector
 
     private validateProbabilityGroup(
         sourceId: string,
         connectors: Connector[],
+        state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
         /**
@@ -147,9 +132,15 @@ export class ConnectorValidation extends ValidationRule {
 
         this.log(`Validating probability group for Source ID: ${sourceId}`);
 
-        const probabilityConnectors = connectors.filter(
-            c => c.connectType === ConnectType.Probability
-        );
+        // Get the source activity to check its connectType
+        const sourceActivity = state.modelDefinition.activities.get(sourceId);
+
+        // Only validate probabilities if the source is an Activity with Probability connectType
+        if (!sourceActivity || sourceActivity.connectType !== ConnectType.Probability) {
+            return;
+        }
+
+        const probabilityConnectors = connectors;
 
         if (probabilityConnectors.length > 0) {
             const totalProbability = probabilityConnectors.reduce(

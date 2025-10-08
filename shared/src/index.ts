@@ -64,6 +64,19 @@ export * from './types/elements/SimulationObjectType';
 export * from './types/elements/SimulationTimeType';
 export * from './types/elements/ModelDefinitionLogger';
 
+// State management types
+export * from './types/elements/ComponentType';
+export * from './types/elements/State';
+export * from './types/elements/StateListManager';
+export * from './types/elements/StateType';
+export * from './types/elements/StateOperation';
+export * from './types/elements/StateComparison';
+export * from './types/elements/StateCondition';
+export * from './types/elements/StateModification';
+
+// Financial properties
+export * from './types/elements/FinancialProperties';
+
 // Distribution types
 export * from './types/elements/distributions';
 

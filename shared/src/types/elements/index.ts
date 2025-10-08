@@ -33,5 +33,18 @@ export * from './SimulationObjectType';
 export * from './SimulationTimeType';
 export * from './ModelDefinitionLogger';
 
+// Export state management types
+export * from './ComponentType';
+export * from './State';
+export * from './StateListManager';
+export * from './StateType';
+export * from './StateOperation';
+export * from './StateComparison';
+export * from './StateCondition';
+export * from './StateModification';
+
+// Export financial properties
+export * from './FinancialProperties';
+
 // Export distributions
 export * from './distributions';

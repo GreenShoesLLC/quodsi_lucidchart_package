@@ -1,8 +1,14 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { PositionedSimulationObject } from "./PositionedSimulationObject";
+import { ResourceFinancialProperties } from "./FinancialProperties";
 
 export class Resource extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Resource;
+
+    /**
+     * Financial properties for Phase 1 costing
+     */
+    financialProperties?: ResourceFinancialProperties;
 
     static createDefault(
         id: string, 

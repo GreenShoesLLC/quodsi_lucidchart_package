@@ -1,10 +1,11 @@
 import { LineProxy, BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     Connector,
-    ConnectType,
     OperationStep,
     SimulationObjectType,
-    ComponentLogger
+    ComponentLogger,
+    StateCondition,
+    StateModification
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -34,8 +35,10 @@ interface StoredConnectorData {
     sourceId?: string;
     targetId?: string;
     probability?: number;
-    connectType?: ConnectType;
     operationSteps?: OperationStep[];
+    entityTemplateUniqueId?: string;
+    stateCondition?: any;
+    stateModifications?: any[];
 }
 
 /**
@@ -70,7 +73,6 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             storedData?.sourceId || endpoint1.connection?.id || '',
             storedData?.targetId || endpoint2.connection?.id || '',
             storedData?.probability ?? 1.0,
-            storedData?.connectType ?? ConnectType.Probability,
             storedData?.operationSteps || [],
             storedData?.sourceX ?? endpoint1.x ?? 0,
             storedData?.sourceY ?? endpoint1.y ?? 0,
@@ -79,6 +81,23 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             storedData?.x ?? (endpoint1.x + endpoint2.x) / 2,
             storedData?.y ?? (endpoint1.y + endpoint2.y) / 2
         );
+
+        // Deserialize state condition
+        if (storedData?.stateCondition) {
+            connector.stateCondition = StateCondition.fromJSON(storedData.stateCondition);
+        }
+
+        // Deserialize state modifications
+        if (storedData?.stateModifications) {
+            connector.stateModifications = storedData.stateModifications.map(
+                (data: any) => StateModification.fromJSON(data)
+            );
+        }
+
+        // Restore entity template unique ID
+        if (storedData?.entityTemplateUniqueId) {
+            connector.entityTemplateUniqueId = storedData.entityTemplateUniqueId;
+        }
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(connector);
@@ -139,8 +158,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: this.simObject.sourceId,
             targetId: this.simObject.targetId,
             probability: this.simObject.probability,
-            connectType: this.simObject.connectType,
-            operationSteps: this.simObject.operationSteps
+            operationSteps: this.simObject.operationSteps,
+            entityTemplateUniqueId: this.simObject.entityTemplateUniqueId,
+            stateCondition: this.simObject.stateCondition?.toJSON(),
+            stateModifications: this.simObject.stateModifications.map(m => m.toJSON())
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
@@ -253,8 +274,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: defaultConnector.sourceId,
             targetId: defaultConnector.targetId,
             probability: defaultConnector.probability,
-            connectType: defaultConnector.connectType,
-            operationSteps: defaultConnector.operationSteps
+            operationSteps: defaultConnector.operationSteps,
+            entityTemplateUniqueId: defaultConnector.entityTemplateUniqueId,
+            stateCondition: defaultConnector.stateCondition?.toJSON(),
+            stateModifications: defaultConnector.stateModifications.map(m => m.toJSON())
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting element data for connector ID: ${line.id}`, storedData);
