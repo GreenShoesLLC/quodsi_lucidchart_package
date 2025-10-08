@@ -9,7 +9,7 @@ import {
   ConstantDistribution,
   DistributionType,
 } from "@quodsi/shared";
-import { Settings, Clock } from "lucide-react";
+import { Settings, Clock, BarChart3, DollarSign, Hash } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import OutputForm from "./OutputForm";
@@ -21,10 +21,10 @@ interface Props {
   onCancel: () => void;
 }
 
-type EditorTab = "model" | "output";
+type EditorTab = "basic" | "output" | "finance" | "states";
 
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
-  const [activeTab, setActiveTab] = useState<EditorTab>("model");
+  const [activeTab, setActiveTab] = useState<EditorTab>("basic");
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
@@ -285,29 +285,68 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
       <div className="border-b bg-gray-50">
         <div className="flex">
           <button
-            onClick={() => setActiveTab("model")}
-            className={`px-2 py-1 text-xs font-medium border-b-2 ${
-              activeTab === "model"
+            type="button"
+            onClick={() => setActiveTab("basic")}
+            title="Basic Settings"
+            className={`px-3 py-2 border-b-2 ${
+              activeTab === "basic"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Model
+            <Settings className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab("output")}
-            className={`px-2 py-1 text-xs font-medium border-b-2 ${
+            title="Output Configuration"
+            className={`px-3 py-2 border-b-2 ${
               activeTab === "output"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            Output
+            <BarChart3 className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("finance")}
+            title="Financial Settings"
+            className={`px-3 py-2 border-b-2 ${
+              activeTab === "finance"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <DollarSign className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("states")}
+            title="State Management"
+            className={`px-3 py-2 border-b-2 ${
+              activeTab === "states"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            <Hash className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {activeTab === "model" ? <ModelForm /> : <OutputForm />}
+      {activeTab === "basic" && <ModelForm />}
+      {activeTab === "output" && <OutputForm />}
+      {activeTab === "finance" && (
+        <div className="p-4 text-center text-gray-500">
+          <p className="text-xs">Financial properties coming soon</p>
+        </div>
+      )}
+      {activeTab === "states" && (
+        <div className="p-4 text-center text-gray-500">
+          <p className="text-xs">State management coming soon</p>
+        </div>
+      )}
     </div>
   );
 };

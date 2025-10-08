@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, Layout, Plus, Layers } from "lucide-react";
+import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft } from "lucide-react";
 import {
   Activity,
   OperationStep,
@@ -10,6 +10,7 @@ import {
   EditorReferenceData,
   Duration,
   ConnectType,
+  ActivityFinancialProperties,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
@@ -23,12 +24,16 @@ interface ActivityEditorProps {
   referenceData?: EditorReferenceData;
 }
 
+type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states";
+
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
   onSave,
   onCancel,
   referenceData,
 }) => {
+  const [activeTab, setActiveTab] = React.useState<ActivityTab>("basic");
+
   // Helper functions
   const bufferToDisplay = (value: number | null | undefined): number =>
     value === null || value === undefined ? 999999 : value;
@@ -71,6 +76,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     // Preserve connectType if it exists, otherwise use default
     activity.connectType = data.connectType || ConnectType.Probability;
 
+    // Initialize financialProperties if it doesn't exist
+    activity.financialProperties = data.financialProperties
+      ? ActivityFinancialProperties.fromJSON(data.financialProperties)
+      : new ActivityFinancialProperties();
+
     return activity;
   };
 
@@ -92,6 +102,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Preserve connectType
     activityToSave.connectType = updatedActivity.connectType;
+
+    // Preserve financialProperties
+    activityToSave.financialProperties = updatedActivity.financialProperties;
 
     onSave(activityToSave);
   };
@@ -156,6 +169,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     []
   );
 
+  const handleFinancialChange = (
+    field: keyof ActivityFinancialProperties,
+    value: any,
+    localData: Activity,
+    handleChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => void
+  ) => {
+    const currentFinancial = localData.financialProperties || new ActivityFinancialProperties();
+    const updatedFinancial = new ActivityFinancialProperties({
+      enabled: currentFinancial.enabled,
+      fixedCost: currentFinancial.fixedCost,
+      costPerEntityProcessed: currentFinancial.costPerEntityProcessed,
+      costPerHourActive: currentFinancial.costPerHourActive,
+      costPerHourIdle: currentFinancial.costPerHourIdle,
+      resourceCostMultiplier: currentFinancial.resourceCostMultiplier,
+      [field]: value,
+    });
+
+    handleChange({
+      target: {
+        name: "financialProperties",
+        value: updatedFinancial,
+      },
+    } as any);
+  };
+
   if (!extractedActivity?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
@@ -194,6 +234,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         // Preserve connectType
         updatedActivity.connectType = updatedData.connectType || ConnectType.Probability;
 
+        // Preserve financialProperties
+        updatedActivity.financialProperties = updatedData.financialProperties;
+
         onSave(updatedActivity);
       }}
       onCancel={onCancel}
@@ -201,138 +244,405 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     >
       {(localData, handleChange) => (
         <div className="space-y-2">
-          {/* Basic Info */}
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <Settings className="w-3 h-3 text-blue-500" />
-              <span className="text-xs font-medium text-gray-700">Basic Settings</span>
-            </div>
-            <div className="space-y-1">
-              <input
-                type="text"
-                name="name"
-                className="w-full px-2 py-1 text-xs border rounded"
-                value={localData.name}
-                onChange={handleChange}
-                placeholder="Activity Name"
-              />
-              <div className="grid grid-cols-3 gap-1">
-                <div>
-                  <label className="block text-xs text-gray-600">Capacity</label>
-                  <input
-                    type="number"
-                    name="capacity"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={localData.capacity}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Input Buf</label>
-                  <input
-                    type="number"
-                    name="inputBufferCapacity"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={
-                      localData.inputBufferCapacity === Infinity
-                        ? 999999
-                        : localData.inputBufferCapacity
-                    }
-                    onChange={handleChange}
-                    min="0"
-                    max="999999"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Output Buf</label>
-                  <input
-                    type="number"
-                    name="outputBufferCapacity"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={
-                      localData.outputBufferCapacity === Infinity
-                        ? 999999
-                        : localData.outputBufferCapacity
-                    }
-                    onChange={handleChange}
-                    min="0"
-                    max="999999"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Routing Settings */}
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <Layout className="w-3 h-3 text-blue-500" />
-              <span className="text-xs font-medium text-gray-700">Routing Settings</span>
-            </div>
-            <div className="space-y-1">
-              <div>
-                <label className="block text-xs text-gray-600">Routing Type</label>
-                <select
-                  name="connectType"
-                  className="w-full px-2 py-1 text-xs border rounded bg-white"
-                  value={localData.connectType}
-                  onChange={handleChange}
-                >
-                  <option value={ConnectType.Probability}>
-                    Probability - Route based on connector probabilities
-                  </option>
-                  <option value={ConnectType.StateCondition}>
-                    State Condition - Route based on state values
-                  </option>
-                  <option value={ConnectType.EntityTemplate}>
-                    Entity Template - Route based on entity type
-                  </option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Controls how entities are routed through outgoing connectors
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Operation Steps */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <Layers className="w-3 h-3 text-blue-500" />
-                <span className="text-xs font-medium text-gray-700">Operation Steps</span>
-              </div>
+          {/* Tab Navigation */}
+          <div className="border-b bg-gray-50">
+            <div className="flex">
               <button
                 type="button"
-                onClick={() => handleAddOperationStep(localData, handleChange)}
-                className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                onClick={() => setActiveTab("basic")}
+                title="Basic Settings"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "basic"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
               >
-                <Plus className="w-3 h-3" />
-                Add
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("opsteps")}
+                title="Operation Steps"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "opsteps"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("financial")}
+                title="Financial Settings"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "financial"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <DollarSign className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("connectors")}
+                title="Routing Configuration"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "connectors"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("states")}
+                title="State Management"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "states"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Hash className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-1">
-              {localData.operationSteps.map((step, index) => (
-                <OperationStepEditor
-                  key={index}
-                  step={step}
-                  index={index}
-                  onChange={(updatedStep) =>
-                    handleOperationStepChange(
-                      index,
-                      updatedStep,
-                      localData,
-                      handleChange
-                    )
-                  }
-                  onDelete={() =>
-                    handleOperationStepDelete(index, localData, handleChange)
-                  }
-                  resourceRequirements={referenceData?.resourceRequirements}
-                />
-              ))}
-            </div>
+          </div>
+
+          {/* Tab Content */}
+          <div className="space-y-2">
+            {activeTab === "basic" && (
+              <div>
+                <div className="flex items-center gap-1 mb-2">
+                  <Settings className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                </div>
+                <div className="space-y-4">
+                  {/* Name Section */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Activity Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      className="w-full px-2 py-1.5 text-xs border rounded"
+                      value={localData.name}
+                      onChange={handleChange}
+                      placeholder="Enter activity name"
+                    />
+                  </div>
+
+                  {/* Capacity Section */}
+                  <div className="pt-3 border-t">
+                    <div className="mb-2">
+                      <div className="text-xs font-medium text-gray-700 mb-0.5">
+                        Capacity Configuration
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Maximum number of entities that can be processed in parallel
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Capacity</label>
+                      <input
+                        type="number"
+                        name="capacity"
+                        className="w-full px-2 py-1.5 text-xs border rounded"
+                        value={localData.capacity}
+                        onChange={handleChange}
+                        min="1"
+                        placeholder="1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Buffer Section */}
+                  <div className="pt-3 border-t">
+                    <div className="mb-2">
+                      <div className="text-xs font-medium text-gray-700 mb-0.5">
+                        Buffer Configuration
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Entity storage capacity before and after processing (999999 = unlimited)
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Input Buffer</label>
+                        <input
+                          type="number"
+                          name="inputBufferCapacity"
+                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          value={
+                            localData.inputBufferCapacity === Infinity
+                              ? 999999
+                              : localData.inputBufferCapacity
+                          }
+                          onChange={handleChange}
+                          min="0"
+                          max="999999"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Output Buffer</label>
+                        <input
+                          type="number"
+                          name="outputBufferCapacity"
+                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          value={
+                            localData.outputBufferCapacity === Infinity
+                              ? 999999
+                              : localData.outputBufferCapacity
+                          }
+                          onChange={handleChange}
+                          min="0"
+                          max="999999"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "opsteps" && (
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1">
+                    <Layers className="w-3 h-3 text-blue-500" />
+                    <span className="text-xs font-medium text-gray-700">Operation Steps</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleAddOperationStep(localData, handleChange)}
+                    className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-1">
+                  {localData.operationSteps.map((step, index) => (
+                    <OperationStepEditor
+                      key={index}
+                      step={step}
+                      index={index}
+                      onChange={(updatedStep) =>
+                        handleOperationStepChange(
+                          index,
+                          updatedStep,
+                          localData,
+                          handleChange
+                        )
+                      }
+                      onDelete={() =>
+                        handleOperationStepDelete(index, localData, handleChange)
+                      }
+                      resourceRequirements={referenceData?.resourceRequirements}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "financial" && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Financial Settings</span>
+                </div>
+                <div className="space-y-2">
+                  {/* Enable Financial Tracking */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="financialEnabled"
+                      checked={localData.financialProperties?.enabled || false}
+                      onChange={(e) =>
+                        handleFinancialChange(
+                          "enabled",
+                          e.target.checked,
+                          localData,
+                          handleChange
+                        )
+                      }
+                      className="w-3 h-3"
+                    />
+                    <label htmlFor="financialEnabled" className="text-xs font-medium text-gray-700">
+                      Enable Financial Tracking
+                    </label>
+                  </div>
+
+                  {/* Cost Components */}
+                  <div className="space-y-1 pt-1">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Fixed Cost</label>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={localData.financialProperties?.fixedCost || 0}
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "fixedCost",
+                            parseFloat(e.target.value) || 0,
+                            localData,
+                            handleChange
+                          )
+                        }
+                        disabled={!localData.financialProperties?.enabled}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        One-time cost at activity initialization
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Cost Per Entity Processed</label>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={localData.financialProperties?.costPerEntityProcessed || 0}
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "costPerEntityProcessed",
+                            parseFloat(e.target.value) || 0,
+                            localData,
+                            handleChange
+                          )
+                        }
+                        disabled={!localData.financialProperties?.enabled}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Variable cost per entity processed
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Cost Per Hour Active</label>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={localData.financialProperties?.costPerHourActive || 0}
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "costPerHourActive",
+                            parseFloat(e.target.value) || 0,
+                            localData,
+                            handleChange
+                          )
+                        }
+                        disabled={!localData.financialProperties?.enabled}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Hourly cost during entity processing
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Cost Per Hour Idle</label>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={localData.financialProperties?.costPerHourIdle || 0}
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "costPerHourIdle",
+                            parseFloat(e.target.value) || 0,
+                            localData,
+                            handleChange
+                          )
+                        }
+                        disabled={!localData.financialProperties?.enabled}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Hourly cost during idle periods
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Resource Cost Settings */}
+                  <div className="space-y-1 pt-1 border-t">
+                    <div className="text-xs font-medium text-gray-600 mb-1">Resource Cost Settings</div>
+                    <div>
+                      <label className="block text-xs text-gray-600">Resource Cost Multiplier</label>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={localData.financialProperties?.resourceCostMultiplier || 1}
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "resourceCostMultiplier",
+                            parseFloat(e.target.value) || 1,
+                            localData,
+                            handleChange
+                          )
+                        }
+                        disabled={!localData.financialProperties?.enabled}
+                        min="0"
+                        step="0.1"
+                        placeholder="1.0"
+                      />
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Multiplier for resource costs (e.g., 1.5 for overtime)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "connectors" && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <ArrowRightLeft className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Routing Settings</span>
+                </div>
+                <div className="space-y-1">
+                  <div>
+                    <label className="block text-xs text-gray-600">Routing Type</label>
+                    <select
+                      name="connectType"
+                      className="w-full px-2 py-1 text-xs border rounded bg-white"
+                      value={localData.connectType}
+                      onChange={handleChange}
+                    >
+                      <option value={ConnectType.Probability}>
+                        Probability - Route based on connector probabilities
+                      </option>
+                      <option value={ConnectType.StateCondition}>
+                        State Condition - Route based on state values
+                      </option>
+                      <option value={ConnectType.EntityTemplate}>
+                        Entity Template - Route based on entity type
+                      </option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Controls how entities are routed through outgoing connectors
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "states" && (
+              <div className="p-4 text-center text-gray-500">
+                <p className="text-xs">State management coming soon</p>
+              </div>
+            )}
           </div>
         </div>
       )}
