@@ -8,22 +8,27 @@ import {
   Distribution,
   ConstantDistribution,
   DistributionType,
+  StateListManager,
+  ComponentType,
 } from "@quodsi/shared";
 import { Settings, Clock, BarChart3, DollarSign, Hash } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import OutputForm from "./OutputForm";
+import StatesEditor from "./StatesEditor";
 
 
 interface Props {
   model: Model;
   onSave: (model: Model) => void;
   onCancel: () => void;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 type EditorTab = "basic" | "output" | "finance" | "states";
 
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
 
   // Helper function to ensure all model properties are present
@@ -343,9 +348,11 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel }) => {
         </div>
       )}
       {activeTab === "states" && (
-        <div className="p-4 text-center text-gray-500">
-          <p className="text-xs">State management coming soon</p>
-        </div>
+        <StatesEditor
+          states={states}
+          onStatesChange={onStatesChange}
+          defaultComponentType={ComponentType.MODEL}
+        />
       )}
     </div>
   );

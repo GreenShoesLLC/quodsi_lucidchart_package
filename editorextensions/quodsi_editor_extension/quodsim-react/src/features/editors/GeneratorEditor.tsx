@@ -7,9 +7,12 @@ import {
   EditorReferenceData,
   PeriodUnit,
   Distribution,
+  StateListManager,
+  ComponentType,
 } from "@quodsi/shared";
 import { Clock, Users, Timer, PlayCircle, Settings, Hash } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import StatesEditor from "./StatesEditor";
 
 
 interface Props {
@@ -17,6 +20,8 @@ interface Props {
   onSave: (generator: Generator) => void;
   onCancel: () => void;
   referenceData: EditorReferenceData;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 type GeneratorTab = "basic" | "frequency" | "start" | "states";
@@ -26,6 +31,8 @@ const GeneratorEditor: React.FC<Props> = ({
   onSave,
   onCancel,
   referenceData,
+  states,
+  onStatesChange,
 }) => {
   const [activeTab, setActiveTab] = React.useState<GeneratorTab>("basic");
   const entities = referenceData.entities || [];
@@ -344,9 +351,11 @@ const GeneratorEditor: React.FC<Props> = ({
             )}
 
             {activeTab === "states" && (
-              <div className="p-4 text-center text-gray-500">
-                <p className="text-xs">State management coming soon</p>
-              </div>
+              <StatesEditor
+                states={states}
+                onStatesChange={onStatesChange}
+                defaultComponentType={ComponentType.RESOURCE}
+              />
             )}
           </div>
         </div>

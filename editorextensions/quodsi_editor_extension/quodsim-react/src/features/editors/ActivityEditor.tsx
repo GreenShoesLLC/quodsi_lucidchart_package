@@ -11,9 +11,12 @@ import {
   Duration,
   ConnectType,
   ActivityFinancialProperties,
+  StateListManager,
+  ComponentType,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
+import StatesEditor from "./StatesEditor";
 
 
 // Main Activity Editor Component
@@ -22,6 +25,8 @@ interface ActivityEditorProps {
   onSave: (activity: Activity) => void;
   onCancel: () => void;
   referenceData?: EditorReferenceData;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states";
@@ -31,6 +36,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   onSave,
   onCancel,
   referenceData,
+  states,
+  onStatesChange,
 }) => {
   const [activeTab, setActiveTab] = React.useState<ActivityTab>("basic");
 
@@ -639,9 +646,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
 
             {activeTab === "states" && (
-              <div className="p-4 text-center text-gray-500">
-                <p className="text-xs">State management coming soon</p>
-              </div>
+              <StatesEditor
+                states={states}
+                onStatesChange={onStatesChange}
+                defaultComponentType={ComponentType.ACTIVITY}
+              />
             )}
           </div>
         </div>

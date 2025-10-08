@@ -1,17 +1,20 @@
 import React from "react";
 import { Settings, DollarSign, Hash } from "lucide-react";
-import { Entity, SimulationObjectType } from "@quodsi/shared";
+import { Entity, SimulationObjectType, StateListManager, ComponentType } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
+import StatesEditor from "./StatesEditor";
 
 interface Props {
   entity: Entity;
   onSave: (entity: Entity) => void;
   onCancel: () => void;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 type EntityTab = "basic" | "finance" | "states";
 
-const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
+const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onStatesChange }) => {
   const [activeTab, setActiveTab] = React.useState<EntityTab>("basic");
 
   return (
@@ -122,9 +125,11 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel }) => {
             )}
 
             {activeTab === "states" && (
-              <div className="p-4 text-center text-gray-500">
-                <p className="text-xs">State management coming soon</p>
-              </div>
+              <StatesEditor
+                states={states}
+                onStatesChange={onStatesChange}
+                defaultComponentType={ComponentType.ENTITY}
+              />
             )}
           </div>
         </div>

@@ -3,15 +3,16 @@ import {
   SimulationObjectType,
   EditorReferenceData,
   DiagramElementType,
+  StateListManager,
 } from "@quodsi/shared";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
-import EntityEditorOld from "src/_deprecated/EntityEditorOld";
 
 import ModelEditor from "../editors/ModelEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
+import EntityEditor from "../editors/EntityEditor";
 import ConnectorEditor from "../editors/ConnectorEditor";
 
 interface ElementEditorProps {
@@ -22,6 +23,8 @@ interface ElementEditorProps {
   isExpanded: boolean;
   onToggle: () => void;
   currentElement?: ExtendedModelItemData;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 /**
@@ -35,6 +38,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   isExpanded,
   onToggle,
   currentElement,
+  states,
+  onStatesChange,
 }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -116,6 +121,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             model={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
+            states={states}
+            onStatesChange={onStatesChange}
           />
         );
 
@@ -128,6 +135,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             onCancel={handleCancel}
             referenceData={referenceData}
+            states={states}
+            onStatesChange={onStatesChange}
           />
         );
 
@@ -139,6 +148,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             onCancel={handleCancel}
             referenceData={referenceData}
+            states={states}
+            onStatesChange={onStatesChange}
           />
         );
 
@@ -149,16 +160,20 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             resource={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
+            states={states}
+            onStatesChange={onStatesChange}
           />
         );
 
       case SimulationObjectType.Entity:
       case "Entity":
         return (
-          <EntityEditorOld
+          <EntityEditor
             entity={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
+            states={states}
+            onStatesChange={onStatesChange}
           />
         );
 

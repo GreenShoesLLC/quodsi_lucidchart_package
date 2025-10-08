@@ -4,7 +4,7 @@ import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationPanel } from './ValidationPanel';
 import { SimulationControls } from './SimulationControls';
-import { SimulationObjectType, DiagramElementType } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType, StateListManager } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 /**
@@ -38,6 +38,19 @@ export const ModelPanel: React.FC = () => {
     validation: !!validationState?.summary?.errorCount,
     simulation: false
   });
+
+  // TODO: This is a temporary placeholder. States should come from the model definition
+  // stored in the messaging state. This will be properly integrated when full model
+  // state management is implemented.
+  const [states, setStates] = useState<StateListManager>(new StateListManager());
+
+  const handleStatesChange = (updatedStates: StateListManager) => {
+    setStates(updatedStates);
+    // TODO: Persist states back to the extension/model definition
+    if (isDevelopment) {
+      console.log('[ModelPanel] States updated:', updatedStates.getAll());
+    }
+  };
 
   // Only show debug features in development
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -233,14 +246,16 @@ export const ModelPanel: React.FC = () => {
               ...currentElement.data,
               id: currentElement.id // Ensure ID is included in elementData
             }}
-            elementType={currentElement.metadata?.type || currentElement.q_meta?.type || 
-              (diagramElementType === DiagramElementType.LINE ? SimulationObjectType.Connector : 
+            elementType={currentElement.metadata?.type || currentElement.q_meta?.type ||
+              (diagramElementType === DiagramElementType.LINE ? SimulationObjectType.Connector :
                currentElement.type || SimulationObjectType.None)}
             onSave={data => onElementUpdate(currentElement.id, data)}
             referenceData={referenceData}
             isExpanded={expandedSections.elementEditor}
             onToggle={() => toggleSection('elementEditor')}
             currentElement={currentElement}
+            states={states}
+            onStatesChange={handleStatesChange}
           />
         )}
         

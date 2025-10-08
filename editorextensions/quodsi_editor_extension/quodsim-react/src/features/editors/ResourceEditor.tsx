@@ -4,18 +4,23 @@ import {
   Resource,
   SimulationObjectType,
   ResourceFinancialProperties,
+  StateListManager,
+  ComponentType,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
+import StatesEditor from "./StatesEditor";
 
 interface Props {
   resource: Resource;
   onSave: (resource: Resource) => void;
   onCancel: () => void;
+  states: StateListManager;
+  onStatesChange: (states: StateListManager) => void;
 }
 
 type ResourceTab = "basic" | "finance" | "states";
 
-const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
+const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, onStatesChange }) => {
   const [activeTab, setActiveTab] = React.useState<ResourceTab>("basic");
 
   // Extract and prepare resource data
@@ -298,9 +303,11 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel }) => {
             )}
 
             {activeTab === "states" && (
-              <div className="p-4 text-center text-gray-500">
-                <p className="text-xs">State management coming soon</p>
-              </div>
+              <StatesEditor
+                states={states}
+                onStatesChange={onStatesChange}
+                defaultComponentType={ComponentType.RESOURCE}
+              />
             )}
           </div>
         </div>
