@@ -12,7 +12,7 @@ export {
   isInIframe,
   getCacheSettings,
   getLoggerOptions
-} from '../_deprecated/msalConfig';
+} from './msalConfig';
 
 // Authentication Policies
 export {

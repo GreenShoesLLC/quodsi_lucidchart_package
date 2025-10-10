@@ -1,10 +1,11 @@
 // Export all types from subdirectories
 export * from './ActivityRelationships';
 export * from './BlockAnalysis';
+export * from './common';
 export * from './ConversionResult';
 export * from './DiagramElementType';
 export * from './EditorReferenceData';
-export * from '../_deprecated/types/messaging';
+export * from './ModelItemData';
 export * from './PageStatus';
 export * from './ProcessAnalysisResult';
 export * from './SelectionState';

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useMsal } from "@azure/msal-react";
 import { useAuthPanelState } from "./useAuthPanelState";
 import { QuodsiUserInfo } from "@quodsi/shared";
-import { loginRequest, b2cPolicies } from "../../config/msalConfig";
+import { loginRequest, b2cPolicies, buildAuthority } from "../../config";
 import { debugService } from "../../messaging/utils/debugService";
 
 // Create dedicated logger for AuthPanel
@@ -224,7 +224,7 @@ export const AuthPanel: React.FC = () => {
         // Login with popup using MSAL - make sure authority is included
         const authRequest = {
           ...loginRequest,
-          authority: b2cPolicies.authorities.signUpSignIn.authority,
+          authority: buildAuthority(b2cPolicies.signUpSignIn),
           prompt: "login",
         };
 
@@ -380,7 +380,7 @@ export const AuthPanel: React.FC = () => {
         // Redirect to password reset experience
         await instance.loginPopup({
           ...loginRequest,
-          authority: b2cPolicies.authorities.passwordReset.authority,
+          authority: buildAuthority(b2cPolicies.forgotPassword),
         });
       }
     } catch (err: any) {
@@ -412,7 +412,7 @@ export const AuthPanel: React.FC = () => {
         // Redirect to profile editing experience
         await instance.loginPopup({
           ...loginRequest,
-          authority: b2cPolicies.authorities.editProfile.authority,
+          authority: buildAuthority(b2cPolicies.editProfile),
         });
       }
     } catch (err: any) {

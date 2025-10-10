@@ -1,6 +1,6 @@
 import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
-import { JsonObject } from '../../_deprecated/types/messaging/JsonTypes';
+import { JsonObject } from '../../types/common';
 import { ISerializedState } from '../../serialization/interfaces/ISerializedState';
 
 /**

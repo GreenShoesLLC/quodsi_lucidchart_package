@@ -5,7 +5,7 @@
  */
 
 import { authApiConfig } from '../config';
-import { authErrorHandler } from '../_deprecated/AuthErrorHandler';
+import { authErrorHandler } from '../utils/AuthErrorHandler';
 import { ComponentLogger } from '@quodsi/shared';
 
 // Define a constant for the logger prefix

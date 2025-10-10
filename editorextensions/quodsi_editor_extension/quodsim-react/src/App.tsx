@@ -3,11 +3,12 @@ import { MsalProvider } from "@azure/msal-react";
 import { PublicClientApplication } from "@azure/msal-browser";
 import { MessageProvider } from "./messaging/MessageProvider";
 
-import { msalConfig } from "./config/msalConfig";
+import { createMsalConfig, b2cPolicies } from "./config";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
 
 // Create the MSAL instance
+const msalConfig = createMsalConfig(b2cPolicies.signUpSignIn);
 const msalInstance = new PublicClientApplication(msalConfig);
 
 interface AppProps {

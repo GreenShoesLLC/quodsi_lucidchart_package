@@ -1,27 +1,19 @@
 import {
     EditorClient,
-    Menu,
-    MenuType,
     Viewport
 } from 'lucid-extension-sdk';
 import { ModelManager } from './core/ModelManager';
-import { ModelPanel } from './_deprecated/ModelPanel';
 import { StorageAdapter } from './core/StorageAdapter';
-import { AuthPanel } from './_deprecated/AuthPanel';
+
 // Import new panels
 import { ContentDockPanel } from './panels/ContentDockPanel';
 import { RightDockPanel } from './panels/RightDockPanel';
 // Import MessageRouter and initialization function
 import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
-import { panelManager } from './managers/PanelManager';
-
-// Toggle to use new messaging implementation
-
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
-
 // Store client globally as a fallback for handlers
 (globalThis as any).lucidEditorClient = client;
 
@@ -33,50 +25,29 @@ ModelManager.initialize(client, storageAdapter);
 const modelManager = ModelManager.getInstance();
 
 // Enable router logging if in new messaging mode
-const useNewMessaging = true; // Set to true to use the new panels with MessageRouter
-if (useNewMessaging) {
-    console.info('[EXT][extension] Using new messaging system with ContentDockPanel and RightDockPanel');
 
-    // Initialize messaging system with logging enabled
-    initializeMessaging(true);
+console.info('[EXT][extension] Using new messaging system with ContentDockPanel and RightDockPanel');
 
-    let rightDockPanel, contentDockPanel;
-    console.info('[EXT][extension] About to create ContentDockPanel');
-    contentDockPanel = new ContentDockPanel(client);
-    contentDockPanel.setLogging(true);
-    console.info('[EXT][extension] Created ContentDockPanel');
+// Initialize messaging system with logging enabled
+initializeMessaging(true);
 
-    console.info('[EXT][extension] About to create RightDockPanel');
-    rightDockPanel = new RightDockPanel(client, modelManager);
-    rightDockPanel.setLogging(true);
-    console.info('[EXT][extension] Created RightDockPanel');
+let rightDockPanel, contentDockPanel;
+console.info('[EXT][extension] About to create ContentDockPanel');
+contentDockPanel = new ContentDockPanel(client);
+contentDockPanel.setLogging(true);
+console.info('[EXT][extension] Created ContentDockPanel');
 
-    // Initialize the SelectionHandler with model manager
-    SelectionHandler.setModelManager(modelManager);
+console.info('[EXT][extension] About to create RightDockPanel');
+rightDockPanel = new RightDockPanel(client, modelManager);
+rightDockPanel.setLogging(true);
+console.info('[EXT][extension] Created RightDockPanel');
 
-    // Hook selection changes to SelectionHandler
-    viewport.hookSelection((items) => {
-        SelectionHandler.handleLucidSelectionEvent(client, items);
-    });
-    console.info('[EXT][extension] Selection handler hooked');
-} else {
-    let authPanel, modelPanel;
-    console.info('[extension] About to create AuthPanel');
-    authPanel = new AuthPanel(client);
-    authPanel.setLogging(true);
-    console.info('[extension] Created AuthPanel');
+// Initialize the SelectionHandler with model manager
+SelectionHandler.setModelManager(modelManager);
 
-    console.info('[extension] About to create ModelPanel');
-    modelPanel = new ModelPanel(client, modelManager);
-    modelPanel.setLogging(true);
-    console.info('[extension] Created ModelPanel');
-
-    panelManager.registerAuthPanel(authPanel);
-    panelManager.registerModelPanel(modelPanel);
-    // Hook selection changes - note that both panel types implement handleSelectionChange
-    viewport.hookSelection((items) => {
-        modelPanel.handleSelectionChange(items);
-    });
-}
-
+// Hook selection changes to SelectionHandler
+viewport.hookSelection((items) => {
+    SelectionHandler.handleLucidSelectionEvent(client, items);
+});
+console.info('[EXT][extension] Selection handler hooked');
 console.info('[EXT][extension] Completed Successfully');

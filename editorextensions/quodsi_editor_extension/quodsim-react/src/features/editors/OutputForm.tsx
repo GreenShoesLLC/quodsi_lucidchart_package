@@ -1,16 +1,22 @@
 import React from "react";
 import { FileOutput } from "lucide-react";
-import { ActionType, ExtensionMessaging, MessageTypes } from "@quodsi/shared";
+import { useMessaging } from "../../messaging/MessageProvider";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 const OutputForm = () => {
+  const { selection, simulation } = useMessaging();
+  const modelOpsSender = useModelOpsSender();
+
   const handleCreatePage = () => {
-    // Now sending an empty page name - you may need to adjust the backend to handle this
-    ExtensionMessaging.getInstance().sendMessage(MessageTypes.ACTION_REQUEST, {
-      actionType: ActionType.CREATE_RESULTS_PAGE,
-      data: {
-        pageName: "Output Page", // Using a default name instead of user input
-      },
-    });
+    const documentId = selection.documentContext?.documentId;
+    const jobId = simulation.jobId;
+
+    if (!documentId || !jobId) {
+      console.warn("Cannot create results page: missing documentId or jobId");
+      return;
+    }
+
+    modelOpsSender.createResultsPage(jobId, documentId, "Simulation Results");
   };
 
   return (

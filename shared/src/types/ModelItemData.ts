@@ -1,5 +1,5 @@
-import { MetaData } from "../../../../types/MetaData";
-import { JsonObject } from "../JsonTypes";
+import { MetaData } from "./MetaData";
+import { JsonObject } from "./common";
 
 export interface ModelItemData {
     id: string;

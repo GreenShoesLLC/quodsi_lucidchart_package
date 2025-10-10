@@ -6,19 +6,10 @@ export * from './core/logging/ComponentLogger';
 // Type exports
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
+export * from './types/common';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
-
-// Some deprecated messaging types are still needed
-export * from './_deprecated/types/messaging/JsonTypes';
-export * from './_deprecated/types/messaging/MessageTypes';
-export * from './_deprecated/types/messaging/payloads/ActionPayloads';
-export * from './_deprecated/types/messaging/payloads/AuthPayloads';
-export * from './_deprecated/types/messaging/payloads/SelectionPayloads';
-export * from './_deprecated/types/messaging/payloads/ValidationPayloads';
-export * from './_deprecated/types/messaging/payloads/ModelItemData';
-export * from './_deprecated/types/messaging/utils/MessageValidation';
-export * from './_deprecated/types/messaging/utils/ExtensionMessaging';
+export * from './types/ModelItemData';
 
 export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';

@@ -51,11 +51,9 @@ export class ExtensionDebugService {
     
     // Model operations handler
     'ModelOpsHandler',
-    
-    // Legacy components (may not be in use)
-    'SelectionManager',
+
+    // Storage and API
     'StorageAdapter',
-    'PanelManager',
     'LucidApiService'
   ];
 
