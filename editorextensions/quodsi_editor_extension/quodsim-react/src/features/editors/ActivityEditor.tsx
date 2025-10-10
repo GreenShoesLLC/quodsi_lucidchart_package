@@ -17,6 +17,7 @@ import {
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 import StatesEditor from "./StatesEditor";
+import StateModificationsEditor from "./StateModificationsEditor";
 
 
 // Main Activity Editor Component
@@ -88,6 +89,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? ActivityFinancialProperties.fromJSON(data.financialProperties)
       : new ActivityFinancialProperties();
 
+    // Preserve state modifications if they exist
+    activity.preProcessingStateModifications = data.preProcessingStateModifications || [];
+    activity.postProcessingStateModifications = data.postProcessingStateModifications || [];
+
     return activity;
   };
 
@@ -112,6 +117,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Preserve financialProperties
     activityToSave.financialProperties = updatedActivity.financialProperties;
+
+    // Preserve state modifications
+    activityToSave.preProcessingStateModifications = updatedActivity.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications = updatedActivity.postProcessingStateModifications;
 
     onSave(activityToSave);
   };
@@ -243,6 +252,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
         // Preserve financialProperties
         updatedActivity.financialProperties = updatedData.financialProperties;
+
+        // Preserve state modifications
+        updatedActivity.preProcessingStateModifications = updatedData.preProcessingStateModifications || [];
+        updatedActivity.postProcessingStateModifications = updatedData.postProcessingStateModifications || [];
 
         onSave(updatedActivity);
       }}
@@ -646,11 +659,59 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
 
             {activeTab === "states" && (
-              <StatesEditor
-                states={states}
-                onStatesChange={onStatesChange}
-                defaultComponentType={ComponentType.ACTIVITY}
-              />
+              <div className="space-y-4">
+                {/* State Definitions Section */}
+                <div className="border-b pb-4">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    State Definitions
+                  </div>
+                  <StatesEditor
+                    states={states}
+                    onStatesChange={onStatesChange}
+                    defaultComponentType={ComponentType.ACTIVITY}
+                  />
+                </div>
+
+                {/* Pre-Processing State Modifications */}
+                <div className="border-b pb-4">
+                  <StateModificationsEditor
+                    modifications={localData.preProcessingStateModifications || []}
+                    onModificationsChange={(mods) =>
+                      handleChange({
+                        target: {
+                          name: "preProcessingStateModifications",
+                          value: mods,
+                        },
+                      } as any)
+                    }
+                    states={states}
+                    title="Pre-Processing State Modifications"
+                    description="Modifications applied before entities enter the activity"
+                    filterComponentType={ComponentType.ENTITY}
+                    allowCrossComponent={true}
+                  />
+                </div>
+
+                {/* Post-Processing State Modifications */}
+                <div>
+                  <StateModificationsEditor
+                    modifications={localData.postProcessingStateModifications || []}
+                    onModificationsChange={(mods) =>
+                      handleChange({
+                        target: {
+                          name: "postProcessingStateModifications",
+                          value: mods,
+                        },
+                      } as any)
+                    }
+                    states={states}
+                    title="Post-Processing State Modifications"
+                    description="Modifications applied after entities complete the activity"
+                    filterComponentType={ComponentType.ENTITY}
+                    allowCrossComponent={true}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>

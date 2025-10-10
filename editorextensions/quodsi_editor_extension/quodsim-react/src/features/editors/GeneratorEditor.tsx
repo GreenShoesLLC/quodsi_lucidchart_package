@@ -13,6 +13,7 @@ import {
 import { Clock, Users, Timer, PlayCircle, Settings, Hash } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
+import StateModificationsEditor from "./StateModificationsEditor";
 
 
 interface Props {
@@ -80,6 +81,9 @@ const GeneratorEditor: React.FC<Props> = ({
       generator.y
     );
 
+    // Preserve state modifications
+    updatedGenerator.initialStateModifications = generator.initialStateModifications || [];
+
     onSave(updatedGenerator);
   };
 
@@ -109,6 +113,9 @@ const GeneratorEditor: React.FC<Props> = ({
           updatedData.x,
           updatedData.y
         );
+
+        // Preserve state modifications
+        updatedGenerator.initialStateModifications = updatedData.initialStateModifications || [];
 
         onSave(updatedGenerator);
       }}
@@ -351,11 +358,39 @@ const GeneratorEditor: React.FC<Props> = ({
             )}
 
             {activeTab === "states" && (
-              <StatesEditor
-                states={states}
-                onStatesChange={onStatesChange}
-                defaultComponentType={ComponentType.RESOURCE}
-              />
+              <div className="space-y-4">
+                {/* State Definitions Section */}
+                <div className="border-b pb-4">
+                  <div className="text-xs font-semibold text-gray-700 mb-2">
+                    State Definitions
+                  </div>
+                  <StatesEditor
+                    states={states}
+                    onStatesChange={onStatesChange}
+                    defaultComponentType={ComponentType.ENTITY}
+                  />
+                </div>
+
+                {/* Initial State Modifications */}
+                <div>
+                  <StateModificationsEditor
+                    modifications={localGenerator.initialStateModifications || []}
+                    onModificationsChange={(mods) =>
+                      handleChange({
+                        target: {
+                          name: "initialStateModifications",
+                          value: mods,
+                        },
+                      } as any)
+                    }
+                    states={states}
+                    title="Initial State Modifications"
+                    description="State values to set on created entities"
+                    filterComponentType={ComponentType.ENTITY}
+                    allowCrossComponent={false}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
