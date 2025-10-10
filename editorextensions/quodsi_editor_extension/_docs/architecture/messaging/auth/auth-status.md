@@ -25,7 +25,7 @@ Authentication status messages manage the synchronization of authentication stat
 
 **Handler:**
 - File: `quodsim-react/src/messaging/mappers/auth.mapper.ts`
-- Function: `auth.mapper.mapMessageToAction`
+- Function: `mapAuth`
 
 **Triggers:**
 - After REACT_APP_READY
@@ -55,7 +55,7 @@ Authentication status messages manage the synchronization of authentication stat
 
 **Handler:**
 - File: `quodsim-react/src/messaging/mappers/auth.mapper.ts`
-- Function: `auth.mapper.mapMessageToAction`
+- Function: `mapAuth`
 
 ---
 
@@ -84,8 +84,8 @@ Authentication status messages manage the synchronization of authentication stat
 
 | Message Type | React Sender | Extension Handler | Extension Sender | React Handler |
 |--------------|--------------|-------------------|------------------|---------------|
-| AUTH_STATUS | ➖ N/A | ➖ N/A | ✅ MessageRouter.sendAuthStatus | ✅ auth.mapper.mapMessageToAction |
-| AUTH_REQUIRED | ➖ N/A | ➖ N/A | ✅ Various handlers | ✅ auth.mapper.mapMessageToAction |
+| AUTH_STATUS | ➖ N/A | ➖ N/A | ✅ MessageRouter.sendAuthStatus | ✅ mapAuth |
+| AUTH_REQUIRED | ➖ N/A | ➖ N/A | ✅ Various handlers | ✅ mapAuth |
 | REQUEST_AUTH_STATUS | ✅ Various | ✅ AuthHandler.handleRequestAuthStatus | ➖ N/A | ➖ N/A |
 
 ## Typical Sequences

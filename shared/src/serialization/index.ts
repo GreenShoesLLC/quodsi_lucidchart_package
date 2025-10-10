@@ -18,8 +18,8 @@ export type { ISerializedOperationStep } from './interfaces/ISerializedOperation
 export type { ISerializedResource } from './interfaces/ISerializedResource';
 export type { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 export type { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
-
 export type { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
+export type { ISerializedState } from './interfaces/ISerializedState';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

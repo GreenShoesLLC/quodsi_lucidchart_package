@@ -284,21 +284,22 @@ export function useModelPanel() {
     // Model and document data
     modelName: documentContext.documentTitle || '',
     documentId: documentContext.documentId,
-    
+
     // Element data
     currentElement: modelItemData as ExtendedModelItemData,
     lastElementUpdate: selection.lastUpdated?.toString(),
     diagramElementType: typedDiagramElementType,
-    
+
     // State data
     validationState,
     simulationStatus: simulationStatusProxy,
     referenceData,
-    
+    states: selection.states || [],
+
     // UI state
     isLoading,
     needsInitialization,
-    
+
     // Actions
     onElementUpdate,
     onElementTypeChange,

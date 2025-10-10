@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 
 /**
@@ -20,6 +20,7 @@ export class StorageAdapter {
     private static readonly DATA_KEY = 'q_data';
     private static readonly META_KEY = 'q_meta';
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
+    private static readonly STATES_KEY = 'q_states';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
@@ -108,6 +109,57 @@ export class StorageAdapter {
             this.log('Successfully cleared simulation status');
         } catch (error) {
             this.logError('Error clearing simulation status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the states array for a page
+     */
+    public setStates(page: ElementProxy, states: ISerializedState[]): void {
+        try {
+            this.log('Setting states for page:', {
+                pageId: page.id,
+                statesCount: states.length
+            });
+            const serializedStates = JSON.stringify(states);
+            page.shapeData.set(StorageAdapter.STATES_KEY, serializedStates);
+            this.log('Successfully set states');
+        } catch (error) {
+            this.logError('Error setting states:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the states array for a page
+     */
+    public getStates(page: ElementProxy): ISerializedState[] {
+        try {
+            this.log('Getting states for page:', page.id);
+            const statesStr = page.shapeData.get(StorageAdapter.STATES_KEY);
+            if (!statesStr || typeof statesStr !== 'string') {
+                this.log('No states found, returning empty array');
+                return [];
+            }
+            const states = JSON.parse(statesStr) as ISerializedState[];
+            this.log('Retrieved states:', { count: states.length });
+            return states;
+        } catch (error) {
+            this.logError('Error getting states:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the states array for a page
+     */
+    public clearStates(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.STATES_KEY);
+            this.log('Successfully cleared states');
+        } catch (error) {
+            this.logError('Error clearing states:', error);
             throw error;
         }
     }

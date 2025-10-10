@@ -1,5 +1,24 @@
 # Element Editor Save Flow
 
+> **⚠️ ARCHIVED DOCUMENTATION**
+>
+> This documentation has been reorganized and integrated into the architecture documentation.
+>
+> **New location:**
+> - [Element Update Exchange](../architecture/messaging/element-ops/element-update.md)
+>   - See **UI Integration** section for React component flow
+>   - See **Save Flow** for complete save sequence
+>   - See **Component Responsibilities** for component details
+>
+> **Key changes:**
+> - Updated handler references to current implementation
+> - Organized within message category structure
+> - Integrated React UI flow with message protocol documentation
+>
+> This archived doc is kept for historical reference only.
+
+---
+
 This document outlines the current messaging flow when a user modifies and saves changes in an Element Editor (Activity, Resource, Connector, etc.) in the Quodsi LucidChart extension.
 
 ## Overview
@@ -60,10 +79,10 @@ When the user clicks the "Save" button:
 5. The message is sent to the extension host
 
 ```
-[REACT] modelOpsSender.updateElementData called with: { 
-  elementId: "516WmQPd4fw", 
-  type: "Resource", 
-  data: { id: "516WmQPd4fw", name: "LATR", capacity: "5" } 
+[REACT] modelOpsSender.updateElementData called with: {
+  elementId: "516WmQPd4fw",
+  type: "Resource",
+  data: { id: "516WmQPd4fw", name: "LATR", capacity: "5" }
 }
 [EXT][RightDockPanel] Received message from iframe: ELEMENT_UPDATE
 [EXT][MessageRouter] Forwarding message to MessageHandlers
@@ -88,10 +107,10 @@ The extension processes the save request:
 
 ```
 [EXT][ElementOpsHandler] Element update requested { elementId: "516WmQPd4fw", type: "Resource" }
-[EXT][ModelManager] saveElementData - Input Parameters: { 
-  elementId: "516WmQPd4fw", 
-  elementType: "BlockProxy", 
-  simulationObjectType: "Resource" 
+[EXT][ModelManager] saveElementData - Input Parameters: {
+  elementId: "516WmQPd4fw",
+  elementType: "BlockProxy",
+  simulationObjectType: "Resource"
 }
 [EXT][ElementOpsHandler] Sending ELEMENT_UPDATE_RESULT { success: true, elementId: "516WmQPd4fw" }
 ```

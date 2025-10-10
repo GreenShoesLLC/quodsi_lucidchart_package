@@ -17,7 +17,8 @@ import {
     ModelDefinitionLogger,
     ActivityListManager,
     ResourceRequirement,
-    ValidationMessages
+    ValidationMessages,
+    ISerializedState
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
@@ -613,6 +614,31 @@ export class ModelManager {
             throw error;
         }
     }
+
+    /**
+     * Updates the states array for the model
+     */
+    public async updateStates(states: ISerializedState[], page: PageProxy): Promise<void> {
+        this.debug.log('updateStates - Start', {
+            statesCount: states.length,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Save states to page storage
+            this.storageAdapter.setStates(page, states);
+
+            // Mark model as dirty to force rebuild on next access
+            this.markModelDirty();
+
+            this.debug.log('updateStates - Complete');
+        } catch (error) {
+            this.debug.error('Error in updateStates:', error);
+            throw error;
+        }
+    }
+
     /**
      * Handles converting an element to a new simulation type
      */

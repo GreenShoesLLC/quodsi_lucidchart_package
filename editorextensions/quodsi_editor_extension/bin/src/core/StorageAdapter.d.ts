@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 /**
  * Shape data storage format
@@ -13,6 +13,7 @@ export declare class StorageAdapter {
     private static readonly DATA_KEY;
     private static readonly META_KEY;
     private static readonly SIMULATION_STATUS_KEY;
+    private static readonly STATES_KEY;
     private static readonly CURRENT_VERSION;
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -37,6 +38,18 @@ export declare class StorageAdapter {
      * Clears the simulation status for a page
      */
     clearSimulationStatus(page: ElementProxy): void;
+    /**
+     * Sets the states array for a page
+     */
+    setStates(page: ElementProxy, states: ISerializedState[]): void;
+    /**
+     * Gets the states array for a page
+     */
+    getStates(page: ElementProxy): ISerializedState[];
+    /**
+     * Clears the states array for a page
+     */
+    clearStates(page: ElementProxy): void;
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */

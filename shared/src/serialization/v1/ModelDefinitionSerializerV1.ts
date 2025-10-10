@@ -32,20 +32,23 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 formatVersion: '1.0',
                 metadata,
                 model: this.serializeModel(modelDefinition.model),
-                entities: modelDefinition.entities.getAll().map(entity => 
+                entities: modelDefinition.entities.getAll().map(entity =>
                     this.serializeEntity(entity)
                 ),
-                activities: modelDefinition.activities.getAll().map(activity => 
-                    this.serializeActivity(activity, modelDefinition) 
+                activities: modelDefinition.activities.getAll().map(activity =>
+                    this.serializeActivity(activity, modelDefinition)
                 ),
-                resources: modelDefinition.resources.getAll().map(resource => 
+                resources: modelDefinition.resources.getAll().map(resource =>
                     this.serializeResource(resource)
                 ),
-                generators: modelDefinition.generators.getAll().map(generator => 
-                    this.serializeGenerator(generator, modelDefinition) 
+                generators: modelDefinition.generators.getAll().map(generator =>
+                    this.serializeGenerator(generator, modelDefinition)
                 ),
-                resourceRequirements: modelDefinition.resourceRequirements.getAll().map(requirement => 
+                resourceRequirements: modelDefinition.resourceRequirements.getAll().map(requirement =>
                     this.serializeResourceRequirement(requirement)
+                ),
+                states: modelDefinition.states.getAll().map(state =>
+                    this.serializeState(state)
                 )
             };
         } catch (error) {

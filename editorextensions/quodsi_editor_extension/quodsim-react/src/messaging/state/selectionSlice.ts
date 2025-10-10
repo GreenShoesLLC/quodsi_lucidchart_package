@@ -4,6 +4,7 @@
  */
 
 import { ElementShape } from './types';
+import { ISerializedState } from '@quodsi/shared';
 import { debugService } from '../utils/debugService';
 
 // Create component-specific logger
@@ -26,6 +27,7 @@ export interface SelectionState {
     entities?: Array<{ id: string; name: string }>;
     resourceRequirements?: any[];
   };
+  states?: ISerializedState[];
   lastUpdated?: number;
 }
 
@@ -34,12 +36,13 @@ export const initialSelectionState: SelectionState = {
   selectedElements: [],
   documentContext: undefined,
   referenceData: undefined,
+  states: undefined,
   lastUpdated: undefined,
 };
 
 // Action types
-export type SelectionAction = 
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; } }
+export type SelectionAction =
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; }; states?: ISerializedState[]; }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -92,6 +95,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
           isQuodsiModel: documentContext.isQuodsiModel
         } : undefined,
         referenceData: action.referenceData || state.referenceData,
+        states: action.states || state.states,
         lastUpdated: Date.now(),
       };
       

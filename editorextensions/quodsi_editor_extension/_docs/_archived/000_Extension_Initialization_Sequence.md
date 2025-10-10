@@ -1,5 +1,21 @@
 # Lucid Extension Initialization Sequence
 
+> **⚠️ ARCHIVED DOCUMENT**
+>
+> This document has been superseded by the modular architecture documentation in `_docs/architecture/bootstrap/`.
+>
+> **Please refer to:**
+> - [Bootstrap Overview](../architecture/bootstrap/README.md)
+> - [Initialization Flow](../architecture/bootstrap/01_initialization_flow.md)
+> - [Extension Bootstrap](../architecture/bootstrap/02_extension_bootstrap.md)
+> - [React Bootstrap](../architecture/bootstrap/03_react_bootstrap.md)
+> - [Messaging Handshake](../architecture/bootstrap/04_messaging_handshake.md)
+> - [Troubleshooting](../architecture/bootstrap/05_troubleshooting.md)
+>
+> This document is kept for historical reference only.
+
+---
+
 This document describes the complete initialization sequence of the Quodsi LucidChart extension from when the browser loads the extension to when the panels are ready for user interaction.
 
 ## Overview

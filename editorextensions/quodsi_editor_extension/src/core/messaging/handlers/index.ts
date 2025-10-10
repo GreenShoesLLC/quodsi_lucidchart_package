@@ -6,6 +6,7 @@ import { FrameworkHandler } from './frameworkHandler';
 import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
+import { StatesHandler } from './statesHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 
@@ -60,7 +61,12 @@ export class MessageHandlers {
     if (ElementOpsHandler.handleMessage(msg)) {
       return true;
     }
-    
+
+    // States operations messages
+    if (StatesHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -73,13 +79,14 @@ export class MessageHandlers {
 }
 
 // Re-export handlers for direct access
-export { 
-  AuthHandler, 
+export {
+  AuthHandler,
   SubscriptionHandler,
   FrameworkHandler,
   SelectionHandler,
   SimulationHandler,
   ModelOpsHandler,
   ElementOpsHandler,
+  StatesHandler,
   StorageHandler
 };

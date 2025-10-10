@@ -1,6 +1,20 @@
-# Right Dock Panel to React App Ready Flow
+# Content Dock Panel to React App Ready Flow
 
-This document outlines the initialization flow and messaging process between the LucidChart extension and the React application, specifically focusing on the sequence from when the user clicks on the Right Dock Panel icon to when the React application sends the `REACT_APP_READY` message.
+> **⚠️ ARCHIVED DOCUMENT**
+>
+> This document has been superseded by the modular architecture documentation in `_docs/architecture/bootstrap/`.
+>
+> **For this topic, please refer to:**
+> - [React Bootstrap (Stages 5-6)](../architecture/bootstrap/03_react_bootstrap.md) - React initialization, MessageProvider, effects system, silent auth
+> - [Messaging Handshake (Stages 7-8)](../architecture/bootstrap/04_messaging_handshake.md) - REACT_APP_READY protocol and handling
+> - [Initialization Flow](../architecture/bootstrap/01_initialization_flow.md) - High-level overview with complete flow diagram
+> - [Extension Bootstrap (Stages 1-4)](../architecture/bootstrap/02_extension_bootstrap.md) - ContentDockPanel creation and lifecycle
+>
+> This document is kept for historical reference only.
+
+---
+
+This document outlines the authentication flow and messaging process between the LucidChart extension and the React application, specifically focusing on the initialization sequence from when the user clicks on the Content Dock Panel icon to when the React application sends the `REACT_APP_READY` message.
 
 ## Architecture Overview
 
@@ -15,27 +29,22 @@ The Quodsi LucidChart extension consists of several interconnected components:
 
 ### 1. User Interaction Trigger
 
-The flow begins when a user clicks on the right dock panel icon in LucidChart.
+The flow begins when a user clicks on the left content dock panel icon in LucidChart.
 
 ```typescript
-// In src/panels/RightDockPanel.ts
-constructor(client: EditorClient, modelManager: ModelManager) {
+// In src/panels/ContentDockPanel.ts
+constructor(client: EditorClient) {
     super(client, {
-        title: 'Quodsi Model',
-        url: 'quodsim-react/index.html?panel=model', // Query param helps React app identify panel type
-        location: PanelLocation.RightDock,
+        title: 'Quodsi',
+        url: 'quodsim-react/index.html?panel=auth', // Query param helps React app identify panel type
+        location: PanelLocation.ContentDock,
         iconUrl: 'https://lucid.app/favicon.ico',
         width: 300
     });
-
-    this.modelManager = modelManager;
-
-    // Enable logging for RightDockPanel by default for easier debugging
-    this.loggingEnabled = true;
 }
 ```
 
-The panel is created with a URL that points to the React application's entry point, passing a query parameter `panel=model` to identify the panel type.
+The panel is created with a URL that points to the React application's entry point, passing a query parameter `panel=auth` to identify the panel type.
 
 ### 2. React Application Loading
 
@@ -91,7 +100,7 @@ Key components of the authentication setup:
 
 ### 4. Modular MessageProvider Initialization
 
-The MessageProvider component is now implemented with a modular approach that orchestrates several effects and hooks:
+The MessageProvider is now implemented with a modular approach that orchestrates several effects and hooks:
 
 ```typescript
 // In quodsim-react/src/messaging/MessageProvider.tsx
@@ -118,6 +127,15 @@ export const MessageProvider: React.FC<MessageProviderProps> = ({
   useInitialAuthCheckEffect(ensureAuthState);
   useAuthInitializationEffect(state, authInitializedRef);
   useSilentAuthCompletionEffect(state, silentAuthCheckCompletedRef);
+  useAuthStateChangeEffect(
+    state,
+    ensureAuthState,
+    authInitializedRef,
+    silentAuthCheckCompletedRef
+  );
+  usePanelTypeDetectionEffect(state, dispatch, initialPanelType);
+
+  // Effects responsible for REACT_APP_READY message
   useReactAppReadyEffect(
     state,
     sendMessage,
@@ -134,6 +152,8 @@ export const MessageProvider: React.FC<MessageProviderProps> = ({
     authInitializedRef,
     silentAuthCheckCompletedRef
   );
+
+  // Message listener effect
   useMessageListenerEffect(
     state,
     dispatch,
@@ -170,6 +190,26 @@ export function useSilentAuth(): void {
   const { auth } = useMessaging();
 
   useEffect(() => {
+    // First check localStorage immediately as a first step
+    const storedAuth = AuthStorageService.loadAuthState();
+    console.log("[REACT][useSilentAuth] Initial localStorage check:", {
+      isAuthStateValid: AuthStorageService.isAuthStateValid(),
+      hasStoredAuth: !!storedAuth,
+      isAuthenticated: storedAuth?.isAuthenticated,
+    });
+
+    // If valid auth in localStorage, use it immediately
+    if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+      console.log(
+        "[REACT][useSilentAuth] Using valid auth from localStorage immediately"
+      );
+      dispatch({
+        type: "AUTH_STATUS_UPDATE",
+        isAuthenticated: true,
+        userInfo: storedAuth.userInfo,
+      });
+    }
+
     // Mark authentication as loading
     dispatch({
       type: "AUTH_LOADING",
@@ -184,37 +224,27 @@ export function useSilentAuth(): void {
           if (accounts.length > 0) {
             const account = accounts[0];
 
-            // Set active account
+            // Set active account and create user info
             instance.setActiveAccount(account);
-
-            // Create user info
             const userInfo = {
               id: account.localAccountId,
               email: account.username,
               displayName: account.name || account.username,
             };
 
-            // Update auth state
+            // Update auth state and save to localStorage
             dispatch({
               type: "AUTH_STATUS_UPDATE",
               isAuthenticated: true,
               userInfo,
             });
-          } else {
-            // Check localStorage as fallback
-            const storedAuth = AuthStorageService.loadAuthState();
 
-            if (
-              storedAuth &&
-              storedAuth.isAuthenticated &&
-              storedAuth.userInfo
-            ) {
-              dispatch({
-                type: "AUTH_STATUS_UPDATE",
-                isAuthenticated: true,
-                userInfo: storedAuth.userInfo,
-              });
-            } else {
+            // Save to localStorage
+            AuthStorageService.saveAuthState(true, userInfo);
+          } else {
+            // Check localStorage as fallback (already did above)
+            // If no accounts were found, update state accordingly
+            if (!storedAuth || !storedAuth.isAuthenticated) {
               dispatch({
                 type: "AUTH_STATUS_UPDATE",
                 isAuthenticated: false,
@@ -231,7 +261,8 @@ export function useSilentAuth(): void {
             silentAuthInProgress: false,
           });
 
-          // Ensure the auth state has a lastUpdated timestamp
+          // Final AUTH_STATUS_UPDATE to ensure lastUpdated is set
+          // The reducer will automatically set lastUpdated
           dispatch({
             type: "AUTH_STATUS_UPDATE",
             isAuthenticated: auth.isAuthenticated || false,
@@ -246,9 +277,108 @@ export function useSilentAuth(): void {
 }
 ```
 
-This hook checks for existing authentication from MSAL or localStorage, and updates the application state accordingly.
+This hook checks for existing authentication from localStorage and MSAL, and updates the application state accordingly.
 
-### 6. REACT_APP_READY Message Sending
+### 6. Authentication State Management
+
+The system now includes a dedicated hook for managing auth state synchronization with localStorage:
+
+```typescript
+// In quodsim-react/src/messaging/hooks/useAuthState.ts
+export function useAuthState(
+  state: { auth: { isAuthenticated: boolean; userInfo?: any } },
+  dispatch: React.Dispatch<any>
+) {
+  const ensureAuthState = useCallback(() => {
+    try {
+      const storedAuth = AuthStorageService.loadAuthState();
+      if (storedAuth && storedAuth.isAuthenticated && storedAuth.userInfo) {
+        logger.log("Found valid auth in localStorage");
+
+        if (!state.auth.isAuthenticated) {
+          logger.log("Forcing local state authentication from localStorage");
+
+          dispatch({
+            type: "AUTH_STATUS_UPDATE",
+            isAuthenticated: true,
+            userInfo: storedAuth.userInfo,
+          });
+        }
+
+        return { isAuthenticated: true, userInfo: storedAuth.userInfo };
+      }
+    } catch (e) {
+      logger.error("Error checking localStorage:", e);
+    }
+
+    return {
+      isAuthenticated: state.auth.isAuthenticated,
+      userInfo: state.auth.userInfo,
+    };
+  }, [state.auth.isAuthenticated, state.auth.userInfo, dispatch]);
+
+  return { ensureAuthState };
+}
+```
+
+This hook is used to ensure that the application state is always synchronized with localStorage, which serves as the source of truth for authentication status.
+
+### 7. Component-Specific Auth State Hook
+
+For components with specialized needs like AuthPanel, we create custom hooks that extend the core functionality:
+
+```typescript
+// In quodsim-react/src/features/auth/hooks/useAuthPanelState.ts
+export const useAuthPanelState = () => {
+  const { auth } = useMessaging();
+  const dispatch = useMessagingDispatch();
+  const { ensureAuthState } = useAuthStateBase({ auth }, dispatch);
+  const sendMessage = useSendMessage({ app: { panelType: "auth" } }, dispatch);
+
+  // Extract auth state from the messaging context
+  const { isAuthenticated, userInfo, silentAuthInProgress, error } = auth;
+
+  // Function to handle login
+  const login = useCallback(
+    (idToken: string, user: any, isNewUser: boolean) => {
+      // Save auth state to localStorage
+      AuthStorageService.saveAuthState(true, user);
+
+      // Update local state
+      dispatch({
+        type: "AUTH_STATUS_UPDATE",
+        isAuthenticated: true,
+        userInfo: user,
+      });
+
+      // Send message to host
+      sendMessage(EnvelopeMessageType.AUTH_LOGIN_SUCCESS, {
+        idToken,
+        user,
+        newUser: isNewUser,
+      });
+    },
+    [dispatch, sendMessage]
+  );
+
+  // Additional functions for logout, sync, etc.
+
+  return {
+    isAuthenticated,
+    userInfo,
+    silentAuthInProgress,
+    error,
+    login,
+    logout,
+    syncAuthStateNow,
+    ensureAuthState,
+  };
+};
+```
+
+This pattern allows components to access custom functionality while still leveraging the core hooks for basic operations.
+
+### 8. REACT_APP_READY Message Sending
 
 There are multiple mechanisms to ensure REACT_APP_READY is sent reliably:
 
@@ -264,50 +394,50 @@ export function useReactAppReadyEffect(
   authInitializedRef,
   silentAuthCheckCompletedRef
 ) {
-  useEffect(() => {
-    if (
-      !hasSentReadyRef.current &&
-      state.app.initialized &&
-      state.app.panelType &&
-      !state.auth.silentAuthInProgress
-    ) {
-      // Check for valid auth in localStorage
-      const { isAuthenticated, userInfo } = ensureAuthState();
-
-      // Force necessary flags if conditions are met
-      if (!authInitializedRef.current && state.auth.lastUpdated) {
-        authInitializedRef.current = true;
-      }
-
+  useEffect(
+    () => {
       if (
-        !silentAuthCheckCompletedRef.current &&
-        !state.auth.silentAuthInProgress
-      ) {
-        silentAuthCheckCompletedRef.current = true;
-      }
-
-      // Send REACT_APP_READY message when all conditions are met
-      if (
+        !hasSentReadyRef.current &&
         state.app.initialized &&
         state.app.panelType &&
-        !state.auth.silentAuthInProgress &&
-        !hasSentReadyRef.current
+        !state.auth.silentAuthInProgress
       ) {
-        sendMessage(EnvelopeMessageType.REACT_APP_READY, {
-          panel: state.app.panelType,
-          isAuthenticated: isAuthenticated,
-          user: userInfo,
-        });
+        // Check for valid auth in localStorage
+        const { isAuthenticated, userInfo } = ensureAuthState();
 
-        hasSentReadyRef.current = true;
+        // Force necessary flags if conditions are met
+        if (!authInitializedRef.current && state.auth.lastUpdated) {
+          authInitializedRef.current = true;
+        }
+
+        if (
+          !silentAuthCheckCompletedRef.current &&
+          !state.auth.silentAuthInProgress
+        ) {
+          silentAuthCheckCompletedRef.current = true;
+        }
+
+        // Send REACT_APP_READY message when all conditions are met
+        if (
+          state.app.initialized &&
+          state.app.panelType &&
+          !state.auth.silentAuthInProgress &&
+          !hasSentReadyRef.current
+        ) {
+          sendMessage(EnvelopeMessageType.REACT_APP_READY, {
+            panel: state.app.panelType,
+            isAuthenticated: isAuthenticated,
+            user: userInfo,
+          });
+
+          hasSentReadyRef.current = true;
+        }
       }
-    }
-  }, [
-    state.app.initialized,
-    state.app.panelType,
-    state.auth.lastUpdated,
-    state.auth.silentAuthInProgress /* ... */,
-  ]);
+    },
+    [
+      /* dependencies */
+    ]
+  );
 }
 ```
 
@@ -360,9 +490,9 @@ export function useEmergencyReactAppReadyEffect(
 
 3. **Message Listener Fallback**: The message listener effect also checks conditions and sends REACT_APP_READY if needed.
 
-### 7. Extension Side Handling of REACT_APP_READY
+### 9. Extension Side Handling of REACT_APP_READY
 
-When the React application sends the `REACT_APP_READY` message, the RightDockPanel forwards it to the router, which processes it and responds with the current authentication state:
+When the React application sends the `REACT_APP_READY` message, the ContentDockPanel forwards it to the router, which processes it and responds with the current authentication state:
 
 ```typescript
 // In src/core/messaging/MessageRouter.ts
@@ -394,13 +524,6 @@ private handleReactAppReady(msg: EnvelopeBase): void {
         });
     }
 
-    // Ensure the channel has a panel before flushing
-    console.log(`[EXT][MessageRouter] Flushing queue for ${role}:`, {
-        queueSize: this.channelManager.getChannel(role)?.queue.length,
-        hasPanel: this.ensureChannelHasPanel(role),
-        isReady: this.channelManager.isChannelReady(role)
-    });
-
     // Flush queued messages
     this.channelManager.flushQueue(role);
 
@@ -412,28 +535,38 @@ private handleReactAppReady(msg: EnvelopeBase): void {
 
 The router responds with the current authentication state by calling `sendAuthStatus(role)`.
 
-## Complete Initialization Flow Diagram
+## Authentication Persistence Flow
+
+The authentication state is persisted across browser sessions using a multi-layered approach:
+
+1. **MSAL Cache**: The primary storage for authentication tokens and account information
+2. **localStorage**: A secondary storage for authentication state that persists across browser sessions
+3. **ensureAuthState**: A utility function that synchronizes state between localStorage and the application
+
+This ensures that users remain authenticated even after closing and reopening LucidChart, providing a seamless experience.
+
+## Complete Authentication Flow Diagram
 
 ```
-User clicks RightDockPanel icon
+User clicks ContentDockPanel icon
     │
     ▼
 LucidChart creates iframe with React app
     │
     ▼
 App_new.tsx renders with MsalProvider
-    │
-    ▼
-MessageProvider initializes
     │                    ╭───────────────────╮
     ▼                    │ Multiple parallel │
-useAuthState initialized ◄───▶ processes run │
+MessageProvider initializes ◄─▶ processes run │
     │                    ╰───────────────────╯
     ▼
-useSilentAuth checks for existing accounts
+Initial localStorage auth check
     │
     ▼
-Authentication state initialized (MSAL or localStorage)
+useSilentAuth attempts authentication
+    │
+    ▼
+Authentication state initialized (localStorage + MSAL)
     │
     ▼
 AUTH_LOADING set to false
@@ -448,7 +581,7 @@ ensureAuthState checks localStorage for auth state
 REACT_APP_READY message sent to extension host
     │
     ▼
-RightDockPanel.messageFromFrame receives message
+ContentDockPanel.messageFromFrame receives message
     │
     ▼
 Message forwarded to router.receive()
@@ -463,7 +596,7 @@ Router updates auth state and marks channel as ready
 Router sends current auth & subscription state back to panel
     │
     ▼
-RightDockPanel UI renders with auth state
+AuthPanel UI renders with authenticated state
 ```
 
 ## Multi-Layered Reliability
@@ -474,6 +607,39 @@ The system now includes multiple mechanisms to ensure REACT_APP_READY is sent re
 2. **Emergency Timer**: After 3 seconds, useEmergencyReactAppReadyEffect force-sends REACT_APP_READY
 3. **Message Listener**: The message listener effect also checks conditions and can send REACT_APP_READY
 4. **Auth State Source of Truth**: ensureAuthState always checks localStorage to ensure correct authentication state
-5. **Manual Refresh**: When needed, the RightDockPanel can send an AUTH_STATUS request
+5. **Silent Authentication**: useSilentAuth checks both MSAL and localStorage for existing authentication
+6. **Component-Specific Hooks**: Components like AuthPanel have specialized hooks for additional reliability
 
 These mechanisms work together to ensure that the panel initializes correctly in all scenarios.
+
+## Benefits of the Modular Implementation
+
+1. **Separation of Concerns**:
+
+   - Each module has a clear, single responsibility
+   - Hooks handle state management
+   - Effects handle side effects
+   - Handlers process messages
+
+2. **Improved Maintainability**:
+
+   - Smaller, focused files are easier to understand and modify
+   - Clear dependencies between modules
+   - Better organization of related functionality
+
+3. **Enhanced Reliability**:
+
+   - Multiple layers of protection against edge cases
+   - Better error handling and recovery
+   - Clear initialization sequence
+
+4. **Better Testability**:
+
+   - Individual modules can be tested in isolation
+   - Easier to mock dependencies
+   - More focused unit tests
+
+5. **Simplified Debugging**:
+   - Clear logging points in each module
+   - Easier to trace through the execution flow
+   - Better error reporting and handling

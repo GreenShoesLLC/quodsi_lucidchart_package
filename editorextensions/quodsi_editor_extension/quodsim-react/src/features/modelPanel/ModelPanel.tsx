@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
+import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationPanel } from './ValidationPanel';
 import { SimulationControls } from './SimulationControls';
-import { SimulationObjectType, DiagramElementType, StateListManager } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 /**
@@ -22,6 +23,7 @@ export const ModelPanel: React.FC = () => {
     diagramElementType,
     referenceData,
     simulationStatus,
+    states: serializedStates,
     // Actions
     onElementUpdate,
     onElementTypeChange,
@@ -32,6 +34,9 @@ export const ModelPanel: React.FC = () => {
     onViewResults
   } = useModelPanel();
 
+  // Get message sender for states
+  const { updateStates: sendStatesUpdate } = useModelOpsSender();
+
   // Local UI state for accordion sections
   const [expandedSections, setExpandedSections] = useState({
     elementEditor: true, // Always start with element editor expanded
@@ -39,16 +44,49 @@ export const ModelPanel: React.FC = () => {
     simulation: false
   });
 
-  // TODO: This is a temporary placeholder. States should come from the model definition
-  // stored in the messaging state. This will be properly integrated when full model
-  // state management is implemented.
-  const [states, setStates] = useState<StateListManager>(new StateListManager());
+  // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
+  const states = useMemo(() => {
+    const stateListManager = new StateListManager();
+
+    // Deserialize and add each state
+    if (serializedStates && serializedStates.length > 0) {
+      serializedStates.forEach((serializedState: any) => {
+        const state = new State(
+          serializedState.id,
+          serializedState.name,
+          serializedState.componentType as ComponentType,
+          serializedState.dataType as StateType,
+          serializedState.initialValue,
+          {
+            categoryValues: serializedState.categoryValues,
+            description: serializedState.description,
+            collectStatistics: serializedState.collectStatistics
+          }
+        );
+        stateListManager.add(state);
+      });
+    }
+
+    return stateListManager;
+  }, [serializedStates]);
 
   const handleStatesChange = (updatedStates: StateListManager) => {
-    setStates(updatedStates);
-    // TODO: Persist states back to the extension/model definition
+    // Serialize states and send to extension
+    const serializedStates = updatedStates.getAll().map(state => ({
+      id: state.id,
+      name: state.name,
+      componentType: state.componentType,
+      dataType: state.dataType,
+      initialValue: state.initialValue,
+      categoryValues: state.categoryValues,
+      description: state.description,
+      collectStatistics: state.collectStatistics
+    }));
+
+    sendStatesUpdate(serializedStates);
+
     if (isDevelopment) {
-      console.log('[ModelPanel] States updated:', updatedStates.getAll());
+      console.log('[ModelPanel] States updated and sent to extension:', serializedStates);
     }
   };
 

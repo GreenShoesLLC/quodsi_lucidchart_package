@@ -1,4 +1,4 @@
-import { EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeMessageType, ISerializedState } from '@quodsi/shared';
 import { useSender } from './useSender';
 
 /**
@@ -117,7 +117,19 @@ export function useModelOpsSender() {
     // No elementId means convert the whole page
     send(EnvelopeMessageType.MODEL_CONVERT, {});
   };
-  
+
+  /**
+   * Send a request to update the states array
+   *
+   * @param states Array of serialized state definitions
+   */
+  const updateStates = (states: ISerializedState[]) => {
+    // Use STATES_UPDATE for updating states
+    send(EnvelopeMessageType.STATES_UPDATE, {
+      states
+    });
+  };
+
   return {
     validateModel,
     convertModel,
@@ -125,6 +137,7 @@ export function useModelOpsSender() {
     createResultsPage,
     updateElementData,
     convertElement,
-    convertPage
+    convertPage,
+    updateStates
   };
 }

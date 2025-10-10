@@ -1,4 +1,4 @@
-import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType } from '@quodsi/shared';
+import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType, ISerializedState } from '@quodsi/shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -81,6 +81,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           entities?: Array<{ id: string; name: string }>;
           resourceRequirements?: any[];
         };
+        states?: ISerializedState[];
         documentContext?: {
           documentId: string;
           pageId: string;
@@ -241,6 +242,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         // Include reference data if present
         ...(selectionData.referenceData ? {
           referenceData: selectionData.referenceData
+        } : {}),
+        // Include states if present
+        ...(selectionData.states ? {
+          states: selectionData.states
         } : {})
       };
       
@@ -256,7 +261,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           activities: (selectionAction as any).referenceData.activities?.length || 0,
           resources: (selectionAction as any).referenceData.resources?.length || 0,
           entities: (selectionAction as any).referenceData.entities?.length || 0
-        } : 'none'
+        } : 'none',
+        statesCount: (selectionAction as any).states?.length || 0
       });
       
       return selectionAction;

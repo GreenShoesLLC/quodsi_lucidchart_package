@@ -40,10 +40,10 @@ if (useNewMessaging) {
     // Initialize messaging system with logging enabled
     initializeMessaging(true);
 
-    let rightDockPanel, contentDoctPanel;
+    let rightDockPanel, contentDockPanel;
     console.info('[EXT][extension] About to create ContentDockPanel');
-    contentDoctPanel = new ContentDockPanel(client);
-    contentDoctPanel.setLogging(true);
+    contentDockPanel = new ContentDockPanel(client);
+    contentDockPanel.setLogging(true);
     console.info('[EXT][extension] Created ContentDockPanel');
 
     console.info('[EXT][extension] About to create RightDockPanel');

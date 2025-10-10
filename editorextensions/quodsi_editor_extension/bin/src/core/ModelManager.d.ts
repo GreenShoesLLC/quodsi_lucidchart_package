@@ -1,4 +1,4 @@
-import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult, MetaData, ModelStructure } from "@quodsi/shared";
+import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult, MetaData, ModelStructure, ISerializedState } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
 export declare class ModelManager {
@@ -104,6 +104,10 @@ export declare class ModelManager {
      * Handles saving simulation element data and metadata
      */
     saveElementData(element: ElementProxy, data: any, type: SimulationObjectType, page: PageProxy): Promise<void>;
+    /**
+     * Updates the states array for the model
+     */
+    updateStates(states: ISerializedState[], page: PageProxy): Promise<void>;
     /**
      * Handles converting an element to a new simulation type
      */

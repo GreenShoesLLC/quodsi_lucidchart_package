@@ -1,6 +1,7 @@
 import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { JsonObject } from '../../_deprecated/types/messaging/JsonTypes';
+import { ISerializedState } from '../../serialization/interfaces/ISerializedState';
 
 /**
  * Sent to request element update
@@ -70,9 +71,36 @@ export interface ElementConvertResultMessage extends EnvelopeBase {
   };
 }
 
+/**
+ * Sent to request states update
+ */
+export interface StatesUpdateMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.STATES_UPDATE;
+  data: {
+    /** Serialized states array */
+    states: ISerializedState[];
+  };
+}
+
+/**
+ * Sent with states update results
+ */
+export interface StatesUpdateResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.STATES_UPDATE_RESULT;
+  data: {
+    /** Success flag */
+    success: boolean;
+
+    /** Error message if update failed */
+    errorMessage?: string;
+  };
+}
+
 /** Union type of all element operations messages */
 export type ElementOpsMessage =
   | ElementUpdateMessage
   | ElementUpdateResultMessage
   | ElementConvertMessage
-  | ElementConvertResultMessage;
+  | ElementConvertResultMessage
+  | StatesUpdateMessage
+  | StatesUpdateResultMessage;

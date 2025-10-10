@@ -1,5 +1,26 @@
 # Quodsi Messaging System Documentation
 
+> **⚠️ ARCHIVED DOCUMENTATION**
+>
+> This documentation has been reorganized and moved to `_docs/architecture/messaging/`.
+>
+> **New location:**
+> - [Messaging System Overview](../../architecture/messaging/README.md)
+> - [Message Protocol](../../architecture/messaging/01_message_protocol.md)
+> - [Message Lifecycle](../../architecture/messaging/02_message_lifecycle.md)
+> - [Mapper System](../../architecture/messaging/03_mapper_system.md)
+> - Individual message docs organized by category
+>
+> **Key changes:**
+> - Updated handler references (`mapMessageToAction` → specific mapper functions)
+> - Organized by message category (framework, auth, selection, element-ops, model-ops, simulation)
+> - Added overview docs explaining protocol and lifecycle
+> - Category READMEs for quick navigation
+>
+> These archived docs are kept for historical reference only.
+
+---
+
 This folder contains detailed documentation for each message exchange in the Quodsi messaging system between the LucidChart extension and embedded React panels.
 
 ## Message Categories

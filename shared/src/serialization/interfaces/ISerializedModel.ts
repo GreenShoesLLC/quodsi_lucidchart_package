@@ -5,6 +5,7 @@ import { ISerializedActivity } from './ISerializedActivity';
 import { ISerializedResource } from './ISerializedResource';
 import { ISerializedGenerator } from './ISerializedGenerator';
 import { ISerializedResourceRequirement } from './ISerializedResourceRequirement';
+import { ISerializedState } from './ISerializedState';
 
 export interface ISerializedMetadata {
     version: string;
@@ -34,4 +35,5 @@ export interface ISerializedModel {
     resources: ISerializedResource[];
     generators: ISerializedGenerator[];
     resourceRequirements: ISerializedResourceRequirement[];
+    states: ISerializedState[];
 }

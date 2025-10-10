@@ -3,7 +3,7 @@ import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
-import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage } from './elementOps/messages';
+import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunAckMessage, ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
@@ -97,6 +97,8 @@ export {
   ElementUpdateResultMessage,
   ElementConvertMessage,
   ElementConvertResultMessage,
+  StatesUpdateMessage,
+  StatesUpdateResultMessage,
   ElementOpsMessage
 } from './elementOps/messages';
 
@@ -161,6 +163,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.ELEMENT_UPDATE_RESULT]: ElementUpdateResultMessage['data'];
   [EnvelopeMessageType.ELEMENT_CONVERT]: ElementConvertMessage['data'];
   [EnvelopeMessageType.ELEMENT_CONVERT_RESULT]: ElementConvertResultMessage['data'];
+  [EnvelopeMessageType.STATES_UPDATE]: StatesUpdateMessage['data'];
+  [EnvelopeMessageType.STATES_UPDATE_RESULT]: StatesUpdateResultMessage['data'];
 
   [EnvelopeMessageType.STORAGE_CONNECT_REQUEST]: StorageConnectRequestMessage['data'];
   [EnvelopeMessageType.STORAGE_CONNECT_RESULT]: StorageConnectResultMessage['data'];

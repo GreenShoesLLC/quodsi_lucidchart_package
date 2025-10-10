@@ -1,5 +1,6 @@
 import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
+import { ISerializedState } from '../../serialization/interfaces/ISerializedState';
 
 /**
  * Basic shape information for diagram elements
@@ -64,6 +65,9 @@ export interface SelectionChangedMessage extends EnvelopeBase {
 
     /** Total number of elements on the page */
     totalElementCount: number;
+
+    /** States definitions from the model */
+    states?: ISerializedState[];
   };
 }
 

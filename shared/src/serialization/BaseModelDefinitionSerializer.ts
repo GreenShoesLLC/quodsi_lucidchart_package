@@ -10,6 +10,9 @@ import { Duration } from '../types/elements/Duration';
 import { RequirementClause } from '../types/elements/RequirementClause';
 import { ResourceRequest } from '../types/elements/ResourceRequest';
 import { OperationStep } from '../types/elements/OperationStep';
+import { State } from '../types/elements/State';
+import { ComponentType } from '../types/elements/ComponentType';
+import { StateType } from '../types/elements/StateType';
 
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 import { ISerializedModel } from './interfaces/ISerializedModel';
@@ -23,6 +26,7 @@ import { ISerializedDuration } from './interfaces/ISerializedDuration';
 import { ISerializedOperationStep } from './interfaces/ISerializedOperationStep';
 import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
+import { ISerializedState } from './interfaces/ISerializedState';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
 import { SerializationError } from './errors/SerializationError';
 import { InvalidModelError } from './errors/InvalidModelError';
@@ -290,6 +294,50 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 `Failed to serialize connector ${connector.id}`,
                 error instanceof Error ? error : undefined
             );
+        }
+    }
+
+    protected serializeState(state: State): ISerializedState {
+        try {
+            if (!state.id || !state.name) {
+                throw new InvalidModelError('State must have id and name');
+            }
+
+            return {
+                id: state.id,
+                name: state.name,
+                componentType: state.componentType,
+                dataType: state.dataType,
+                initialValue: state.initialValue,
+                categoryValues: state.categoryValues,
+                description: state.description,
+                collectStatistics: state.collectStatistics
+            };
+        } catch (error) {
+            throw new SerializationError('State', `Failed to serialize state ${state.id}`, error instanceof Error ? error : undefined);
+        }
+    }
+
+    protected deserializeState(data: ISerializedState): State {
+        try {
+            if (!data.id || !data.name) {
+                throw new InvalidModelError('Serialized state must have id and name');
+            }
+
+            return new State(
+                data.id,
+                data.name,
+                data.componentType as ComponentType,
+                data.dataType as StateType,
+                data.initialValue,
+                {
+                    categoryValues: data.categoryValues,
+                    description: data.description,
+                    collectStatistics: data.collectStatistics
+                }
+            );
+        } catch (error) {
+            throw new SerializationError('State', `Failed to deserialize state ${data.id}`, error instanceof Error ? error : undefined);
         }
     }
 

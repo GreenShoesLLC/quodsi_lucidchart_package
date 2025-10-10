@@ -173,19 +173,39 @@ export class SelectionHandler {
     // Get data from both state managers
     const selectionData = SelectionHandler.selectionState.getData();
     const documentData = SelectionHandler.documentContext.getData();
-    
+
+    // Get states from page if available
+    let states: any[] = [];
+    try {
+      if (SelectionHandler.modelManager) {
+        // Get the current page from the client viewport
+        const client = ModelManager.getClient();
+        const viewport = new Viewport(client);
+        const page = viewport.getCurrentPage();
+
+        if (page) {
+          const storageAdapter = SelectionHandler.modelManager.getStorageAdapter();
+          states = storageAdapter.getStates(page);
+        }
+      }
+    } catch (error) {
+      console.error('[SelectionHandler] Error retrieving states:', error);
+    }
+
     // Combine data for the message
     const messageData: any = {
       ...selectionData,
-      documentContext: documentData
+      documentContext: documentData,
+      states: states
     };
-    
+
     console.log('[SelectionHandler] Sending SELECTION_CHANGED message', {
       selectionType: messageData.selectionType,
       hasModel: messageData.hasModel,
-      itemCount: messageData.selectionCount
+      itemCount: messageData.selectionCount,
+      statesCount: states.length
     });
-    
+
     // Send message via router
     router.send('model', {
       id: `selection_change_${Date.now()}`,
