@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft } from "lucide-react";
 import {
   Activity,
@@ -18,6 +18,8 @@ import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
+import { ResourceRequirementModal } from "./ResourceRequirementModal";
+import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 
 
 // Main Activity Editor Component
@@ -40,7 +42,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   states,
   onStatesChange,
 }) => {
-  const [activeTab, setActiveTab] = React.useState<ActivityTab>("basic");
+  const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
+  const [requirementModalOpen, setRequirementModalOpen] = useState(false);
+  const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
 
   // Helper functions
   const bufferToDisplay = (value: number | null | undefined): number =>
@@ -212,6 +216,30 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     } as any);
   };
 
+  // Resource Requirement Modal Handlers
+  const handleOpenRequirementModal = (requirementId: string) => {
+    const req = referenceData?.resourceRequirements?.find(r => r.id === requirementId);
+    if (req) {
+      const structure = convertRootClausesToStructure(req.rootClauses);
+      setEditingRequirement({ id: req.id, name: req.name, structure });
+      setRequirementModalOpen(true);
+    }
+  };
+
+  const handleCreateRequirement = () => {
+    setEditingRequirement(null);
+    setRequirementModalOpen(true);
+  };
+
+  const handleSaveRequirement = (data: { name: string; structure: TeamStructure }) => {
+    const rootClauses = convertStructureToRootClauses(data.structure);
+    // TODO: Implement save to backend
+    // For now, just log the requirement
+    console.log('Save requirement:', { name: data.name, rootClauses });
+    setRequirementModalOpen(false);
+    setEditingRequirement(null);
+  };
+
   if (!extractedActivity?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
@@ -222,6 +250,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   }
 
   return (
+    <>
     <BaseEditor
       data={{
         ...extractedActivity,
@@ -463,6 +492,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         handleOperationStepDelete(index, localData, handleChange)
                       }
                       resourceRequirements={referenceData?.resourceRequirements}
+                      availableResources={referenceData?.resources}
+                      onOpenRequirementModal={handleOpenRequirementModal}
+                      onCreateRequirement={handleCreateRequirement}
                     />
                   ))}
                 </div>
@@ -717,6 +749,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         </div>
       )}
     </BaseEditor>
+    
+    {/* Resource Requirement Modal */}
+    <ResourceRequirementModal
+      isOpen={requirementModalOpen}
+      onClose={() => {
+        setRequirementModalOpen(false);
+        setEditingRequirement(null);
+      }}
+      onSave={handleSaveRequirement}
+      editingRequirement={editingRequirement}
+      availableResources={referenceData?.resources || []}
+    />
+  </>
   );
 };
 

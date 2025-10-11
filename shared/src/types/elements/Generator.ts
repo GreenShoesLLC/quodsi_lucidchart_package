@@ -3,7 +3,6 @@ import { Duration } from "./Duration";
 import { PositionedSimulationObject } from "./PositionedSimulationObject";
 import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
-import { DurationType } from "./DurationType";
 import { ConstantDistribution } from "./distributions";
 import { StateModification } from "./StateModification";
 

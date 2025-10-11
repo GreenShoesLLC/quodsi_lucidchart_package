@@ -6,8 +6,9 @@ import {
   Distribution,
   ResourceRequirement,
 } from "@quodsi/shared";
-import { X } from "lucide-react";
+import { X, Edit2, Plus } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import { convertRootClausesToStructure, generatePreview } from "../../utils/resourceRequirementConverter";
 
 interface OperationStepEditorProps {
   step: OperationStep;
@@ -15,6 +16,9 @@ interface OperationStepEditorProps {
   onDelete: (index: number) => void;
   onChange: (updatedStep: OperationStep) => void;
   resourceRequirements?: ResourceRequirement[];
+  availableResources?: Array<{ id: string; name: string }>;
+  onOpenRequirementModal?: (requirementId: string) => void;
+  onCreateRequirement?: () => void;
 }
 
 export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
@@ -23,6 +27,9 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   onDelete,
   onChange,
   resourceRequirements = [],
+  availableResources = [],
+  onOpenRequirementModal,
+  onCreateRequirement,
 }) => {
 
   // Updated to handle separate periodUnit and distribution within existing Duration
@@ -41,11 +48,20 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   };
 
   const handleRequirementChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const requirementId = e.target.value;
-    onChange({
-      ...step,
-      requirementId: requirementId === "" ? null : requirementId,
-    });
+    const value = e.target.value;
+    
+    if (value === "__new__") {
+      // User selected "Create New..." option
+      if (onCreateRequirement) {
+        onCreateRequirement();
+      }
+    } else {
+      // Normal requirement selection
+      onChange({
+        ...step,
+        requirementId: value === "" ? null : value,
+      });
+    }
   };
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -55,6 +71,25 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
       quantity,
     });
   };
+
+  const handleEditRequirement = () => {
+    if (step.requirementId && onOpenRequirementModal) {
+      onOpenRequirementModal(step.requirementId);
+    }
+  };
+
+  const getResourceName = (id: string): string => {
+    return availableResources.find(r => r.id === id)?.name || 'Unknown';
+  };
+
+  const generateRequirementPreview = (req: ResourceRequirement): string => {
+    const structure = convertRootClausesToStructure(req.rootClauses);
+    return generatePreview(structure, getResourceName);
+  };
+
+  const selectedRequirement = step.requirementId 
+    ? resourceRequirements.find(r => r.id === step.requirementId)
+    : null;
 
   return (
     <div className="bg-gray-50 rounded p-1 border border-gray-200">
@@ -77,36 +112,65 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
           compact={true}
         />
 
-        <div className="grid grid-cols-2 gap-1">
-          <div>
-            <label className="block text-xs text-gray-600">Resource</label>
+        <div>
+          <label className="block text-xs text-gray-600 mb-0.5">Resource Requirement</label>
+          <div className="flex gap-1">
             <select
               value={step.requirementId || ""}
               onChange={handleRequirementChange}
-              className="w-full px-1 py-0.5 text-xs border rounded"
+              className="flex-1 px-1 py-0.5 text-xs border rounded bg-white"
             >
               <option value="">None</option>
+              {onCreateRequirement && (
+                <option value="__new__" className="font-semibold text-blue-600">
+                  + Create New...
+                </option>
+              )}
               {resourceRequirements.map((req) => (
                 <option key={req.id} value={req.id}>
                   {req.name}
                 </option>
               ))}
             </select>
+            
+            {/* Edit button - only show if requirement selected and edit handler provided */}
+            {step.requirementId && step.requirementId !== "__new__" && onOpenRequirementModal && (
+              <button
+                onClick={handleEditRequirement}
+                className="px-1 py-0.5 border rounded bg-gray-50 hover:bg-gray-100 transition"
+                title="Edit requirement"
+              >
+                <Edit2 className="w-3 h-3 text-blue-600" />
+              </button>
+            )}
           </div>
-          
-          {step.requirementId && (
-            <div>
-              <label className="block text-xs text-gray-600">Qty</label>
-              <input
-                type="number"
-                value={step.quantity}
-                onChange={handleQuantityChange}
-                min="1"
-                className="w-full px-1 py-0.5 text-xs border rounded"
-              />
+
+          {/* Preview of selected requirement */}
+          {selectedRequirement && (
+            <div className="mt-1 p-1.5 bg-blue-50 rounded border border-blue-200">
+              <div className="text-xs text-blue-900 font-medium mb-0.5">
+                {selectedRequirement.name}
+              </div>
+              <div className="text-xs text-blue-700">
+                {generateRequirementPreview(selectedRequirement)}
+              </div>
             </div>
           )}
         </div>
+
+        {/* Quantity field - only show when requirement is selected */}
+        {step.requirementId && step.requirementId !== "__new__" && (
+          <div>
+            <label className="block text-xs text-gray-600">Quantity</label>
+            <input
+              type="number"
+              value={step.quantity}
+              onChange={handleQuantityChange}
+              min="1"
+              className="w-full px-1 py-0.5 text-xs border rounded"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

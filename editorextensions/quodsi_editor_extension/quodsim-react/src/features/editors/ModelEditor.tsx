@@ -11,12 +11,17 @@ import {
   StateListManager,
   ComponentType,
 } from "@quodsi/shared";
-import { Settings, Clock, BarChart3, DollarSign, Hash } from "lucide-react";
+import { Settings, Clock, BarChart3, DollarSign, Hash, Package } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import OutputForm from "./OutputForm";
 import StatesEditor from "./StatesEditor";
+import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
+import { ResourceRequirementModal } from "./ResourceRequirementModal";
+import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 
+
+import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
 interface Props {
   model: Model;
@@ -24,12 +29,15 @@ interface Props {
   onCancel: () => void;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  referenceData?: EditorReferenceData;
 }
 
-type EditorTab = "basic" | "output" | "finance" | "states";
+type EditorTab = "basic" | "output" | "finance" | "states" | "requirements";
 
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
+  const [requirementModalOpen, setRequirementModalOpen] = useState(false);
+  const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
@@ -336,9 +344,21 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
             }`}
           >
             <Hash className="w-4 h-4" />
-          </button>
-        </div>
+            </button>
+              <button
+                  type="button"
+          onClick={() => setActiveTab("requirements")}
+          title="Resource Requirements"
+          className={`px-3 py-2 border-b-2 ${
+            activeTab === "requirements"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <Package className="w-4 h-4" />
+        </button>
       </div>
+    </div>
 
       {activeTab === "basic" && <ModelForm />}
       {activeTab === "output" && <OutputForm />}
@@ -354,6 +374,57 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
           defaultComponentType={ComponentType.MODEL}
         />
       )}
+      {activeTab === "requirements" && (
+        <ResourceRequirementsManager
+          requirements={referenceData?.resourceRequirements || []}
+          availableResources={referenceData?.resources || []}
+          onAdd={() => {
+            setEditingRequirement(null);
+            setRequirementModalOpen(true);
+          }}
+          onEdit={(req) => {
+            const structure = convertRootClausesToStructure(req.rootClauses);
+            setEditingRequirement({ id: req.id, name: req.name, structure });
+            setRequirementModalOpen(true);
+          }}
+          onDelete={(id) => {
+            // Note: Actual deletion should be handled through messaging
+            console.log('Delete requirement:', id);
+            // TODO: Send delete message to extension
+          }}
+          getUsageCount={(id) => {
+            // TODO: Calculate actual usage count from activities
+            return 0;
+          }}
+        />
+      )}
+      
+      {/* Resource Requirement Modal */}
+      <ResourceRequirementModal
+        isOpen={requirementModalOpen}
+        onClose={() => {
+          setRequirementModalOpen(false);
+          setEditingRequirement(null);
+        }}
+        onSave={(data) => {
+          const rootClauses = convertStructureToRootClauses(data.structure);
+          if (editingRequirement) {
+            // Update existing requirement
+            const updated = new ResourceRequirement(editingRequirement.id, data.name, rootClauses);
+            // TODO: Send update message to extension
+            console.log('Update requirement:', updated);
+          } else {
+            // Create new requirement
+            const newReq = new ResourceRequirement(`req-${Date.now()}`, data.name, rootClauses);
+            // TODO: Send create message to extension
+            console.log('Create requirement:', newReq);
+          }
+          setRequirementModalOpen(false);
+          setEditingRequirement(null);
+        }}
+        editingRequirement={editingRequirement}
+        availableResources={referenceData?.resources || []}
+      />
     </div>
   );
 };
