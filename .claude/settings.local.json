@@ -14,7 +14,9 @@
       "Bash(md5sum:*)",
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/model_definition/**)",
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/enums/**)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(src/messaging/mappers/selection.mapper.ts )",
+      "Bash(src/messaging/state/selectionSlice.ts)"
     ],
     "deny": []
   }

@@ -26,6 +26,7 @@ interface ElementEditorProps {
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   resourceRequirements?: any[];
+  outgoingConnectors?: any[];
 }
 
 /**
@@ -42,6 +43,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   states,
   onStatesChange,
   resourceRequirements,
+  outgoingConnectors,
 }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -141,6 +143,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             referenceData={referenceData}
             states={states}
             onStatesChange={onStatesChange}
+            outgoingConnectors={outgoingConnectors}
           />
         );
 

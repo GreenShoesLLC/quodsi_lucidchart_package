@@ -26,9 +26,11 @@ export interface SelectionState {
     resources?: Array<{ id: string; name: string }>;
     entities?: Array<{ id: string; name: string }>;
     resourceRequirements?: any[];
+    connectors?: any[];
   };
   states?: ISerializedState[];
   resourceRequirements?: any[];
+  outgoingConnectors?: any[];
   lastUpdated?: number;
 }
 
@@ -39,12 +41,13 @@ export const initialSelectionState: SelectionState = {
   referenceData: undefined,
   states: undefined,
   resourceRequirements: undefined,
+  outgoingConnectors: undefined,
   lastUpdated: undefined,
 };
 
 // Action types
 export type SelectionAction =
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; }; states?: ISerializedState[]; resourceRequirements?: any[]; }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; }; states?: ISerializedState[]; resourceRequirements?: any[]; outgoingConnectors?: any[]; }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -99,6 +102,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         referenceData: action.referenceData || state.referenceData,
         states: action.states || state.states,
         resourceRequirements: action.resourceRequirements || state.resourceRequirements,
+        outgoingConnectors: action.outgoingConnectors || state.outgoingConnectors,
         lastUpdated: Date.now(),
       };
       
@@ -116,10 +120,12 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         referenceDataSummary: updatedState.referenceData ? {
           activities: updatedState.referenceData.activities?.length || 0,
           resources: updatedState.referenceData.resources?.length || 0,
-          entities: updatedState.referenceData.entities?.length || 0
+          entities: updatedState.referenceData.entities?.length || 0,
+          connectors: updatedState.referenceData.connectors?.length || 0
         } : 'none',
         statesCount: updatedState.states?.length || 0,
-        resourceRequirementsCount: updatedState.resourceRequirements?.length || 0
+        resourceRequirementsCount: updatedState.resourceRequirements?.length || 0,
+        outgoingConnectorsCount: updatedState.outgoingConnectors?.length || 0
       });
       
       return updatedState;

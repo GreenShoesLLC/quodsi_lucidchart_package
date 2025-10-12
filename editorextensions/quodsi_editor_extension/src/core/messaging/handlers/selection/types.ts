@@ -17,22 +17,23 @@ export interface SelectionStateData {
   selectedElements: ElementShape[];
   selectionCount: number;
   totalElementCount: number;
-  
+
   // Core selection fields (from old system)
   selectionType: SelectionType;
   selectionState: SelectionState;
   documentId: string;
-  
+
   // Model data
   hasModel?: boolean;
   modelItemData?: ModelItemData | ModelItemData[];
   validationResult?: ValidationResult;
   referenceData?: EditorReferenceData;
-  
+  outgoingConnectors?: any[];
+
   // Element specifics
   diagramElementType?: DiagramElementType;
   elementId?: string;
-  
+
   // Status
   isProcessing?: boolean;
   error?: string;

@@ -25,6 +25,7 @@ export const ModelPanel: React.FC = () => {
     simulationStatus,
     states: serializedStates,
     resourceRequirements: serializedResourceRequirements,
+    outgoingConnectors,
     // Actions
     onElementUpdate,
     onElementTypeChange,
@@ -296,6 +297,7 @@ export const ModelPanel: React.FC = () => {
             states={states}
             onStatesChange={handleStatesChange}
             resourceRequirements={serializedResourceRequirements}
+            outgoingConnectors={outgoingConnectors}
           />
         )}
         

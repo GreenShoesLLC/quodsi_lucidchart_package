@@ -13,12 +13,14 @@ import {
   ActivityFinancialProperties,
   StateListManager,
   ComponentType,
+  Connector,
 } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
+import { RoutingConfigurationPanel } from "./RoutingConfigurationPanel";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
@@ -31,6 +33,7 @@ interface ActivityEditorProps {
   referenceData?: EditorReferenceData;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  outgoingConnectors?: Connector[];
 }
 
 type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states";
@@ -42,6 +45,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   referenceData,
   states,
   onStatesChange,
+  outgoingConnectors = [],
 }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
@@ -706,18 +710,20 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
             {activeTab === "connectors" && (
               <div>
-                <div className="flex items-center gap-1 mb-1">
+                <div className="flex items-center gap-1 mb-2">
                   <ArrowRightLeft className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Routing Settings</span>
+                  <span className="text-xs font-medium text-gray-700">Routing Configuration</span>
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-3">
+                  {/* Routing Type Selection */}
                   <div>
-                    <label className="block text-xs text-gray-600">Routing Type</label>
+                    <label className="block text-xs text-gray-600 mb-1">Routing Type</label>
                     <select
                       name="connectType"
-                      className="w-full px-2 py-1 text-xs border rounded bg-white"
+                      className="w-full px-2 py-1 text-xs border rounded bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={localData.connectType}
                       onChange={handleChange}
+                      disabled={outgoingConnectors.length === 1}
                     >
                       <option value={ConnectType.Probability}>
                         Probability - Route based on connector probabilities
@@ -730,8 +736,25 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       </option>
                     </select>
                     <p className="text-xs text-gray-500 mt-1">
-                      Controls how entities are routed through outgoing connectors
+                      {outgoingConnectors.length === 1
+                        ? "Only one connector - routing type locked to Probability"
+                        : "Controls how entities are routed through outgoing connectors"}
                     </p>
+                  </div>
+
+                  {/* Routing Configuration Panel */}
+                  <div className="border-t pt-3">
+                    <RoutingConfigurationPanel
+                      activityId={localData.id}
+                      connectType={localData.connectType}
+                      outgoingConnectors={outgoingConnectors}
+                      entityStates={states}
+                      availableEntities={referenceData?.entities || []}
+                      onConnectorUpdate={(connectorId, updates) => {
+                        // Handle connector update - this will be done via message sender in the panel
+                        console.log('Connector updated:', connectorId, updates);
+                      }}
+                    />
                   </div>
                 </div>
               </div>

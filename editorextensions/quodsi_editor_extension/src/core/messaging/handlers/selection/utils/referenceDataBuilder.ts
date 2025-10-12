@@ -71,9 +71,24 @@ export const referenceDataBuilder = {
           name: r.name
         }));
 
+        // Get all connectors
+        const allConnectors = modelDef.connectors.getAll();
+        referenceData.connectors = allConnectors;
+        console.log('[ReferenceDataBuilder] Raw connectors:', allConnectors);
+
+        // Get all entities (needed for Entity Template routing)
+        const allEntities = modelDef.entities.getAll();
+        referenceData.entities = allEntities.map(e => ({
+          id: e.id,
+          name: e.name
+        }));
+        console.log('[ReferenceDataBuilder] Raw entities:', allEntities);
+
         console.log('[ReferenceDataBuilder] Mapped resource data:', {
           requirementsCount: requirements.length,
           resourcesCount: allResources.length,
+          connectorsCount: allConnectors.length,
+          entitiesCount: allEntities.length,
           resources: referenceData.resources
         });
       } else {

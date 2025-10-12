@@ -73,18 +73,26 @@ export class ActivityProcessor extends BaseSelectionProcessor {
         messageData.referenceData = await referenceDataBuilder.buildResourceReferenceData(
           modelManager
         );
-        
+
+        // Filter outgoing connectors for this activity
+        const activityId = item.id;
+        const allConnectors = messageData.referenceData?.connectors || [];
+        const outgoingConnectors = allConnectors.filter(conn => conn.sourceId === activityId);
+        messageData.outgoingConnectors = outgoingConnectors;
+
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
-        
+
         console.log('[ActivityProcessor] Processed activity data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
           refDataSummary: messageData.referenceData ? {
             resources: messageData.referenceData.resources?.length || 0,
-            resourceRequirements: messageData.referenceData.resourceRequirements?.length || 0
+            resourceRequirements: messageData.referenceData.resourceRequirements?.length || 0,
+            connectors: messageData.referenceData.connectors?.length || 0
           } : 'none',
+          outgoingConnectorsCount: outgoingConnectors.length,
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {

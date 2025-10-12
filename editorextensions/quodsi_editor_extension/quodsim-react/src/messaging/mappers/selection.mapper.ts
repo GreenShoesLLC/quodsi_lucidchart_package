@@ -80,9 +80,11 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           resources?: Array<{ id: string; name: string }>;
           entities?: Array<{ id: string; name: string }>;
           resourceRequirements?: any[];
+          connectors?: any[];
         };
         states?: ISerializedState[];
         resourceRequirements?: any[];
+        outgoingConnectors?: any[];
         documentContext?: {
           documentId: string;
           pageId: string;
@@ -97,6 +99,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         referenceDataKeys: selectionData.referenceData ? Object.keys(selectionData.referenceData) : [],
         resourcesCount: selectionData.referenceData?.resources?.length || 0,
         resourceRequirementsCount: selectionData.referenceData?.resourceRequirements?.length || 0,
+        connectorsCount: selectionData.referenceData?.connectors?.length || 0,
+        outgoingConnectorsCount: selectionData.outgoingConnectors?.length || 0,
         rawReferenceData: selectionData.referenceData
       });
 
@@ -115,9 +119,11 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           activities: selectionData.referenceData.activities?.length || 0,
           resources: selectionData.referenceData.resources?.length || 0,
           entities: selectionData.referenceData.entities?.length || 0,
-          resourceRequirements: selectionData.referenceData.resourceRequirements?.length || 0
+          resourceRequirements: selectionData.referenceData.resourceRequirements?.length || 0,
+          connectors: selectionData.referenceData.connectors?.length || 0
         } : 'none',
         resourceRequirementsCount: selectionData.resourceRequirements?.length || 0,
+        outgoingConnectorsCount: selectionData.outgoingConnectors?.length || 0,
         statesCount: selectionData.states?.length || 0
       });
       
@@ -261,6 +267,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         // Include resource requirements if present
         ...(selectionData.resourceRequirements ? {
           resourceRequirements: selectionData.resourceRequirements
+        } : {}),
+        // Include outgoing connectors if present
+        ...(selectionData.outgoingConnectors ? {
+          outgoingConnectors: selectionData.outgoingConnectors
         } : {})
       };
       
@@ -275,10 +285,12 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         referenceDataSummary: (selectionAction as any).referenceData ? {
           activities: (selectionAction as any).referenceData.activities?.length || 0,
           resources: (selectionAction as any).referenceData.resources?.length || 0,
-          entities: (selectionAction as any).referenceData.entities?.length || 0
+          entities: (selectionAction as any).referenceData.entities?.length || 0,
+          connectors: (selectionAction as any).referenceData.connectors?.length || 0
         } : 'none',
         statesCount: (selectionAction as any).states?.length || 0,
-        resourceRequirementsCount: (selectionAction as any).resourceRequirements?.length || 0
+        resourceRequirementsCount: (selectionAction as any).resourceRequirements?.length || 0,
+        outgoingConnectorsCount: (selectionAction as any).outgoingConnectors?.length || 0
       });
       
       return selectionAction;

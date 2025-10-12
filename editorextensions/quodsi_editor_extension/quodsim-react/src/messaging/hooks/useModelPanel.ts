@@ -205,7 +205,15 @@ export function useModelPanel() {
     activitiesCount: referenceData.activities?.length || 0,
     resourcesCount: referenceData.resources?.length || 0,
     entitiesCount: referenceData.entities?.length || 0,
-    resourceRequirementsCount: referenceData.resourceRequirements?.length || 0
+    resourceRequirementsCount: referenceData.resourceRequirements?.length || 0,
+    connectorsCount: referenceData.connectors?.length || 0
+  });
+
+  // Extract outgoing connectors from selection state
+  const outgoingConnectors = selection.outgoingConnectors || [];
+  logger.debug('Outgoing connectors from selection state:', {
+    count: outgoingConnectors.length,
+    connectors: outgoingConnectors
   });
   
   // Convert the string diagramElementType to the proper enum value if possible
@@ -296,6 +304,7 @@ export function useModelPanel() {
     referenceData,
     states: selection.states || [],
     resourceRequirements: selection.resourceRequirements || [],
+    outgoingConnectors,
 
     // UI state
     isLoading,
