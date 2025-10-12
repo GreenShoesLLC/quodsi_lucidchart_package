@@ -25,6 +25,7 @@ interface ElementEditorProps {
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  resourceRequirements?: any[];
 }
 
 /**
@@ -40,6 +41,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   currentElement,
   states,
   onStatesChange,
+  resourceRequirements,
 }) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
 
@@ -124,6 +126,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             states={states}
             onStatesChange={onStatesChange}
             referenceData={referenceData}
+            resourceRequirements={resourceRequirements}
           />
         );
 

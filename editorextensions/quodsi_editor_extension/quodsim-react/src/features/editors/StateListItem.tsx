@@ -70,10 +70,15 @@ const StateListItem: React.FC<Props> = ({ state, onEdit, onDelete }) => {
     <div className="border rounded p-2 bg-white hover:bg-gray-50">
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-gray-900 truncate">
+          {/* Row 1: State name (full width) */}
+          <div className="mb-1">
+            <span className="text-xs font-medium text-gray-900 break-words">
               {state.name}
             </span>
+          </div>
+
+          {/* Row 2: Type icon and component badge */}
+          <div className="flex items-center gap-2 mb-1">
             {getStateTypeIcon(state.dataType)}
             <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 shrink-0">
               {getComponentTypeLabel(state.componentType)}

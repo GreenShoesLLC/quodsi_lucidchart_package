@@ -24,6 +24,7 @@ export const ModelPanel: React.FC = () => {
     referenceData,
     simulationStatus,
     states: serializedStates,
+    resourceRequirements: serializedResourceRequirements,
     // Actions
     onElementUpdate,
     onElementTypeChange,
@@ -294,6 +295,7 @@ export const ModelPanel: React.FC = () => {
             currentElement={currentElement}
             states={states}
             onStatesChange={handleStatesChange}
+            resourceRequirements={serializedResourceRequirements}
           />
         )}
         

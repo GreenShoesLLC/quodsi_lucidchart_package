@@ -82,6 +82,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           resourceRequirements?: any[];
         };
         states?: ISerializedState[];
+        resourceRequirements?: any[];
         documentContext?: {
           documentId: string;
           pageId: string;
@@ -91,6 +92,14 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         };
       };
       
+      console.log('[SelectionMapper] SELECTION_CHANGED referenceData check:', {
+        hasReferenceData: !!selectionData.referenceData,
+        referenceDataKeys: selectionData.referenceData ? Object.keys(selectionData.referenceData) : [],
+        resourcesCount: selectionData.referenceData?.resources?.length || 0,
+        resourceRequirementsCount: selectionData.referenceData?.resourceRequirements?.length || 0,
+        rawReferenceData: selectionData.referenceData
+      });
+
       logger.log('SELECTION_CHANGED details:', {
         selectionType: selectionData.selectionType,
         documentId: selectionData.documentId,
@@ -107,7 +116,9 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           resources: selectionData.referenceData.resources?.length || 0,
           entities: selectionData.referenceData.entities?.length || 0,
           resourceRequirements: selectionData.referenceData.resourceRequirements?.length || 0
-        } : 'none'
+        } : 'none',
+        resourceRequirementsCount: selectionData.resourceRequirements?.length || 0,
+        statesCount: selectionData.states?.length || 0
       });
       
       // Check if we have embedded document context that needs to be processed
@@ -246,6 +257,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         // Include states if present
         ...(selectionData.states ? {
           states: selectionData.states
+        } : {}),
+        // Include resource requirements if present
+        ...(selectionData.resourceRequirements ? {
+          resourceRequirements: selectionData.resourceRequirements
         } : {})
       };
       
@@ -262,7 +277,8 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           resources: (selectionAction as any).referenceData.resources?.length || 0,
           entities: (selectionAction as any).referenceData.entities?.length || 0
         } : 'none',
-        statesCount: (selectionAction as any).states?.length || 0
+        statesCount: (selectionAction as any).states?.length || 0,
+        resourceRequirementsCount: (selectionAction as any).resourceRequirements?.length || 0
       });
       
       return selectionAction;

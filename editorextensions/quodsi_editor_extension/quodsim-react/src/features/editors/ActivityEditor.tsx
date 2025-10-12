@@ -20,6 +20,7 @@ import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 
 // Main Activity Editor Component
@@ -45,6 +46,20 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
+
+  // Get message sender for updating resource requirements
+  const { updateResourceRequirements } = useModelOpsSender();
+
+  // Debug logging to verify referenceData is received
+  React.useEffect(() => {
+    console.log('[ActivityEditor] referenceData received:', {
+      hasReferenceData: !!referenceData,
+      resourcesCount: referenceData?.resources?.length || 0,
+      requirementsCount: referenceData?.resourceRequirements?.length || 0,
+      resources: referenceData?.resources,
+      requirements: referenceData?.resourceRequirements
+    });
+  }, [referenceData]);
 
   // Helper functions
   const bufferToDisplay = (value: number | null | undefined): number =>
@@ -233,9 +248,41 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   const handleSaveRequirement = (data: { name: string; structure: TeamStructure }) => {
     const rootClauses = convertStructureToRootClauses(data.structure);
-    // TODO: Implement save to backend
-    // For now, just log the requirement
-    console.log('Save requirement:', { name: data.name, rootClauses });
+
+    // Get the current requirements array
+    const currentRequirements = referenceData?.resourceRequirements || [];
+
+    let updatedRequirements;
+
+    if (editingRequirement) {
+      // Update existing requirement
+      updatedRequirements = currentRequirements.map(req =>
+        req.id === editingRequirement.id
+          ? {
+              id: req.id,
+              name: data.name,
+              type: SimulationObjectType.ResourceRequirement,
+              rootClauses
+            }
+          : req
+      );
+      console.log('[ActivityEditor] Updating requirement:', editingRequirement.id, data.name);
+    } else {
+      // Create new requirement with generated ID
+      const newRequirement = {
+        id: `rr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: data.name,
+        type: SimulationObjectType.ResourceRequirement,
+        rootClauses
+      };
+      updatedRequirements = [...currentRequirements, newRequirement];
+      console.log('[ActivityEditor] Creating new requirement:', newRequirement.id, data.name);
+    }
+
+    // Send update message to extension
+    updateResourceRequirements(updatedRequirements);
+
+    // Close modal
     setRequirementModalOpen(false);
     setEditingRequirement(null);
   };

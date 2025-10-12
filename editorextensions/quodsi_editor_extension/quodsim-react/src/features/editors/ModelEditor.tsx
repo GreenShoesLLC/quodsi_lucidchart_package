@@ -30,11 +30,12 @@ interface Props {
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   referenceData?: EditorReferenceData;
+  resourceRequirements?: any[];
 }
 
 type EditorTab = "basic" | "output" | "finance" | "states" | "requirements";
 
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData, resourceRequirements }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
@@ -376,7 +377,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       )}
       {activeTab === "requirements" && (
         <ResourceRequirementsManager
-          requirements={referenceData?.resourceRequirements || []}
+          requirements={resourceRequirements || []}
           availableResources={referenceData?.resources || []}
           onAdd={() => {
             setEditingRequirement(null);

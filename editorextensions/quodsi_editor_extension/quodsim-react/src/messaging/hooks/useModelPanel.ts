@@ -295,6 +295,7 @@ export function useModelPanel() {
     simulationStatus: simulationStatusProxy,
     referenceData,
     states: selection.states || [],
+    resourceRequirements: selection.resourceRequirements || [],
 
     // UI state
     isLoading,

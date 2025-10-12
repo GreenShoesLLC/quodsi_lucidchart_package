@@ -7,6 +7,7 @@ import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
 import { StatesHandler } from './statesHandler';
+import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 
@@ -67,6 +68,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Resource requirements operations messages
+    if (ResourceRequirementsHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -88,5 +94,6 @@ export {
   ModelOpsHandler,
   ElementOpsHandler,
   StatesHandler,
+  ResourceRequirementsHandler,
   StorageHandler
 };

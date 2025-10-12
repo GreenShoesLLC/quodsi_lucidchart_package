@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 
 /**
@@ -21,6 +21,7 @@ export class StorageAdapter {
     private static readonly META_KEY = 'q_meta';
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly STATES_KEY = 'q_states';
+    private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
@@ -160,6 +161,57 @@ export class StorageAdapter {
             this.log('Successfully cleared states');
         } catch (error) {
             this.logError('Error clearing states:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the resource requirements array for a page
+     */
+    public setResourceRequirements(page: ElementProxy, requirements: ISerializedResourceRequirement[]): void {
+        try {
+            this.log('Setting resource requirements for page:', {
+                pageId: page.id,
+                requirementsCount: requirements.length
+            });
+            const serializedRequirements = JSON.stringify(requirements);
+            page.shapeData.set(StorageAdapter.RESOURCE_REQUIREMENTS_KEY, serializedRequirements);
+            this.log('Successfully set resource requirements');
+        } catch (error) {
+            this.logError('Error setting resource requirements:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the resource requirements array for a page
+     */
+    public getResourceRequirements(page: ElementProxy): ISerializedResourceRequirement[] {
+        try {
+            this.log('Getting resource requirements for page:', page.id);
+            const requirementsStr = page.shapeData.get(StorageAdapter.RESOURCE_REQUIREMENTS_KEY);
+            if (!requirementsStr || typeof requirementsStr !== 'string') {
+                this.log('No resource requirements found, returning empty array');
+                return [];
+            }
+            const requirements = JSON.parse(requirementsStr) as ISerializedResourceRequirement[];
+            this.log('Retrieved resource requirements:', { count: requirements.length });
+            return requirements;
+        } catch (error) {
+            this.logError('Error getting resource requirements:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the resource requirements array for a page
+     */
+    public clearResourceRequirements(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.RESOURCE_REQUIREMENTS_KEY);
+            this.log('Successfully cleared resource requirements');
+        } catch (error) {
+            this.logError('Error clearing resource requirements:', error);
             throw error;
         }
     }
@@ -403,7 +455,9 @@ export class StorageAdapter {
             // Clear model data from page
 
             this.clearElementData(page);
-            this.clearSimulationStatus(page); 
+            this.clearSimulationStatus(page);
+            this.clearStates(page);
+            this.clearResourceRequirements(page);
 
             // Clear data from all blocks
             for (const [, block] of page.allBlocks) {

@@ -43,29 +43,47 @@ export const referenceDataBuilder = {
   /**
    * Builds reference data for resources
    * @param modelManager The model manager
-   * @returns Reference data containing resource requirements
+   * @returns Reference data containing resources and resource requirements
    */
   async buildResourceReferenceData(
     modelManager: ModelManager
   ): Promise<EditorReferenceData> {
     this.debug.log('Building resource reference data');
-    
+
     const referenceData: EditorReferenceData = {};
-    
+
     try {
       const modelDef = await modelManager.getModelDefinition();
+      console.log('[ReferenceDataBuilder] ModelDefinition exists:', !!modelDef);
+
       if (modelDef) {
+        // Get resource requirements
         const requirements = modelDef.resourceRequirements.getAll();
         referenceData.resourceRequirements = requirements;
-        
-        this.debug.log('Added resource requirements:', {
-          count: requirements.length
+        console.log('[ReferenceDataBuilder] Raw requirements:', requirements);
+
+        // Get resources
+        const allResources = modelDef.resources.getAll();
+        console.log('[ReferenceDataBuilder] Raw resources:', allResources);
+
+        referenceData.resources = allResources.map(r => ({
+          id: r.id,
+          name: r.name
+        }));
+
+        console.log('[ReferenceDataBuilder] Mapped resource data:', {
+          requirementsCount: requirements.length,
+          resourcesCount: allResources.length,
+          resources: referenceData.resources
         });
+      } else {
+        console.warn('[ReferenceDataBuilder] No ModelDefinition available');
       }
     } catch (error) {
+      console.error('[ReferenceDataBuilder] Error building resource reference data:', error);
       this.debug.error('Error building resource reference data:', error);
     }
-    
+
     return referenceData;
   },
   

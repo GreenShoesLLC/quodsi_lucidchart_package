@@ -169,7 +169,7 @@ export class SelectionHandler {
   /**
    * Send current selection state to React app
    */
-  private static sendSelectionChangedMessage(): void {
+  public static sendSelectionChangedMessage(): void {
     // Get data from both state managers
     const selectionData = SelectionHandler.selectionState.getData();
     const documentData = SelectionHandler.documentContext.getData();
@@ -192,18 +192,38 @@ export class SelectionHandler {
       console.error('[SelectionHandler] Error retrieving states:', error);
     }
 
+    // Get resource requirements from page if available
+    let resourceRequirements: any[] = [];
+    try {
+      if (SelectionHandler.modelManager) {
+        // Get the current page from the client viewport
+        const client = ModelManager.getClient();
+        const viewport = new Viewport(client);
+        const page = viewport.getCurrentPage();
+
+        if (page) {
+          const storageAdapter = SelectionHandler.modelManager.getStorageAdapter();
+          resourceRequirements = storageAdapter.getResourceRequirements(page);
+        }
+      }
+    } catch (error) {
+      console.error('[SelectionHandler] Error retrieving resource requirements:', error);
+    }
+
     // Combine data for the message
     const messageData: any = {
       ...selectionData,
       documentContext: documentData,
-      states: states
+      states: states,
+      resourceRequirements: resourceRequirements
     };
 
     console.log('[SelectionHandler] Sending SELECTION_CHANGED message', {
       selectionType: messageData.selectionType,
       hasModel: messageData.hasModel,
       itemCount: messageData.selectionCount,
-      statesCount: states.length
+      statesCount: states.length,
+      requirementsCount: resourceRequirements.length
     });
 
     // Send message via router

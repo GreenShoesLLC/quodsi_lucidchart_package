@@ -18,7 +18,8 @@ import {
     ActivityListManager,
     ResourceRequirement,
     ValidationMessages,
-    ISerializedState
+    ISerializedState,
+    ISerializedResourceRequirement
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
@@ -635,6 +636,30 @@ export class ModelManager {
             this.debug.log('updateStates - Complete');
         } catch (error) {
             this.debug.error('Error in updateStates:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Updates the resource requirements array for the model
+     */
+    public async updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void> {
+        this.debug.log('updateResourceRequirements - Start', {
+            requirementsCount: requirements.length,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Save resource requirements to page storage
+            this.storageAdapter.setResourceRequirements(page, requirements);
+
+            // Mark model as dirty to force rebuild on next access
+            this.markModelDirty();
+
+            this.debug.log('updateResourceRequirements - Complete');
+        } catch (error) {
+            this.debug.error('Error in updateResourceRequirements:', error);
             throw error;
         }
     }

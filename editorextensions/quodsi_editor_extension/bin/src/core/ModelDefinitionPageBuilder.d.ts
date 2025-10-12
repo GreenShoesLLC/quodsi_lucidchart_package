@@ -24,6 +24,25 @@ export declare class ModelDefinitionPageBuilder {
      */
     buildFromConvertedPage(page: PageProxy): ModelDefinition | null;
     /**
+     * Helper to convert serialized RequirementClause to RequirementClause instance (recursive)
+     */
+    private deserializeClause;
+    /**
+     * Loads custom resource requirements from storage and merges with automatic ones.
+     *
+     * Strategy:
+     * - Automatic requirements (from Resource blocks) are generated on-the-fly, never persisted
+     * - Custom requirements (from q_res_requirements) are persisted and can be:
+     *   1. Pure custom (multi-resource like "Mixed Team Options")
+     *   2. Overrides of automatic requirements (if user customizes a single-resource requirement)
+     *
+     * Merge logic:
+     * - Custom requirements by ID override automatic ones
+     * - Remaining custom requirements are added (pure custom)
+     * - Result: no duplicates, custom takes precedence
+     */
+    private loadAndMergeResourceRequirements;
+    /**
      * Logs a summary of the ModelDefinition contents
      */
     private logModelDefinitionSummary;

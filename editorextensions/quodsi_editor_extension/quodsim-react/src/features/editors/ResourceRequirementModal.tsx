@@ -122,6 +122,19 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
     }
   }, [isOpen, editingRequirement]);
 
+  // Debug logging to verify availableResources
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[ResourceRequirementModal] Modal opened with:', {
+        isOpen,
+        availableResourcesCount: availableResources.length,
+        availableResources: availableResources,
+        editingRequirement: editingRequirement ? editingRequirement.name : 'none',
+        templatesCount: createTemplates(availableResources).length
+      });
+    }
+  }, [isOpen, availableResources, editingRequirement]);
+
   if (!isOpen) return null;
 
   const templates = createTemplates(availableResources);
@@ -234,14 +247,14 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[60vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-4 py-3 border-b flex items-center justify-between bg-gray-50 flex-shrink-0">
-          <h2 className="font-semibold text-lg">
+        <div className="px-3 py-2 border-b flex items-center justify-between bg-gray-50 flex-shrink-0">
+          <h2 className="font-semibold text-base">
             {editingRequirement ? 'Edit' : 'Create'} Resource Requirement
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-gray-200 rounded">
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
@@ -249,9 +262,9 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
         <div className="flex border-b flex-shrink-0">
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex-1 px-4 py-2 text-sm font-medium ${
-              activeTab === 'templates' 
-                ? 'border-b-2 border-blue-500 text-blue-600' 
+            className={`flex-1 px-3 py-1.5 text-sm font-medium ${
+              activeTab === 'templates'
+                ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
@@ -259,9 +272,9 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
           </button>
           <button
             onClick={() => setActiveTab('build')}
-            className={`flex-1 px-4 py-2 text-sm font-medium ${
-              activeTab === 'build' 
-                ? 'border-b-2 border-blue-500 text-blue-600' 
+            className={`flex-1 px-3 py-1.5 text-sm font-medium ${
+              activeTab === 'build'
+                ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
@@ -270,9 +283,9 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ minHeight: 0 }}>
+        <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: 0 }}>
           {/* Name Input */}
-          <div className="mb-4">
+          <div className="mb-3">
             <label className="block text-sm font-medium mb-1">
               Requirement Name <span className="text-red-500">*</span>
             </label>
@@ -281,16 +294,16 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Development Team"
-              className="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-2 py-1.5 text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
 
           {/* Templates Tab */}
           {activeTab === 'templates' && (
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600 mb-3">Choose a template to get started:</p>
+            <div className="space-y-1.5">
+              <p className="text-xs text-gray-600 mb-2">Choose a template to get started:</p>
               {templates.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">
+                <p className="text-xs text-gray-500 text-center py-3">
                   No resources available to create templates
                 </p>
               ) : (
@@ -298,10 +311,10 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                   <button
                     key={idx}
                     onClick={() => loadTemplate(template)}
-                    className="w-full text-left p-3 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition"
+                    className="w-full text-left p-2 bg-blue-50 hover:bg-blue-100 rounded border border-blue-200 transition"
                   >
                     <div className="font-medium text-sm">{template.name}</div>
-                    <div className="text-xs text-gray-600 mt-1">{template.description}</div>
+                    <div className="text-xs text-gray-600 mt-0.5">{template.description}</div>
                   </button>
                 ))
               )}
@@ -312,12 +325,12 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
           {activeTab === 'build' && (
             <div>
               {/* Mode Selector */}
-              <div className="mb-4 p-3 bg-gray-50 rounded border">
-                <label className="block text-sm font-medium mb-2">Op Step needs:</label>
+              <div className="mb-3 p-2 bg-gray-50 rounded border">
+                <label className="block text-sm font-medium mb-1.5">Op Step needs:</label>
                 <select
                   value={requirement.mode}
                   onChange={(e) => setRequirement({ ...requirement, mode: e.target.value as 'ALL' | 'ANY' })}
-                  className="w-full px-3 py-2 border rounded bg-white"
+                  className="w-full px-2 py-1.5 text-sm border rounded bg-white"
                 >
                   <option value="ALL">ALL of the following teams</option>
                   <option value="ANY">ANY ONE of the following teams</option>
@@ -325,8 +338,8 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
               </div>
 
               {/* Teams */}
-              <div className="space-y-3">
-                <div className="text-sm font-medium mb-2 flex items-center justify-between">
+              <div className="space-y-2">
+                <div className="text-sm font-medium mb-1.5 flex items-center justify-between">
                   <span>Team Options:</span>
                   {requirement.teams.length > 0 && (
                     <span className="text-xs text-gray-500">
@@ -336,14 +349,14 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                 </div>
 
                 {requirement.teams.map((team, teamIdx) => (
-                  <div key={teamIdx} className="p-3 bg-purple-50 rounded border-2 border-purple-300">
-                    <div className="flex justify-between items-center mb-2">
+                  <div key={teamIdx} className="p-2 bg-purple-50 rounded border-2 border-purple-300">
+                    <div className="flex justify-between items-center mb-1.5">
                       <span className="text-xs font-medium text-purple-900">
                         {requirement.mode === 'ANY' ? `Option ${teamIdx + 1}` : `Team ${teamIdx + 1}`}
                       </span>
                       <button
                         onClick={() => removeTeam(teamIdx)}
-                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                        className="p-0.5 text-red-600 hover:bg-red-100 rounded"
                         title="Remove this team"
                       >
                         <Trash2 size={14} />
@@ -352,7 +365,7 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
 
                     {/* Team Mode Selector - only show if team has multiple resources */}
                     {team.requests.length > 1 && (
-                      <div className="mb-2">
+                      <div className="mb-1.5">
                         <select
                           value={team.mode}
                           onChange={(e) => updateTeamMode(teamIdx, e.target.value as 'ALL' | 'ANY')}
@@ -365,23 +378,23 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                     )}
 
                     {/* Resources in Team */}
-                    <div className="space-y-2 mb-2">
+                    <div className="space-y-1.5 mb-1.5">
                       {team.requests.map((req, reqIdx) => (
-                        <div key={reqIdx} className="flex gap-2 items-center bg-white p-2 rounded border border-purple-200">
+                        <div key={reqIdx} className="flex gap-1.5 items-center bg-white p-1.5 rounded border border-purple-200">
                           <input
                             type="number"
                             value={req.quantity}
                             onChange={(e) => updateTeamResource(teamIdx, reqIdx, 'quantity', parseInt(e.target.value) || 1)}
-                            className="w-14 px-2 py-1.5 text-sm border rounded"
+                            className="w-12 px-1.5 py-1 text-xs border rounded"
                             min="1"
                           />
                           <select
                             value={req.resourceId}
                             onChange={(e) => updateTeamResource(teamIdx, reqIdx, 'resourceId', e.target.value)}
-                            className="flex-1 px-2 py-1.5 text-sm border rounded"
+                            className="flex-1 px-1.5 py-1 text-xs border rounded"
                           >
                             {availableResources.map(r => {
-                              const isUsed = team.requests.some((request, idx) => 
+                              const isUsed = team.requests.some((request, idx) =>
                                 idx !== reqIdx && request.resourceId === r.id
                               );
                               return (
@@ -394,10 +407,10 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                           {team.requests.length > 1 && (
                             <button
                               onClick={() => removeResourceFromTeam(teamIdx, reqIdx)}
-                              className="p-1.5 text-red-600 hover:bg-red-100 rounded"
+                              className="p-1 text-red-600 hover:bg-red-100 rounded"
                               title="Remove from team"
                             >
-                              <X size={16} />
+                              <X size={14} />
                             </button>
                           )}
                         </div>
@@ -407,9 +420,9 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                     {/* Add Resource to Team */}
                     <button
                       onClick={() => addResourceToTeam(teamIdx)}
-                      className="w-full py-1.5 text-xs bg-purple-100 hover:bg-purple-200 rounded border border-purple-300 flex items-center justify-center gap-1"
+                      className="w-full py-1 text-xs bg-purple-100 hover:bg-purple-200 rounded border border-purple-300 flex items-center justify-center gap-1"
                     >
-                      <Plus size={14} /> Add Resource to Team
+                      <Plus size={12} /> Add Resource to Team
                     </button>
                   </div>
                 ))}
@@ -419,9 +432,9 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
               {availableResources.length > 0 && (
                 <button
                   onClick={addTeam}
-                  className="w-full mt-3 py-2 text-sm bg-purple-200 hover:bg-purple-300 rounded border-2 border-purple-400 flex items-center justify-center gap-1 font-medium"
+                  className="w-full mt-2 py-1.5 text-sm bg-purple-200 hover:bg-purple-300 rounded border-2 border-purple-400 flex items-center justify-center gap-1 font-medium"
                 >
-                  <Plus size={16} /> Add New Team
+                  <Plus size={14} /> Add New Team
                 </button>
               )}
             </div>
@@ -429,27 +442,27 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t bg-gray-50 flex-shrink-0">
-          <div className="flex justify-end gap-2 mb-3">
+        <div className="px-3 py-2 border-t bg-gray-50 flex-shrink-0">
+          <div className="flex justify-end gap-1.5 mb-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 rounded"
+              className="px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-200 rounded"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+              className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
             >
-              <Check size={16} />
+              <Check size={14} />
               {editingRequirement ? 'Update' : 'Create'}
             </button>
           </div>
-          
+
           {/* Preview */}
-          <div className="p-2 bg-gray-100 rounded border text-xs">
-            <div className="font-medium mb-1">Preview:</div>
-            <div className="text-gray-700">{previewText}</div>
+          <div className="p-1.5 bg-gray-100 rounded border text-xs">
+            <div className="font-medium mb-0.5">Preview:</div>
+            <div className="text-gray-700 text-xs">{previewText}</div>
           </div>
         </div>
       </div>

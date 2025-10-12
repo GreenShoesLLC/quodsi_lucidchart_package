@@ -32,10 +32,10 @@ export class ActivityProcessor extends BaseSelectionProcessor {
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
     console.log('[ActivityProcessor] Processing activity selection');
-    
+
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
-    
+
     // Create the base message
     const messageData = this.createBaseMessageData(
       items,
@@ -44,28 +44,31 @@ export class ActivityProcessor extends BaseSelectionProcessor {
       documentId,
       isQuodsiModel
     );
-    
+
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
       console.log('[ActivityProcessor] Not a Quodsi model or multiple items selected');
       return messageData;
     }
-    
+
+    // Ensure ModelManager has the current page set so ModelDefinition can be built
+    modelManager.setCurrentPage(currentPage);
+
     // Get validation result
     const validationResult = await this.getValidationResult(modelManager);
     messageData.validationResult = validationResult;
-    
+
     const item = items[0];
     const metadata = modelManager.getMetadata(item);
-    
+
     if (metadata) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
-          item, 
+          item,
           modelManager
         );
-        
+
         // Get resource reference data
         messageData.referenceData = await referenceDataBuilder.buildResourceReferenceData(
           modelManager
@@ -78,6 +81,10 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
+          refDataSummary: messageData.referenceData ? {
+            resources: messageData.referenceData.resources?.length || 0,
+            resourceRequirements: messageData.referenceData.resourceRequirements?.length || 0
+          } : 'none',
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {

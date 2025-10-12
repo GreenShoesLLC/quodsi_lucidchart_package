@@ -1,4 +1,4 @@
-import { EnvelopeMessageType, ISerializedState } from '@quodsi/shared';
+import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
 import { useSender } from './useSender';
 
 /**
@@ -130,6 +130,18 @@ export function useModelOpsSender() {
     });
   };
 
+  /**
+   * Send a request to update the resource requirements array
+   *
+   * @param resourceRequirements Array of serialized resource requirement definitions
+   */
+  const updateResourceRequirements = (resourceRequirements: ISerializedResourceRequirement[]) => {
+    // Use RESOURCE_REQUIREMENTS_UPDATE for updating resource requirements
+    send(EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE, {
+      resourceRequirements
+    });
+  };
+
   return {
     validateModel,
     convertModel,
@@ -138,6 +150,7 @@ export function useModelOpsSender() {
     updateElementData,
     convertElement,
     convertPage,
-    updateStates
+    updateStates,
+    updateResourceRequirements
   };
 }

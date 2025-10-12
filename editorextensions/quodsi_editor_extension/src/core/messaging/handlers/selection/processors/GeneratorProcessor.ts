@@ -50,22 +50,25 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
       console.log('[GeneratorProcessor] Not a Quodsi model or multiple items selected');
       return messageData;
     }
-    
+
+    // Ensure ModelManager has the current page set so ModelDefinition can be built
+    modelManager.setCurrentPage(currentPage);
+
     // Get validation result
     const validationResult = await this.getValidationResult(modelManager);
     messageData.validationResult = validationResult;
-    
+
     const item = items[0];
     const metadata = modelManager.getMetadata(item);
-    
+
     if (metadata) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
-          item, 
+          item,
           modelManager
         );
-        
+
         // Get entity reference data
         messageData.referenceData = await referenceDataBuilder.buildEntityReferenceData(
           modelManager

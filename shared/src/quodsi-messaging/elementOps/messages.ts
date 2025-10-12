@@ -2,6 +2,7 @@ import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { JsonObject } from '../../types/common';
 import { ISerializedState } from '../../serialization/interfaces/ISerializedState';
+import { ISerializedResourceRequirement } from '../../serialization/interfaces/ISerializedResourceRequirement';
 
 /**
  * Sent to request element update
@@ -96,6 +97,31 @@ export interface StatesUpdateResultMessage extends EnvelopeBase {
   };
 }
 
+/**
+ * Sent to request resource requirements update
+ */
+export interface ResourceRequirementsUpdateMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE;
+  data: {
+    /** Serialized resource requirements array */
+    resourceRequirements: ISerializedResourceRequirement[];
+  };
+}
+
+/**
+ * Sent with resource requirements update results
+ */
+export interface ResourceRequirementsUpdateResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT;
+  data: {
+    /** Success flag */
+    success: boolean;
+
+    /** Error message if update failed */
+    errorMessage?: string;
+  };
+}
+
 /** Union type of all element operations messages */
 export type ElementOpsMessage =
   | ElementUpdateMessage
@@ -103,4 +129,6 @@ export type ElementOpsMessage =
   | ElementConvertMessage
   | ElementConvertResultMessage
   | StatesUpdateMessage
-  | StatesUpdateResultMessage;
+  | StatesUpdateResultMessage
+  | ResourceRequirementsUpdateMessage
+  | ResourceRequirementsUpdateResultMessage;

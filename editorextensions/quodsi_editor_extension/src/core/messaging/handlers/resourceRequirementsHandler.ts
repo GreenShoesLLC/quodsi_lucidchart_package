@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedState } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/shared';
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -6,45 +6,45 @@ import { SelectionHandler } from './selection/SelectionHandler';
 
 
 /**
- * Handler for states operations (update states array)
+ * Handler for resource requirements operations (update resource requirements array)
  */
-export class StatesHandler {
+export class ResourceRequirementsHandler {
   /**
-   * Handle messages related to states operations
+   * Handle messages related to resource requirements operations
    *
    * @param msg The received message
    * @returns Whether the message was handled
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
-      case EnvelopeMessageType.STATES_UPDATE:
+      case EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE:
         // Start the async process but return true synchronously
-        StatesHandler.handleStatesUpdate(msg)
-          .catch(err => console.error('[StatesHandler] Error in handleStatesUpdate:', err));
+        ResourceRequirementsHandler.handleResourceRequirementsUpdate(msg)
+          .catch(err => console.error('[ResourceRequirementsHandler] Error in handleResourceRequirementsUpdate:', err));
         return true;
 
-      case EnvelopeMessageType.STATES_UPDATE_RESULT:
-        return StatesHandler.handleStatesUpdateResult(msg);
+      case EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT:
+        return ResourceRequirementsHandler.handleResourceRequirementsUpdateResult(msg);
 
-      // Not a states operations message
+      // Not a resource requirements operations message
       default:
         return false;
     }
   }
 
   /**
-   * Handle states update request
+   * Handle resource requirements update request
    *
-   * @param msg STATES_UPDATE message
+   * @param msg RESOURCE_REQUIREMENTS_UPDATE message
    * @returns True indicating message was handled
    */
-  private static async handleStatesUpdate(msg: EnvelopeBase): Promise<boolean> {
+  private static async handleResourceRequirementsUpdate(msg: EnvelopeBase): Promise<boolean> {
     const data = msg.data as {
-      states: ISerializedState[];
+      resourceRequirements: ISerializedResourceRequirement[];
     };
 
-    console.log('[StatesHandler] States update requested', {
-      statesCount: data.states.length
+    console.log('[ResourceRequirementsHandler] Resource requirements update requested', {
+      requirementsCount: data.resourceRequirements.length
     });
 
     try {
@@ -59,20 +59,20 @@ export class StatesHandler {
         throw new Error('Current page not available');
       }
 
-      // Update states using ModelManager
-      await modelManager.updateStates(data.states, currentPage);
+      // Update resource requirements using ModelManager
+      await modelManager.updateResourceRequirements(data.resourceRequirements, currentPage);
 
       // Validate the model after update
       await modelManager.validateModel();
 
-      // Trigger a selection change to send updated states back to React
-      // This ensures React gets the fresh states array
+      // Trigger a selection change to send updated resource requirements back to React
+      // This ensures React gets the fresh resource requirements array
       SelectionHandler.sendSelectionChangedMessage();
 
       // Send success response
       router.send('model', {
         id: msg.id, // Use same ID for correlation
-        type: EnvelopeMessageType.STATES_UPDATE_RESULT,
+        type: EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
@@ -84,12 +84,12 @@ export class StatesHandler {
       return true;
 
     } catch (error) {
-      console.error('[StatesHandler] Error updating states', error);
+      console.error('[ResourceRequirementsHandler] Error updating resource requirements', error);
 
       // Send error response
       router.send('model', {
         id: msg.id,
-        type: EnvelopeMessageType.STATES_UPDATE_RESULT,
+        type: EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
@@ -104,18 +104,18 @@ export class StatesHandler {
   }
 
   /**
-   * Handle states update result
+   * Handle resource requirements update result
    *
-   * @param msg STATES_UPDATE_RESULT message
+   * @param msg RESOURCE_REQUIREMENTS_UPDATE_RESULT message
    * @returns True indicating message was handled
    */
-  private static handleStatesUpdateResult(msg: EnvelopeBase): boolean {
+  private static handleResourceRequirementsUpdateResult(msg: EnvelopeBase): boolean {
     const data = msg.data as {
       success: boolean;
       errorMessage?: string;
     };
 
-    console.log('[StatesHandler] States update result received', {
+    console.log('[ResourceRequirementsHandler] Resource requirements update result received', {
       success: data.success,
       error: data.errorMessage
     });

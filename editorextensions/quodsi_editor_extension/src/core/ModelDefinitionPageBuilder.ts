@@ -2,7 +2,8 @@ import { PageProxy, BlockProxy } from 'lucid-extension-sdk';
 import {
     ModelDefinition,
     SimulationObjectType,
-    ResourceRequirement
+    ResourceRequirement,
+    RequirementClause
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
@@ -178,6 +179,9 @@ export class ModelDefinitionPageBuilder {
                 }
             }
 
+            // Load and merge custom resource requirements from storage
+            this.loadAndMergeResourceRequirements(page, modelDefinition);
+
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
@@ -212,6 +216,91 @@ export class ModelDefinitionPageBuilder {
             }
             return null;
         }
+    }
+
+    /**
+     * Helper to convert serialized RequirementClause to RequirementClause instance (recursive)
+     */
+    private deserializeClause(serialized: any): RequirementClause {
+        const requests = serialized.requests || [];
+        const subClauses = (serialized.subClauses || []).map((sc: any) => this.deserializeClause(sc));
+
+        return new RequirementClause(
+            serialized.clauseId,
+            serialized.mode,
+            serialized.parentClauseId,
+            requests, // ResourceRequest objects are plain objects, no deserialization needed
+            subClauses
+        );
+    }
+
+    /**
+     * Loads custom resource requirements from storage and merges with automatic ones.
+     *
+     * Strategy:
+     * - Automatic requirements (from Resource blocks) are generated on-the-fly, never persisted
+     * - Custom requirements (from q_res_requirements) are persisted and can be:
+     *   1. Pure custom (multi-resource like "Mixed Team Options")
+     *   2. Overrides of automatic requirements (if user customizes a single-resource requirement)
+     *
+     * Merge logic:
+     * - Custom requirements by ID override automatic ones
+     * - Remaining custom requirements are added (pure custom)
+     * - Result: no duplicates, custom takes precedence
+     */
+    private loadAndMergeResourceRequirements(
+        page: PageProxy,
+        modelDefinition: ModelDefinition
+    ): void {
+        this.log('Loading and merging resource requirements');
+
+        // Get automatic requirements already added (one per Resource block)
+        const autoRequirements = modelDefinition.resourceRequirements.getAll();
+        this.log(`Automatic requirements from Resource blocks: ${autoRequirements.length}`);
+
+        // Load custom requirements from storage
+        const customRequirements = this.storageAdapter.getResourceRequirements(page);
+        this.log(`Custom requirements from storage: ${customRequirements.length}`);
+
+        // Create a map of custom requirements by ID for fast lookup
+        const customById = new Map(customRequirements.map(r => [r.id, r]));
+
+        // Merge: custom overrides auto by matching ID
+        const mergedRequirements: ResourceRequirement[] = [];
+
+        for (const autoReq of autoRequirements) {
+            const customReq = customById.get(autoReq.id);
+            if (customReq) {
+                // Custom requirement overrides automatic one - deserialize clauses
+                const deserializedClauses = customReq.rootClauses.map(c => this.deserializeClause(c));
+                mergedRequirements.push(
+                    new ResourceRequirement(customReq.id, customReq.name, deserializedClauses)
+                );
+                customById.delete(autoReq.id); // Mark as processed
+                this.log(`Using custom requirement for resource: ${customReq.name} (ID: ${autoReq.id})`);
+            } else {
+                // Keep automatic requirement
+                mergedRequirements.push(autoReq);
+            }
+        }
+
+        // Add remaining custom requirements (pure custom, not tied to a single resource)
+        for (const [id, customReq] of customById) {
+            // Deserialize clauses for pure custom requirements
+            const deserializedClauses = customReq.rootClauses.map(c => this.deserializeClause(c));
+            mergedRequirements.push(
+                new ResourceRequirement(customReq.id, customReq.name, deserializedClauses)
+            );
+            this.log(`Adding pure custom requirement: ${customReq.name} (ID: ${id})`);
+        }
+
+        // Clear and repopulate the requirements manager with merged result
+        modelDefinition.resourceRequirements.clear();
+        for (const req of mergedRequirements) {
+            modelDefinition.resourceRequirements.add(req);
+        }
+
+        this.log(`Final merged requirements count: ${mergedRequirements.length}`);
     }
 
     /**

@@ -1,4 +1,4 @@
-import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult, MetaData, ModelStructure, ISerializedState } from "@quodsi/shared";
+import { Model, ModelDefinition, SimulationObject, SimulationObjectType, ValidationResult, MetaData, ModelStructure, ISerializedState, ISerializedResourceRequirement } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
 export declare class ModelManager {
@@ -108,6 +108,10 @@ export declare class ModelManager {
      * Updates the states array for the model
      */
     updateStates(states: ISerializedState[], page: PageProxy): Promise<void>;
+    /**
+     * Updates the resource requirements array for the model
+     */
+    updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void>;
     /**
      * Handles converting an element to a new simulation type
      */
