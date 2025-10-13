@@ -789,7 +789,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     states={states}
                     title="Pre-Processing State Modifications"
                     description="Modifications applied before entities enter the activity"
-                    filterComponentType={ComponentType.ENTITY}
                     allowCrossComponent={true}
                   />
                 </div>
@@ -809,7 +808,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     states={states}
                     title="Post-Processing State Modifications"
                     description="Modifications applied after entities complete the activity"
-                    filterComponentType={ComponentType.ENTITY}
                     allowCrossComponent={true}
                   />
                 </div>
