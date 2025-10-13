@@ -165,11 +165,13 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
       {connectType === ConnectType.Probability && (
         <div className="space-y-2">
           <div className="text-xs text-gray-600 mb-2">
-            Set the probability for each outgoing connector. Probabilities should sum to 1.0.
+            {localConnectors.length === 1
+              ? "Single connector - probability locked to 1.0 (100%)"
+              : "Set the probability for each outgoing connector. Probabilities should sum to 1.0."}
           </div>
 
           {/* Probability validation warning */}
-          {Math.abs(totalProbability - 1.0) > 0.001 && (
+          {localConnectors.length > 1 && Math.abs(totalProbability - 1.0) > 0.001 && (
             <div className="flex items-start gap-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs">
               <AlertCircle className="w-3 h-3 text-amber-600 mt-0.5 flex-shrink-0" />
               <div>
@@ -198,9 +200,10 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
                     <label className="text-xs text-gray-600">Probability:</label>
                     <input
                       type="number"
-                      className="w-24 px-2 py-1 text-xs border rounded"
-                      value={connector.probability}
+                      className="w-24 px-2 py-1 text-xs border rounded disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      value={localConnectors.length === 1 ? 1 : connector.probability}
                       onChange={(e) => handleProbabilityChange(connector.id, e.target.value)}
+                      disabled={localConnectors.length === 1}
                       min="0"
                       max="1"
                       step="0.01"

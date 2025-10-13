@@ -4,7 +4,6 @@ import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationPanel } from './ValidationPanel';
-import { SimulationControls } from './SimulationControls';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
@@ -42,8 +41,7 @@ export const ModelPanel: React.FC = () => {
   // Local UI state for accordion sections
   const [expandedSections, setExpandedSections] = useState({
     elementEditor: true, // Always start with element editor expanded
-    validation: !!validationState?.summary?.errorCount,
-    simulation: false
+    validation: !!validationState?.summary?.errorCount
   });
 
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
@@ -307,17 +305,6 @@ export const ModelPanel: React.FC = () => {
           isExpanded={expandedSections.validation}
           onToggle={() => toggleSection('validation')}
         />
-        
-        {/* Show simulation controls if we're on a model element */}
-        {isModelElement && (
-          <SimulationControls
-            status={simulationStatus}
-            onSimulate={onSimulate}
-            onViewResults={onViewResults}
-            isExpanded={expandedSections.simulation}
-            onToggle={() => toggleSection('simulation')}
-          />
-        )}
       </div>
     </div>
   );

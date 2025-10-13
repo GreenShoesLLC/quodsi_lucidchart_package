@@ -45,7 +45,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   onViewResults,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
-  const [scenarioName, setScenarioName] = useState("New Scenario");
 
   // Reset the simulation button state when status changes
   useEffect(() => {
@@ -90,7 +89,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const handleSimulateClick = () => {
     setIsSimulating(true);
     if (onSimulate) {
-      onSimulate(scenarioName);
+      onSimulate("LucidChart");
     }
   };
 
@@ -224,22 +223,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           </button>
         </div>
       </div>
-      
-      {/* Row 2: Scenario name (only for Model type) */}
-      {currentElement?.metadata?.type === SimulationObjectType.Model && (
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-600 whitespace-nowrap">Scenario:</label>
-          <input
-            type="text"
-            className="text-xs p-1 border border-gray-300 rounded flex-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            value={scenarioName}
-            onChange={(e) => setScenarioName(e.target.value)}
-            disabled={isSimulating}
-          />
-        </div>
-      )}
-      
-      {/* Row 3: Action buttons */}
+
+      {/* Row 2: Action buttons */}
       <div className="flex gap-2">
         {renderButtons()}
       </div>
