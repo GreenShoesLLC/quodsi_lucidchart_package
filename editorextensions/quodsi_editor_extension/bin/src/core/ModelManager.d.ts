@@ -114,8 +114,14 @@ export declare class ModelManager {
     updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void>;
     /**
      * Handles converting an element to a new simulation type
+     * Uses LucidElementFactory for proper element creation with all required fields
      */
     private handleTypeConversion;
+    /**
+     * Calculates connector probability based on outgoing connections from source
+     * Probability = 1.0 / number of outgoing connections from source
+     */
+    private calculateConnectorProbability;
     /**
      * Handles updating element data
      */

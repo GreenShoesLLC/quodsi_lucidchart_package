@@ -199,8 +199,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           logger.debug('Set type from direct property: Resource');
         }
         // Only map diagram to connector, not block to activity
-        else if (selectionData.diagramElementType && 
-          (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None)) {
+        // Don't auto-convert unconverted elements - let user choose
+        else if (selectionData.diagramElementType &&
+          (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None) &&
+          !modelItemData.isUnconverted) {
           
           const diagramType = selectionData.diagramElementType.toLowerCase();
           let simulationType = SimulationObjectType.None;
@@ -246,6 +248,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         type: 'SELECTION_UPDATE' as const,
         elements: elements as unknown as ElementShape[],
         totalElements: selectionData.selectionState.selectedIds.length || 0,
+        // Include diagram element type if present
+        ...(selectionData.diagramElementType ? {
+          diagramElementType: selectionData.diagramElementType
+        } : {}),
         // Include document context if embedded
         ...(hasEmbeddedContext && selectionData.documentContext ? {
           documentContext: {

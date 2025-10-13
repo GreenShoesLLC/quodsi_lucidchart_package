@@ -42,7 +42,7 @@ export class ElementOpsHandler {
   
   /**
    * Handle element update request
-   * 
+   *
    * @param msg ELEMENT_UPDATE message
    * @returns True indicating message was handled
    */
@@ -51,13 +51,15 @@ export class ElementOpsHandler {
       elementId: string;
       type: string;
       data: JsonObject;
+      diagramElementType?: string;
     };
-    
+
     console.log('[ElementOpsHandler] Element update requested', {
       elementId: data.elementId,
-      type: data.type
+      type: data.type,
+      diagramElementType: data.diagramElementType
     });
-    
+
     try {
       // Get the client and model manager from singleton
       const client = ModelManager.getClient();
@@ -69,9 +71,13 @@ export class ElementOpsHandler {
       if (!currentPage) {
         throw new Error('Current page not available');
       }
-      
-      // Find the element by ID
-      const element = ElementOpsHandler.findElementById(viewport, data.elementId);
+
+      // Find the element by ID, using diagram element type as hint if available
+      const element = ElementOpsHandler.findElementById(
+        viewport,
+        data.elementId,
+        data.diagramElementType
+      );
       if (!element) {
         throw new Error(`Element not found: ${data.elementId}`);
       }
@@ -164,7 +170,7 @@ export class ElementOpsHandler {
   
   /**
    * Handle element conversion request
-   * 
+   *
    * @param msg ELEMENT_CONVERT message
    * @returns True indicating message was handled
    */
@@ -173,13 +179,15 @@ export class ElementOpsHandler {
       elementId: string;
       newType: string;
       data?: JsonObject;
+      diagramElementType?: string;
     };
-    
+
     console.log('[ElementOpsHandler] Element conversion requested', {
       elementId: data.elementId,
-      newType: data.newType
+      newType: data.newType,
+      diagramElementType: data.diagramElementType
     });
-    
+
     try {
       // Get the client and model manager from singleton
       const client = ModelManager.getClient();
@@ -191,16 +199,20 @@ export class ElementOpsHandler {
       if (!currentPage) {
         throw new Error('Current page not available');
       }
-      
-      // Find the element by ID
-      const element = ElementOpsHandler.findElementById(viewport, data.elementId);
+
+      // Find the element by ID, using diagram element type as hint if available
+      const element = ElementOpsHandler.findElementById(
+        viewport,
+        data.elementId,
+        data.diagramElementType
+      );
       if (!element) {
         throw new Error(`Element not found: ${data.elementId}`);
       }
-      
+
       // Convert string type to SimulationObjectType
       const newType = ElementOpsHandler.getElementType(data.newType);
-      
+
       // Save element data using ModelManager with the new type
       await modelManager.saveElementData(
         element,
@@ -208,10 +220,10 @@ export class ElementOpsHandler {
         newType,
         currentPage
       );
-      
+
       // Validate the model after conversion
       await modelManager.validateModel();
-      
+
       // Send success response
       router.send('model', {
         id: msg.id, // Use same ID for correlation
@@ -224,19 +236,19 @@ export class ElementOpsHandler {
           elementId: data.elementId
         }
       });
-      
+
       // Handle selection change to refresh UI
       const selectedItems = viewport.getSelectedItems();
       if (selectedItems.some(item => item.id === data.elementId)) {
         // Re-selecting the element will refresh the UI
         viewport.setSelectedItems(selectedItems); // Use correct method name
       }
-      
+
       return true;
-      
+
     } catch (error) {
       console.error('[ElementOpsHandler] Error converting element', error);
-      
+
       // Send error response
       router.send('model', {
         id: msg.id,
@@ -250,7 +262,7 @@ export class ElementOpsHandler {
           errorMessage: error instanceof Error ? error.message : String(error)
         }
       });
-      
+
       return false;
     }
   }
@@ -282,20 +294,96 @@ export class ElementOpsHandler {
   
   /**
    * Helper method to find an element by ID
-   * 
+   *
    * @param viewport Viewport instance
    * @param elementId Element ID to find
+   * @param diagramElementType Optional hint about element type ('block' or 'line')
    * @returns Found element or null
    */
-  private static findElementById(viewport: Viewport, elementId: string): ElementProxy | null {
+  private static findElementById(
+    viewport: Viewport,
+    elementId: string,
+    diagramElementType?: string
+  ): ElementProxy | null {
     const page = viewport.getCurrentPage();
-    if (!page) return null;
-    
-    // Check both blocks and lines collections
-    // These are typically Maps with element ID as the key
-    return page.allBlocks?.get(elementId) || 
-           page.allLines?.get(elementId) || 
-           null;
+    if (!page) {
+      console.log('[ElementOpsHandler] No current page found');
+      return null;
+    }
+
+    console.log('[ElementOpsHandler] Finding element:', {
+      elementId,
+      diagramElementType,
+      hasHint: !!diagramElementType
+    });
+
+    // If we have a hint about the element type, check that collection first
+    if (diagramElementType?.toLowerCase() === 'line') {
+      // Check lines first when we know it's a line
+      const line = page.allLines?.get(elementId);
+      if (line) {
+        console.log('[ElementOpsHandler] Found element in allLines (via hint):', {
+          elementId,
+          type: 'LineProxy'
+        });
+        return line;
+      }
+      // Still check blocks as fallback
+      const block = page.allBlocks?.get(elementId);
+      if (block) {
+        console.log('[ElementOpsHandler] Found element in allBlocks (fallback from line hint):', {
+          elementId,
+          type: 'BlockProxy'
+        });
+        return block;
+      }
+    } else if (diagramElementType?.toLowerCase() === 'block') {
+      // Check blocks first when we know it's a block
+      const block = page.allBlocks?.get(elementId);
+      if (block) {
+        console.log('[ElementOpsHandler] Found element in allBlocks (via hint):', {
+          elementId,
+          type: 'BlockProxy'
+        });
+        return block;
+      }
+      // Still check lines as fallback
+      const line = page.allLines?.get(elementId);
+      if (line) {
+        console.log('[ElementOpsHandler] Found element in allLines (fallback from block hint):', {
+          elementId,
+          type: 'LineProxy'
+        });
+        return line;
+      }
+    } else {
+      // No hint provided, check both (blocks first for backwards compatibility)
+      const block = page.allBlocks?.get(elementId);
+      if (block) {
+        console.log('[ElementOpsHandler] Found element in allBlocks (no hint):', {
+          elementId,
+          type: 'BlockProxy'
+        });
+        return block;
+      }
+
+      const line = page.allLines?.get(elementId);
+      if (line) {
+        console.log('[ElementOpsHandler] Found element in allLines (no hint):', {
+          elementId,
+          type: 'LineProxy'
+        });
+        return line;
+      }
+    }
+
+    console.log('[ElementOpsHandler] Element not found:', {
+      elementId,
+      diagramElementType,
+      lineCount: page.allLines?.size || 0,
+      blockCount: page.allBlocks?.size || 0
+    });
+    return null;
   }
   
   /**

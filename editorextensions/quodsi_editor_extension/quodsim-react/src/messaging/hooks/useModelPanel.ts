@@ -148,22 +148,22 @@ export function useModelPanel() {
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
     logger.log(`Updating element ${elementId} with data:`, data);
-    
+
     // For model type, we need special handling
     if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
       logger.log('Updating model properties');
       // Use the model update method
-      modelOpsSender.updateElementData(elementId, 'Model', data);
+      modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType);
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';
-      modelOpsSender.updateElementData(elementId, type, data);
+      modelOpsSender.updateElementData(elementId, type, data, typedDiagramElementType);
     }
   };
   
   const onElementTypeChange = (elementId: string, newType: SimulationObjectType) => {
     logger.log(`Changing element ${elementId} to type ${newType}`);
-    modelOpsSender.convertElement(elementId, newType);
+    modelOpsSender.convertElement(elementId, newType, typedDiagramElementType);
   };
   
   const onValidate = () => {
@@ -216,22 +216,24 @@ export function useModelPanel() {
     connectors: outgoingConnectors
   });
   
-  // Convert the string diagramElementType to the proper enum value if possible
+  // Get diagram element type from selection state (set by extension)
   let typedDiagramElementType = DiagramElementType.BLOCK; // Default to BLOCK
-  if (selection.selectedElements?.[0]?.type) {
-    // Convert string type to DiagramElementType enum
-    const elementType = selection.selectedElements[0].type.toLowerCase();
+  if (selection.diagramElementType) {
+    const elementType = selection.diagramElementType.toLowerCase();
     if (elementType === 'block') {
       typedDiagramElementType = DiagramElementType.BLOCK;
-      logger.debug('Detected BLOCK diagram element type');
+      logger.debug('Using BLOCK diagram element type from selection state');
     } else if (elementType === 'line') {
       typedDiagramElementType = DiagramElementType.LINE;
-      logger.debug('Detected LINE diagram element type');
+      logger.debug('Using LINE diagram element type from selection state');
     }
+  } else {
+    logger.debug('No diagramElementType in selection state, defaulting to BLOCK');
   }
   
   // Ensure the modelItemData has a proper type value if needed
-  if (modelItemData && (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None)) {
+  // Don't auto-convert unconverted elements - let user choose
+  if (modelItemData && (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None) && !modelItemData.isUnconverted) {
     // First check if q_meta contains type information
     if (modelItemData.q_meta && modelItemData.q_meta.type) {
       logger.debug('Using q_meta type:', modelItemData.q_meta.type);

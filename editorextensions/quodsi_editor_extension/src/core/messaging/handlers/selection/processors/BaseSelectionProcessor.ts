@@ -1,7 +1,8 @@
-import { 
-  EditorClient, 
-  ItemProxy, 
+import {
+  EditorClient,
+  ItemProxy,
   ElementProxy,
+  LineProxy,
   DocumentProxy,
   Viewport,
   PageProxy
@@ -133,10 +134,8 @@ export abstract class BaseSelectionProcessor {
    * @returns The diagram element type
    */
   protected getDiagramElementType(item: ItemProxy): DiagramElementType {
-    // Check if this is an instance of line using the className property
-    // This is safer than using instanceof which may not work as expected
-    // due to how types are loaded in the extension environment
-    const className = (item as any).className || '';
-    return className.includes('Line') ? DiagramElementType.LINE : DiagramElementType.BLOCK;
+    // Check if this is a line using instanceof which works reliably
+    // (used successfully throughout the codebase in selectionTypeUtils, RightDockPanel, ModelManager, etc.)
+    return item instanceof LineProxy ? DiagramElementType.LINE : DiagramElementType.BLOCK;
   }
 }

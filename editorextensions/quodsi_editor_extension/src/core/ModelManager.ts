@@ -22,7 +22,7 @@ import {
     ISerializedResourceRequirement
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { BlockProxy, ElementProxy, PageProxy, EditorClient } from "lucid-extension-sdk";
+import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -666,12 +666,19 @@ export class ModelManager {
 
     /**
      * Handles converting an element to a new simulation type
+     * Uses LucidElementFactory for proper element creation with all required fields
      */
     private async handleTypeConversion(
         element: ElementProxy,
         newType: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
+        this.debug.log('handleTypeConversion - Start', {
+            elementId: element.id,
+            newType: newType,
+            elementType: element.constructor.name
+        });
+
         // Ensure model exists
         if (!this.getModel()) {
             const model = {
@@ -682,25 +689,108 @@ export class ModelManager {
             await this.initializeModel(model as Model, page);
         }
 
-        // Create initial data
-        const elementName = this.getDefaultElementName(element);
-        const convertedData = {
-            id: element.id,
-            type: newType,
-            name: elementName
-        };
+        try {
+            // Log element details for debugging
+            this.debug.debug('Element details before conversion:', {
+                elementId: element.id,
+                elementConstructor: element.constructor.name,
+                isLineProxy: element instanceof LineProxy,
+                isBlockProxy: element instanceof BlockProxy,
+                hasGetEndpoint1: 'getEndpoint1' in element,
+                hasGetEndpoint2: 'getEndpoint2' in element
+            });
 
-        // Register and save
-        this.registerElement(convertedData, element);
-        this.setElementData(
-            element,
-            convertedData,
-            newType,
-            {
-                id: element.id,
-                version: this.CURRENT_VERSION
+            // Validate element type matches target type
+            if (newType === SimulationObjectType.Connector && !(element instanceof LineProxy)) {
+                throw new Error(`Cannot convert element ${element.id} to Connector: element is not a LineProxy (found ${element.constructor.name})`);
             }
-        );
+            if (newType !== SimulationObjectType.Connector && !(element instanceof BlockProxy)) {
+                throw new Error(`Cannot convert element ${element.id} to ${newType}: element is not a BlockProxy (found ${element.constructor.name})`);
+            }
+
+            // Use LucidElementFactory to create proper platform object
+            const factory = new LucidElementFactory(this.storageAdapter);
+            factory.setLogging(false);
+
+            this.debug.debug('Creating platform object using factory');
+            const platformObject = factory.createPlatformObject(
+                element,
+                newType,
+                true // isConversion flag
+            );
+
+            // Get the simulation object
+            const simObject = platformObject.getSimulationObject();
+
+            this.debug.debug('Created simulation object:', {
+                id: simObject.id,
+                type: simObject.type,
+                name: simObject.name
+            });
+
+            // For Connectors, calculate and set probability based on outgoing connections
+            if (newType === SimulationObjectType.Connector && element instanceof LineProxy) {
+                const probability = this.calculateConnectorProbability(element as LineProxy, page);
+                (simObject as Connector).probability = probability;
+
+                this.debug.debug('Set connector probability:', {
+                    connectorId: simObject.id,
+                    probability: probability
+                });
+
+                // Update storage with the probability
+                platformObject.updateFromPlatform();
+            }
+
+            // Register with model manager
+            this.debug.debug('Registering element with model manager');
+            await this.registerElement(simObject, element);
+
+            this.debug.log('handleTypeConversion - Completed successfully');
+
+        } catch (error) {
+            this.debug.error('handleTypeConversion - Error:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Calculates connector probability based on outgoing connections from source
+     * Probability = 1.0 / number of outgoing connections from source
+     */
+    private calculateConnectorProbability(line: LineProxy, page: PageProxy): number {
+        try {
+            const endpoint1 = line.getEndpoint1();
+            if (!endpoint1?.connection) {
+                this.debug.debug('No source connection, defaulting probability to 1.0');
+                return 1.0;
+            }
+
+            const sourceId = endpoint1.connection.id;
+
+            // Count outgoing connections from this source
+            let outgoingCount = 0;
+            for (const [, otherLine] of page.allLines) {
+                const otherEndpoint1 = otherLine.getEndpoint1();
+                if (otherEndpoint1?.connection?.id === sourceId) {
+                    outgoingCount++;
+                }
+            }
+
+            const probability = outgoingCount > 0 ? 1.0 / outgoingCount : 1.0;
+
+            this.debug.debug('Calculated connector probability:', {
+                sourceId,
+                outgoingCount,
+                probability
+            });
+
+            return probability;
+
+        } catch (error) {
+            this.debug.error('Error calculating connector probability:', error);
+            return 1.0; // Default to 1.0 on error
+        }
     }
 
     /**

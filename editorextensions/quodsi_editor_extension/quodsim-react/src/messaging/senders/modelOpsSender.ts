@@ -71,41 +71,47 @@ export function useModelOpsSender() {
   
   /**
    * Send an element data update
-   * 
+   *
    * @param elementId Element ID to update
    * @param type Element type
    * @param data Updated element data
+   * @param diagramElementType Optional diagram element type ('block' or 'line')
    */
   const updateElementData = (
     elementId: string,
     type: string,
-    data: Record<string, any>
+    data: Record<string, any>,
+    diagramElementType?: string
   ) => {
-    // Use the new ELEMENT_UPDATE message type 
+    // Use the new ELEMENT_UPDATE message type
     send(EnvelopeMessageType.ELEMENT_UPDATE, {
       elementId,
       type,
       data: {
         ...data,
         id: elementId  // Ensure ID is included in the data
-      }
+      },
+      diagramElementType
     });
   };
   
   /**
    * Send a request to convert an element to a new type
-   * 
+   *
    * @param elementId Element ID to convert
    * @param type Target element type
+   * @param diagramElementType Optional diagram element type ('block' or 'line')
    */
   const convertElement = (
     elementId: string,
-    type: string
+    type: string,
+    diagramElementType?: string
   ) => {
     // Use ELEMENT_CONVERT for converting elements
     send(EnvelopeMessageType.ELEMENT_CONVERT, {
       elementId,
-      newType: type
+      newType: type,
+      diagramElementType
     });
   };
   

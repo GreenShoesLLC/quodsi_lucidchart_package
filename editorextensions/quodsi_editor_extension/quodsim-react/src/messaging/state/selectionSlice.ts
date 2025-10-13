@@ -13,6 +13,7 @@ const logger = debugService.forComponent('SelectionSlice');
 // State shape
 export interface SelectionState {
   selectedElements: ElementShape[];
+  diagramElementType?: string; // 'block' or 'line' from extension
   documentContext?: {
     documentId: string;
     pageId: string;
@@ -37,6 +38,7 @@ export interface SelectionState {
 // Initial state
 export const initialSelectionState: SelectionState = {
   selectedElements: [],
+  diagramElementType: undefined,
   documentContext: undefined,
   referenceData: undefined,
   states: undefined,
@@ -47,7 +49,7 @@ export const initialSelectionState: SelectionState = {
 
 // Action types
 export type SelectionAction =
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; }; states?: ISerializedState[]; resourceRequirements?: any[]; outgoingConnectors?: any[]; }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; diagramElementType?: string; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; }; states?: ISerializedState[]; resourceRequirements?: any[]; outgoingConnectors?: any[]; }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -93,6 +95,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
       const updatedState = {
         ...state,
         selectedElements: action.elements,
+        diagramElementType: action.diagramElementType || state.diagramElementType,
         documentContext: documentContext ? {
           ...documentContext,
           totalElements: action.totalElements,
