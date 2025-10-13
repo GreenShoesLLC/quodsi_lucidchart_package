@@ -793,9 +793,20 @@ export class ModelManager {
      * Gets default name for an element based on its type
      */
     private getDefaultElementName(element: ElementProxy): string {
-        return element instanceof BlockProxy ?
-            (element.id || 'Unnamed Block') :
-            'Unnamed Connector';
+        if (element instanceof BlockProxy) {
+            // Check for text areas on the block
+            if (element.textAreas && element.textAreas.size > 0) {
+                for (const text of element.textAreas.values()) {
+                    if (text && text.trim()) {
+                        return text.trim();
+                    }
+                }
+            }
+            // If no text found, use class name
+            const className = element.getClassName() || 'Block';
+            return `Block ${className}`;
+        }
+        return 'Unnamed Connector';
     }
 
     public async getModelStructure(): Promise<ModelStructure | undefined> {
