@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory } from '@quodsi/shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -36,31 +36,37 @@ export class ModelOpsHandler {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_VALIDATE:
         return ModelOpsHandler.handleValidate(msg);
-        
+
       case EnvelopeMessageType.MODEL_VALIDATION_RESULT:
         return ModelOpsHandler.handleValidationResult(msg);
-        
+
       case EnvelopeMessageType.MODEL_CONVERT:
         // Start async process but return true immediately
         ModelOpsHandler.handleConvert(msg)
           .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_CONVERT:', err));
         return true;
-        
+
       case EnvelopeMessageType.MODEL_CONVERSION_RESULT:
         return ModelOpsHandler.handleConversionResult(msg);
-        
+
       case EnvelopeMessageType.MODEL_REMOVE:
         return ModelOpsHandler.handleRemove(msg);
-        
+
       case EnvelopeMessageType.MODEL_REMOVE_RESULT:
         return ModelOpsHandler.handleRemoveResult(msg);
-        
+
+      case EnvelopeMessageType.MODEL_JSON_REQUEST:
+        return ModelOpsHandler.handleModelJsonRequest(msg);
+
+      case EnvelopeMessageType.MODEL_JSON_RESPONSE:
+        return ModelOpsHandler.handleModelJsonResponse(msg);
+
       case EnvelopeMessageType.RESULTS_PAGE_CREATE:
         return ModelOpsHandler.handleResultsPageCreate(msg);
-        
+
       case EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT:
         return ModelOpsHandler.handleResultsPageCreateResult(msg);
-        
+
       // Not a model operations message
       default:
         return false;
@@ -698,6 +704,180 @@ export class ModelOpsHandler {
     return true;
   }
   
+  /**
+   * Handle model JSON request
+   *
+   * @param msg MODEL_JSON_REQUEST message
+   * @returns True indicating message was handled
+   */
+  private static handleModelJsonRequest(msg: EnvelopeBase): boolean {
+    const data = msg.data as { documentId: string };
+
+    ModelOpsHandler.logger.log('Model JSON requested', {
+      documentId: data.documentId
+    });
+
+    // Start async process but return true immediately
+    ModelOpsHandler.serializeAndSendModel(msg, data)
+      .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_JSON_REQUEST:', err));
+
+    return true;
+  }
+
+  /**
+   * Serialize the model and send it back
+   */
+  private static async serializeAndSendModel(msg: EnvelopeBase, data: { documentId: string }): Promise<void> {
+    try {
+      const modelManager = ModelManager.getInstance();
+      const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      const documentProxy = new DocumentProxy(client);
+      const activePageProxy = viewport.getCurrentPage();
+
+      // Verify we have an active page
+      if (!activePageProxy) {
+        ModelOpsHandler.logger.error('No active page found');
+
+        router.send('model', {
+          id: msg.id,
+          type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            success: false,
+            error: 'No active page found'
+          }
+        });
+
+        return;
+      }
+
+      // Ensure the model is loaded for the current page
+      ModelOpsHandler.logger.log('Ensuring model is loaded for current page...');
+      try {
+        // Check if current page is set in ModelManager
+        let currentModelDef = await modelManager.getModelDefinition();
+        if (!currentModelDef) {
+          // Try to initialize/reload the model for the current page
+          ModelOpsHandler.logger.log('No current model definition, attempting to initialize...');
+
+          // Check if this is a Quodsi model page
+          const isQuodsiModel = modelManager.isQuodsiModel(activePageProxy);
+          if (!isQuodsiModel) {
+            ModelOpsHandler.logger.error('Current page is not a Quodsi model');
+
+            router.send('model', {
+              id: msg.id,
+              type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
+              source: 'host',
+              target: 'model-iframe',
+              version: '1.0',
+              data: {
+                success: false,
+                error: 'Current page is not a Quodsi model. Please convert it first.'
+              }
+            });
+
+            return;
+          }
+
+          // Try to initialize the model for the current page
+          ModelOpsHandler.logger.log('Initializing model for current page...');
+          const basicModel = Model.createDefault(documentProxy.id);
+          await modelManager.initializeModel(basicModel, activePageProxy);
+
+          // Get the model definition again after initialization
+          currentModelDef = await modelManager.getModelDefinition();
+        }
+
+        // Final check if we have a model definition
+        if (!currentModelDef) {
+          ModelOpsHandler.logger.error('No model definition found after initialization attempt');
+
+          router.send('model', {
+            id: msg.id,
+            type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
+            source: 'host',
+            target: 'model-iframe',
+            version: '1.0',
+            data: {
+              success: false,
+              error: 'No model definition found. Please ensure the page contains Quodsi model elements.'
+            }
+          });
+
+          return;
+        }
+
+        // Serialize the model (same as simulation button)
+        ModelOpsHandler.logger.log('Serializing model...');
+        const serializer = ModelSerializerFactory.create(currentModelDef);
+        const serializedModel = serializer.serialize(currentModelDef);
+        ModelOpsHandler.logger.log('Model serialized successfully');
+
+        // Send success response with JSON
+        router.send('model', {
+          id: msg.id,
+          type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            success: true,
+            modelJson: serializedModel
+          }
+        });
+
+      } catch (initError) {
+        ModelOpsHandler.logger.error('Error during model initialization:', initError);
+        throw initError;
+      }
+
+    } catch (error) {
+      ModelOpsHandler.logger.error('Error serializing model:', error);
+
+      // Send error response
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_JSON_RESPONSE,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle model JSON response
+   *
+   * @param msg MODEL_JSON_RESPONSE message
+   * @returns True indicating message was handled
+   */
+  private static handleModelJsonResponse(msg: EnvelopeBase): boolean {
+    const data = msg.data as {
+      success: boolean;
+      modelJson?: any;
+      error?: string;
+    };
+
+    ModelOpsHandler.logger.log('Model JSON response received', {
+      success: data.success,
+      hasJson: !!data.modelJson,
+      error: data.error
+    });
+
+    // This is usually sent by the extension, not received
+    // But we'll handle it anyway for completeness
+
+    return true;
+  }
+
   /**
    * Get the last validation result for a document
    */

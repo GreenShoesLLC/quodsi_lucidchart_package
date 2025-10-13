@@ -2,7 +2,7 @@ import { AuthErrorMessage, AuthLoginSuccessMessage, AuthLogoutMessage, AuthMessa
 import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
-import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
+import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
 import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunAckMessage, ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage } from './simulation/messages';
@@ -86,6 +86,8 @@ export {
   ModelConversionResultMessage,
   ModelRemoveMessage,
   ModelRemoveResultMessage,
+  ModelJsonRequestMessage,
+  ModelJsonResponseMessage,
   ResultsPageCreateMessage,
   ResultsPageCreateResultMessage,
   ModelOpsMessage
@@ -158,6 +160,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.MODEL_CONVERSION_RESULT]: ModelConversionResultMessage['data'];
   [EnvelopeMessageType.MODEL_REMOVE]: ModelRemoveMessage['data'];
   [EnvelopeMessageType.MODEL_REMOVE_RESULT]: ModelRemoveResultMessage['data'];
+  [EnvelopeMessageType.MODEL_JSON_REQUEST]: ModelJsonRequestMessage['data'];
+  [EnvelopeMessageType.MODEL_JSON_RESPONSE]: ModelJsonResponseMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE]: ResultsPageCreateMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT]: ResultsPageCreateResultMessage['data'];
 

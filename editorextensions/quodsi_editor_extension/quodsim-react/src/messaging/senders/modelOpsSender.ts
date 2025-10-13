@@ -142,6 +142,18 @@ export function useModelOpsSender() {
     });
   };
 
+  /**
+   * Send a request for the serialized model JSON
+   *
+   * @param documentId Document ID to get model JSON from
+   */
+  const requestModelJson = (documentId: string) => {
+    // Use MODEL_JSON_REQUEST to get serialized model
+    send(EnvelopeMessageType.MODEL_JSON_REQUEST, {
+      documentId
+    });
+  };
+
   return {
     validateModel,
     convertModel,
@@ -151,6 +163,7 @@ export function useModelOpsSender() {
     convertElement,
     convertPage,
     updateStates,
-    updateResourceRequirements
+    updateResourceRequirements,
+    requestModelJson
   };
 }

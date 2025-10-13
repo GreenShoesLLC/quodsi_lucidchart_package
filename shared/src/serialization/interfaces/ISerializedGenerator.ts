@@ -16,4 +16,5 @@ export interface ISerializedGenerator {
     connectors: ISerializedConnector[];
     x: number;
     y: number;
+    initialStateModifications?: any[];
 }

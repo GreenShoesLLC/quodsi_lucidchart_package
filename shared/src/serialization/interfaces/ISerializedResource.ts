@@ -7,4 +7,5 @@ export interface ISerializedResource {
     x: number;
     y: number;
     capacity: number;
+    financialProperties?: any;
 }

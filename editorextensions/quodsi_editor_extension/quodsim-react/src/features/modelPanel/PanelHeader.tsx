@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, FileJson } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
   DiagramElementType,
   SimulationObjectType,
+  EnvelopeMessageType,
+  EnvelopeBase,
 } from "@quodsi/shared";
 import { SimulationStatus } from "../../types/SimulationStatus";
 
@@ -12,6 +14,8 @@ import { StatusIndicator } from "../shared/StatusIndicator";
 import { getSimulationState } from "../../utils/simulationState";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
+import { ModelDefinitionViewer } from "./ModelDefinitionViewer";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -45,6 +49,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   onViewResults,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
+  const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
+  const [modelJson, setModelJson] = useState<any>(null);
+
+  const { requestModelJson } = useModelOpsSender();
 
   // Reset the simulation button state when status changes
   useEffect(() => {
@@ -59,6 +67,33 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       }
     }
   }, [simulationStatus]);
+
+  // Listen for MODEL_JSON_RESPONSE
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase;
+
+      // Check if this is a MODEL_JSON_RESPONSE message
+      if (msg?.type === EnvelopeMessageType.MODEL_JSON_RESPONSE) {
+        const data = msg.data as {
+          success: boolean;
+          modelJson?: any;
+          error?: string;
+        };
+
+        if (data.success && data.modelJson) {
+          setModelJson(data.modelJson);
+          setIsModelViewerOpen(true);
+        } else {
+          console.error('[PanelHeader] Failed to get model JSON:', data.error);
+          // Could show an error message to user here
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // Helper to get display name for the element
   const getDisplayName = (
@@ -91,6 +126,13 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     if (onSimulate) {
       onSimulate("LucidChart");
     }
+  };
+
+  const handleViewModelClick = () => {
+    // Request model JSON from extension
+    // We don't have documentId here, so we'll use an empty string
+    // The extension will get it from the current context
+    requestModelJson('');
   };
 
 
@@ -216,6 +258,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         <div className="flex items-center gap-1">
           {renderValidationIndicators()}
           <button
+            className="text-xs px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center gap-1"
+            onClick={handleViewModelClick}
+            title="View Model Definition"
+          >
+            <FileJson className="w-3 h-3" />
+            View Model
+          </button>
+          <button
             className="text-xs px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded transition-colors"
             onClick={onValidate}
           >
@@ -228,6 +278,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <div className="flex gap-2">
         {renderButtons()}
       </div>
+
+      {/* Model Definition Viewer Modal */}
+      {isModelViewerOpen && modelJson && (
+        <ModelDefinitionViewer
+          modelJson={modelJson}
+          onClose={() => setIsModelViewerOpen(false)}
+        />
+      )}
     </div>
   );
 };

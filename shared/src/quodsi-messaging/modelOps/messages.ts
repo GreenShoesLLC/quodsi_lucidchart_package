@@ -163,6 +163,34 @@ export interface ResultsPageCreateResultMessage extends EnvelopeBase {
   };
 }
 
+/**
+ * Sent to request serialized model JSON
+ */
+export interface ModelJsonRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.MODEL_JSON_REQUEST;
+  data: {
+    /** Document ID to get model JSON from */
+    documentId: string;
+  };
+}
+
+/**
+ * Sent with serialized model JSON
+ */
+export interface ModelJsonResponseMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.MODEL_JSON_RESPONSE;
+  data: {
+    /** Success flag */
+    success: boolean;
+
+    /** Serialized model JSON (same as sent to simulation API) */
+    modelJson?: any;
+
+    /** Error message if serialization failed */
+    error?: string;
+  };
+}
+
 /** Union type of all model operations messages */
 export type ModelOpsMessage =
   | ModelValidateMessage
@@ -171,5 +199,7 @@ export type ModelOpsMessage =
   | ModelConversionResultMessage
   | ModelRemoveMessage
   | ModelRemoveResultMessage
+  | ModelJsonRequestMessage
+  | ModelJsonResponseMessage
   | ResultsPageCreateMessage
   | ResultsPageCreateResultMessage;

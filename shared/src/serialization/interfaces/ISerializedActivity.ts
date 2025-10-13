@@ -1,6 +1,7 @@
 import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
 import { ISerializedOperationStep } from './ISerializedOperationStep';
 import { ISerializedConnector } from './ISerializedConnector';
+import { ConnectType } from '../../types/elements/ConnectType';
 
 export interface ISerializedActivity {
     id: string;
@@ -13,4 +14,8 @@ export interface ISerializedActivity {
     outputBufferCapacity: number;
     operationSteps: ISerializedOperationStep[];
     connectors: ISerializedConnector[];
+    financialProperties?: any;
+    preProcessingStateModifications?: any[];
+    postProcessingStateModifications?: any[];
+    connectType?: ConnectType;
 }

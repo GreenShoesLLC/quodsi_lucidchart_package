@@ -106,7 +106,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 .filter(connector => connector.sourceId === activity.id)
                 .map(connector => this.serializeConnector(connector));
 
-            return {
+            const serialized: ISerializedActivity = {
                 id: activity.id,
                 name: activity.name,
                 type: activity.type,
@@ -120,6 +120,22 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 ),
                 connectors: relevantConnectors
             };
+
+            // Add optional properties if they exist
+            if (activity.financialProperties) {
+                serialized.financialProperties = activity.financialProperties.toJSON();
+            }
+            if (activity.preProcessingStateModifications && activity.preProcessingStateModifications.length > 0) {
+                serialized.preProcessingStateModifications = activity.preProcessingStateModifications.map(m => m.toJSON());
+            }
+            if (activity.postProcessingStateModifications && activity.postProcessingStateModifications.length > 0) {
+                serialized.postProcessingStateModifications = activity.postProcessingStateModifications.map(m => m.toJSON());
+            }
+            if (activity.connectType) {
+                serialized.connectType = activity.connectType;
+            }
+
+            return serialized;
         } catch (error) {
             throw new SerializationError(
                 'Activity',
@@ -167,7 +183,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 .filter(connector => connector.sourceId === generator.id)
                 .map(connector => this.serializeConnector(connector));
 
-            return {
+            const serialized: ISerializedGenerator = {
                 id: generator.id,
                 name: generator.name,
                 type: generator.type,
@@ -182,6 +198,13 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 maxEntities: generator.maxEntities,
                 connectors: relevantConnectors
             };
+
+            // Add optional properties if they exist
+            if (generator.initialStateModifications && generator.initialStateModifications.length > 0) {
+                serialized.initialStateModifications = generator.initialStateModifications.map(m => m.toJSON());
+            }
+
+            return serialized;
         } catch (error) {
             throw new SerializationError(
                 'Generator',
@@ -197,7 +220,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('Resource must have id and name');
             }
 
-            return {
+            const serialized: ISerializedResource = {
                 id: resource.id,
                 name: resource.name,
                 type: resource.type,
@@ -205,6 +228,13 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 y: resource.y,
                 capacity: resource.capacity
             };
+
+            // Add optional properties if they exist
+            if (resource.financialProperties) {
+                serialized.financialProperties = resource.financialProperties.toJSON();
+            }
+
+            return serialized;
         } catch (error) {
             throw new SerializationError('Resource', `Failed to serialize resource ${resource.id}`, error instanceof Error ? error : undefined);
         }
