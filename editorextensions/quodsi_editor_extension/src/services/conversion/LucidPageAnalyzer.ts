@@ -129,11 +129,18 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             const blockClass = block.getClassName();
             const previousType = analysis.elementType;
 
-            // Only override in specific cases
-            if (blockClass === 'TerminatorBlockV2') {
-                analysis.elementType = SimulationObjectType.Generator;
-            }
+            // REMOVED: Blind override that breaks connection-based logic
+            // TerminatorBlockV2 shapes should be typed based on their connections:
+            // - End/sink terminators (incoming, no outgoing) → Activity
+            // - Source terminators (no incoming, has outgoing) → Generator
+            // - Isolated terminators (no connections) → Skipped
+            //
+            // if (blockClass === 'TerminatorBlockV2') {
+            //     analysis.elementType = SimulationObjectType.Generator;
+            // }
+
             // Add other specific overrides if needed
+            // (Only add overrides that respect connection patterns)
 
             if (previousType !== analysis.elementType) {
                 this.log(`Block ${blockId} type changed by block-specific logic`, {

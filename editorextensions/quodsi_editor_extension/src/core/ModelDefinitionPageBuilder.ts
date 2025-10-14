@@ -3,7 +3,8 @@ import {
     ModelDefinition,
     SimulationObjectType,
     ResourceRequirement,
-    RequirementClause
+    RequirementClause,
+    State
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
@@ -182,6 +183,9 @@ export class ModelDefinitionPageBuilder {
             // Load and merge custom resource requirements from storage
             this.loadAndMergeResourceRequirements(page, modelDefinition);
 
+            // Load states from storage
+            this.loadStates(page, modelDefinition);
+
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
@@ -301,6 +305,30 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final merged requirements count: ${mergedRequirements.length}`);
+    }
+
+    /**
+     * Loads state definitions from storage and adds them to the model definition.
+     */
+    private loadStates(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading states from storage');
+
+        // Get states from page storage
+        const serializedStates = this.storageAdapter.getStates(page);
+        this.log(`Found ${serializedStates.length} states in storage`);
+
+        // Deserialize and add each state to the model definition
+        for (const serializedState of serializedStates) {
+            try {
+                const state = State.fromJSON(serializedState);
+                modelDefinition.states.add(state);
+                this.log(`Added state: ${state.name} (${state.componentType})`);
+            } catch (error) {
+                this.log(`Error deserializing state: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final states count: ${modelDefinition.states.size()}`);
     }
 
     /**

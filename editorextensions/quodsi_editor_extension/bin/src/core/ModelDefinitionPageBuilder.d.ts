@@ -43,6 +43,10 @@ export declare class ModelDefinitionPageBuilder {
      */
     private loadAndMergeResourceRequirements;
     /**
+     * Loads state definitions from storage and adds them to the model definition.
+     */
+    private loadStates;
+    /**
      * Logs a summary of the ModelDefinition contents
      */
     private logModelDefinitionSummary;
