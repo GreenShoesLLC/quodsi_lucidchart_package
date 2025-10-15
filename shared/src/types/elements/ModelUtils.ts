@@ -50,7 +50,6 @@ export class ModelUtils {
             name: partialModel.name || 'New Model',
             type: SimulationObjectType.Model,
             reps: ModelDefaults.DEFAULT_REPS,
-            forecastDays: ModelDefaults.DEFAULT_FORECAST_DAYS,
             seed: ModelDefaults.DEFAULT_SEED,
             oneClockUnit: ModelDefaults.DEFAULT_CLOCK_UNIT,
             simulationTimeType: ModelDefaults.DEFAULT_SIMULATION_TIME_TYPE,
@@ -75,7 +74,6 @@ export class ModelUtils {
         }
 
         validated.reps = Math.max(1, model.reps);
-        validated.forecastDays = Math.max(1, model.forecastDays);
 
         if (validated.warmupClockPeriod !== undefined) {
             validated.warmupClockPeriod = Math.max(0, validated.warmupClockPeriod);
@@ -105,7 +103,6 @@ export class ModelUtils {
             model.id.length > 0 &&
             typeof model.name === 'string' &&
             typeof model.reps === 'number' &&
-            typeof model.forecastDays === 'number' &&
             model.type === SimulationObjectType.Model
         );
     }

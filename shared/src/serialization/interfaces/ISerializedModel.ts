@@ -18,7 +18,6 @@ export interface ISerializedModel {
         id: string;
         name: string;
         reps: number;
-        forecastDays: number;
         seed?: number;
         oneClockUnit?: PeriodUnit;
         simulationTimeType?: SimulationTimeType;

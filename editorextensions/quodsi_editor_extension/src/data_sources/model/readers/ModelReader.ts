@@ -8,7 +8,6 @@ export interface ModelData {
   id: string;
   name: string;
   reps: number;
-  forecastDays: number;
   seed: number;
   oneClockUnit: string;
   simulationTimeType: string;
@@ -336,7 +335,6 @@ export class ModelReader extends DataSourceReader {
       id: item.fields.get('id') as string,
       name: item.fields.get('name') as string,
       reps: item.fields.get('reps') as number,
-      forecastDays: item.fields.get('forecastDays') as number,
       seed: item.fields.get('seed') as number,
       oneClockUnit: item.fields.get('oneClockUnit') as string,
       simulationTimeType: item.fields.get('simulationTimeType') as string,

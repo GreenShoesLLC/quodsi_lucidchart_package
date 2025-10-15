@@ -8,7 +8,6 @@
     "id": "model-2",
     "name": "Model E0A1R2G1",
     "reps": 1,
-    "forecastDays": 30,
     "seed": 12345,
     "oneClockUnit": "MINUTES",
     "simulationTimeType": "Clock",

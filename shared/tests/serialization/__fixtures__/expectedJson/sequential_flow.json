@@ -8,7 +8,6 @@
     "id": "model-1",
     "name": "Sequential Flow Model",
     "reps": 1,
-    "forecastDays": 30,
     "seed": 12345,
     "oneClockUnit": "MINUTES",
     "simulationTimeType": "Clock",

@@ -55,8 +55,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       warmupClockPeriodUnit: data.warmupClockPeriodUnit || PeriodUnit.MINUTES,
       runClockPeriod: data.runClockPeriod || 0,
       runClockPeriodUnit: data.runClockPeriodUnit || PeriodUnit.MINUTES,
-      // Adding missing properties
-      forecastDays: data.forecastDays || 30,
       warmupDateTime: data.warmupDateTime || null,
       startDateTime: data.startDateTime || null,
       finishDateTime: data.finishDateTime || null,
@@ -82,8 +80,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
         updatedModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
       runClockPeriod: updatedModel.runClockPeriod || 0,
       runClockPeriodUnit: updatedModel.runClockPeriodUnit || PeriodUnit.MINUTES,
-      // Add missing properties
-      forecastDays: updatedModel.forecastDays || 30,
       warmupDateTime: updatedModel.warmupDateTime || null,
       startDateTime: updatedModel.startDateTime || null,
       finishDateTime: updatedModel.finishDateTime || null,

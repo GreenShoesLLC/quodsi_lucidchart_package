@@ -15,7 +15,6 @@ interface StoredModelData {
     id: string;
     name?: string;
     reps?: number;
-    forecastDays?: number;
     seed?: number;
     oneClockUnit?: PeriodUnit;
     simulationTimeType?: SimulationTimeType;
@@ -44,7 +43,6 @@ export class ModelLucid extends SimObjectLucid<Model> {
             this.platformElementId,
             '',  // name will be set below
             ModelDefaults.DEFAULT_REPS,
-            ModelDefaults.DEFAULT_FORECAST_DAYS,
             ModelDefaults.DEFAULT_SEED,
             ModelDefaults.DEFAULT_CLOCK_UNIT,
             SimulationTimeType.Clock,
@@ -64,7 +62,6 @@ export class ModelLucid extends SimObjectLucid<Model> {
             // Copy properties from stored data
             model.name = storedData.name || this.getElementName();
             model.reps = storedData.reps ?? ModelDefaults.DEFAULT_REPS;
-            model.forecastDays = storedData.forecastDays ?? ModelDefaults.DEFAULT_FORECAST_DAYS;
             model.seed = storedData.seed ?? ModelDefaults.DEFAULT_SEED;
             model.oneClockUnit = storedData.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
             model.simulationTimeType = storedData.simulationTimeType ?? SimulationTimeType.Clock;
@@ -94,7 +91,6 @@ export class ModelLucid extends SimObjectLucid<Model> {
             id: this.platformElementId,
             name: this.simObject.name,
             reps: this.simObject.reps,
-            forecastDays: this.simObject.forecastDays,
             seed: this.simObject.seed,
             oneClockUnit: this.simObject.oneClockUnit,
             simulationTimeType: this.simObject.simulationTimeType,
@@ -117,7 +113,6 @@ export class ModelLucid extends SimObjectLucid<Model> {
 
     public validate(): boolean {
         return !!this.simObject.name &&
-            this.simObject.reps > 0 &&
-            this.simObject.forecastDays > 0;
+            this.simObject.reps > 0;
     }
 }

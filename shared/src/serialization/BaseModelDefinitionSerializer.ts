@@ -60,7 +60,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 id: model.id,
                 name: model.name,
                 reps: model.reps,
-                forecastDays: model.forecastDays,
                 seed: model.seed,
                 oneClockUnit: model.oneClockUnit,
                 simulationTimeType: model.simulationTimeType,

@@ -5,7 +5,6 @@
     "id": "0_0",
     "name": "New Model",
     "reps": "1",
-    "forecastDays": 30,
     "seed": 12345,
     "oneClockUnit": "MINUTES",
     "simulationTimeType": "Clock",

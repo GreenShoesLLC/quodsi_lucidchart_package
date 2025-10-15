@@ -12,12 +12,11 @@ export class Model implements SimulationObject {
             id, //id
             'New Model', //name
             ModelDefaults.DEFAULT_REPS, //reps
-            ModelDefaults.DEFAULT_FORECAST_DAYS, //forecast
             ModelDefaults.DEFAULT_SEED, //seed
             ModelDefaults.DEFAULT_CLOCK_UNIT, //oneClockUnit
-            SimulationTimeType.Clock, //oneClockUnit
-            0, //simulationTimeType
-            PeriodUnit.HOURS, //warmupClockPeriod
+            SimulationTimeType.Clock, //simulationTimeType
+            0, //warmupClockPeriod
+            PeriodUnit.HOURS, //warmupClockPeriodUnit
             24, //runClockPeriod
             PeriodUnit.HOURS, //runClockPeriodUnit
             null,  // warmupDateTime
@@ -29,7 +28,6 @@ export class Model implements SimulationObject {
         public id: string,
         public name: string,
         public reps: number,
-        public forecastDays: number,
         public seed?: number,
         public oneClockUnit?: PeriodUnit,
         public simulationTimeType?: SimulationTimeType,

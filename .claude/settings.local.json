@@ -16,7 +16,8 @@
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/enums/**)",
       "Bash(npm run:*)",
       "Bash(src/messaging/mappers/selection.mapper.ts )",
-      "Bash(src/messaging/state/selectionSlice.ts)"
+      "Bash(src/messaging/state/selectionSlice.ts)",
+      "Bash(npm test:*)"
     ],
     "deny": []
   }
