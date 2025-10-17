@@ -19,6 +19,7 @@ interface RoutingConfigurationPanelProps {
   entityStates: StateListManager;
   availableEntities: Array<{ id: string; name: string }>;
   onConnectorUpdate: (connectorId: string, updates: Partial<Connector>) => void;
+  selectedConnectorId?: string;  // Optional - highlights connector when set
 }
 
 /**
@@ -35,17 +36,34 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
   outgoingConnectors,
   entityStates,
   availableEntities,
-  onConnectorUpdate
+  onConnectorUpdate,
+  selectedConnectorId
 }) => {
   const { updateElementData } = useModelOpsSender();
 
   // Track local connector state for optimistic UI updates
   const [localConnectors, setLocalConnectors] = useState<Connector[]>(outgoingConnectors);
 
+  // Ref for selected connector (for auto-scroll)
+  const selectedConnectorRef = React.useRef<HTMLDivElement>(null);
+
   // Update local state when props change (e.g., selection change)
   useEffect(() => {
     setLocalConnectors(outgoingConnectors);
   }, [outgoingConnectors]);
+
+  // Auto-scroll to selected connector
+  useEffect(() => {
+    if (selectedConnectorId && selectedConnectorRef.current) {
+      // Use timeout to ensure DOM has updated
+      setTimeout(() => {
+        selectedConnectorRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }, 100);
+    }
+  }, [selectedConnectorId]);
 
   // Get entity states for StateCondition routing
   const entityStateOptions = useMemo(() => {
@@ -188,7 +206,15 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
           {/* Connector list */}
           <div className="space-y-2">
             {localConnectors.map((connector) => (
-              <div key={connector.id} className="bg-white rounded border shadow-sm overflow-hidden">
+              <div
+                key={connector.id}
+                ref={connector.id === selectedConnectorId ? selectedConnectorRef : null}
+                className={`bg-white rounded border shadow-sm overflow-hidden ${
+                  connector.id === selectedConnectorId
+                    ? 'ring-2 ring-blue-500 shadow-lg'
+                    : ''
+                }`}
+              >
                 {/* Prominent connector name header */}
                 <div className="font-semibold text-sm text-gray-900 bg-blue-50 p-2 border-b border-blue-100">
                   {connector.name || 'Unnamed Connector'}
@@ -248,7 +274,15 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
               const supportedComparisons = getSupportedComparisons(condition.stateName);
 
               return (
-                <div key={connector.id} className="bg-white rounded border shadow-sm overflow-hidden">
+                <div
+                  key={connector.id}
+                  ref={connector.id === selectedConnectorId ? selectedConnectorRef : null}
+                  className={`bg-white rounded border shadow-sm overflow-hidden ${
+                    connector.id === selectedConnectorId
+                      ? 'ring-2 ring-blue-500 shadow-lg'
+                      : ''
+                  }`}
+                >
                   {/* Enhanced connector name header */}
                   <div className="font-semibold text-sm text-gray-900 bg-green-50 p-2 border-b border-green-100">
                     {connector.name || 'Unnamed Connector'}
@@ -361,7 +395,15 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
           {/* Connector list */}
           <div className="space-y-2">
             {localConnectors.map((connector) => (
-              <div key={connector.id} className="bg-white rounded border shadow-sm overflow-hidden">
+              <div
+                key={connector.id}
+                ref={connector.id === selectedConnectorId ? selectedConnectorRef : null}
+                className={`bg-white rounded border shadow-sm overflow-hidden ${
+                  connector.id === selectedConnectorId
+                    ? 'ring-2 ring-blue-500 shadow-lg'
+                    : ''
+                }`}
+              >
                 {/* Prominent connector name header */}
                 <div className="font-semibold text-sm text-gray-900 bg-purple-50 p-2 border-b border-purple-100">
                   {connector.name || 'Unnamed Connector'}

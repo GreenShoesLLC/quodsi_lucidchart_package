@@ -14,6 +14,7 @@ import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
 import EntityEditor from "../editors/EntityEditor";
 import ConnectorEditor from "../editors/ConnectorEditor";
+import ConnectorsEditor from "../editors/ConnectorsEditor";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | string;
@@ -187,6 +188,34 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
       case SimulationObjectType.Connector:
       case "Connector":
       case DiagramElementType.LINE:
+        // Try to find source Activity for routing configuration
+        const sourceActivityRef = referenceData.activities?.find(
+          (a) => a.id === safeElementData.sourceId
+        );
+
+        if (sourceActivityRef) {
+          // Show ConnectorsEditor with routing configuration
+          // Note: We're passing a minimal activity object - ConnectorsEditor will handle it
+          if (isDevelopment) {
+            console.log("[ElementEditor] Showing ConnectorsEditor for connector:", safeElementData.id, "from activity:", sourceActivityRef.id);
+          }
+          return (
+            <ConnectorsEditor
+              activity={sourceActivityRef as any}
+              outgoingConnectors={outgoingConnectors || []}
+              selectedConnectorId={safeElementData.id}
+              onSave={onSave}
+              onCancel={handleCancel}
+              referenceData={referenceData}
+              states={states}
+            />
+          );
+        }
+
+        // Fallback: Show ConnectorEditor if source not found or not an Activity
+        if (isDevelopment) {
+          console.log("[ElementEditor] Falling back to ConnectorEditor for connector:", safeElementData.id);
+        }
         return (
           <ConnectorEditor
             connector={safeElementData}
