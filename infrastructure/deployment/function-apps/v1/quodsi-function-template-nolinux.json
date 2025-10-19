@@ -59,12 +59,6 @@
         "description": "Resource group containing the Batch account"
       }
     },
-    "batchStorageConnectionString": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Connection string for the Batch storage account"
-      }
-    },
     "modelStorageConnectionString": {
       "type": "securestring",
       "metadata": {
@@ -262,10 +256,6 @@
             {
               "name": "AzureStorageConnectionString",
               "value": "[parameters('modelStorageConnectionString')]"
-            },
-            {
-              "name": "BatchStorageConnectionString",
-              "value": "[parameters('batchStorageConnectionString')]"
             },
             {
               "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",

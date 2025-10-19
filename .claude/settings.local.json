@@ -17,7 +17,11 @@
       "Bash(npm run:*)",
       "Bash(src/messaging/mappers/selection.mapper.ts )",
       "Bash(src/messaging/state/selectionSlice.ts)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Read(//mnt/c/_source/Greenshoes/api_flask_greenshoe/**)",
+      "Read(//mnt/c/_source/Greenshoes/**)",
+      "Bash(unzip -l /mnt/c/_source/Greenshoes/quodsim/quodsim_v1.0.zip)",
+      "Bash(python3 -c \"import zipfile; z = zipfile.ZipFile(''quodsim_v1.0.zip''); print(''\\n''.join(z.namelist()[:30]))\")"
     ],
     "deny": []
   }

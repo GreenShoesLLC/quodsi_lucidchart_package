@@ -76,7 +76,6 @@ export function getConfig(): QuodsiConfig {
 | QUODSI_ENVIRONMENT | Explicitly identifies the environment | `dev`, `tst`, or `prd` |
 | QUODSI_STORAGE_ACCOUNT | Environment-specific storage account name | `devquodsist01` |
 | AzureStorageConnectionString | Connection string for environment-specific storage | `DefaultEndpointsProtocol=https;AccountName=devquodsist01;...` |
-| BatchStorageConnectionString | Connection string for shared batch storage | `DefaultEndpointsProtocol=https;AccountName=quodsisharedbatch01storage;...` |
 | BatchAccountName | Name of the shared batch account | `quodsisharedbatch01` |
 | BatchAccountUrl | URL of the shared batch account | `https://quodsisharedbatch01.eastus2.batch.azure.com` |
 | BatchAccountKey | Access key for the batch account | (Secure value) |

@@ -139,23 +139,6 @@ DefaultEndpointsProtocol=https;AccountName=devquodsist01;AccountKey=YOUR_KEY;End
 
 ---
 
-### BatchStorageConnectionString
-
-**Purpose:** Connection string for Azure Batch internal storage
-
-**Format:** Connection string with account key
-
-**Example:**
-```
-DefaultEndpointsProtocol=https;AccountName=quodsisharedbatch01storage;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net
-```
-
-**Used for:** Batch service task management
-
-**Required:** Yes (for simulation submission)
-
----
-
 ### BatchAccountUrl
 
 **Purpose:** Azure Batch service endpoint

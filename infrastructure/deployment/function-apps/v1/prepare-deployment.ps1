@@ -5,16 +5,13 @@ param(
     [Parameter(Mandatory=$true)]
     [ValidateSet("dev", "tst", "prd", "all")]
     [string]$Environment,
-    
-    [Parameter(Mandatory=$false)]
-    [string]$BatchStorageConnectionString,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$DevStorageConnectionString,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$TstStorageConnectionString,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$PrdStorageConnectionString
 )
@@ -23,11 +20,6 @@ param(
 $devParamsFile = ".\quodsi-function-dev-params-v2.json"
 $tstParamsFile = ".\quodsi-function-tst-params-v2.json"
 $prdParamsFile = ".\quodsi-function-prd-params-v2.json"
-
-# If batch storage connection string wasn't provided, prompt for it if needed
-if (-not $BatchStorageConnectionString -and ($Environment -eq "all" -or $Environment -eq "dev" -or $Environment -eq "tst" -or $Environment -eq "prd")) {
-    $BatchStorageConnectionString = Read-Host "Enter the Batch storage connection string"
-}
 
 # Prepare DEV environment
 if ($Environment -eq "dev" -or $Environment -eq "all") {
@@ -40,9 +32,8 @@ if ($Environment -eq "dev" -or $Environment -eq "all") {
     
     # Read the parameter file
     $devParams = Get-Content $devParamsFile -Raw
-    
+
     # Replace placeholders
-    $devParams = $devParams -replace "BATCH_STORAGE_CONNECTION_STRING_PLACEHOLDER", $BatchStorageConnectionString
     $devParams = $devParams -replace "DEV_STORAGE_CONNECTION_STRING_PLACEHOLDER", $DevStorageConnectionString
     
     # Write to temporary file
@@ -62,9 +53,8 @@ if ($Environment -eq "tst" -or $Environment -eq "all") {
     
     # Read the parameter file
     $tstParams = Get-Content $tstParamsFile -Raw
-    
+
     # Replace placeholders
-    $tstParams = $tstParams -replace "BATCH_STORAGE_CONNECTION_STRING_PLACEHOLDER", $BatchStorageConnectionString
     $tstParams = $tstParams -replace "TST_STORAGE_CONNECTION_STRING_PLACEHOLDER", $TstStorageConnectionString
     
     # Write to temporary file
@@ -84,9 +74,8 @@ if ($Environment -eq "prd" -or $Environment -eq "all") {
     
     # Read the parameter file
     $prdParams = Get-Content $prdParamsFile -Raw
-    
+
     # Replace placeholders
-    $prdParams = $prdParams -replace "BATCH_STORAGE_CONNECTION_STRING_PLACEHOLDER", $BatchStorageConnectionString
     $prdParams = $prdParams -replace "PRD_STORAGE_CONNECTION_STRING_PLACEHOLDER", $PrdStorageConnectionString
     
     # Write to temporary file

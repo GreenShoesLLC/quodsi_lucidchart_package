@@ -9,7 +9,6 @@
     "QUODSI_ENVIRONMENT": "dev",
     "QUODSI_STORAGE_ACCOUNT": "devquodsist01",
     "AzureStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=devquodsist01;AccountKey=YOUR_DEV_STORAGE_KEY;EndpointSuffix=core.windows.net",
-    "BatchStorageConnectionString": "DefaultEndpointsProtocol=https;AccountName=quodsisharedbatch01storage;AccountKey=YOUR_BATCH_STORAGE_KEY;EndpointSuffix=core.windows.net",
     "BatchAccountUrl": "https://quodsisharedbatch01.eastus2.batch.azure.com",
     "BatchAccountName": "quodsisharedbatch01",
     "BatchAccountKey": "YOUR_BATCH_ACCOUNT_KEY",

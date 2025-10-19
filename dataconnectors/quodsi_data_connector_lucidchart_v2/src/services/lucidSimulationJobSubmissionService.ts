@@ -160,7 +160,8 @@ export class LucidSimulationJobSubmissionService {
                         { name: "BATCH_ACCOUNT_KEY", value: this.batchAccountKey },
                         { name: "BATCH_URL", value: this.batchAccountUrl },
                         { name: "AZURE_STORAGE_CONNECTION_STRING", value: config.azureStorageConnectionString },
-                        { name: "AZURE_STORAGE_URL", value: this.extractStorageUrlFromConnectionString(config.azureStorageConnectionString) }
+                        { name: "AZURE_STORAGE_URL", value: this.extractStorageUrlFromConnectionString(config.azureStorageConnectionString) },
+                        { name: "QUODSIM_UPLOAD_MODE", value: "both" }
                     ]
                 };
 

@@ -115,7 +115,6 @@ Each Function App includes environment-specific configuration settings for:
 - **QUODSI_ENVIRONMENT**: Explicitly identifies the current environment (`dev`, `tst`, or `prd`)
 - **QUODSI_STORAGE_ACCOUNT**: Name of the environment-specific storage account
 - **AzureStorageConnectionString**: Connection string for the environment-specific storage account
-- **BatchStorageConnectionString**: Connection string for the shared batch storage account
 - **BatchPoolId**: Name of the environment-specific batch pool
 - **DefaultApplicationId**: Environment-specific batch application ID (`dev_quodsim`, `tst_quodsim`, or `prd_quodsim`)
 
