@@ -27,11 +27,13 @@ export class SimulationHandler {
    */
   private static activeJobs: Map<string, {
     documentId: string;
+    scenarioId?: string;
     scenarioName?: string;
     status: SimulationStatus;
     progress: number;
     startTime: Date;
     lastUpdate: Date;
+    pollInterval?: number;
   }> = new Map();
 
   /**
@@ -238,6 +240,7 @@ export class SimulationHandler {
       // Create job tracking
       SimulationHandler.activeJobs.set(jobId, {
         documentId: data.documentId,
+        scenarioId: BASELINE_SCENARIO_ID,
         scenarioName: data.scenarioName,
         status: SimulationStatus.QUEUED,
         progress: 0,
@@ -258,7 +261,7 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName: data.scenarioName || 'New Scenario',
             diagramSvg: diagramSvg,
-            appVersion: '1.0'
+            appVersion: '2.0'
           },
           asynchronous: true
         });
@@ -287,9 +290,8 @@ export class SimulationHandler {
           }
         });
         
-        // Start polling for real status (or continue with mock for now)
-        // In production, you would poll the backend for actual status
-        SimulationHandler.mockSimulationProgress(jobId);
+        // Start polling for real status
+        SimulationHandler.pollDocumentStatus(documentProxy.id, BASELINE_SCENARIO_ID, jobId);
         
       } catch (submitError) {
         console.error('[SimulationHandler] Error submitting simulation:', submitError);
@@ -401,108 +403,188 @@ export class SimulationHandler {
   }
   
   /**
-   * Mock a simulation run with progress updates
-   * For development/testing only
+   * Poll for real simulation status from data connector
    */
-  private static mockSimulationProgress(jobId: string) {
-    let progress = 0;
-    let status = SimulationStatus.QUEUED;
-    
-    // First update - processing
-    setTimeout(() => {
-      status = SimulationStatus.PROCESSING;
-      progress = 5;
-      
-      router.send('model', {
-        id: '',
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          jobId,
-          status,
-          progress,
-          currentStep: 'Initializing simulation'
+  private static async pollDocumentStatus(
+    documentId: string,
+    scenarioId: string,
+    jobId: string
+  ): Promise<void> {
+    console.log('[SimulationHandler] Starting status polling', { documentId, scenarioId, jobId });
+
+    const client = ModelManager.getClient();
+
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log('[SimulationHandler] Polling for status...');
+
+        // Call GetDocumentStatus data action
+        const result = await LucidDataActionUtility.performDataAction(client, {
+          dataConnectorName: 'quodsi_data_connector',
+          actionName: 'GetDocumentStatus',
+          actionData: { documentId, scenarioId },
+          asynchronous: false
+        });
+
+        if (!result.success) {
+          console.error('[SimulationHandler] Status check failed:', result.error);
+          return;
         }
-      });
-    }, 1000);
-    
-    // Second update - validating
-    setTimeout(() => {
-      status = SimulationStatus.VALIDATING;
-      progress = 15;
-      
-      router.send('model', {
-        id: '',
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          jobId,
-          status,
-          progress,
-          currentStep: 'Validating model structure'
+
+        // Get scenario from result
+        const scenario = result.scenario;
+
+        if (!scenario) {
+          console.log('[SimulationHandler] No scenario status available yet');
+          return;
         }
-      });
-    }, 2000);
-    
-    // Simulation updates
-    const interval = setInterval(() => {
-      if (progress >= 95) {
-        clearInterval(interval);
-        
-        // Final update - completed
-        setTimeout(() => {
-          status = SimulationStatus.COMPLETED;
-          progress = 100;
-          
-          router.send('model', {
-            id: '',
-            type: EnvelopeMessageType.MODEL_RUN_STATUS,
-            source: 'host',
-            target: 'model-iframe',
-            version: '1.0',
-            data: {
-              jobId,
-              status,
-              progress,
-              currentStep: 'Simulation complete',
-              resultUrl: `/results/${jobId}`
-            }
-          });
-          
-          // Clean up job tracking after some time
+
+        console.log('[SimulationHandler] Scenario status:', scenario.runState);
+
+        // Map RunState to SimulationStatus
+        let status: SimulationStatus;
+        let progress: number;
+        let currentStep: string;
+
+        switch (scenario.runState) {
+          case 'NOT_RUN':
+            status = SimulationStatus.QUEUED;
+            progress = 0;
+            currentStep = 'Queued';
+            break;
+          case 'RUNNING':
+            status = SimulationStatus.RUNNING;
+            progress = 50;
+            currentStep = 'Running simulation';
+            break;
+          case 'RAN_SUCCESSFULLY':
+            status = SimulationStatus.COMPLETED;
+            progress = 100;
+            currentStep = 'Complete - Results ready';
+            break;
+          case 'RAN_WITH_ERRORS':
+            status = SimulationStatus.FAILED;
+            progress = 0;
+            currentStep = 'Failed with errors';
+            break;
+          default:
+            status = SimulationStatus.PROCESSING;
+            progress = 25;
+            currentStep = 'Processing';
+        }
+
+        // Update job tracking
+        const job = SimulationHandler.activeJobs.get(jobId);
+        if (job) {
+          job.status = status;
+          job.progress = progress;
+          job.lastUpdate = new Date();
+        }
+
+        // Send status update to React
+        router.send('model', {
+          id: '',
+          type: EnvelopeMessageType.MODEL_RUN_STATUS,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            jobId,
+            documentId,
+            status,
+            progress,
+            currentStep,
+            lastChecked: new Date().toISOString(),
+            resultUrl: status === SimulationStatus.COMPLETED
+              ? `/results/${documentId}/${scenario.id}`
+              : undefined
+          }
+        });
+
+        // Stop polling on terminal states
+        if (status === SimulationStatus.COMPLETED ||
+            status === SimulationStatus.FAILED) {
+          console.log('[SimulationHandler] Simulation finished, stopping polling');
+          clearInterval(pollInterval);
+
+          // Clean up job tracking after 60s
           setTimeout(() => {
             SimulationHandler.activeJobs.delete(jobId);
           }, 60000);
-          
-        }, 1000);
-        
-        return;
-      }
-      
-      // Regular updates during simulation
-      status = SimulationStatus.RUNNING;
-      progress += Math.floor(Math.random() * 10) + 5; // Increment by 5-15%
-      progress = Math.min(progress, 95); // Cap at 95% until completion
-      
-      router.send('model', {
-        id: '',
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          jobId,
-          status,
-          progress,
-          currentStep: `Running simulation (${progress}%)`
         }
-      });
-      
-    }, 2000);
+
+      } catch (error) {
+        console.error('[SimulationHandler] Polling error:', error);
+
+        // Send error status
+        router.send('model', {
+          id: '',
+          type: EnvelopeMessageType.MODEL_RUN_STATUS,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            jobId,
+            documentId,
+            status: SimulationStatus.FAILED,
+            progress: 0,
+            error: `Status polling failed: ${error.message}`,
+            lastChecked: new Date().toISOString()
+          }
+        });
+
+        clearInterval(pollInterval);
+
+        // Clean up job tracking
+        const job = SimulationHandler.activeJobs.get(jobId);
+        if (job) {
+          job.status = SimulationStatus.FAILED;
+        }
+      }
+    }, 10000); // Poll every 10 seconds
+
+    // Store interval for potential cleanup
+    const job = SimulationHandler.activeJobs.get(jobId);
+    if (job) {
+      job.pollInterval = pollInterval;
+    }
+  }
+
+  /**
+   * Stop polling for a job
+   */
+  public static stopPolling(jobId: string): void {
+    const job = SimulationHandler.activeJobs.get(jobId);
+    if (job?.pollInterval) {
+      clearInterval(job.pollInterval);
+      job.pollInterval = undefined;
+      console.log('[SimulationHandler] Stopped polling for job', jobId);
+    }
+  }
+
+  /**
+   * Check if there are active simulations and resume polling if needed
+   * Called when panel is reopened
+   */
+  public static resumePollingIfNeeded(documentId: string): void {
+    console.log('[SimulationHandler] Checking for active simulations...');
+
+    // Find jobs for this document that are still running
+    for (const [jobId, job] of SimulationHandler.activeJobs.entries()) {
+      if (job.documentId === documentId) {
+        const isRunning =
+          job.status === SimulationStatus.QUEUED ||
+          job.status === SimulationStatus.PROCESSING ||
+          job.status === SimulationStatus.RUNNING ||
+          job.status === SimulationStatus.VALIDATING;
+
+        if (isRunning && !job.pollInterval) {
+          console.log('[SimulationHandler] Resuming polling for job', jobId);
+          const scenarioId = job.scenarioId || BASELINE_SCENARIO_ID;
+          SimulationHandler.pollDocumentStatus(documentId, scenarioId, jobId);
+        }
+      }
+    }
   }
   
   /**

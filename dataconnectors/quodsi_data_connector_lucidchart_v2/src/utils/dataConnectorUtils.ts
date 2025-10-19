@@ -11,6 +11,7 @@ import { saveAndSubmitSimulationAction } from '../actions/saveAndSubmitSimulatio
 import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAction';
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
 import { markResultsViewedAction } from '../actions/markResultsViewedAction';
+import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
 
 
 export const createDataConnector = () => {
@@ -25,8 +26,9 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("SaveAndSubmitSimulation", saveAndSubmitSimulationAction)
         .defineAsynchronousAction("MarkResultsViewed", markResultsViewedAction)
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
-        .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction);
-    
+        .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction)
+        .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction);
+
     return connector;
 };
 

@@ -51,7 +51,8 @@
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
         "SubmitSimulationJob": "submitSimulationJobAction",
         "UploadModelDefinition": "uploadModelDefinitionAction",
-        "Poll": "poll"
+        "Poll": "poll",
+        "GetDocumentStatus": "getDocumentStatusAction"
       }
     }
   ]

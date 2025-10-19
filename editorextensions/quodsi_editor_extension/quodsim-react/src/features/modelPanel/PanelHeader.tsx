@@ -17,6 +17,27 @@ import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { ModelDefinitionViewer } from "./ModelDefinitionViewer";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
+/**
+ * Helper function to get human-readable time ago
+ */
+const getTimeAgo = (date: Date | null): string => {
+  if (!date) return '';
+
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
 interface PanelHeaderProps {
   modelName: string;
   validationState: ValidationState | null;
@@ -51,6 +72,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const [isSimulating, setIsSimulating] = useState(false);
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
   const [modelJson, setModelJson] = useState<any>(null);
+  const [currentStatus, setCurrentStatus] = useState<string>('');
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
   const { requestModelJson } = useModelOpsSender();
 
@@ -95,6 +118,55 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // Listen for MODEL_RUN_STATUS messages
+  useEffect(() => {
+    const handleStatusMessage = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase;
+
+      // Check if this is a MODEL_RUN_STATUS message
+      if (msg?.type === EnvelopeMessageType.MODEL_RUN_STATUS) {
+        const data = msg.data as {
+          jobId?: string;
+          status?: string;
+          progress?: number;
+          currentStep?: string;
+          lastChecked?: string;
+          error?: string;
+        };
+
+        if (data.currentStep) {
+          setCurrentStatus(data.currentStep);
+        }
+
+        if (data.lastChecked) {
+          setLastChecked(new Date(data.lastChecked));
+        }
+
+        // Update isSimulating based on status
+        if (data.status === 'COMPLETED' || data.status === 'FAILED') {
+          setIsSimulating(false);
+        } else if (data.status === 'RUNNING' || data.status === 'PROCESSING' || data.status === 'QUEUED') {
+          setIsSimulating(true);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleStatusMessage);
+    return () => window.removeEventListener('message', handleStatusMessage);
+  }, []);
+
+  // Timer to force re-render every second when simulating (to update "time ago" text)
+  useEffect(() => {
+    if (!isSimulating) return;
+
+    const timer = setInterval(() => {
+      // Force re-render by updating a dummy state
+      setLastChecked(prev => prev ? new Date(prev.getTime()) : null);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isSimulating]);
+
   // Helper to get display name for the element
   const getDisplayName = (
     modelItemData: ExtendedModelItemData | null
@@ -123,6 +195,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
   const handleSimulateClick = () => {
     setIsSimulating(true);
+    setCurrentStatus('Starting simulation...');
+    setLastChecked(new Date());
     if (onSimulate) {
       onSimulate("LucidChart");
     }
@@ -162,6 +236,19 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     // Handle Model type buttons
     if (elementType === SimulationObjectType.Model) {
+      // Build button label with status indicator
+      let buttonLabel: string;
+      if (isSimulating) {
+        const timeAgo = getTimeAgo(lastChecked);
+        const statusText = currentStatus || 'Running';
+        buttonLabel = timeAgo ? `${statusText} (${timeAgo})` : statusText;
+      } else {
+        buttonLabel = getSimulationState(
+          simulationStatus?.pageStatus || null,
+          simulationStatus?.isPollingSimState || false
+        ).buttonLabel;
+      }
+
       return (
         <>
           {onSimulate && (
@@ -171,13 +258,9 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               }
               onClick={handleSimulateClick}
               disabled={isSimulating}
+              title={isSimulating ? `Status: ${currentStatus || 'Running'}` : undefined}
             >
-              {isSimulating
-                ? "Running..."
-                : getSimulationState(
-                    simulationStatus?.pageStatus || null,
-                    simulationStatus?.isPollingSimState || false
-                  ).buttonLabel}
+              {buttonLabel}
             </button>
           )}
           {onRemoveModel && (
