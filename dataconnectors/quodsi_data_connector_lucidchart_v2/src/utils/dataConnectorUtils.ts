@@ -12,6 +12,7 @@ import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAct
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
 import { markResultsViewedAction } from '../actions/markResultsViewedAction';
 import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
+import { listScenariosAction } from '../actions/listScenariosAction';
 
 
 export const createDataConnector = () => {
@@ -27,7 +28,8 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("MarkResultsViewed", markResultsViewedAction)
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction)
-        .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction);
+        .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction)
+        .defineAsynchronousAction("ListScenarios", listScenariosAction);
 
     return connector;
 };

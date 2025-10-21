@@ -1,6 +1,12 @@
 // src/services/azureStorageService.ts
 
-import { BlobServiceClient, BlobUploadCommonResponse } from '@azure/storage-blob';
+import {
+    BlobServiceClient,
+    BlobUploadCommonResponse,
+    BlobSASPermissions,
+    generateBlobSASQueryParameters,
+    StorageSharedKeyCredential
+} from '@azure/storage-blob';
 import { retry, AttemptContext, PartialAttemptOptions } from '@lifeomic/attempt';
 import { LoggingLevel } from '../utils/loggingLevels';
 
@@ -67,12 +73,14 @@ function storageError(message: string, ...args: any[]): void {
 
 export class AzureStorageService {
     private blobServiceClient: BlobServiceClient;
+    private connectionString: string;
     private blobRetryOptions: PartialAttemptOptions<string>;
     private existsRetryOptions: PartialAttemptOptions<boolean>;
     private uploadRetryOptions: PartialAttemptOptions<BlobUploadCommonResponse>;
 
     constructor(connectionString: string) {
         storageImportant('[AzureStorageService] Initializing service');
+        this.connectionString = connectionString;
         this.blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
         storageLog('[AzureStorageService] BlobServiceClient initialized:', {
             url: this.blobServiceClient.url,
@@ -398,6 +406,133 @@ export class AzureStorageService {
                 durationMs: Date.now() - startTime
             });
             return [];
+        }
+    }
+
+    /**
+     * Generate a time-limited SAS URL for blob download
+     * @param containerName Container name
+     * @param blobName Blob path/name
+     * @param expiryMinutes Expiry time in minutes (default 30)
+     * @returns Full blob URL with SAS token
+     */
+    async generateBlobSasUrl(
+        containerName: string,
+        blobName: string,
+        expiryMinutes: number = 30
+    ): Promise<string> {
+        const startTime = Date.now();
+
+        try {
+            storageDebug('[AzureStorageService] Generating SAS URL:', {
+                containerName,
+                blobName,
+                expiryMinutes
+            });
+
+            // Extract account name and key from connection string
+            const accountNameMatch = this.connectionString.match(/AccountName=([^;]+)/);
+            const accountKeyMatch = this.connectionString.match(/AccountKey=([^;]+)/);
+
+            if (!accountNameMatch || !accountKeyMatch) {
+                throw new Error('Failed to extract account credentials from connection string');
+            }
+
+            const accountName = accountNameMatch[1];
+            const accountKey = accountKeyMatch[1];
+
+            // Create shared key credential
+            const sharedKeyCredential = new StorageSharedKeyCredential(accountName, accountKey);
+
+            // Set permissions (read only)
+            const permissions = new BlobSASPermissions();
+            permissions.read = true;
+
+            // Calculate expiry time
+            const now = new Date();
+            const expiresOn = new Date(now.getTime() + expiryMinutes * 60 * 1000);
+
+            // Generate SAS token (simple read-only, no content-disposition to avoid signature issues)
+            const sasToken = generateBlobSASQueryParameters(
+                {
+                    containerName,
+                    blobName,
+                    permissions,
+                    startsOn: now,
+                    expiresOn
+                },
+                sharedKeyCredential
+            ).toString();
+
+            // Construct full URL (remove trailing slash from base URL to avoid double slashes)
+            const baseUrl = this.blobServiceClient.url.replace(/\/+$/, '');
+            const blobUrl = `${baseUrl}/${containerName}/${blobName}?${sasToken}`;
+
+            storageLog('[AzureStorageService] SAS URL generated successfully:', {
+                containerName,
+                blobName,
+                expiresOn: expiresOn.toISOString(),
+                durationMs: Date.now() - startTime
+            });
+
+            return blobUrl;
+        } catch (error) {
+            storageError('[AzureStorageService] Failed to generate SAS URL:', {
+                containerName,
+                blobName,
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            throw error;
+        }
+    }
+
+    /**
+     * Get blob size and last modified metadata
+     * @param containerName Container name
+     * @param blobName Blob path/name
+     * @returns Metadata object with size and last modified date
+     */
+    async getBlobMetadata(
+        containerName: string,
+        blobName: string
+    ): Promise<{ sizeBytes: number; lastModified: Date }> {
+        const startTime = Date.now();
+
+        try {
+            storageDebug('[AzureStorageService] Getting blob metadata:', {
+                containerName,
+                blobName
+            });
+
+            const containerClient = this.blobServiceClient.getContainerClient(containerName);
+            const blobClient = containerClient.getBlobClient(blobName);
+
+            // Get blob properties
+            const properties = await blobClient.getProperties();
+
+            const metadata = {
+                sizeBytes: properties.contentLength || 0,
+                lastModified: properties.lastModified || new Date()
+            };
+
+            storageLog('[AzureStorageService] Blob metadata retrieved:', {
+                containerName,
+                blobName,
+                sizeBytes: metadata.sizeBytes,
+                lastModified: metadata.lastModified.toISOString(),
+                durationMs: Date.now() - startTime
+            });
+
+            return metadata;
+        } catch (error) {
+            storageError('[AzureStorageService] Failed to get blob metadata:', {
+                containerName,
+                blobName,
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            throw error;
         }
     }
 }

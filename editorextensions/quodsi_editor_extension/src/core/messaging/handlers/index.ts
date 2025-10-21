@@ -10,6 +10,7 @@ import { StatesHandler } from './statesHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
+import { ScenarioHandler } from './scenarioHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -77,7 +78,12 @@ export class MessageHandlers {
     if (StorageHandler.handleMessage(msg)) {
       return true;
     }
-    
+
+    // Scenario messages
+    if (ScenarioHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Message wasn't handled by any handler
     console.warn(`Unhandled message type: ${msg.type}`);
     return false;
@@ -95,5 +101,6 @@ export {
   ElementOpsHandler,
   StatesHandler,
   ResourceRequirementsHandler,
-  StorageHandler
+  StorageHandler,
+  ScenarioHandler
 };

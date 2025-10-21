@@ -178,6 +178,43 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.STORAGE_CONNECT_RESULT]: StorageConnectResultMessage['data'];
   [EnvelopeMessageType.STORAGE_DISCONNECT]: StorageDisconnectMessage['data'];
   [EnvelopeMessageType.STORAGE_STATUS]: StorageStatusMessage['data'];
+
+  // Scenario Management payloads
+  [EnvelopeMessageType.SCENARIOS_LIST_REQUEST]: {
+    documentId: string;
+  };
+  [EnvelopeMessageType.SCENARIOS_LIST_RESULT]: {
+    success: boolean;
+    documentId: string;
+    scenarios: Array<{
+      id: string;
+      name: string;
+      runState: string;
+      reps: number;
+      runClockPeriod: number;
+      runClockPeriodUnit: string;
+      simulationTimeType: string;
+      completedAt?: string;
+      hasResults: boolean;
+      downloadInfo?: {
+        zipUrl: string;
+        fileSizeBytes: number;
+        fileSizeMB: string;
+        expiresAt: string;
+      };
+    }>;
+    generatedAt: string;
+  };
+  [EnvelopeMessageType.SCENARIO_DELETE]: {
+    documentId: string;
+    scenarioId: string;
+  };
+  [EnvelopeMessageType.SCENARIO_DELETE_RESULT]: {
+    success: boolean;
+    documentId: string;
+    scenarioId: string;
+    error?: string;
+  };
 }
 
 /**

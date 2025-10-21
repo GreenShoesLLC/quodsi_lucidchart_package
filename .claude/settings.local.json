@@ -1,28 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx:*)",
-      "WebFetch(domain:developer.lucid.co)",
-      "Bash(rg:*)",
-      "Bash(mkdir:*)",
-      "Bash(npm install:*)",
-      "Bash(git rm:*)",
-      "Bash(grep:*)",
-      "Bash(find:*)",
-      "Bash(ls:*)",
-      "WebFetch(domain:docs.anthropic.com)",
-      "Bash(md5sum:*)",
-      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/model_definition/**)",
-      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim/enums/**)",
-      "Bash(npm run:*)",
-      "Bash(src/messaging/mappers/selection.mapper.ts )",
-      "Bash(src/messaging/state/selectionSlice.ts)",
-      "Bash(npm test:*)",
-      "Read(//mnt/c/_source/Greenshoes/api_flask_greenshoe/**)",
-      "Read(//mnt/c/_source/Greenshoes/**)",
-      "Bash(unzip -l /mnt/c/_source/Greenshoes/quodsim/quodsim_v1.0.zip)",
-      "Bash(python3 -c \"import zipfile; z = zipfile.ZipFile(''quodsim_v1.0.zip''); print(''\\n''.join(z.namelist()[:30]))\")"
+      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim_runner/**)",
+      "WebFetch(domain:developer.lucid.co)"
     ],
-    "deny": []
+    "deny": [],
+    "ask": []
   }
 }

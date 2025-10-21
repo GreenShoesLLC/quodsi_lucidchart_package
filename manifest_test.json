@@ -52,7 +52,9 @@
         "SubmitSimulationJob": "submitSimulationJobAction",
         "UploadModelDefinition": "uploadModelDefinitionAction",
         "Poll": "poll",
-        "GetDocumentStatus": "getDocumentStatusAction"
+        "HardRefresh": "hardRefresh",
+        "GetDocumentStatus": "getDocumentStatusAction",
+        "ListScenarios": "listScenarios"
       }
     }
   ]

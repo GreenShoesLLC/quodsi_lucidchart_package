@@ -11,15 +11,15 @@ import {
   StateListManager,
   ComponentType,
 } from "@quodsi/shared";
-import { Settings, Clock, BarChart3, DollarSign, Hash, Package } from "lucide-react";
+import { Settings, Clock, Hash, Package, PlaySquare } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
-import OutputForm from "./OutputForm";
 import StatesEditor from "./StatesEditor";
+import ScenarioEditor from "./ScenarioEditor";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
-
+import { useMessaging } from "../../messaging/MessageProvider";
 
 import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
@@ -33,12 +33,13 @@ interface Props {
   resourceRequirements?: any[];
 }
 
-type EditorTab = "basic" | "output" | "finance" | "states" | "requirements";
+type EditorTab = "basic" | "states" | "requirements" | "scenarios";
 
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData, resourceRequirements }) => {
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
+  const { selection } = useMessaging();
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
@@ -308,30 +309,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("output")}
-            title="Output Configuration"
-            className={`px-3 py-2 border-b-2 ${
-              activeTab === "output"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("finance")}
-            title="Financial Settings"
-            className={`px-3 py-2 border-b-2 ${
-              activeTab === "finance"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <DollarSign className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
             onClick={() => setActiveTab("states")}
             title="State Management"
             className={`px-3 py-2 border-b-2 ${
@@ -354,16 +331,22 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
         >
           <Package className="w-4 h-4" />
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("scenarios")}
+          title="Simulation Scenarios"
+          className={`px-3 py-2 border-b-2 ${
+            activeTab === "scenarios"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          <PlaySquare className="w-4 h-4" />
+        </button>
       </div>
     </div>
 
       {activeTab === "basic" && <ModelForm />}
-      {activeTab === "output" && <OutputForm />}
-      {activeTab === "finance" && (
-        <div className="p-4 text-center text-gray-500">
-          <p className="text-xs">Financial properties coming soon</p>
-        </div>
-      )}
       {activeTab === "states" && (
         <StatesEditor
           states={states}
@@ -395,7 +378,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
           }}
         />
       )}
-      
+      {activeTab === "scenarios" && (
+        <ScenarioEditor
+          documentId={selection.documentContext?.documentId}
+        />
+      )}
+
       {/* Resource Requirement Modal */}
       <ResourceRequirementModal
         isOpen={requirementModalOpen}

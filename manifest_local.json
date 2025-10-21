@@ -53,7 +53,8 @@
         "UploadModelDefinition": "uploadModelDefinitionAction",
         "Poll": "poll",
         "HardRefresh": "hardRefresh",
-        "GetDocumentStatus": "getDocumentStatusAction"
+        "GetDocumentStatus": "getDocumentStatusAction",
+        "ListScenarios": "listScenarios"
       }
     }
   ]
