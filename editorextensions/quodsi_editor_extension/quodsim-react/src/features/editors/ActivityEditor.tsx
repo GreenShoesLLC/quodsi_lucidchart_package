@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft } from "lucide-react";
+import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap } from "lucide-react";
 import {
   Activity,
   OperationStep,
@@ -36,7 +36,7 @@ interface ActivityEditorProps {
   outgoingConnectors?: Connector[];
 }
 
-type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states";
+type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states" | "events";
 
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
@@ -351,74 +351,86 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 type="button"
                 onClick={() => setActiveTab("basic")}
                 title="Basic Settings"
-                className={`px-3 py-2 border-b-2 ${
+                className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "basic"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("opsteps")}
                 title="Operation Steps"
-                className={`px-3 py-2 border-b-2 ${
+                className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "opsteps"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Layers className="w-4 h-4" />
+                <Layers className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("financial")}
                 title="Financial Settings"
-                className={`px-3 py-2 border-b-2 ${
+                className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "financial"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <DollarSign className="w-4 h-4" />
+                <DollarSign className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("connectors")}
                 title="Routing Configuration"
-                className={`px-3 py-2 border-b-2 ${
+                className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "connectors"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <ArrowRightLeft className="w-4 h-4" />
+                <ArrowRightLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("states")}
                 title="State Management"
-                className={`px-3 py-2 border-b-2 ${
+                className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "states"
                     ? "border-blue-600 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <Hash className="w-4 h-4" />
+                <Hash className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("events")}
+                title="Event Modifications"
+                className={`px-2 py-1.5 border-b-2 ${
+                  activeTab === "events"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {activeTab === "basic" && (
               <div>
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-1 mb-1">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {/* Name Section */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -435,13 +447,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </div>
 
                   {/* Capacity Section */}
-                  <div className="pt-3 border-t">
-                    <div className="mb-2">
+                  <div className="pt-2 border-t">
+                    <div className="mb-1">
                       <div className="text-xs font-medium text-gray-700 mb-0.5">
                         Capacity Configuration
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Maximum number of entities that can be processed in parallel
+                      <div className="text-[10px] text-gray-500 leading-tight">
+                        Max parallel entities
                       </div>
                     </div>
                     <div>
@@ -449,7 +461,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         name="capacity"
-                        className="w-full px-2 py-1.5 text-xs border rounded"
+                        className="w-full px-2 py-1 text-xs border rounded"
                         value={localData.capacity}
                         onChange={handleChange}
                         min="1"
@@ -459,13 +471,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </div>
 
                   {/* Buffer Section */}
-                  <div className="pt-3 border-t">
-                    <div className="mb-2">
+                  <div className="pt-2 border-t">
+                    <div className="mb-1">
                       <div className="text-xs font-medium text-gray-700 mb-0.5">
                         Buffer Configuration
                       </div>
-                      <div className="text-xs text-gray-500">
-                        Entity storage capacity before and after processing (999999 = unlimited)
+                      <div className="text-[10px] text-gray-500 leading-tight">
+                        Queue limits (999999 = ∞)
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -474,7 +486,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         <input
                           type="number"
                           name="inputBufferCapacity"
-                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          className="w-full px-2 py-1 text-xs border rounded"
                           value={
                             localData.inputBufferCapacity === Infinity
                               ? 999999
@@ -491,7 +503,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         <input
                           type="number"
                           name="outputBufferCapacity"
-                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          className="w-full px-2 py-1 text-xs border rounded"
                           value={
                             localData.outputBufferCapacity === Infinity
                               ? 999999
@@ -558,7 +570,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   <DollarSign className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Financial Settings</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {/* Enable Financial Tracking */}
                   <div className="flex items-center gap-2">
                     <input
@@ -581,10 +593,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </div>
 
                   {/* Cost Components */}
-                  <div className="space-y-1 pt-1">
-                    <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-medium text-gray-600 mb-0.5">Cost Components</div>
                     <div>
-                      <label className="block text-xs text-gray-600">Fixed Cost</label>
+                      <label className="block text-xs text-gray-600 mb-0.5">Fixed Cost</label>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -602,12 +614,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         step="0.01"
                         placeholder="0.00"
                       />
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        One-time cost at activity initialization
-                      </p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600">Cost Per Entity Processed</label>
+                      <label className="block text-xs text-gray-600 mb-0.5">Cost Per Entity</label>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -625,12 +634,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         step="0.01"
                         placeholder="0.00"
                       />
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Variable cost per entity processed
-                      </p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600">Cost Per Hour Active</label>
+                      <label className="block text-xs text-gray-600 mb-0.5">Cost/Hr Active</label>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -648,12 +654,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         step="0.01"
                         placeholder="0.00"
                       />
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Hourly cost during entity processing
-                      </p>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600">Cost Per Hour Idle</label>
+                      <label className="block text-xs text-gray-600 mb-0.5">Cost/Hr Idle</label>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -671,17 +674,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         step="0.01"
                         placeholder="0.00"
                       />
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Hourly cost during idle periods
-                      </p>
                     </div>
                   </div>
 
                   {/* Resource Cost Settings */}
-                  <div className="space-y-1 pt-1 border-t">
-                    <div className="text-xs font-medium text-gray-600 mb-1">Resource Cost Settings</div>
+                  <div className="space-y-0.5 pt-0.5 border-t">
+                    <div className="text-xs font-medium text-gray-600 mb-0.5">Resource Cost</div>
                     <div>
-                      <label className="block text-xs text-gray-600">Resource Cost Multiplier</label>
+                      <label className="block text-xs text-gray-600 mb-0.5">Cost Multiplier</label>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -699,9 +699,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         step="0.1"
                         placeholder="1.0"
                       />
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Multiplier for resource costs (e.g., 1.5 for overtime)
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -720,21 +717,27 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
 
             {activeTab === "states" && (
-              <div className="space-y-4">
-                {/* State Definitions Section */}
-                <div className="border-b pb-4">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">
-                    State Definitions
-                  </div>
-                  <StatesEditor
-                    states={states}
-                    onStatesChange={onStatesChange}
-                    defaultComponentType={ComponentType.ACTIVITY}
-                  />
+              <div>
+                <div className="text-xs font-semibold text-gray-700 mb-1">
+                  State Definitions
+                </div>
+                <StatesEditor
+                  states={states}
+                  onStatesChange={onStatesChange}
+                  defaultComponentType={ComponentType.ACTIVITY}
+                />
+              </div>
+            )}
+
+            {activeTab === "events" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <Zap className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Event Modifications</span>
                 </div>
 
                 {/* Pre-Processing State Modifications */}
-                <div className="border-b pb-4">
+                <div className="border-b pb-2">
                   <StateModificationsEditor
                     modifications={localData.preProcessingStateModifications || []}
                     onModificationsChange={(mods) =>
@@ -747,7 +750,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     }
                     states={states}
                     title="Pre-Processing State Modifications"
-                    description="Modifications applied before entities enter the activity"
+                    description="Applied before entry"
                     allowCrossComponent={true}
                   />
                 </div>
@@ -766,7 +769,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     }
                     states={states}
                     title="Post-Processing State Modifications"
-                    description="Modifications applied after entities complete the activity"
+                    description="Applied after completion"
                     allowCrossComponent={true}
                   />
                 </div>

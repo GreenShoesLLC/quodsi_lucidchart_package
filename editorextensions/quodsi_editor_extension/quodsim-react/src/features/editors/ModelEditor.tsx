@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Model,
   PeriodUnit,
@@ -10,8 +10,10 @@ import {
   DistributionType,
   StateListManager,
   ComponentType,
+  EnvelopeMessageType,
+  EnvelopeBase,
 } from "@quodsi/shared";
-import { Settings, Clock, Hash, Package, PlaySquare } from "lucide-react";
+import { Settings, Clock, Hash, Package, PlaySquare, FileJson } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -20,6 +22,8 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging } from "../../messaging/MessageProvider";
+import { ModelDefinitionViewer } from "../modelPanel/ModelDefinitionViewer";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
@@ -39,7 +43,36 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
+  const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
+  const [modelJson, setModelJson] = useState<any>(null);
   const { selection } = useMessaging();
+  const { requestModelJson } = useModelOpsSender();
+
+  // Listen for MODEL_JSON_RESPONSE
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase;
+
+      // Check if this is a MODEL_JSON_RESPONSE message
+      if (msg?.type === EnvelopeMessageType.MODEL_JSON_RESPONSE) {
+        const data = msg.data as {
+          success: boolean;
+          modelJson?: any;
+          error?: string;
+        };
+
+        if (data.success && data.modelJson) {
+          setModelJson(data.modelJson);
+          setIsModelViewerOpen(true);
+        } else {
+          console.error('[ModelEditor] Failed to get model JSON:', data.error);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
@@ -123,14 +156,20 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
     handleChange(createSyntheticEvent(periodUnitField, periodUnit));
   };
 
+  const handleViewModelClick = () => {
+    // Request model JSON from extension
+    requestModelJson(selection.documentContext?.documentId || '');
+  };
+
   const ModelForm = () => (
-    <BaseEditor
-      data={localModel}
-      onSave={handleSave}
-      onCancel={onCancel}
-      messageType="modelSaved"
-    >
-      {(localModel, handleChange) => (
+    <>
+      <BaseEditor
+        data={localModel}
+        onSave={handleSave}
+        onCancel={onCancel}
+        messageType="modelSaved"
+      >
+        {(localModel, handleChange) => (
         <div className="space-y-2">
           {/* Basic Settings */}
           <div>
@@ -289,6 +328,16 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
         </div>
       )}
     </BaseEditor>
+    <button
+      type="button"
+      className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1 mt-2"
+      onClick={handleViewModelClick}
+      title="View Model Definition as JSON"
+    >
+      <FileJson className="w-3 h-3" />
+      View Model JSON
+    </button>
+    </>
   );
 
   return (
@@ -410,6 +459,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
         editingRequirement={editingRequirement}
         availableResources={referenceData?.resources || []}
       />
+
+      {/* Model Definition Viewer Modal */}
+      {isModelViewerOpen && modelJson && (
+        <ModelDefinitionViewer
+          modelJson={modelJson}
+          onClose={() => setIsModelViewerOpen(false)}
+        />
+      )}
     </div>
   );
 };

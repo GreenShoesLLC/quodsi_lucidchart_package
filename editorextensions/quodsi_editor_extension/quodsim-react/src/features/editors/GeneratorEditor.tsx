@@ -10,7 +10,7 @@ import {
   StateListManager,
   ComponentType,
 } from "@quodsi/shared";
-import { Clock, Users, Timer, PlayCircle, Settings, Hash } from "lucide-react";
+import { Clock, Users, Timer, PlayCircle, Settings, Hash, Zap } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -25,7 +25,7 @@ interface Props {
   onStatesChange: (states: StateListManager) => void;
 }
 
-type GeneratorTab = "basic" | "frequency" | "start" | "states";
+type GeneratorTab = "basic" | "frequency" | "start" | "states" | "events";
 
 const GeneratorEditor: React.FC<Props> = ({
   generator,
@@ -175,18 +175,30 @@ const GeneratorEditor: React.FC<Props> = ({
               >
                 <Hash className="w-4 h-4" />
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("events")}
+                title="Event Modifications"
+                className={`px-3 py-2 border-b-2 ${
+                  activeTab === "events"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Zap className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
           {/* Tab Content */}
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {activeTab === "basic" && (
               <div>
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-1 mb-1">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {/* Name Section */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -203,8 +215,8 @@ const GeneratorEditor: React.FC<Props> = ({
                   </div>
 
                   {/* Entity Selection */}
-                  <div className="pt-3 border-t">
-                    <div className="mb-2">
+                  <div className="pt-2 border-t">
+                    <div className="mb-1">
                       <div className="text-xs font-medium text-gray-700 mb-0.5">
                         Entity Template
                       </div>
@@ -227,8 +239,8 @@ const GeneratorEditor: React.FC<Props> = ({
                   </div>
 
                   {/* Generation Configuration */}
-                  <div className="pt-3 border-t">
-                    <div className="text-xs font-medium text-gray-700 mb-2">
+                  <div className="pt-2 border-t">
+                    <div className="text-xs font-medium text-gray-700 mb-1">
                       Generation Configuration
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -239,13 +251,13 @@ const GeneratorEditor: React.FC<Props> = ({
                         <input
                           type="number"
                           name="entitiesPerCreation"
-                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          className="w-full px-2 py-1 text-xs border rounded"
                           value={localGenerator.entitiesPerCreation}
                           onChange={handleChange}
                           min="1"
                         />
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Number of entities created each time
+                        <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                          Per creation event
                         </p>
                       </div>
                       <div>
@@ -255,13 +267,13 @@ const GeneratorEditor: React.FC<Props> = ({
                         <input
                           type="number"
                           name="maxEntities"
-                          className="w-full px-2 py-1.5 text-xs border rounded"
+                          className="w-full px-2 py-1 text-xs border rounded"
                           value={localGenerator.maxEntities}
                           onChange={handleChange}
                           min="1"
                         />
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Total entity limit (999999 = unlimited)
+                        <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                          Limit (999999 = ∞)
                         </p>
                       </div>
                     </div>
@@ -276,7 +288,7 @@ const GeneratorEditor: React.FC<Props> = ({
                   <Timer className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Frequency Settings</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {/* Interarrival Time */}
                   <div>
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
@@ -298,26 +310,26 @@ const GeneratorEditor: React.FC<Props> = ({
                       }
                       compact={true}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Time between entity creations
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      Between creations
                     </p>
                   </div>
 
                   {/* Periodic Occurrences */}
-                  <div className="pt-3 border-t">
+                  <div className="pt-2 border-t">
                     <label className="block text-xs font-medium text-gray-700 mb-1">
                       Periodic Occurrences
                     </label>
                     <input
                       type="number"
                       name="periodicOccurrences"
-                      className="w-full px-2 py-1.5 text-xs border rounded"
+                      className="w-full px-2 py-1 text-xs border rounded"
                       value={localGenerator.periodicOccurrences}
                       onChange={handleChange}
                       min="0"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Number of times to create entities (999999 = unlimited)
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      Times to create (999999 = ∞)
                     </p>
                   </div>
                 </div>
@@ -330,7 +342,7 @@ const GeneratorEditor: React.FC<Props> = ({
                   <PlayCircle className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Start Configuration</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div>
                     <label className="text-xs font-medium text-gray-700 mb-1 block">
                       Start Delay
@@ -349,8 +361,8 @@ const GeneratorEditor: React.FC<Props> = ({
                       }
                       compact={true}
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Delay before first entity creation
+                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      Initial delay
                     </p>
                   </div>
                 </div>
@@ -358,38 +370,40 @@ const GeneratorEditor: React.FC<Props> = ({
             )}
 
             {activeTab === "states" && (
-              <div className="space-y-4">
-                {/* State Definitions Section */}
-                <div className="border-b pb-4">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">
-                    State Definitions
-                  </div>
-                  <StatesEditor
-                    states={states}
-                    onStatesChange={onStatesChange}
-                    defaultComponentType={ComponentType.ENTITY}
-                  />
+              <div>
+                <div className="text-xs font-semibold text-gray-700 mb-1">
+                  State Definitions
                 </div>
+                <StatesEditor
+                  states={states}
+                  onStatesChange={onStatesChange}
+                  defaultComponentType={ComponentType.ENTITY}
+                />
+              </div>
+            )}
 
-                {/* Initial State Modifications */}
-                <div>
-                  <StateModificationsEditor
-                    modifications={localGenerator.initialStateModifications || []}
-                    onModificationsChange={(mods) =>
-                      handleChange({
-                        target: {
-                          name: "initialStateModifications",
-                          value: mods,
-                        },
-                      } as any)
-                    }
-                    states={states}
-                    title="Initial State Modifications"
-                    description="State values to set on created entities"
-                    filterComponentType={ComponentType.ENTITY}
-                    allowCrossComponent={false}
-                  />
+            {activeTab === "events" && (
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <Zap className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Event Modifications</span>
                 </div>
+                <StateModificationsEditor
+                  modifications={localGenerator.initialStateModifications || []}
+                  onModificationsChange={(mods) =>
+                    handleChange({
+                      target: {
+                        name: "initialStateModifications",
+                        value: mods,
+                      },
+                    } as any)
+                  }
+                  states={states}
+                  title="Initial State Modifications"
+                  description="Applied to new entities"
+                  filterComponentType={ComponentType.ENTITY}
+                  allowCrossComponent={false}
+                />
               </div>
             )}
           </div>

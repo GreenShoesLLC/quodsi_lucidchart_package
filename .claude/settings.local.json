@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim_runner/**)",
-      "WebFetch(domain:developer.lucid.co)"
+      "WebFetch(domain:developer.lucid.co)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

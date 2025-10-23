@@ -147,11 +147,11 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
 
           {/* Preview of selected requirement */}
           {selectedRequirement && (
-            <div className="mt-1 p-1.5 bg-blue-50 rounded border border-blue-200">
-              <div className="text-xs text-blue-900 font-medium mb-0.5">
+            <div className="mt-0.5 p-1 bg-blue-50 rounded border border-blue-200">
+              <div className="text-[10px] text-blue-900 font-medium leading-tight">
                 {selectedRequirement.name}
               </div>
-              <div className="text-xs text-blue-700">
+              <div className="text-[10px] text-blue-700 leading-tight">
                 {generateRequirementPreview(selectedRequirement)}
               </div>
             </div>
@@ -161,7 +161,7 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
         {/* Quantity field - only show when requirement is selected */}
         {step.requirementId && step.requirementId !== "__new__" && (
           <div>
-            <label className="block text-xs text-gray-600">Quantity</label>
+            <label className="block text-xs text-gray-600 mb-0.5">Quantity</label>
             <input
               type="number"
               value={step.quantity}
