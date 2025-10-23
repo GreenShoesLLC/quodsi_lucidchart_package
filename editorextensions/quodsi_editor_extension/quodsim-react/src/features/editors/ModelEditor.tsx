@@ -13,7 +13,7 @@ import {
   EnvelopeMessageType,
   EnvelopeBase,
 } from "@quodsi/shared";
-import { Settings, Clock, Hash, Package, PlaySquare, FileJson } from "lucide-react";
+import { Settings, Clock, Hash, Package, PlaySquare, FileJson, Info } from "lucide-react";
 import BaseEditor from "./BaseEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -176,6 +176,9 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
             <div className="flex items-center gap-1 mb-1">
               <Settings className="w-3 h-3 text-blue-600" />
               <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+              <span title="Configure model name, number of replications, and simulation time settings (clock-based or calendar-based)">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
             </div>
             <div className="space-y-1">
               <input
@@ -397,40 +400,67 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
 
       {activeTab === "basic" && <ModelForm />}
       {activeTab === "states" && (
-        <StatesEditor
-          states={states}
-          onStatesChange={onStatesChange}
-          defaultComponentType={ComponentType.MODEL}
-        />
+        <div>
+          <div className="flex items-center gap-1 mb-1 p-2">
+            <Hash className="w-3 h-3 text-blue-600" />
+            <span className="text-xs font-medium text-gray-700">State Definitions</span>
+            <span title="Define model-level state variables that can be accessed and modified throughout the simulation">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </div>
+          <StatesEditor
+            states={states}
+            onStatesChange={onStatesChange}
+            defaultComponentType={ComponentType.MODEL}
+          />
+        </div>
       )}
       {activeTab === "requirements" && (
-        <ResourceRequirementsManager
-          requirements={resourceRequirements || []}
-          availableResources={referenceData?.resources || []}
-          onAdd={() => {
-            setEditingRequirement(null);
-            setRequirementModalOpen(true);
-          }}
-          onEdit={(req) => {
-            const structure = convertRootClausesToStructure(req.rootClauses);
-            setEditingRequirement({ id: req.id, name: req.name, structure });
-            setRequirementModalOpen(true);
-          }}
-          onDelete={(id) => {
-            // Note: Actual deletion should be handled through messaging
-            console.log('Delete requirement:', id);
-            // TODO: Send delete message to extension
-          }}
-          getUsageCount={(id) => {
-            // TODO: Calculate actual usage count from activities
-            return 0;
-          }}
-        />
+        <div>
+          <div className="flex items-center gap-1 mb-1 p-2">
+            <Package className="w-3 h-3 text-blue-600" />
+            <span className="text-xs font-medium text-gray-700">Resource Requirements</span>
+            <span title="Create reusable resource requirement templates that define which resources are needed for activities">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </div>
+          <ResourceRequirementsManager
+            requirements={resourceRequirements || []}
+            availableResources={referenceData?.resources || []}
+            onAdd={() => {
+              setEditingRequirement(null);
+              setRequirementModalOpen(true);
+            }}
+            onEdit={(req) => {
+              const structure = convertRootClausesToStructure(req.rootClauses);
+              setEditingRequirement({ id: req.id, name: req.name, structure });
+              setRequirementModalOpen(true);
+            }}
+            onDelete={(id) => {
+              // Note: Actual deletion should be handled through messaging
+              console.log('Delete requirement:', id);
+              // TODO: Send delete message to extension
+            }}
+            getUsageCount={(id) => {
+              // TODO: Calculate actual usage count from activities
+              return 0;
+            }}
+          />
+        </div>
       )}
       {activeTab === "scenarios" && (
-        <ScenarioEditor
-          documentId={selection.documentContext?.documentId}
-        />
+        <div>
+          <div className="flex items-center gap-1 mb-1 p-2">
+            <PlaySquare className="w-3 h-3 text-blue-600" />
+            <span className="text-xs font-medium text-gray-700">Simulation Scenarios</span>
+            <span title="Configure and manage simulation scenarios with different parameter sets and run configurations">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </div>
+          <ScenarioEditor
+            documentId={selection.documentContext?.documentId}
+          />
+        </div>
       )}
 
       {/* Resource Requirement Modal */}

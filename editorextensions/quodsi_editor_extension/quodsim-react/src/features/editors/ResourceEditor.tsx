@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, DollarSign, Hash } from "lucide-react";
+import { Settings, DollarSign, Hash, Info } from "lucide-react";
 import {
   Resource,
   SimulationObjectType,
@@ -153,6 +153,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 <div className="flex items-center gap-1 mb-2">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                  <span title="Configure resource name and capacity (maximum number of concurrent uses)">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-4">
                   {/* Name Section */}
@@ -202,6 +205,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 <div className="flex items-center gap-1 mb-1">
                   <DollarSign className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Financial Settings</span>
+                  <span title="Track resource costs including per-seize costs and time-based utilization costs">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {/* Enable Financial Tracking */}
@@ -303,11 +309,20 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
             )}
 
             {activeTab === "states" && (
-              <StatesEditor
-                states={states}
-                onStatesChange={onStatesChange}
-                defaultComponentType={ComponentType.RESOURCE}
-              />
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <Hash className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">State Definitions</span>
+                  <span title="Define custom state variables that this resource can track and modify">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+                <StatesEditor
+                  states={states}
+                  onStatesChange={onStatesChange}
+                  defaultComponentType={ComponentType.RESOURCE}
+                />
+              </div>
             )}
           </div>
         </div>

@@ -34,7 +34,7 @@ export const ConstantParameterEditor: React.FC<ConstantParameterEditorProps> = (
 
   return (
     <div>
-      <label className="block text-xs text-gray-600 font-medium mb-1">
+      <label className="block text-xs text-gray-600 font-medium mb-0.5">
         {metadata.label}
       </label>
       <input
@@ -44,7 +44,7 @@ export const ConstantParameterEditor: React.FC<ConstantParameterEditorProps> = (
         disabled={disabled}
         min={metadata.min}
         step={metadata.step}
-        className="w-full px-2 py-1 text-xs border border-gray-300 rounded shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
       />
     </div>
   );

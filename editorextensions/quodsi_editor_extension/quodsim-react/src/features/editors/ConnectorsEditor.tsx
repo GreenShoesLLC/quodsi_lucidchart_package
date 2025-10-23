@@ -7,9 +7,8 @@ import {
   StateListManager,
   Connector,
 } from "@quodsi/shared";
-import { ArrowRightLeft, Info } from "lucide-react";
 import BaseEditor from "./BaseEditor";
-import { RoutingConfigurationPanel } from "./RoutingConfigurationPanel";
+import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 
 interface ConnectorsEditorProps {
   activity: Activity;
@@ -114,79 +113,14 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       messageType="activitySaved"
     >
       {(localData, handleChange) => (
-        <div className="space-y-2">
-          {/* Context Header - Show when accessed via Connector selection */}
-          {selectedConnectorId && (
-            <div className="bg-blue-50 px-3 py-2 text-xs border-b border-blue-100 rounded-t">
-              <div className="flex items-start gap-2">
-                <Info className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-blue-900">
-                    Routing Configuration for: {localData.name}
-                  </div>
-                  <div className="text-blue-700 mt-0.5">
-                    Selected connector is highlighted below
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Routing Configuration Content */}
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <ArrowRightLeft className="w-3 h-3 text-blue-500" />
-              <span className="text-xs font-medium text-gray-700">Routing Configuration</span>
-            </div>
-
-            <div className="space-y-3">
-              {/* Routing Type Selection */}
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Routing Type</label>
-                <select
-                  name="connectType"
-                  className="w-full px-2 py-1 text-xs border rounded bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  value={localData.connectType}
-                  onChange={handleChange}
-                  disabled={outgoingConnectors.length === 1}
-                >
-                  <option value={ConnectType.Probability}>
-                    Probability - Route based on connector probabilities
-                  </option>
-                  <option value={ConnectType.StateCondition}>
-                    State Condition - Route based on state values
-                  </option>
-                  <option value={ConnectType.EntityTemplate}>
-                    Entity Template - Route based on entity type
-                  </option>
-                </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {outgoingConnectors.length === 1
-                    ? "Only one connector - routing type locked to Probability"
-                    : "Controls how entities are routed through outgoing connectors"}
-                </p>
-              </div>
-
-              {/* Routing Configuration Panel */}
-              <div className="border-t pt-3">
-                <RoutingConfigurationPanel
-                  activityId={localData.id}
-                  connectType={localData.connectType}
-                  outgoingConnectors={outgoingConnectors}
-                  entityStates={states}
-                  availableEntities={referenceData?.entities || []}
-                  selectedConnectorId={selectedConnectorId}
-                  onConnectorUpdate={(connectorId, updates) => {
-                    // Connector updates are handled via messaging in the panel
-                    if (isDevelopment) {
-                      console.log('[ConnectorsEditor] Connector updated:', connectorId, updates);
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <RoutingConfigurationContent
+          localData={localData}
+          handleChange={handleChange}
+          outgoingConnectors={outgoingConnectors}
+          selectedConnectorId={selectedConnectorId}
+          referenceData={referenceData}
+          states={states}
+        />
       )}
     </BaseEditor>
   );

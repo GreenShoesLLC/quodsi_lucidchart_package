@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap } from "lucide-react";
+import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap, Info } from "lucide-react";
 import {
   Activity,
   OperationStep,
@@ -20,7 +20,7 @@ import { OperationStepEditor } from "./OperationStepEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
-import ConnectorsEditor from "./ConnectorsEditor";
+import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
@@ -429,6 +429,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                  <span title="Configure activity name, processing capacity (parallel entities), and queue buffer limits">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {/* Name Section */}
@@ -527,6 +530,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   <div className="flex items-center gap-1">
                     <Layers className="w-3 h-3 text-blue-500" />
                     <span className="text-xs font-medium text-gray-700">Operation Steps</span>
+                    <span title="Define sequential processing steps with durations and resource requirements for this activity">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -569,6 +575,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <DollarSign className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Financial Settings</span>
+                  <span title="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-1">
                   {/* Enable Financial Tracking */}
@@ -706,20 +715,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
 
             {activeTab === "connectors" && (
-              <ConnectorsEditor
-                activity={localData}
-                outgoingConnectors={outgoingConnectors}
-                onSave={handleSave}
-                onCancel={onCancel}
-                referenceData={referenceData || { activities: [], resources: [], entities: [], resourceRequirements: [] }}
-                states={states}
-              />
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <ArrowRightLeft className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Routing Configuration</span>
+                  <span title="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+                <RoutingConfigurationContent
+                  localData={localData}
+                  handleChange={handleChange}
+                  outgoingConnectors={outgoingConnectors}
+                  referenceData={referenceData || { activities: [], resources: [], entities: [], resourceRequirements: [] }}
+                  states={states}
+                  showHeader={false}
+                />
+              </div>
             )}
 
             {activeTab === "states" && (
               <div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">
-                  State Definitions
+                <div className="flex items-center gap-1 mb-1">
+                  <Hash className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">State Definitions</span>
+                  <span title="Define custom state variables that this activity can track and modify">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <StatesEditor
                   states={states}
@@ -734,6 +756,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <Zap className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Event Modifications</span>
+                  <span title="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
 
                 {/* Pre-Processing State Modifications */}

@@ -73,16 +73,16 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     allowedDistributionTypes[0] === distributionType;
 
   return (
-    <div className={`duration-editor ${compact ? "compact" : ""}`}>
+    <div className={`duration-editor ${compact ? "compact" : ""} space-y-0.5`}>
       {/* Label - enhanced to include distribution type info when fixed */}
-      <div className="text-xs font-medium text-gray-700 mb-1">
+      <div className="text-xs font-medium text-gray-700 mb-0.5">
         {isFixedDistribution && distributionType === DistributionType.CONSTANT
           ? `${label}`
           : label}
       </div>
 
       {/* Distribution Type Selector - only shown if not fixed */}
-      <div className="mb-1">
+      <div>
         <DistributionTypeSelector
           distributionType={distributionType}
           onChange={handleDistributionTypeChange}
@@ -91,7 +91,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
       </div>
 
       {/* Distribution Parameters Editor */}
-      <div className="mb-1">
+      <div>
         <DistributionParametersEditor
           distribution={distribution}
           distributionType={distributionType}
@@ -103,7 +103,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
       <div>
         <select
           name="durationPeriodUnit"
-          className="w-full text-xs border border-gray-300 rounded px-2 py-1 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
+          className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
           value={periodUnit}
           onChange={handlePeriodUnitChange}
         >

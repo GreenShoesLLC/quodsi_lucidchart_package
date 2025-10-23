@@ -430,11 +430,6 @@ export const RoutingConfigurationPanel: React.FC<RoutingConfigurationPanelProps>
           </div>
         </div>
       )}
-
-      {/* Help text */}
-      <div className="text-xs text-gray-500 pt-2 border-t">
-        <strong>Note:</strong> Changes are saved automatically. Routing type is set at the Activity level and affects all outgoing connectors.
-      </div>
     </div>
   );
 };

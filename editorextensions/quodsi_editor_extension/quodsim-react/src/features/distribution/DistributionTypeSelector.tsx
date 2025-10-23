@@ -41,14 +41,14 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   
   return (
     <div>
-      <label className="block text-sm text-gray-600 font-medium mb-1">
+      <label className="block text-xs text-gray-600 font-medium mb-0.5">
         Distribution Type
       </label>
       <select
         value={distributionType}
         onChange={handleChange}
         disabled={disabled}
-        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
+        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"
       >
         {groups.map((group) => (
           <optgroup key={group.label} label={group.label}>

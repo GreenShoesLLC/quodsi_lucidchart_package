@@ -10,7 +10,7 @@ import {
   StateListManager,
   ComponentType,
 } from "@quodsi/shared";
-import { Clock, Users, Timer, PlayCircle, Settings, Hash, Zap } from "lucide-react";
+import { Clock, Users, Timer, PlayCircle, Settings, Hash, Zap, Info } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -197,6 +197,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                  <span title="Configure generator name, entity template, and how many entities are created per event">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {/* Name Section */}
@@ -287,6 +290,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <Timer className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Frequency Settings</span>
+                  <span title="Set the time interval between entity creation events and total number of occurrences">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-2">
                   {/* Interarrival Time */}
@@ -341,6 +347,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <PlayCircle className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Start Configuration</span>
+                  <span title="Define when the generator begins creating entities (initial delay)">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-2">
                   <div>
@@ -371,8 +380,12 @@ const GeneratorEditor: React.FC<Props> = ({
 
             {activeTab === "states" && (
               <div>
-                <div className="text-xs font-semibold text-gray-700 mb-1">
-                  State Definitions
+                <div className="flex items-center gap-1 mb-1">
+                  <Hash className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">State Definitions</span>
+                  <span title="Define custom state variables for entities created by this generator">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <StatesEditor
                   states={states}
@@ -387,6 +400,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 <div className="flex items-center gap-1 mb-1">
                   <Zap className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Event Modifications</span>
+                  <span title="Set initial state values for entities when they are created">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <StateModificationsEditor
                   modifications={localGenerator.initialStateModifications || []}

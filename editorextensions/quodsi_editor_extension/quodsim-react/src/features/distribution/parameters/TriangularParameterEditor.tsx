@@ -108,7 +108,7 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
   return (
     <div className="space-y-2">
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {leftMetadata.label}
         </label>
         <input
@@ -118,11 +118,11 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
           disabled={disabled}
           min={leftMetadata.min}
           step={leftMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {modeMetadata.label}
         </label>
         <input
@@ -132,11 +132,11 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
           disabled={disabled}
           min={modeMetadata.min}
           step={modeMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {rightMetadata.label}
         </label>
         <input
@@ -146,10 +146,10 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
           disabled={disabled}
           min={rightMetadata.min}
           step={rightMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
       </div>
-      <div className="text-xs text-gray-500 mt-1 italic">
+      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
         Triangular distribution generates random values with increasing probability up to the Mode (peak) and then decreasing probability to the Maximum. Most likely value is the Mode.
       </div>
     </div>

@@ -66,7 +66,7 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   return (
     <div className="space-y-2">
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {meanMetadata.label}
           <span className="text-xs text-gray-400 ml-1">(Average value)</span>
         </label>
@@ -77,12 +77,12 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
           disabled={disabled}
           min={meanMetadata.min}
           step={meanMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
         {errors.mean && <p className="text-xs text-red-500 mt-1">{errors.mean}</p>}
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {stdMetadata.label}
           <span className="text-xs text-gray-400 ml-1">(Variability around mean)</span>
         </label>
@@ -93,11 +93,11 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
           disabled={disabled}
           min={stdMetadata.min}
           step={stdMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
         {errors.std && <p className="text-xs text-red-500 mt-1">{errors.std}</p>}
       </div>
-      <div className="text-xs text-gray-500 mt-1 italic">
+      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
         Normal distribution generates a bell curve centered at the Mean with most values falling within 3 Standard Deviations from the Mean.
       </div>
     </div>

@@ -98,7 +98,7 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
   return (
     <div className="space-y-2">
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {lowMetadata.label}
           <span className="text-xs text-gray-400 ml-1">(Lower bound)</span>
         </label>
@@ -109,12 +109,12 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
           disabled={disabled}
           min={lowMetadata.min}
           step={lowMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
         {errors.low && <p className="text-xs text-red-500 mt-1">{errors.low}</p>}
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-1">
+        <label className="block text-xs text-gray-600 mb-0.5">
           {highMetadata.label}
           <span className="text-xs text-gray-400 ml-1">(Upper bound)</span>
         </label>
@@ -125,11 +125,11 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
           disabled={disabled}
           min={highMetadata.min}
           step={highMetadata.step}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-xs border rounded"
         />
         {errors.high && <p className="text-xs text-red-500 mt-1">{errors.high}</p>}
       </div>
-      <div className="text-xs text-gray-500 mt-1 italic">
+      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
         Uniform distribution generates random values with equal probability between Minimum and Maximum.
       </div>
     </div>

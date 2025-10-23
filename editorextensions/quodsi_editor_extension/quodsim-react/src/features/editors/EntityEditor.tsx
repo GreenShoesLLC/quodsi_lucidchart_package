@@ -1,5 +1,5 @@
 import React from "react";
-import { Settings, DollarSign, Hash } from "lucide-react";
+import { Settings, DollarSign, Hash, Info } from "lucide-react";
 import { Entity, SimulationObjectType, StateListManager, ComponentType } from "@quodsi/shared";
 import BaseEditor from "./BaseEditor";
 import StatesEditor from "./StatesEditor";
@@ -95,6 +95,9 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                 <div className="flex items-center gap-1 mb-2">
                   <Settings className="w-3 h-3 text-blue-500" />
                   <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                  <span title="Configure entity template name and properties. Entity templates define the types of entities that flow through the simulation">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
                 <div className="space-y-4">
                   {/* Name Section */}
@@ -119,17 +122,35 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
             )}
 
             {activeTab === "finance" && (
-              <div className="p-4 text-center text-gray-500">
-                <p className="text-xs">Financial properties coming soon</p>
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <DollarSign className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Financial Settings</span>
+                  <span title="Track entity-specific costs and financial properties (feature coming soon)">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+                <div className="p-4 text-center text-gray-500">
+                  <p className="text-xs">Financial properties coming soon</p>
+                </div>
               </div>
             )}
 
             {activeTab === "states" && (
-              <StatesEditor
-                states={states}
-                onStatesChange={onStatesChange}
-                defaultComponentType={ComponentType.ENTITY}
-              />
+              <div>
+                <div className="flex items-center gap-1 mb-1">
+                  <Hash className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">State Definitions</span>
+                  <span title="Define custom state variables that entities of this type can carry and modify during simulation">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+                <StatesEditor
+                  states={states}
+                  onStatesChange={onStatesChange}
+                  defaultComponentType={ComponentType.ENTITY}
+                />
+              </div>
             )}
           </div>
         </div>
