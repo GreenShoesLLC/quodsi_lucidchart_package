@@ -128,12 +128,13 @@ export const referenceDataBuilder = {
         // Get all activities
         const allActivities = modelDef.activities.getAll();
         this.debug.log('Raw activities:', allActivities);
-        
+
         referenceData.activities = allActivities.map(a => {
-          this.debug.debug('Mapping activity:', { id: a.id, name: a.name });
+          this.debug.debug('Mapping activity:', { id: a.id, name: a.name, connectType: a.connectType });
           return {
             id: a.id,
-            name: a.name
+            name: a.name,
+            connectType: a.connectType
           };
         });
         

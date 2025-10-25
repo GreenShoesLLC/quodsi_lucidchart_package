@@ -76,13 +76,13 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
               disabled={outgoingConnectors.length === 1}
             >
               <option value={ConnectType.Probability}>
-                Probability - Route based on connector probabilities
+                Probability
               </option>
               <option value={ConnectType.StateCondition}>
-                State Condition - Route based on state values
+                State Condition
               </option>
               <option value={ConnectType.EntityTemplate}>
-                Entity Template - Route based on entity type
+                Entity
               </option>
             </select>
             {outgoingConnectors.length === 1 && (

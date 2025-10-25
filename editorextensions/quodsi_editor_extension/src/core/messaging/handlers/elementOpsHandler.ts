@@ -72,14 +72,28 @@ export class ElementOpsHandler {
         throw new Error('Current page not available');
       }
 
-      // Find the element by ID, using diagram element type as hint if available
-      const element = ElementOpsHandler.findElementById(
-        viewport,
-        data.elementId,
-        data.diagramElementType
-      );
-      if (!element) {
-        throw new Error(`Element not found: ${data.elementId}`);
+      // Determine the element to update
+      let element: ElementProxy;
+
+      // Check if this is a Model update (Page-level data)
+      if (data.type === 'Model' || data.type === SimulationObjectType.Model) {
+        console.log('[ElementOpsHandler] Updating Model (Page) directly:', {
+          elementId: data.elementId,
+          pageId: currentPage.id
+        });
+        // Model is the Page itself, not a block or line
+        element = currentPage;
+      } else {
+        // Find the element by ID, using diagram element type as hint if available
+        const foundElement = ElementOpsHandler.findElementById(
+          viewport,
+          data.elementId,
+          data.diagramElementType
+        );
+        if (!foundElement) {
+          throw new Error(`Element not found: ${data.elementId}`);
+        }
+        element = foundElement;
       }
       
       // Convert string type to SimulationObjectType
@@ -200,14 +214,28 @@ export class ElementOpsHandler {
         throw new Error('Current page not available');
       }
 
-      // Find the element by ID, using diagram element type as hint if available
-      const element = ElementOpsHandler.findElementById(
-        viewport,
-        data.elementId,
-        data.diagramElementType
-      );
-      if (!element) {
-        throw new Error(`Element not found: ${data.elementId}`);
+      // Determine the element to convert
+      let element: ElementProxy;
+
+      // Check if this is a Model conversion (Page-level)
+      if (data.newType === 'Model' || data.newType === SimulationObjectType.Model) {
+        console.log('[ElementOpsHandler] Converting to Model (Page) directly:', {
+          elementId: data.elementId,
+          pageId: currentPage.id
+        });
+        // Model is the Page itself, not a block or line
+        element = currentPage;
+      } else {
+        // Find the element by ID, using diagram element type as hint if available
+        const foundElement = ElementOpsHandler.findElementById(
+          viewport,
+          data.elementId,
+          data.diagramElementType
+        );
+        if (!foundElement) {
+          throw new Error(`Element not found: ${data.elementId}`);
+        }
+        element = foundElement;
       }
 
       // Convert string type to SimulationObjectType

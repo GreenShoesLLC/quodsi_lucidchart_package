@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap, Info } from "lucide-react";
 import {
   Activity,
@@ -15,7 +15,6 @@ import {
   ComponentType,
   Connector,
 } from "@quodsi/shared";
-import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -119,120 +118,318 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     return activity;
   };
 
-  // Extract and prepare activity data for BaseEditor
-  const extractedActivity = React.useMemo(() => extractActivityData(activity), [activity]);
+  // State management for BaseEditor replacement
+  const [formData, setFormData] = useState<Activity>(() => extractActivityData(activity));
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Sync with activity prop changes (only when no unsaved changes and not saving)
+  useEffect(() => {
+    if (!hasChanges && !isSaving) {
+      setFormData(extractActivityData(activity));
+    }
+  }, [activity, hasChanges, isSaving]);
+
+  // Clear the saving flag after a short delay to allow for the new data to arrive
+  useEffect(() => {
+    if (isSaving) {
+      const timer = setTimeout(() => {
+        setIsSaving(false);
+        setHasChanges(false);
+      }, 500); // Give the parent component time to update
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSaving]);
 
   // Handlers
-  const handleSave = (updatedActivity: Activity) => {
+  // Input change handler for basic fields
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updatedActivity = new Activity(
+        prev.id,
+        name === 'name' ? value : prev.name,
+        name === 'capacity' ? parseInt(value) || 1 : prev.capacity,
+        name === 'inputBufferCapacity' ? displayToBuffer(parseInt(value) || 0) : prev.inputBufferCapacity,
+        name === 'outputBufferCapacity' ? displayToBuffer(parseInt(value) || 0) : prev.outputBufferCapacity,
+        prev.operationSteps,
+        prev.x,
+        prev.y
+      );
+
+      // Preserve connectType
+      updatedActivity.connectType = prev.connectType;
+
+      // Preserve financialProperties
+      updatedActivity.financialProperties = prev.financialProperties;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
+    });
+    setHasChanges(true);
+  };
+
+  // Save handler
+  const handleSave = () => {
     const activityToSave = new Activity(
-      updatedActivity.id,
-      updatedActivity.name,
-      updatedActivity.capacity,
-      displayToBuffer(updatedActivity.inputBufferCapacity),
-      displayToBuffer(updatedActivity.outputBufferCapacity),
-      updatedActivity.operationSteps,
-      updatedActivity.x,
-      updatedActivity.y
+      formData.id,
+      formData.name,
+      formData.capacity,
+      displayToBuffer(formData.inputBufferCapacity),
+      displayToBuffer(formData.outputBufferCapacity),
+      formData.operationSteps,
+      formData.x,
+      formData.y
     );
 
     // Preserve connectType
-    activityToSave.connectType = updatedActivity.connectType;
+    activityToSave.connectType = formData.connectType;
 
     // Preserve financialProperties
-    activityToSave.financialProperties = updatedActivity.financialProperties;
+    activityToSave.financialProperties = formData.financialProperties;
 
     // Preserve state modifications
-    activityToSave.preProcessingStateModifications = updatedActivity.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications = updatedActivity.postProcessingStateModifications;
+    activityToSave.preProcessingStateModifications = formData.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications = formData.postProcessingStateModifications;
 
     onSave(activityToSave);
+    setIsSaving(true); // Will be cleared by useEffect after 500ms
   };
 
-  const handleOperationStepChange = (
-    index: number,
-    updatedStep: OperationStep,
-    localData: Activity,
-    handleChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => void
-  ) => {
-    const newOperationSteps = [...localData.operationSteps];
-    newOperationSteps[index] = updatedStep;
-
-    handleChange({
-      target: {
-        name: "operationSteps",
-        value: newOperationSteps,
-      },
-    } as any);
+  // Cancel handler - resets form without closing the editor
+  const handleCancel = () => {
+    setFormData(extractActivityData(activity));
+    setHasChanges(false);
   };
 
-  const handleAddOperationStep = (
-    localData: Activity,
-    handleChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => void
-  ) => {
+  const handleOperationStepChange = (index: number, updatedStep: OperationStep) => {
+    setFormData(prev => {
+      const newOperationSteps = [...prev.operationSteps];
+      newOperationSteps[index] = updatedStep;
+
+      const updatedActivity = new Activity(
+        prev.id,
+        prev.name,
+        prev.capacity,
+        prev.inputBufferCapacity,
+        prev.outputBufferCapacity,
+        newOperationSteps,
+        prev.x,
+        prev.y
+      );
+
+      // Preserve connectType
+      updatedActivity.connectType = prev.connectType;
+
+      // Preserve financialProperties
+      updatedActivity.financialProperties = prev.financialProperties;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
+    });
+    setHasChanges(true);
+  };
+
+  const handleAddOperationStep = () => {
     // Create a new operation step with a default constant distribution
     const newStep = createOperationStep(
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
-    const newOperationSteps = [...localData.operationSteps, newStep];
-    handleChange({
-      target: {
-        name: "operationSteps",
-        value: newOperationSteps,
-      },
-    } as any);
+    setFormData(prev => {
+      const newOperationSteps = [...prev.operationSteps, newStep];
+
+      const updatedActivity = new Activity(
+        prev.id,
+        prev.name,
+        prev.capacity,
+        prev.inputBufferCapacity,
+        prev.outputBufferCapacity,
+        newOperationSteps,
+        prev.x,
+        prev.y
+      );
+
+      // Preserve connectType
+      updatedActivity.connectType = prev.connectType;
+
+      // Preserve financialProperties
+      updatedActivity.financialProperties = prev.financialProperties;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
+    });
+    setHasChanges(true);
   };
 
-  const handleOperationStepDelete = React.useCallback(
-    (
-      index: number,
-      localData: Activity,
-      handleChange: (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-      ) => void
-    ) => {
-      const newOperationSteps = localData.operationSteps.filter(
-        (_, i) => i !== index
+  const handleOperationStepDelete = React.useCallback((index: number) => {
+    setFormData(prev => {
+      const newOperationSteps = prev.operationSteps.filter((_, i) => i !== index);
+
+      const updatedActivity = new Activity(
+        prev.id,
+        prev.name,
+        prev.capacity,
+        prev.inputBufferCapacity,
+        prev.outputBufferCapacity,
+        newOperationSteps,
+        prev.x,
+        prev.y
       );
-      handleChange({
-        target: {
-          name: "operationSteps",
-          value: newOperationSteps,
-        },
-      } as any);
-    },
-    []
-  );
 
-  const handleFinancialChange = (
-    field: keyof ActivityFinancialProperties,
-    value: any,
-    localData: Activity,
-    handleChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => void
-  ) => {
-    const currentFinancial = localData.financialProperties || new ActivityFinancialProperties();
-    const updatedFinancial = new ActivityFinancialProperties({
-      enabled: currentFinancial.enabled,
-      fixedCost: currentFinancial.fixedCost,
-      costPerEntityProcessed: currentFinancial.costPerEntityProcessed,
-      costPerHourActive: currentFinancial.costPerHourActive,
-      costPerHourIdle: currentFinancial.costPerHourIdle,
-      resourceCostMultiplier: currentFinancial.resourceCostMultiplier,
-      [field]: value,
+      // Preserve connectType
+      updatedActivity.connectType = prev.connectType;
+
+      // Preserve financialProperties
+      updatedActivity.financialProperties = prev.financialProperties;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
     });
+    setHasChanges(true);
+  }, []);
 
-    handleChange({
-      target: {
-        name: "financialProperties",
-        value: updatedFinancial,
-      },
-    } as any);
+  const handleFinancialChange = (field: keyof ActivityFinancialProperties, value: any) => {
+    setFormData(prev => {
+      const currentFinancial = prev.financialProperties || new ActivityFinancialProperties();
+      const updatedFinancial = new ActivityFinancialProperties({
+        enabled: currentFinancial.enabled,
+        fixedCost: currentFinancial.fixedCost,
+        costPerEntityProcessed: currentFinancial.costPerEntityProcessed,
+        costPerHourActive: currentFinancial.costPerHourActive,
+        costPerHourIdle: currentFinancial.costPerHourIdle,
+        resourceCostMultiplier: currentFinancial.resourceCostMultiplier,
+        [field]: value,
+      });
+
+      const updatedActivity = new Activity(
+        prev.id,
+        prev.name,
+        prev.capacity,
+        prev.inputBufferCapacity,
+        prev.outputBufferCapacity,
+        prev.operationSteps,
+        prev.x,
+        prev.y
+      );
+
+      // Preserve connectType
+      updatedActivity.connectType = prev.connectType;
+
+      // Update financialProperties
+      updatedActivity.financialProperties = updatedFinancial;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
+    });
+    setHasChanges(true);
+  };
+
+  // ConnectType change handler
+  const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+    const newConnectType = e.target.value as ConnectType;
+    setFormData(prev => {
+      const updatedActivity = new Activity(
+        prev.id,
+        prev.name,
+        prev.capacity,
+        prev.inputBufferCapacity,
+        prev.outputBufferCapacity,
+        prev.operationSteps,
+        prev.x,
+        prev.y
+      );
+
+      // Update connectType
+      updatedActivity.connectType = newConnectType;
+
+      // Preserve financialProperties
+      updatedActivity.financialProperties = prev.financialProperties;
+
+      // Preserve state modifications
+      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+
+      return updatedActivity;
+    });
+    setHasChanges(true);
+  };
+
+  // State modifications change handlers - auto-save immediately
+  const handlePreProcessingChange = (mods: any[]) => {
+    const updatedActivity = new Activity(
+      formData.id,
+      formData.name,
+      formData.capacity,
+      formData.inputBufferCapacity,
+      formData.outputBufferCapacity,
+      formData.operationSteps,
+      formData.x,
+      formData.y
+    );
+
+    // Preserve connectType
+    updatedActivity.connectType = formData.connectType;
+
+    // Preserve financialProperties
+    updatedActivity.financialProperties = formData.financialProperties;
+
+    // Update pre-processing state modifications
+    updatedActivity.preProcessingStateModifications = mods;
+
+    // Preserve post-processing state modifications
+    updatedActivity.postProcessingStateModifications = formData.postProcessingStateModifications;
+
+    // Auto-save immediately
+    onSave(updatedActivity);
+    // Update local state to match
+    setFormData(updatedActivity);
+  };
+
+  const handlePostProcessingChange = (mods: any[]) => {
+    const updatedActivity = new Activity(
+      formData.id,
+      formData.name,
+      formData.capacity,
+      formData.inputBufferCapacity,
+      formData.outputBufferCapacity,
+      formData.operationSteps,
+      formData.x,
+      formData.y
+    );
+
+    // Preserve connectType
+    updatedActivity.connectType = formData.connectType;
+
+    // Preserve financialProperties
+    updatedActivity.financialProperties = formData.financialProperties;
+
+    // Preserve pre-processing state modifications
+    updatedActivity.preProcessingStateModifications = formData.preProcessingStateModifications;
+
+    // Update post-processing state modifications
+    updatedActivity.postProcessingStateModifications = mods;
+
+    // Auto-save immediately
+    onSave(updatedActivity);
+    // Update local state to match
+    setFormData(updatedActivity);
   };
 
   // Resource Requirement Modal Handlers
@@ -291,7 +488,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setEditingRequirement(null);
   };
 
-  if (!extractedActivity?.id) {
+  if (!formData?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
         <div className="text-red-600 font-medium">Invalid activity data</div>
@@ -302,48 +499,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
   return (
     <>
-    <BaseEditor
-      data={{
-        ...extractedActivity,
-        type: SimulationObjectType.Activity,
-        // Ensure all Activity methods are available
-        setLocation: (x: number, y: number) => extractedActivity.setLocation(x, y),
-        getLocation: () => extractedActivity.getLocation(),
-        hasLocation: () => extractedActivity.hasLocation(),
-        clone: () => extractedActivity.clone(),
-        resetLocation: () => extractedActivity.resetLocation(),
-        toJSON: () => extractedActivity.toJSON(),
-      }}
-      onSave={(updatedData) => {
-        // Create a new Activity instance to preserve class methods
-        const updatedActivity = new Activity(
-          updatedData.id,
-          updatedData.name,
-          updatedData.capacity,
-          displayToBuffer(updatedData.inputBufferCapacity),
-          displayToBuffer(updatedData.outputBufferCapacity),
-          updatedData.operationSteps,
-          updatedData.x,
-          updatedData.y
-        );
-
-        // Preserve connectType
-        updatedActivity.connectType = updatedData.connectType || ConnectType.Probability;
-
-        // Preserve financialProperties
-        updatedActivity.financialProperties = updatedData.financialProperties;
-
-        // Preserve state modifications
-        updatedActivity.preProcessingStateModifications = updatedData.preProcessingStateModifications || [];
-        updatedActivity.postProcessingStateModifications = updatedData.postProcessingStateModifications || [];
-
-        onSave(updatedActivity);
-      }}
-      onCancel={onCancel}
-      messageType="activitySaved"
-    >
-      {(localData, handleChange) => (
-        <div className="space-y-2">
+      <div className="space-y-2">
           {/* Tab Navigation */}
           <div className="border-b bg-gray-50">
             <div className="flex">
@@ -397,18 +553,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("states")}
-                title="State Management"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "states"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Hash className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab("events")}
                 title="Event Modifications"
                 className={`px-2 py-1.5 border-b-2 ${
@@ -418,6 +562,18 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 }`}
               >
                 <Zap className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("states")}
+                title="State Management"
+                className={`px-2 py-1.5 border-b-2 ${
+                  activeTab === "states"
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <Hash className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -443,8 +599,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       type="text"
                       name="name"
                       className="w-full px-2 py-1.5 text-xs border rounded"
-                      value={localData.name}
-                      onChange={handleChange}
+                      value={formData.name}
+                      onChange={handleInputChange}
                       placeholder="Enter activity name"
                     />
                   </div>
@@ -465,8 +621,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         type="number"
                         name="capacity"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.capacity}
-                        onChange={handleChange}
+                        value={formData.capacity}
+                        onChange={handleInputChange}
                         min="1"
                         placeholder="1"
                       />
@@ -491,11 +647,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           name="inputBufferCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
                           value={
-                            localData.inputBufferCapacity === Infinity
+                            formData.inputBufferCapacity === Infinity
                               ? 999999
-                              : localData.inputBufferCapacity
+                              : formData.inputBufferCapacity
                           }
-                          onChange={handleChange}
+                          onChange={handleInputChange}
                           min="0"
                           max="999999"
                           placeholder="0"
@@ -508,11 +664,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           name="outputBufferCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
                           value={
-                            localData.outputBufferCapacity === Infinity
+                            formData.outputBufferCapacity === Infinity
                               ? 999999
-                              : localData.outputBufferCapacity
+                              : formData.outputBufferCapacity
                           }
-                          onChange={handleChange}
+                          onChange={handleInputChange}
                           min="0"
                           max="999999"
                           placeholder="0"
@@ -536,7 +692,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleAddOperationStep(localData, handleChange)}
+                    onClick={handleAddOperationStep}
                     className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
                   >
                     <Plus className="w-3 h-3" />
@@ -544,21 +700,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </button>
                 </div>
                 <div className="space-y-1">
-                  {localData.operationSteps.map((step, index) => (
+                  {formData.operationSteps.map((step, index) => (
                     <OperationStepEditor
                       key={index}
                       step={step}
                       index={index}
                       onChange={(updatedStep) =>
-                        handleOperationStepChange(
-                          index,
-                          updatedStep,
-                          localData,
-                          handleChange
-                        )
+                        handleOperationStepChange(index, updatedStep)
                       }
                       onDelete={() =>
-                        handleOperationStepDelete(index, localData, handleChange)
+                        handleOperationStepDelete(index)
                       }
                       resourceRequirements={referenceData?.resourceRequirements}
                       availableResources={referenceData?.resources}
@@ -585,14 +736,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     <input
                       type="checkbox"
                       id="financialEnabled"
-                      checked={localData.financialProperties?.enabled || false}
+                      checked={formData.financialProperties?.enabled || false}
                       onChange={(e) =>
-                        handleFinancialChange(
-                          "enabled",
-                          e.target.checked,
-                          localData,
-                          handleChange
-                        )
+                        handleFinancialChange("enabled", e.target.checked)
                       }
                       className="w-3 h-3"
                     />
@@ -609,16 +755,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.financialProperties?.fixedCost || 0}
+                        value={formData.financialProperties?.fixedCost || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "fixedCost",
-                            parseFloat(e.target.value) || 0,
-                            localData,
-                            handleChange
+                            parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!localData.financialProperties?.enabled}
+                        disabled={!formData.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -629,16 +773,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.financialProperties?.costPerEntityProcessed || 0}
+                        value={formData.financialProperties?.costPerEntityProcessed || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerEntityProcessed",
-                            parseFloat(e.target.value) || 0,
-                            localData,
-                            handleChange
+                            parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!localData.financialProperties?.enabled}
+                        disabled={!formData.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -649,16 +791,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.financialProperties?.costPerHourActive || 0}
+                        value={formData.financialProperties?.costPerHourActive || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerHourActive",
-                            parseFloat(e.target.value) || 0,
-                            localData,
-                            handleChange
+                            parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!localData.financialProperties?.enabled}
+                        disabled={!formData.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -669,16 +809,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.financialProperties?.costPerHourIdle || 0}
+                        value={formData.financialProperties?.costPerHourIdle || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerHourIdle",
-                            parseFloat(e.target.value) || 0,
-                            localData,
-                            handleChange
+                            parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!localData.financialProperties?.enabled}
+                        disabled={!formData.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -694,16 +832,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localData.financialProperties?.resourceCostMultiplier || 1}
+                        value={formData.financialProperties?.resourceCostMultiplier || 1}
                         onChange={(e) =>
                           handleFinancialChange(
                             "resourceCostMultiplier",
-                            parseFloat(e.target.value) || 1,
-                            localData,
-                            handleChange
+                            parseFloat(e.target.value) || 1
                           )
                         }
-                        disabled={!localData.financialProperties?.enabled}
+                        disabled={!formData.financialProperties?.enabled}
                         min="0"
                         step="0.1"
                         placeholder="1.0"
@@ -724,13 +860,49 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </span>
                 </div>
                 <RoutingConfigurationContent
-                  localData={localData}
-                  handleChange={handleChange}
+                  localData={formData}
+                  handleChange={handleConnectTypeChange}
                   outgoingConnectors={outgoingConnectors}
                   referenceData={referenceData || { activities: [], resources: [], entities: [], resourceRequirements: [] }}
                   states={states}
                   showHeader={false}
                 />
+              </div>
+            )}
+
+            {activeTab === "events" && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 mb-1">
+                  <Zap className="w-3 h-3 text-blue-500" />
+                  <span className="text-xs font-medium text-gray-700">Event Modifications</span>
+                  <span title="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+
+                {/* Pre-Processing State Modifications */}
+                <div className="border-b pb-2">
+                  <StateModificationsEditor
+                    modifications={formData.preProcessingStateModifications || []}
+                    onModificationsChange={handlePreProcessingChange}
+                    states={states}
+                    title="Pre-Processing State Modifications"
+                    description="Applied before entry"
+                    allowCrossComponent={true}
+                  />
+                </div>
+
+                {/* Post-Processing State Modifications */}
+                <div>
+                  <StateModificationsEditor
+                    modifications={formData.postProcessingStateModifications || []}
+                    onModificationsChange={handlePostProcessingChange}
+                    states={states}
+                    title="Post-Processing State Modifications"
+                    description="Applied after completion"
+                    allowCrossComponent={true}
+                  />
+                </div>
               </div>
             )}
 
@@ -750,60 +922,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 />
               </div>
             )}
-
-            {activeTab === "events" && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <Zap className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Event Modifications</span>
-                  <span title="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-
-                {/* Pre-Processing State Modifications */}
-                <div className="border-b pb-2">
-                  <StateModificationsEditor
-                    modifications={localData.preProcessingStateModifications || []}
-                    onModificationsChange={(mods) =>
-                      handleChange({
-                        target: {
-                          name: "preProcessingStateModifications",
-                          value: mods,
-                        },
-                      } as any)
-                    }
-                    states={states}
-                    title="Pre-Processing State Modifications"
-                    description="Applied before entry"
-                    allowCrossComponent={true}
-                  />
-                </div>
-
-                {/* Post-Processing State Modifications */}
-                <div>
-                  <StateModificationsEditor
-                    modifications={localData.postProcessingStateModifications || []}
-                    onModificationsChange={(mods) =>
-                      handleChange({
-                        target: {
-                          name: "postProcessingStateModifications",
-                          value: mods,
-                        },
-                      } as any)
-                    }
-                    states={states}
-                    title="Post-Processing State Modifications"
-                    description="Applied after completion"
-                    allowCrossComponent={true}
-                  />
-                </div>
-              </div>
-            )}
           </div>
+
+      {/* Save/Cancel Buttons - Only show for tabs that require manual save (not States or Events which auto-save) */}
+      {activeTab !== "states" && activeTab !== "events" && (
+        <div className="flex justify-end gap-2 pt-2 border-t">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!hasChanges}
+            className={`px-3 py-1.5 text-xs rounded ${
+              hasChanges
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            Save
+          </button>
         </div>
       )}
-    </BaseEditor>
+    </div>
     
     {/* Resource Requirement Modal */}
     <ResourceRequirementModal

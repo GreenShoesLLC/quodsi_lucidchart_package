@@ -28,7 +28,7 @@ These new components integrate with existing editor components:
 - GeneratorEditor
 - ResourceEditor
 - EntityEditor
-- ConnectorEditor
+- ConnectorsEditor
 - ModelEditor
 
 ### Styling

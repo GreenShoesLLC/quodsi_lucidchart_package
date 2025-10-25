@@ -3,7 +3,8 @@
     "allow": [
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim_runner/**)",
       "WebFetch(domain:developer.lucid.co)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

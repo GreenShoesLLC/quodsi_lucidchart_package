@@ -76,18 +76,27 @@ export function useModelPanel() {
     modelItemData = transformToModelItemData(selectedElement);
     logger.debug('Transformed modelItemData result:', modelItemData);
   } else if (documentContext.isQuodsiModel) {
-    // If no element is selected but we have a Quodsi model, 
+    // If no element is selected but we have a Quodsi model,
     // check if we have modelItemData in the metadata
     if (documentContext.metadata?.modelItemData) {
       logger.debug('Using modelItemData from metadata:', documentContext.metadata.modelItemData);
       modelItemData = documentContext.metadata.modelItemData;
+
+      if (modelItemData) {
+        logger.log('[useModelPanel] Model data from metadata:', {
+          hasData: !!modelItemData.data,
+          dataKeys: modelItemData.data ? Object.keys(modelItemData.data) : [],
+          runClockPeriod: modelItemData.data?.runClockPeriod,
+          fullData: modelItemData.data
+        });
+      }
     } else {
       // Create a Model element from the page - similar to buildModelItemData in old code
-      logger.debug('Creating Model element from page');
-      
+      logger.warn('[useModelPanel] ⚠️ Creating Model element with EMPTY data object');
+
       modelItemData = {
         id: documentContext.documentId,
-        data: {}, // Empty data object for now
+        data: {}, // Empty data object for now - THIS IS THE PROBLEM!
         metadata: {
           type: SimulationObjectType.Model,
           version: '1.0',
@@ -96,25 +105,34 @@ export function useModelPanel() {
         },
         name: documentContext.documentTitle || 'Untitled Model'
       };
-      
-      logger.debug('Created Model element:', modelItemData);
+
+      logger.warn('[useModelPanel] ⚠️ Created Model element with empty data:', {
+        modelItemData,
+        documentContext,
+        hasMetadata: !!documentContext.metadata,
+        metadataKeys: documentContext.metadata ? Object.keys(documentContext.metadata) : []
+      });
     }
   }
   
   // Log important flags about modelItemData
   if (modelItemData) {
-    logger.debug('ModelItemData details:', {
+    logger.log('[useModelPanel] Final modelItemData details:', {
       id: modelItemData.id,
       name: modelItemData.name,
       hasData: !!modelItemData.data,
+      dataKeys: modelItemData.data ? Object.keys(modelItemData.data) : [],
+      dataIsEmpty: modelItemData.data ? Object.keys(modelItemData.data).length === 0 : true,
+      runClockPeriod: modelItemData.data?.runClockPeriod,
       hasMetadata: !!modelItemData.metadata,
       metadataType: modelItemData.metadata?.type,
       hasQMeta: !!modelItemData.q_meta,
       qMetaType: modelItemData.q_meta?.type,
-      isUnconverted: modelItemData.isUnconverted
+      isUnconverted: modelItemData.isUnconverted,
+      fullData: modelItemData.data
     });
   } else {
-    logger.warn('No modelItemData created or found');
+    logger.warn('[useModelPanel] No modelItemData created or found');
   }
   
   // Transform validation data
@@ -147,16 +165,31 @@ export function useModelPanel() {
   
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
-    logger.log(`Updating element ${elementId} with data:`, data);
+    logger.log('[useModelPanel] onElementUpdate CALLED:', {
+      elementId,
+      data,
+      dataKeys: data ? Object.keys(data) : [],
+      runClockPeriod: data.runClockPeriod,
+      isModel: modelItemData?.metadata?.type === SimulationObjectType.Model
+    });
 
     // For model type, we need special handling
     if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
-      logger.log('Updating model properties');
+      logger.log('[useModelPanel] Updating MODEL properties:', {
+        elementId,
+        type: 'Model',
+        data
+      });
       // Use the model update method
       modelOpsSender.updateElementData(elementId, 'Model', data, typedDiagramElementType);
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';
+      logger.log('[useModelPanel] Updating ELEMENT properties:', {
+        elementId,
+        type,
+        data
+      });
       modelOpsSender.updateElementData(elementId, type, data, typedDiagramElementType);
     }
   };

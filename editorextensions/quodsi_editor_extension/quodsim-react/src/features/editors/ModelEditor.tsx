@@ -4,19 +4,14 @@ import {
   PeriodUnit,
   SimulationTimeType,
   SimulationObjectType,
-  Duration,
-  Distribution,
-  ConstantDistribution,
-  DistributionType,
   StateListManager,
   ComponentType,
   EnvelopeMessageType,
   EnvelopeBase,
 } from "@quodsi/shared";
-import { Settings, Clock, Hash, Package, PlaySquare, FileJson, Info } from "lucide-react";
-import BaseEditor from "./BaseEditor";
-import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import { Settings, Hash, PlaySquare, FileJson, Info, Users } from "lucide-react";
 import StatesEditor from "./StatesEditor";
+import { AccordionSection } from "../shared/AccordionSection";
 import ScenarioEditor from "./ScenarioEditor";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
@@ -40,13 +35,27 @@ interface Props {
 type EditorTab = "basic" | "states" | "requirements" | "scenarios";
 
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData, resourceRequirements }) => {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
   const [modelJson, setModelJson] = useState<any>(null);
+  const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const { selection } = useMessaging();
   const { requestModelJson } = useModelOpsSender();
+
+  if (isDevelopment) {
+    console.log('[ModelEditor] RENDER - model prop received:', {
+      model,
+      modelKeys: model ? Object.keys(model) : [],
+      hasData: !!((model as any)?.data),
+      dataKeys: (model as any)?.data ? Object.keys((model as any).data) : [],
+      runClockPeriod: model?.runClockPeriod || ((model as any)?.data?.runClockPeriod),
+      modelId: model?.id
+    });
+  }
 
   // Listen for MODEL_JSON_RESPONSE
   useEffect(() => {
@@ -76,84 +85,166 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
-    const data = mod.data || mod;
-    return {
+    if (isDevelopment) {
+      console.log('[ModelEditor] extractModelData INPUT:', {
+        mod,
+        hasData: !!(mod as any)?.data,
+        hasMod: !!mod,
+        modKeys: mod ? Object.keys(mod) : [],
+        dataKeys: (mod as any)?.data ? Object.keys((mod as any).data) : [],
+        modRunClockPeriod: mod?.runClockPeriod,
+        dataRunClockPeriod: (mod as any)?.data?.runClockPeriod
+      });
+    }
+
+    const data = (mod as any).data || mod;
+
+    const result = {
       id: data.id || "",
       name: data.name || "New Model",
       type: SimulationObjectType.Model,
       reps: data.reps || 1,
       seed: data.seed || 0,
       simulationTimeType: data.simulationTimeType || SimulationTimeType.Clock,
-      oneClockUnit: data.oneClockUnit || PeriodUnit.MINUTES,
+      oneClockUnit: data.oneClockUnit || PeriodUnit.HOURS,
       warmupClockPeriod: data.warmupClockPeriod || 0,
-      warmupClockPeriodUnit: data.warmupClockPeriodUnit || PeriodUnit.MINUTES,
+      warmupClockPeriodUnit: data.warmupClockPeriodUnit || PeriodUnit.HOURS,
       runClockPeriod: data.runClockPeriod || 0,
-      runClockPeriodUnit: data.runClockPeriodUnit || PeriodUnit.MINUTES,
+      runClockPeriodUnit: data.runClockPeriodUnit || PeriodUnit.HOURS,
       warmupDateTime: data.warmupDateTime || null,
       startDateTime: data.startDateTime || null,
       finishDateTime: data.finishDateTime || null,
     };
+
+    if (isDevelopment) {
+      console.log('[ModelEditor] extractModelData OUTPUT:', {
+        result,
+        runClockPeriod: result.runClockPeriod,
+        hasRunClockPeriod: 'runClockPeriod' in data,
+        dataRunClockPeriod: data.runClockPeriod,
+        usedDefault: !data.runClockPeriod
+      });
+    }
+
+    return result;
   };
 
-  // Create local state with extracted model data
-  const [localModel, setLocalModel] = useState<Model>(extractModelData(model));
+  // Direct form state management
+  const [formData, setFormData] = useState<Model>(() => {
+    const initialData = extractModelData(model);
+    if (isDevelopment) {
+      console.log('[ModelEditor] useState INITIALIZATION:', {
+        initialData,
+        runClockPeriod: initialData.runClockPeriod
+      });
+    }
+    return initialData;
+  });
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // Handlers
-  const handleSave = (updatedModel: Model) => {
+  // Sync with model prop changes (only when no unsaved changes)
+  useEffect(() => {
+    if (isDevelopment) {
+      console.log('[ModelEditor] useEffect TRIGGERED:', {
+        hasChanges,
+        modelId: model?.id,
+        currentFormDataId: formData.id,
+        modelRunClockPeriod: model?.runClockPeriod || ((model as any)?.data?.runClockPeriod),
+        formDataRunClockPeriod: formData.runClockPeriod,
+        willUpdate: !hasChanges,
+        modelPropType: typeof model,
+        modelPropKeys: model ? Object.keys(model) : []
+      });
+    }
+
+    if (!hasChanges) {
+      const newFormData = extractModelData(model);
+      setFormData(newFormData);
+
+      if (isDevelopment) {
+        console.log('[ModelEditor] useEffect UPDATED formData:', {
+          newFormData,
+          runClockPeriod: newFormData.runClockPeriod
+        });
+      }
+    } else {
+      if (isDevelopment) {
+        console.log('[ModelEditor] useEffect SKIPPED (hasChanges=true)');
+      }
+    }
+  }, [model, hasChanges, isDevelopment]);
+
+  // Handle form input changes with type conversion
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+
+    // Convert values based on input type
+    let convertedValue: any = value;
+    if (type === 'number') {
+      const numValue = parseFloat(value);
+      convertedValue = isNaN(numValue) ? 0 : numValue;
+    } else if (type === 'datetime-local') {
+      convertedValue = value ? new Date(value) : null;
+    }
+
+    if (isDevelopment) {
+      console.log('[ModelEditor] handleChange:', {
+        name,
+        value,
+        type,
+        convertedValue,
+        previousValue: formData[name as keyof Model]
+      });
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: convertedValue
+    }));
+    setHasChanges(true);
+  };
+
+  // Handle save
+  const handleSave = () => {
     const modelToSave: Model = {
-      ...updatedModel,
-      type: "Model" as any, // Use string 'Model' instead of enum to match what ModelPanel.ts expects
-      // Ensure all properties are included
-      reps: updatedModel.reps || 1,
-      seed: updatedModel.seed || 12345,
-      simulationTimeType:
-        updatedModel.simulationTimeType || SimulationTimeType.Clock,
-      oneClockUnit: updatedModel.oneClockUnit || PeriodUnit.MINUTES,
-      warmupClockPeriod: updatedModel.warmupClockPeriod || 0,
-      warmupClockPeriodUnit:
-        updatedModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
-      runClockPeriod: updatedModel.runClockPeriod || 0,
-      runClockPeriodUnit: updatedModel.runClockPeriodUnit || PeriodUnit.MINUTES,
-      warmupDateTime: updatedModel.warmupDateTime || null,
-      startDateTime: updatedModel.startDateTime || null,
-      finishDateTime: updatedModel.finishDateTime || null,
+      ...formData,
+      type: "Model" as any,
+      // Ensure all properties have defaults
+      reps: formData.reps || 1,
+      seed: formData.seed || 12345,
+      simulationTimeType: formData.simulationTimeType || SimulationTimeType.Clock,
+      oneClockUnit: formData.oneClockUnit || PeriodUnit.HOURS,
+      warmupClockPeriod: formData.warmupClockPeriod || 0,
+      warmupClockPeriodUnit: formData.warmupClockPeriodUnit || PeriodUnit.HOURS,
+      runClockPeriod: formData.runClockPeriod || 0,
+      runClockPeriodUnit: formData.runClockPeriodUnit || PeriodUnit.HOURS,
+      warmupDateTime: formData.warmupDateTime || null,
+      startDateTime: formData.startDateTime || null,
+      finishDateTime: formData.finishDateTime || null,
     };
 
-    // Update our local state immediately with the new model data
-    setLocalModel(modelToSave);
+    if (isDevelopment) {
+      console.log('[ModelEditor] handleSave CALLED:', {
+        formData,
+        modelToSave,
+        runClockPeriod: modelToSave.runClockPeriod,
+        hasChanges
+      });
+    }
 
-    // Then send to parent
     onSave(modelToSave);
+    setHasChanges(false);
+
+    if (isDevelopment) {
+      console.log('[ModelEditor] handleSave COMPLETED - hasChanges set to false');
+    }
   };
 
-  const createSyntheticEvent = (
-    name: string,
-    value: any
-  ): React.ChangeEvent<HTMLInputElement | HTMLSelectElement> => {
-    return {
-      target: { name, value },
-      currentTarget: { name, value },
-    } as React.ChangeEvent<HTMLInputElement | HTMLSelectElement>;
-  };
-
-  const handleDurationChange = (
-    periodField: "warmupClockPeriod" | "runClockPeriod",
-    periodUnitField: "warmupClockPeriodUnit" | "runClockPeriodUnit",
-    periodUnit: PeriodUnit,
-    distribution: Distribution,
-    localData: Model,
-    handleChange: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-    ) => void
-  ) => {
-    const value =
-      distribution.distributionType === "constant"
-        ? (distribution.parameters as { value: number }).value
-        : 0;
-
-    // Update through handleChange so BaseEditor state is updated properly
-    handleChange(createSyntheticEvent(periodField, value));
-    handleChange(createSyntheticEvent(periodUnitField, periodUnit));
+  // Handle cancel
+  const handleCancel = () => {
+    setFormData(extractModelData(model));
+    setHasChanges(false);
+    onCancel();
   };
 
   const handleViewModelClick = () => {
@@ -163,174 +254,211 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
 
   const ModelForm = () => (
     <>
-      <BaseEditor
-        data={localModel}
-        onSave={handleSave}
-        onCancel={onCancel}
-        messageType="modelSaved"
-      >
-        {(localModel, handleChange) => (
+      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
         <div className="space-y-2">
-          {/* Basic Settings */}
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <Settings className="w-3 h-3 text-blue-600" />
-              <span className="text-xs font-medium text-gray-700">Basic Settings</span>
-              <span title="Configure model name, number of replications, and simulation time settings (clock-based or calendar-based)">
-                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-              </span>
+              {/* Model Name - Always Visible WITH LABEL */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Model Name
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  className="w-full px-2 py-1 text-xs border rounded"
+                  value={formData.name}
+                  placeholder="Enter model name"
+                  onChange={handleChange}
+                />
             </div>
-            <div className="space-y-1">
-              <input
-                type="text"
-                name="name"
-                className="w-full px-2 py-1 text-xs border rounded"
-                value={localModel.name}
-                placeholder="Model Name"
-                onChange={handleChange}
-              />
-              <div className="grid grid-cols-2 gap-1">
+
+            {/* Run Time - Conditional: Only in Clock mode */}
+            {formData.simulationTimeType === SimulationTimeType.Clock && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Run Time
+                </label>
+                <div className="grid grid-cols-2 gap-1">
+                  <input
+                    type="number"
+                    name="runClockPeriod"
+                    className="w-full px-2 py-1 text-xs border rounded"
+                    value={formData.runClockPeriod || 0}
+                    onChange={handleChange}
+                    min="0"
+                  />
+                  <select
+                    name="runClockPeriodUnit"
+                    className="w-full px-2 py-1 text-xs border rounded bg-white"
+                    value={formData.runClockPeriodUnit || PeriodUnit.HOURS}
+                    onChange={handleChange}
+                  >
+                    {Object.values(PeriodUnit).map((unit) => (
+                      <option key={unit} value={unit}>
+                        {unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Advanced Settings - Accordion */}
+            <AccordionSection
+              title="Advanced Settings"
+              isExpanded={isAdvancedExpanded}
+              onToggle={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
+            >
+              <div className="space-y-2">
+                {/* Replications */}
                 <div>
-                  <label className="block text-xs text-gray-600">Reps</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Replications
+                  </label>
                   <input
                     type="number"
                     name="reps"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={localModel.reps}
+                    className="w-full px-2 py-1 text-xs border rounded"
+                    value={formData.reps}
                     onChange={handleChange}
                     min="1"
                   />
                 </div>
+
+                {/* Time Mode */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Time Mode
+                  </label>
+                  <select
+                    name="simulationTimeType"
+                    className="w-full px-2 py-1 text-xs border rounded bg-white"
+                    value={formData.simulationTimeType}
+                    onChange={handleChange}
+                  >
+                    {Object.values(SimulationTimeType).map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Clock Mode Fields - Conditional */}
+                {formData.simulationTimeType === SimulationTimeType.Clock && (
+                  <>
+                    {/* Clock Unit */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Clock Unit
+                      </label>
+                      <select
+                        name="oneClockUnit"
+                        className="w-full px-2 py-1 text-xs border rounded bg-white"
+                        value={formData.oneClockUnit}
+                        onChange={handleChange}
+                      >
+                        {Object.values(PeriodUnit).map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Warmup Time - Simple number + dropdown */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Warmup Time
+                      </label>
+                      <div className="grid grid-cols-2 gap-1">
+                        <input
+                          type="number"
+                          name="warmupClockPeriod"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={formData.warmupClockPeriod || 0}
+                          onChange={handleChange}
+                          min="0"
+                        />
+                        <select
+                          name="warmupClockPeriodUnit"
+                          className="w-full px-2 py-1 text-xs border rounded bg-white"
+                          value={formData.warmupClockPeriodUnit || PeriodUnit.HOURS}
+                          onChange={handleChange}
+                        >
+                          {Object.values(PeriodUnit).map((unit) => (
+                            <option key={unit} value={unit}>
+                              {unit}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Calendar Date Mode Fields - Conditional */}
+                {formData.simulationTimeType === SimulationTimeType.CalendarDate && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Start Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="startDateTime"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={formData.startDateTime?.toISOString().slice(0, 16) || ""}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Finish Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="finishDateTime"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={formData.finishDateTime?.toISOString().slice(0, 16) || ""}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Warmup Date
+                      </label>
+                      <input
+                        type="datetime-local"
+                        name="warmupDateTime"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={formData.warmupDateTime?.toISOString().slice(0, 16) || ""}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
+            </AccordionSection>
           </div>
 
-          {/* Time Settings */}
-          <div>
-            <div className="flex items-center gap-1 mb-1">
-              <Clock className="w-3 h-3 text-blue-600" />
-              <span className="text-xs font-medium text-gray-700">Time Settings</span>
-            </div>
-
-            <div className="space-y-1">
-              <select
-                name="simulationTimeType"
-                className="w-full px-2 py-1 text-xs border rounded bg-white"
-                value={localModel.simulationTimeType}
-                onChange={handleChange}
-              >
-                {Object.values(SimulationTimeType).map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-
-              <select
-                name="oneClockUnit"
-                className="w-full px-2 py-1 text-xs border rounded bg-white"
-                value={localModel.oneClockUnit}
-                onChange={handleChange}
-              >
-                {Object.values(PeriodUnit).map((unit) => (
-                  <option key={unit} value={unit}>
-                    {unit}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {localModel.simulationTimeType === SimulationTimeType.Clock && (
-              <div className="space-y-1 mt-1">
-                <EnhancedDurationEditor
-                  label="Warmup Time"
-                  periodUnit={
-                    localModel.warmupClockPeriodUnit || PeriodUnit.MINUTES
-                  }
-                  distribution={ConstantDistribution.create(
-                    localModel.warmupClockPeriod || 0
-                  )}
-                  onChange={(periodUnit, distribution) =>
-                    handleDurationChange(
-                      "warmupClockPeriod",
-                      "warmupClockPeriodUnit",
-                      periodUnit,
-                      distribution,
-                      localModel,
-                      handleChange
-                    )
-                  }
-                  compact={true}
-                  allowedDistributionTypes={[DistributionType.CONSTANT]}
-                />
-                <EnhancedDurationEditor
-                  label="Run Time"
-                  periodUnit={
-                    localModel.runClockPeriodUnit || PeriodUnit.MINUTES
-                  }
-                  distribution={ConstantDistribution.create(
-                    localModel.runClockPeriod || 0
-                  )}
-                  onChange={(periodUnit, distribution) =>
-                    handleDurationChange(
-                      "runClockPeriod",
-                      "runClockPeriodUnit",
-                      periodUnit,
-                      distribution,
-                      localModel,
-                      handleChange
-                    )
-                  }
-                  compact={true}
-                  allowedDistributionTypes={[DistributionType.CONSTANT]}
-                />
-              </div>
-            )}
-
-            {localModel.simulationTimeType === SimulationTimeType.CalendarDate && (
-              <div className="space-y-1 mt-1">
-                <div>
-                  <label className="block text-xs text-gray-600">Start Date</label>
-                  <input
-                    type="datetime-local"
-                    name="startDateTime"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={
-                      localModel.startDateTime?.toISOString().slice(0, 16) || ""
-                    }
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Finish Date</label>
-                  <input
-                    type="datetime-local"
-                    name="finishDateTime"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={
-                      localModel.finishDateTime?.toISOString().slice(0, 16) || ""
-                    }
-                    onChange={handleChange}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600">Warmup Date</label>
-                  <input
-                    type="datetime-local"
-                    name="warmupDateTime"
-                    className="w-full px-1 py-0.5 text-xs border rounded"
-                    value={
-                      localModel.warmupDateTime?.toISOString().slice(0, 16) || ""
-                    }
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Save/Cancel Buttons */}
+          <div className="flex space-x-2 mt-2 justify-end">
+            <button
+              type="submit"
+              className="px-2 py-1 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+              disabled={!hasChanges}
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              Cancel
+            </button>
           </div>
-        </div>
-      )}
-    </BaseEditor>
+        </form>
     <button
       type="button"
       className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1 mt-2"
@@ -381,7 +509,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
               : "border-transparent text-gray-500 hover:text-gray-700"
           }`}
         >
-          <Package className="w-4 h-4" />
+          <Users className="w-4 h-4" />
         </button>
         <button
           type="button"
@@ -418,7 +546,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       {activeTab === "requirements" && (
         <div>
           <div className="flex items-center gap-1 mb-1 p-2">
-            <Package className="w-3 h-3 text-blue-600" />
+            <Users className="w-3 h-3 text-blue-600" />
             <span className="text-xs font-medium text-gray-700">Resource Requirements</span>
             <span title="Create reusable resource requirement templates that define which resources are needed for activities">
               <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />

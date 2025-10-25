@@ -13,7 +13,6 @@ import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
 import EntityEditor from "../editors/EntityEditor";
-import ConnectorEditor from "../editors/ConnectorEditor";
 import ConnectorsEditor from "../editors/ConnectorsEditor";
 
 interface ElementEditorProps {
@@ -96,7 +95,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   // Renders the appropriate editor component based on element type
   const renderEditor = () => {
     const safeElementType = getElementType();
-    
+
     // Ensure element data has ID
     const safeElementData = {
       ...(elementData && typeof elementData === "object" ? elementData : {}),
@@ -104,7 +103,16 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
     };
 
     if (isDevelopment) {
-      console.log("[ElementEditor] Rendering:", safeElementType, safeElementData.id);
+      console.log("[ElementEditor] Rendering editor for:", {
+        safeElementType,
+        safeElementDataId: safeElementData.id,
+        elementDataKeys: Object.keys(elementData || {}),
+        safeElementDataKeys: Object.keys(safeElementData),
+        hasRunClockPeriod: 'runClockPeriod' in safeElementData,
+        runClockPeriod: safeElementData.runClockPeriod,
+        isModel: safeElementType === SimulationObjectType.Model || safeElementType === "Model",
+        fullSafeElementData: safeElementData
+      });
     }
 
     // Validate we have required data
@@ -121,10 +129,27 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
     switch (safeElementType) {
       case SimulationObjectType.Model:
       case "Model":
+        if (isDevelopment) {
+          console.log("[ElementEditor] Passing to ModelEditor:", {
+            model: safeElementData,
+            modelKeys: Object.keys(safeElementData),
+            hasRunClockPeriod: 'runClockPeriod' in safeElementData,
+            runClockPeriod: safeElementData.runClockPeriod
+          });
+        }
         return (
           <ModelEditor
             model={safeElementData}
-            onSave={onSave}
+            onSave={(data) => {
+              if (isDevelopment) {
+                console.log("[ElementEditor] ModelEditor onSave called:", {
+                  data,
+                  dataKeys: Object.keys(data),
+                  runClockPeriod: data.runClockPeriod
+                });
+              }
+              onSave(data);
+            }}
             onCancel={handleCancel}
             states={states}
             onStatesChange={onStatesChange}
@@ -212,17 +237,23 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           );
         }
 
-        // Fallback: Show ConnectorEditor if source not found or not an Activity
+        // Error: Source Activity not found - data integrity issue
         if (isDevelopment) {
-          console.log("[ElementEditor] Falling back to ConnectorEditor for connector:", safeElementData.id);
+          console.error("[ElementEditor] Source Activity not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
         }
         return (
-          <ConnectorEditor
-            connector={safeElementData}
-            onSave={onSave}
-            onCancel={handleCancel}
-            referenceData={referenceData}
-          />
+          <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
+            <div className="font-medium">Cannot edit connector</div>
+            <div className="text-xs mt-1">
+              Source Activity not found. This indicates a data integrity issue.
+            </div>
+            {isDevelopment && (
+              <div className="text-xs mt-2 text-red-500">
+                Connector ID: {safeElementData.id}<br />
+                Source ID: {safeElementData.sourceId || 'not set'}
+              </div>
+            )}
+          </div>
         );
 
       default:
