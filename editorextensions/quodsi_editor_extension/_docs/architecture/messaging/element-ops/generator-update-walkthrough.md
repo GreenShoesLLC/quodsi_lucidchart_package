@@ -301,13 +301,14 @@ case "Generator":
    - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:29-42`
    - Validates generator has ID
    - Extracts entities from referenceData for dropdown
-   - Passes generator directly to BaseEditor
+   - Initializes state management
 
-7. **BaseEditor wraps with form handling**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:24-62`
-   - Manages localGenerator state
-   - Provides handleChange function
-   - Provides Save/Cancel buttons
+7. **GeneratorEditor manages its own state**
+   - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:86-130`
+   - Initializes `formData` state with generator
+   - Sets up `hasChanges` and `isSaving` flags
+   - Configures useEffect hooks for prop synchronization
+   - Provides handleChange, handleSave, handleDurationChange functions
 
 8. **User sees the Generator editor**
    - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:120-363`
@@ -319,6 +320,7 @@ case "Generator":
      - Generator name input
      - Entity template dropdown
      - Entities per creation, max entities
+   - Save/Cancel buttons at bottom of form
 
 ### Console Output
 ```
@@ -326,7 +328,7 @@ case "Generator":
 [useModelPanel] ModelItemData details: { id: 'gen456', name: 'Arrivals', type: 'Generator' }
 [ElementEditor] Rendering GeneratorEditor for type: Generator
 [GeneratorEditor] Entities available: 3
-[BaseEditor] useEffect - new data: { id: 'gen456', name: 'Arrivals', ... }
+[GeneratorEditor] Initializing form state with generator data: { id: 'gen456', name: 'Arrivals', ... }
 ```
 
 ---
@@ -415,41 +417,48 @@ const handleDurationChange = (
 ### Duration Change Triggers Save
 
 1. **GeneratorEditor.handleDurationChange calls onSave**
-   - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:83`
-   - **No BaseEditor.handleSave** - bypassed for Duration edits
+   - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:44-84`
+   - Creates new Generator instance with updated Duration
+   - **Bypasses normal Save button** - immediate save for Duration changes
+   - Sets `isSaving = true` flag
    - Goes directly to parent onSave callback
 
-2. **BaseEditor.onSave creates Generator instance**
-   - File: `quodsim-react/src/features/editors/GeneratorEditor.tsx:97-114`
-   - Creates new Generator instance to preserve class methods
-   - Ensures all properties properly typed
-
 ```typescript
-onSave={(updatedData) => {
+const handleDurationChange = (
+  name: "periodIntervalDuration" | "periodicStartDuration",
+  periodUnit: PeriodUnit,
+  distribution: Distribution
+) => {
   const updatedGenerator = new Generator(
-    updatedData.id,
-    updatedData.name,
-    updatedData.activityKeyId,
-    updatedData.entityId,
-    updatedData.periodicOccurrences,
-    updatedData.periodIntervalDuration,  // Updated Duration object
-    updatedData.entitiesPerCreation,
-    updatedData.periodicStartDuration,
-    updatedData.maxEntities,
-    updatedData.x,
-    updatedData.y
+    generator.id,
+    generator.name,
+    generator.activityKeyId,
+    generator.entityId,
+    generator.periodicOccurrences,
+    name === "periodIntervalDuration"
+      ? new Duration(periodUnit, distribution)  // Updated Duration
+      : generator.periodIntervalDuration,
+    generator.entitiesPerCreation,
+    name === "periodicStartDuration"
+      ? new Duration(periodUnit, distribution)
+      : generator.periodicStartDuration,
+    generator.maxEntities,
+    generator.x,
+    generator.y
   );
+  updatedGenerator.initialStateModifications = generator.initialStateModifications;
 
-  onSave(updatedGenerator);
-}}
+  setIsSaving(true);
+  onSave(updatedGenerator);  // Immediate save
+};
 ```
 
-3. **Callback chain bubbles up**
+2. **Callback chain bubbles up**
    - GeneratorEditor's onSave → ElementEditor's onSave
    - ElementEditor's onSave → ModelPanel's handleElementSave
    - ModelPanel calls useModelPanel.onElementUpdate
 
-4. **useModelPanel.onElementUpdate executes**
+3. **useModelPanel.onElementUpdate executes**
    - File: `quodsim-react/src/messaging/hooks/useModelPanel.ts:149-162`
    - Determines element type from metadata
    - Calls modelOpsSender.updateElementData()
@@ -465,7 +474,7 @@ const onElementUpdate = (elementId: string, data: JsonObject) => {
 
 ### Message Creation and Sending
 
-5. **modelOpsSender.updateElementData creates message**
+4. **modelOpsSender.updateElementData creates message**
    - File: `quodsim-react/src/messaging/senders/modelOpsSender.ts:79-93`
    - Creates ELEMENT_UPDATE envelope
    - Ensures elementId included in data
@@ -487,7 +496,7 @@ const updateElementData = (
 };
 ```
 
-6. **useSender sends via postMessage**
+5. **useSender sends via postMessage**
    - File: `quodsim-react/src/messaging/senders/useSender.ts`
    - Creates envelope with id, type, source, target, version, data
    - Calls `window.parent.postMessage(envelope, '*')`
@@ -720,7 +729,8 @@ storageAdapter.updateElementData(element, dataToStore);
 │                    PHASE 2: UI DISPLAY (React)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapSelection → selectionSlice                        │
-│  ModelPanel → ElementEditor → GeneratorEditor → BaseEditor              │
+│  ModelPanel → ElementEditor → GeneratorEditor                           │
+│  GeneratorEditor initializes state, displays form                       │
 │  Display interarrival time: "1 Hour"                                    │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
@@ -731,15 +741,15 @@ storageAdapter.updateElementData(element, dataToStore);
 ├─────────────────────────────────────────────────────────────────────────┤
 │  EnhancedDurationEditor.onChange → handleDurationChange                 │
 │  Create new Generator with updated Duration                             │
-│  onSave(updatedGenerator) - IMMEDIATE                                   │
+│  setIsSaving(true), onSave(updatedGenerator) - IMMEDIATE                │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ↓
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                 PHASE 4: SAVE TRIGGER (React → Extension)               │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  GeneratorEditor.onSave → ElementEditor.onSave                          │
-│  → useModelPanel.onElementUpdate                                        │
+│  GeneratorEditor.handleDurationChange creates Generator                 │
+│  → ElementEditor.onSave → useModelPanel.onElementUpdate                 │
 │  → modelOpsSender.updateElementData → useSender                         │
 │  window.parent.postMessage(ELEMENT_UPDATE)                              │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -781,10 +791,10 @@ storageAdapter.updateElementData(element, dataToStore);
 | 2 | ElementEditor | `quodsim-react/src/features/modelPanel/ElementEditor.tsx` | 143-154 | Route to GeneratorEditor |
 | 2 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 29-42 | Validate and display Generator |
 | 2 | Generator | `shared/src/types/elements/Generator.ts` | 41-57 | Generator constructor used |
-| 2 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 24-62 | Manage form state |
+| 2 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 86-130 | Initialize state management |
 | 3 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 273-297 | EnhancedDurationEditor for interarrival |
 | 3 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 44-84 | handleDurationChange - immediate save |
-| 4 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 97-114 | Create Generator instance in onSave |
+| 4 | GeneratorEditor | `quodsim-react/src/features/editors/GeneratorEditor.tsx` | 44-84 | Create Generator instance in handleDurationChange |
 | 4 | Generator | `shared/src/types/elements/Generator.ts` | 41-57 | Generator constructor creates instance |
 | 4 | useModelPanel | `quodsim-react/src/messaging/hooks/useModelPanel.ts` | 149-162 | Trigger update |
 | 4 | modelOpsSender | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | 79-93 | Create ELEMENT_UPDATE |
@@ -819,7 +829,7 @@ This shows the full console output for the complete flow:
 [useModelPanel] Reference data entities: 3
 [ElementEditor] Rendering GeneratorEditor for type: Generator
 [GeneratorEditor] Entities available for dropdown: 3
-[BaseEditor] useEffect - new data: { id: 'gen456', name: 'Arrivals', ... }
+[GeneratorEditor] Initializing form state with generator data: { id: 'gen456', name: 'Arrivals', ... }
 
 [GeneratorEditor] User editing interarrival time via EnhancedDurationEditor
 [GeneratorEditor] Duration change detected: periodIntervalDuration

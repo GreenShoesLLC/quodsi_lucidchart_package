@@ -251,13 +251,14 @@ case "Entity":
 6. **EntityEditor is simplest editor**
    - File: `quodsim-react/src/features/editors/EntityEditor.tsx:17-141`
    - No data extraction needed - Entity already simple
-   - Passes entity directly to BaseEditor with preserved methods
+   - Initializes state management directly
 
-7. **BaseEditor wraps with form handling**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:24-62`
-   - Manages localEntity state
-   - Provides handleChange function
-   - Provides Save/Cancel buttons
+7. **EntityEditor manages its own state**
+   - File: `quodsim-react/src/features/editors/EntityEditor.tsx:50-93`
+   - Initializes `formData` state with Entity
+   - Sets up `hasChanges` and `isSaving` flags
+   - Configures useEffect hooks for prop synchronization
+   - Provides handleChange, handleSave, handleCancel functions
 
 8. **User sees the Entity editor**
    - File: `quodsim-react/src/features/editors/EntityEditor.tsx:93-119`
@@ -265,14 +266,14 @@ case "Entity":
    - Basic tab shows:
      - Entity Name input: displays "Part"
      - Description text: "Unique identifier for this entity template"
-   - Save button enabled
+   - Save/Cancel buttons at bottom of form
 
 ### Console Output
 ```
 [MessageProvider] Received SELECTION_CHANGED
 [useModelPanel] ModelItemData details: { id: 'xyz789', name: 'Part', type: 'Entity' }
 [ElementEditor] Rendering EntityEditor for type: Entity
-[BaseEditor] useEffect - new data: { id: 'xyz789', name: 'Part' }
+[EntityEditor] Initializing form state with entity data: { id: 'xyz789', name: 'Part' }
 ```
 
 ---
@@ -283,45 +284,45 @@ case "Entity":
 
 1. **Input onChange handler fires**
    - File: `quodsim-react/src/features/editors/EntityEditor.tsx:105-112`
-   - HTML input with `value={localEntity.name}` and `onChange={handleChange}`
+   - HTML input with `value={formData.name}` and `onChange={handleChange}`
 
 ```typescript
 <input
   type="text"
   name="name"
   className="w-full px-2 py-1.5 text-xs border rounded"
-  value={localEntity.name}
+  value={formData.name}
   onChange={handleChange}
   placeholder="Enter entity name"
 />
 ```
 
-2. **BaseEditor.handleChange updates local state**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:76-90`
+2. **EntityEditor.handleChange updates local state**
+   - File: `quodsim-react/src/features/editors/EntityEditor.tsx:67-80`
    - Extracts name and value from event
-   - Sets `hasUnsavedChanges = true`
-   - Updates localData via setLocalData
+   - Sets `hasChanges = true`
+   - Updates formData via setFormData
 
 ```typescript
 const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
   const { name, value } = e.target;
-  setHasUnsavedChanges(true);
-  setLocalData((prev) => ({
+  setFormData(prev => ({
     ...prev,
     [name]: value,
   }));
+  setHasChanges(true);
 };
 ```
 
 3. **Data transformation (local only)**
-   - Before: `localEntity.name = "Part"`
-   - After: `localEntity.name = "Widget"`
+   - Before: `formData.name = "Part"`
+   - After: `formData.name = "Widget"`
    - **No messages sent** - purely React component state
-   - Save button styling may change (unsaved changes indicator)
+   - Save button becomes enabled (hasChanges = true)
 
 ### Console Output
 ```
-[BaseEditor] handleChange: { name: 'name', value: 'Widget' }
+[EntityEditor] handleChange: { name: 'name', value: 'Widget' }
 ```
 
 ---
@@ -330,36 +331,33 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
 
 ### User Clicks Save Button
 
-1. **BaseEditor.handleSave triggered**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:92-110`
+1. **EntityEditor.handleSave triggered**
+   - File: `quodsim-react/src/features/editors/EntityEditor.tsx:82-91`
    - Sets `isSaving = true` to prevent race conditions
+   - Creates new Entity instance with updated data
    - Calls parent onSave callback
 
-2. **EntityEditor.onSave creates Entity instance**
-   - File: `quodsim-react/src/features/editors/EntityEditor.tsx:33-42`
-   - Creates new Entity instance with updated data
-   - Simplest of all editors - no complex transformations
-
 ```typescript
-onSave={(updatedData) => {
-  // Create a new Entity instance to preserve class methods
-  const updatedEntity = new Entity(
-    updatedData.id,
-    updatedData.name,  // "Widget"
-    updatedData.x,
-    updatedData.y
+const handleSave = () => {
+  setIsSaving(true);
+
+  const entityToSave = new Entity(
+    formData.id,
+    formData.name,  // "Widget"
+    formData.x,
+    formData.y
   );
 
-  onSave(updatedEntity);
-}}
+  onSave(entityToSave);
+};
 ```
 
-3. **Callback chain bubbles up**
+2. **Callback chain bubbles up**
    - EntityEditor's onSave → ElementEditor's onSave
    - ElementEditor's onSave → ModelPanel's handleElementSave
    - ModelPanel calls useModelPanel.onElementUpdate
 
-4. **useModelPanel.onElementUpdate executes**
+3. **useModelPanel.onElementUpdate executes**
    - File: `quodsim-react/src/messaging/hooks/useModelPanel.ts:149-162`
    - Determines element type from metadata
    - Calls modelOpsSender.updateElementData()
@@ -375,7 +373,7 @@ const onElementUpdate = (elementId: string, data: JsonObject) => {
 
 ### Message Creation and Sending
 
-5. **modelOpsSender.updateElementData creates message**
+4. **modelOpsSender.updateElementData creates message**
    - File: `quodsim-react/src/messaging/senders/modelOpsSender.ts:79-93`
    - Creates ELEMENT_UPDATE envelope
    - Ensures elementId included in data
@@ -397,7 +395,7 @@ const updateElementData = (
 };
 ```
 
-6. **useSender sends via postMessage**
+5. **useSender sends via postMessage**
    - File: `quodsim-react/src/messaging/senders/useSender.ts`
    - Creates envelope with id, type, source, target, version, data
    - Calls `window.parent.postMessage(envelope, '*')`
@@ -556,9 +554,9 @@ storageAdapter.updateElementData(element, dataToStore);
    - isSaving flag can be cleared
 
 4. **UI responds to update**
-   - BaseEditor's isSaving becomes false
-   - hasUnsavedChanges cleared
-   - Save button returns to normal state
+   - EntityEditor's isSaving flag cleared after 500ms delay
+   - hasChanges cleared
+   - Save button becomes disabled (no changes)
    - Success notification may appear (if implemented)
 
 5. **Optional: Selection refresh**
@@ -571,7 +569,7 @@ storageAdapter.updateElementData(element, dataToStore);
 ```
 [MessageProvider] Received ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'xyz789' }
-[BaseEditor] Save completed, clearing isSaving flag
+[EntityEditor] Save completed, clearing isSaving flag after delay
 ```
 
 ---
@@ -598,7 +596,8 @@ storageAdapter.updateElementData(element, dataToStore);
 │                    PHASE 2: UI DISPLAY (React)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapSelection → selectionSlice                        │
-│  ModelPanel → ElementEditor → EntityEditor → BaseEditor                 │
+│  ModelPanel → ElementEditor → EntityEditor                              │
+│  EntityEditor initializes state, displays form                          │
 │  Display name input: "Part"                                             │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
@@ -607,9 +606,9 @@ storageAdapter.updateElementData(element, dataToStore);
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    PHASE 3: USER EDIT (Local State)                     │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  Input onChange → BaseEditor.handleChange                               │
-│  localEntity.name = "Widget"                                            │
-│  hasUnsavedChanges = true                                               │
+│  Input onChange → EntityEditor.handleChange                             │
+│  formData.name = "Widget"                                               │
+│  hasChanges = true                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                 3. User clicks Save
@@ -617,7 +616,7 @@ storageAdapter.updateElementData(element, dataToStore);
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                 PHASE 4: SAVE CLICK (React → Extension)                 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  BaseEditor.handleSave → EntityEditor.onSave                            │
+│  EntityEditor.handleSave creates Entity instance                        │
 │  → ElementEditor.onSave → useModelPanel.onElementUpdate                 │
 │  → modelOpsSender.updateElementData → useSender                         │
 │  window.parent.postMessage(ELEMENT_UPDATE)                              │
@@ -659,11 +658,11 @@ storageAdapter.updateElementData(element, dataToStore);
 | 2 | ElementEditor | `quodsim-react/src/features/modelPanel/ElementEditor.tsx` | 168-178 | Route to EntityEditor |
 | 2 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 20-45 | Display Entity form |
 | 2 | Entity | `shared/src/types/elements/Entity.ts` | 22-31 | Entity constructor used |
-| 2 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 24-62 | Manage form state |
+| 2 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 50-93 | Initialize state management |
 | 3 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 105-112 | Name input field |
-| 3 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 76-90 | Handle input change |
-| 4 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 92-110 | Handle save click |
-| 4 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 33-42 | Create Entity instance |
+| 3 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 67-80 | Handle input change |
+| 4 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 82-91 | Handle save click |
+| 4 | EntityEditor | `quodsim-react/src/features/editors/EntityEditor.tsx` | 82-91 | Create Entity instance |
 | 4 | Entity | `shared/src/types/elements/Entity.ts` | 22-31 | Entity constructor creates instance |
 | 4 | useModelPanel | `quodsim-react/src/messaging/hooks/useModelPanel.ts` | 149-162 | Trigger update |
 | 4 | modelOpsSender | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | 79-93 | Create ELEMENT_UPDATE |
@@ -695,12 +694,12 @@ This shows the full console output for the complete flow:
 [selectionSlice] Updating selection state
 [useModelPanel] ModelItemData details: { id: 'xyz789', name: 'Part', type: 'Entity' }
 [ElementEditor] Rendering EntityEditor for type: Entity
-[BaseEditor] useEffect - new data: { id: 'xyz789', name: 'Part' }
+[EntityEditor] Initializing form state with entity data: { id: 'xyz789', name: 'Part' }
 
-[BaseEditor] handleChange: { name: 'name', value: 'Widget' }
+[EntityEditor] handleChange: { name: 'name', value: 'Widget' }
 
-[BaseEditor] handleSave: { id: 'xyz789', name: 'Widget', x: 250, y: 150 }
-[EntityEditor] Creating Entity instance with updated data
+[EntityEditor] handleSave: Creating Entity instance with updated data
+[EntityEditor] Setting isSaving = true
 [useModelPanel] Updating element xyz789 with data: { name: 'Widget', x: 250, y: 150 }
 [modelOpsSender] updateElementData called with elementId: xyz789, type: Entity
 [useSender] Sending ELEMENT_UPDATE to host
@@ -719,7 +718,7 @@ This shows the full console output for the complete flow:
 
 [MessageProvider] Received message: ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'xyz789' }
-[BaseEditor] Save completed, clearing isSaving flag
+[EntityEditor] Save completed, clearing isSaving flag after 500ms delay
 ```
 
 ---

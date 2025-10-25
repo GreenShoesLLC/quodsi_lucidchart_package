@@ -236,24 +236,25 @@ case DiagramElementType.BLOCK:
    - Handles missing or malformed data
    - Preserves all properties (connectType, financialProperties, etc.)
 
-7. **BaseEditor wraps with form handling**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:24-62`
-   - Manages localData state
-   - Provides handleChange function
-   - Provides Save/Cancel buttons
+7. **ActivityEditor manages its own state**
+   - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:87-130`
+   - Initializes `formData` state with extracted Activity
+   - Sets up `hasChanges` and `isSaving` flags
+   - Configures useEffect hooks for prop synchronization
+   - Provides handleChange, handleSave, handleCancel functions
 
 8. **User sees the Activity editor**
    - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:322-342`
    - Name input field displays current value: "Assembly"
    - Tabbed interface with Basic, Operation Steps, Financial, Connectors, States
-   - Save button enabled
+   - Save/Cancel buttons at bottom of form
 
 ### Console Output
 ```
 [MessageProvider] Received SELECTION_CHANGED
 [useModelPanel] ModelItemData details: { id: 'abc123', name: 'Assembly', type: 'Activity' }
 [ElementEditor] Rendering ActivityEditor for type: Activity
-[BaseEditor] useEffect - new data: { id: 'abc123', name: 'Assembly', capacity: 1 }
+[ActivityEditor] Initializing form state with activity data: { id: 'abc123', name: 'Assembly', capacity: 1 }
 ```
 
 ---
@@ -264,45 +265,54 @@ case DiagramElementType.BLOCK:
 
 1. **Input onChange handler fires**
    - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:334-341`
-   - HTML input with `value={localData.name}` and `onChange={handleChange}`
+   - HTML input with `value={formData.name}` and `onChange={handleChange}`
 
 ```typescript
 <input
   type="text"
   name="name"
   className="w-full px-2 py-1.5 text-xs border rounded"
-  value={localData.name}
+  value={formData.name}
   onChange={handleChange}
   placeholder="Enter activity name"
 />
 ```
 
-2. **BaseEditor.handleChange updates local state**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:76-90`
+2. **ActivityEditor.handleChange updates local state**
+   - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:132-146`
    - Extracts name and value from event
-   - Sets `hasUnsavedChanges = true`
-   - Updates localData via setLocalData
+   - Sets `hasChanges = true`
+   - Updates formData via setFormData
 
 ```typescript
 const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
   const { name, value } = e.target;
-  setHasUnsavedChanges(true);
-  setLocalData((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
+  setFormData(prev => {
+    const updatedActivity = new Activity(
+      prev.id, prev.name, prev.capacity,
+      prev.inputBufferCapacity, prev.outputBufferCapacity,
+      prev.operationSteps, prev.x, prev.y
+    );
+    // Update the specific field
+    (updatedActivity as any)[name] = value;
+    // Preserve other properties
+    updatedActivity.connectType = prev.connectType;
+    updatedActivity.financialProperties = prev.financialProperties;
+    return updatedActivity;
+  });
+  setHasChanges(true);
 };
 ```
 
 3. **Data transformation (local only)**
-   - Before: `localData.name = "Assembly"`
-   - After: `localData.name = "Assembly Line"`
+   - Before: `formData.name = "Assembly"`
+   - After: `formData.name = "Assembly Line"`
    - **No messages sent** - purely React component state
-   - Save button styling may change (unsaved changes indicator)
+   - Save button becomes enabled (hasChanges = true)
 
 ### Console Output
 ```
-[BaseEditor] handleChange: { name: 'name', value: 'Assembly Line' }
+[ActivityEditor] handleChange: { name: 'name', value: 'Assembly Line' }
 ```
 
 ---
@@ -311,43 +321,43 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
 
 ### User Clicks Save Button
 
-1. **BaseEditor.handleSave triggered**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:92-110`
+1. **ActivityEditor.handleSave triggered**
+   - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:148-168`
    - Sets `isSaving = true` to prevent race conditions
-   - Calls parent onSave callback
-
-2. **ActivityEditor.handleSave creates Activity instance**
-   - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:98-117`
    - Transforms buffer display values (999999 → Infinity)
    - Creates new Activity instance with updated data
-   - Preserves connectType, financialProperties
+   - Calls parent onSave callback
 
 ```typescript
-const handleSave = (updatedActivity: Activity) => {
+const handleSave = () => {
+  setIsSaving(true);
+
   const activityToSave = new Activity(
-    updatedActivity.id,
-    updatedActivity.name,  // "Assembly Line"
-    updatedActivity.capacity,
-    displayToBuffer(updatedActivity.inputBufferCapacity),
-    displayToBuffer(updatedActivity.outputBufferCapacity),
-    updatedActivity.operationSteps,
-    updatedActivity.x,
-    updatedActivity.y
+    formData.id,
+    formData.name,  // "Assembly Line"
+    formData.capacity,
+    displayToBuffer(formData.inputBufferCapacity),
+    displayToBuffer(formData.outputBufferCapacity),
+    formData.operationSteps,
+    formData.x,
+    formData.y
   );
 
-  activityToSave.connectType = updatedActivity.connectType;
-  activityToSave.financialProperties = updatedActivity.financialProperties;
+  activityToSave.connectType = formData.connectType;
+  activityToSave.financialProperties = formData.financialProperties;
+  activityToSave.preProcessingStateModifications = formData.preProcessingStateModifications;
+  activityToSave.postProcessingStateModifications = formData.postProcessingStateModifications;
 
   onSave(activityToSave);
 };
 ```
 
-3. **Callback chain bubbles up**
+2. **Callback chain bubbles up**
    - ActivityEditor's onSave → ElementEditor's onSave
    - ElementEditor's onSave → ModelPanel's handleElementSave
    - ModelPanel calls useModelPanel.onElementUpdate
 
-4. **useModelPanel.onElementUpdate executes**
+3. **useModelPanel.onElementUpdate executes**
    - File: `quodsim-react/src/messaging/hooks/useModelPanel.ts:149-162`
    - Determines element type from metadata
    - Calls modelOpsSender.updateElementData()
@@ -363,7 +373,7 @@ const onElementUpdate = (elementId: string, data: JsonObject) => {
 
 ### Message Creation and Sending
 
-5. **modelOpsSender.updateElementData creates message**
+4. **modelOpsSender.updateElementData creates message**
    - File: `quodsim-react/src/messaging/senders/modelOpsSender.ts:79-93`
    - Creates ELEMENT_UPDATE envelope
    - Ensures elementId included in data
@@ -385,7 +395,7 @@ const updateElementData = (
 };
 ```
 
-6. **useSender sends via postMessage**
+5. **useSender sends via postMessage**
    - File: `quodsim-react/src/messaging/senders/useSender.ts`
    - Creates envelope with id, type, source, target, version, data
    - Calls `window.parent.postMessage(envelope, '*')`
@@ -576,9 +586,9 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
    - isSaving flag can be cleared
 
 4. **UI responds to update**
-   - BaseEditor's isSaving becomes false
-   - hasUnsavedChanges cleared
-   - Save button returns to normal state
+   - ActivityEditor's isSaving flag cleared after 500ms delay
+   - hasChanges cleared
+   - Save button becomes disabled (no changes)
    - Success notification may appear (if implemented)
 
 5. **Optional: Selection refresh**
@@ -591,7 +601,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ```
 [MessageProvider] Received ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'abc123' }
-[BaseEditor] Save completed, clearing isSaving flag
+[ActivityEditor] Save completed, clearing isSaving flag after delay
 ```
 
 ---
@@ -618,7 +628,8 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 │                    PHASE 2: UI DISPLAY (React)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapSelection → selectionSlice                        │
-│  ModelPanel → ElementEditor → ActivityEditor → BaseEditor               │
+│  ModelPanel → ElementEditor → ActivityEditor                            │
+│  ActivityEditor initializes state, displays form                        │
 │  Display name input: "Assembly"                                         │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
@@ -627,9 +638,9 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    PHASE 3: USER EDIT (Local State)                     │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  Input onChange → BaseEditor.handleChange                               │
-│  localData.name = "Assembly Line"                                       │
-│  hasUnsavedChanges = true                                               │
+│  Input onChange → ActivityEditor.handleChange                           │
+│  formData.name = "Assembly Line"                                        │
+│  hasChanges = true                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                 3. User clicks Save
@@ -637,7 +648,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                 PHASE 4: SAVE CLICK (React → Extension)                 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  BaseEditor.handleSave → ActivityEditor.handleSave                      │
+│  ActivityEditor.handleSave creates Activity instance                    │
 │  → ElementEditor.onSave → useModelPanel.onElementUpdate                 │
 │  → modelOpsSender.updateElementData → useSender                         │
 │  window.parent.postMessage(ELEMENT_UPDATE)                              │
@@ -659,7 +670,8 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 │               PHASE 6: SUCCESS RESPONSE (Extension → React)             │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapElementOps → Update state                         │
-│  Clear isSaving flag → Show success notification                        │
+│  ActivityEditor clears isSaving and hasChanges after delay              │
+│  Show success notification                                              │
 │  Optional: Selection refresh with updated data                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -679,11 +691,11 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 | 2 | ElementEditor | `quodsim-react/src/features/modelPanel/ElementEditor.tsx` | 116-141 | Route to ActivityEditor |
 | 2 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 51-95 | Extract and display Activity |
 | 2 | Activity | `shared/src/types/elements/Activity.ts` | 57-70 | Activity constructor used |
-| 2 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 24-62 | Manage form state |
+| 2 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 87-130 | Initialize state management |
 | 3 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 334-341 | Name input field |
-| 3 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 76-90 | Handle input change |
-| 4 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 92-110 | Handle save click |
-| 4 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 98-117 | Create Activity instance |
+| 3 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 132-146 | Handle input change |
+| 4 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 148-168 | Handle save click |
+| 4 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 148-168 | Create Activity instance |
 | 4 | Activity | `shared/src/types/elements/Activity.ts` | 57-70 | Activity constructor creates instance |
 | 4 | useModelPanel | `quodsim-react/src/messaging/hooks/useModelPanel.ts` | 149-162 | Trigger update |
 | 4 | modelOpsSender | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | 79-93 | Create ELEMENT_UPDATE |
@@ -714,12 +726,12 @@ This shows the full console output for the complete flow:
 [useModelPanel] ModelItemData details: { id: 'abc123', name: 'Assembly', type: 'Activity' }
 [ElementEditor] Rendering ActivityEditor for type: Activity
 [ActivityEditor] Extracting activity data: { id: 'abc123', name: 'Assembly' }
-[BaseEditor] useEffect - new data: { id: 'abc123', name: 'Assembly', capacity: 1 }
+[ActivityEditor] Initializing form state with activity data: { id: 'abc123', name: 'Assembly', capacity: 1 }
 
-[BaseEditor] handleChange: { name: 'name', value: 'Assembly Line' }
+[ActivityEditor] handleChange: { name: 'name', value: 'Assembly Line' }
 
-[BaseEditor] handleSave: { id: 'abc123', name: 'Assembly Line', capacity: 1 }
-[ActivityEditor] Creating Activity instance with updated data
+[ActivityEditor] handleSave: Creating Activity instance with updated data
+[ActivityEditor] Setting isSaving = true
 [useModelPanel] Updating element abc123 with data: { name: 'Assembly Line', ... }
 [modelOpsSender] updateElementData called with elementId: abc123, type: Activity
 [useSender] Sending ELEMENT_UPDATE to host
@@ -736,7 +748,7 @@ This shows the full console output for the complete flow:
 
 [MessageProvider] Received message: ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'abc123' }
-[BaseEditor] Save completed, clearing isSaving flag
+[ActivityEditor] Save completed, clearing isSaving flag after 500ms delay
 ```
 
 ---

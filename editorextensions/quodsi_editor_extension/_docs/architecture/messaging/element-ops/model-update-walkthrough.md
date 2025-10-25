@@ -261,11 +261,12 @@ case "Model":
    - Handles missing or malformed data
    - Applies defaults for all properties
 
-7. **BaseEditor wraps with form handling**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:24-62`
-   - Manages localModel state
-   - Provides handleChange function
-   - Provides Save/Cancel buttons
+7. **ModelEditor manages its own state**
+   - File: `quodsim-react/src/features/editors/ModelEditor.tsx:90-133`
+   - Initializes `formData` state with Model
+   - Sets up `hasChanges` and `isSaving` flags
+   - Configures useEffect hooks for prop synchronization
+   - Provides handleChange, handleSave, handleDurationChange functions
 
 8. **User sees the Model editor**
    - File: `quodsim-react/src/features/editors/ModelEditor.tsx:120-285`
@@ -275,7 +276,7 @@ case "Model":
      - Replications count input: displays "1"
      - Time settings (Clock vs Calendar mode)
      - Warmup and Run time editors
-   - Save button enabled
+   - Save/Cancel buttons at bottom of form
 
 ### Console Output
 ```
@@ -284,7 +285,7 @@ case "Model":
 [useModelPanel] No element selected, creating Model element from page
 [ElementEditor] Rendering ModelEditor for type: Model
 [ModelEditor] Extracting model data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
-[BaseEditor] useEffect - new data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
+[ModelEditor] Initializing form state with model data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
 ```
 
 ---
@@ -295,7 +296,7 @@ case "Model":
 
 1. **Input onChange handler fires**
    - File: `quodsim-react/src/features/editors/ModelEditor.tsx:146-156`
-   - HTML input with `value={localModel.reps}` and `onChange={handleChange}`
+   - HTML input with `value={formData.reps}` and `onChange={handleChange}`
 
 ```typescript
 <div>
@@ -304,39 +305,39 @@ case "Model":
     type="number"
     name="reps"
     className="w-full px-1 py-0.5 text-xs border rounded"
-    value={localModel.reps}
+    value={formData.reps}
     onChange={handleChange}
     min="1"
   />
 </div>
 ```
 
-2. **BaseEditor.handleChange updates local state**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:76-90`
+2. **ModelEditor.handleChange updates local state**
+   - File: `quodsim-react/src/features/editors/ModelEditor.tsx:135-147`
    - Extracts name ("reps") and value ("10") from event
-   - Sets `hasUnsavedChanges = true`
-   - Updates localData via setLocalData
+   - Sets `hasChanges = true`
+   - Updates formData via setFormData
 
 ```typescript
 const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
   const { name, value } = e.target;
-  setHasUnsavedChanges(true);
-  setLocalData((prev) => ({
+  setFormData((prev) => ({
     ...prev,
-    [name]: value,
+    [name]: name === 'reps' ? parseInt(value, 10) : value,
   }));
+  setHasChanges(true);
 };
 ```
 
 3. **Data transformation (local only)**
-   - Before: `localModel.reps = 1`
-   - After: `localModel.reps = 10`
+   - Before: `formData.reps = 1`
+   - After: `formData.reps = 10`
    - **No messages sent** - purely React component state
-   - Save button styling may change (unsaved changes indicator)
+   - Save button becomes enabled (hasChanges = true)
 
 ### Console Output
 ```
-[BaseEditor] handleChange: { name: 'reps', value: '10' }
+[ModelEditor] handleChange: { name: 'reps', value: '10' }
 ```
 
 ---
@@ -345,47 +346,44 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
 
 ### User Clicks Save Button
 
-1. **BaseEditor.handleSave triggered**
-   - File: `quodsim-react/src/features/editors/BaseEditor.tsx:92-110`
+1. **ModelEditor.handleSave triggered**
+   - File: `quodsim-react/src/features/editors/ModelEditor.tsx:149-176`
    - Sets `isSaving = true` to prevent race conditions
-   - Calls parent onSave callback
-
-2. **ModelEditor.handleSave creates Model instance**
-   - File: `quodsim-react/src/features/editors/ModelEditor.tsx:61-88`
    - Ensures all Model properties are included
    - Applies defaults for missing values
-   - Sets type to "Model" (string) for compatibility
+   - Calls parent onSave callback
 
 ```typescript
-const handleSave = (updatedModel: Model) => {
+const handleSave = () => {
+  setIsSaving(true);
+
   const modelToSave: Model = {
-    ...updatedModel,
+    ...formData,
     type: "Model" as any,
-    reps: updatedModel.reps || 1,  // Now 10
-    seed: updatedModel.seed || 12345,
-    simulationTimeType: updatedModel.simulationTimeType || SimulationTimeType.Clock,
-    oneClockUnit: updatedModel.oneClockUnit || PeriodUnit.MINUTES,
-    warmupClockPeriod: updatedModel.warmupClockPeriod || 0,
-    warmupClockPeriodUnit: updatedModel.warmupClockPeriodUnit || PeriodUnit.MINUTES,
-    runClockPeriod: updatedModel.runClockPeriod || 0,
-    runClockPeriodUnit: updatedModel.runClockPeriodUnit || PeriodUnit.MINUTES,
-    forecastDays: updatedModel.forecastDays || 30,
-    warmupDateTime: updatedModel.warmupDateTime || null,
-    startDateTime: updatedModel.startDateTime || null,
-    finishDateTime: updatedModel.finishDateTime || null,
+    reps: formData.reps || 1,  // Now 10
+    seed: formData.seed || 12345,
+    simulationTimeType: formData.simulationTimeType || SimulationTimeType.Clock,
+    oneClockUnit: formData.oneClockUnit || PeriodUnit.MINUTES,
+    warmupClockPeriod: formData.warmupClockPeriod || 0,
+    warmupClockPeriodUnit: formData.warmupClockPeriodUnit || PeriodUnit.MINUTES,
+    runClockPeriod: formData.runClockPeriod || 0,
+    runClockPeriodUnit: formData.runClockPeriodUnit || PeriodUnit.MINUTES,
+    forecastDays: formData.forecastDays || 30,
+    warmupDateTime: formData.warmupDateTime || null,
+    startDateTime: formData.startDateTime || null,
+    finishDateTime: formData.finishDateTime || null,
   };
 
-  setLocalModel(modelToSave);
   onSave(modelToSave);
 };
 ```
 
-3. **Callback chain bubbles up**
+2. **Callback chain bubbles up**
    - ModelEditor's onSave → ElementEditor's onSave
    - ElementEditor's onSave → ModelPanel's handleElementSave
    - ModelPanel calls useModelPanel.onElementUpdate
 
-4. **useModelPanel.onElementUpdate executes**
+3. **useModelPanel.onElementUpdate executes**
    - File: `quodsim-react/src/messaging/hooks/useModelPanel.ts:149-162`
    - Detects Model type from metadata
    - Calls modelOpsSender.updateElementData()
@@ -403,7 +401,7 @@ const onElementUpdate = (elementId: string, data: JsonObject) => {
 
 ### Message Creation and Sending
 
-5. **modelOpsSender.updateElementData creates message**
+4. **modelOpsSender.updateElementData creates message**
    - File: `quodsim-react/src/messaging/senders/modelOpsSender.ts:79-93`
    - Creates ELEMENT_UPDATE envelope
    - Ensures elementId included in data
@@ -425,7 +423,7 @@ const updateElementData = (
 };
 ```
 
-6. **useSender sends via postMessage**
+5. **useSender sends via postMessage**
    - File: `quodsim-react/src/messaging/senders/useSender.ts`
    - Creates envelope with id, type, source, target, version, data
    - Calls `window.parent.postMessage(envelope, '*')`
@@ -584,9 +582,9 @@ page.shapeData.set('q_meta', JSON.stringify({
    - isSaving flag can be cleared
 
 4. **UI responds to update**
-   - BaseEditor's isSaving becomes false
-   - hasUnsavedChanges cleared
-   - Save button returns to normal state
+   - ModelEditor's isSaving flag cleared after 500ms delay
+   - hasChanges cleared
+   - Save button becomes disabled (no changes)
    - Success notification may appear (if implemented)
 
 5. **Optional: Selection refresh**
@@ -599,7 +597,7 @@ page.shapeData.set('q_meta', JSON.stringify({
 ```
 [MessageProvider] Received ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'page123' }
-[BaseEditor] Save completed, clearing isSaving flag
+[ModelEditor] Save completed, clearing isSaving flag after delay
 ```
 
 ---
@@ -627,7 +625,8 @@ page.shapeData.set('q_meta', JSON.stringify({
 │                    PHASE 2: UI DISPLAY (React)                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapSelection → selectionSlice                        │
-│  ModelPanel → ElementEditor → ModelEditor → BaseEditor                  │
+│  ModelPanel → ElementEditor → ModelEditor                               │
+│  ModelEditor initializes state, displays form                           │
 │  Display reps input: "1"                                                │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
@@ -636,9 +635,9 @@ page.shapeData.set('q_meta', JSON.stringify({
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                    PHASE 3: USER EDIT (Local State)                     │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  Input onChange → BaseEditor.handleChange                               │
-│  localModel.reps = 10                                                   │
-│  hasUnsavedChanges = true                                               │
+│  Input onChange → ModelEditor.handleChange                              │
+│  formData.reps = 10                                                     │
+│  hasChanges = true                                                      │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                 3. User clicks Save
@@ -646,7 +645,7 @@ page.shapeData.set('q_meta', JSON.stringify({
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                 PHASE 4: SAVE CLICK (React → Extension)                 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  BaseEditor.handleSave → ModelEditor.handleSave                         │
+│  ModelEditor.handleSave creates Model instance                          │
 │  → ElementEditor.onSave → useModelPanel.onElementUpdate                 │
 │  → modelOpsSender.updateElementData → useSender                         │
 │  window.parent.postMessage(ELEMENT_UPDATE)                              │
@@ -668,7 +667,8 @@ page.shapeData.set('q_meta', JSON.stringify({
 │               PHASE 6: SUCCESS RESPONSE (Extension → React)             │
 ├─────────────────────────────────────────────────────────────────────────┤
 │  MessageProvider → mapElementOps → Update state                         │
-│  Clear isSaving flag → Show success notification                        │
+│  ModelEditor clears isSaving and hasChanges after delay                 │
+│  Show success notification                                              │
 │  Optional: Selection refresh with updated data                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -690,11 +690,11 @@ page.shapeData.set('q_meta', JSON.stringify({
 | 2 | ElementEditor | `quodsim-react/src/features/modelPanel/ElementEditor.tsx` | 116-127 | Route to ModelEditor |
 | 2 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 35-55 | Extract and display Model |
 | 2 | Model | `shared/src/types/elements/Model.ts` | 28-43 | Model constructor used |
-| 2 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 24-62 | Manage form state |
+| 2 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 90-133 | Initialize state management |
 | 3 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 146-156 | Reps input field |
-| 3 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 76-90 | Handle input change |
-| 4 | BaseEditor | `quodsim-react/src/features/editors/BaseEditor.tsx` | 92-110 | Handle save click |
-| 4 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 61-88 | Create Model instance |
+| 3 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 135-147 | Handle input change |
+| 4 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 149-176 | Handle save click |
+| 4 | ModelEditor | `quodsim-react/src/features/editors/ModelEditor.tsx` | 149-176 | Create Model instance |
 | 4 | Model | `shared/src/types/elements/Model.ts` | 28-43 | Model constructor creates instance |
 | 4 | useModelPanel | `quodsim-react/src/messaging/hooks/useModelPanel.ts` | 149-162 | Trigger update for Model |
 | 4 | modelOpsSender | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | 79-93 | Create ELEMENT_UPDATE |
@@ -728,12 +728,12 @@ This shows the full console output for the complete flow:
 [useModelPanel] ModelItemData details: { id: 'page123', type: 'Model' }
 [ElementEditor] Rendering ModelEditor for type: Model
 [ModelEditor] Extracting model data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
-[BaseEditor] useEffect - new data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
+[ModelEditor] Initializing form state with model data: { id: 'page123', name: 'Manufacturing Model', reps: 1 }
 
-[BaseEditor] handleChange: { name: 'reps', value: '10' }
+[ModelEditor] handleChange: { name: 'reps', value: '10' }
 
-[BaseEditor] handleSave: { id: 'page123', name: 'Manufacturing Model', reps: 10 }
-[ModelEditor] Creating Model instance with updated data
+[ModelEditor] handleSave: Creating Model instance with updated data
+[ModelEditor] Setting isSaving = true
 [useModelPanel] Updating element page123 with data: { reps: 10, ... }
 [modelOpsSender] updateElementData called with elementId: page123, type: Model
 [useSender] Sending ELEMENT_UPDATE to host
@@ -751,7 +751,7 @@ This shows the full console output for the complete flow:
 
 [MessageProvider] Received message: ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'page123' }
-[BaseEditor] Save completed, clearing isSaving flag
+[ModelEditor] Save completed, clearing isSaving flag after 500ms delay
 ```
 
 ---

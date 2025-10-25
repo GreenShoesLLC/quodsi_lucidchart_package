@@ -123,15 +123,16 @@ ELEMENT_UPDATE message sent
 
 **When user clicks Save button:**
 
-1. Editor's `onSave` handler called with updated data
-2. Callback bubbles up: Editor → ElementEditor → ModelPanel → useModelPanel
-3. `useModelPanel` calls `modelOpsSender.updateElementData()`
-4. `modelOpsSender` creates ELEMENT_UPDATE envelope
-5. Message sent via `window.parent.postMessage()`
-6. Extension receives and processes
-7. ELEMENT_UPDATE_RESULT returned
-8. `mapElementOps` converts to reducer action
-9. UI updated with success/error state
+1. Editor's internal `handleSave` creates updated element instance
+2. Editor calls parent `onSave` callback with element data
+3. Callback bubbles up: Editor → ElementEditor → ModelPanel → useModelPanel
+4. `useModelPanel` calls `modelOpsSender.updateElementData()`
+5. `modelOpsSender` creates ELEMENT_UPDATE envelope
+6. Message sent via `window.parent.postMessage()`
+7. Extension receives and processes
+8. ELEMENT_UPDATE_RESULT returned
+9. `mapElementOps` converts to reducer action
+10. UI updated with success/error state
 
 ### Component Responsibilities
 
@@ -141,10 +142,38 @@ ELEMENT_UPDATE message sent
 - Handles save callback routing
 
 **Specific Editors (Activity, Resource, etc.):**
-- Render element-specific UI forms
+- Manage their own form state using React hooks (useState, useEffect)
+- Track changes with `hasChanges` and `isSaving` flags
+- Render element-specific UI forms with Save/Cancel buttons
 - Validate user input
-- Trigger save on button click
+- Create properly typed element instances on save
 - Display validation errors
+
+**Editor State Management Pattern:**
+Each editor follows this pattern:
+```typescript
+const [formData, setFormData] = useState<T>(() => extractData(element));
+const [hasChanges, setHasChanges] = useState(false);
+const [isSaving, setIsSaving] = useState(false);
+
+// Sync with prop changes when not editing
+useEffect(() => {
+  if (!hasChanges && !isSaving) {
+    setFormData(extractData(element));
+  }
+}, [element, hasChanges, isSaving]);
+
+// Clear saving flag after brief delay
+useEffect(() => {
+  if (isSaving) {
+    const timer = setTimeout(() => {
+      setIsSaving(false);
+      setHasChanges(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }
+}, [isSaving]);
+```
 
 **useModelPanel Hook:**
 - Connects UI components to messaging system

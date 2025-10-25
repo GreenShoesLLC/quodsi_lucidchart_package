@@ -165,23 +165,30 @@ const extractResourceData = (res: any): Resource => {
 };
 ```
 
-**BaseEditor wraps form:**
+**ResourceEditor manages state directly:**
 ```typescript
-<BaseEditor data={extractedResource} onSave={onSave} onCancel={onCancel}>
-  {(localResource, handleChange) => (
-    // Three tabs: basic, finance, states
-    <div className="space-y-2">
-      {activeTab === "basic" && (
-        <input
-          type="number"
-          name="capacity"
-          value={localResource.capacity}  // Current value: 1
-          onChange={handleChange}
-        />
-      )}
-    </div>
+const [formData, setFormData] = useState<Resource>(() => extractResourceData(resource));
+const [hasChanges, setHasChanges] = useState(false);
+const [isSaving, setIsSaving] = useState(false);
+
+// Sync with prop changes
+useEffect(() => {
+  if (!hasChanges && !isSaving) {
+    setFormData(extractResourceData(resource));
+  }
+}, [resource, hasChanges, isSaving]);
+
+// Render form with direct state
+<div className="space-y-2">
+  {activeTab === "basic" && (
+    <input
+      type="number"
+      name="capacity"
+      value={formData.capacity}  // Current value: 1
+      onChange={handleChange}
+    />
   )}
-</BaseEditor>
+</div>
 ```
 
 ### Phase 3: User Edit (Local State)
@@ -190,18 +197,19 @@ User changes capacity from 1 to 3:
 
 ```typescript
 // User types "3" in capacity input
-handleChange({
-  target: { name: 'capacity', value: '3' }
-});
-
-// BaseEditor updates local state
-setLocalData({ ...localData, capacity: 3 });
-setHasUnsavedChanges(true);  // Enable Save button
+const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    [name]: name === 'capacity' ? parseInt(value, 10) : value,
+  }));
+  setHasChanges(true);  // Enable Save button
+};
 ```
 
 **Local state now:**
 ```typescript
-{
+formData = {
   id: "res_123",
   name: "Server Pool",
   capacity: 3,  // Changed from 1
@@ -209,6 +217,7 @@ setHasUnsavedChanges(true);  // Enable Save button
   y: 200,
   financialProperties: ResourceFinancialProperties { ... }
 }
+hasChanges = true
 ```
 
 ### Phase 4: Save Click (React → Extension)
@@ -216,11 +225,13 @@ setHasUnsavedChanges(true);  // Enable Save button
 User clicks Save button:
 
 ```typescript
-// BaseEditor handleSave
+// ResourceEditor handleSave
 const handleSave = () => {
+  setIsSaving(true);
+
   // Create new Resource instance to preserve class methods
-  const updatedResource = new Resource(
-    localData.id,
+  const resourceToSave = new Resource(
+    formData.id,
     localData.name,
     localData.capacity,  // 3
     localData.x,
@@ -374,7 +385,7 @@ case 'ELEMENT_UPDATE_RESULT':
     // Clear unsaved changes flag
     setHasUnsavedChanges(false);
 
-    // Show success message (BaseEditor)
+    // Show success message (ResourceEditor clears isSaving flag)
     console.log('Resource saved successfully');
   }
 ```
@@ -383,7 +394,7 @@ case 'ELEMENT_UPDATE_RESULT':
 ```
 [MessageRouter] Sending ELEMENT_UPDATE_RESULT to modelPanel
 [MessageProvider] Received ELEMENT_UPDATE_RESULT
-[BaseEditor] Save successful
+[ResourceEditor] Save successful, clearing isSaving flag after delay
 ```
 
 ## Unique Characteristics of Resource Updates
@@ -416,7 +427,7 @@ const handleFinancialChange = (field, value, localData, handleChange) => {
     [field]: value
   });
 
-  // Trigger BaseEditor's handleChange
+  // Trigger ResourceEditor's handleChange
   handleChange({
     target: {
       name: "financialProperties",
@@ -498,7 +509,7 @@ Uses normal Save button flow (unlike Generator's immediate save for Durations):
 | 17 | **Finance Tab** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 200-302 | Financial tracking UI (enabled + 3 cost fields) |
 | 18 | **handleFinancialChange** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 48-72 | Updates individual financial fields |
 | 19 | **States Tab** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 305-311 | StatesEditor component for state management |
-| 20 | **BaseEditor Wrapper** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 75-104 | Provides form handling, Save/Cancel buttons |
+| 20 | **ResourceEditor State Management** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 75-130 | Manages form state with useState/useEffect hooks |
 | 21 | **onSave Handler** | `quodsim-react/src/features/editors/ResourceEditor.tsx` | 87-100 | Creates new Resource instance, preserves financial |
 | 22 | **modelOpsSender** | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | - | Creates ELEMENT_UPDATE message |
 | 23 | **MessageProvider** | `quodsim-react/src/messaging/MessageProvider.tsx` | - | Posts message to extension via postMessage |
