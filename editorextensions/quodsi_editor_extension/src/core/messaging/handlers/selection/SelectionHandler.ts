@@ -19,6 +19,7 @@ import { ProcessorFactory } from './processors/ProcessorFactory';
 import { selectionTypeUtils } from './utils/selectionTypeUtils';
 import { SelectionStateData } from './types';
 import { ModelManager } from '../../../ModelManager';
+import { itemDataBuilder } from './utils/itemDataBuilder';
 
 /**
  * Handler for selection and document context related messages
@@ -169,7 +170,7 @@ export class SelectionHandler {
   /**
    * Send current selection state to React app
    */
-  public static sendSelectionChangedMessage(): void {
+  public static async sendSelectionChangedMessage(): Promise<void> {
     // Get data from both state managers
     const selectionData = SelectionHandler.selectionState.getData();
     const documentData = SelectionHandler.documentContext.getData();
@@ -210,12 +211,38 @@ export class SelectionHandler {
       console.error('[SelectionHandler] Error retrieving resource requirements:', error);
     }
 
+    // Build modelItemData for Quodsi model pages when not already present
+    let modelItemData = selectionData.modelItemData;
+    if (documentData.isQuodsiModel && !modelItemData && SelectionHandler.modelManager) {
+      try {
+        const client = ModelManager.getClient();
+        const viewport = new Viewport(client);
+        const page = viewport.getCurrentPage();
+
+        if (page) {
+          console.log('[SelectionHandler] Building modelItemData for Quodsi model page');
+          modelItemData = await itemDataBuilder.buildModelItemData(
+            page,
+            SelectionHandler.modelManager
+          );
+          console.log('[SelectionHandler] Built modelItemData:', {
+            id: modelItemData?.id,
+            hasData: !!modelItemData?.data,
+            dataKeys: modelItemData?.data ? Object.keys(modelItemData.data) : []
+          });
+        }
+      } catch (error) {
+        console.error('[SelectionHandler] Error building modelItemData:', error);
+      }
+    }
+
     // Combine data for the message
     const messageData: any = {
       ...selectionData,
       documentContext: documentData,
       states: states,
-      resourceRequirements: resourceRequirements
+      resourceRequirements: resourceRequirements,
+      ...(modelItemData ? { modelItemData } : {})
     };
 
     console.log('[SelectionHandler] Sending SELECTION_CHANGED message', {
@@ -223,7 +250,9 @@ export class SelectionHandler {
       hasModel: messageData.hasModel,
       itemCount: messageData.selectionCount,
       statesCount: states.length,
-      requirementsCount: resourceRequirements.length
+      requirementsCount: resourceRequirements.length,
+      hasModelItemData: !!messageData.modelItemData,
+      modelItemDataId: messageData.modelItemData?.id
     });
 
     // Send message via router

@@ -259,7 +259,10 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
             pageId: selectionData.documentContext.pageId,
             documentTitle: selectionData.documentContext.title,
             isQuodsiModel: selectionData.documentContext.isQuodsiModel,
-            metadata: selectionData.documentContext.metadata
+            metadata: {
+              ...(selectionData.documentContext.metadata || {}),
+              ...(selectionData.modelItemData ? { modelItemData: selectionData.modelItemData } : {})
+            }
           }
         } : {}),
         // Include reference data if present

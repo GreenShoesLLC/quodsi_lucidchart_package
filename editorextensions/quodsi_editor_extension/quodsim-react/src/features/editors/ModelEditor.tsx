@@ -46,17 +46,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
   const { selection } = useMessaging();
   const { requestModelJson } = useModelOpsSender();
 
-  if (isDevelopment) {
-    console.log('[ModelEditor] RENDER - model prop received:', {
-      model,
-      modelKeys: model ? Object.keys(model) : [],
-      hasData: !!((model as any)?.data),
-      dataKeys: (model as any)?.data ? Object.keys((model as any).data) : [],
-      runClockPeriod: model?.runClockPeriod || ((model as any)?.data?.runClockPeriod),
-      modelId: model?.id
-    });
-  }
-
   // Listen for MODEL_JSON_RESPONSE
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -85,18 +74,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
 
   // Helper function to ensure all model properties are present
   const extractModelData = (mod: any): Model => {
-    if (isDevelopment) {
-      console.log('[ModelEditor] extractModelData INPUT:', {
-        mod,
-        hasData: !!(mod as any)?.data,
-        hasMod: !!mod,
-        modKeys: mod ? Object.keys(mod) : [],
-        dataKeys: (mod as any)?.data ? Object.keys((mod as any).data) : [],
-        modRunClockPeriod: mod?.runClockPeriod,
-        dataRunClockPeriod: (mod as any)?.data?.runClockPeriod
-      });
-    }
-
     const data = (mod as any).data || mod;
 
     const result = {
@@ -116,16 +93,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       finishDateTime: data.finishDateTime || null,
     };
 
-    if (isDevelopment) {
-      console.log('[ModelEditor] extractModelData OUTPUT:', {
-        result,
-        runClockPeriod: result.runClockPeriod,
-        hasRunClockPeriod: 'runClockPeriod' in data,
-        dataRunClockPeriod: data.runClockPeriod,
-        usedDefault: !data.runClockPeriod
-      });
-    }
-
     return result;
   };
 
@@ -141,23 +108,25 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
     return initialData;
   });
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Sync with model prop changes (only when no unsaved changes)
+  // Sync with model prop changes (only when no unsaved changes and not saving)
   useEffect(() => {
     if (isDevelopment) {
       console.log('[ModelEditor] useEffect TRIGGERED:', {
         hasChanges,
+        isSaving,
         modelId: model?.id,
         currentFormDataId: formData.id,
         modelRunClockPeriod: model?.runClockPeriod || ((model as any)?.data?.runClockPeriod),
         formDataRunClockPeriod: formData.runClockPeriod,
-        willUpdate: !hasChanges,
+        willUpdate: !hasChanges && !isSaving,
         modelPropType: typeof model,
         modelPropKeys: model ? Object.keys(model) : []
       });
     }
 
-    if (!hasChanges) {
+    if (!hasChanges && !isSaving) {
       const newFormData = extractModelData(model);
       setFormData(newFormData);
 
@@ -169,10 +138,48 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       }
     } else {
       if (isDevelopment) {
-        console.log('[ModelEditor] useEffect SKIPPED (hasChanges=true)');
+        console.log('[ModelEditor] useEffect SKIPPED', {
+          hasChanges,
+          isSaving,
+          reason: hasChanges ? 'hasChanges=true' : 'isSaving=true'
+        });
       }
     }
-  }, [model, hasChanges, isDevelopment]);
+  }, [model, hasChanges, isSaving, isDevelopment]);
+
+  // Listen for save confirmation and clear isSaving flag immediately
+  useEffect(() => {
+    const handleSaveConfirmation = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase;
+
+      // Check if this is an ELEMENT_UPDATE_RESULT message
+      if (msg?.type === EnvelopeMessageType.ELEMENT_UPDATE_RESULT) {
+        const data = msg.data as {
+          success: boolean;
+          elementId: string;
+          errorMessage?: string;
+        };
+
+        if (data.success && isSaving) {
+          if (isDevelopment) {
+            console.log('[ModelEditor] Save confirmed, clearing isSaving flag');
+          }
+          // Clear flags immediately when save is confirmed
+          setIsSaving(false);
+          setHasChanges(false);
+        } else if (!data.success) {
+          if (isDevelopment) {
+            console.error('[ModelEditor] Save failed:', data.errorMessage);
+          }
+          // On error, just clear isSaving but keep hasChanges so user can retry
+          setIsSaving(false);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleSaveConfirmation);
+    return () => window.removeEventListener('message', handleSaveConfirmation);
+  }, [isSaving, isDevelopment]);
 
   // Handle form input changes with type conversion
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -233,10 +240,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
     }
 
     onSave(modelToSave);
-    setHasChanges(false);
+    setIsSaving(true); // Will be cleared by useEffect after 500ms
 
     if (isDevelopment) {
-      console.log('[ModelEditor] handleSave COMPLETED - hasChanges set to false');
+      console.log('[ModelEditor] handleSave COMPLETED - isSaving set to true');
     }
   };
 
@@ -251,225 +258,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
     // Request model JSON from extension
     requestModelJson(selection.documentContext?.documentId || '');
   };
-
-  const ModelForm = () => (
-    <>
-      <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
-        <div className="space-y-2">
-              {/* Model Name - Always Visible WITH LABEL */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Model Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  className="w-full px-2 py-1 text-xs border rounded"
-                  value={formData.name}
-                  placeholder="Enter model name"
-                  onChange={handleChange}
-                />
-            </div>
-
-            {/* Run Time - Conditional: Only in Clock mode */}
-            {formData.simulationTimeType === SimulationTimeType.Clock && (
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Run Time
-                </label>
-                <div className="grid grid-cols-2 gap-1">
-                  <input
-                    type="number"
-                    name="runClockPeriod"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={formData.runClockPeriod || 0}
-                    onChange={handleChange}
-                    min="0"
-                  />
-                  <select
-                    name="runClockPeriodUnit"
-                    className="w-full px-2 py-1 text-xs border rounded bg-white"
-                    value={formData.runClockPeriodUnit || PeriodUnit.HOURS}
-                    onChange={handleChange}
-                  >
-                    {Object.values(PeriodUnit).map((unit) => (
-                      <option key={unit} value={unit}>
-                        {unit}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
-
-            {/* Advanced Settings - Accordion */}
-            <AccordionSection
-              title="Advanced Settings"
-              isExpanded={isAdvancedExpanded}
-              onToggle={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
-            >
-              <div className="space-y-2">
-                {/* Replications */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Replications
-                  </label>
-                  <input
-                    type="number"
-                    name="reps"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={formData.reps}
-                    onChange={handleChange}
-                    min="1"
-                  />
-                </div>
-
-                {/* Time Mode */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Time Mode
-                  </label>
-                  <select
-                    name="simulationTimeType"
-                    className="w-full px-2 py-1 text-xs border rounded bg-white"
-                    value={formData.simulationTimeType}
-                    onChange={handleChange}
-                  >
-                    {Object.values(SimulationTimeType).map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Clock Mode Fields - Conditional */}
-                {formData.simulationTimeType === SimulationTimeType.Clock && (
-                  <>
-                    {/* Clock Unit */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Clock Unit
-                      </label>
-                      <select
-                        name="oneClockUnit"
-                        className="w-full px-2 py-1 text-xs border rounded bg-white"
-                        value={formData.oneClockUnit}
-                        onChange={handleChange}
-                      >
-                        {Object.values(PeriodUnit).map((unit) => (
-                          <option key={unit} value={unit}>
-                            {unit}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Warmup Time - Simple number + dropdown */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Warmup Time
-                      </label>
-                      <div className="grid grid-cols-2 gap-1">
-                        <input
-                          type="number"
-                          name="warmupClockPeriod"
-                          className="w-full px-2 py-1 text-xs border rounded"
-                          value={formData.warmupClockPeriod || 0}
-                          onChange={handleChange}
-                          min="0"
-                        />
-                        <select
-                          name="warmupClockPeriodUnit"
-                          className="w-full px-2 py-1 text-xs border rounded bg-white"
-                          value={formData.warmupClockPeriodUnit || PeriodUnit.HOURS}
-                          onChange={handleChange}
-                        >
-                          {Object.values(PeriodUnit).map((unit) => (
-                            <option key={unit} value={unit}>
-                              {unit}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* Calendar Date Mode Fields - Conditional */}
-                {formData.simulationTimeType === SimulationTimeType.CalendarDate && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="startDateTime"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.startDateTime?.toISOString().slice(0, 16) || ""}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Finish Date
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="finishDateTime"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.finishDateTime?.toISOString().slice(0, 16) || ""}
-                        onChange={handleChange}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Warmup Date
-                      </label>
-                      <input
-                        type="datetime-local"
-                        name="warmupDateTime"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.warmupDateTime?.toISOString().slice(0, 16) || ""}
-                        onChange={handleChange}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </AccordionSection>
-          </div>
-
-          {/* Save/Cancel Buttons */}
-          <div className="flex space-x-2 mt-2 justify-end">
-            <button
-              type="submit"
-              className="px-2 py-1 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-              disabled={!hasChanges}
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-    <button
-      type="button"
-      className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1 mt-2"
-      onClick={handleViewModelClick}
-      title="View Model Definition as JSON"
-    >
-      <FileJson className="w-3 h-3" />
-      View Model JSON
-    </button>
-    </>
-  );
 
   return (
     <div className="flex flex-col bg-white">
@@ -526,7 +314,224 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
       </div>
     </div>
 
-      {activeTab === "basic" && <ModelForm />}
+      {activeTab === "basic" && (
+        <>
+          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
+            <div className="space-y-2">
+                  {/* Model Name - Always Visible WITH LABEL */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Model Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={formData.name}
+                      placeholder="Enter model name"
+                      onChange={handleChange}
+                    />
+                </div>
+
+                {/* Run Time - Conditional: Only in Clock mode */}
+                {formData.simulationTimeType === SimulationTimeType.Clock && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Run Time
+                    </label>
+                    <div className="grid grid-cols-2 gap-1">
+                      <input
+                        type="number"
+                        name="runClockPeriod"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={formData.runClockPeriod || 0}
+                        onChange={handleChange}
+                        min="0"
+                      />
+                      <select
+                        name="runClockPeriodUnit"
+                        className="w-full px-2 py-1 text-xs border rounded bg-white"
+                        value={formData.runClockPeriodUnit || PeriodUnit.HOURS}
+                        onChange={handleChange}
+                      >
+                        {Object.values(PeriodUnit).map((unit) => (
+                          <option key={unit} value={unit}>
+                            {unit}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {/* Advanced Settings - Accordion */}
+                <AccordionSection
+                  title="Advanced Settings"
+                  isExpanded={isAdvancedExpanded}
+                  onToggle={() => setIsAdvancedExpanded(!isAdvancedExpanded)}
+                >
+                  <div className="space-y-2">
+                    {/* Replications */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Replications
+                      </label>
+                      <input
+                        type="number"
+                        name="reps"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={formData.reps}
+                        onChange={handleChange}
+                        min="1"
+                      />
+                    </div>
+
+                    {/* Time Mode */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Time Mode
+                      </label>
+                      <select
+                        name="simulationTimeType"
+                        className="w-full px-2 py-1 text-xs border rounded bg-white"
+                        value={formData.simulationTimeType}
+                        onChange={handleChange}
+                      >
+                        {Object.values(SimulationTimeType).map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Clock Mode Fields - Conditional */}
+                    {formData.simulationTimeType === SimulationTimeType.Clock && (
+                      <>
+                        {/* Clock Unit */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Clock Unit
+                          </label>
+                          <select
+                            name="oneClockUnit"
+                            className="w-full px-2 py-1 text-xs border rounded bg-white"
+                            value={formData.oneClockUnit}
+                            onChange={handleChange}
+                          >
+                            {Object.values(PeriodUnit).map((unit) => (
+                              <option key={unit} value={unit}>
+                                {unit}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Warmup Time - Simple number + dropdown */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Warmup Time
+                          </label>
+                          <div className="grid grid-cols-2 gap-1">
+                            <input
+                              type="number"
+                              name="warmupClockPeriod"
+                              className="w-full px-2 py-1 text-xs border rounded"
+                              value={formData.warmupClockPeriod || 0}
+                              onChange={handleChange}
+                              min="0"
+                            />
+                            <select
+                              name="warmupClockPeriodUnit"
+                              className="w-full px-2 py-1 text-xs border rounded bg-white"
+                              value={formData.warmupClockPeriodUnit || PeriodUnit.HOURS}
+                              onChange={handleChange}
+                            >
+                              {Object.values(PeriodUnit).map((unit) => (
+                                <option key={unit} value={unit}>
+                                  {unit}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Calendar Date Mode Fields - Conditional */}
+                    {formData.simulationTimeType === SimulationTimeType.CalendarDate && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Start Date
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="startDateTime"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={formData.startDateTime?.toISOString().slice(0, 16) || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Finish Date
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="finishDateTime"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={formData.finishDateTime?.toISOString().slice(0, 16) || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Warmup Date
+                          </label>
+                          <input
+                            type="datetime-local"
+                            name="warmupDateTime"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={formData.warmupDateTime?.toISOString().slice(0, 16) || ""}
+                            onChange={handleChange}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </AccordionSection>
+              </div>
+
+              {/* Save/Cancel Buttons */}
+              <div className="flex space-x-2 mt-2 justify-end">
+                <button
+                  type="submit"
+                  className="px-2 py-1 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  disabled={!hasChanges}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="px-2 py-1 bg-white text-gray-700 border border-gray-300 rounded shadow-sm hover:bg-gray-50 transition-colors text-xs font-medium focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+        <button
+          type="button"
+          className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1 mt-2"
+          onClick={handleViewModelClick}
+          title="View Model Definition as JSON"
+        >
+          <FileJson className="w-3 h-3" />
+          View Model JSON
+        </button>
+        </>
+      )}
       {activeTab === "states" && (
         <div>
           <div className="flex items-center gap-1 mb-1 p-2">
@@ -629,4 +634,4 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
   );
 };
 
-export default ModelEditor;
+export default React.memo(ModelEditor);

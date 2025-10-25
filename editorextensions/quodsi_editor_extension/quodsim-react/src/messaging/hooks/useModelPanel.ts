@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { useMessaging } from '../MessageProvider';
 import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
@@ -67,53 +68,66 @@ export function useModelPanel() {
   }
   
   // Extract current element based on appropriate case
-  let modelItemData: ExtendedModelItemData | null = null;
-  
-  if (selection.selectedElements && selection.selectedElements.length > 0) {
-    // If elements are selected, use the first one
-    const selectedElement = selection.selectedElements[0];
-    logger.debug('Using selected element (before transform):', selectedElement);
-    modelItemData = transformToModelItemData(selectedElement);
-    logger.debug('Transformed modelItemData result:', modelItemData);
-  } else if (documentContext.isQuodsiModel) {
-    // If no element is selected but we have a Quodsi model,
-    // check if we have modelItemData in the metadata
-    if (documentContext.metadata?.modelItemData) {
-      logger.debug('Using modelItemData from metadata:', documentContext.metadata.modelItemData);
-      modelItemData = documentContext.metadata.modelItemData;
+  const modelItemData: ExtendedModelItemData | null = useMemo(() => {
 
-      if (modelItemData) {
-        logger.log('[useModelPanel] Model data from metadata:', {
-          hasData: !!modelItemData.data,
-          dataKeys: modelItemData.data ? Object.keys(modelItemData.data) : [],
-          runClockPeriod: modelItemData.data?.runClockPeriod,
-          fullData: modelItemData.data
+    if (selection.selectedElements && selection.selectedElements.length > 0) {
+      // If elements are selected, use the first one
+      const selectedElement = selection.selectedElements[0];
+      logger.debug('Using selected element (before transform):', selectedElement);
+      const transformed = transformToModelItemData(selectedElement);
+      logger.debug('Transformed modelItemData result:', transformed);
+      return transformed;
+    } else if (documentContext.isQuodsiModel) {
+      // If no element is selected but we have a Quodsi model,
+      // check if we have modelItemData in the metadata
+      if (documentContext.metadata?.modelItemData) {
+        logger.debug('Using modelItemData from metadata:', documentContext.metadata.modelItemData);
+        const fromMetadata = documentContext.metadata.modelItemData;
+
+        if (fromMetadata) {
+          logger.log('[useModelPanel] Model data from metadata:', {
+            hasData: !!fromMetadata.data,
+            dataKeys: fromMetadata.data ? Object.keys(fromMetadata.data) : [],
+            runClockPeriod: fromMetadata.data?.runClockPeriod,
+            fullData: fromMetadata.data
+          });
+        }
+        return fromMetadata;
+      } else {
+        // Create a Model element from the page - similar to buildModelItemData in old code
+        logger.warn('[useModelPanel] ⚠️ Creating Model element with EMPTY data object');
+
+        const createdModel = {
+          id: documentContext.documentId,
+          data: {}, // Empty data object for now
+          metadata: {
+            type: SimulationObjectType.Model,
+            version: '1.0',
+            // Removed lastModified - not needed for placeholder
+            id: documentContext.documentId
+          },
+          name: documentContext.documentTitle || 'Untitled Model'
+        };
+
+        logger.warn('[useModelPanel] ⚠️ Created Model element with empty data:', {
+          modelItemData: createdModel,
+          documentContext,
+          hasMetadata: !!documentContext.metadata,
+          metadataKeys: documentContext.metadata ? Object.keys(documentContext.metadata) : []
         });
+
+        return createdModel;
       }
-    } else {
-      // Create a Model element from the page - similar to buildModelItemData in old code
-      logger.warn('[useModelPanel] ⚠️ Creating Model element with EMPTY data object');
-
-      modelItemData = {
-        id: documentContext.documentId,
-        data: {}, // Empty data object for now - THIS IS THE PROBLEM!
-        metadata: {
-          type: SimulationObjectType.Model,
-          version: '1.0',
-          lastModified: new Date().toISOString(),
-          id: documentContext.documentId
-        },
-        name: documentContext.documentTitle || 'Untitled Model'
-      };
-
-      logger.warn('[useModelPanel] ⚠️ Created Model element with empty data:', {
-        modelItemData,
-        documentContext,
-        hasMetadata: !!documentContext.metadata,
-        metadataKeys: documentContext.metadata ? Object.keys(documentContext.metadata) : []
-      });
     }
-  }
+
+    return null;
+  }, [
+    selection.selectedElements,
+    documentContext.isQuodsiModel,
+    documentContext.metadata?.modelItemData,
+    documentContext.documentId,
+    documentContext.documentTitle
+  ]);
   
   // Log important flags about modelItemData
   if (modelItemData) {

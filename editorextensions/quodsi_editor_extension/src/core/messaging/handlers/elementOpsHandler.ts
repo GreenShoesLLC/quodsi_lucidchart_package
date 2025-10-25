@@ -2,6 +2,7 @@ import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType } f
 import { router } from '../index';
 import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { SelectionHandler } from './selection/SelectionHandler';
 
 
 /**
@@ -126,14 +127,24 @@ export class ElementOpsHandler {
           elementId: data.elementId
         }
       });
-      
-      // Handle selection change to refresh UI
-      const selectedItems = viewport.getSelectedItems();
-      if (selectedItems.some(item => item.id === data.elementId)) {
-        // Re-selecting the element will refresh the UI
-        viewport.setSelectedItems(selectedItems); // Use correct method name
+
+      // Refresh the UI by sending updated selection data
+      // For Model updates, trigger a SELECTION_CHANGED to refresh React with new data
+      if (data.type === 'Model' || data.type === SimulationObjectType.Model) {
+        console.log('[ElementOpsHandler] Triggering SELECTION_CHANGED after Model save');
+        await SelectionHandler.sendSelectionChangedMessage();
+      } else {
+        // For element updates, force a selection change to trigger refresh
+        const selectedItems = viewport.getSelectedItems();
+        if (selectedItems.some(item => item.id === data.elementId)) {
+          console.log('[ElementOpsHandler] Forcing selection refresh for element:', data.elementId);
+          // Deselect and re-select to force a change event
+          viewport.setSelectedItems([]);
+          await new Promise(resolve => setTimeout(resolve, 10));
+          viewport.setSelectedItems(selectedItems);
+        }
       }
-      
+
       return true;
       
     } catch (error) {
