@@ -175,41 +175,9 @@ export class SelectionHandler {
     const selectionData = SelectionHandler.selectionState.getData();
     const documentData = SelectionHandler.documentContext.getData();
 
-    // Get states from page if available
-    let states: any[] = [];
-    try {
-      if (SelectionHandler.modelManager) {
-        // Get the current page from the client viewport
-        const client = ModelManager.getClient();
-        const viewport = new Viewport(client);
-        const page = viewport.getCurrentPage();
-
-        if (page) {
-          const storageAdapter = SelectionHandler.modelManager.getStorageAdapter();
-          states = storageAdapter.getStates(page);
-        }
-      }
-    } catch (error) {
-      console.error('[SelectionHandler] Error retrieving states:', error);
-    }
-
-    // Get resource requirements from page if available
-    let resourceRequirements: any[] = [];
-    try {
-      if (SelectionHandler.modelManager) {
-        // Get the current page from the client viewport
-        const client = ModelManager.getClient();
-        const viewport = new Viewport(client);
-        const page = viewport.getCurrentPage();
-
-        if (page) {
-          const storageAdapter = SelectionHandler.modelManager.getStorageAdapter();
-          resourceRequirements = storageAdapter.getResourceRequirements(page);
-        }
-      }
-    } catch (error) {
-      console.error('[SelectionHandler] Error retrieving resource requirements:', error);
-    }
+    // NOTE: states and resourceRequirements are now included in referenceData
+    // They are built by referenceDataBuilder.buildAllReferenceData() from ModelDefinition
+    // This eliminates duplicate retrieval and centralizes all reference data
 
     // Build modelItemData for Quodsi model pages when not already present
     let modelItemData = selectionData.modelItemData;
@@ -237,11 +205,10 @@ export class SelectionHandler {
     }
 
     // Combine data for the message
+    // Note: states and resourceRequirements are now in selectionData.referenceData
     const messageData: any = {
       ...selectionData,
       documentContext: documentData,
-      states: states,
-      resourceRequirements: resourceRequirements,
       ...(modelItemData ? { modelItemData } : {})
     };
 
@@ -249,8 +216,9 @@ export class SelectionHandler {
       selectionType: messageData.selectionType,
       hasModel: messageData.hasModel,
       itemCount: messageData.selectionCount,
-      statesCount: states.length,
-      requirementsCount: resourceRequirements.length,
+      hasReferenceData: !!messageData.referenceData,
+      statesCount: messageData.referenceData?.states?.length || 0,
+      requirementsCount: messageData.referenceData?.resourceRequirements?.length || 0,
       hasModelItemData: !!messageData.modelItemData,
       modelItemDataId: messageData.modelItemData?.id
     });

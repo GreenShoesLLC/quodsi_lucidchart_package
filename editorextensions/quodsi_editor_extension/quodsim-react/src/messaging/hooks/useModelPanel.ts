@@ -351,8 +351,8 @@ export function useModelPanel() {
     validationState,
     simulationStatus: simulationStatusProxy,
     referenceData,
-    states: selection.states || [],
-    resourceRequirements: selection.resourceRequirements || [],
+    states: referenceData?.states || [],
+    resourceRequirements: referenceData?.resourceRequirements || [],
     outgoingConnectors,
 
     // UI state

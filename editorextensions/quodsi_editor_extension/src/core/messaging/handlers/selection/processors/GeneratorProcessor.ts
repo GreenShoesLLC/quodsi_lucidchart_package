@@ -69,8 +69,8 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
           modelManager
         );
 
-        // Get entity reference data
-        messageData.referenceData = await referenceDataBuilder.buildEntityReferenceData(
+        // Get complete reference data for all editors
+        messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
           modelManager
         );
         

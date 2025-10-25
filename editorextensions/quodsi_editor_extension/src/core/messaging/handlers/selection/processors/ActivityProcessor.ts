@@ -69,8 +69,8 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           modelManager
         );
 
-        // Get resource reference data
-        messageData.referenceData = await referenceDataBuilder.buildResourceReferenceData(
+        // Get complete reference data for all editors
+        messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
           modelManager
         );
 

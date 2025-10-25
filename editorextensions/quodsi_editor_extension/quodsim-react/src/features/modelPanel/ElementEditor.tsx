@@ -7,6 +7,7 @@ import {
 } from "@quodsi/shared";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
+import { getSimulationObjectType } from "../../utils/typeDetection";
 
 import ModelEditor from "../editors/ModelEditor";
 import ActivityEditor from "../editors/ActivityEditor";
@@ -45,8 +46,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   resourceRequirements,
   outgoingConnectors,
 }) => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
   // Helper to get descriptive title for the accordion section
   const getElementTypeDisplay = () => {
     return elementType === SimulationObjectType.Model
@@ -63,57 +62,15 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
     }
   };
 
-  // Determines the correct element type from various sources
-  const getElementType = () => {
-    // Check for resource type from multiple sources
-    const isResource = 
-      elementType === SimulationObjectType.Resource ||
-      elementType === "Resource" ||
-      currentElement?.type === "Resource" ||
-      currentElement?.metadata?.type === SimulationObjectType.Resource ||
-      currentElement?.metadata?.type === "Resource" ||
-      currentElement?.q_meta?.type === "Resource" ||
-      elementData?.type === "Resource";
-
-    if (isResource) return SimulationObjectType.Resource;
-
-    // Use metadata/q_meta type if available
-    const metadataType = currentElement?.metadata?.type || currentElement?.q_meta?.type;
-    if (metadataType && metadataType !== SimulationObjectType.None) {
-      return metadataType;
-    }
-
-    // Handle diagram element types
-    if (elementType === DiagramElementType.LINE || elementType === "line") {
-      return SimulationObjectType.Connector;
-    }
-
-    // Return the provided element type
-    return elementType;
-  };
-
   // Renders the appropriate editor component based on element type
   const renderEditor = () => {
-    const safeElementType = getElementType();
+    const safeElementType = getSimulationObjectType(elementType, currentElement, elementData);
 
     // Ensure element data has ID
     const safeElementData = {
       ...(elementData && typeof elementData === "object" ? elementData : {}),
       id: elementData?.id || currentElement?.id || "",
     };
-
-    if (isDevelopment) {
-      console.log("[ElementEditor] Rendering editor for:", {
-        safeElementType,
-        safeElementDataId: safeElementData.id,
-        elementDataKeys: Object.keys(elementData || {}),
-        safeElementDataKeys: Object.keys(safeElementData),
-        hasRunClockPeriod: 'runClockPeriod' in safeElementData,
-        runClockPeriod: safeElementData.runClockPeriod,
-        isModel: safeElementType === SimulationObjectType.Model || safeElementType === "Model",
-        fullSafeElementData: safeElementData
-      });
-    }
 
     // Validate we have required data
     if (!safeElementData.id) {
@@ -129,27 +86,10 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
     switch (safeElementType) {
       case SimulationObjectType.Model:
       case "Model":
-        if (isDevelopment) {
-          console.log("[ElementEditor] Passing to ModelEditor:", {
-            model: safeElementData,
-            modelKeys: Object.keys(safeElementData),
-            hasRunClockPeriod: 'runClockPeriod' in safeElementData,
-            runClockPeriod: safeElementData.runClockPeriod
-          });
-        }
         return (
           <ModelEditor
             model={safeElementData}
-            onSave={(data) => {
-              if (isDevelopment) {
-                console.log("[ElementEditor] ModelEditor onSave called:", {
-                  data,
-                  dataKeys: Object.keys(data),
-                  runClockPeriod: data.runClockPeriod
-                });
-              }
-              onSave(data);
-            }}
+            onSave={onSave}
             onCancel={handleCancel}
             states={states}
             onStatesChange={onStatesChange}
@@ -160,7 +100,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
 
       case SimulationObjectType.Activity:
       case "Activity":
-      case DiagramElementType.BLOCK:
         return (
           <ActivityEditor
             activity={safeElementData}
@@ -212,7 +151,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
 
       case SimulationObjectType.Connector:
       case "Connector":
-      case DiagramElementType.LINE:
         // Try to find source Activity for routing configuration
         const sourceActivityRef = referenceData.activities?.find(
           (a) => a.id === safeElementData.sourceId
@@ -221,9 +159,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         if (sourceActivityRef) {
           // Show ConnectorsEditor with routing configuration
           // Note: We're passing a minimal activity object - ConnectorsEditor will handle it
-          if (isDevelopment) {
-            console.log("[ElementEditor] Showing ConnectorsEditor for connector:", safeElementData.id, "from activity:", sourceActivityRef.id);
-          }
           return (
             <ConnectorsEditor
               activity={sourceActivityRef as any}
@@ -238,21 +173,13 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         }
 
         // Error: Source Activity not found - data integrity issue
-        if (isDevelopment) {
-          console.error("[ElementEditor] Source Activity not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
-        }
+        console.error("[ElementEditor] Source Activity not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
         return (
           <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
             <div className="font-medium">Cannot edit connector</div>
             <div className="text-xs mt-1">
               Source Activity not found. This indicates a data integrity issue.
             </div>
-            {isDevelopment && (
-              <div className="text-xs mt-2 text-red-500">
-                Connector ID: {safeElementData.id}<br />
-                Source ID: {safeElementData.sourceId || 'not set'}
-              </div>
-            )}
           </div>
         );
 

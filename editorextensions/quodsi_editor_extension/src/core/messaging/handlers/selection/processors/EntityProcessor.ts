@@ -9,6 +9,7 @@ import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
+import { referenceDataBuilder } from '../utils/referenceDataBuilder';
 
 /**
  * Processor for entity selection
@@ -61,16 +62,23 @@ export class EntityProcessor extends BaseSelectionProcessor {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
-          item, 
+          item,
           modelManager
         );
-        
+
+        // Get complete reference data for all editors
+        messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
+          modelManager
+        );
+
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
-        
+
         console.log('[EntityProcessor] Processed entity data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
+          hasRefData: messageData.referenceData ? 'yes' : 'no',
+          statesCount: messageData.referenceData?.states?.length || 0,
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {

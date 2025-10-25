@@ -65,8 +65,8 @@ export class ModelProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      // Build complete reference data for model editor
-      messageData.referenceData = await referenceDataBuilder.buildCompleteReferenceData(
+      // Get complete reference data for all editors
+      messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
         modelManager
       );
 

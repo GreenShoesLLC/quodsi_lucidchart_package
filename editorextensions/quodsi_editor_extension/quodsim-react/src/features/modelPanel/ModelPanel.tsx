@@ -6,6 +6,7 @@ import { ElementEditor } from './ElementEditor';
 import { ValidationPanel } from './ValidationPanel';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
+import { getSimulationObjectType } from '../../utils/typeDetection';
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -284,9 +285,11 @@ export const ModelPanel: React.FC = () => {
               ...currentElement.data,
               id: currentElement.id // Ensure ID is included in elementData
             }}
-            elementType={currentElement.metadata?.type || currentElement.q_meta?.type ||
-              (diagramElementType === DiagramElementType.LINE ? SimulationObjectType.Connector :
-               currentElement.type || SimulationObjectType.None)}
+            elementType={getSimulationObjectType(
+              currentElement.metadata?.type || currentElement.q_meta?.type || currentElement.type,
+              currentElement,
+              currentElement.data
+            )}
             onSave={data => onElementUpdate(currentElement.id, data)}
             referenceData={referenceData}
             isExpanded={expandedSections.elementEditor}

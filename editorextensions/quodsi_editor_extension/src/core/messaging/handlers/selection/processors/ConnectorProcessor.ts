@@ -75,12 +75,12 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
-          item, 
+          item,
           modelManager
         );
-        
-        // Get complete reference data for connectors (includes all elements)
-        messageData.referenceData = await referenceDataBuilder.buildCompleteReferenceData(
+
+        // Get complete reference data for all editors
+        messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
           modelManager
         );
         
