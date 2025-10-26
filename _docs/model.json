@@ -1,0 +1,637 @@
+{
+  "formatVersion": "1.0",
+  "metadata": {
+    "version": "1.0",
+    "timestamp": "2025-10-26T19:38:18.811Z"
+  },
+  "model": {
+    "id": "0_0",
+    "name": "Page 1",
+    "reps": 1,
+    "seed": 12345,
+    "oneClockUnit": "HOURS",
+    "simulationTimeType": "Clock",
+    "warmupClockPeriod": 0,
+    "warmupClockPeriodUnit": "HOURS",
+    "runClockPeriod": 11,
+    "runClockPeriodUnit": "HOURS",
+    "warmupDateTime": null,
+    "startDateTime": null,
+    "finishDateTime": null
+  },
+  "entities": [
+    {
+      "id": "00000000-0000-0000-0000-000000000000",
+      "name": "Default Entity",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
+    },
+    {
+      "id": "7dz2zmr9VOca",
+      "name": "GreenE",
+      "type": "Entity",
+      "x": 20,
+      "y": 680
+    },
+    {
+      "id": "Rd3YVlhnGa~j",
+      "name": "Widget4",
+      "type": "Entity",
+      "x": -860,
+      "y": 49.2737644152036
+    },
+    {
+      "id": "nez2K7ssnrxg",
+      "name": "Blue",
+      "type": "Entity",
+      "x": 280,
+      "y": 680
+    }
+  ],
+  "activities": [
+    {
+      "id": "vGZY3vEyNNKx",
+      "name": "Decision",
+      "type": "Activity",
+      "x": -459.32692562968623,
+      "y": 353.43085216045597,
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "triangular",
+              "parameters": {
+                "left": 0,
+                "mode": 5,
+                "right": 10
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "vGZY7OtiDWdd",
+          "name": "Decision → Process",
+          "type": "Connector",
+          "sourceId": "vGZY3vEyNNKx",
+          "targetId": "vGZYMb4-W73g",
+          "sourceX": 446.02614408838826,
+          "sourceY": 795.704511723316,
+          "targetX": 553.4620717420981,
+          "targetY": 795.704511723316,
+          "x": 499.7441079152432,
+          "y": 795.704511723316,
+          "probability": 0.5,
+          "operationSteps": [],
+          "entityTemplateUniqueId": "7dz2zmr9VOca",
+          "stateCondition": {
+            "stateName": "color",
+            "comparison": "==",
+            "value": "blue"
+          },
+          "stateModifications": []
+        },
+        {
+          "id": "vGZYLLI5dlSn",
+          "name": "Decision → Document",
+          "type": "Connector",
+          "sourceId": "vGZY3vEyNNKx",
+          "targetId": "vGZYV-fPYbJG",
+          "sourceX": 367.51971319886974,
+          "sourceY": 736.2014208010228,
+          "targetX": 367.51394113260284,
+          "targetY": 642.8518356451513,
+          "x": 367.5168271657363,
+          "y": 689.5266282230871,
+          "probability": 0.5,
+          "operationSteps": [],
+          "entityTemplateUniqueId": "nez2K7ssnrxg",
+          "stateCondition": {
+            "stateName": "color",
+            "comparison": "==",
+            "value": "green"
+          },
+          "stateModifications": []
+        }
+      ],
+      "financialProperties": {
+        "enabled": false,
+        "fixedCost": 0,
+        "costPerEntityProcessed": 0,
+        "costPerHourActive": 0,
+        "costPerHourIdle": 0,
+        "resourceCostMultiplier": 1
+      },
+      "connectType": "StateCondition"
+    },
+    {
+      "id": "vGZYMb4-W73g",
+      "name": "Process",
+      "type": "Activity",
+      "x": -192.88461708645764,
+      "y": 353.43085216045597,
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "vGZY6Ktx8JGE",
+          "name": "Process → Data",
+          "type": "Connector",
+          "sourceId": "vGZYMb4-W73g",
+          "targetId": "vGZYX30aDQqS",
+          "sourceX": 714.4619717420986,
+          "sourceY": 795.704511723316,
+          "targetX": 835.8869228496894,
+          "targetY": 795.704511723316,
+          "x": 775.174447295894,
+          "y": 795.704511723316,
+          "probability": 1,
+          "operationSteps": [],
+          "stateModifications": []
+        }
+      ],
+      "connectType": "Probability"
+    },
+    {
+      "id": "vGZYV-fPYbJG",
+      "name": "Document",
+      "type": "Activity",
+      "x": -459.33269769595313,
+      "y": 150.25467581946646,
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [],
+      "connectType": "Probability"
+    },
+    {
+      "id": "vGZYX30aDQqS",
+      "name": "Data",
+      "type": "Activity",
+      "x": 73.55769145677164,
+      "y": 353.43085216045597,
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "vGZYRDOD95k_",
+          "name": "Data → End",
+          "type": "Connector",
+          "sourceId": "vGZYX30aDQqS",
+          "targetId": "vGZYf8GxywO9",
+          "sourceX": 964.9217377209654,
+          "sourceY": 795.704511723316,
+          "targetX": 1086.3463269687118,
+          "targetY": 794.9666121261589,
+          "x": 1025.6340323448385,
+          "y": 795.3355619247375,
+          "probability": 1,
+          "operationSteps": [],
+          "stateModifications": []
+        }
+      ],
+      "connectType": "Probability"
+    },
+    {
+      "id": "vGZYf8GxywO9",
+      "name": "End",
+      "type": "Activity",
+      "x": 340.0000000000002,
+      "y": 373.43085216045597,
+      "capacity": 1,
+      "inputBufferCapacity": 1,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [],
+      "financialProperties": {
+        "enabled": false,
+        "fixedCost": 0,
+        "costPerEntityProcessed": 0,
+        "costPerHourActive": 0,
+        "costPerHourIdle": 0,
+        "resourceCostMultiplier": 1
+      },
+      "postProcessingStateModifications": [
+        {
+          "stateUniqueId": "state-1760443403655-e4ien4lh8",
+          "stateName": "thruput",
+          "operation": "+=",
+          "value": 1
+        }
+      ],
+      "connectType": "Probability"
+    },
+    {
+      "id": "vGZYk~hTeVL0",
+      "name": "Process",
+      "type": "Activity",
+      "x": -725.769234172915,
+      "y": 353.43085216045597,
+      "capacity": 1,
+      "inputBufferCapacity": 2,
+      "outputBufferCapacity": 1,
+      "operationSteps": [
+        {
+          "duration": {
+            "durationPeriodUnit": "MINUTES",
+            "distribution": {
+              "distributionType": "constant",
+              "parameters": {
+                "value": 1
+              },
+              "description": ""
+            }
+          },
+          "requirementId": null,
+          "quantity": 1
+        }
+      ],
+      "connectors": [
+        {
+          "id": "vGZYqIHoX979",
+          "name": "Process → Decision",
+          "type": "Connector",
+          "sourceId": "vGZYk~hTeVL0",
+          "targetId": "vGZY3vEyNNKx",
+          "sourceX": 181.57735465564116,
+          "sourceY": 795.704511723316,
+          "targetX": 289.0132823093512,
+          "targetY": 795.704511723316,
+          "x": 235.29531848249619,
+          "y": 795.704511723316,
+          "probability": 1,
+          "operationSteps": [],
+          "stateModifications": []
+        }
+      ],
+      "financialProperties": {
+        "enabled": false,
+        "fixedCost": 0,
+        "costPerEntityProcessed": 0,
+        "costPerHourActive": 0,
+        "costPerHourIdle": 0,
+        "resourceCostMultiplier": 1
+      },
+      "connectType": "Probability"
+    }
+  ],
+  "resources": [
+    {
+      "id": "4l-Yk84gHL~_",
+      "name": "Res2",
+      "type": "Resource",
+      "x": -1040,
+      "y": 700,
+      "capacity": 2,
+      "financialProperties": {
+        "enabled": true,
+        "costPerSeize": 0,
+        "costPerHourUtilized": 0,
+        "costPerHourIdle": 0
+      }
+    },
+    {
+      "id": "Yl-YSMYu207q",
+      "name": "Res1",
+      "type": "Resource",
+      "x": -1280,
+      "y": 700,
+      "capacity": 1,
+      "financialProperties": {
+        "enabled": false,
+        "costPerSeize": 0,
+        "costPerHourUtilized": 0,
+        "costPerHourIdle": 0
+      }
+    },
+    {
+      "id": "_l-Yg1huNplk",
+      "name": "Res3b",
+      "type": "Resource",
+      "x": -780,
+      "y": 700,
+      "capacity": 3,
+      "financialProperties": {
+        "enabled": false,
+        "costPerSeize": 0,
+        "costPerHourUtilized": 0,
+        "costPerHourIdle": 0
+      }
+    }
+  ],
+  "generators": [
+    {
+      "id": "Eo-YEEi8kxY8",
+      "name": "BlueGenerator",
+      "type": "Generator",
+      "x": -992.2115427161439,
+      "y": 500,
+      "activityKeyId": "{SomeActivityName}",
+      "entityId": "nez2K7ssnrxg",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationPeriodUnit": "HOURS",
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 1
+          },
+          "description": ""
+        }
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationPeriodUnit": "HOURS",
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 1
+          },
+          "description": ""
+        }
+      },
+      "maxEntities": 999,
+      "connectors": [
+        {
+          "id": "tt_YPb5tiI.0",
+          "name": "Blue → Process",
+          "type": "Connector",
+          "sourceId": "Eo-YEEi8kxY8",
+          "targetId": "vGZYk~hTeVL0",
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": -645.769234172915,
+          "targetY": 474.4308021604562,
+          "x": -322.8846170864575,
+          "y": 237.2154010802281,
+          "probability": 1,
+          "operationSteps": [],
+          "stateModifications": []
+        }
+      ],
+      "initialStateModifications": [
+        {
+          "stateUniqueId": "state-1760443194919-mytqyg8mw",
+          "stateName": "color",
+          "operation": "=",
+          "value": "blue"
+        }
+      ]
+    },
+    {
+      "id": "vGZYgAVBupar",
+      "name": "GreenGenerator",
+      "type": "Generator",
+      "x": -992.2115427161439,
+      "y": 373.43085216045597,
+      "activityKeyId": "{SomeActivityName}",
+      "entityId": "7dz2zmr9VOca",
+      "periodicOccurrences": 10,
+      "periodIntervalDuration": {
+        "durationPeriodUnit": "HOURS",
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 1
+          },
+          "description": ""
+        }
+      },
+      "entitiesPerCreation": 1,
+      "periodicStartDuration": {
+        "durationPeriodUnit": "HOURS",
+        "distribution": {
+          "distributionType": "constant",
+          "parameters": {
+            "value": 1
+          },
+          "description": ""
+        }
+      },
+      "maxEntities": 1000,
+      "connectors": [
+        {
+          "id": "vGZYIy3aZUfl",
+          "name": "Green → Process",
+          "type": "Connector",
+          "sourceId": "vGZYgAVBupar",
+          "targetId": "vGZYk~hTeVL0",
+          "sourceX": -84.8645920277437,
+          "sourceY": 795.704511723316,
+          "targetX": 20.577454655640693,
+          "targetY": 795.704511723316,
+          "x": -32.1435686860515,
+          "y": 795.704511723316,
+          "probability": 1,
+          "operationSteps": [],
+          "stateModifications": []
+        }
+      ],
+      "initialStateModifications": [
+        {
+          "stateUniqueId": "state-1760443194919-mytqyg8mw",
+          "stateName": "color",
+          "operation": "=",
+          "value": "green"
+        }
+      ]
+    }
+  ],
+  "resourceRequirements": [
+    {
+      "id": "4l-Yk84gHL~_",
+      "name": "Res2",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "4l-Yk84gHL~_",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    },
+    {
+      "id": "Yl-YSMYu207q",
+      "name": "Res1",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "Yl-YSMYu207q",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    },
+    {
+      "id": "_l-Yg1huNplk",
+      "name": "Res3b",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "clause-1",
+          "mode": "REQUIRE_ALL",
+          "requests": [
+            {
+              "resourceId": "_l-Yg1huNplk",
+              "quantity": 1,
+              "priority": 1,
+              "keepResource": false
+            }
+          ],
+          "subClauses": []
+        }
+      ]
+    },
+    {
+      "id": "req-1761485865100",
+      "name": "Flexible Options2",
+      "type": "ResourceRequirement",
+      "rootClauses": [
+        {
+          "clauseId": "root-clause",
+          "mode": "REQUIRE_ANY",
+          "requests": [],
+          "subClauses": [
+            {
+              "clauseId": "sub-clause-0",
+              "mode": "REQUIRE_ALL",
+              "parentClauseId": "root-clause",
+              "requests": [
+                {
+                  "resourceId": "4l-Yk84gHL~_",
+                  "quantity": 1,
+                  "priority": 1,
+                  "keepResource": false
+                }
+              ],
+              "subClauses": []
+            },
+            {
+              "clauseId": "sub-clause-1",
+              "mode": "REQUIRE_ALL",
+              "parentClauseId": "root-clause",
+              "requests": [
+                {
+                  "resourceId": "Yl-YSMYu207q",
+                  "quantity": 2,
+                  "priority": 1,
+                  "keepResource": false
+                }
+              ],
+              "subClauses": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "states": [
+    {
+      "id": "state-1760443194919-mytqyg8mw",
+      "name": "color",
+      "componentType": "ENTITY",
+      "dataType": "CATEGORY",
+      "initialValue": "blue",
+      "categoryValues": ["blue", "green"],
+      "collectStatistics": true
+    },
+    {
+      "id": "state-1760443403655-e4ien4lh8",
+      "name": "thruput",
+      "componentType": "MODEL",
+      "dataType": "NUMBER",
+      "initialValue": 0,
+      "collectStatistics": true
+    }
+  ]
+}

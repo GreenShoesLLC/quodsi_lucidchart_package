@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2 } from 'lucide-react';
 import { ResourceRequirement } from '@quodsi/shared';
 import { convertRootClausesToStructure, generatePreview } from '../../utils/resourceRequirementConverter';
 
@@ -112,18 +112,18 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
                   <div className="flex gap-1 ml-2 flex-shrink-0">
                     <button
                       onClick={() => onEdit(req)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                      className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                       title="Edit requirement"
                     >
-                      <Edit2 size={14} />
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                     {!isAutoRequirement(req) && (
                       <button
                         onClick={() => handleDelete(req)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
                         title="Delete requirement"
                       >
-                        <Trash2 size={14} />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>

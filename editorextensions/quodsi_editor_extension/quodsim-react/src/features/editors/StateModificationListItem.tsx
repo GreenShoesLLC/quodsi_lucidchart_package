@@ -112,7 +112,7 @@ const StateModificationListItem: React.FC<Props> = ({
             <button
               type="button"
               onClick={onEdit}
-              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
               title="Edit modification"
             >
               <Edit2 className="w-3.5 h-3.5" />
@@ -120,7 +120,7 @@ const StateModificationListItem: React.FC<Props> = ({
             <button
               type="button"
               onClick={onDelete}
-              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
               title="Delete modification"
             >
               <Trash2 className="w-3.5 h-3.5" />
