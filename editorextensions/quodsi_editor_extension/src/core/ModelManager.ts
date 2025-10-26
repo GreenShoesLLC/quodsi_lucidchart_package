@@ -138,10 +138,23 @@ export class ModelManager {
     private async ensureModelDefinition(): Promise<ModelDefinition | null> {
         this.checkCacheTimeouts();
 
-        if (this.changeTracker.modelDefinitionDirty && this.currentPage) {
+        console.log('[ModelManager][ensureModelDefinition] Called:', {
+            hasModelDefinition: !!this.modelDefinition,
+            isDirty: this.changeTracker.modelDefinitionDirty,
+            hasCurrentPage: !!this.currentPage,
+            currentPageId: this.currentPage?.id,
+            willRebuild: (this.changeTracker.modelDefinitionDirty || !this.modelDefinition) && !!this.currentPage
+        });
+
+        if ((this.changeTracker.modelDefinitionDirty || !this.modelDefinition) && this.currentPage) {
             this.debug.log('Rebuilding ModelDefinition due to pending changes:', {
                 pendingChanges: Array.from(this.changeTracker.pendingChanges),
                 changeCount: this.changeTracker.pendingChanges.size
+            });
+
+            console.log('[ModelManager][ensureModelDefinition] Starting build from page:', {
+                pageId: this.currentPage.id,
+                pageTitle: this.currentPage.getTitle?.() || 'unknown'
             });
 
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
@@ -174,6 +187,14 @@ export class ModelManager {
                 this.changeTracker.lastModelDefinitionUpdate = Date.now();
                 this.changeTracker.pendingChanges.clear();
 
+                console.log('[ModelManager][ensureModelDefinition] Build complete:', {
+                    hasModelDef: !!this.modelDefinition,
+                    resourcesCount: this.modelDefinition?.resources?.size() || 0,
+                    requirementsCount: this.modelDefinition?.resourceRequirements?.size() || 0,
+                    statesCount: this.modelDefinition?.states?.size() || 0,
+                    activitiesCount: this.modelDefinition?.activities?.size() || 0
+                });
+
                 return this.modelDefinition;
 
             } catch (error) {
@@ -181,6 +202,11 @@ export class ModelManager {
                 throw error;
             }
         }
+
+        console.log('[ModelManager][ensureModelDefinition] SKIPPED rebuild - returning cached/null:', {
+            reason: !this.currentPage ? 'NO_CURRENT_PAGE' : 'ALREADY_BUILT',
+            hasModelDefinition: !!this.modelDefinition
+        });
 
         return this.modelDefinition;
     }

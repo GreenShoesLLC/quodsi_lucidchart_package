@@ -20,6 +20,7 @@ import { selectionTypeUtils } from './utils/selectionTypeUtils';
 import { SelectionStateData } from './types';
 import { ModelManager } from '../../../ModelManager';
 import { itemDataBuilder } from './utils/itemDataBuilder';
+import { referenceDataBuilder } from './utils/referenceDataBuilder';
 
 /**
  * Handler for selection and document context related messages
@@ -204,12 +205,41 @@ export class SelectionHandler {
       }
     }
 
+    // Build referenceData for Quodsi model pages when not already present
+    let referenceData = selectionData.referenceData;
+    if (documentData.isQuodsiModel && !referenceData && SelectionHandler.modelManager) {
+      try {
+        // Ensure ModelManager has currentPage set before building reference data
+        // This is critical for initial panel load where currentPage isn't set yet
+        const client = ModelManager.getClient();
+        const viewport = new Viewport(client);
+        const page = viewport.getCurrentPage();
+
+        if (page) {
+          SelectionHandler.modelManager.setCurrentPage(page);
+        }
+
+        console.log('[SelectionHandler] Building referenceData for Quodsi model page');
+        referenceData = await referenceDataBuilder.buildAllReferenceData(
+          SelectionHandler.modelManager
+        );
+        console.log('[SelectionHandler] Built referenceData:', {
+          requirementsCount: referenceData?.resourceRequirements?.length || 0,
+          statesCount: referenceData?.states?.length || 0,
+          resourcesCount: referenceData?.resources?.length || 0
+        });
+      } catch (error) {
+        console.error('[SelectionHandler] Error building referenceData:', error);
+      }
+    }
+
     // Combine data for the message
-    // Note: states and resourceRequirements are now in selectionData.referenceData
+    // Note: states and resourceRequirements are now in referenceData
     const messageData: any = {
       ...selectionData,
       documentContext: documentData,
-      ...(modelItemData ? { modelItemData } : {})
+      ...(modelItemData ? { modelItemData } : {}),
+      ...(referenceData ? { referenceData } : {})
     };
 
     console.log('[SelectionHandler] Sending SELECTION_CHANGED message', {

@@ -1,6 +1,6 @@
-import { 
-  EditorClient, 
-  ItemProxy, 
+import {
+  EditorClient,
+  ItemProxy,
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
@@ -9,6 +9,7 @@ import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
+import { referenceDataBuilder } from '../utils/referenceDataBuilder';
 
 /**
  * Processor for no selection (page-level selection)
@@ -56,17 +57,28 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
     
     // For NONE selection with a model, build model item data for the page
     try {
+      // Build model item data for the page
       messageData.modelItemData = await itemDataBuilder.buildModelItemData(
         currentPage,
         modelManager
       );
-      
+
+      // Build complete reference data (includes resourceRequirements, states, etc.)
+      // This ensures ModelEditor has reference data on initial panel load
+      messageData.referenceData = await referenceDataBuilder.buildAllReferenceData(
+        modelManager
+      );
+
       console.log('[NoneSelectionProcessor] Built model data for page:', {
-        modelData: messageData.modelItemData ? 'present' : 'absent'
+        modelData: messageData.modelItemData ? 'present' : 'absent',
+        refData: messageData.referenceData ? 'present' : 'absent',
+        requirementsCount: messageData.referenceData?.resourceRequirements?.length || 0,
+        statesCount: messageData.referenceData?.states?.length || 0,
+        resourcesCount: messageData.referenceData?.resources?.length || 0
       });
     } catch (error) {
-      console.error('[NoneSelectionProcessor] Error building model item data:', error);
-      messageData.error = 'Error building model data for page';
+      console.error('[NoneSelectionProcessor] Error building data:', error);
+      messageData.error = 'Error building data for page';
     }
     
     return messageData;
