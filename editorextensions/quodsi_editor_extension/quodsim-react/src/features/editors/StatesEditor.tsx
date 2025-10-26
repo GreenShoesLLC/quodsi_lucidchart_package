@@ -22,6 +22,7 @@ const StatesEditor: React.FC<Props> = ({
   );
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingState, setEditingState] = useState<State | undefined>(undefined);
+  const [deletingState, setDeletingState] = useState<State | undefined>(undefined);
 
   // Filter states based on component type
   const filteredStates = useMemo(() => {
@@ -51,16 +52,21 @@ const StatesEditor: React.FC<Props> = ({
   };
 
   const handleDeleteState = (state: State) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete the state "${state.name}"?\n\nThis action cannot be undone.`
-      )
-    ) {
-      const updatedList = states.getAll().filter((s) => s.id !== state.id);
+    setDeletingState(state);
+  };
+
+  const confirmDelete = () => {
+    if (deletingState) {
+      const updatedList = states.getAll().filter((s) => s.id !== deletingState.id);
       const updatedStates = new StateListManager();
       updatedList.forEach((s) => updatedStates.add(s));
       onStatesChange(updatedStates);
+      setDeletingState(undefined);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeletingState(undefined);
   };
 
   const getComponentTypeLabel = (type: ComponentType | "ALL"): string => {
@@ -131,6 +137,41 @@ const StatesEditor: React.FC<Props> = ({
             : `${filteredStates.length} state${filteredStates.length === 1 ? "" : "s"} ${filterComponentType !== "ALL" ? `for ${getComponentTypeLabel(filterComponentType).toLowerCase()}` : "total"}`}
         </p>
       </div>
+
+      {/* Delete Confirmation */}
+      {deletingState && (
+        <div className="mx-3 mb-2 p-3 bg-red-50 border border-red-200 rounded">
+          <div className="text-xs font-medium text-red-900 mb-2">
+            Delete State: "{deletingState.name}"?
+          </div>
+          <div className="text-xs text-red-700 mb-2">
+            ⚠️ Warning: This state may be referenced in:
+          </div>
+          <ul className="text-xs text-red-600 ml-4 mb-2 list-disc">
+            <li>Activity state modifications (pre/post processing)</li>
+            <li>Generator initial state modifications</li>
+            <li>Operation step state modifications</li>
+          </ul>
+          <div className="text-xs text-red-700 mb-3">
+            These references will be automatically removed.
+            This action cannot be undone.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={confirmDelete}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete State
+            </button>
+            <button
+              onClick={cancelDelete}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* States List */}
       <div className="flex-1 overflow-y-auto p-3">

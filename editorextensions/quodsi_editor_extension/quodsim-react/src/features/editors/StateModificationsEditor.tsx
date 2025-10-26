@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
 import { StateModification, StateListManager, ComponentType } from "@quodsi/shared";
 import StateModificationFormDialog from "./StateModificationFormDialog";
@@ -28,12 +28,53 @@ const StateModificationsEditor: React.FC<Props> = ({
     StateModification | undefined
   >(undefined);
   const [editingIndex, setEditingIndex] = useState<number>(-1);
+  const [deletingIndex, setDeletingIndex] = useState<number>(-1);
+
+  // Optimistic state management for immediate UI updates
+  const [pendingModifications, setPendingModifications] = useState<StateModification[] | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Use pending modifications during save, otherwise use props
+  const displayModifications = isSaving && pendingModifications ? pendingModifications : modifications;
+
+  // Track modifications array reference to close dialogs after updates complete
+  const prevModsRef = useRef(modifications);
+
+  useEffect(() => {
+    // If modifications prop changed after save, clear optimistic state
+    if (modifications !== prevModsRef.current) {
+      prevModsRef.current = modifications;
+      setIsSaving(false);
+      setPendingModifications(null);
+      // Close all dialogs after confirmed update
+      setIsAddDialogOpen(false);
+      setEditingModification(undefined);
+      setEditingIndex(-1);
+      setDeletingIndex(-1);
+    }
+  }, [modifications]);
+
+  // Fallback timeout to clear optimistic state if prop never updates
+  useEffect(() => {
+    if (isSaving) {
+      const timer = setTimeout(() => {
+        setIsSaving(false);
+        setPendingModifications(null);
+      }, 2000); // 2 second fallback to ensure UI doesn't get stuck
+
+      return () => clearTimeout(timer);
+    }
+  }, [isSaving]);
 
   // Handle add modification
   const handleAddModification = (modification: StateModification) => {
     const updatedModifications = [...modifications, modification];
+    // Set optimistic state for immediate UI update
+    setPendingModifications(updatedModifications);
+    setIsSaving(true);
+    // Notify parent to save
     onModificationsChange(updatedModifications);
-    setIsAddDialogOpen(false);
+    // Dialog will close automatically via useEffect when modifications prop updates
   };
 
   // Handle edit modification
@@ -41,23 +82,36 @@ const StateModificationsEditor: React.FC<Props> = ({
     if (editingIndex >= 0) {
       const updatedModifications = [...modifications];
       updatedModifications[editingIndex] = modification;
+      // Set optimistic state for immediate UI update
+      setPendingModifications(updatedModifications);
+      setIsSaving(true);
+      // Notify parent to save
       onModificationsChange(updatedModifications);
-      setEditingModification(undefined);
-      setEditingIndex(-1);
+      // Dialog will close automatically via useEffect when modifications prop updates
     }
   };
 
   // Handle delete modification
   const handleDeleteModification = (index: number) => {
-    const mod = modifications[index];
-    if (
-      window.confirm(
-        `Are you sure you want to delete the modification for "${mod.stateName}"?\n\nThis action cannot be undone.`
-      )
-    ) {
-      const updatedModifications = modifications.filter((_, i) => i !== index);
+    setDeletingIndex(index);
+  };
+
+  // Confirm delete
+  const confirmDelete = () => {
+    if (deletingIndex >= 0) {
+      const updatedModifications = modifications.filter((_, i) => i !== deletingIndex);
+      // Set optimistic state for immediate UI update
+      setPendingModifications(updatedModifications);
+      setIsSaving(true);
+      // Notify parent to save
       onModificationsChange(updatedModifications);
+      // Confirmation dialog will close automatically via useEffect when modifications prop updates
     }
+  };
+
+  // Cancel delete
+  const cancelDelete = () => {
+    setDeletingIndex(-1);
   };
 
   // Open edit dialog
@@ -92,9 +146,35 @@ const StateModificationsEditor: React.FC<Props> = ({
         </button>
       </div>
 
+      {/* Delete Confirmation */}
+      {deletingIndex >= 0 && displayModifications[deletingIndex] && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded">
+          <div className="text-sm font-medium text-red-900 mb-2">
+            Delete State Modification: "{displayModifications[deletingIndex].stateName}"?
+          </div>
+          <div className="text-xs text-red-700 mb-3">
+            This action cannot be undone.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={confirmDelete}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete Modification
+            </button>
+            <button
+              onClick={cancelDelete}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modifications List */}
       <div className="space-y-1.5">
-        {modifications.length === 0 ? (
+        {displayModifications.length === 0 ? (
           <div className="text-center py-6 bg-gray-50 rounded border border-dashed">
             <p className="text-xs text-gray-500 mb-1">
               No state modifications defined
@@ -104,7 +184,7 @@ const StateModificationsEditor: React.FC<Props> = ({
             </p>
           </div>
         ) : (
-          modifications.map((mod, index) => {
+          displayModifications.map((mod, index) => {
             const state = states.getByUniqueId(mod.stateUniqueId);
             return (
               <StateModificationListItem

@@ -36,7 +36,11 @@ export const referenceDataBuilder = {
         referenceData.activities = modelDef.activities.getAll().map(a => ({
           id: a.id,
           name: a.name,
-          connectType: a.connectType
+          connectType: a.connectType,
+          // Extract requirement IDs from operation steps for usage counting
+          operationStepRequirementIds: a.operationSteps
+            .map(step => step.requirementId)
+            .filter(id => id !== null) as string[]
         }));
 
         referenceData.resources = modelDef.resources.getAll().map(r => ({

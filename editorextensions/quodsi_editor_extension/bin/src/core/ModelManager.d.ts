@@ -105,6 +105,14 @@ export declare class ModelManager {
      */
     saveElementData(element: ElementProxy, data: any, type: SimulationObjectType, page: PageProxy): Promise<void>;
     /**
+     * Clean up all references to a deleted state
+     */
+    private cleanupStateReferences;
+    /**
+     * Clean up all references to a deleted resource requirement
+     */
+    private cleanupRequirementReferences;
+    /**
      * Updates the states array for the model
      */
     updateStates(states: ISerializedState[], page: PageProxy): Promise<void>;

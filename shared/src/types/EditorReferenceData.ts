@@ -12,7 +12,12 @@ import { ConnectType } from "./elements/ConnectType";
 export interface EditorReferenceData {
     entities?: Array<{ id: string, name: string }>;
     resources?: Array<{ id: string, name: string }>;
-    activities?: Array<{ id: string, name: string, connectType?: ConnectType }>;
+    activities?: Array<{
+        id: string,
+        name: string,
+        connectType?: ConnectType,
+        operationStepRequirementIds?: string[]  // Requirement IDs used by operation steps
+    }>;
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
     states?: any[]; // Serialized state definitions for all components

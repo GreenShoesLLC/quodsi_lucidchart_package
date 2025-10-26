@@ -283,7 +283,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
           <button
             type="button"
             onClick={() => setActiveTab("states")}
-            title="State Management"
+            title="State Definitions"
             className={`px-3 py-2 border-b-2 ${
               activeTab === "states"
                 ? "border-blue-600 text-blue-600"
@@ -323,6 +323,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
         <>
           <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
             <div className="space-y-2">
+                  <div className="flex items-center gap-1 mb-1 p-2">
+                    <Settings className="w-3 h-3 text-blue-600" />
+                    <span className="text-xs font-medium text-gray-700">Basic Settings</span>
+                    <span title="Configure model name, simulation time settings, and runtime parameters">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   {/* Model Name - Always Visible WITH LABEL */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -603,8 +610,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
               updateResourceRequirements(serialized);
             }}
             getUsageCount={(id) => {
-              // TODO: Calculate actual usage count from activities
-              return 0;
+              // Calculate how many operation steps use this requirement
+              const activities = referenceData?.activities || [];
+              let count = 0;
+              for (const activity of activities) {
+                const reqIds = activity.operationStepRequirementIds || [];
+                count += reqIds.filter(reqId => reqId === id).length;
+              }
+              return count;
             }}
           />
         </div>

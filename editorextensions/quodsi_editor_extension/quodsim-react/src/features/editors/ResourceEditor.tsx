@@ -167,7 +167,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
           <button
             type="button"
             onClick={() => setActiveTab("states")}
-            title="State Management"
+            title="State Definitions"
             className={`px-3 py-2 border-b-2 ${
               activeTab === "states"
                 ? "border-blue-600 text-blue-600"

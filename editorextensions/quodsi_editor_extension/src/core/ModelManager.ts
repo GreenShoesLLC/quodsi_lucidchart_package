@@ -138,25 +138,7 @@ export class ModelManager {
     private async ensureModelDefinition(): Promise<ModelDefinition | null> {
         this.checkCacheTimeouts();
 
-        console.log('[ModelManager][ensureModelDefinition] Called:', {
-            hasModelDefinition: !!this.modelDefinition,
-            isDirty: this.changeTracker.modelDefinitionDirty,
-            hasCurrentPage: !!this.currentPage,
-            currentPageId: this.currentPage?.id,
-            willRebuild: (this.changeTracker.modelDefinitionDirty || !this.modelDefinition) && !!this.currentPage
-        });
-
         if ((this.changeTracker.modelDefinitionDirty || !this.modelDefinition) && this.currentPage) {
-            this.debug.log('Rebuilding ModelDefinition due to pending changes:', {
-                pendingChanges: Array.from(this.changeTracker.pendingChanges),
-                changeCount: this.changeTracker.pendingChanges.size
-            });
-
-            console.log('[ModelManager][ensureModelDefinition] Starting build from page:', {
-                pageId: this.currentPage.id,
-                pageTitle: this.currentPage.getTitle?.() || 'unknown'
-            });
-
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
             lucidElementFactory.setLogging(false);
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);
@@ -187,14 +169,6 @@ export class ModelManager {
                 this.changeTracker.lastModelDefinitionUpdate = Date.now();
                 this.changeTracker.pendingChanges.clear();
 
-                console.log('[ModelManager][ensureModelDefinition] Build complete:', {
-                    hasModelDef: !!this.modelDefinition,
-                    resourcesCount: this.modelDefinition?.resources?.size() || 0,
-                    requirementsCount: this.modelDefinition?.resourceRequirements?.size() || 0,
-                    statesCount: this.modelDefinition?.states?.size() || 0,
-                    activitiesCount: this.modelDefinition?.activities?.size() || 0
-                });
-
                 return this.modelDefinition;
 
             } catch (error) {
@@ -202,11 +176,6 @@ export class ModelManager {
                 throw error;
             }
         }
-
-        console.log('[ModelManager][ensureModelDefinition] SKIPPED rebuild - returning cached/null:', {
-            reason: !this.currentPage ? 'NO_CURRENT_PAGE' : 'ALREADY_BUILT',
-            hasModelDefinition: !!this.modelDefinition
-        });
 
         return this.modelDefinition;
     }
@@ -517,39 +486,18 @@ export class ModelManager {
         type: SimulationObjectType,
         metadata?: { id: string; version: string }
     ): void {
-        this.debug.log('setElementData - Start', {
-            elementId: element.id,
-            dataType: typeof data,
-            simulationObjectType: SimulationObjectType[type]
-        });
-
         try {
-            // Log basic input details
-            this.debug.debug('Input Data:', {
-                dataKeys: data ? Object.keys(data) : 'No data',
-                metadata: metadata
-            });
-
             // Determine metadata
             const actualMetadata = metadata || {
                 id: element.id,
                 version: this.storageAdapter.CURRENT_VERSION
             };
 
-            this.debug.debug('Metadata:', {
-                id: actualMetadata.id,
-                version: actualMetadata.version,
-                isDefaultUsed: !metadata
-            });
-
             // Call storage adapter
             this.storageAdapter.setElementData(element, data, type, actualMetadata);
 
             // Mark model as dirty
-            this.debug.debug('Marking model dirty for element:', element.id);
             this.markModelDirty(element.id);
-
-            this.debug.log('setElementData - Completed Successfully');
         } catch (error) {
             this.debug.error('setElementData - Error', {
                 elementId: element.id,
@@ -600,36 +548,18 @@ export class ModelManager {
         type: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        this.debug.log('saveElementData - Start', {
-            elementId: element.id,
-            elementType: element.constructor.name,
-            simulationObjectType: type,
-            pageId: page.id,
-            pageTitle: page.getTitle()
-        });
-
         try {
             // Handle conversion to NONE type (removing simulation data)
             if (type === SimulationObjectType.None) {
-                this.debug.log('Detected NONE type - removing element');
                 const existingElement = this.getElementById(element.id);
                 if (existingElement) {
-                    this.debug.log('Removing element:', element.id);
                     this.removeElement(element.id);
                 }
                 return;
             }
 
-            // Log data details for type conversion or update
-            this.debug.debug('Incoming Data:', {
-                type: typeof data,
-                keys: data ? Object.keys(data) : 'No data',
-                data: data ? JSON.parse(JSON.stringify(data)) : null
-            });
-
             // Handle type conversion with no data
             if (type && (!data || Object.keys(data).length === 0)) {
-                this.debug.log('Detected type conversion with no data');
                 await this.handleTypeConversion(element, type, page);
                 return;
             }
@@ -639,6 +569,108 @@ export class ModelManager {
         } catch (error) {
             this.debug.error('Error in saveElementData:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Clean up all references to a deleted state
+     */
+    private async cleanupStateReferences(stateId: string, page: PageProxy): Promise<void> {
+        // Process all blocks (Activities and Generators)
+        for (const [, block] of page.allBlocks) {
+            const elementData = this.storageAdapter.getElementData<any>(block);
+
+            if (elementData?.type === SimulationObjectType.Activity) {
+                let modified = false;
+
+                // Clean preProcessingStateModifications
+                if (elementData.preProcessingStateModifications) {
+                    const filtered = elementData.preProcessingStateModifications
+                        .filter((mod: any) => mod.stateUniqueId !== stateId);
+
+                    if (filtered.length !== elementData.preProcessingStateModifications.length) {
+                        elementData.preProcessingStateModifications = filtered;
+                        modified = true;
+                    }
+                }
+
+                // Clean postProcessingStateModifications
+                if (elementData.postProcessingStateModifications) {
+                    const filtered = elementData.postProcessingStateModifications
+                        .filter((mod: any) => mod.stateUniqueId !== stateId);
+
+                    if (filtered.length !== elementData.postProcessingStateModifications.length) {
+                        elementData.postProcessingStateModifications = filtered;
+                        modified = true;
+                    }
+                }
+
+                // Clean operationSteps[].stateModifications
+                if (elementData.operationSteps) {
+                    for (const step of elementData.operationSteps) {
+                        if (step.stateModifications) {
+                            const filtered = step.stateModifications
+                                .filter((mod: any) => mod.stateUniqueId !== stateId);
+
+                            if (filtered.length !== step.stateModifications.length) {
+                                step.stateModifications = filtered;
+                                modified = true;
+                            }
+                        }
+                    }
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                }
+            }
+
+            // Process generators
+            if (elementData?.type === SimulationObjectType.Generator) {
+                let modified = false;
+
+                if (elementData.initialStateModifications) {
+                    const filtered = elementData.initialStateModifications
+                        .filter((mod: any) => mod.stateUniqueId !== stateId);
+
+                    if (filtered.length !== elementData.initialStateModifications.length) {
+                        elementData.initialStateModifications = filtered;
+                        modified = true;
+                    }
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
+                }
+            }
+        }
+    }
+
+    /**
+     * Clean up all references to a deleted resource requirement
+     */
+    private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<void> {
+        this.debug.log('Cleaning up references to requirement:', requirementId);
+
+        // Process all activities
+        for (const [, block] of page.allBlocks) {
+            const elementData = this.storageAdapter.getElementData<any>(block);
+
+            if (elementData?.type === SimulationObjectType.Activity && elementData.operationSteps) {
+                let modified = false;
+
+                for (const step of elementData.operationSteps) {
+                    if (step.requirementId === requirementId) {
+                        step.requirementId = null;
+                        modified = true;
+                    }
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                    this.debug.log('Updated activity after requirement cleanup:', block.id);
+                }
+            }
         }
     }
 
@@ -653,13 +685,28 @@ export class ModelManager {
         });
 
         try {
+            // Get current states to detect deletions
+            const currentStates = this.storageAdapter.getStates(page) || [];
+            const newStateIds = new Set(states.map(s => s.id));
+
+            // Find deleted states
+            const deletedStates = currentStates.filter(s => !newStateIds.has(s.id));
+
+            // Clean up references for each deleted state
+            for (const deletedState of deletedStates) {
+                this.debug.log('Detected deleted state, cleaning up references:', deletedState.id);
+                await this.cleanupStateReferences(deletedState.id, page);
+            }
+
             // Save states to page storage
             this.storageAdapter.setStates(page, states);
 
             // Mark model as dirty to force rebuild on next access
             this.markModelDirty();
 
-            this.debug.log('updateStates - Complete');
+            this.debug.log('updateStates - Complete with cascading cleanup', {
+                deletedCount: deletedStates.length
+            });
         } catch (error) {
             this.debug.error('Error in updateStates:', error);
             throw error;
@@ -677,13 +724,28 @@ export class ModelManager {
         });
 
         try {
+            // Get current requirements to detect deletions
+            const currentReqs = this.storageAdapter.getResourceRequirements(page) || [];
+            const newReqIds = new Set(requirements.map(r => r.id));
+
+            // Find deleted requirements
+            const deletedReqs = currentReqs.filter(r => !newReqIds.has(r.id));
+
+            // Clean up references for each deleted requirement
+            for (const deletedReq of deletedReqs) {
+                this.debug.log('Detected deleted requirement, cleaning up references:', deletedReq.id);
+                await this.cleanupRequirementReferences(deletedReq.id, page);
+            }
+
             // Save resource requirements to page storage
             this.storageAdapter.setResourceRequirements(page, requirements);
 
             // Mark model as dirty to force rebuild on next access
             this.markModelDirty();
 
-            this.debug.log('updateResourceRequirements - Complete');
+            this.debug.log('updateResourceRequirements - Complete with cascading cleanup', {
+                deletedCount: deletedReqs.length
+            });
         } catch (error) {
             this.debug.error('Error in updateResourceRequirements:', error);
             throw error;

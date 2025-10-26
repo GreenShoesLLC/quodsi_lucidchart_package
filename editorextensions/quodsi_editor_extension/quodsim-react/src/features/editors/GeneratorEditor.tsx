@@ -51,8 +51,10 @@ const GeneratorEditor: React.FC<Props> = ({
       data.y || 0
     );
 
-    // Preserve state modifications
-    extractedGenerator.initialStateModifications = data.initialStateModifications || [];
+    // Always create new array to ensure reference changes for proper change detection
+    extractedGenerator.initialStateModifications = data.initialStateModifications
+      ? [...data.initialStateModifications]
+      : [];
 
     return extractedGenerator;
   };
@@ -161,6 +163,7 @@ const GeneratorEditor: React.FC<Props> = ({
     onSave(updatedGenerator);
     // Update local state to match
     setFormData(updatedGenerator);
+    setIsSaving(true);
   };
 
   // State modifications change handler - auto-saves immediately
@@ -186,6 +189,7 @@ const GeneratorEditor: React.FC<Props> = ({
     onSave(updatedGenerator);
     // Update local state to match
     setFormData(updatedGenerator);
+    setIsSaving(true);
   };
 
   // Save handler
@@ -274,7 +278,7 @@ const GeneratorEditor: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setActiveTab("states")}
-            title="State Management"
+            title="State Definitions"
             className={`px-3 py-2 border-b-2 ${
               activeTab === "states"
                 ? "border-blue-600 text-blue-600"

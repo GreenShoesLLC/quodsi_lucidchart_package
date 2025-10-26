@@ -53,17 +53,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
 
-  // Debug logging to verify referenceData is received
-  React.useEffect(() => {
-    console.log('[ActivityEditor] referenceData received:', {
-      hasReferenceData: !!referenceData,
-      resourcesCount: referenceData?.resources?.length || 0,
-      requirementsCount: referenceData?.resourceRequirements?.length || 0,
-      resources: referenceData?.resources,
-      requirements: referenceData?.resourceRequirements
-    });
-  }, [referenceData]);
-
   // Helper functions
   const bufferToDisplay = (value: number | null | undefined): number =>
     value === null || value === undefined ? 999999 : value;
@@ -111,9 +100,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? ActivityFinancialProperties.fromJSON(data.financialProperties)
       : new ActivityFinancialProperties();
 
-    // Preserve state modifications if they exist
-    activity.preProcessingStateModifications = data.preProcessingStateModifications || [];
-    activity.postProcessingStateModifications = data.postProcessingStateModifications || [];
+    // Always create new arrays to ensure reference changes for proper change detection
+    activity.preProcessingStateModifications = data.preProcessingStateModifications
+      ? [...data.preProcessingStateModifications]
+      : [];
+    activity.postProcessingStateModifications = data.postProcessingStateModifications
+      ? [...data.postProcessingStateModifications]
+      : [];
 
     return activity;
   };
@@ -400,6 +393,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     onSave(updatedActivity);
     // Update local state to match
     setFormData(updatedActivity);
+    setIsSaving(true);
   };
 
   const handlePostProcessingChange = (mods: any[]) => {
@@ -430,6 +424,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     onSave(updatedActivity);
     // Update local state to match
     setFormData(updatedActivity);
+    setIsSaving(true);
   };
 
   // Resource Requirement Modal Handlers
@@ -467,7 +462,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             }
           : req
       );
-      console.log('[ActivityEditor] Updating requirement:', editingRequirement.id, data.name);
     } else {
       // Create new requirement with generated ID
       const newRequirement = {
@@ -477,7 +471,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         rootClauses
       };
       updatedRequirements = [...currentRequirements, newRequirement];
-      console.log('[ActivityEditor] Creating new requirement:', newRequirement.id, data.name);
     }
 
     // Send update message to extension
@@ -566,7 +559,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveTab("states")}
-                title="State Management"
+                title="State Definitions"
                 className={`px-2 py-1.5 border-b-2 ${
                   activeTab === "states"
                     ? "border-blue-600 text-blue-600"

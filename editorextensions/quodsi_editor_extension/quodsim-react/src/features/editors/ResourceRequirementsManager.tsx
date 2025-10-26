@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { ResourceRequirement } from '@quodsi/shared';
 import { convertRootClausesToStructure, generatePreview } from '../../utils/resourceRequirementConverter';
@@ -20,19 +20,21 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
   onDelete,
   getUsageCount
 }) => {
+  const [deletingRequirement, setDeletingRequirement] = useState<ResourceRequirement | null>(null);
   
   const handleDelete = (req: ResourceRequirement) => {
-    const usageCount = getUsageCount(req.id);
+    setDeletingRequirement(req);
+  };
 
-    if (usageCount > 0) {
-      const confirmed = window.confirm(
-        `This requirement is used by ${usageCount} Operation Step${usageCount !== 1 ? 's' : ''}. ` +
-        `Deleting it will remove the resource assignment from those steps. Are you sure?`
-      );
-      if (!confirmed) return;
+  const confirmDelete = () => {
+    if (deletingRequirement) {
+      onDelete(deletingRequirement.id);
+      setDeletingRequirement(null);
     }
+  };
 
-    onDelete(req.id);
+  const cancelDelete = () => {
+    setDeletingRequirement(null);
   };
 
   const isAutoRequirement = (req: ResourceRequirement): boolean => {
@@ -51,12 +53,7 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
   return (
     <div className="p-2">
       <div className="flex items-center justify-between mb-2">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900">Resource Requirements</h3>
-          <p className="text-xs text-gray-600 mt-0.5">
-            Define reusable resource requirements for operation steps
-          </p>
-        </div>
+        <h3 className="text-sm font-semibold text-gray-900">Resource Requirements</h3>
         <button
           onClick={onAdd}
           className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1 text-xs font-medium"
@@ -65,6 +62,47 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
           Add New
         </button>
       </div>
+
+      {/* Delete Confirmation */}
+      {deletingRequirement && (
+        <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded">
+          <div className="text-sm font-medium text-red-900 mb-2">
+            Delete Requirement: "{deletingRequirement.name}"?
+          </div>
+          {(() => {
+            const usageCount = getUsageCount(deletingRequirement.id);
+            return usageCount > 0 ? (
+              <div className="text-sm text-red-700 mb-2">
+                ⚠️ This requirement is currently used by {usageCount} Operation Step{usageCount !== 1 ? 's' : ''}.
+              </div>
+            ) : null;
+          })()}
+          <div className="text-xs text-red-600 mb-2">
+            ⚠️ Warning: This requirement may be referenced in:
+          </div>
+          <ul className="text-xs text-red-600 ml-4 mb-2 list-disc">
+            <li>Activity operation steps</li>
+          </ul>
+          <div className="text-xs text-red-700 mb-3">
+            These references will be automatically cleared.
+            This action cannot be undone.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={confirmDelete}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete Requirement
+            </button>
+            <button
+              onClick={cancelDelete}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         {requirements.length === 0 ? (

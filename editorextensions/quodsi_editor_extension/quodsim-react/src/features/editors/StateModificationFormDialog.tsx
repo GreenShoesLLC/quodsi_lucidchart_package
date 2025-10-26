@@ -216,7 +216,6 @@ const StateModificationFormDialog: React.FC<Props> = ({
               >
                 {supportedOperations.map((op) => (
                   <option key={op} value={op}>
-                    {op} -{" "}
                     {op === StateOperation.ASSIGN
                       ? "Assign"
                       : op === StateOperation.ADD
@@ -225,7 +224,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
                       ? "Subtract"
                       : op === StateOperation.MULTIPLY
                       ? "Multiply"
-                      : "Divide"}
+                      : "Divide"} ({op})
                   </option>
                 ))}
               </select>

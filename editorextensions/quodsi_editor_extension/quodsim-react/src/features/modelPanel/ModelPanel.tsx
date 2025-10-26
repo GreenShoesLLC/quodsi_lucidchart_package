@@ -45,8 +45,18 @@ export const ModelPanel: React.FC = () => {
     validation: !!validationState?.summary?.errorCount
   });
 
+  // Optimistic state management for states during save operations
+  const [pendingStates, setPendingStates] = useState<StateListManager | null>(null);
+  const [isSavingStates, setIsSavingStates] = useState(false);
+
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
   const states = useMemo(() => {
+    // During save operations, use optimistic pending states to prevent race condition
+    if (isSavingStates && pendingStates) {
+      return pendingStates;
+    }
+
+    // Otherwise derive from serializedStates prop
     const stateListManager = new StateListManager();
 
     // Deserialize and add each state
@@ -69,9 +79,12 @@ export const ModelPanel: React.FC = () => {
     }
 
     return stateListManager;
-  }, [serializedStates]);
+  }, [serializedStates, isSavingStates, pendingStates]);
 
   const handleStatesChange = (updatedStates: StateListManager) => {
+    // Store pending states optimistically
+    setPendingStates(updatedStates);
+    setIsSavingStates(true);
     // Serialize states and send to extension
     const serializedStates = updatedStates.getAll().map(state => ({
       id: state.id,
@@ -86,84 +99,26 @@ export const ModelPanel: React.FC = () => {
 
     sendStatesUpdate(serializedStates);
 
-    if (isDevelopment) {
-      console.log('[ModelPanel] States updated and sent to extension:', serializedStates);
-    }
+    // Clear save flag after delay to allow UI to update
+    setTimeout(() => {
+      setIsSavingStates(false);
+      setPendingStates(null);
+    }, 500);
   };
-
-  // Only show debug features in development
-  const isDevelopment = process.env.NODE_ENV === 'development';
 
   // Toggle accordion sections
   const toggleSection = (section: keyof typeof expandedSections) => {
-    if (isDevelopment) {
-      console.log(`[ModelPanel] Toggling section: ${section}`);
-    }
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
 
-  // Log important state changes for debugging (development only)
   useEffect(() => {
-    if (isDevelopment) {
-      console.log('[ModelPanel] Component mounted');
-      return () => console.log('[ModelPanel] Component unmounted');
-    }
-  }, [isDevelopment]);
-  
-  // Log all key prop changes for better debugging (development only)
-  useEffect(() => {
-    if (isDevelopment) {
-      console.log('[ModelPanel] Render with key props:', {
-        modelName,
-        hasCurrentElement: !!currentElement,
-        currentElementId: currentElement?.id,
-        currentElementType: currentElement?.metadata?.type,
-        hasValidation: !!validationState,
-        validationErrors: validationState?.summary?.errorCount,
-        validationWarnings: validationState?.summary?.warningCount,
-        isLoading,
-        needsInitialization,
-        diagramElementType,
-        simulationStatus: simulationStatus ? {
-          errorMessage: simulationStatus.errorMessage,
-          lastChecked: simulationStatus.lastChecked
-        } : null
-      });
-    }
-  }, [modelName, currentElement, validationState, isLoading, needsInitialization, diagramElementType, simulationStatus, isDevelopment]);
-
-  useEffect(() => {
-    if (isDevelopment) {
-      console.log('[ModelPanel] Model or selection changed - DETAILED:', {
-        modelName,
-        hasCurrentElement: !!currentElement,
-        currentElementId: currentElement?.id,
-        currentElementType: currentElement?.metadata?.type,
-        elementType: currentElement?.type,  // Direct type property
-        metadata: currentElement?.metadata,
-        metadataType: currentElement?.metadata?.type,
-        q_meta: currentElement?.q_meta,
-        qMetaType: currentElement?.q_meta?.type,
-        isModelType: currentElement?.metadata?.type === SimulationObjectType.Model,
-        diagramElementType,
-        isUnconverted: currentElement?.isUnconverted
-      });
-    }
-    
-    // Handle element type issues (keep this logic for functionality)
+    // Handle element type issues
     if (currentElement && (!currentElement.metadata?.type || currentElement.metadata.type === SimulationObjectType.None)) {
-      if (isDevelopment) {
-        console.warn('[ModelPanel] Current element has no valid type:', currentElement);
-      }
-      
       // Try to check for q_meta type if metadata type is missing
       if (currentElement.q_meta?.type) {
-        if (isDevelopment) {
-          console.log('[ModelPanel] Using type from q_meta:', currentElement.q_meta.type);
-        }
         if (!currentElement.metadata) {
           currentElement.metadata = {
             type: SimulationObjectType.None,
@@ -176,9 +131,6 @@ export const ModelPanel: React.FC = () => {
       }
       // Only if we don't have metadata or q_meta, then auto-map line to connector
       else if (diagramElementType === DiagramElementType.LINE) {
-        if (isDevelopment) {
-          console.log('[ModelPanel] Setting missing type to Connector for line element');
-        }
         currentElement.metadata = currentElement.metadata || {
           type: SimulationObjectType.None,
           version: '1.0',
@@ -190,20 +142,7 @@ export const ModelPanel: React.FC = () => {
       // For blocks, we do not automatically assign Activity type
       // Leave it to the user to select the appropriate type
     }
-  }, [modelName, currentElement, diagramElementType, isDevelopment]);
-
-  // Debug UI state decision making (development only)
-  if (isDevelopment) {
-    console.log('[ModelPanel] UI state decision:', {
-      needsInitialization,
-      isLoading,
-      hasContent: !!(modelName || currentElement),
-      renderingInitializationScreen: needsInitialization,
-      renderingLoadingScreen: isLoading,
-      renderingNoContentScreen: !needsInitialization && !isLoading && !(modelName || currentElement),
-      renderingMainContent: !needsInitialization && !isLoading && !!(modelName || currentElement)
-    });
-  }
+  }, [modelName, currentElement, diagramElementType]);
   
   // Handle initialization state
   if (needsInitialization) {
