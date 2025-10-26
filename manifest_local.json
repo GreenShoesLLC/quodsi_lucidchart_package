@@ -18,13 +18,7 @@
       ]
     }
   ],
-  "shapeLibraries": [
-    {
-      "name": "quodsi_shape_library",
-      "product": "chart",
-      "lcszPath": "shapelibraries\\quodsi_shape_library.lcsz"
-    }
-  ],
+  "shapeLibraries": [],
   "oauthProviders": [
     {
       "name": "lucid",
