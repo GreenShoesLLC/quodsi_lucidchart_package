@@ -1,6 +1,9 @@
 {
   "name": "quodsi_data_connector_lucidchart_v1",
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20.x"
+  },
   "description": "",
   "scripts": {
     "build": "tsc",
@@ -20,11 +23,11 @@
     "papaparse": "^5.5.2"
   },
   "devDependencies": {
-    "@types/node": "^20.x",
+    "@types/node": "^22.x",
     "@types/papaparse": "^5.3.15",
     "copyfiles": "^2.4.1",
     "rimraf": "^5.0.0",
-    "typescript": "^4.0.0"
+    "typescript": "^5.0.0"
   },
-  "main": "dist/src/{index.js,functions/*.js}"
+  "main": "dist/src/index.js"
 }

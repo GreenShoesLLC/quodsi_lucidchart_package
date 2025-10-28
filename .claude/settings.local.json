@@ -4,7 +4,8 @@
       "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim_runner/**)",
       "WebFetch(domain:developer.lucid.co)",
       "WebSearch",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []

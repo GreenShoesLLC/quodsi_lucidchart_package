@@ -9,6 +9,10 @@
 /editorextensions/quodsi_editor_extension/bin
 /editorextensions/quodsi_editor_extension/quodsim-react/build
 
+# Lucid package bundle output
+/public/quodsim-react/
+/package.zip
+
 # TypeScript build info
 **/*.tsbuildinfo
 

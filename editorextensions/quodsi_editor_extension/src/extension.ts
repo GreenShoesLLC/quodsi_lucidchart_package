@@ -6,7 +6,7 @@ import { ModelManager } from './core/ModelManager';
 import { StorageAdapter } from './core/StorageAdapter';
 
 // Import new panels
-import { ContentDockPanel } from './panels/ContentDockPanel';
+// import { ContentDockPanel } from './panels/ContentDockPanel';
 import { RightDockPanel } from './panels/RightDockPanel';
 // Import MessageRouter and initialization function
 import { initializeMessaging } from './core/messaging';
@@ -31,12 +31,13 @@ console.info('[EXT][extension] Using new messaging system with ContentDockPanel 
 // Initialize messaging system with logging enabled
 initializeMessaging(true);
 
-let rightDockPanel, contentDockPanel;
-console.info('[EXT][extension] About to create ContentDockPanel');
-contentDockPanel = new ContentDockPanel(client);
-contentDockPanel.setLogging(true);
-console.info('[EXT][extension] Created ContentDockPanel');
+// let contentDockPanel;
+// console.info('[EXT][extension] About to create ContentDockPanel');
+// contentDockPanel = new ContentDockPanel(client);
+// contentDockPanel.setLogging(true);
+// console.info('[EXT][extension] Created ContentDockPanel');
 
+let rightDockPanel;
 console.info('[EXT][extension] About to create RightDockPanel');
 rightDockPanel = new RightDockPanel(client, modelManager);
 rightDockPanel.setLogging(true);
