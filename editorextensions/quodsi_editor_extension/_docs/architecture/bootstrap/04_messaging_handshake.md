@@ -15,13 +15,11 @@ The handshake establishes bidirectional communication between the extension and 
 {
   id: string,
   type: EnvelopeMessageType.REACT_APP_READY,
-  source: 'auth-iframe' | 'model-iframe',
+  source: 'model-iframe',
   target: 'host',
   version: '1.0',
   data: {
-    panel: 'auth' | 'model',
-    isAuthenticated: boolean,
-    user?: QuodsiUserInfo
+    panel: 'model'
   }
 }
 ```
@@ -37,16 +35,13 @@ Function: `useReactAppReadyEffect()`
 **Trigger Conditions:**
 ```typescript
 !hasSentReadyRef.current &&
-state.app.initialized &&
-state.app.panelType &&
-!state.auth.silentAuthInProgress
+state.app.initialized
 ```
 
 **Actions (lines 88-102):**
-1. Call `ensureAuthState()` to validate localStorage
-2. Force-set refs if needed
-3. Send message via `sendMessage(EnvelopeMessageType.REACT_APP_READY, data)`
-4. Set `hasSentReadyRef.current = true` (prevents duplicate sends)
+1. Force-set refs if needed
+2. Send message via `sendMessage(EnvelopeMessageType.REACT_APP_READY, data)`
+3. Set `hasSentReadyRef.current = true` (prevents duplicate sends)
 
 ### Emergency Fallback
 
@@ -60,12 +55,10 @@ Function: `useEmergencyReactAppReadyEffect()`
 1. Check if REACT_APP_READY already sent
 2. If not sent and app initialized:
    - Force-set all tracking refs to true
-   - Call `ensureAuthState()` for auth data
    - Force send REACT_APP_READY
    - Log warning about emergency send
 
 **Why needed?**
-- Network delays in silent auth
 - Race conditions in effect execution
 - Ensures initialization always completes
 
@@ -88,7 +81,7 @@ Function: `MessageRouter.handleReactAppReady(msg)` (lines 250-296)
 
 **Step 1: Extract Panel Role**
 ```typescript
-const role = data.panel as PanelRole; // 'auth' | 'model'
+const role = data.panel as PanelRole; // 'model'
 ```
 
 **Step 2: Register Panel (if needed)**
@@ -107,17 +100,7 @@ this.channelManager.markChannelReady(role);
 - Sets `channel.ready = true`
 - Enables message delivery to this channel
 
-**Step 4: Update Auth State**
-```typescript
-if (data.isAuthenticated !== undefined) {
-  this.state.updateAuthState({
-    isAuthenticated: data.isAuthenticated,
-    user: data.user
-  });
-}
-```
-
-**Step 5: Ensure Panel Reference**
+**Step 4: Ensure Panel Reference**
 ```typescript
 this.ensureChannelHasPanel(role);
 ```
@@ -127,7 +110,7 @@ this.ensureChannelHasPanel(role);
 - If not, attempts recovery from global registry
 - Returns true/false for success
 
-**Step 6: Flush Queued Messages**
+**Step 5: Flush Queued Messages**
 ```typescript
 this.channelManager.flushQueue(role);
 ```
@@ -137,22 +120,7 @@ this.channelManager.flushQueue(role);
 - Sends each message via `channel.panel.relayToIframe(msg)`
 - Clears queue
 
-**Step 7: Send Initial State**
-```typescript
-this.sendAuthStatus(role);
-this.sendSubscriptionStatus(role);
-```
-
-**sendAuthStatus()** (lines 301-310):
-- Sends current auth state from RouterState
-- Message type: `AUTH_STATUS`
-
-**sendSubscriptionStatus()** (lines 336-348):
-- Sends subscription tier, status, feature flags
-- Message type: `SUBSCRIPTION_STATUS`
-- Only sent if subscription data exists
-
-**Step 8: Request Model Context**
+**Step 6: Request Model Context**
 ```typescript
 this.requestModelContext(role);
 ```
@@ -206,12 +174,7 @@ channel.queue = []; // Clear queue
 
 ### Global Registry
 
-Both panels register themselves in `window.quodsiExtension.panels`:
-
-**ContentDockPanel** (line 76):
-```typescript
-(window as any).quodsiExtension.panels.auth = this;
-```
+The panel registers itself in `window.quodsiExtension.panels`:
 
 **RightDockPanel** (via MessageRouter.storeInGlobalRegistry):
 ```typescript
@@ -243,9 +206,7 @@ After handshake completes, system is fully operational:
 - No more message queuing (direct delivery)
 
 ### ✅ State Synchronization
-- Auth state synced between panels
 - Selection state broadcasts to model panel
-- Subscription status available
 
 ### ✅ Selection Updates
 - User selects shapes → SelectionHandler
@@ -254,7 +215,6 @@ After handshake completes, system is fully operational:
 - Model panel updates UI
 
 ### ✅ User Interaction Ready
-- Auth panel: can login/logout
 - Model panel: can edit elements, run simulations
 
 ## Handshake State Machine
@@ -263,8 +223,6 @@ After handshake completes, system is fully operational:
 [React Mounted]
       ↓
 [Effects Initializing]
-      ↓
-[Auth Check Complete]
       ↓
 [REACT_APP_READY Sent] ← Emergency Timer (3s)
       ↓
@@ -276,8 +234,6 @@ After handshake completes, system is fully operational:
       ↓
 [Flush Queue]
       ↓
-[Send Initial State]
-      ↓
 [Request Model Context]
       ↓
 [OPERATIONAL]
@@ -287,7 +243,7 @@ After handshake completes, system is fully operational:
 
 | Step | Typical Duration | Notes |
 |------|-----------------|-------|
-| React detects ready | ~500-1500ms | Depends on auth |
+| React detects ready | ~200-500ms | Depends on initialization |
 | Send REACT_APP_READY | < 1ms | postMessage is fast |
 | Extension receives | < 10ms | Event loop delay |
 | handleReactAppReady | < 5ms | Synchronous |

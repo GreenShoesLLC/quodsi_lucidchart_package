@@ -21,9 +21,8 @@ Complete initialization sequence from browser load to operational state.
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Stage 3: Panel Creation                                    │
-│ - ContentDockPanel (auth) instantiated                     │
 │ - RightDockPanel (model) instantiated                      │
-│ - Both panels register with MessageRouter                  │
+│ - Panel registers with MessageRouter                       │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -44,10 +43,9 @@ Complete initialization sequence from browser load to operational state.
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Stage 6: React Initialization                              │
-│ - App.tsx renders with panelType                          │
+│ - App.tsx renders                                         │
 │ - MessageProvider initializes messaging state             │
-│ - 7+ effects begin initialization                         │
-│ - useSilentAuth() attempts authentication                 │
+│ - Effects begin initialization                            │
 │ - Refs track initialization: hasSentReadyRef, etc.        │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -58,7 +56,6 @@ Complete initialization sequence from browser load to operational state.
 │ - MessageRouter.handleReactAppReady():                    │
 │   • Marks channel ready                                   │
 │   • Flushes queued messages                               │
-│   • Sends AUTH_STATUS, SUBSCRIPTION_STATUS                │
 │   • Requests MODEL_CONTEXT from panel                     │
 └─────────────────────────────────────────────────────────────┘
                             ↓
@@ -66,7 +63,6 @@ Complete initialization sequence from browser load to operational state.
 │ Stage 8: Operational State                                 │
 │ - Bidirectional messaging active                           │
 │ - Selection sync working                                   │
-│ - Auth state synchronized                                  │
 │ - User can interact with panels                            │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -95,16 +91,14 @@ Communication establishment and transition to operational state.
 | Extension load (Stages 1-4) | ~100ms | Synchronous, deterministic |
 | User clicks icon → iframe load | Variable | User action required |
 | React mount → initialized | ~200-500ms | Depends on bundle size |
-| Silent auth check | ~500-1500ms | Network dependent |
 | REACT_APP_READY trigger | Max 3000ms | Emergency timer ensures firing |
-| Full initialization | ~1-5 seconds | From extension load to operational |
+| Full initialization | ~1-3 seconds | From extension load to operational |
 
 ## Critical Path
 
 The critical path for REACT_APP_READY is:
-1. `state.app.initialized = true` (panel type detected)
-2. `state.app.panelType` set ('auth' or 'model')
-3. `!state.auth.silentAuthInProgress` (auth check complete)
+1. `state.app.initialized = true` (app initialized)
+2. All initialization effects complete
 
 Emergency timer forces REACT_APP_READY after 3 seconds if normal flow stalls.
 

@@ -45,10 +45,10 @@ const cleanup = initializeMessaging({
 
 ```typescript
 const urlParams = new URLSearchParams(window.location.search);
-const panelType = urlParams.get("panel") === "auth" ? "auth" : "model";
+const panelType = urlParams.get("panel") || "model";
 ```
 
-Determines which panel UI to render based on URL query parameter.
+Determines which panel UI to render based on URL query parameter (defaults to "model").
 
 ### Step 3: React Root Mounting
 
@@ -58,7 +58,7 @@ Determines which panel UI to render based on URL query parameter.
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App panelType={panelType as "auth" | "model"} />
+    <App panelType={panelType as "model"} />
   </React.StrictMode>
 );
 ```
@@ -69,17 +69,10 @@ File: `quodsim-react/src/App.tsx`
 
 ```
 App (panelType prop)
-  └─> MsalProvider (instance={msalInstance})
-       └─> MessageProvider (initialPanelType={panelType})
-            └─> LucidApp (panelType={panelType})
-                 ├─> AuthPanel (if panelType === 'auth')
-                 └─> ModelPanel (if panelType === 'model')
+  └─> MessageProvider (initialPanelType={panelType})
+       └─> LucidApp (panelType={panelType})
+            └─> ModelPanel
 ```
-
-### MSAL Provider
-- **Purpose**: Azure AD authentication
-- **Config**: `msalConfig` from `config/msalConfig.ts`
-- **Creates**: PublicClientApplication for OAuth flows
 
 ### MessageProvider
 
@@ -88,21 +81,14 @@ File: `quodsim-react/src/messaging/MessageProvider.tsx`
 **Core Responsibilities:**
 1. State management via reducer
 2. Message handling orchestration
-3. Authentication lifecycle coordination
-4. REACT_APP_READY determination and sending
+3. REACT_APP_READY determination and sending
 
 **State Structure:**
 ```typescript
 {
   app: {
     initialized: boolean,
-    panelType?: 'auth' | 'model'
-  },
-  auth: {
-    isAuthenticated: boolean,
-    userInfo?: QuodsiUserInfo,
-    silentAuthInProgress: boolean,
-    lastUpdated?: number
+    panelType?: 'model'
   },
   selection: { ... },
   simulation: { ... },
@@ -116,8 +102,6 @@ MessageProvider uses refs to track initialization progress:
 
 ```typescript
 const hasSentReadyRef = useRef(false);
-const authInitializedRef = useRef(false);
-const silentAuthCheckCompletedRef = useRef(false);
 const processedMessageIds = useRef(new Set<string>());
 ```
 
@@ -130,27 +114,7 @@ const processedMessageIds = useRef(new Set<string>());
 
 File: `quodsim-react/src/messaging/effects/`
 
-MessageProvider initializes 7+ specialized effects:
-
-### Authentication Effects
-
-**useInitialAuthCheckEffect** (`effects/authEffects.ts`)
-- Runs once on mount
-- Immediately checks localStorage for cached auth
-- Fastest auth path (synchronous)
-
-**useAuthInitializationEffect** (`effects/authEffects.ts`)
-- Watches for `state.auth.lastUpdated` to be set
-- Sets `authInitializedRef.current = true` when auth state has timestamp
-
-**useSilentAuthCompletionEffect** (`effects/authEffects.ts`)
-- Watches for `state.auth.silentAuthInProgress` to become false
-- Sets `silentAuthCheckCompletedRef.current = true` when complete
-
-**useAuthStateChangeEffect** (`effects/authEffects.ts`)
-- Comprehensive tracking of all auth state changes
-- Redundant safety mechanism to ensure auth completes
-- Calls `ensureAuthState()` to validate localStorage
+MessageProvider initializes specialized effects:
 
 ### Initialization Effects
 
@@ -166,21 +130,16 @@ MessageProvider initializes 7+ specialized effects:
 **Trigger Conditions (all must be true):**
 1. `!hasSentReadyRef.current` - Haven't sent yet
 2. `state.app.initialized` - App initialized
-3. `state.app.panelType` - Panel type determined
-4. `!state.auth.silentAuthInProgress` - Auth check complete
 
 **Actions when triggered:**
-1. Call `ensureAuthState()` - validates localStorage
-2. Force-set refs if conditions met
-3. Send REACT_APP_READY message via `sendMessage()`
-4. Set `hasSentReadyRef.current = true`
+1. Force-set refs if conditions met
+2. Send REACT_APP_READY message via `sendMessage()`
+3. Set `hasSentReadyRef.current = true`
 
 **Message payload:**
 ```typescript
 {
-  panel: 'auth' | 'model',
-  isAuthenticated: boolean,
-  user: QuodsiUserInfo | undefined
+  panel: 'model'
 }
 ```
 
@@ -195,69 +154,36 @@ There's also a 3-second emergency timer that forces REACT_APP_READY if normal fl
 - Routes incoming messages to appropriate handlers
 - Prevents duplicate processing via `processedMessageIds` ref
 
-## Silent Authentication Flow
-
-File: `quodsim-react/src/hooks/useSilentAuth.ts`
-
-**Execution:**
-1. Component mounts
-2. `useSilentAuth()` hook runs
-3. Checks localStorage for cached token
-4. If found: validates and updates state
-5. If not found: attempts MSAL silent auth (acquireTokenSilent)
-6. Sets `silentAuthInProgress = false` when complete
-
-**Duration:** 500-1500ms (network dependent)
-
-**States:**
-```
-silentAuthInProgress: true (initial)
-  ↓
-[localStorage check or MSAL call]
-  ↓
-silentAuthInProgress: false (complete)
-lastUpdated: timestamp
-isAuthenticated: true/false
-```
-
 ## Initialization Completion Criteria
 
 For REACT_APP_READY to be sent, all these must be true:
 
 ```typescript
 state.app.initialized === true
-state.app.panelType !== undefined
-state.auth.silentAuthInProgress === false
 hasSentReadyRef.current === false
 ```
 
 **Timeline:**
 ```
 0ms:    React mounts
-50ms:   Panel type detected → initialized=true
-100ms:  Silent auth starts → silentAuthInProgress=true
-500ms:  Silent auth completes → silentAuthInProgress=false
-501ms:  REACT_APP_READY triggered (all conditions met)
+50ms:   App initialized → initialized=true
+100ms:  Effects complete
+150ms:  REACT_APP_READY triggered (all conditions met)
 ```
 
 ## Component Rendering
 
 Once MessageProvider is initialized, it renders `LucidApp`:
 
-### AuthPanel (panelType === 'auth')
-- Login/logout UI
-- User profile display
-- Authentication status
-
-### ModelPanel (panelType === 'model')
+### ModelPanel
 - Model editing UI
 - Selection-based forms
 - Validation messages
 - Simulation controls
 
-Both panels have access to messaging context:
+The panel has access to messaging context:
 ```typescript
-const { auth, selection, sendMessage } = useMessaging();
+const { selection, simulation, validation, sendMessage } = useMessaging();
 ```
 
 ## Next Steps

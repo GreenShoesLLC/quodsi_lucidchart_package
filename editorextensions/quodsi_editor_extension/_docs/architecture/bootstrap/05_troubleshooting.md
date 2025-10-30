@@ -17,29 +17,21 @@ Check browser console for:
 ```
 [ReactAppReadyEffects] Conditions for REACT_APP_READY check:
   appInitialized: false/true
-  panelType: undefined/'auth'/'model'
-  authLoading: true/false
 ```
 
 **Common Causes:**
 
-**A. Panel type not detected**
-- Check URL has `?panel=auth` or `?panel=model`
-- Verify `usePanelTypeDetectionEffect` is running
+**A. App initialization stuck**
+- Verify initialization effects are running
 - Look for `state.app.initialized = true` in logs
 
 **Fix:**
 ```typescript
 // Verify URL in browser console
-console.log(window.location.search); // Should show ?panel=X
+console.log(window.location.search); // Should show ?panel=model
 ```
 
-**B. Silent auth stuck**
-- `state.auth.silentAuthInProgress` stays true
-- Network timeout in MSAL
-- MSAL configuration issue
-
-**Fix:**
+**B. Emergency timer not firing**
 - Emergency timer should fire after 3s
 - Check for `EMERGENCY: Forcing REACT_APP_READY` in logs
 - If emergency timer doesn't fire, check effect dependencies
@@ -114,50 +106,7 @@ router.registerChannel('model', panel);
 - Message queuing system handles this automatically
 - No user action needed - architectural solution
 
-### 4. Authentication Delays
-
-**Symptoms:**
-- Panel takes > 5 seconds to become operational
-- Multiple "attempting silent auth" messages
-- Auth state flickering between authenticated/not authenticated
-
-**Diagnosis:**
-
-Check for:
-```
-[useSilentAuth] Starting silent authentication
-[useSilentAuth] Silent auth completed: false
-[useSilentAuth] Silent auth completed: true
-```
-
-**Causes:**
-
-**A. Network latency**
-- MSAL token endpoint slow
-- Corporate proxy/VPN issues
-
-**B. localStorage corruption**
-- Cached tokens invalid
-- Parse errors in stored auth data
-
-**Fix:**
-
-Clear localStorage:
-```typescript
-// In React console:
-localStorage.removeItem('quodsi_auth_state');
-window.location.reload();
-```
-
-**C. Multiple auth checks**
-- Multiple effects calling MSAL
-- Redundant auth verification
-
-**Fix:**
-- Verify only `useSilentAuth` calls MSAL
-- Check that auth effects are read-only (don't trigger auth)
-
-### 5. Panel Communication Failures
+### 4. Panel Communication Failures
 
 **Symptoms:**
 - Messages sent from React but not received by extension
@@ -255,7 +204,6 @@ window.__quodsiDebug.getAllLogs() // All logged messages
 // Extension ready checklist:
 ModelManager.getInstance() // Should exist
 MessageRouter.getInstance() // Should exist
-window.quodsiExtension.panels.auth // Should exist
 window.quodsiExtension.panels.model // Should exist
 ```
 
@@ -294,7 +242,6 @@ window.__reactAppReady // Should be true after REACT_APP_READY sent
 
 **Check for:**
 - iframe loading: `quodsim-react/index.html`
-- MSAL token requests to `login.microsoftonline.com`
 - Data connector API calls
 
 **Expected timeline:**
@@ -303,9 +250,7 @@ window.__reactAppReady // Should be true after REACT_APP_READY sent
 100ms:  index.html loaded
 150ms:  JavaScript bundle loaded
 200ms:  React mounted
-500ms:  MSAL token request
-1500ms: MSAL response
-1501ms: REACT_APP_READY sent
+250ms:  REACT_APP_READY sent
 ```
 
 ### React DevTools
@@ -313,16 +258,13 @@ window.__reactAppReady // Should be true after REACT_APP_READY sent
 **Check component hierarchy:**
 ```
 <App>
-  <MsalProvider>
-    <MessageProvider>  ← State should show auth, selection, etc.
-      <LucidApp>
-        <ModelPanel>  ← Should render based on state
+  <MessageProvider>  ← State should show selection, simulation, validation
+    <LucidApp>
+      <ModelPanel>  ← Should render based on state
 ```
 
 **Check MessageProvider state:**
 - `app.initialized` should be `true`
-- `app.panelType` should be `'auth'` or `'model'`
-- `auth.silentAuthInProgress` should be `false` after ~1s
 
 ## Development Tips
 
@@ -365,11 +307,11 @@ npm start
 // In React console:
 const testMsg = {
   id: 'test',
-  type: 'AUTH_STATUS',
+  type: 'SELECTION_CHANGED',
   source: 'host',
   target: 'model-iframe',
   version: '1.0',
-  data: { isAuthenticated: true }
+  data: { selectedElements: [] }
 };
 window.postMessage(testMsg, '*');
 ```
@@ -384,11 +326,11 @@ MessageRouter.getInstance().dumpChannelState();
 // Force send message
 MessageRouter.getInstance().send('model', {
   id: 'manual_test',
-  type: 'AUTH_STATUS',
+  type: 'SELECTION_CHANGED',
   source: 'host',
   target: 'model-iframe',
   version: '1.0',
-  data: { isAuthenticated: true }
+  data: { selectedElements: [] }
 });
 
 // Check panel registration
@@ -404,7 +346,7 @@ window.parent.postMessage({
   source: 'model-iframe',
   target: 'host',
   version: '1.0',
-  data: { panel: 'model', isAuthenticated: false }
+  data: { panel: 'model' }
 }, '*');
 ```
 
@@ -422,12 +364,6 @@ window.parent.postMessage({
 
 **Fix:** Use refs for objects that shouldn't trigger re-renders
 
-### MSAL error: interaction_in_progress
-
-**Cause:** Multiple simultaneous MSAL calls
-
-**Fix:** Ensure `silentAuthInProgress` flag is checked before calling MSAL
-
 ### postMessage: Failed to execute on 'Window': target origin differs
 
 **Cause:** React app trying to send to wrong origin
@@ -438,9 +374,8 @@ window.parent.postMessage({
 
 Before deploying changes to bootstrap code:
 
-- [ ] Test both auth and model panel initialization
+- [ ] Test model panel initialization
 - [ ] Test with network throttling (slow 3G)
-- [ ] Test with no cached auth (incognito mode)
 - [ ] Test rapid panel open/close cycles
 - [ ] Verify emergency timer fires if needed
 - [ ] Check message queue flushes properly
@@ -454,8 +389,7 @@ Before deploying changes to bootstrap code:
 If you encounter:
 - REACT_APP_READY not sent after 5+ seconds (emergency timer should fire at 3s)
 - Repeated panel recovery failures
-- Messages reaching wrong panel (auth vs model)
-- State corruption (auth flickering, invalid data)
+- State corruption or invalid data
 - Build errors in messaging system
 
 Check:

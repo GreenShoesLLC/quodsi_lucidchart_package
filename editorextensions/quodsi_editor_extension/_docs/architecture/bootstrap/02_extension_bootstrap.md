@@ -53,7 +53,6 @@ initializeMessaging(true); // Enable logging
 - **Pattern**: Singleton via `MessageRouter.getInstance()`
 - **Creates**:
   - `ChannelManager` for panel communication
-  - `RouterState` for global state
   - Message queue system
 
 **Schema:**
@@ -61,32 +60,12 @@ initializeMessaging(true); // Enable logging
 initializeMessaging()
   └─> MessageRouter.getInstance() [singleton]
        ├─> new ChannelManager(logFn)
-       ├─> new RouterState()
        └─> window.__msgLog = logBuffer
 ```
 
 ## Stage 3: Panel Creation
 
 **Lines: extension.ts:43-52**
-
-### ContentDockPanel (Auth Panel)
-```typescript
-contentDockPanel = new ContentDockPanel(client);
-contentDockPanel.setLogging(true);
-```
-- File: `src/panels/ContentDockPanel.ts`
-- **Extends**: `Panel` (Lucid SDK)
-- **Implements**: `RoutablePanel` interface
-- **Config**:
-  - Location: PanelLocation.ContentDock (left side)
-  - URL: `quodsim-react/index.html?panel=auth`
-  - Width: 300px
-  - Icon: Lucid favicon (temporary)
-
-**On construction:**
-1. Calls `super()` with panel config
-2. Registers in global scope: `window.quodsiExtension.panels.auth = this`
-3. Waits for `didMount()` lifecycle event
 
 ### RightDockPanel (Model Panel)
 ```typescript
@@ -109,7 +88,7 @@ rightDockPanel.setLogging(true);
 
 ### Panel Lifecycle Hooks
 
-Both panels implement these lifecycle methods:
+The panel implements these lifecycle methods:
 
 **didMount()**
 - Called when panel is mounted by Lucid
@@ -118,8 +97,7 @@ Both panels implement these lifecycle methods:
 **frameLoaded()**
 - Called when iframe has loaded
 - Re-registers with MessageRouter (ensure valid reference)
-- ContentDockPanel: sets `isReady = true`
-- RightDockPanel: marks channel ready, requests auth status
+- Marks channel ready
 
 **frameClosed()**
 - Called when iframe removed from DOM
@@ -166,7 +144,7 @@ At this point:
 
 ## Panel Registration with MessageRouter
 
-When panels call `router.registerChannel(role, this)`:
+When the panel calls `router.registerChannel(role, this)`:
 
 **MessageRouter actions:**
 1. Validates panel has `relayToIframe()` method
@@ -193,7 +171,7 @@ interface RoutablePanel {
 }
 ```
 
-Both ContentDockPanel and RightDockPanel implement this to receive messages from MessageRouter.
+RightDockPanel implements this to receive messages from MessageRouter.
 
 ## Next Steps
 

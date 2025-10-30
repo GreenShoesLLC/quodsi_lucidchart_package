@@ -9,9 +9,9 @@ The bootstrap process follows an 8-stage sequence:
 1. **Extension Load** - Browser executes extension package
 2. **Core Setup** - Singletons and services initialization
 3. **Messaging System** - MessageRouter and ChannelManager setup
-4. **Panel Creation** - ContentDockPanel and RightDockPanel instantiation
+4. **Panel Creation** - RightDockPanel instantiation
 5. **React App Load** - iframe creation and React mount
-6. **React Initialization** - Effects, hooks, and auth setup
+6. **React Initialization** - Effects and hooks setup
 7. **Communication Handshake** - REACT_APP_READY and channel readiness
 8. **Operational State** - Fully functional system
 
@@ -34,7 +34,6 @@ React-side initialization (Stages 5-6):
 - iframe load and React mount
 - Component tree: `index.tsx` → `App.tsx` → `MessageProvider` → `LucidApp`
 - Effects system and ref tracking
-- Silent authentication flow
 
 ### [04_messaging_handshake.md](./04_messaging_handshake.md)
 Communication establishment (Stages 7-8):
@@ -47,7 +46,6 @@ Communication establishment (Stages 7-8):
 ### [05_troubleshooting.md](./05_troubleshooting.md)
 Common issues and debugging:
 - Race conditions
-- Authentication delays
 - Panel communication failures
 - Logging strategies
 
@@ -67,7 +65,6 @@ Common issues and debugging:
 - `src/core/ModelManager.ts` - Model state singleton
 - `src/core/StorageAdapter.ts` - Data persistence
 - `src/core/messaging/MessageRouter.ts` - Message routing singleton
-- `src/panels/ContentDockPanel.ts` - Auth panel
 - `src/panels/RightDockPanel.ts` - Model panel
 
 **React Side:**
