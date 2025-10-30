@@ -33,9 +33,3 @@ export {
   SESSION_CHECK_INTERVAL_MS,
   SESSION_STORAGE_KEYS
 } from './sessionConfig';
-
-// API Configuration
-export {
-  coreApiConfig,
-  authApiConfig
-} from './authApiConfig';
