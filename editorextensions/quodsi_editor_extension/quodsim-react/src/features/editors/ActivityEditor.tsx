@@ -23,7 +23,7 @@ import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useActivityFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
 
 // ============================================================================
 // CONSTANTS
@@ -33,16 +33,97 @@ import { useActivityFormSync, useSaveCompletionDetector } from "./hooks/useEdito
 // (999999 is used to represent unlimited capacity in the UI)
 const INFINITY_DISPLAY_VALUE = 999999;
 
+/**
+ * Tab navigation configuration for ActivityEditor.
+ * Defines all available tabs, their icons, titles, and tooltips.
+ */
+const TAB_CONFIG = [
+  {
+    id: "basic" as const,
+    title: "Basic Settings",
+    icon: Settings,
+    tooltip: "Configure activity name, processing capacity (parallel entities), and queue buffer limits"
+  },
+  {
+    id: "opsteps" as const,
+    title: "Operation Steps",
+    icon: Layers,
+    tooltip: "Define sequential processing steps with durations and resource requirements for this activity"
+  },
+  {
+    id: "financial" as const,
+    title: "Financial Settings",
+    icon: DollarSign,
+    tooltip: "Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
+  },
+  {
+    id: "connectors" as const,
+    title: "Routing Configuration",
+    icon: ArrowRightLeft,
+    tooltip: "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
+  },
+  {
+    id: "events" as const,
+    title: "Event Modifications",
+    icon: Zap,
+    tooltip: "Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
+  },
+  {
+    id: "states" as const,
+    title: "State Definitions",
+    icon: Hash,
+    tooltip: "Define custom state variables that this activity can track and modify"
+  },
+];
+
+/**
+ * TabHeader - Consistent header for tab content sections
+ *
+ * Displays an icon, title, and tooltip for each tab's content area.
+ * Used across all activity editor tabs for visual consistency.
+ *
+ * @param icon - Lucide icon component to display
+ * @param title - Tab section title
+ * @param tooltip - Helpful description shown on hover
+ */
+const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
+  icon: Icon,
+  title,
+  tooltip,
+}) => (
+  <div className="flex items-center gap-1 mb-1">
+    <Icon className="w-3 h-3 text-blue-500" />
+    <span className="text-xs font-medium text-gray-700">{title}</span>
+    <span title={tooltip}>
+      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+    </span>
+  </div>
+);
+
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/**
+ * Input type for activity data - accepts various formats
+ */
+type ActivityInput = Activity | { data: Partial<Activity> } | Partial<Activity>;
+
+/**
+ * Type for tracking resource requirement being edited in modal
+ */
+interface EditingRequirement {
+  id: string;
+  name: string;
+  structure: TeamStructure;
+}
 
 /**
  * Props for the ActivityEditor component
  */
 interface ActivityEditorProps {
   /** The activity to edit (can be Activity instance or raw data object) */
-  activity: any;
+  activity: ActivityInput;
   /** Callback when user clicks Save - receives the updated Activity */
   onSave: (activity: Activity) => void;
   /** Callback when user clicks Cancel */
@@ -95,7 +176,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
-  const [editingRequirement, setEditingRequirement] = useState<{ id: string; name: string; structure: TeamStructure } | null>(null);
+  const [editingRequirement, setEditingRequirement] = useState<EditingRequirement | null>(null);
 
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
@@ -274,7 +355,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Set to true: When any field changes
    * Set to false: When save completes (via useSaveCompletionDetector) or Cancel clicked
    */
-  const [hasPendingChanges, setHasChanges] = useState(false);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
   /**
    * Redux-managed state for save operation tracking.
@@ -289,14 +370,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const optimisticData = localActivityDraft.id ? elementOpsState.getOptimisticData(localActivityDraft.id) : null;
 
   // Custom hooks for state synchronization
-  useActivityFormSync(
-    activity.id,
+  useFormSync(
+    (activity as any).id || (activity as any).data?.id || "",
     hasPendingChanges,
     () => extractActivityData(activity),
     setLocalActivityDraft
   );
 
-  useSaveCompletionDetector(isSaving, setHasChanges);
+  useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -316,7 +397,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     setLocalActivityDraft(prev => {
       // Build updates object based on which field changed
-      const updates: any = {};
+      const updates: Partial<{
+        name: string;
+        capacity: number;
+        inputBufferCapacity: number;
+        outputBufferCapacity: number;
+      }> = {};
 
       if (name === 'name') {
         updates.name = value;
@@ -331,7 +417,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       return updateActivityImmutably(prev, updates);
     });
 
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
   /**
@@ -384,9 +470,24 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const handleCancel = () => {
     setLocalActivityDraft(extractActivityData(activity));
-    setHasChanges(false);
+    setHasPendingChanges(false);
   };
 
+  /**
+   * Handles changes to a specific operation step.
+   *
+   * Updates the operation step at the specified index with new data.
+   * Operation steps define sequential processing phases with durations
+   * and resource requirements.
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but NOT persisted until user clicks Save button.
+   *
+   * Sets hasPendingChanges to enable the Save button.
+   *
+   * @param index - Array index of the operation step being updated
+   * @param updatedStep - New operation step data
+   */
   const handleOperationStepChange = (index: number, updatedStep: OperationStep) => {
     setLocalActivityDraft(prev => {
       const newOperationSteps = [...prev.operationSteps];
@@ -396,9 +497,24 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         operationSteps: newOperationSteps
       });
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
+  /**
+   * Adds a new operation step to the activity.
+   *
+   * Creates a new operation step with default settings:
+   * - Duration: 1 minute (constant distribution)
+   * - No resource requirements initially
+   *
+   * The new step is appended to the end of the operation steps array.
+   * User can then configure duration and resources via OperationStepEditor.
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but NOT persisted until user clicks Save button.
+   *
+   * Sets hasPendingChanges to enable the Save button.
+   */
   const handleAddOperationStep = () => {
     // Create a new operation step with a default constant distribution
     const newStep = createOperationStep(
@@ -412,9 +528,25 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         operationSteps: newOperationSteps
       });
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
+  /**
+   * Deletes an operation step at the specified index.
+   *
+   * Removes the operation step from the operationSteps array.
+   * This is a destructive operation - the step's configuration is lost.
+   *
+   * Uses React.useCallback for performance optimization since this
+   * handler is passed to child components (OperationStepEditor).
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but NOT persisted until user clicks Save button.
+   *
+   * Sets hasPendingChanges to enable the Save button.
+   *
+   * @param index - Array index of the operation step to delete
+   */
   const handleOperationStepDelete = React.useCallback((index: number) => {
     setLocalActivityDraft(prev => {
       const newOperationSteps = prev.operationSteps.filter((_, i) => i !== index);
@@ -423,9 +555,28 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         operationSteps: newOperationSteps
       });
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   }, []);
 
+  /**
+   * Handles changes to financial property fields.
+   *
+   * Creates a new ActivityFinancialProperties instance with the updated field,
+   * preserving all other financial properties. Financial tracking enables
+   * cost analysis for activities including:
+   * - Fixed costs
+   * - Per-entity costs
+   * - Time-based costs (active/idle)
+   * - Resource cost multipliers
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but NOT persisted until user clicks Save button.
+   *
+   * Sets hasPendingChanges to enable the Save button.
+   *
+   * @param field - The financial property field to update
+   * @param value - The new value for the field
+   */
   const handleFinancialChange = (field: keyof ActivityFinancialProperties, value: any) => {
     setLocalActivityDraft(prev => {
       const currentFinancial = prev.financialProperties || new ActivityFinancialProperties();
@@ -443,10 +594,24 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         financialProperties: updatedFinancial
       });
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
-  // ConnectType change handler
+  /**
+   * Handles changes to the activity's routing/connect type.
+   *
+   * Connect type determines how entities are routed to downstream activities:
+   * - Probability: Route based on connector probabilities
+   * - Conditional: Route based on state conditions
+   * - EntityType: Route based on entity template
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but NOT persisted until user clicks Save button.
+   *
+   * Sets hasPendingChanges to enable the Save button.
+   *
+   * @param e - Change event from select or input element
+   */
   const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const newConnectType = e.target.value as ConnectType;
     setLocalActivityDraft(prev => {
@@ -454,7 +619,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         connectType: newConnectType
       });
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
   /**
@@ -505,7 +670,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setLocalActivityDraft(updatedActivity);
   };
 
-  // Resource Requirement Modal Handlers
+  /**
+   * Opens the resource requirement modal in edit mode.
+   *
+   * Loads the specified resource requirement's configuration into the modal,
+   * converting the internal root clauses format to the UI-friendly team structure.
+   *
+   * @param requirementId - ID of the resource requirement to edit
+   */
   const handleOpenRequirementModal = (requirementId: string) => {
     const req = referenceData?.resourceRequirements?.find(r => r.id === requirementId);
     if (req) {
@@ -515,11 +687,27 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     }
   };
 
+  /**
+   * Opens the resource requirement modal in create mode.
+   *
+   * Clears any existing editing state to start fresh with a new requirement.
+   * The modal will generate a new ID when saved.
+   */
   const handleCreateRequirement = () => {
     setEditingRequirement(null);
     setRequirementModalOpen(true);
   };
 
+  /**
+   * Saves a resource requirement (either new or edited).
+   *
+   * Converts the UI-friendly team structure back to internal root clauses format.
+   * Either updates an existing requirement or creates a new one with generated ID.
+   *
+   * Sends update message to extension via Redux to persist to model.
+   *
+   * @param data - Requirement name and team structure from modal
+   */
   const handleSaveRequirement = (data: { name: string; structure: TeamStructure }) => {
     const rootClauses = convertStructureToRootClauses(data.structure);
 
@@ -563,6 +751,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // RENDER
   // ============================================================================
 
+  // Guard against invalid activity data
   if (!localActivityDraft?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
@@ -578,78 +767,24 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           {/* Tab Navigation */}
           <div className="border-b bg-gray-50">
             <div className="flex">
-              <button
-                type="button"
-                onClick={() => setActiveTab("basic")}
-                title="Basic Settings"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "basic"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("opsteps")}
-                title="Operation Steps"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "opsteps"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("financial")}
-                title="Financial Settings"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "financial"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <DollarSign className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("connectors")}
-                title="Routing Configuration"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "connectors"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("events")}
-                title="Event Modifications"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "events"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("states")}
-                title="State Definitions"
-                className={`px-2 py-1.5 border-b-2 ${
-                  activeTab === "states"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Hash className="w-3.5 h-3.5" />
-              </button>
+              {TAB_CONFIG.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    title={tab.title}
+                    className={`px-3 py-2 border-b-2 ${
+                      activeTab === tab.id
+                        ? "border-blue-600 text-blue-600"
+                        : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -657,13 +792,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
             {activeTab === "basic" && (
               <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <Settings className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Basic Settings</span>
-                  <span title="Configure activity name, processing capacity (parallel entities), and queue buffer limits">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
+                <TabHeader
+                  icon={Settings}
+                  title="Basic Settings"
+                  tooltip="Configure activity name, processing capacity (parallel entities), and queue buffer limits"
+                />
                 <div className="space-y-2">
                   {/* Name Section */}
                   <div>
@@ -758,13 +891,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             {activeTab === "opsteps" && (
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1">
-                    <Layers className="w-3 h-3 text-blue-500" />
-                    <span className="text-xs font-medium text-gray-700">Operation Steps</span>
-                    <span title="Define sequential processing steps with durations and resource requirements for this activity">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
+                  <TabHeader
+                    icon={Layers}
+                    title="Operation Steps"
+                    tooltip="Define sequential processing steps with durations and resource requirements for this activity"
+                  />
                   <button
                     type="button"
                     onClick={handleAddOperationStep}
@@ -799,13 +930,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
             {activeTab === "financial" && (
               <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <DollarSign className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Financial Settings</span>
-                  <span title="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
+                <TabHeader
+                  icon={DollarSign}
+                  title="Financial Settings"
+                  tooltip="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
+                />
                 <div className="space-y-1">
                   {/* Enable Financial Tracking */}
                   <div className="flex items-center gap-2">
@@ -928,13 +1057,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
             {activeTab === "connectors" && (
               <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <ArrowRightLeft className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Routing Configuration</span>
-                  <span title="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
+                <TabHeader
+                  icon={ArrowRightLeft}
+                  title="Routing Configuration"
+                  tooltip="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
+                />
                 <RoutingConfigurationContent
                   localData={localActivityDraft}
                   handleChange={handleConnectTypeChange}
@@ -948,13 +1075,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
             {activeTab === "events" && (
               <div className="space-y-2">
-                <div className="flex items-center gap-1 mb-1">
-                  <Zap className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">Event Modifications</span>
-                  <span title="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
+                <TabHeader
+                  icon={Zap}
+                  title="Event Modifications"
+                  tooltip="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
+                />
 
                 {/* Pre-Processing State Modifications */}
                 <div className="border-b pb-2">
@@ -984,13 +1109,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
             {activeTab === "states" && (
               <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <Hash className="w-3 h-3 text-blue-500" />
-                  <span className="text-xs font-medium text-gray-700">State Definitions</span>
-                  <span title="Define custom state variables that this activity can track and modify">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
+                <TabHeader
+                  icon={Hash}
+                  title="State Definitions"
+                  tooltip="Define custom state variables that this activity can track and modify"
+                />
                 <StatesEditor
                   states={states}
                   onStatesChange={onStatesChange}
@@ -1000,7 +1123,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
           </div>
 
-      {/* Save/Cancel Buttons - Only show for tabs that require manual save (not States or Events which auto-save) */}
+      {/*
+        Save/Cancel Buttons - Conditional display based on tab type
+
+        Hidden for tabs with auto-save behavior:
+        - states: State definitions auto-save immediately
+        - events: State modifications auto-save immediately
+
+        Shown for manual-save tabs:
+        - basic, opsteps, financial, connectors
+      */}
       {activeTab !== "states" && activeTab !== "events" && (
         <div className="flex justify-end gap-2 pt-2 border-t">
           <button
