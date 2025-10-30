@@ -1,32 +1,46 @@
 import { useEffect, useRef } from "react";
-import { Activity } from "@quodsi/shared";
 
 /**
- * Custom hook that syncs form state when the activity ID changes.
+ * Custom hook that syncs form state when the element ID changes.
  *
- * This handles the case where the user switches from editing Activity A to Activity B.
- * The form should update to show Activity B's data, but ONLY if there are no pending
+ * This handles the case where the user switches from editing Element A to Element B.
+ * The form should update to show Element B's data, but ONLY if there are no pending
  * changes (to avoid losing user edits).
  *
- * @param activityId - The ID of the currently selected activity
+ * Generic version that works with any element type (Activity, Generator, Entity, etc.)
+ *
+ * @param elementId - The ID of the currently selected element
  * @param hasPendingChanges - Whether there are unsaved changes (guard condition)
- * @param extractActivityData - Function to extract fresh activity data from props
- * @param setLocalActivityDraft - State setter to update the form draft
+ * @param extractElementData - Function to extract fresh element data from props
+ * @param setLocalDraft - State setter to update the form draft
  */
-export function useActivityFormSync(
-  activityId: string,
+export function useFormSync<T>(
+  elementId: string,
   hasPendingChanges: boolean,
-  extractActivityData: () => Activity,
-  setLocalActivityDraft: (activity: Activity) => void
+  extractElementData: () => T,
+  setLocalDraft: (element: T) => void
 ) {
-  // Sync localActivityDraft when activity ID changes (switching to different activity)
+  // Sync localDraft when element ID changes (switching to different element)
   // hasPendingChanges is a guard condition (protects edits), not a trigger
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!hasPendingChanges) {
-      setLocalActivityDraft(extractActivityData());
+      setLocalDraft(extractElementData());
     }
-  }, [activityId]);
+  }, [elementId]);
+}
+
+/**
+ * DEPRECATED: Use useFormSync instead.
+ * Kept for backward compatibility with ActivityEditor.
+ */
+export function useActivityFormSync(
+  activityId: string,
+  hasPendingChanges: boolean,
+  extractActivityData: () => any,
+  setLocalActivityDraft: (activity: any) => void
+) {
+  return useFormSync(activityId, hasPendingChanges, extractActivityData, setLocalActivityDraft);
 }
 
 /**

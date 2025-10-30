@@ -23,7 +23,7 @@ import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useActivityFormSync, useSaveCompletionDetector } from "./hooks/useActivityEditorState";
+import { useActivityFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
 
 // ============================================================================
 // CONSTANTS
