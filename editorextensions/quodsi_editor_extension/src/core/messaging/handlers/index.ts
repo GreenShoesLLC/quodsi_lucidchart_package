@@ -1,6 +1,4 @@
 import { EnvelopeBase } from '@quodsi/shared';
-import { AuthHandler } from './authHandler';
-import { SubscriptionHandler } from './subscriptionHandler';
 import { FrameworkHandler } from './frameworkHandler';
 
 import { SimulationHandler } from './simulationHandler';
@@ -32,18 +30,7 @@ export class MessageHandlers {
       console.log(`[MessageHandlers] Message ${msg.type} handled by FrameworkHandler`);
       return true;
     }
-    
-    // Auth messages
-    if (AuthHandler.handleMessage(msg)) {
-      console.log(`[MessageHandlers] Message ${msg.type} handled by AuthHandler`);
-      return true;
-    }
-    
-    // Subscription messages
-    if (SubscriptionHandler.handleMessage(msg)) {
-      return true;
-    }
-    
+
     // Selection messages
     if (SelectionHandler.handleMessage(msg)) {
       return true;
@@ -92,8 +79,6 @@ export class MessageHandlers {
 
 // Re-export handlers for direct access
 export {
-  AuthHandler,
-  SubscriptionHandler,
   FrameworkHandler,
   SelectionHandler,
   SimulationHandler,

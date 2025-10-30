@@ -17,15 +17,14 @@ const rootElement = document.getElementById("root");
 if (!rootElement) {
   console.error("Could not find root element to mount application");
 } else {
-  // Determine the panel type from URL for direct initialization
-  const urlParams = new URLSearchParams(window.location.search);
-  const panelType = urlParams.get("panel") === "auth" ? "auth" : "model";
+  // Always use model panel (auth has been removed)
+  const panelType: "model" = "model";
 
   // Use the new createRoot API
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <React.StrictMode>
-      <App panelType={panelType as "auth" | "model"} />
+      <App panelType={panelType} />
     </React.StrictMode>
   );
 }

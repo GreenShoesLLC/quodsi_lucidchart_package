@@ -12,7 +12,6 @@ export class ChannelManager {
    * Channel registry for each panel type
    */
   private channels: Record<PanelRole, Channel> = {
-    auth: { ready: false, queue: [] },
     model: { ready: false, queue: [] },
   };
   
@@ -111,16 +110,7 @@ export class ChannelManager {
       msgId: msg.id,
       msgTarget: msg.target
     });
-    
-    // Special handling for AUTH_STATUS messages - always log them
-    if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-      this.debug.log(`AUTH_STATUS message for ${role}:`, {
-        authData: msg.data,
-        // isAuthenticated: msg.data?.isAuthenticated,
-        hasTarget: !!msg.target
-      });
-    }
-    
+
     if (ch.ready && ch.panel) {
       try {
         this.debug.debug(`Attempting to relay message to iframe:`, {
@@ -209,16 +199,7 @@ export class ChannelManager {
             id: m.id,
             target: m.target
           });
-          
-          // Special handling for AUTH_STATUS messages - always log them when flushing
-          if (m.type === EnvelopeMessageType.AUTH_STATUS) {
-            this.debug.log(`Flushing AUTH_STATUS message:`, {
-              authData: m.data,
-              // isAuthenticated: m.data?.isAuthenticated,
-              target: m.target
-            });
-          }
-          
+
           ch.panel!.relayToIframe(m);
           this.debug.debug(`Successfully flushed message ${index + 1}`);
         } catch (err) {

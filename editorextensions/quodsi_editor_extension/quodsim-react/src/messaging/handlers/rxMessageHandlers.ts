@@ -1,7 +1,6 @@
 import { EnvelopeMessageType, isEnvelope } from '@quodsi/shared';
 import { debugService } from '../utils/debugService';
 import { mapEnvelopeToAction } from '../mappers/mapEnvelopeToAction';
-import { handleAuthStatus } from './authStatusHandler';
 
 const logger = debugService.forComponent('RxMessageHandlers');
 
@@ -12,8 +11,7 @@ export function createRxMessageHandler(
   state: any,
   dispatch: React.Dispatch<any>,
   processedMessageIds: React.MutableRefObject<Set<string>>,
-  sendMessage: (type: EnvelopeMessageType, data?: any) => void,
-  ensureAuthState: () => { isAuthenticated: boolean, userInfo: any }
+  sendMessage: (type: EnvelopeMessageType, data?: any) => void
 ) {
   return function handleMessage(event: MessageEvent) {
     logger.debug("Received raw event:", event);
@@ -26,12 +24,7 @@ export function createRxMessageHandler(
       return;
     }
 
-    // CRITICAL: Special handling for AUTH_STATUS messages
-    if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-      return handleAuthStatus(msg, state, dispatch);
-    }
-
-    // For all other message types, check for duplicates
+    // For all message types, check for duplicates
     // Deduplicate messages - skip if we've already processed this message ID
     if (msg.id && processedMessageIds.current.has(msg.id)) {
       logger.debug(`Skipping duplicate message with ID: ${msg.id}`);

@@ -1,26 +1,21 @@
 // Export the MessageProvider component and base hooks
-export { 
+export {
   MessageProvider,
   useMessaging,
   useMessagingDispatch,
-  useAuth,
-  useSubscription,
   useSelection,
   useSimulation,
   useValidation
 } from './MessageProvider';
 
 // Export hooks we've implemented
-export { 
-  useAuthState,
+export {
   useSendMessage
 } from './hooks';
 
 // Export message senders
-export { 
+export {
   useSender,
-  useAuthSender,
-  useSubscriptionSender,
   useSimulationSender,
   useModelOpsSender,
   useStorageSender
@@ -31,8 +26,6 @@ export { mapEnvelopeToAction } from './mappers';
 
 // Export individual mappers directly from their source files to avoid any re-export issues
 export { mapFramework } from './mappers/framework.mapper';
-export { mapAuth } from './mappers/auth.mapper';
-export { mapSubscription } from './mappers/subscription.mapper';
 export { mapSelection } from './mappers/selection.mapper';
 export { mapSimulation } from './mappers/simulation.mapper';
 export { mapModelOps } from './mappers/modelOps.mapper';

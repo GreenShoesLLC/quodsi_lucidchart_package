@@ -8,9 +8,7 @@ export * from './types';
 
 // Re-export all state slices
 export * from './appSlice';
-export * from './authSlice';
 export * from './selectionSlice';
-export * from './subscriptionSlice';
 export * from './simulationSlice';
 export * from './validationSlice';
 

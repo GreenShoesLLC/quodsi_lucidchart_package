@@ -32,11 +32,8 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
       // Log the error for debugging
       debugService.error(`Received ERROR message: [${errorData.code}] ${errorData.message}`);
 
-      // Map to an auth error action since we don't have a dedicated app error type
-      return {
-        type: 'AUTH_ERROR',
-        error: `${errorData.code}: ${errorData.message}`
-      };
+      // No state changes for error messages - just log them
+      return null;
 
     case EnvelopeMessageType.LOG:
       // Extract log data from message
@@ -61,22 +58,3 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
   }
 }
 
-/**
- * Creates a typed ERROR message action
- * 
- * @param code Error code
- * @param message Human-readable error message
- * @param id Optional correlation ID
- * @returns Messaging action
- */
-export function createErrorAction(
-  code: string,
-  message: string,
-  id?: string
-): MessagingAction {
-  // Using AUTH_ERROR since we don't have APP_ERROR in our state structure
-  return {
-    type: 'AUTH_ERROR',
-    error: `${code}: ${message}`
-  };
-}

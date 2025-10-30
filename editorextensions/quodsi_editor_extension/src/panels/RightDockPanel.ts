@@ -64,11 +64,6 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     public relayToIframe(msg: EnvelopeBase): void {
         this.debug.log(`relayToIframe called with msg type: ${msg.type}`);
-        
-        // Special logging for auth status
-        if (msg.type === EnvelopeMessageType.AUTH_STATUS) {
-            this.debug.log('Relaying AUTH_STATUS to iframe:', msg.data);
-        }
 
         try {
             // Use a type assertion to bypass TypeScript's type checking
@@ -107,12 +102,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         
         // Add a hidden reference to this panel so the handlers can re-register it if needed
         (envelope as any)._panelRef = this;
-        
-        // Special handling for AUTH_STATUS messages - log them more verbosely
-        if (envelope.type === EnvelopeMessageType.AUTH_STATUS) {
-            this.debug.log('Received AUTH_STATUS message:', envelope.data);
-        }
-        
+
         this.debug.debug('Forwarding message to router:', envelope.type);
         
         // Forward to the router
@@ -151,59 +141,6 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         this.debug.debug('Dumping channel state for diagnosis');
         if (typeof router.dumpChannelState === 'function') {
             router.dumpChannelState();
-        }
-
-        // NOTE: Previously we were waiting for REACT_APP_READY, but we should also
-        // set up a delayed auth status request to handle cases where silent auth
-        // completes after the panel initialization
-        this.debug.log('Setting up delayed auth status request');
-
-        // Request auth status after a short delay to allow silent auth to complete
-        setTimeout(() => {
-            this.requestAuthStatus();
-        }, 3000); // 3 second delay
-    }
-
-    /**
-     * Request current authentication status
-     * This is a helper method to ensure we get the latest auth state
-     */
-    public requestAuthStatus(): void {
-        this.debug.log('Requesting current auth state');
-        try {
-            // Get the current auth state from the router
-            const authState = router.getAuthState();
-            this.debug.log('Current auth state:', authState);
-
-            // If we already have authentication, use it
-            if (authState && authState.isAuthenticated) {
-                // First try using the channel manager's force deliver method
-                const channelManager = router.getChannelManager();
-                if (channelManager && typeof channelManager.forceDeliverMessage === 'function') {
-                    this.debug.log('Using forceDeliverMessage for AUTH_STATUS');
-                    channelManager.forceDeliverMessage('model', EnvelopeMessageType.AUTH_STATUS, authState);
-                    this.debug.log('Force delivered auth state:', authState);
-                } else {
-                    // Fallback to a direct broadcast request
-                    this.debug.log('Using direct send for AUTH_STATUS');
-                    router.send('model', {
-                        id: `auth_status_request_${Date.now()}`,
-                        type: EnvelopeMessageType.AUTH_STATUS,
-                        source: 'host',
-                        target: 'model-iframe',
-                        version: '1.0',
-                        data: authState
-                    });
-
-                    this.debug.log('Direct sent auth state:', authState);
-                }
-            } else {
-                // No existing auth, broadcast to ensure we get latest state from auth panel
-                this.debug.log('No auth state found, requesting broadcast');
-                router.broadcastAuthStatus();
-            }
-        } catch (err) {
-            this.debug.error('Error requesting auth state:', err);
         }
     }
 

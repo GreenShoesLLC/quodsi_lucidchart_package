@@ -31,22 +31,6 @@ export function useMessagingDispatch() {
 }
 
 /**
- * Hook to access authentication state
- */
-export function useAuth() {
-  const { auth } = useMessaging();
-  return auth;
-}
-
-/**
- * Hook to access subscription state
- */
-export function useSubscription() {
-  const { subscription } = useMessaging();
-  return subscription;
-}
-
-/**
  * Hook to access selection state
  */
 export function useSelection() {

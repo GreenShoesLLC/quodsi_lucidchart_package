@@ -69,12 +69,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to auth error action since we don't have a dedicated app error
+      // If error, log it
       if (!conversionData.success && conversionData.error) {
-        return {
-          type: 'AUTH_ERROR',
-          error: `Conversion failed: ${conversionData.error}`
-        };
+        logger.error(`Conversion failed: ${conversionData.error}`);
+        return null;
       }
 
       // Success - trigger a UI refresh to ensure proper state transition
@@ -93,13 +91,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
 
       logger.log('Processing MODEL_REMOVE_RESULT:', removeData);
 
-      // If error, map to auth error action
+      // If error, log it
       if (!removeData.success && removeData.error) {
         logger.error('Model removal failed:', removeData.error);
-        return {
-          type: 'AUTH_ERROR',
-          error: `Model removal failed: ${removeData.error}`
-        };
+        return null;
       }
 
       // Success - trigger a UI refresh to ensure proper state transition
@@ -117,12 +112,10 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to auth error action
+      // If error, log it
       if (!resultsPageData.success && resultsPageData.error) {
-        return {
-          type: 'AUTH_ERROR',
-          error: `Results page creation failed: ${resultsPageData.error}`
-        };
+        logger.error(`Results page creation failed: ${resultsPageData.error}`);
+        return null;
       }
 
       // Success doesn't require state changes

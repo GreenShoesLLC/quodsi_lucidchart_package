@@ -1,10 +1,8 @@
-import { 
-  EnvelopeBase, 
-  EnvelopeMessageType, 
-  QuodsiUserInfo, 
-  SubscriptionTier, 
-  SubscriptionStatus, 
-  ElementShape, 
+import {
+  EnvelopeBase,
+  EnvelopeMessageType,
+  QuodsiUserInfo,
+  ElementShape,
   SimulationStatus,
   StorageProvider,
   ConnectionStatus
@@ -30,17 +28,6 @@ export interface PendingRequest {
   resolve: (value: any) => void;
   reject: (reason: any) => void;
   timeout: NodeJS.Timeout;
-}
-
-/**
- * Type for feature flags provided by subscription status
- */
-export interface FeatureFlags {
-  simulationEnabled: boolean;
-  multiScenarioEnabled: boolean;
-  customDashboardEnabled: boolean;
-  apiAccessEnabled: boolean;
-  [key: string]: boolean;
 }
 
 /**
@@ -78,38 +65,6 @@ export interface ValidationMessage {
   message: string;
   elementId?: string;
   code?: string;
-}
-
-/**
- * Auth state from the useAuthState hook
- */
-export interface AuthState {
-  isAuthenticated: boolean;
-  userInfo?: QuodsiUserInfo;
-  silentAuthInProgress: boolean;
-  error?: string;
-  logout: () => void;
-  login: (idToken: string, user: QuodsiUserInfo, isNewUser: boolean) => void;
-}
-
-/**
- * Subscription state from the useSubscriptionState hook
- */
-export interface SubscriptionState {
-  tier?: SubscriptionTier;
-  status?: SubscriptionStatus;
-  expiresAt?: string;
-  featureFlags: Record<string, boolean>;
-  isActive: boolean;
-  isExpired: boolean;
-  isInGracePeriod: boolean;
-  isFree: boolean;
-  isPro: boolean;
-  isEnterprise: boolean;
-  hasFeature: (feature: string) => boolean;
-  upgradeToPro: (returnUrl?: string) => void;
-  upgradeToEnterprise: (returnUrl?: string) => void;
-  changeTier: (tier: SubscriptionTier, returnUrl?: string) => void;
 }
 
 /**

@@ -29,14 +29,10 @@ export function mapStorage(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      // If error, map to appropriate error action
-      // Since we don't have a specific storage error action, we'll use AUTH_ERROR
-      // in a real application, you might want to add a STORAGE_ERROR action type
+      // If error, log it
       if (!connectData.success && connectData.error) {
-        return {
-          type: 'AUTH_ERROR', // Using an existing error action type
-          error: `Storage connection failed: ${connectData.error}`
-        };
+        debugService.error(`Storage connection failed: ${connectData.error}`);
+        return null;
       }
 
       // Success doesn't require state changes

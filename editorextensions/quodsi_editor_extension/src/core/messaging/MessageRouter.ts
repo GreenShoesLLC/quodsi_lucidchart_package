@@ -1,15 +1,11 @@
 // import { v4 as uuid } from 'uuid';
-import { 
-  EnvelopeBase, 
-  EnvelopeMessageType, 
-  isEnvelope, 
-  SubscriptionTier, 
-  SubscriptionStatus,
-  QuodsiUserInfo
+import {
+  EnvelopeBase,
+  EnvelopeMessageType,
+  isEnvelope
 } from '@quodsi/shared';
 import { PanelRole, LogEntry } from './types';
 import { ChannelManager } from './ChannelManager';
-import { RouterState } from './RouterState';
 import { RoutablePanel } from './RoutablePanel';
 import { MessageHandlers } from './handlers'; // Pre-load handlers at initialization time
 import { ExtensionDebugService } from '../logging/ExtensionDebugService';
@@ -19,9 +15,8 @@ import { ExtensionDebugService } from '../logging/ExtensionDebugService';
  */
 export class MessageRouter {
   private static instance: MessageRouter;
-  
+
   private channelManager: ChannelManager;
-  private state: RouterState;
   private devLogging = false;
   private logBuffer: LogEntry[] = [];
   private debug = ExtensionDebugService.forComponent('MessageRouter');
@@ -38,9 +33,6 @@ export class MessageRouter {
 
   // Private constructor for singleton pattern
   private constructor() {
-    // Initialize the state manager
-    this.state = new RouterState();
-    
     // Initialize the channel manager with a logging function
     this.channelManager = new ChannelManager(this.logDebug.bind(this));
     
@@ -55,14 +47,6 @@ export class MessageRouter {
    */
   private generateId(): string {
     return 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-  }
-  
-  /**
-   * Get the current authentication state for external use
-   * Used by direct broadcasting mechanisms
-   */
-  public getAuthState(): any {
-    return this.state.getAuthState();
   }
   
   /**
@@ -210,7 +194,7 @@ export class MessageRouter {
 
     // Check for panel reference in the message - but only if we don't already have a valid panel
     if ((msg as any)._panelRef) {
-      const role: PanelRole = msg.source.includes('auth') ? 'auth' : 'model';
+      const role: PanelRole = 'model';
 
       // Only register if we don't already have a valid panel
       const channel = this.channelManager.getChannel(role);
@@ -266,15 +250,7 @@ export class MessageRouter {
     
     // Mark channel as ready
     this.channelManager.markChannelReady(role);
-    
-    // Update auth state if provided
-    if (data.isAuthenticated !== undefined) {
-      this.state.updateAuthState({
-        isAuthenticated: data.isAuthenticated,
-        user: data.user
-      });
-    }
-    
+
     // Ensure the channel has a panel before flushing
     this.debug.log(`Flushing queue for ${role}:`, {
       queueSize: this.channelManager.getChannel(role)?.queue.length,
@@ -284,89 +260,14 @@ export class MessageRouter {
     
     // Flush queued messages
     this.channelManager.flushQueue(role);
-    
-    // Send current auth and subscription state
-    this.sendAuthStatus(role);
-    this.sendSubscriptionStatus(role);
-    
+
     // Request the panel to send MODEL_CONTEXT
-    // This ensures proper ordering: AUTH -> SUBSCRIPTION -> MODEL_CONTEXT
     this.debug.log(`About to request MODEL_CONTEXT for ${role}`);
     this.requestModelContext(role);
   }
-  
-  /**
-   * Send current auth status to a specific panel
-   */
-  private sendAuthStatus(role: PanelRole): void {
-    this.send(role, {
-      id: this.generateId(),
-      type: EnvelopeMessageType.AUTH_STATUS,
-      source: 'host',
-      target: `${role}-iframe`,
-      version: '1.0',
-      data: this.state.getAuthState()
-    });
-  }
-  
-  /**
-   * Broadcast auth status to all panels
-   */
-  public broadcastAuthStatus(): void {
-    this.debug.log('Broadcasting auth status:', this.state.getAuthState());
-    
-    // Ensure all channels have panels before broadcasting
-    this.channelManager.getAllRoles().forEach(role => {
-      this.ensureChannelHasPanel(role);
-    });
-    
-    this.send('broadcast', {
-      id: this.generateId(),
-      type: EnvelopeMessageType.AUTH_STATUS,
-      source: 'host',
-      target: 'broadcast',
-      version: '1.0',
-      data: this.state.getAuthState()
-    });
-  }
-  
-  /**
-   * Send current subscription status to a specific panel
-   */
-  private sendSubscriptionStatus(role: PanelRole): void {
-    // Only send if we have subscription data
-    if (this.state.hasSubscriptionData()) {
-      this.send(role, {
-        id: this.generateId(),
-        type: EnvelopeMessageType.SUBSCRIPTION_STATUS,
-        source: 'host',
-        target: `${role}-iframe`,
-        version: '1.0',
-        data: this.state.getSubscriptionState()
-      });
-    }
-  }
-  
-  /**
-   * Broadcast subscription status to all panels
-   */
-  private broadcastSubscriptionStatus(): void {
-    // Only broadcast if we have subscription data
-    if (this.state.hasSubscriptionData()) {
-      this.send('broadcast', {
-        id: this.generateId(),
-        type: EnvelopeMessageType.SUBSCRIPTION_STATUS,
-        source: 'host',
-        target: 'broadcast',
-        version: '1.0',
-        data: this.state.getSubscriptionState()
-      });
-    }
-  }
-  
+
   /**
    * Request the panel to send MODEL_CONTEXT
-   * This is called after AUTH and SUBSCRIPTION messages to ensure proper ordering
    */
   private requestModelContext(role: PanelRole): void {
     this.debug.log(`Requesting MODEL_CONTEXT from ${role} panel`);
@@ -390,68 +291,7 @@ export class MessageRouter {
       this.debug.warn(`Panel for ${role} does not have sendModelContext or initializeModelContext method`);
     }
   }
-  
-  /**
-   * Update subscription state and broadcast to all panels
-   */
-  public updateSubscription(
-    tier: SubscriptionTier,
-    status: SubscriptionStatus,
-    expiresAt?: string,
-    featureFlags?: Record<string, boolean>
-  ): void {
-    this.state.updateSubscriptionState({
-      tier,
-      status,
-      expiresAt,
-      featureFlags
-    });
-    
-    this.broadcastSubscriptionStatus();
-  }
-  
-  /**
-   * Update authentication state and broadcast to all panels
-   * 
-   * @param isAuthenticated Whether the user is authenticated
-   * @param user User information (if authenticated)
-   */
-  public updateAuthState(isAuthenticated: boolean, user?: QuodsiUserInfo): void {
-    this.debug.log('updateAuthState called:', isAuthenticated, user);
-    
-    this.state.updateAuthState({
-      isAuthenticated,
-      user
-    });
-    
-    this.logDebug(`Auth state updated: isAuthenticated=${isAuthenticated}`);
-    
-    // Ensure all channels have panels before broadcasting
-    this.channelManager.getAllRoles().forEach(role => {
-      this.ensureChannelHasPanel(role);
-    });
-    
-    // Broadcast the updated state
-    this.broadcastAuthStatus();
-  }
-  
-  /**
-   * Clear authentication state (for logout) and broadcast to all panels
-   */
-  public clearAuthState(): void {
-    this.debug.log('clearAuthState called');
-    
-    this.state.updateAuthState({
-      isAuthenticated: false,
-      user: undefined
-    });
-    
-    this.logDebug('Auth state cleared');
-    
-    // Broadcast the updated state
-    this.broadcastAuthStatus();
-  }
-  
+
   /**
    * Log a debug message if dev logging is enabled
    */

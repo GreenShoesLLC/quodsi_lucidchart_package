@@ -4,11 +4,11 @@ import { MessageRouter } from './MessageRouter';
 export { MessageRouter } from './MessageRouter';
 
 // Export types from the new location
-export { PanelRole, Channel, AuthState, SubscriptionState, LogEntry } from './types';
+export { PanelRole, Channel, LogEntry } from './types';
 export { RoutablePanel } from './RoutablePanel';
 
 // Re-export handlers for direct access
-export { MessageHandlers, AuthHandler, SubscriptionHandler } from './handlers';
+export { MessageHandlers } from './handlers';
 
 // Export the singleton instance
 export const router = MessageRouter.getInstance();
