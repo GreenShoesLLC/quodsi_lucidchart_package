@@ -67,8 +67,8 @@ export class ResourceRequirementsHandler {
 
       // Trigger a selection change to send updated resource requirements back to React
       // This ensures React gets the fresh resource requirements array
-      // IMPORTANT: Await this to ensure ModelDefinition rebuild completes before sending
-      await SelectionHandler.sendSelectionChangedMessage();
+      // IMPORTANT: Force rebuild of referenceData to ensure React receives updated requirements
+      await SelectionHandler.sendSelectionChangedMessage(true);
 
       // Send success response
       router.send('model', {

@@ -45,18 +45,8 @@ export const ModelPanel: React.FC = () => {
     validation: !!validationState?.summary?.errorCount
   });
 
-  // Optimistic state management for states during save operations
-  const [pendingStates, setPendingStates] = useState<StateListManager | null>(null);
-  const [isSavingStates, setIsSavingStates] = useState(false);
-
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
   const states = useMemo(() => {
-    // During save operations, use optimistic pending states to prevent race condition
-    if (isSavingStates && pendingStates) {
-      return pendingStates;
-    }
-
-    // Otherwise derive from serializedStates prop
     const stateListManager = new StateListManager();
 
     // Deserialize and add each state
@@ -79,12 +69,9 @@ export const ModelPanel: React.FC = () => {
     }
 
     return stateListManager;
-  }, [serializedStates, isSavingStates, pendingStates]);
+  }, [serializedStates]);
 
   const handleStatesChange = (updatedStates: StateListManager) => {
-    // Store pending states optimistically
-    setPendingStates(updatedStates);
-    setIsSavingStates(true);
     // Serialize states and send to extension
     const serializedStates = updatedStates.getAll().map(state => ({
       id: state.id,
@@ -98,12 +85,6 @@ export const ModelPanel: React.FC = () => {
     }));
 
     sendStatesUpdate(serializedStates);
-
-    // Clear save flag after delay to allow UI to update
-    setTimeout(() => {
-      setIsSavingStates(false);
-      setPendingStates(null);
-    }, 500);
   };
 
   // Toggle accordion sections

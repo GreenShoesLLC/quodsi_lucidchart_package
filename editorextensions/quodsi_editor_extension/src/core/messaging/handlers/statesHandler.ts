@@ -67,8 +67,8 @@ export class StatesHandler {
 
       // Trigger a selection change to send updated states back to React
       // This ensures React gets the fresh states array
-      // IMPORTANT: Await this to ensure ModelDefinition rebuild completes before sending
-      await SelectionHandler.sendSelectionChangedMessage();
+      // IMPORTANT: Force rebuild of referenceData to ensure React receives updated states
+      await SelectionHandler.sendSelectionChangedMessage(true);
 
       // Send success response
       router.send('model', {

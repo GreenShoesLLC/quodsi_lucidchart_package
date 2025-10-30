@@ -170,8 +170,9 @@ export class SelectionHandler {
   
   /**
    * Send current selection state to React app
+   * @param forceRebuild - Force rebuild of referenceData even if it already exists (useful after updates)
    */
-  public static async sendSelectionChangedMessage(): Promise<void> {
+  public static async sendSelectionChangedMessage(forceRebuild: boolean = false): Promise<void> {
     // Get data from both state managers
     const selectionData = SelectionHandler.selectionState.getData();
     const documentData = SelectionHandler.documentContext.getData();
@@ -205,9 +206,9 @@ export class SelectionHandler {
       }
     }
 
-    // Build referenceData for Quodsi model pages when not already present
+    // Build referenceData for Quodsi model pages when not already present or when forced
     let referenceData = selectionData.referenceData;
-    if (documentData.isQuodsiModel && !referenceData && SelectionHandler.modelManager) {
+    if (documentData.isQuodsiModel && (!referenceData || forceRebuild) && SelectionHandler.modelManager) {
       try {
         // Ensure ModelManager has currentPage set before building reference data
         // This is critical for initial panel load where currentPage isn't set yet
