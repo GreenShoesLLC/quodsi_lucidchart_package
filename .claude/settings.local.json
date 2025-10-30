@@ -5,7 +5,13 @@
       "WebFetch(domain:developer.lucid.co)",
       "WebSearch",
       "Bash(npx tsc:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(az functionapp list:*)",
+      "Bash(az functionapp config show:*)",
+      "Bash(test:*)",
+      "Bash(cat:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install)"
     ],
     "deny": [],
     "ask": []

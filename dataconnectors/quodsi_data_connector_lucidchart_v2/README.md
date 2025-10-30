@@ -174,8 +174,123 @@ The data connector is deployed as part of the Azure Function App:
 - Test: `tst-quodsi-func-v1` (in `tst-quodsi-rg-01`)
 - Production: `prd-quodsi-func-v1` (in `prd-quodsi-rg-01`)
 
-See the deployment instructions in: 
-`infrastructure/deployment/function-apps/v1/README.md`
+### Critical Deployment Requirements
+
+**This function app is NOT part of the monorepo workspace configuration** - this is intentional and required for proper deployment.
+
+#### Why Not in Workspaces?
+
+When a package is in the workspaces array, npm hoists dependencies to the root `node_modules` folder. This causes problems for Azure Functions deployment:
+
+```
+Problem: Workspace Configuration
+├── Root node_modules/            ← Dependencies hoisted here
+│   └── @azure/functions/
+└── dataconnectors/.../
+    └── node_modules/              ← Nearly empty (only 1.6MB)
+        └── (just a few packages)
+```
+
+Azure Functions deployment only packages the function app directory, so hoisted dependencies don't get deployed. This results in:
+- Deployment package only ~650KB (should be ~20MB+)
+- Functions not appearing in Azure Portal
+- "Cannot find module" errors at runtime
+
+#### Correct Configuration
+
+The function app should have its own complete `node_modules`:
+
+```
+Root package.json workspaces: [
+  "editorextensions/quodsi_editor_extension",
+  "editorextensions/quodsi_editor_extension/quodsim-react",
+  "shared"
+  // NOTE: dataconnectors NOT included
+]
+
+dataconnectors/.../
+└── node_modules/                  ← Complete dependencies (~67MB)
+    ├── @azure/functions/
+    ├── @azure/batch/
+    ├── @azure/storage-blob/
+    └── ... (~170 packages total)
+```
+
+### Installing Dependencies
+
+Because this directory is not in workspaces, you must install dependencies directly in this directory:
+
+```bash
+# Navigate to function app directory
+cd dataconnectors/quodsi_data_connector_lucidchart_v2
+
+# Install dependencies
+npm install
+
+# Verify installation
+du -sh node_modules  # Should show ~67MB
+ls node_modules/@azure  # Should show azure packages
+```
+
+Running `npm install` at the root level will NOT install dependencies for this function app.
+
+### .funcignore Configuration
+
+The `.funcignore` file controls what gets excluded from deployment:
+
+```
+*.js.map              # Source maps
+*.ts                  # TypeScript source
+.git*                 # Git files
+.vscode               # Editor config
+local.settings.json   # Local settings
+test                  # Test files
+tsconfig.json         # TypeScript config
+node_modules/.bin     # Binary symlinks (Windows deployment issue)
+```
+
+**Important**: `node_modules` itself is NOT excluded - only `node_modules/.bin` is excluded to avoid Windows symlink issues during packaging.
+
+### Deployment Scripts
+
+See deployment instructions and scripts in:
+- `infrastructure/deployment/scripts/function-deployment/README.md`
+- `infrastructure/deployment/scripts/function-deployment/Deploy-Function.ps1`
+- `infrastructure/deployment/scripts/function-deployment/deploy-function.bat`
+
+### Verifying Deployment Readiness
+
+Before deploying, verify your setup:
+
+```bash
+# 1. Check node_modules exists and has proper size
+du -sh node_modules
+# Expected: ~67MB (not 1-2MB)
+
+# 2. Count packages
+ls node_modules | wc -l
+# Expected: ~170+ packages
+
+# 3. Verify Azure packages exist
+ls node_modules/@azure/
+# Should show: batch, core-auth, core-client, functions, storage-blob, etc.
+
+# 4. Verify function app NOT in root workspaces
+cat ../../package.json | grep -A 5 "workspaces"
+# Should NOT see "dataconnectors/quodsi_data_connector_lucidchart_v2"
+
+# 5. Check dist folder structure
+ls dist/
+# Should show: index.js, functions/, services/, etc. at root level
+```
+
+### Deployment Package Size
+
+A correct deployment package should be:
+- **Compressed**: ~20-30MB
+- **Uncompressed**: ~80-100MB
+
+If your package is only 650KB, node_modules is not being included!
 
 ## Adding New Environment-Specific Settings
 

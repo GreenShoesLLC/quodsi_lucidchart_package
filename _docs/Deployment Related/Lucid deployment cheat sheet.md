@@ -1,4 +1,49 @@
-# Build quodsi_editor_extension zip
+# Lucid Extension Deployment Cheat Sheet
+
+## Automated Deployment (Recommended)
+
+Use the automated build script which handles environment variables AND manifest selection:
+
+```powershell
+# For Development environment
+.\infrastructure\deployment\scripts\lucid-package-bundle\Build-Lucid-Bundle.ps1 -TargetEnvironment Dev
+
+# For Test environment
+.\infrastructure\deployment\scripts\lucid-package-bundle\Build-Lucid-Bundle.ps1 -TargetEnvironment TST
+
+# For Production environment
+.\infrastructure\deployment\scripts\lucid-package-bundle\Build-Lucid-Bundle.ps1 -TargetEnvironment PRD
+```
+
+**What the script does automatically:**
+1. Sets React environment variables (`REACT_APP_*`) for the target environment
+2. Selects and temporarily uses the correct manifest file (manifest_dev.json, manifest_test.json, or manifest_prod.json)
+3. Validates the manifest URL matches the target environment
+4. Builds and bundles the extension
+5. Restores the original manifest.json (localhost) after completion
+
+**Result:** Creates `package.zip` ready to upload to Lucid Developer Portal
+
+---
+
+## Important: Manifest Files
+
+The data connector URL is controlled by manifest files, NOT React environment variables:
+
+| File | Environment | Data Connector URL |
+|------|-------------|-------------------|
+| `manifest.json` | Local development | http://localhost:7071/api/dataConnector/ |
+| `manifest_dev.json` | Development | https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| `manifest_test.json` | Test | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| `manifest_prod.json` | Production | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+
+**The Build-Lucid-Bundle.ps1 script automatically handles manifest selection.**
+
+---
+
+## Manual Build Process (Legacy - Not Recommended)
+
+### Build quodsi_editor_extension zip
 
 npx lucid-package@latest bundle
 

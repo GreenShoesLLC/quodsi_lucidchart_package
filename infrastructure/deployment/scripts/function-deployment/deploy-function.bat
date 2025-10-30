@@ -66,6 +66,35 @@ cd %projectPath% || (
     exit /b 1
 )
 
+REM Validate node_modules before deployment
+echo.
+echo Validating node_modules...
+if not exist "node_modules\" (
+    echo ERROR: node_modules folder not found!
+    echo Run 'npm install' before deploying.
+    goto :error
+)
+
+REM Check for critical Azure packages
+if not exist "node_modules\@azure\functions\" (
+    echo WARNING: @azure/functions package not found in node_modules
+    echo Dependencies may not be properly installed.
+    echo.
+)
+
+if not exist "node_modules\@azure\batch\" (
+    echo WARNING: @azure/batch package not found in node_modules
+    echo.
+)
+
+if not exist "node_modules\@azure\storage-blob\" (
+    echo WARNING: @azure/storage-blob package not found in node_modules
+    echo.
+)
+
+echo node_modules validation passed
+echo.
+
 REM Clean and rebuild
 echo.
 echo Running clean...

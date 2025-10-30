@@ -86,8 +86,62 @@ function Deploy-ToEnvironment {
     # Navigate to function app directory
     Write-Host "Changing to project directory..." -ForegroundColor Cyan
     Push-Location $projectPath
-    
+
     try {
+        # Validate node_modules before deployment
+        Write-Host "Validating node_modules..." -ForegroundColor Cyan
+
+        if (-not (Test-Path "node_modules")) {
+            Write-Error "node_modules folder not found! Run 'npm install' before deploying."
+            return $false
+        }
+
+        # Check node_modules size (should be substantial, not nearly empty)
+        $nodeModulesSize = (Get-ChildItem node_modules -Recurse -File | Measure-Object -Property Length -Sum).Sum
+        $sizeInMB = [math]::Round($nodeModulesSize / 1MB, 2)
+
+        Write-Host "node_modules size: $sizeInMB MB" -ForegroundColor Cyan
+
+        if ($sizeInMB -lt 30) {
+            Write-Warning "node_modules size is only $sizeInMB MB - this seems too small!"
+            Write-Warning "Expected size is ~67MB. Dependencies may not be properly installed."
+            Write-Warning ""
+            Write-Warning "Possible cause: Function app is in root package.json workspaces array"
+            Write-Warning "Solution: Remove from workspaces, delete node_modules, run 'npm install'"
+            Write-Warning ""
+
+            if (-not $Force) {
+                $continue = Read-Host "Continue anyway? (Y/N)"
+                if ($continue -ne "Y" -and $continue -ne "y") {
+                    Write-Host "Deployment canceled." -ForegroundColor Yellow
+                    return $false
+                }
+            }
+        }
+
+        # Check for critical Azure packages
+        $azurePackages = @("@azure/functions", "@azure/batch", "@azure/storage-blob")
+        $missingPackages = @()
+
+        foreach ($package in $azurePackages) {
+            $packagePath = "node_modules/$package"
+            if (-not (Test-Path $packagePath)) {
+                $missingPackages += $package
+            }
+        }
+
+        if ($missingPackages.Count -gt 0) {
+            Write-Warning "Missing critical Azure packages: $($missingPackages -join ', ')"
+            Write-Warning "Run 'npm install' to install missing dependencies"
+
+            if (-not $Force) {
+                return $false
+            }
+        }
+
+        Write-Host "node_modules validation passed" -ForegroundColor Green
+        Write-Host ""
+
         if (-not $SkipBuild) {
             # Clean and rebuild
             Write-Host "Running clean..." -ForegroundColor Cyan

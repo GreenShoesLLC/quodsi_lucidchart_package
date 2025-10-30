@@ -177,6 +177,76 @@ if (Test-Path -Path $PublicReactDir -PathType Container) {
 }
 
 
+# --- Step 4.5: Select Correct Manifest for Target Environment --- (NEW STEP)
+Write-Host "--------------------------------------------------"
+Write-Host "Step 4.5: Selecting manifest for $TargetEnvironment environment..."
+Write-Host "--------------------------------------------------"
+
+# Determine which manifest to use based on target environment
+$ManifestSource = switch ($TargetEnvironment) {
+    'Dev' { "manifest_dev.json" }
+    'TST' { "manifest_test.json" }
+    'PRD' { "manifest_prod.json" }
+    default {
+        Write-Host "No target environment specified, using default manifest.json (localhost)" -ForegroundColor Yellow
+        $null  # Don't copy anything, use existing manifest.json
+    }
+}
+
+if ($ManifestSource) {
+    Write-Host "Using manifest: $ManifestSource" -ForegroundColor Cyan
+
+    # Backup original manifest.json
+    if (Test-Path "manifest.json") {
+        try {
+            Copy-Item -Path "manifest.json" -Destination "manifest.json.backup" -Force -ErrorAction Stop
+            Write-Host "Backed up manifest.json → manifest.json.backup" -ForegroundColor Gray
+        } catch {
+            Write-Warning "Could not backup manifest.json: $($_.Exception.Message)"
+        }
+    }
+
+    # Copy the environment-specific manifest to manifest.json (what bundle uses)
+    try {
+        if (-not (Test-Path $ManifestSource)) {
+            Write-Error "Manifest file not found: $ManifestSource"
+            exit 1
+        }
+
+        Copy-Item -Path $ManifestSource -Destination "manifest.json" -Force -ErrorAction Stop
+        Write-Host "✓ Copied $ManifestSource → manifest.json" -ForegroundColor Green
+    } catch {
+        Write-Error "Failed to copy manifest file: $($_.Exception.Message)"
+        exit 1
+    }
+
+    # Validate the manifest URL matches expected environment
+    try {
+        $manifestContent = Get-Content "manifest.json" -Raw | ConvertFrom-Json
+        $callbackUrl = $manifestContent.dataConnectors[0].callbackBaseUrl
+
+        $expectedUrlPattern = switch ($TargetEnvironment) {
+            'Dev' { "https://dev-quodsi-func-v1.azurewebsites.net" }
+            'TST' { "https://tst-quodsi-func-v1.azurewebsites.net" }
+            'PRD' { "https://prd-quodsi-func-v1.azurewebsites.net" }
+        }
+
+        if ($callbackUrl -like "$expectedUrlPattern*") {
+            Write-Host "✓ Manifest URL validated: $callbackUrl" -ForegroundColor Green
+        } else {
+            Write-Error "Manifest URL mismatch! Expected $expectedUrlPattern* but got $callbackUrl"
+            exit 1
+        }
+    } catch {
+        Write-Warning "Could not validate manifest URL: $($_.Exception.Message)"
+    }
+} else {
+    Write-Host "Using existing manifest.json (local development mode)" -ForegroundColor Cyan
+}
+
+Write-Host ""
+
+
 # --- Step 5: Run Lucid Package Bundle Command (Always Runs) --- (Renumbered)
 Write-Host "--------------------------------------------------"
 Write-Host "Step 5: Running Lucid Package Bundle (using set Env Vars)..."
@@ -197,6 +267,28 @@ catch {
     Write-Error "An error occurred while attempting to run 'npx lucid-package@latest bundle'. Error: $($_.Exception.Message)"
     exit 1
 }
+
+
+# --- Step 6: Restore Original Manifest --- (NEW STEP)
+Write-Host "--------------------------------------------------"
+Write-Host "Step 6: Restoring original manifest..."
+Write-Host "--------------------------------------------------"
+
+# Restore original manifest.json if it was backed up
+if (Test-Path "manifest.json.backup") {
+    try {
+        Move-Item -Path "manifest.json.backup" -Destination "manifest.json" -Force -ErrorAction Stop
+        Write-Host "✓ Original manifest.json restored from backup" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not restore manifest.json from backup: $($_.Exception.Message)"
+        Write-Warning "You may need to manually restore manifest.json"
+    }
+} else {
+    Write-Host "No manifest backup found, manifest.json unchanged" -ForegroundColor Gray
+}
+
+Write-Host ""
+
 
 # --- Script End ---
 Write-Host "--------------------------------------------------"

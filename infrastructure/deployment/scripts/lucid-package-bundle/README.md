@@ -23,6 +23,57 @@ Before running this script, ensure the following are met:
     `C:\_source\Greenshoes\quodsi_lucidchart_package`
     * If this path is incorrect, you must update the `$LucidPackageDir` variable inside `Build-Lucid-Bundle.ps1`.
 6.  **Source Code:** The necessary source code for both the React app and the Lucid package structure must be present at the expected locations.
+7.  **Manifest Files:** Environment-specific manifest files must exist at the project root:
+    * `manifest.json` - Local development (localhost:7071)
+    * `manifest_dev.json` - Development environment
+    * `manifest_test.json` - Test environment
+    * `manifest_prod.json` - Production environment
+
+## Manifest Selection by Environment
+
+The build script **automatically selects the correct manifest** based on the `-TargetEnvironment` parameter. This ensures that the bundled extension calls the correct Azure Function data connector URL.
+
+| Environment | Manifest Used | Data Connector URL |
+|-------------|---------------|-------------------|
+| Dev | manifest_dev.json | https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| TST | manifest_test.json | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| PRD | manifest_prod.json | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| (none) | manifest.json | http://localhost:7071/api/dataConnector/ (local dev) |
+
+### How Manifest Selection Works
+
+1. **Backup**: The script backs up the existing `manifest.json` to `manifest.json.backup`
+2. **Copy**: The environment-specific manifest (e.g., `manifest_prod.json`) is copied to `manifest.json`
+3. **Validate**: The script verifies the manifest URL matches the expected environment
+4. **Bundle**: The `npx lucid-package bundle` command uses the `manifest.json` file
+5. **Restore**: After bundling completes, the original `manifest.json` is restored
+
+**Important:**
+- `manifest.json` remains configured for **local development** (localhost:7071) by default
+- Environment-specific manifests are temporarily copied during bundling only
+- The original `manifest.json` is always restored after the bundle completes
+- This allows local development to work without any configuration changes
+
+### Troubleshooting Manifest Issues
+
+If your deployed extension is calling the wrong URL:
+
+1. **Verify manifest files exist:**
+   ```powershell
+   Get-ChildItem manifest*.json
+   # Should show: manifest.json, manifest_dev.json, manifest_test.json, manifest_prod.json
+   ```
+
+2. **Check the manifest URL in the deployed package:**
+   - Extract `package.zip`
+   - Open `editorextensions/quodsi_editor_extension/manifest.json`
+   - Verify `callbackBaseUrl` matches the target environment
+
+3. **Verify manifest was restored after build:**
+   ```powershell
+   Get-Content manifest.json | Select-String "callbackBaseUrl"
+   # Should show localhost:7071 after build completes
+   ```
 
 ## How to Run
 
@@ -83,6 +134,57 @@ Before running this script, ensure the following are met:
     `C:\_source\Greenshoes\quodsi_lucidchart_package`
     * If this path is incorrect, you must update the `$LucidPackageDir` variable inside `Build-Lucid-Bundle.ps1`.
 6.  **Source Code:** The necessary source code for both the React app and the Lucid package structure must be present at the expected locations.
+7.  **Manifest Files:** Environment-specific manifest files must exist at the project root:
+    * `manifest.json` - Local development (localhost:7071)
+    * `manifest_dev.json` - Development environment
+    * `manifest_test.json` - Test environment
+    * `manifest_prod.json` - Production environment
+
+## Manifest Selection by Environment
+
+The build script **automatically selects the correct manifest** based on the `-TargetEnvironment` parameter. This ensures that the bundled extension calls the correct Azure Function data connector URL.
+
+| Environment | Manifest Used | Data Connector URL |
+|-------------|---------------|-------------------|
+| Dev | manifest_dev.json | https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| TST | manifest_test.json | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| PRD | manifest_prod.json | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| (none) | manifest.json | http://localhost:7071/api/dataConnector/ (local dev) |
+
+### How Manifest Selection Works
+
+1. **Backup**: The script backs up the existing `manifest.json` to `manifest.json.backup`
+2. **Copy**: The environment-specific manifest (e.g., `manifest_prod.json`) is copied to `manifest.json`
+3. **Validate**: The script verifies the manifest URL matches the expected environment
+4. **Bundle**: The `npx lucid-package bundle` command uses the `manifest.json` file
+5. **Restore**: After bundling completes, the original `manifest.json` is restored
+
+**Important:**
+- `manifest.json` remains configured for **local development** (localhost:7071) by default
+- Environment-specific manifests are temporarily copied during bundling only
+- The original `manifest.json` is always restored after the bundle completes
+- This allows local development to work without any configuration changes
+
+### Troubleshooting Manifest Issues
+
+If your deployed extension is calling the wrong URL:
+
+1. **Verify manifest files exist:**
+   ```powershell
+   Get-ChildItem manifest*.json
+   # Should show: manifest.json, manifest_dev.json, manifest_test.json, manifest_prod.json
+   ```
+
+2. **Check the manifest URL in the deployed package:**
+   - Extract `package.zip`
+   - Open `editorextensions/quodsi_editor_extension/manifest.json`
+   - Verify `callbackBaseUrl` matches the target environment
+
+3. **Verify manifest was restored after build:**
+   ```powershell
+   Get-Content manifest.json | Select-String "callbackBaseUrl"
+   # Should show localhost:7071 after build completes
+   ```
 
 ## How to Run
 
