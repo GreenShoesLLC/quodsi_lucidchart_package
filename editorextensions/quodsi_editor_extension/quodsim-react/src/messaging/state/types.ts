@@ -40,13 +40,15 @@ import { AppAction } from './appSlice';
 import { SelectionAction } from './selectionSlice';
 import { SimulationAction } from './simulationSlice';
 import { ValidationAction } from './validationSlice';
+import { ElementOpsAction } from './elementOpsSlice';
 
 // Re-export the action types
 export type {
   AppAction,
   SelectionAction,
   SimulationAction,
-  ValidationAction
+  ValidationAction,
+  ElementOpsAction
 };
 
 // Union type that encompasses all possible actions
@@ -54,4 +56,5 @@ export type MessagingAction =
   | AppAction
   | SelectionAction
   | SimulationAction
-  | ValidationAction;
+  | ValidationAction
+  | ElementOpsAction;

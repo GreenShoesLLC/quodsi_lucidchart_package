@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap, Info } from "lucide-react";
 import {
   Activity,
@@ -22,21 +22,68 @@ import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
+import { useActivityFormSync, useSaveCompletionDetector } from "./hooks/useActivityEditorState";
 
+// ============================================================================
+// CONSTANTS
+// ============================================================================
 
-// Main Activity Editor Component
+// Constant representing "infinity" for buffer capacity display
+// (999999 is used to represent unlimited capacity in the UI)
+const INFINITY_DISPLAY_VALUE = 999999;
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Props for the ActivityEditor component
+ */
 interface ActivityEditorProps {
+  /** The activity to edit (can be Activity instance or raw data object) */
   activity: any;
+  /** Callback when user clicks Save - receives the updated Activity */
   onSave: (activity: Activity) => void;
+  /** Callback when user clicks Cancel */
   onCancel: () => void;
+  /** Reference data for dropdowns (resources, requirements, etc.) */
   referenceData?: EditorReferenceData;
+  /** State manager for model-level states */
   states: StateListManager;
+  /** Callback when states are modified */
   onStatesChange: (states: StateListManager) => void;
+  /** Connectors leaving this activity (for routing configuration) */
   outgoingConnectors?: Connector[];
 }
 
+/**
+ * Available tabs in the activity editor
+ */
 type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states" | "events";
 
+/**
+ * ActivityEditor - Comprehensive editor for Activity simulation objects
+ *
+ * This component provides a tabbed interface for editing all aspects of an Activity:
+ * - Basic: Name, capacity, buffer sizes
+ * - Operation Steps: Processing durations and resource requirements
+ * - Financial: Cost tracking properties
+ * - Connectors: Routing rules for outgoing connectors
+ * - States: State modifications (pre/post processing)
+ *
+ * State Management:
+ * - Maintains local draft state (localActivityDraft) for immediate UI updates
+ * - Syncs with Redux for save state tracking (isSaving, optimisticData)
+ * - Uses custom hooks for activity switching and save completion detection
+ * - Only persists changes when user clicks Save button
+ *
+ * Key Features:
+ * - Dirty state tracking (hasPendingChanges) enables/disables Save button
+ * - Guard conditions prevent data loss when switching activities
+ * - Immutable updates via updateActivityImmutably helper
+ * - Auto-save for state modifications (pre/post processing events)
+ */
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
   onSave,
@@ -53,13 +100,55 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
 
-  // Helper functions
+  // Get element operations state from Redux
+  const elementOpsState = useElementOpsState();
+
+  // ============================================================================
+  // HELPER FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Converts internal buffer capacity values to display values for the UI.
+   *
+   * Buffer capacities are stored as either a number or Infinity (unlimited).
+   * This converts null/undefined (representing unlimited) to a large number
+   * (999999) that's more user-friendly in input fields.
+   *
+   * @param value - Internal buffer capacity (null/undefined = unlimited)
+   * @returns Display value for UI (999999 represents unlimited)
+   */
   const bufferToDisplay = (value: number | null | undefined): number =>
-    value === null || value === undefined ? 999999 : value;
+    value === null || value === undefined ? INFINITY_DISPLAY_VALUE : value;
 
+  /**
+   * Converts display values from the UI back to internal buffer capacity values.
+   *
+   * Users enter 999999 to represent unlimited capacity. This converts that
+   * back to JavaScript's Infinity for internal storage.
+   *
+   * @param value - Display value from UI
+   * @returns Internal value (Infinity for unlimited, otherwise the number)
+   */
   const displayToBuffer = (value: number): number =>
-    value >= 999999 ? Infinity : value;
+    value >= INFINITY_DISPLAY_VALUE ? Infinity : value;
 
+  /**
+   * Extracts and normalizes activity data from props into a clean Activity instance.
+   *
+   * This handles multiple data formats:
+   * - Full Activity instances
+   * - Raw data objects with nested .data property
+   * - Missing/null values (creates default activity)
+   *
+   * Key responsibilities:
+   * - Normalizes buffer capacities for display (null → 999999)
+   * - Ensures financialProperties are properly initialized
+   * - Creates new array references for state modifications (for change detection)
+   * - Applies sensible defaults for missing values
+   *
+   * @param act - Activity data (can be Activity instance, raw object, or null)
+   * @returns Normalized Activity instance ready for editing
+   */
   const extractActivityData = (act: any): Activity => {
     // Handle completely missing data case
     if (!act) {
@@ -111,121 +200,201 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     return activity;
   };
 
-  // State management for BaseEditor replacement
-  const [formData, setFormData] = useState<Activity>(() => extractActivityData(activity));
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  /**
+   * Creates an updated Activity instance with modified fields while preserving
+   * all other properties. This ensures proper immutability and change detection.
+   *
+   * Why we need this: React state updates require new object references for change
+   * detection. Activity class instances need to be reconstructed with new references
+   * rather than mutated in place. This helper eliminates ~100 lines of duplicated
+   * reconstruction logic across 8+ handlers.
+   *
+   * @param base - The existing activity to base updates on
+   * @param updates - Partial activity fields to update
+   * @returns New Activity instance with updates applied and all other fields preserved
+   */
+  const updateActivityImmutably = (
+    base: Activity,
+    updates: Partial<{
+      name: string;
+      capacity: number;
+      inputBufferCapacity: number;
+      outputBufferCapacity: number;
+      operationSteps: OperationStep[];
+      connectType: ConnectType;
+      financialProperties: ActivityFinancialProperties;
+      preProcessingStateModifications: any[];
+      postProcessingStateModifications: any[];
+    }>
+  ): Activity => {
+    const updated = new Activity(
+      base.id,
+      updates.name ?? base.name,
+      updates.capacity ?? base.capacity,
+      updates.inputBufferCapacity ?? base.inputBufferCapacity,
+      updates.outputBufferCapacity ?? base.outputBufferCapacity,
+      updates.operationSteps ?? base.operationSteps,
+      base.x,
+      base.y
+    );
 
-  // Sync with activity prop changes (only when no unsaved changes and not saving)
-  useEffect(() => {
-    if (!hasChanges && !isSaving) {
-      setFormData(extractActivityData(activity));
-    }
-  }, [activity, hasChanges, isSaving]);
+    // Preserve/update complex properties
+    updated.connectType = updates.connectType ?? base.connectType;
+    updated.financialProperties = updates.financialProperties ?? base.financialProperties;
+    updated.preProcessingStateModifications =
+      updates.preProcessingStateModifications ?? base.preProcessingStateModifications;
+    updated.postProcessingStateModifications =
+      updates.postProcessingStateModifications ?? base.postProcessingStateModifications;
 
-  // Clear the saving flag after a short delay to allow for the new data to arrive
-  useEffect(() => {
-    if (isSaving) {
-      const timer = setTimeout(() => {
-        setIsSaving(false);
-        setHasChanges(false);
-      }, 500); // Give the parent component time to update
+    return updated;
+  };
 
-      return () => clearTimeout(timer);
-    }
-  }, [isSaving]);
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
 
-  // Handlers
-  // Input change handler for basic fields
+  /**
+   * Local draft of the activity being edited.
+   *
+   * This is the single source of truth for form state. All inputs read from
+   * and write to this state. Changes are applied immediately for responsive UI,
+   * but only persisted to model when user clicks Save.
+   *
+   * Initialized with extractActivityData() to normalize incoming props.
+   */
+  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() => extractActivityData(activity));
+
+  /**
+   * Flag indicating whether user has made changes that haven't been saved.
+   *
+   * Controls:
+   * - Save button enabled/disabled state
+   * - Guard condition for activity switching (prevents data loss)
+   *
+   * Set to true: When any field changes
+   * Set to false: When save completes (via useSaveCompletionDetector) or Cancel clicked
+   */
+  const [hasPendingChanges, setHasChanges] = useState(false);
+
+  /**
+   * Redux-managed state for save operation tracking.
+   *
+   * isSaving: true when save is in progress (shows loading state)
+   * optimisticData: Optimistically updated data (shown during save)
+   *
+   * These are managed by Redux elementOpsState to coordinate saves across
+   * multiple editor instances.
+   */
+  const isSaving = localActivityDraft.id ? elementOpsState.isSaving(localActivityDraft.id) : false;
+  const optimisticData = localActivityDraft.id ? elementOpsState.getOptimisticData(localActivityDraft.id) : null;
+
+  // Custom hooks for state synchronization
+  useActivityFormSync(
+    activity.id,
+    hasPendingChanges,
+    () => extractActivityData(activity),
+    setLocalActivityDraft
+  );
+
+  useSaveCompletionDetector(isSaving, setHasChanges);
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  /**
+   * Handles changes to basic input fields (name, capacity, buffer capacities).
+   *
+   * Updates are applied immediately to localActivityDraft for responsive UI,
+   * but not persisted until user clicks Save button.
+   *
+   * Special handling for buffer capacities: Converts display values (999999)
+   * back to internal format (Infinity) using displayToBuffer helper.
+   */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updatedActivity = new Activity(
-        prev.id,
-        name === 'name' ? value : prev.name,
-        name === 'capacity' ? parseInt(value) || 1 : prev.capacity,
-        name === 'inputBufferCapacity' ? displayToBuffer(parseInt(value) || 0) : prev.inputBufferCapacity,
-        name === 'outputBufferCapacity' ? displayToBuffer(parseInt(value) || 0) : prev.outputBufferCapacity,
-        prev.operationSteps,
-        prev.x,
-        prev.y
-      );
 
-      // Preserve connectType
-      updatedActivity.connectType = prev.connectType;
+    setLocalActivityDraft(prev => {
+      // Build updates object based on which field changed
+      const updates: any = {};
 
-      // Preserve financialProperties
-      updatedActivity.financialProperties = prev.financialProperties;
+      if (name === 'name') {
+        updates.name = value;
+      } else if (name === 'capacity') {
+        updates.capacity = parseInt(value) || 1;
+      } else if (name === 'inputBufferCapacity') {
+        updates.inputBufferCapacity = displayToBuffer(parseInt(value) || 0);
+      } else if (name === 'outputBufferCapacity') {
+        updates.outputBufferCapacity = displayToBuffer(parseInt(value) || 0);
+      }
 
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+      return updateActivityImmutably(prev, updates);
     });
+
     setHasChanges(true);
   };
 
-  // Save handler
+  /**
+   * Saves the current activity draft to the model.
+   *
+   * Key responsibilities:
+   * - Converts display values back to internal format (999999 → Infinity)
+   * - Triggers Redux save action via onSave callback
+   * - Redux manages isSaving state and optimistic updates
+   * - useSaveCompletionDetector hook clears hasPendingChanges when save completes
+   *
+   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
+   * save completion detector to avoid race conditions.
+   */
   const handleSave = () => {
     const activityToSave = new Activity(
-      formData.id,
-      formData.name,
-      formData.capacity,
-      displayToBuffer(formData.inputBufferCapacity),
-      displayToBuffer(formData.outputBufferCapacity),
-      formData.operationSteps,
-      formData.x,
-      formData.y
+      localActivityDraft.id,
+      localActivityDraft.name,
+      localActivityDraft.capacity,
+      displayToBuffer(localActivityDraft.inputBufferCapacity),
+      displayToBuffer(localActivityDraft.outputBufferCapacity),
+      localActivityDraft.operationSteps,
+      localActivityDraft.x,
+      localActivityDraft.y
     );
 
     // Preserve connectType
-    activityToSave.connectType = formData.connectType;
+    activityToSave.connectType = localActivityDraft.connectType;
 
     // Preserve financialProperties
-    activityToSave.financialProperties = formData.financialProperties;
+    activityToSave.financialProperties = localActivityDraft.financialProperties;
 
     // Preserve state modifications
-    activityToSave.preProcessingStateModifications = formData.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications = formData.postProcessingStateModifications;
+    activityToSave.preProcessingStateModifications = localActivityDraft.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications = localActivityDraft.postProcessingStateModifications;
 
+    // Save is handled through Redux - modelOpsSender will dispatch ELEMENT_SAVE_START
     onSave(activityToSave);
-    setIsSaving(true); // Will be cleared by useEffect after 500ms
+    // Note: isSaving state is now managed by Redux through elementOpsState
   };
 
-  // Cancel handler - resets form without closing the editor
+  /**
+   * Cancels editing and resets form to original activity data.
+   *
+   * Discards all pending changes by:
+   * - Re-extracting fresh data from activity prop
+   * - Clearing hasPendingChanges flag (disables Save button)
+   *
+   * Note: Does NOT close the editor - that's handled by parent component.
+   */
   const handleCancel = () => {
-    setFormData(extractActivityData(activity));
+    setLocalActivityDraft(extractActivityData(activity));
     setHasChanges(false);
   };
 
   const handleOperationStepChange = (index: number, updatedStep: OperationStep) => {
-    setFormData(prev => {
+    setLocalActivityDraft(prev => {
       const newOperationSteps = [...prev.operationSteps];
       newOperationSteps[index] = updatedStep;
 
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
-        newOperationSteps,
-        prev.x,
-        prev.y
-      );
-
-      // Preserve connectType
-      updatedActivity.connectType = prev.connectType;
-
-      // Preserve financialProperties
-      updatedActivity.financialProperties = prev.financialProperties;
-
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+      return updateActivityImmutably(prev, {
+        operationSteps: newOperationSteps
+      });
     });
     setHasChanges(true);
   };
@@ -236,67 +405,29 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
-    setFormData(prev => {
+    setLocalActivityDraft(prev => {
       const newOperationSteps = [...prev.operationSteps, newStep];
 
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
-        newOperationSteps,
-        prev.x,
-        prev.y
-      );
-
-      // Preserve connectType
-      updatedActivity.connectType = prev.connectType;
-
-      // Preserve financialProperties
-      updatedActivity.financialProperties = prev.financialProperties;
-
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+      return updateActivityImmutably(prev, {
+        operationSteps: newOperationSteps
+      });
     });
     setHasChanges(true);
   };
 
   const handleOperationStepDelete = React.useCallback((index: number) => {
-    setFormData(prev => {
+    setLocalActivityDraft(prev => {
       const newOperationSteps = prev.operationSteps.filter((_, i) => i !== index);
 
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
-        newOperationSteps,
-        prev.x,
-        prev.y
-      );
-
-      // Preserve connectType
-      updatedActivity.connectType = prev.connectType;
-
-      // Preserve financialProperties
-      updatedActivity.financialProperties = prev.financialProperties;
-
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+      return updateActivityImmutably(prev, {
+        operationSteps: newOperationSteps
+      });
     });
     setHasChanges(true);
   }, []);
 
   const handleFinancialChange = (field: keyof ActivityFinancialProperties, value: any) => {
-    setFormData(prev => {
+    setLocalActivityDraft(prev => {
       const currentFinancial = prev.financialProperties || new ActivityFinancialProperties();
       const updatedFinancial = new ActivityFinancialProperties({
         enabled: currentFinancial.enabled,
@@ -308,28 +439,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         [field]: value,
       });
 
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
-        prev.operationSteps,
-        prev.x,
-        prev.y
-      );
-
-      // Preserve connectType
-      updatedActivity.connectType = prev.connectType;
-
-      // Update financialProperties
-      updatedActivity.financialProperties = updatedFinancial;
-
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+      return updateActivityImmutably(prev, {
+        financialProperties: updatedFinancial
+      });
     });
     setHasChanges(true);
   };
@@ -337,94 +449,60 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // ConnectType change handler
   const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const newConnectType = e.target.value as ConnectType;
-    setFormData(prev => {
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
-        prev.operationSteps,
-        prev.x,
-        prev.y
-      );
-
-      // Update connectType
-      updatedActivity.connectType = newConnectType;
-
-      // Preserve financialProperties
-      updatedActivity.financialProperties = prev.financialProperties;
-
-      // Preserve state modifications
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
-
-      return updatedActivity;
+    setLocalActivityDraft(prev => {
+      return updateActivityImmutably(prev, {
+        connectType: newConnectType
+      });
     });
     setHasChanges(true);
   };
 
-  // State modifications change handlers - auto-save immediately
+  /**
+   * Handles changes to pre-processing state modifications.
+   *
+   * IMPORTANT: This handler auto-saves immediately (different from other handlers).
+   * State modifications are considered "committed" as soon as they're changed.
+   *
+   * Flow:
+   * 1. Create updated activity with new modifications
+   * 2. Trigger immediate save via onSave (Redux manages save state)
+   * 3. Update local state to match
+   *
+   * This prevents the Save button workflow - changes are persisted immediately.
+   */
   const handlePreProcessingChange = (mods: any[]) => {
-    const updatedActivity = new Activity(
-      formData.id,
-      formData.name,
-      formData.capacity,
-      formData.inputBufferCapacity,
-      formData.outputBufferCapacity,
-      formData.operationSteps,
-      formData.x,
-      formData.y
-    );
+    const updatedActivity = updateActivityImmutably(localActivityDraft, {
+      preProcessingStateModifications: mods
+    });
 
-    // Preserve connectType
-    updatedActivity.connectType = formData.connectType;
-
-    // Preserve financialProperties
-    updatedActivity.financialProperties = formData.financialProperties;
-
-    // Update pre-processing state modifications
-    updatedActivity.preProcessingStateModifications = mods;
-
-    // Preserve post-processing state modifications
-    updatedActivity.postProcessingStateModifications = formData.postProcessingStateModifications;
-
-    // Auto-save immediately
+    // Auto-save immediately (Redux manages save state)
     onSave(updatedActivity);
     // Update local state to match
-    setFormData(updatedActivity);
-    setIsSaving(true);
+    setLocalActivityDraft(updatedActivity);
   };
 
+  /**
+   * Handles changes to post-processing state modifications.
+   *
+   * IMPORTANT: This handler auto-saves immediately (different from other handlers).
+   * State modifications are considered "committed" as soon as they're changed.
+   *
+   * Flow:
+   * 1. Create updated activity with new modifications
+   * 2. Trigger immediate save via onSave (Redux manages save state)
+   * 3. Update local state to match
+   *
+   * This prevents the Save button workflow - changes are persisted immediately.
+   */
   const handlePostProcessingChange = (mods: any[]) => {
-    const updatedActivity = new Activity(
-      formData.id,
-      formData.name,
-      formData.capacity,
-      formData.inputBufferCapacity,
-      formData.outputBufferCapacity,
-      formData.operationSteps,
-      formData.x,
-      formData.y
-    );
+    const updatedActivity = updateActivityImmutably(localActivityDraft, {
+      postProcessingStateModifications: mods
+    });
 
-    // Preserve connectType
-    updatedActivity.connectType = formData.connectType;
-
-    // Preserve financialProperties
-    updatedActivity.financialProperties = formData.financialProperties;
-
-    // Preserve pre-processing state modifications
-    updatedActivity.preProcessingStateModifications = formData.preProcessingStateModifications;
-
-    // Update post-processing state modifications
-    updatedActivity.postProcessingStateModifications = mods;
-
-    // Auto-save immediately
+    // Auto-save immediately (Redux manages save state)
     onSave(updatedActivity);
     // Update local state to match
-    setFormData(updatedActivity);
-    setIsSaving(true);
+    setLocalActivityDraft(updatedActivity);
   };
 
   // Resource Requirement Modal Handlers
@@ -481,7 +559,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     setEditingRequirement(null);
   };
 
-  if (!formData?.id) {
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
+  if (!localActivityDraft?.id) {
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
         <div className="text-red-600 font-medium">Invalid activity data</div>
@@ -592,7 +674,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       type="text"
                       name="name"
                       className="w-full px-2 py-1.5 text-xs border rounded"
-                      value={formData.name}
+                      value={localActivityDraft.name}
                       onChange={handleInputChange}
                       placeholder="Enter activity name"
                     />
@@ -614,7 +696,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         type="number"
                         name="capacity"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.capacity}
+                        value={localActivityDraft.capacity}
                         onChange={handleInputChange}
                         min="1"
                         placeholder="1"
@@ -629,7 +711,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         Buffer Configuration
                       </div>
                       <div className="text-[10px] text-gray-500 leading-tight">
-                        Queue limits (999999 = ∞)
+                        Queue limits ({INFINITY_DISPLAY_VALUE} = ∞)
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -640,13 +722,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           name="inputBufferCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
                           value={
-                            formData.inputBufferCapacity === Infinity
-                              ? 999999
-                              : formData.inputBufferCapacity
+                            localActivityDraft.inputBufferCapacity === Infinity
+                              ? INFINITY_DISPLAY_VALUE
+                              : localActivityDraft.inputBufferCapacity
                           }
                           onChange={handleInputChange}
                           min="0"
-                          max="999999"
+                          max={INFINITY_DISPLAY_VALUE}
                           placeholder="0"
                         />
                       </div>
@@ -657,13 +739,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           name="outputBufferCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
                           value={
-                            formData.outputBufferCapacity === Infinity
-                              ? 999999
-                              : formData.outputBufferCapacity
+                            localActivityDraft.outputBufferCapacity === Infinity
+                              ? INFINITY_DISPLAY_VALUE
+                              : localActivityDraft.outputBufferCapacity
                           }
                           onChange={handleInputChange}
                           min="0"
-                          max="999999"
+                          max={INFINITY_DISPLAY_VALUE}
                           placeholder="0"
                         />
                       </div>
@@ -693,9 +775,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </button>
                 </div>
                 <div className="space-y-1">
-                  {formData.operationSteps.map((step, index) => (
+                  {localActivityDraft.operationSteps.map((step, index) => (
                     <OperationStepEditor
                       key={index}
+                      activityId={localActivityDraft.id}
                       step={step}
                       index={index}
                       onChange={(updatedStep) =>
@@ -729,7 +812,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     <input
                       type="checkbox"
                       id="financialEnabled"
-                      checked={formData.financialProperties?.enabled || false}
+                      checked={localActivityDraft.financialProperties?.enabled || false}
                       onChange={(e) =>
                         handleFinancialChange("enabled", e.target.checked)
                       }
@@ -748,14 +831,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.financialProperties?.fixedCost || 0}
+                        value={localActivityDraft.financialProperties?.fixedCost || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "fixedCost",
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!formData.financialProperties?.enabled}
+                        disabled={!localActivityDraft.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -766,14 +849,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.financialProperties?.costPerEntityProcessed || 0}
+                        value={localActivityDraft.financialProperties?.costPerEntityProcessed || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerEntityProcessed",
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!formData.financialProperties?.enabled}
+                        disabled={!localActivityDraft.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -784,14 +867,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.financialProperties?.costPerHourActive || 0}
+                        value={localActivityDraft.financialProperties?.costPerHourActive || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerHourActive",
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!formData.financialProperties?.enabled}
+                        disabled={!localActivityDraft.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -802,14 +885,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.financialProperties?.costPerHourIdle || 0}
+                        value={localActivityDraft.financialProperties?.costPerHourIdle || 0}
                         onChange={(e) =>
                           handleFinancialChange(
                             "costPerHourIdle",
                             parseFloat(e.target.value) || 0
                           )
                         }
-                        disabled={!formData.financialProperties?.enabled}
+                        disabled={!localActivityDraft.financialProperties?.enabled}
                         min="0"
                         step="0.01"
                         placeholder="0.00"
@@ -825,14 +908,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={formData.financialProperties?.resourceCostMultiplier || 1}
+                        value={localActivityDraft.financialProperties?.resourceCostMultiplier || 1}
                         onChange={(e) =>
                           handleFinancialChange(
                             "resourceCostMultiplier",
                             parseFloat(e.target.value) || 1
                           )
                         }
-                        disabled={!formData.financialProperties?.enabled}
+                        disabled={!localActivityDraft.financialProperties?.enabled}
                         min="0"
                         step="0.1"
                         placeholder="1.0"
@@ -853,7 +936,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </span>
                 </div>
                 <RoutingConfigurationContent
-                  localData={formData}
+                  localData={localActivityDraft}
                   handleChange={handleConnectTypeChange}
                   outgoingConnectors={outgoingConnectors}
                   referenceData={referenceData || { activities: [], resources: [], entities: [], resourceRequirements: [] }}
@@ -876,7 +959,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 {/* Pre-Processing State Modifications */}
                 <div className="border-b pb-2">
                   <StateModificationsEditor
-                    modifications={formData.preProcessingStateModifications || []}
+                    modifications={localActivityDraft.preProcessingStateModifications || []}
                     onModificationsChange={handlePreProcessingChange}
                     states={states}
                     title="Pre-Processing State Modifications"
@@ -888,7 +971,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 {/* Post-Processing State Modifications */}
                 <div>
                   <StateModificationsEditor
-                    modifications={formData.postProcessingStateModifications || []}
+                    modifications={localActivityDraft.postProcessingStateModifications || []}
                     onModificationsChange={handlePostProcessingChange}
                     states={states}
                     title="Post-Processing State Modifications"
@@ -923,21 +1006,24 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           <button
             type="button"
             onClick={handleCancel}
-            className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50"
+            disabled={isSaving}
+            className={`px-3 py-1.5 text-xs border rounded ${
+              isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
+            }`}
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            disabled={!hasChanges}
+            disabled={!hasPendingChanges || isSaving}
             className={`px-3 py-1.5 text-xs rounded ${
-              hasChanges
+              hasPendingChanges && !isSaving
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
-            Save
+            {isSaving ? "Saving..." : "Save"}
           </button>
         </div>
       )}

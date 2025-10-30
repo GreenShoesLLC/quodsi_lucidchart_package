@@ -11,6 +11,7 @@ import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import { convertRootClausesToStructure, generatePreview } from "../../utils/resourceRequirementConverter";
 
 interface OperationStepEditorProps {
+  activityId?: string;
   step: OperationStep;
   index: number;
   onDelete: (index: number) => void;
@@ -22,6 +23,7 @@ interface OperationStepEditorProps {
 }
 
 export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
+  activityId,
   step,
   index,
   onDelete,
@@ -105,6 +107,7 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
 
       <div className="space-y-1">
         <EnhancedDurationEditor
+          elementId={activityId}
           periodUnit={step.duration.durationPeriodUnit}
           distribution={step.duration.distribution}
           onChange={handleDurationChange}

@@ -21,7 +21,7 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   const supportedTypes = Object.values(DistributionType)
     .filter(type => isDistributionTypeSupported(type))
     .filter(type => !allowedTypes || allowedTypes.includes(type));
-  
+
   // Define groups for the dropdown - in future versions, we might add more groups
   const groups = [
     {
@@ -31,6 +31,7 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   ];
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    // Notify parent immediately (no local buffering)
     onChange(e.target.value as DistributionType);
   };
 

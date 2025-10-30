@@ -28,7 +28,6 @@ export interface SelectionStateData {
   modelItemData?: ModelItemData | ModelItemData[];
   validationResult?: ValidationResult;
   referenceData?: EditorReferenceData;
-  outgoingConnectors?: any[];
 
   // Element specifics
   diagramElementType?: DiagramElementType;

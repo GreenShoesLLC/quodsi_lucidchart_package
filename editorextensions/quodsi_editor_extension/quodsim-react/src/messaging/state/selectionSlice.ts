@@ -29,7 +29,6 @@ export interface SelectionState {
     connectors?: any[];
     states?: any[]; // Now included in referenceData instead of separate field
   };
-  outgoingConnectors?: any[];
   lastUpdated?: number;
 }
 
@@ -39,13 +38,12 @@ export const initialSelectionState: SelectionState = {
   diagramElementType: undefined,
   documentContext: undefined,
   referenceData: undefined,
-  outgoingConnectors: undefined,
   lastUpdated: undefined,
 };
 
 // Action types
 export type SelectionAction =
-  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; diagramElementType?: string; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; states?: any[]; }; outgoingConnectors?: any[]; }
+  | { type: 'SELECTION_UPDATE'; elements: ElementShape[]; totalElements: number; diagramElementType?: string; documentContext?: { documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> }; referenceData?: { activities?: Array<{ id: string; name: string }>; resources?: Array<{ id: string; name: string }>; entities?: Array<{ id: string; name: string }>; resourceRequirements?: any[]; connectors?: any[]; states?: any[]; }; }
   | { type: 'DOCUMENT_CONTEXT_UPDATE'; documentId: string; pageId: string; documentTitle: string; isQuodsiModel: boolean; metadata?: Record<string, any> };
 
 // Reducer
@@ -99,7 +97,6 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
           isQuodsiModel: documentContext.isQuodsiModel
         } : undefined,
         referenceData: action.referenceData || state.referenceData,
-        outgoingConnectors: action.outgoingConnectors || state.outgoingConnectors,
         lastUpdated: Date.now(),
       };
       
@@ -121,8 +118,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
           connectors: updatedState.referenceData.connectors?.length || 0,
           states: updatedState.referenceData.states?.length || 0,
           resourceRequirements: updatedState.referenceData.resourceRequirements?.length || 0
-        } : 'none',
-        outgoingConnectorsCount: updatedState.outgoingConnectors?.length || 0
+        } : 'none'
       });
       
       return updatedState;

@@ -62,3 +62,11 @@ export function useValidation() {
   const { validation } = useMessaging();
   return validation;
 }
+
+/**
+ * Hook to access element operations state
+ */
+export function useElementOps() {
+  const { elementOps } = useMessaging();
+  return elementOps;
+}

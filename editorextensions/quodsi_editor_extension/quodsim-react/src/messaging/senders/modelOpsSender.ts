@@ -1,13 +1,15 @@
 import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
 import { useSender } from './useSender';
+import { useMessagingDispatch } from '../MessageContext';
 
 /**
  * Custom hook that provides typed functions for sending model operations messages
- * 
+ *
  * @returns Object containing model operations message sender functions
  */
 export function useModelOpsSender() {
   const send = useSender();
+  const dispatch = useMessagingDispatch();
   
   /**
    * Send a MODEL_VALIDATE message
@@ -83,7 +85,14 @@ export function useModelOpsSender() {
     data: Record<string, any>,
     diagramElementType?: string
   ) => {
-    // Use the new ELEMENT_UPDATE message type
+    // Dispatch ELEMENT_SAVE_START action to Redux to track save state
+    dispatch({
+      type: 'ELEMENT_SAVE_START',
+      elementId,
+      optimisticData: data, // Store optimistic data for immediate UI update
+    });
+
+    // Send the ELEMENT_UPDATE message to the extension
     send(EnvelopeMessageType.ELEMENT_UPDATE, {
       elementId,
       type,

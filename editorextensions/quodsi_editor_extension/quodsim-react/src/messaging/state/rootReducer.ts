@@ -8,6 +8,7 @@ import { AppState, initialAppState, appReducer, AppAction } from './appSlice';
 import { SelectionState, initialSelectionState, selectionReducer, SelectionAction } from './selectionSlice';
 import { SimulationState, initialSimulationState, simulationReducer, SimulationAction } from './simulationSlice';
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
+import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
 
 // Combined state type
 export interface MessagingState {
@@ -15,6 +16,7 @@ export interface MessagingState {
   selection: SelectionState;
   simulation: SimulationState;
   validation: ValidationState;
+  elementOps: ElementOpsState;
 }
 
 // Initial state
@@ -23,6 +25,7 @@ export const initialState: MessagingState = {
   selection: initialSelectionState,
   simulation: initialSimulationState,
   validation: initialValidationState,
+  elementOps: initialElementOpsState,
 };
 
 /**
@@ -35,5 +38,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     selection: selectionReducer(state.selection, action as SelectionAction),
     simulation: simulationReducer(state.simulation, action as SimulationAction),
     validation: validationReducer(state.validation, action as ValidationAction),
+    elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
   };
 }

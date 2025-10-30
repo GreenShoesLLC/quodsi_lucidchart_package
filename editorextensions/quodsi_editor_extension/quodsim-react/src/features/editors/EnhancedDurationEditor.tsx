@@ -12,6 +12,7 @@ import { DistributionTypeSelector } from "src/features/distribution/Distribution
 import { DistributionParametersEditor } from "src/features/distribution/DistributionParametersEditor";
 
 interface EnhancedDurationEditorProps {
+  elementId?: string;
   periodUnit: PeriodUnit;
   distribution: Distribution;
   onChange: (periodUnit: PeriodUnit, distribution: Distribution) => void;
@@ -21,6 +22,7 @@ interface EnhancedDurationEditorProps {
 }
 
 export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
+  elementId,
   periodUnit,
   distribution,
   onChange,
@@ -38,20 +40,22 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
 
   // Handle distribution type change
   const handleDistributionTypeChange = (type: DistributionType) => {
-    // Use factory method to create default distribution
-    const newDistribution = createDefaultDistribution(type);
+    // Create new distribution
+    let newDistribution: Distribution;
 
-    // If CONSTANT, ensure a default value
     if (type === DistributionType.CONSTANT) {
-      const constantDistribution = ConstantDistribution.create(1);
-      onChange(periodUnit, constantDistribution);
+      newDistribution = ConstantDistribution.create(1);
     } else {
-      onChange(periodUnit, newDistribution);
+      newDistribution = createDefaultDistribution(type);
     }
+
+    // Notify parent immediately (no local buffering)
+    onChange(periodUnit, newDistribution);
   };
 
   // Handle distribution parameter changes
   const handleDistributionChange = (updatedDistribution: Distribution) => {
+    // Notify parent immediately (no local buffering)
     onChange(periodUnit, updatedDistribution);
   };
 
@@ -62,21 +66,17 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     onChange(event.target.value as PeriodUnit, distribution);
   };
 
-  // Get current distribution type, defaulting to CONSTANT if not set
-  const distributionType =
-    distribution?.distributionType || DistributionType.CONSTANT;
-
   // Check if we have only one allowed distribution type that matches the current type
   const isFixedDistribution =
     allowedDistributionTypes &&
     allowedDistributionTypes.length === 1 &&
-    allowedDistributionTypes[0] === distributionType;
+    allowedDistributionTypes[0] === distribution.distributionType;
 
   return (
     <div className={`duration-editor ${compact ? "compact" : ""} space-y-0.5`}>
       {/* Label - enhanced to include distribution type info when fixed */}
       <div className="text-xs font-medium text-gray-700 mb-0.5">
-        {isFixedDistribution && distributionType === DistributionType.CONSTANT
+        {isFixedDistribution && distribution.distributionType === DistributionType.CONSTANT
           ? `${label}`
           : label}
       </div>
@@ -84,7 +84,7 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
       {/* Distribution Type Selector - only shown if not fixed */}
       <div>
         <DistributionTypeSelector
-          distributionType={distributionType}
+          distributionType={distribution.distributionType}
           onChange={handleDistributionTypeChange}
           allowedTypes={allowedDistributionTypes}
         />
@@ -93,8 +93,9 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
       {/* Distribution Parameters Editor */}
       <div>
         <DistributionParametersEditor
+          elementId={elementId}
           distribution={distribution}
-          distributionType={distributionType}
+          distributionType={distribution.distributionType}
           onChange={handleDistributionChange}
         />
       </div>

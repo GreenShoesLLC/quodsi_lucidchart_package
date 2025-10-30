@@ -4,21 +4,28 @@ import {
   NORMAL_PARAMETER_METADATA,
   NormalDistribution,
 } from "@quodsi/shared";
+import { useMultiParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface NormalParameterEditorProps {
   parameters: NormalParameters;
   onChange: (updatedParameters: NormalParameters) => void;
   disabled?: boolean;
+  elementId?: string; // Optional: for Redux save state integration
 }
 
 export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   parameters,
   onChange,
   disabled = false,
+  elementId,
 }) => {
   // State for error messages
   const [errors, setErrors] = useState<{mean?: string; std?: string}>({});
-  
+
+  // Use stateful parameter editor with Redux integration (for both mean and std)
+  const { localParams, updateField, isDirty, setIsDirty, isSaving } =
+    useMultiParameterEditorState(parameters, elementId);
+
   // Get metadata
   const meanMetadata = NORMAL_PARAMETER_METADATA.mean;
   const stdMetadata = NORMAL_PARAMETER_METADATA.std;
@@ -26,19 +33,24 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   const handleParameterChange = (paramName: keyof NormalParameters, value: number) => {
     // Clear any previous errors for this parameter
     setErrors(prev => ({...prev, [paramName]: undefined}));
-    
+
+    // Update local state immediately
+    updateField(paramName, value);
+    setIsDirty(true);
+
     // Create an updated copy of parameters
-    const updatedParams: NormalParameters = {
-      ...parameters,
+    let updatedParams: NormalParameters = {
+      ...localParams,
       [paramName]: value
     };
-    
+
     // Special handling for std to ensure it's always positive
     if (paramName === 'std' && value <= 0) {
       updatedParams.std = 0.1; // Minimum allowed value for std
+      updateField('std', 0.1);
       setErrors(prev => ({...prev, std: 'Standard deviation must be greater than 0. Set to minimum value (0.1).'}));
     }
-    
+
     // Only update if the parameters are valid
     if (NormalDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
@@ -66,34 +78,46 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   return (
     <div className="space-y-2">
       <div>
-        <label className="block text-xs text-gray-600 mb-0.5">
+        <label className="block text-xs text-gray-600 font-medium mb-0.5">
           {meanMetadata.label}
-          <span className="text-xs text-gray-400 ml-1">(Average value)</span>
+          <span className="text-xs text-gray-400 ml-1 font-normal">(Average value)</span>
+          {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
+          {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
         <input
           type="number"
-          value={parameters.mean}
+          value={localParams.mean}
           onChange={handleMeanChange}
-          disabled={disabled}
+          disabled={disabled || isSaving}
           min={meanMetadata.min}
           step={meanMetadata.step}
-          className="w-full px-2 py-1 text-xs border rounded"
+          className={`w-full px-2 py-1 text-xs border rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${
+            disabled || isSaving
+              ? "border-gray-200 bg-gray-50 cursor-not-allowed"
+              : "border-gray-300"
+          }`}
         />
         {errors.mean && <p className="text-xs text-red-500 mt-1">{errors.mean}</p>}
       </div>
       <div>
-        <label className="block text-xs text-gray-600 mb-0.5">
+        <label className="block text-xs text-gray-600 font-medium mb-0.5">
           {stdMetadata.label}
-          <span className="text-xs text-gray-400 ml-1">(Variability around mean)</span>
+          <span className="text-xs text-gray-400 ml-1 font-normal">(Variability around mean)</span>
+          {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
+          {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
         <input
           type="number"
-          value={parameters.std}
+          value={localParams.std}
           onChange={handleStdChange}
-          disabled={disabled}
+          disabled={disabled || isSaving}
           min={stdMetadata.min}
           step={stdMetadata.step}
-          className="w-full px-2 py-1 text-xs border rounded"
+          className={`w-full px-2 py-1 text-xs border rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none ${
+            disabled || isSaving
+              ? "border-gray-200 bg-gray-50 cursor-not-allowed"
+              : "border-gray-300"
+          }`}
         />
         {errors.std && <p className="text-xs text-red-500 mt-1">{errors.std}</p>}
       </div>

@@ -34,12 +34,24 @@ function handleElementUpdateResult(msg: EnvelopeBase): MessagingAction | null {
     elementId: string;
     errorMessage?: string;
   };
-  
+
   logger.log('Handling ELEMENT_UPDATE_RESULT:', data);
-  
-  // Currently there is no toast notification system in the app
-  // Just return null to indicate message was handled but no state change needed
-  return null;
+
+  // Dispatch Redux action based on save success/failure
+  if (data.success) {
+    logger.log(`Element ${data.elementId} saved successfully`);
+    return {
+      type: 'ELEMENT_SAVE_SUCCESS',
+      elementId: data.elementId,
+    };
+  } else {
+    logger.error(`Element ${data.elementId} save failed:`, data.errorMessage);
+    return {
+      type: 'ELEMENT_SAVE_ERROR',
+      elementId: data.elementId,
+      errorMessage: data.errorMessage || 'Unknown error occurred during save',
+    };
+  }
 }
 
 /**

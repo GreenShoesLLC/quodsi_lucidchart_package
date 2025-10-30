@@ -74,12 +74,6 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           modelManager
         );
 
-        // Filter outgoing connectors for this activity
-        const activityId = item.id;
-        const allConnectors = messageData.referenceData?.connectors || [];
-        const outgoingConnectors = allConnectors.filter(conn => conn.sourceId === activityId);
-        messageData.outgoingConnectors = outgoingConnectors;
-
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
 
@@ -92,7 +86,6 @@ export class ActivityProcessor extends BaseSelectionProcessor {
             resourceRequirements: messageData.referenceData.resourceRequirements?.length || 0,
             connectors: messageData.referenceData.connectors?.length || 0
           } : 'none',
-          outgoingConnectorsCount: outgoingConnectors.length,
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {
