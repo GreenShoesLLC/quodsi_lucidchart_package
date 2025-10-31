@@ -167,7 +167,8 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
     entity.id,
     hasPendingChanges,
     () => extractEntityData(entity),
-    setLocalEntityDraft
+    setLocalEntityDraft,
+    setHasPendingChanges
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);

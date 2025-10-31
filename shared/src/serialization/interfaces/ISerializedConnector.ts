@@ -13,7 +13,7 @@ export interface ISerializedConnector {
     targetY: number;
     x: number;  // Midpoint x
     y: number;  // Midpoint y
-    probability: number;
+    weight: number;
     operationSteps: ISerializedOperationStep[];
     entityTemplateUniqueId?: string;
     stateCondition?: any;

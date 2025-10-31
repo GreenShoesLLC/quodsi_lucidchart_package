@@ -275,7 +275,8 @@ const GeneratorEditor: React.FC<Props> = ({
     generator.id,
     hasPendingChanges,
     () => extractGeneratorData(generator),
-    setLocalGeneratorDraft
+    setLocalGeneratorDraft,
+    setHasPendingChanges
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);

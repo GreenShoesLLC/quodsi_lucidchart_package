@@ -208,7 +208,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
     resource.id,
     hasPendingChanges,
     () => extractResourceData(resource),
-    setLocalResourceDraft
+    setLocalResourceDraft,
+    setHasPendingChanges
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);

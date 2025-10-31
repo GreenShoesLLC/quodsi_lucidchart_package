@@ -7,7 +7,6 @@ import { Connector } from '../../types/elements/Connector';
 import { Activity } from '../../types/elements/Activity';
 
 export class ConnectorValidation extends ValidationRule {
-    private static readonly PROBABILITY_TOLERANCE = 0.0001;
     private static readonly MAX_OUTGOING_CONNECTIONS = 20;
 
     validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
@@ -21,9 +20,9 @@ export class ConnectorValidation extends ValidationRule {
             this.validateConnectorData(connector, messages);
         });
 
-        this.log("Validating probability distributions for connector groups.");
+        this.log("Validating weight values for connector groups.");
         connectorsBySource.forEach((sourceConnectors, sourceId) => {
-            this.validateProbabilityGroup(sourceId, sourceConnectors, state, messages);
+            this.validateWeightGroup(sourceId, sourceConnectors, state, messages);
         });
 
         this.log("Detecting circular references in connectors.");
@@ -93,13 +92,11 @@ export class ConnectorValidation extends ValidationRule {
             messages.push(ValidationMessages.missingName('Connector', connector.id));
         }
 
-        if (typeof connector.probability !== 'number' ||
-            connector.probability < 0 ||
-            connector.probability > 1) {
-            this.log(`Connector ID ${connector.id} has an invalid probability: ${connector.probability}`);
+        if (typeof connector.weight !== 'number' || connector.weight <= 0) {
+            this.log(`Connector ID ${connector.id} has an invalid weight: ${connector.weight}`);
             messages.push({
                 type: 'error',
-                message: `Connector ${connector.id} has invalid probability (must be between 0 and 1)`,
+                message: `Connector ${connector.id} has invalid weight (must be greater than 0)`,
                 elementId: connector.id
             });
         }
@@ -120,43 +117,37 @@ export class ConnectorValidation extends ValidationRule {
 
     // Note: validateConnectorType removed - connectType is now on Activity, not Connector
 
-    private validateProbabilityGroup(
+    private validateWeightGroup(
         sourceId: string,
         connectors: Connector[],
         state: ModelDefinitionState,
         messages: ValidationMessage[]
     ): void {
         /**
-         * Validates the probability distribution of connectors originating from the same source.
+         * Validates the weight values of connectors originating from the same source.
          */
 
-        this.log(`Validating probability group for Source ID: ${sourceId}`);
+        this.log(`Validating weight group for Source ID: ${sourceId}`);
 
         // Get the source activity to check its connectType
         const sourceActivity = state.modelDefinition.activities.get(sourceId);
 
-        // Only validate probabilities if the source is an Activity with Probability connectType
+        // Only validate weights if the source is an Activity with Probability connectType
         if (!sourceActivity || sourceActivity.connectType !== ConnectType.Probability) {
             return;
         }
 
-        const probabilityConnectors = connectors;
-
-        if (probabilityConnectors.length > 0) {
-            const totalProbability = probabilityConnectors.reduce(
-                (sum, connector) => sum + connector.probability,
-                0
-            );
-
-            if (Math.abs(totalProbability - 1.0) > ConnectorValidation.PROBABILITY_TOLERANCE) {
-                this.log(`Probability sum for Source ID ${sourceId} is invalid: ${totalProbability.toFixed(4)}`);
+        // Check for zero or negative weights
+        connectors.forEach((connector, idx) => {
+            if (!connector.weight || connector.weight <= 0) {
+                this.log(`Connector ID ${connector.id} has invalid weight: ${connector.weight}`);
                 messages.push({
-                    type: 'error',
-                    message: `Outgoing connection probabilities from activity ${sourceId} sum to ${totalProbability.toFixed(4)} (should be 1.0)`,
-                    elementId: sourceId
+                    type: 'warning',
+                    message: `Connector ${idx + 1} from activity ${sourceId} has weight ${connector.weight || 0}. Weight must be greater than 0.`,
+                    elementId: connector.id
                 });
             }
-        }
+        });
 
         if (connectors.length > ConnectorValidation.MAX_OUTGOING_CONNECTIONS) {
             this.log(`Source ID ${sourceId} has too many outgoing connections: ${connectors.length}`);

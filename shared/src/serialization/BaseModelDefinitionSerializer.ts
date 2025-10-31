@@ -309,7 +309,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 targetY: connector.targetY,
                 x: connector.x,  // Midpoint x
                 y: connector.y,  // Midpoint y
-                probability: connector.probability,
+                weight: connector.weight,
                 operationSteps: connector.operationSteps.map(step =>
                     this.serializeOperationStep(step)
                 ),

@@ -8,6 +8,17 @@ import {
   Connector,
 } from "@quodsi/shared";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
+import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
+import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+/**
+ * Input type for activity data - accepts various formats
+ */
+type ActivityInput = Activity | { data: Partial<Activity> } | Partial<Activity>;
 
 interface ConnectorsEditorProps {
   activity: Activity;
@@ -59,58 +70,72 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
     );
   }
 
-  // Helper function to extract activity data with safe defaults
-  const extractActivityData = (act: Activity): Activity => {
+  // ============================================================================
+  // HELPER FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Extracts and normalizes activity data from props into a clean Activity object.
+   * Handles multiple data formats and initializes all required properties with safe defaults.
+   */
+  const extractActivityData = (act: ActivityInput): Activity => {
+    const data = (act as any).data || act;
     const safeActivity = new Activity(
-      act.id,
-      act.name,
-      act.capacity || 1,
-      act.inputBufferCapacity || Infinity,
-      act.outputBufferCapacity || Infinity,
-      act.operationSteps || [],
-      act.x || 0,
-      act.y || 0
+      data.id,
+      data.name,
+      data.capacity || 1,
+      data.inputBufferCapacity || Infinity,
+      data.outputBufferCapacity || Infinity,
+      data.operationSteps || [],
+      data.x || 0,
+      data.y || 0
     );
 
     // Preserve connectType (the main property we're editing)
-    safeActivity.connectType = act.connectType || ConnectType.Probability;
+    safeActivity.connectType = data.connectType || ConnectType.Probability;
 
     // Preserve other properties
-    safeActivity.financialProperties = act.financialProperties;
-    safeActivity.preProcessingStateModifications = act.preProcessingStateModifications || [];
-    safeActivity.postProcessingStateModifications = act.postProcessingStateModifications || [];
+    safeActivity.financialProperties = data.financialProperties;
+    safeActivity.preProcessingStateModifications = data.preProcessingStateModifications || [];
+    safeActivity.postProcessingStateModifications = data.postProcessingStateModifications || [];
 
     return safeActivity;
   };
 
-  // State management for BaseEditor replacement
-  const [formData, setFormData] = useState<Activity>(() => extractActivityData(activity));
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
 
-  // Sync with activity prop changes (only when no unsaved changes and not saving)
-  useEffect(() => {
-    if (!hasChanges && !isSaving) {
-      setFormData(extractActivityData(activity));
-    }
-  }, [activity, hasChanges, isSaving]);
+  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() => extractActivityData(activity));
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
-  // Clear the saving flag after a short delay to allow for the new data to arrive
-  useEffect(() => {
-    if (isSaving) {
-      const timer = setTimeout(() => {
-        setIsSaving(false);
-        setHasChanges(false);
-      }, 500); // Give the parent component time to update
+  // Redux-based save state tracking
+  const elementOpsState = useElementOpsState();
+  const isSaving = activity?.id ? elementOpsState.isSaving(activity.id) : false;
 
-      return () => clearTimeout(timer);
-    }
-  }, [isSaving]);
+  // Sync form data with activity prop changes
+  useFormSync(
+    activity?.id || "",
+    hasPendingChanges,
+    () => extractActivityData(activity),
+    setLocalActivityDraft,
+    setHasPendingChanges
+  );
 
-  // ConnectType change handler
+  // Clear hasPendingChanges flag when save completes
+  useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // ============================================================================
+  // EVENT HANDLERS
+  // ============================================================================
+
+  /**
+   * Handles changes to the activity's routing type (ConnectType).
+   * Updates the local draft and marks the form as having pending changes.
+   */
   const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const newConnectType = e.target.value as ConnectType;
-    setFormData(prev => {
+    setLocalActivityDraft(prev => {
       const updatedActivity = new Activity(
         prev.id,
         prev.name,
@@ -132,44 +157,53 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
       return updatedActivity;
     });
-    setHasChanges(true);
+    setHasPendingChanges(true);
   };
 
-  // Save handler
+  /**
+   * Saves the activity's routing configuration changes.
+   * Creates a new Activity instance with updated connectType and triggers the onSave callback.
+   */
   const handleSave = () => {
     const activityToSave = new Activity(
-      formData.id,
-      formData.name,
-      formData.capacity,
-      formData.inputBufferCapacity,
-      formData.outputBufferCapacity,
-      formData.operationSteps,
-      formData.x,
-      formData.y
+      localActivityDraft.id,
+      localActivityDraft.name,
+      localActivityDraft.capacity,
+      localActivityDraft.inputBufferCapacity,
+      localActivityDraft.outputBufferCapacity,
+      localActivityDraft.operationSteps,
+      localActivityDraft.x,
+      localActivityDraft.y
     );
 
     // Preserve connectType (the main thing we're editing here)
-    activityToSave.connectType = formData.connectType;
+    activityToSave.connectType = localActivityDraft.connectType;
 
     // Preserve other properties
-    activityToSave.financialProperties = formData.financialProperties;
-    activityToSave.preProcessingStateModifications = formData.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications = formData.postProcessingStateModifications;
+    activityToSave.financialProperties = localActivityDraft.financialProperties;
+    activityToSave.preProcessingStateModifications = localActivityDraft.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications = localActivityDraft.postProcessingStateModifications;
 
     onSave(activityToSave);
-    setIsSaving(true); // Will be cleared by useEffect after 500ms
   };
 
-  // Cancel handler - resets form without closing the editor
+  /**
+   * Cancels any pending changes and resets the form to the original activity state.
+   * Does not close the editor - only discards unsaved changes.
+   */
   const handleCancel = () => {
-    setFormData(extractActivityData(activity));
-    setHasChanges(false);
+    setLocalActivityDraft(extractActivityData(activity));
+    setHasPendingChanges(false);
   };
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
 
   return (
     <div className="space-y-2">
       <RoutingConfigurationContent
-        localData={formData}
+        localData={localActivityDraft}
         handleChange={handleConnectTypeChange}
         outgoingConnectors={outgoingConnectors}
         selectedConnectorId={selectedConnectorId}
@@ -189,9 +223,9 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
         <button
           type="button"
           onClick={handleSave}
-          disabled={!hasChanges}
+          disabled={!hasPendingChanges}
           className={`px-3 py-1.5 text-xs rounded ${
-            hasChanges
+            hasPendingChanges
               ? "bg-blue-600 text-white hover:bg-blue-700"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}

@@ -118,7 +118,7 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Name: ${connector.name || "Unnamed"}`);
         this.log(`    Source ID: ${connector.sourceId || "Not defined"}`);
         this.log(`    Target ID: ${connector.targetId || "Not defined"}`);
-        this.log(`    Probability: ${connector.probability !== undefined ? connector.probability : "Not defined"}`);
+        this.log(`    Weight: ${connector.weight !== undefined ? connector.weight : "Not defined"}`);
 
         const operationSteps = connector.operationSteps;
         this.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);
@@ -142,7 +142,7 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Name: ${resourceRequirement.name}`);
         // this.log(`    Mode: ${resourceRequirement.mode}`);
     }
-    
+
     private logGenerator(generator: Generator): void {
         this.log(`  Generator ID: ${generator.id}`);
         this.log(`    Name: ${generator.name || "Unnamed"}`);

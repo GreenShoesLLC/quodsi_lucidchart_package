@@ -29,10 +29,10 @@ export class Connector extends PositionedSimulationObject {
     stateModifications: StateModification[] = [];
 
     static createDefault(
-        id: string, 
-        sourceX: number = 0, 
+        id: string,
+        sourceX: number = 0,
         sourceY: number = 0,
-        targetX: number = 0, 
+        targetX: number = 0,
         targetY: number = 0
     ): Connector {
         const connector = new Connector(
@@ -40,7 +40,7 @@ export class Connector extends PositionedSimulationObject {
             'New Connector',
             '', // sourceId
             '', // targetId
-            1.0, // probability
+            1, // weight
             [] // operationSteps
         );
 
@@ -52,7 +52,7 @@ export class Connector extends PositionedSimulationObject {
 
         // Set midpoint as default location
         connector.setLocation(
-            (sourceX + targetX) / 2, 
+            (sourceX + targetX) / 2,
             (sourceY + targetY) / 2
         );
 
@@ -64,7 +64,7 @@ export class Connector extends PositionedSimulationObject {
         public name: string,
         public sourceId: string,
         public targetId: string,
-        public probability: number = 1.0,
+        public weight: number = 1,
         public operationSteps: OperationStep[] = [],
         sourceX: number = 0,
         sourceY: number = 0,
@@ -72,9 +72,9 @@ export class Connector extends PositionedSimulationObject {
         targetY: number = 0,
         x: number = 0,
         y: number = 0
-    ) { 
+    ) {
         super();
-        
+
         // Set source and target coordinates
         this.sourceX = sourceX;
         this.sourceY = sourceY;
@@ -83,7 +83,7 @@ export class Connector extends PositionedSimulationObject {
 
         // Set location to midpoint by default
         this.setLocation(
-            x || (sourceX + targetX) / 2, 
+            x || (sourceX + targetX) / 2,
             y || (sourceY + targetY) / 2
         );
     }
@@ -94,10 +94,10 @@ export class Connector extends PositionedSimulationObject {
     setSourceLocation(x: number, y: number): void {
         this.sourceX = x;
         this.sourceY = y;
-        
+
         // Recalculate midpoint
         this.setLocation(
-            (this.sourceX + this.targetX) / 2, 
+            (this.sourceX + this.targetX) / 2,
             (this.sourceY + this.targetY) / 2
         );
     }
@@ -108,10 +108,10 @@ export class Connector extends PositionedSimulationObject {
     setTargetLocation(x: number, y: number): void {
         this.targetX = x;
         this.targetY = y;
-        
+
         // Recalculate midpoint
         this.setLocation(
-            (this.sourceX + this.targetX) / 2, 
+            (this.sourceX + this.targetX) / 2,
             (this.sourceY + this.targetY) / 2
         );
     }

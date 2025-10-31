@@ -214,7 +214,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
     model.id,
     hasPendingChanges,
     () => extractModelData(model),
-    setLocalModelDraft
+    setLocalModelDraft,
+    setHasPendingChanges
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);

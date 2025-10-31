@@ -374,7 +374,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     (activity as any).id || (activity as any).data?.id || "",
     hasPendingChanges,
     () => extractActivityData(activity),
-    setLocalActivityDraft
+    setLocalActivityDraft,
+    setHasPendingChanges
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);

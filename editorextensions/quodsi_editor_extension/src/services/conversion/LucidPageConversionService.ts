@@ -221,7 +221,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const connector = platformObject.getSimulationObject() as Connector;
                 connector.sourceId = sourceId;
                 connector.targetId = endpoint2.connection.id;
-                connector.probability = probability;
+                connector.weight = probability;
 
                 // Update the platform object to save changes
                 platformObject.updateFromPlatform();

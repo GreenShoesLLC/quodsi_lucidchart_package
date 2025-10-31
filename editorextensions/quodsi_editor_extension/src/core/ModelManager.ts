@@ -818,12 +818,12 @@ export class ModelManager {
 
             // For Connectors, calculate and set probability based on outgoing connections
             if (newType === SimulationObjectType.Connector && element instanceof LineProxy) {
-                const probability = this.calculateConnectorProbability(element as LineProxy, page);
-                (simObject as Connector).probability = probability;
+                const weight = this.calculateConnectorProbability(element as LineProxy, page);
+                (simObject as Connector).weight = weight;
 
                 this.debug.debug('Set connector probability:', {
                     connectorId: simObject.id,
-                    probability: probability
+                    probability: weight
                 });
 
                 // Update storage with the probability
