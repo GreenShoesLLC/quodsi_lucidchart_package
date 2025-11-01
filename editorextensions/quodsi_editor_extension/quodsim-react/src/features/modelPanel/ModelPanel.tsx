@@ -195,6 +195,7 @@ export const ModelPanel: React.FC = () => {
         diagramElementType={diagramElementType}
         simulationStatus={simulationStatus}
         onViewResults={onViewResults}
+        referenceData={referenceData}
       />
       
       <div className="flex-1 bg-gray-50">
