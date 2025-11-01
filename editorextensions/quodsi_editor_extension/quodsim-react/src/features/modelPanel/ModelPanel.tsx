@@ -211,6 +211,7 @@ export const ModelPanel: React.FC = () => {
               currentElement.data
             )}
             onSave={data => onElementUpdate(currentElement.id, data)}
+            onRemoveModel={onRemoveModel}
             referenceData={referenceData}
             isExpanded={expandedSections.elementEditor}
             onToggle={() => toggleSection('elementEditor')}

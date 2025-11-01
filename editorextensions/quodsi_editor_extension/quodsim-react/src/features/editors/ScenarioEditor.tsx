@@ -32,6 +32,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isTabVisible, setIsTabVisible] = useState(true);
   const scenarioSender = useScenarioSender();
 
   // Load scenarios function
@@ -82,26 +83,47 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
     }
   }, [documentId]);
 
-  // Auto-refresh when SAS URLs are about to expire
+  // Detect when tab/window becomes visible
   useEffect(() => {
-    if (scenarios.length === 0) return;
+    const handleVisibility = () => {
+      const visible = document.visibilityState === 'visible';
+      setIsTabVisible(visible);
 
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const hasExpiringSoon = scenarios.some(
-        (s) =>
-          s.downloadInfo &&
-          new Date(s.downloadInfo.expiresAt).getTime() - now < 5 * 60 * 1000 // 5 minutes
-      );
-
-      if (hasExpiringSoon) {
-        console.log("[ScenarioEditor] SAS URLs expiring soon, refreshing...");
+      // Refresh immediately when tab becomes visible
+      if (visible && documentId) {
+        console.log('[ScenarioEditor] Tab became visible, refreshing scenarios');
         loadScenarios();
       }
-    }, 60000); // Check every 60 seconds
+    };
 
-    return () => clearInterval(interval);
-  }, [scenarios]);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [documentId]);
+
+  // Auto-refresh when tab is visible AND scenarios are running
+  useEffect(() => {
+    if (!isTabVisible) {
+      console.log('[ScenarioEditor] Tab not visible, skipping auto-refresh');
+      return;
+    }
+
+    const hasRunning = scenarios.some(s => s.runState === RunState.Running);
+    if (!hasRunning) {
+      console.log('[ScenarioEditor] No running scenarios, skipping auto-refresh');
+      return;
+    }
+
+    console.log('[ScenarioEditor] Setting up auto-refresh for running scenarios');
+    const interval = setInterval(() => {
+      console.log('[ScenarioEditor] Auto-refreshing running scenarios');
+      loadScenarios();
+    }, 10000); // 10 seconds for running scenarios
+
+    return () => {
+      console.log('[ScenarioEditor] Clearing auto-refresh interval');
+      clearInterval(interval);
+    };
+  }, [scenarios, isTabVisible, documentId]);
 
   const handleDeleteScenario = (scenarioId: string) => {
     // TODO: Implement scenario deletion
@@ -183,8 +205,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
       {!loading && !error && scenarios.length > 0 && (
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-xs text-blue-800">
-            <strong>Tip:</strong> Download links are refreshed automatically when they're about to expire.
-            Click the Refresh button to manually reload the scenario list.
+            <strong>Tip:</strong> Running scenarios auto-refresh every 10 seconds.
+            Download links are refreshed automatically when they expire.
+            Click Refresh to manually reload.
           </p>
         </div>
       )}

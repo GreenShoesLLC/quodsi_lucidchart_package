@@ -6,18 +6,17 @@ import {
   ModelSerializerFactory,
   Model
 } from '@quodsi/shared';
-import { 
-  DocumentProxy, 
-  PageProxy, 
+import {
+  DocumentProxy,
+  PageProxy,
   UserProxy,
   Viewport,
   EditorClient
 } from 'lucid-extension-sdk';
+import { v4 as uuidv4 } from 'uuid';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
-
-const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
  * Handler for simulation-related messages
@@ -196,8 +195,8 @@ export class SimulationHandler {
           data: {
             jobId: 'error',
             documentId: data.documentId,
-            scenarioId: BASELINE_SCENARIO_ID,
-            scenarioName: data.scenarioName || 'New Scenario',
+            scenarioId: 'error',
+            scenarioName: data.scenarioName || 'Error',
             status: SimulationStatus.FAILED,
             progress: 0,
             lastChecked: new Date().toISOString(),
@@ -227,8 +226,8 @@ export class SimulationHandler {
           data: {
             jobId: 'error',
             documentId: documentProxy.id,
-            scenarioId: BASELINE_SCENARIO_ID,
-            scenarioName: data.scenarioName || 'New Scenario',
+            scenarioId: 'error',
+            scenarioName: data.scenarioName || 'Error',
             status: SimulationStatus.FAILED,
             progress: 0,
             lastChecked: new Date().toISOString(),
@@ -250,9 +249,12 @@ export class SimulationHandler {
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
       console.log('[SimulationHandler] SVG obtained successfully');
       
-      // Generate job ID and queuedAt timestamp
+      // Generate unique scenario ID and job ID
+      const scenarioId = uuidv4();
+      const timestamp = new Date();
+      const queuedAt = timestamp.toISOString();
+      const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
       const jobId = `job-${documentProxy.id}-${Date.now()}`;
-      const queuedAt = new Date().toISOString();
 
       // Send initial status (replaces old MODEL_RUN_ACK)
       router.send('model', {
@@ -264,8 +266,8 @@ export class SimulationHandler {
         data: {
           jobId,
           documentId: data.documentId,
-          scenarioId: BASELINE_SCENARIO_ID,
-          scenarioName: data.scenarioName || 'New Scenario',
+          scenarioId,
+          scenarioName,
           status: SimulationStatus.QUEUED,
           progress: 0,
           currentStep: 'Submitting simulation to Azure',
@@ -278,12 +280,12 @@ export class SimulationHandler {
       SimulationHandler.activeJobs.set(jobId, {
         jobId,
         documentId: data.documentId,
-        scenarioId: BASELINE_SCENARIO_ID,
-        scenarioName: data.scenarioName || 'New Scenario',
+        scenarioId,
+        scenarioName,
         status: SimulationStatus.QUEUED,
         progress: 0,
-        startTime: new Date(),
-        lastUpdate: new Date(),
+        startTime: timestamp,
+        lastUpdate: timestamp,
         currentStep: 'Submitting simulation to Azure'
       });
       
@@ -296,9 +298,9 @@ export class SimulationHandler {
           actionName: 'SaveAndSubmitSimulation',
           actionData: {
             documentId: documentProxy.id,
-            scenarioId: BASELINE_SCENARIO_ID,
+            scenarioId,
             model: serializedModel,
-            scenarioName: data.scenarioName || 'New Scenario',
+            scenarioName,
             diagramSvg: diagramSvg,
             appVersion: '2.0'
           },
@@ -324,8 +326,8 @@ export class SimulationHandler {
           data: {
             jobId,
             documentId: data.documentId,
-            scenarioId: BASELINE_SCENARIO_ID,
-            scenarioName: data.scenarioName || 'New Scenario',
+            scenarioId,
+            scenarioName,
             status: SimulationStatus.PROCESSING,
             progress: 10,
             currentStep: 'Simulation submitted to backend',
@@ -335,7 +337,7 @@ export class SimulationHandler {
         });
         
         // Start polling for real status
-        SimulationHandler.pollDocumentStatus(documentProxy.id, BASELINE_SCENARIO_ID, jobId);
+        SimulationHandler.pollDocumentStatus(documentProxy.id, scenarioId, jobId);
         
       } catch (submitError) {
         console.error('[SimulationHandler] Error submitting simulation:', submitError);
@@ -357,8 +359,8 @@ export class SimulationHandler {
           data: {
             jobId,
             documentId: data.documentId,
-            scenarioId: BASELINE_SCENARIO_ID,
-            scenarioName: data.scenarioName || 'New Scenario',
+            scenarioId,
+            scenarioName,
             status: SimulationStatus.FAILED,
             progress: 0,
             lastChecked: new Date().toISOString(),
@@ -381,8 +383,8 @@ export class SimulationHandler {
         data: {
           jobId: 'error',
           documentId: data.documentId,
-          scenarioId: BASELINE_SCENARIO_ID,
-          scenarioName: data.scenarioName || 'New Scenario',
+          scenarioId: 'error',
+          scenarioName: data.scenarioName || 'Error',
           status: SimulationStatus.FAILED,
           progress: 0,
           lastChecked: new Date().toISOString(),
@@ -639,7 +641,7 @@ export class SimulationHandler {
 
         if (isRunning && !job.pollInterval) {
           console.log('[SimulationHandler] Resuming polling for job', jobId);
-          const scenarioId = job.scenarioId || BASELINE_SCENARIO_ID;
+          const scenarioId = job.scenarioId || 'unknown';
           SimulationHandler.pollDocumentStatus(documentId, scenarioId, jobId);
         }
       }

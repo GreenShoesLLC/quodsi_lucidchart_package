@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Trash2 } from "lucide-react";
 import {
   ValidationState,
@@ -7,33 +7,10 @@ import {
   SimulationObjectType,
 } from "@quodsi/shared";
 import { SimulationStatus } from "../../types/SimulationStatus";
-import { useSimulation } from "../../messaging/MessageContext";
 
 import { StatusIndicator } from "../shared/StatusIndicator";
-import { getSimulationState } from "../../utils/simulationState";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
-
-/**
- * Helper function to get human-readable time ago
- */
-const getTimeAgo = (date: Date | null): string => {
-  if (!date) return '';
-
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-
-  if (seconds < 5) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
-
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-};
 
 interface PanelHeaderProps {
   modelName: string;
@@ -66,30 +43,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   simulationStatus,
   onViewResults,
 }) => {
-  // Get simulation state from context
-  const {
-    isRunning,
-    currentStep,
-    lastChecked: lastCheckedString,
-  } = useSimulation();
-
-  // Convert lastChecked string to Date for display
-  const lastChecked = lastCheckedString ? new Date(lastCheckedString) : null;
-
-  // Local state for triggering re-renders (for time ago display)
-  const [, setTick] = useState(0);
-
-  // Timer to force re-render every second when simulating (to update "time ago" text)
-  useEffect(() => {
-    if (!isRunning) return;
-
-    const timer = setInterval(() => {
-      setTick(prev => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isRunning]);
-
   // Helper to get display name for the element
   const getDisplayName = (
     modelItemData: ExtendedModelItemData | null
@@ -148,36 +101,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     // Handle Model type buttons
     if (elementType === SimulationObjectType.Model) {
-      // Build button label with status indicator
-      let buttonLabel: string;
-      if (isRunning) {
-        const timeAgo = getTimeAgo(lastChecked);
-        const statusText = currentStep || 'Running';
-        buttonLabel = timeAgo ? `${statusText} (${timeAgo})` : statusText;
-      } else {
-        buttonLabel = getSimulationState(
-          simulationStatus?.pageStatus || null,
-          simulationStatus?.isPollingSimState || false
-        ).buttonLabel;
-      }
-
       return (
         <>
           {onSimulate && (
             <button
-              className={
-                isRunning ? disabledButtonClasses : simulateButtonClasses
-              }
+              className={simulateButtonClasses}
               onClick={handleSimulateClick}
-              disabled={isRunning}
-              title={isRunning ? `Status: ${currentStep || 'Running'}` : undefined}
             >
-              {buttonLabel}
-            </button>
-          )}
-          {onRemoveModel && (
-            <button className={dangerButtonClasses} onClick={onRemoveModel}>
-              Remove
+              Simulate
             </button>
           )}
         </>

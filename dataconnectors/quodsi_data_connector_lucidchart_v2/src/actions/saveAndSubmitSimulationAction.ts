@@ -1,15 +1,11 @@
 import { DataConnectorAsynchronousAction } from 'lucid-extension-sdk';
 import { AzureStorageService } from "../services/azureStorageService";
 import { LucidSimulationJobSubmissionService } from "../services/lucidSimulationJobSubmissionService";
-import { updateScenarioResultsData } from "../services/scenarioResultsService";
 import { BatchConfigurationError, BatchJobCreationError } from "../services/errors/batchErrors";
 import { getConfig } from "../config";
 import { ActionLogger } from '../utils/logging';
 import { updateModelData } from '../services';
 import { LoggingLevel } from '../utils/loggingLevels';
-
-// Default baseline scenario ID (all zeros UUID)
-const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
 interface SaveAndSubmitRequest {
     documentId: string;
@@ -58,28 +54,6 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             config.azureStorageConnectionString.split('AccountName=')[1].split(';')[0] : 'unknown'}`);
         logger.debug(`Using batch pool: ${config.batchPoolId}`);
         logger.debug(`Using application: ${config.defaultApplicationId}`);
-        // Create a scenario record in the "submitted" state
-        logger.info(`Creating scenario record with ID: ${scenarioId}`);
-        try {
-            const scenarioResult = await updateScenarioResultsData(
-                action,
-                documentId,
-                scenarioId,
-                loggingLevel >= LoggingLevel.VERBOSE, // Use verbose flag based on logging level
-                logger
-            );
-
-            if (scenarioResult.success) {
-                logger.info('Scenario record created successfully');
-            } else {
-                logger.error(`Failed to create scenario record: ${scenarioResult.error}`);
-                // Continue with simulation even if scenario record creation fails
-            }
-        } catch (scenarioError) {
-            logger.error(`Unexpected error creating scenario record: ${scenarioError.message}`);
-            // Continue with simulation even if scenario record creation fails
-        }
-
         // Phase 1: Upload model to blob storage
         const uploadStart = Date.now();
         const storageService = new AzureStorageService(config.azureStorageConnectionString);
@@ -99,20 +73,6 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
 
         if (!uploadSuccess) {
             logger.error('Failed to upload model definition');
-            
-            // Update scenario status to 'failed'
-            const failedUpdate = await updateScenarioResultsData(
-                action,
-                documentId,
-                scenarioId,
-                loggingLevel >= LoggingLevel.VERBOSE,
-                logger
-            );
-
-            if (!failedUpdate.success) {
-                logger.error(`Failed to update scenario status to 'failed': ${failedUpdate.error}`);
-            }
-            
             return { success: false };
         }
 
@@ -166,20 +126,6 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const jobIdMatch = batchResult.match(/Job '([^']+)'/);
         const taskIdMatch = batchResult.match(/task '([^']+)'/);
 
-        // Update scenario to 'running' state
-        const runningUpdate = await updateScenarioResultsData(
-            action,
-            documentId,
-            scenarioId,
-            loggingLevel >= LoggingLevel.VERBOSE,
-            logger
-        );
-
-        if (!runningUpdate.success) {
-            logger.error(`Failed to update scenario status to 'running': ${runningUpdate.error}`);
-            // Continue with returning success even if status update fails
-        }
-
         // Log performance metrics
         const totalDuration = Date.now() - metrics.startTime;
         logger.important('Operation completed', {
@@ -217,29 +163,6 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
                 message: error instanceof Error ? error.message : "Unknown error",
                 stack: error instanceof Error ? error.stack : undefined
             });
-        }
-
-        // If we have the data object, try to update the scenario to failed state
-        try {
-            const data = action.data as SaveAndSubmitRequest;
-            if (data && data.documentId && data.scenarioId) {
-                const failedUpdate = await updateScenarioResultsData(
-                    action,
-                    data.documentId,
-                    data.scenarioId,
-                    loggingLevel >= LoggingLevel.VERBOSE,
-                    logger
-                );
-                
-                if (!failedUpdate.success) {
-                    logger.error(`Failed to update scenario status to 'failed': ${failedUpdate.error}`);
-                }
-            }
-        } catch (scenarioUpdateError) {
-            logger.error(`Unexpected error updating scenario status: ${scenarioUpdateError.message}`);
-            if (scenarioUpdateError.stack) {
-                logger.error(`Stack trace: ${scenarioUpdateError.stack}`);
-            }
         }
 
         return { success: false };

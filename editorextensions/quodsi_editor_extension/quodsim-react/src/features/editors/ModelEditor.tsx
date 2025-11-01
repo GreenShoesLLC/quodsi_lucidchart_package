@@ -9,7 +9,7 @@ import {
   EnvelopeMessageType,
   EnvelopeBase,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, FileJson, Info, Users } from "lucide-react";
+import { Settings, Hash, PlaySquare, FileJson, Info, Users, Wrench, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import ScenarioEditor from "./ScenarioEditor";
@@ -39,13 +39,14 @@ interface Props {
   model: Model;
   onSave: (model: Model) => void;
   onCancel: () => void;
+  onRemoveModel?: () => void;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
 }
 
-type EditorTab = "basic" | "states" | "requirements" | "scenarios";
+type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -84,6 +85,12 @@ const TAB_CONFIG = [
     title: "Simulation Scenarios",
     icon: PlaySquare,
     tooltip: "Configure and manage simulation scenarios with different parameter sets and run configurations"
+  },
+  {
+    id: "utilities" as const,
+    title: "Utilities",
+    icon: Wrench,
+    tooltip: "Model utilities, diagnostics, and maintenance functions"
   },
 ];
 
@@ -152,7 +159,7 @@ const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: str
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onStatesChange, referenceData, resourceRequirements }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -570,15 +577,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
                 </button>
               </div>
             </form>
-        <button
-          type="button"
-          className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1 mt-2"
-          onClick={handleViewModelClick}
-          title="View Model Definition as JSON"
-        >
-          <FileJson className="w-3 h-3" />
-          View Model JSON
-        </button>
         </>
       )}
       {activeTab === "states" && (
@@ -645,6 +643,56 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, states, onState
           <ScenarioEditor
             documentId={selection.documentContext?.documentId}
           />
+        </div>
+      )}
+      {activeTab === "utilities" && (
+        <div className="space-y-3">
+          <TabHeader
+            icon={Wrench}
+            title="Model Utilities"
+            tooltip="Model utilities, diagnostics, and maintenance functions"
+          />
+
+          {/* Diagnostics Section */}
+          <div className="border border-gray-200 rounded-lg p-2">
+            <h3 className="text-xs font-semibold text-gray-700 mb-2">Diagnostics</h3>
+            <button
+              type="button"
+              className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1"
+              onClick={handleViewModelClick}
+              title="View Model Definition as JSON"
+            >
+              <FileJson className="w-3 h-3" />
+              View Model JSON
+            </button>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="border-2 border-red-200 rounded-lg p-2 bg-red-50">
+            <div className="flex items-center gap-1 mb-2">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <h3 className="text-xs font-semibold text-red-700">Danger Zone</h3>
+            </div>
+            <div className="bg-white border border-red-200 rounded p-2 mb-2">
+              <h4 className="text-xs font-semibold text-gray-900 mb-1">Remove Quodsi Data</h4>
+              <p className="text-xs text-gray-600 mb-2">
+                This will permanently remove all Quodsi simulation data from this document,
+                including all activities, resources, entities, generators, connectors, scenarios,
+                and configuration. The document will be restored to its original state.
+              </p>
+              <p className="text-xs font-semibold text-red-600 mb-2">
+                ⚠️ This action cannot be undone.
+              </p>
+              <button
+                type="button"
+                className="w-full text-xs px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors font-medium"
+                onClick={onRemoveModel}
+                title="Remove all Quodsi data from this document"
+              >
+                Remove All Quodsi Data
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

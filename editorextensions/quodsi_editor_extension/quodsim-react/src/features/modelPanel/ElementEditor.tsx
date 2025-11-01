@@ -20,6 +20,7 @@ interface ElementEditorProps {
   elementType: SimulationObjectType | string;
   elementData: any;
   onSave: (data: any) => void;
+  onRemoveModel?: () => void;
   referenceData: EditorReferenceData;
   isExpanded: boolean;
   onToggle: () => void;
@@ -37,6 +38,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   elementType,
   elementData,
   onSave,
+  onRemoveModel,
   referenceData,
   isExpanded,
   onToggle,
@@ -91,6 +93,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             model={safeElementData}
             onSave={onSave}
             onCancel={handleCancel}
+            onRemoveModel={onRemoveModel}
             states={states}
             onStatesChange={onStatesChange}
             referenceData={referenceData}

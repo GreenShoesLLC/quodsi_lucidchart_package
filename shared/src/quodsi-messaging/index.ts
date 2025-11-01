@@ -8,6 +8,7 @@ import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from '
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
+import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioMessage, ScenarioInfo } from './scenario/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -117,6 +118,16 @@ export {
   StorageMessage
 } from './storage/messages';
 
+// Export scenario messages
+export {
+  ScenarioInfo,
+  ScenarioListRequestMessage,
+  ScenarioListResultMessage,
+  ScenarioDeleteMessage,
+  ScenarioDeleteResultMessage,
+  ScenarioMessage
+} from './scenario/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage
@@ -126,7 +137,8 @@ export type QuodsiMessage =
   | SimulationMessage
   | ModelOpsMessage
   | ElementOpsMessage
-  | StorageMessage;
+  | StorageMessage
+  | ScenarioMessage;
 
 // Define payload type mapping
 export interface EnvelopMessagePayloads {
@@ -178,42 +190,10 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.STORAGE_DISCONNECT]: StorageDisconnectMessage['data'];
   [EnvelopeMessageType.STORAGE_STATUS]: StorageStatusMessage['data'];
 
-  // Scenario Management payloads
-  [EnvelopeMessageType.SCENARIOS_LIST_REQUEST]: {
-    documentId: string;
-  };
-  [EnvelopeMessageType.SCENARIOS_LIST_RESULT]: {
-    success: boolean;
-    documentId: string;
-    scenarios: Array<{
-      id: string;
-      name: string;
-      runState: string;
-      reps: number;
-      runClockPeriod: number;
-      runClockPeriodUnit: string;
-      simulationTimeType: string;
-      completedAt?: string;
-      hasResults: boolean;
-      downloadInfo?: {
-        zipUrl: string;
-        fileSizeBytes: number;
-        fileSizeMB: string;
-        expiresAt: string;
-      };
-    }>;
-    generatedAt: string;
-  };
-  [EnvelopeMessageType.SCENARIO_DELETE]: {
-    documentId: string;
-    scenarioId: string;
-  };
-  [EnvelopeMessageType.SCENARIO_DELETE_RESULT]: {
-    success: boolean;
-    documentId: string;
-    scenarioId: string;
-    error?: string;
-  };
+  [EnvelopeMessageType.SCENARIOS_LIST_REQUEST]: ScenarioListRequestMessage['data'];
+  [EnvelopeMessageType.SCENARIOS_LIST_RESULT]: ScenarioListResultMessage['data'];
+  [EnvelopeMessageType.SCENARIO_DELETE]: ScenarioDeleteMessage['data'];
+  [EnvelopeMessageType.SCENARIO_DELETE_RESULT]: ScenarioDeleteResultMessage['data'];
 }
 
 /**

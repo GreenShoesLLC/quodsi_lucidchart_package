@@ -170,34 +170,38 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
         return {
           icon: <CheckCircle className="w-4 h-4" />,
           color: "text-green-600",
-          bgColor: "bg-green-50",
-          borderColor: "border-green-200",
-          label: "Completed Successfully"
+          bgColor: "bg-white",
+          borderColor: "border-gray-200",
+          leftBorderColor: "border-l-green-500",
+          label: "Done"
         };
       case RunState.Running:
         return {
           icon: <Clock className="w-4 h-4 animate-pulse" />,
           color: "text-blue-600",
-          bgColor: "bg-blue-50",
-          borderColor: "border-blue-200",
-          label: "Running..."
+          bgColor: "bg-white",
+          borderColor: "border-gray-200",
+          leftBorderColor: "border-l-blue-500",
+          label: "Running"
         };
       case RunState.RanWithErrors:
         return {
           icon: <XCircle className="w-4 h-4" />,
           color: "text-red-600",
-          bgColor: "bg-red-50",
-          borderColor: "border-red-200",
-          label: "Ran with Errors"
+          bgColor: "bg-white",
+          borderColor: "border-gray-200",
+          leftBorderColor: "border-l-red-500",
+          label: "Failed"
         };
       case RunState.NotRun:
       default:
         return {
           icon: <AlertCircle className="w-4 h-4" />,
           color: "text-gray-600",
-          bgColor: "bg-gray-50",
+          bgColor: "bg-white",
           borderColor: "border-gray-200",
-          label: "Not Run"
+          leftBorderColor: "border-l-gray-400",
+          label: "Queued"
         };
     }
   };
@@ -205,17 +209,18 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
   const statusDisplay = getStatusDisplay();
 
   return (
-    <div className={`border ${statusDisplay.borderColor} rounded-lg p-2 ${statusDisplay.bgColor}`}>
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <div className={statusDisplay.color}>
+    <div className={`border ${statusDisplay.borderColor} border-l-4 ${statusDisplay.leftBorderColor} rounded-lg p-1.5 ${statusDisplay.bgColor}`}>
+      {/* Header with compact status badge */}
+      <div className="flex items-center gap-2 mb-0.5">
+        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded ${statusDisplay.color} bg-gray-50 border border-gray-200`}>
           {statusDisplay.icon}
+          <span className="text-xs font-semibold">{statusDisplay.label}</span>
         </div>
-        <h3 className="text-sm font-semibold text-gray-900">{scenario.name}</h3>
+        <h3 className="text-sm font-medium text-gray-900 truncate">{scenario.name}</h3>
       </div>
 
       {/* Metadata */}
-      <div className="text-xs text-gray-600 space-y-0.5 mb-2">
+      <div className="text-xs text-gray-600 space-y-0.5 mb-1.5">
         <div>
           <span className="font-medium">Reps:</span> {scenario.reps} •{" "}
           <span className="font-medium">Duration:</span> {scenario.runClockPeriod} {scenario.runClockPeriodUnit}
@@ -231,18 +236,18 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
 
       {/* Action Buttons */}
       {scenario.hasResults && scenario.downloadInfo && (
-        <div className="border-t border-gray-200 pt-2 space-y-1">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="border-t border-gray-200 pt-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={handleCreateResultsPage}
-              className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              className="flex items-center justify-center gap-1 px-1.5 py-1 rounded text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
             >
               <FileText className="w-3 h-3" />
               Results Page
             </button>
             <button
               onClick={handleCopyLink}
-              className={`flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={`flex items-center justify-center gap-1 px-1.5 py-1 rounded text-xs font-medium transition-colors ${
                 copied
                   ? 'bg-green-600 text-white hover:bg-green-700'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -262,7 +267,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
             </button>
           </div>
           {timeRemaining && (
-            <div className="text-xs text-center text-gray-500">
+            <div className="text-xs text-center text-gray-500 mt-1">
               {timeRemaining}
             </div>
           )}
@@ -271,7 +276,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
 
       {/* No Results Message */}
       {!scenario.hasResults && scenario.runState === RunState.Running && (
-        <div className="border-t border-gray-200 pt-1.5 text-xs text-center text-gray-500">
+        <div className="border-t border-gray-200 pt-1 text-xs text-center text-gray-500">
           Results will be available when simulation completes
         </div>
       )}
