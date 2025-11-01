@@ -235,7 +235,7 @@ export function useModelPanel() {
   
   const onViewResults = () => {
     logger.log('Viewing simulation results');
-    simulationSender.viewResults(documentContext.documentId, simulation.jobId);
+    simulationSender.viewResults(documentContext.documentId, simulation.jobId ?? undefined);
   };
   
   // Use reference data from selection state or provide empty default

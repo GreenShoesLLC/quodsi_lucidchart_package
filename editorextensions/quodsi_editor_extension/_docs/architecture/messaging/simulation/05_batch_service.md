@@ -195,13 +195,18 @@ environmentSettings: [
   { name: "BATCH_ACCOUNT_KEY", value: this.batchAccountKey },
   { name: "BATCH_URL", value: this.batchAccountUrl },
   { name: "AZURE_STORAGE_CONNECTION_STRING", value: config.azureStorageConnectionString },
-  { name: "AZURE_STORAGE_URL", value: this.extractStorageUrlFromConnectionString(...) }
+  { name: "AZURE_STORAGE_URL", value: this.extractStorageUrlFromConnectionString(...) },
+  { name: "QUODSIM_UPLOAD_MODE", value: "both" }
 ]
 ```
 
 **Purpose of Environment Variables:**
 - `BATCH_ACCOUNT_*`: Allow simulation runner to interact with Batch API
 - `AZURE_STORAGE_*`: Allow simulation runner to read model and write results
+- `QUODSIM_UPLOAD_MODE`: Controls output upload behavior
+  - `"both"`: Upload to both blob storage and data connector (default)
+  - `"blob"`: Upload only to blob storage
+  - `"connector"`: Upload only via data connector
 
 **Task Parameters:**
 ```typescript

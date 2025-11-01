@@ -316,25 +316,30 @@ Calls `LucidDataActionUtility.performDataAction()` with:
 
 ---
 
-### Step 9: Status Updates (Mock Implementation)
+### Step 9: Status Updates (Real Azure Polling)
 
-**Location:** `src/core/messaging/handlers/simulationHandler.ts:407-506`
+**Location:** `src/core/messaging/handlers/simulationHandler.ts:408-551`
 
 **Current Implementation:**
-Uses `mockSimulationProgress()` function for development/testing
+Uses `pollDocumentStatus()` function to query Azure Storage via LucidChart Data Connector
 
-**Update Sequence:**
-1. **1s delay:** Status = `PROCESSING` (5%), "Initializing simulation"
-2. **2s delay:** Status = `VALIDATING` (15%), "Validating model structure"
-3. **Every 2s:** Status = `RUNNING`, progress +5-15%, "Running simulation (X%)"
-4. **At 95%:** Delay 1s, then Status = `COMPLETED` (100%), "Simulation complete"
+**Update Mechanism:**
+1. **Poll Interval:** Every 10 seconds
+2. **Data Action:** `GetDocumentStatus` via LucidDataActionUtility
+3. **Status Mapping:** Maps Azure `RunState` to `SimulationStatus`
+   - `"RAN_SUCCESSFULLY"` → `COMPLETED` (100%)
+   - `"RAN_WITH_ERRORS"` → `FAILED` (0%)
+   - `"RUNNING"` → `RUNNING` (70%)
+   - `"QUEUED"` → `QUEUED` (0%)
+   - Unknown → `PROCESSING` (10%)
+4. **Cleanup:** On completion, stop polling and remove job after 60s
 
 **Message Sent:** `MODEL_RUN_STATUS` to React panel
 
-**Planned Implementation:**
-- Real Azure Batch polling via data connector API
-- Status: GET `/api/dataConnector/status/{jobId}`
-- Results: GET `/api/dataConnector/results/{jobId}`
+**Integration:**
+- Uses LucidChart Data Connector for Azure communication
+- No direct Azure Batch API calls from extension
+- Leverages existing Lucid infrastructure for auth and access
 
 **Next:** Status messages received by React
 
@@ -441,7 +446,7 @@ if (statusData.status === 'completed') {
 | Blob upload | 500ms-2s | Network dependent |
 | Batch submission | 1-3s | Azure API calls |
 | Simulation execution | 10s-10min | Model dependent |
-| Status polling | Every 5-10s | Configurable |
+| Status polling | Every 10s | Real Azure polling via Data Connector |
 
 ## Error Handling
 

@@ -29,8 +29,7 @@ export enum EnvelopeMessageType {
   
   // Simulation Run
   MODEL_RUN_REQUEST = "MODEL_RUN_REQUEST",
-  MODEL_RUN_ACK = "MODEL_RUN_ACK",
-  MODEL_RUN_STATUS = "MODEL_RUN_STATUS",
+  MODEL_RUN_STATUS = "MODEL_RUN_STATUS",  // Now includes initial acknowledgment (queuedAt field)
   
   // Model Operations
   MODEL_VALIDATE = "MODEL_VALIDATE",

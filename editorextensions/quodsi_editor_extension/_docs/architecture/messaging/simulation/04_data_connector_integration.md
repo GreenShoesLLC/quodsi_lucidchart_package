@@ -132,6 +132,8 @@ interface SaveAndSubmitRequest {
   documentId: string;         // LucidChart document ID
   scenarioId: string;          // Scenario identifier (typically baseline GUID)
   model: any;                  // Serialized ModelDefinition JSON
+  scenarioName?: string;       // Human-readable scenario name (default: "New Scenario")
+  diagramSvg?: string;         // SVG representation of the diagram
   applicationId?: string;      // Batch application ID (default: "dev_quodsim")
   appVersion?: string;         // Application version (default: "1.0")
 }
@@ -179,7 +181,15 @@ Upload the serialized model definition to Azure Blob Storage for access by the s
 
 ```typescript
 const requestBody = await request.json() as SaveAndSubmitRequest;
-const { documentId, scenarioId, model, applicationId, appVersion } = requestBody;
+const {
+  documentId,
+  scenarioId,
+  model,
+  scenarioName,
+  diagramSvg,
+  applicationId,
+  appVersion
+} = requestBody;
 
 if (!documentId || !scenarioId || !model) {
   return {
@@ -193,9 +203,11 @@ if (!documentId || !scenarioId || !model) {
 ```
 
 **Validation:**
-- documentId must be present
-- scenarioId must be present
-- model object must exist
+- documentId must be present (required)
+- scenarioId must be present (required)
+- model object must exist (required)
+- scenarioName is optional (default: "New Scenario")
+- diagramSvg is optional (for visual reference)
 
 ---
 

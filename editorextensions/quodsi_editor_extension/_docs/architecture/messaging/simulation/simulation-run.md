@@ -15,15 +15,17 @@ Simulation run messages handle the complete lifecycle of running a simulation: r
 ```typescript
 {
   documentId: string,
-  modelId?: string,
-  priority?: number,
-  options?: object
+  scenarioName?: string,
+  durationDays?: number,
+  repetitions?: number,
+  parameters?: Record<string, unknown>
 }
 ```
 
-**Sender:** 
+**Sender:**
 - File: `quodsim-react/src/messaging/senders/simulationSender.ts`
-- Function: `simulationSender.runSimulation`
+- Hook: `useSimulationSender()` returns `requestSimulation()` function
+- Implementation: Hook-based sender using `MessageProvider` context
 
 **Handler:**
 - File: `src/core/messaging/handlers/simulationHandler.ts`
@@ -114,80 +116,182 @@ Simulation run messages handle the complete lifecycle of running a simulation: r
 
 ## Implementation Details
 
-### Simulation Request Handler
+### React Sender: useSimulationSender Hook
+
+**File:** `quodsim-react/src/messaging/senders/simulationSender.ts`
+
+```typescript
+export const useSimulationSender = () => {
+  const { send } = useContext(MessageProvider);
+
+  const requestSimulation = (
+    documentId: string,
+    scenarioName?: string,
+    durationDays?: number,
+    repetitions?: number,
+    parameters?: Record<string, unknown>
+  ) => {
+    send(EnvelopeMessageType.MODEL_RUN_REQUEST, {
+      documentId,
+      scenarioName,
+      durationDays,
+      repetitions,
+      parameters
+    });
+  };
+
+  return { requestSimulation };
+};
+```
+
+**Usage in Components:**
+```typescript
+const { requestSimulation } = useSimulationSender();
+
+// Trigger simulation
+const handleSimulate = () => {
+  requestSimulation(documentId, "LucidChart");
+};
+```
+
+---
+
+### Extension Simulation Handler
+
+**File:** `src/core/messaging/handlers/simulationHandler.ts`
+
 ```typescript
 async handleRunRequest(msg: EnvelopeBase): Promise<void> {
     try {
         const data = msg.data as ModelRunRequestPayload;
-        
-        // Validate model before submission
-        const validationResult = await this.modelManager.validateModel();
-        if (!validationResult.isValid) {
-            throw new Error('Model validation failed');
-        }
-        
-        // Submit to data connector
-        const jobResponse = await this.dataConnectorService.submitSimulation({
-            documentId: data.documentId,
-            modelData: await this.modelManager.serializeModel(),
-            options: data.options
-        });
-        
+
+        // Load and serialize model
+        const modelDefinition = await this.modelManager.getModelDefinition();
+        const serializer = ModelSerializerFactory.create(modelDefinition);
+        const serializedModel = serializer.serialize(modelDefinition);
+
+        // Capture SVG
+        const diagramSvg = await activePageProxy.getSvg(undefined, true);
+
+        // Generate job ID
+        const jobId = `job-${documentId}-${Date.now()}`;
+
         // Send acknowledgment
-        this.router.sendToChannel(msg.source, EnvelopeMessageType.MODEL_RUN_ACK, {
-            success: true,
-            jobId: jobResponse.jobId,
-            documentId: data.documentId
+        router.send('model', {
+            type: EnvelopeMessageType.MODEL_RUN_ACK,
+            data: {
+                jobId,
+                queuedAt: new Date().toISOString()
+            }
         });
-        
-        // Start status polling
-        this.startStatusPolling(jobResponse.jobId, data.documentId);
-        
+
+        // Submit to Azure via data connector
+        await LucidDataActionUtility.performDataAction(client, {
+            dataConnectorName: 'quodsi_data_connector',
+            actionName: 'SaveAndSubmitSimulation',
+            actionData: {
+                documentId,
+                scenarioId: BASELINE_SCENARIO_ID,
+                model: serializedModel,
+                scenarioName: data.scenarioName || 'New Scenario',
+                diagramSvg,
+                appVersion: '1.0'
+            },
+            asynchronous: true
+        });
+
+        // Start real Azure polling
+        SimulationHandler.pollDocumentStatus(documentId, scenarioId, jobId);
+
     } catch (error) {
-        // Send error response
-        this.router.sendToChannel(msg.source, EnvelopeMessageType.MODEL_RUN_ACK, {
-            success: false,
-            documentId: data.documentId,
-            errorMessage: error.message
+        // Send error status
+        router.send('model', {
+            type: EnvelopeMessageType.MODEL_RUN_STATUS,
+            data: {
+                jobId: 'error',
+                status: SimulationStatus.FAILED,
+                error: error.message
+            }
         });
     }
 }
 ```
 
 ### Status Polling
+
+**Method:** `SimulationHandler.pollDocumentStatus()`
+
+**Implementation:**
 ```typescript
-private async startStatusPolling(jobId: string, documentId: string): Promise<void> {
-    const pollInterval = setInterval(async () => {
+private static async pollDocumentStatus(
+    documentId: string,
+    scenarioId: string,
+    jobId: string
+): Promise<void> {
+    // Create polling interval (10 seconds)
+    const intervalId = setInterval(async () => {
         try {
-            const status = await this.dataConnectorService.getJobStatus(jobId);
-            
+            // Query Azure via data connector
+            const response = await LucidDataActionUtility.performDataAction(client, {
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'GetDocumentStatus',
+                actionData: { documentId },
+                asynchronous: false
+            });
+
+            // Extract scenario status
+            const scenario = response.pageStatus.scenarios.find(
+                s => s.scenarioId === scenarioId
+            );
+
+            // Map RunState to SimulationStatus
+            const status = this.mapRunStateToStatus(scenario?.runState);
+
             // Send status update
-            this.router.broadcastToAllChannels(EnvelopeMessageType.MODEL_RUN_STATUS, {
-                jobId,
-                documentId,
-                status: status.state,
-                progress: status.progress,
-                hasResults: status.hasResults
+            router.send('model', {
+                type: EnvelopeMessageType.MODEL_RUN_STATUS,
+                data: {
+                    jobId,
+                    status,
+                    progress: this.calculateProgress(status),
+                    hasResults: scenario?.hasResults || false
+                }
             });
-            
-            // Stop polling if job is complete
-            if (status.state === 'completed' || status.state === 'failed') {
-                clearInterval(pollInterval);
+
+            // Stop polling if complete or failed
+            if (status === SimulationStatus.COMPLETED ||
+                status === SimulationStatus.FAILED) {
+                clearInterval(intervalId);
+
+                // Clean up after 60s
+                setTimeout(() => {
+                    SimulationHandler.activeJobs.delete(jobId);
+                }, 60000);
             }
-            
+
         } catch (error) {
-            // Send error status
-            this.router.broadcastToAllChannels(EnvelopeMessageType.MODEL_RUN_STATUS, {
-                jobId,
-                documentId,
-                status: 'failed',
-                errorMessage: error.message
+            // Send error and stop polling
+            router.send('model', {
+                type: EnvelopeMessageType.MODEL_RUN_STATUS,
+                data: {
+                    jobId,
+                    status: SimulationStatus.FAILED,
+                    error: error.message
+                }
             });
-            clearInterval(pollInterval);
+            clearInterval(intervalId);
         }
-    }, 5000); // Poll every 5 seconds
+    }, 10000); // Poll every 10 seconds
+
+    // Store interval handle for cleanup
+    const job = SimulationHandler.activeJobs.get(jobId);
+    if (job) {
+        job.pollInterval = intervalId;
+    }
 }
 ```
+
+**Polling Interval:** 10 seconds (changed from 5 seconds)
 
 ## Status Transitions
 

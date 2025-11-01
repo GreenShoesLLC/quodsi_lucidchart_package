@@ -217,30 +217,38 @@ export function createModelRunRequestMessage(
 
 /**
  * Create a MODEL_RUN_STATUS message
- * 
+ *
  * @param jobId Job ID
+ * @param documentId Document ID
+ * @param scenarioId Scenario ID
+ * @param scenarioName Scenario name
  * @param status Current status
  * @param progress Progress percentage (0-100)
+ * @param lastChecked ISO timestamp of last status check
+ * @param queuedAt ISO timestamp when job was queued
  * @param currentStep Optional description of current step
  * @param error Optional error message if status is FAILED
  * @param resultUrl Optional result URL if status is COMPLETED
- * @param details Additional details
  * @returns A properly formatted MODEL_RUN_STATUS message
  */
 export function createModelRunStatusMessage(
   jobId: string,
+  documentId: string,
+  scenarioId: string,
+  scenarioName: string,
   status: EnvelopMessagePayloads[EnvelopeMessageType.MODEL_RUN_STATUS]['status'],
   progress: number,
+  lastChecked: string,
+  queuedAt: string,
   currentStep?: string,
   error?: string,
-  resultUrl?: string,
-  details?: Record<string, unknown>
+  resultUrl?: string
 ) {
   return createBaseMessage(
     EnvelopeMessageType.MODEL_RUN_STATUS,
     'host',
     'model-iframe',
-    { jobId, status, progress, currentStep, error, resultUrl, details }
+    { jobId, documentId, scenarioId, scenarioName, status, progress, lastChecked, queuedAt, currentStep, error, resultUrl }
   );
 }
 

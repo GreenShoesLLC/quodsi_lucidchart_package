@@ -4,178 +4,204 @@ Documentation of the status update mechanism that keeps the UI synchronized with
 
 ## Overview
 
-The status polling system provides real-time feedback to users about simulation progress. Currently implemented as a mock for development, it's designed to be replaced with real Azure Batch status polling in production.
+The status polling system provides real-time feedback to users about simulation progress through Azure Data Connector integration.
 
 **Key Files:**
-- **Extension:** `src/core/messaging/handlers/simulationHandler.ts:407-506` (mock implementation)
+- **Extension:** `src/core/messaging/handlers/simulationHandler.ts:408-551` (real polling implementation)
 - **React Mapper:** `quodsim-react/src/messaging/mappers/simulation.mapper.ts:12-97`
 - **React UI:** `quodsim-react/src/features/modelPanel/PanelHeader.tsx:58-69`
 
-## Current Implementation: Mock Polling
+## Current Implementation: Real Azure Polling
 
 ### Purpose
 
-Provide realistic status updates during development without requiring actual Azure Batch execution.
+Provide real-time status updates by querying Azure Storage via the LucidChart Data Connector.
 
-### mockSimulationProgress()
+### Architecture
 
-**Location:** `simulationHandler.ts:407-506`
+The polling system uses the LucidChart Data Connector to query Azure for simulation status:
+
+```
+Extension                    Data Connector           Azure Storage
+    │                              │                        │
+    │  Poll every 10s              │                        │
+    ├──────────────────────────────>│                        │
+    │  GetDocumentStatus           │                        │
+    │                              │  Check scenario        │
+    │                              ├───────────────────────>│
+    │                              │  PageStatus            │
+    │                              │<───────────────────────┤
+    │<──────────────────────────────┤                        │
+    │  Send MODEL_RUN_STATUS       │                        │
+```
+
+### pollDocumentStatus()
+
+**Location:** `simulationHandler.ts:408-551`
 
 **Signature:**
 ```typescript
-private static mockSimulationProgress(jobId: string): void
+private static async pollDocumentStatus(
+  documentId: string,
+  scenarioId: string,
+  jobId: string
+): Promise<void>
 ```
 
 **Called After:** Job submission to data connector
 
+**Polling Interval:** 10 seconds
+
 ### Update Sequence
 
-#### Phase 1: Processing (1s delay)
+#### Phase 1: Initialize Polling
 
 ```typescript
-setTimeout(() => {
-  status = SimulationStatus.PROCESSING;
-  progress = 5;
+// Store interval handle in job for cleanup
+const intervalId = setInterval(async () => {
+  await this.checkStatus(documentId, scenarioId, jobId);
+}, 10000); // Poll every 10 seconds
 
-  router.send('model', {
-    id: '',
-    type: EnvelopeMessageType.MODEL_RUN_STATUS,
-    source: 'host',
-    target: 'model-iframe',
-    version: '1.0',
-    data: {
-      jobId,
-      status,
-      progress,
-      currentStep: 'Initializing simulation'
-    }
-  });
-}, 1000);
+const job = SimulationHandler.activeJobs.get(jobId);
+if (job) {
+  job.pollInterval = intervalId;
+}
 ```
 
-**Message:**
-- Status: `PROCESSING`
-- Progress: 5%
-- Step: "Initializing simulation"
+**Actions:**
+- Creates polling interval (10 seconds)
+- Stores interval handle for later cleanup
+- Begins periodic status checks
 
 ---
 
-#### Phase 2: Validating (2s delay)
+#### Phase 2: Status Check via Data Action
 
 ```typescript
-setTimeout(() => {
-  status = SimulationStatus.VALIDATING;
-  progress = 15;
-
-  router.send('model', {
-    // ...
-    data: {
-      jobId,
-      status,
-      progress,
-      currentStep: 'Validating model structure'
-    }
-  });
-}, 2000);
+const response = await LucidDataActionUtility.performDataAction(client, {
+  dataConnectorName: 'quodsi_data_connector',
+  actionName: 'GetDocumentStatus',
+  actionData: {
+    documentId: documentId
+  },
+  asynchronous: false
+});
 ```
 
-**Message:**
-- Status: `VALIDATING`
-- Progress: 15%
-- Step: "Validating model structure"
+**Integration:**
+- Uses LucidChart Data Connector API
+- Calls `GetDocumentStatus` action
+- Returns `PageStatus` object with scenario information
 
----
-
-#### Phase 3: Running (every 2s)
-
+**Response Structure:**
 ```typescript
-const interval = setInterval(() => {
-  if (progress >= 95) {
-    clearInterval(interval);
-    // Move to completion
-    return;
+{
+  pageStatus: {
+    scenarios: [{
+      scenarioId: string;
+      scenarioName: string;
+      runState: "QUEUED" | "RUNNING" | "RAN_SUCCESSFULLY" | "RAN_WITH_ERRORS" | null;
+      hasResults: boolean;
+    }]
   }
-
-  status = SimulationStatus.RUNNING;
-  progress += Math.floor(Math.random() * 10) + 5; // +5-15%
-  progress = Math.min(progress, 95); // Cap at 95%
-
-  router.send('model', {
-    // ...
-    data: {
-      jobId,
-      status,
-      progress,
-      currentStep: `Running simulation (${progress}%)`
-    }
-  });
-}, 2000);
+}
 ```
-
-**Messages:**
-- Status: `RUNNING`
-- Progress: Incrementally increases by 5-15% each interval
-- Step: "Running simulation (X%)"
-- Cap: Progress stops at 95% until completion
-
-**Frequency:** Every 2 seconds
 
 ---
 
-#### Phase 4: Completion (1s delay after 95%)
+#### Phase 3: Map RunState to SimulationStatus
 
+**Status Mapping:**
+
+| Azure RunState | SimulationStatus | Progress | Description |
+|----------------|------------------|----------|-------------|
+| `"RAN_SUCCESSFULLY"` | `COMPLETED` | 100% | Simulation finished successfully |
+| `"RAN_WITH_ERRORS"` | `FAILED` | 0% | Simulation encountered errors |
+| `"RUNNING"` | `RUNNING` | 50-90% | Simulation actively executing |
+| `"QUEUED"` | `QUEUED` | 0% | Waiting to start |
+| `null` or unknown | `PROCESSING` | 10% | Initializing or unknown state |
+
+**Code Logic:**
+```typescript
+switch (runState) {
+  case "RAN_SUCCESSFULLY":
+    return { status: SimulationStatus.COMPLETED, progress: 100 };
+  case "RAN_WITH_ERRORS":
+    return { status: SimulationStatus.FAILED, progress: 0 };
+  case "RUNNING":
+    return { status: SimulationStatus.RUNNING, progress: 70 };
+  case "QUEUED":
+    return { status: SimulationStatus.QUEUED, progress: 0 };
+  default:
+    return { status: SimulationStatus.PROCESSING, progress: 10 };
+}
+```
+
+---
+
+#### Phase 4: Send Status Update
+
+**Message Sent:**
+```typescript
+router.send('model', {
+  id: '',
+  type: EnvelopeMessageType.MODEL_RUN_STATUS,
+  source: 'host',
+  target: 'model-iframe',
+  version: '1.0',
+  data: {
+    jobId,
+    status: mappedStatus,
+    progress: mappedProgress,
+    currentStep: 'Running simulation',
+    hasResults: scenario.hasResults
+  }
+});
+```
+
+**Frequency:** Every 10 seconds until completion
+
+---
+
+#### Phase 5: Completion and Cleanup
+
+**When Status is COMPLETED or FAILED:**
+
+1. **Clear Polling Interval:**
+```typescript
+const job = SimulationHandler.activeJobs.get(jobId);
+if (job?.pollInterval) {
+  clearInterval(job.pollInterval);
+  job.pollInterval = undefined;
+}
+```
+
+2. **Send Final Status Message** (with hasResults flag)
+
+3. **Schedule Job Removal:**
 ```typescript
 setTimeout(() => {
-  status = SimulationStatus.COMPLETED;
-  progress = 100;
-
-  router.send('model', {
-    // ...
-    data: {
-      jobId,
-      status,
-      progress,
-      currentStep: 'Simulation complete',
-      resultUrl: `/results/${jobId}`
-    }
-  });
-
-  // Clean up job tracking after 60s
-  setTimeout(() => {
-    SimulationHandler.activeJobs.delete(jobId);
-  }, 60000);
-}, 1000);
+  SimulationHandler.activeJobs.delete(jobId);
+}, 60000); // Remove after 60 seconds
 ```
-
-**Message:**
-- Status: `COMPLETED`
-- Progress: 100%
-- Step: "Simulation complete"
-- ResultUrl: `/results/{jobId}`
-
-**Cleanup:** Job removed from tracking 60 seconds later
 
 ---
 
-### Update Timing
+### Update Timing (Real Azure)
 
 ```
-T+0s     Submit job
-T+1s     PROCESSING (5%)
-T+2s     VALIDATING (15%)
-T+4s     RUNNING (25%)
-T+6s     RUNNING (40%)
-T+8s     RUNNING (55%)
-T+10s    RUNNING (70%)
-T+12s    RUNNING (85%)
-T+14s    RUNNING (95%)
-T+15s    COMPLETED (100%)
-T+75s    Job tracking cleaned up
+T+0s     Submit job to Azure
+T+10s    First poll → QUEUED (0%)
+T+20s    Poll → RUNNING (70%)
+T+30s    Poll → RUNNING (70%)
+...      (continues every 10s)
+T+Xs     Poll → RAN_SUCCESSFULLY (100%)
+T+Xs+60s Job tracking cleaned up
 ```
 
-**Total Duration:** ~15 seconds (development speed)
+**Polling Interval:** 10 seconds
 
-**Production Duration:** Variable, 10 seconds to 10+ minutes
+**Total Duration:** Variable based on simulation complexity (10 seconds to 10+ minutes)
 
 ---
 
@@ -363,135 +389,87 @@ Button returns to idle state, potentially with "View Results" option
 
 ---
 
-## Planned Implementation: Real Polling
+## Error Handling
 
-### Architecture
+### Polling Failures
 
-```
-Extension                    Data Connector           Azure Batch
-    │                              │                        │
-    │  Poll every 5-10s            │                        │
-    ├──────────────────────────────>│                        │
-    │  GET /api/status/{jobId}     │                        │
-    │                              │  Get job status        │
-    │                              ├───────────────────────>│
-    │                              │                        │
-    │                              │<───────────────────────┤
-    │<──────────────────────────────┤  {status, progress}    │
-    │  Send MODEL_RUN_STATUS       │                        │
-    │                              │                        │
-```
+**Scenarios:**
+- Network connectivity issues
+- Data connector unavailable
+- Invalid response format
+- Azure Storage access errors
 
-### Data Connector Endpoint (Planned)
-
-**Endpoint:** `GET /api/dataConnector/status/{jobId}`
-
-**Response:**
+**Handling:**
 ```typescript
-{
-  jobId: string;
-  status: 'queued' | 'running' | 'completed' | 'failed';
-  progress: number;           // 0-100
-  startTime?: string;
-  endTime?: string;
-  error?: string;
-  hasResults: boolean;
+try {
+  const response = await LucidDataActionUtility.performDataAction(/*...*/);
+  // Process response
+} catch (error) {
+  console.error('[SimulationHandler] Polling error:', error);
+
+  // Send FAILED status to React
+  router.send('model', {
+    type: EnvelopeMessageType.MODEL_RUN_STATUS,
+    data: {
+      jobId,
+      status: SimulationStatus.FAILED,
+      progress: 0,
+      error: `Failed to check status: ${error.message}`
+    }
+  });
+
+  // Stop polling
+  clearInterval(job.pollInterval);
 }
 ```
 
 ---
 
-### Extension Polling (Planned)
+## Lifecycle Management
 
-**Location:** Add to `simulationHandler.ts`
+### Stopping Polling
+
+**Method:** `SimulationHandler.stopPolling(jobId)`
+
+**Use Cases:**
+- User navigates away from page
+- User cancels simulation
+- Error requires stopping
 
 **Implementation:**
 ```typescript
-private static async pollSimulationStatus(
-  jobId: string,
-  documentId: string
-): Promise<void> {
-  const pollInterval = setInterval(async () => {
-    try {
-      // Call data connector status endpoint
-      const response = await fetch(
-        `${config.dataConnectorUrl}/status/${jobId}`
-      );
-      const status = await response.json();
-
-      // Send status update
-      router.send('model', {
-        id: '',
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          jobId,
-          documentId,
-          status: status.status,
-          progress: status.progress,
-          error: status.error,
-          hasResults: status.hasResults
-        }
-      });
-
-      // Stop polling if complete or failed
-      if (status.status === 'completed' || status.status === 'failed') {
-        clearInterval(pollInterval);
-
-        // Clean up job tracking
-        setTimeout(() => {
-          SimulationHandler.activeJobs.delete(jobId);
-        }, 60000);
-      }
-
-    } catch (error) {
-      console.error('[SimulationHandler] Polling error:', error);
-
-      // Send error status
-      router.send('model', {
-        id: '',
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          jobId,
-          documentId,
-          status: 'failed',
-          progress: 0,
-          error: `Polling failed: ${error.message}`
-        }
-      });
-
-      clearInterval(pollInterval);
-    }
-  }, 5000); // Poll every 5 seconds
+public static stopPolling(jobId: string): void {
+  const job = SimulationHandler.activeJobs.get(jobId);
+  if (job?.pollInterval) {
+    clearInterval(job.pollInterval);
+    job.pollInterval = undefined;
+  }
 }
 ```
 
-**Polling Interval:** 5 seconds (configurable)
-
-**Stop Conditions:**
-- Status becomes `completed`
-- Status becomes `failed`
-- Polling error occurs
-
 ---
 
-### Azure Batch Status Mapping
+### Resuming Polling
 
-**Azure Batch Task States:**
-- `active` → `queued`
-- `preparing` → `processing`
-- `running` → `running`
-- `completed` → `completed` (if exit code 0) or `failed` (if exit code != 0)
+**Method:** `SimulationHandler.resumePollingIfNeeded(documentId)`
 
-**Progress Calculation Options:**
-1. **Task Progress API:** If available from simulation runner
-2. **Time-based Estimation:** Based on historical data
-3. **Fixed Milestones:** 25% (started), 50% (midpoint), 75% (finalizing), 100% (complete)
+**Use Cases:**
+- User returns to page with active simulations
+- Panel reopens after being closed
+
+**Implementation:**
+```typescript
+public static resumePollingIfNeeded(documentId: string): void {
+  for (const [jobId, job] of SimulationHandler.activeJobs.entries()) {
+    if (job.documentId === documentId && !job.pollInterval) {
+      if (job.status !== SimulationStatus.COMPLETED &&
+          job.status !== SimulationStatus.FAILED) {
+        SimulationHandler.pollDocumentStatus(documentId, job.scenarioId, jobId);
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -499,16 +477,11 @@ private static async pollSimulationStatus(
 
 ### Network Impact
 
-**Mock Implementation:**
-- Messages: 10-15 per simulation
-- Total data: < 5KB
-- Impact: Negligible
-
-**Real Polling:**
-- Frequency: Every 5-10s
-- Request size: < 100 bytes
-- Response size: 200-500 bytes
-- 10-minute simulation: ~60-120 requests, ~30-60KB total
+**Current Implementation:**
+- Frequency: Every 10 seconds
+- Request size: ~100-200 bytes (performDataAction call)
+- Response size: ~200-500 bytes (PageStatus object)
+- 10-minute simulation: ~60 requests, ~30-45KB total
 - Impact: Low
 
 ### Extension Memory
@@ -559,24 +532,25 @@ private static async pollSimulationStatus(
 
 ### Polling Interval
 
-**Current (Mock):** 2 seconds
-
-**Planned (Production):** 5-10 seconds
+**Current:** 10 seconds
 
 **Rationale:**
-- Too frequent: Unnecessary load on data connector
+- Too frequent: Unnecessary load on data connector and Azure Storage
 - Too infrequent: Poor user experience
-- 5-10s balances both concerns
+- 10s balances both concerns while minimizing API calls
+
+**Configurable:** Interval can be adjusted in `pollDocumentStatus()` method
 
 ### Timeout/Retry
 
-**Current:** None (mock always succeeds)
+**Current Implementation:**
+- Network timeout: Handled by LucidDataActionUtility (default: ~30s)
+- Retry on failure: No automatic retry (sends FAILED status)
+- Polling stops on error (manual retry required)
 
-**Planned:**
-- Network timeout: 10 seconds
-- Retry on failure: 3 attempts
-- Exponential backoff: 1s, 2s, 4s
-- Give up after: 3 consecutive failures
+**Error Recovery:**
+- User can re-run simulation to restart polling
+- `resumePollingIfNeeded()` can restart polling for existing jobs
 
 ---
 

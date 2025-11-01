@@ -252,25 +252,51 @@ az batch pool show --pool-id dev-quodsi-pool --account-name {accountName}
 - No completion
 
 **Causes:**
-- Status polling stopped
-- Mock polling crashed
+- Status polling stopped due to error
+- Data connector unavailable during polling
+- Network connectivity lost
+- Azure Storage returning errors
 - Extension lost state
 
 **Solutions:**
-1. **Wait:** Sometimes polling is just slow
-2. **Check console:** Look for errors in browser console
-3. **Refresh page:** Hard refresh (Ctrl+Shift+R)
-4. **Check mock polling:** Verify `mockSimulationProgress()` is running
+1. **Check console:** Look for polling errors in browser console
+2. **Check data connector:** Verify data connector is responding
+3. **Check network:** Monitor network tab for failed requests
+4. **Refresh page:** Hard refresh (Ctrl+Shift+R) to reset state
+5. **Verify Azure Storage:** Check if GetDocumentStatus is working
 
 **Debug:**
 ```javascript
-// Browser console
+// Browser console - Check active jobs
 const handler = window.SimulationHandler;
 handler.getActiveJobs();
-// Should show job with status and progress
+// Should show job with status, progress, and pollInterval
+
+// Check if polling interval is active
+const jobs = handler.getActiveJobs();
+jobs.forEach(job => {
+  console.log(`Job ${job.jobId}: polling=${!!job.pollInterval}`);
+});
+
+// Try to resume polling manually
+handler.resumePollingIfNeeded(documentId);
 ```
 
-**Prevention:** Implement timeout in mock/real polling
+**Manual Recovery:**
+```javascript
+// Stop stuck polling
+handler.stopPolling(jobId);
+
+// Clear all jobs and restart
+handler.getActiveJobs().forEach(job => {
+  handler.stopPolling(job.jobId);
+});
+```
+
+**Prevention:**
+- Polling includes error handling that stops polling on failure
+- User can manually retry simulation to restart polling
+- `resumePollingIfNeeded()` can restart polling when returning to page
 
 ---
 
@@ -428,18 +454,64 @@ az batch task file download \
 ### Issue: Status Updates Slow or Missing
 
 **Symptoms:**
-- Long delays between status updates
-- Progress bar doesn't update smoothly
+- Long delays between status updates (>15 seconds)
+- Progress bar doesn't update
+- Status stuck on same value
 
 **Causes:**
-- Mock polling intervals too long
+- Data connector slow to respond
+- Azure Storage query delays
 - Network latency
-- Extension throttling
+- GetDocumentStatus failing silently
 
 **Solutions:**
-1. **Check console:** Verify status messages arriving
-2. **Adjust interval:** Modify mock polling interval (currently 2s)
-3. **Check network:** Monitor network tab for delays
+1. **Check console:** Verify status messages arriving every 10s
+2. **Monitor network:** Check for GetDocumentStatus calls in network tab
+3. **Check data connector logs:** Look for slow queries or errors
+4. **Verify Azure Storage:** Check storage account performance metrics
+
+**Debug:**
+```javascript
+// Check last update time for jobs
+const jobs = handler.getActiveJobs();
+jobs.forEach(job => {
+  console.log(`Job ${job.jobId}: Last update ${job.lastUpdate}`);
+  const secondsSinceUpdate = (Date.now() - job.lastUpdate.getTime()) / 1000;
+  console.log(`  -> ${secondsSinceUpdate}s ago`);
+});
+```
+
+**Expected Behavior:**
+- New status message every 10 seconds
+- `lastUpdate` timestamp should refresh regularly
+- Console shows `[SimulationHandler]` polling messages
+
+### Issue 11: GetDocumentStatus Failing
+
+**Symptoms:**
+- Polling stops after first attempt
+- Console shows "Failed to check status" errors
+- Simulation never completes
+
+**Causes:**
+- Data connector action not registered
+- Invalid documentId
+- Azure Storage permissions issues
+- Network connectivity problems
+
+**Solutions:**
+1. **Verify data connector:** Test GetDocumentStatus action manually
+2. **Check documentId:** Ensure valid LucidChart document ID
+3. **Check permissions:** Verify storage account access
+4. **Review logs:** Check Azure Function logs for errors
+
+**Debug:**
+```bash
+# Test GetDocumentStatus via data connector
+curl -X POST https://{function-app}/api/dataConnector/getDocumentStatus \
+  -H "Content-Type: application/json" \
+  -d '{"documentId": "your-doc-id"}'
+```
 
 ---
 

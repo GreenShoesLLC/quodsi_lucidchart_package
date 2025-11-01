@@ -201,19 +201,31 @@ router.send('model', {
 
 **Direction:** Extension → React
 **Purpose:** Provide periodic updates on simulation execution progress
-**Timing:** Every 2-5 seconds during simulation
-**Count:** Multiple messages (typically 5-20 depending on duration)
+**Timing:** Every 10 seconds during simulation
+**Count:** Multiple messages (typically 6-60 depending on duration)
 
 #### Sender
 
-**File:** `src/core/messaging/handlers/simulationHandler.ts:276-288, 407-506`
+**File:** `src/core/messaging/handlers/simulationHandler.ts:408-551`
 
 **Context:**
-- Initial status after submission (line 276)
-- Periodic updates via `mockSimulationProgress()` (line 407)
+- Initial status after submission
+- Periodic updates via `pollDocumentStatus()` (real Azure polling)
 
-**Implementation (Mock):**
+**Implementation (Real Azure Polling):**
 ```typescript
+// Query Azure via Data Connector
+const response = await LucidDataActionUtility.performDataAction(client, {
+  dataConnectorName: 'quodsi_data_connector',
+  actionName: 'GetDocumentStatus',
+  actionData: { documentId },
+  asynchronous: false
+});
+
+// Map RunState to status
+const status = mapRunStateToStatus(scenario.runState);
+
+// Send update
 router.send('model', {
   id: '',
   type: EnvelopeMessageType.MODEL_RUN_STATUS,
@@ -224,7 +236,8 @@ router.send('model', {
     jobId,
     status,
     progress,
-    currentStep: 'Running simulation (X%)'
+    currentStep: 'Running simulation',
+    hasResults: scenario.hasResults
   }
 });
 ```
@@ -245,14 +258,15 @@ router.send('model', {
 
 #### Status Values
 
-| Value | Meaning | Typical Progress |
-|-------|---------|-----------------|
-| `queued` | Job submitted, waiting | 0% |
-| `processing` | Initializing | 5-10% |
-| `validating` | Model validation | 10-20% |
-| `running` | Executing simulation | 20-95% |
-| `completed` | Finished successfully | 100% |
-| `failed` | Error occurred | N/A |
+| Value | Meaning | Typical Progress | Azure RunState |
+|-------|---------|-----------------|----------------|
+| `queued` | Job submitted, waiting | 0% | `"QUEUED"` |
+| `processing` | Initializing | 10% | Unknown/null |
+| `running` | Executing simulation | 70% | `"RUNNING"` |
+| `completed` | Finished successfully | 100% | `"RAN_SUCCESSFULLY"` |
+| `failed` | Error occurred | 0% | `"RAN_WITH_ERRORS"` |
+
+**Note:** Status values are mapped from Azure Storage RunState via GetDocumentStatus data action.
 
 #### Envelope Structure
 
@@ -340,7 +354,7 @@ T+31000ms  MODEL_RUN_STATUS (COMPLETED, 100%)
 |-------------|-------|-----------|
 | MODEL_RUN_REQUEST | 1 | One-time (per simulation) |
 | MODEL_RUN_ACK | 1 | One-time (immediate response) |
-| MODEL_RUN_STATUS | 10-50 | Every 2-5s until completion |
+| MODEL_RUN_STATUS | 6-60 | Every 10s until completion |
 
 ---
 

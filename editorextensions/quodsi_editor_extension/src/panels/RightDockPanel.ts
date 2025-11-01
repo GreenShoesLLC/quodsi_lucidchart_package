@@ -16,7 +16,7 @@ import {
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
-import { SelectionHandler } from '../core/messaging/handlers';
+import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 
 
@@ -149,10 +149,22 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      */
     protected frameClosed(): void {
         this.debug.log('Frame closed, cleaning up resources');
-        
+
+        // Stop all polling for this document
+        try {
+            const documentProxy = new DocumentProxy(this.client);
+            const documentId = documentProxy.id;
+            if (documentId) {
+                this.debug.log('Stopping simulation polling for document', documentId);
+                SimulationHandler.stopAllPollingForDocument(documentId);
+            }
+        } catch (error) {
+            this.debug.error('Error stopping simulation polling:', error);
+        }
+
         // Call parent method to maintain proper behavior
         super.frameClosed();
-        
+
         // Mark iframe as not ready
         this.isReady = false;
     }

@@ -19,6 +19,9 @@ export interface MessagingState {
   elementOps: ElementOpsState;
 }
 
+// Export RootState as an alias for MessagingState (common Redux pattern)
+export type RootState = MessagingState;
+
 // Initial state
 export const initialState: MessagingState = {
   app: initialAppState,

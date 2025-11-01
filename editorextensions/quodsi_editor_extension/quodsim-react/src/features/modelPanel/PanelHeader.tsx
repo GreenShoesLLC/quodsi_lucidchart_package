@@ -5,10 +5,9 @@ import {
   ModelItemData,
   DiagramElementType,
   SimulationObjectType,
-  EnvelopeMessageType,
-  EnvelopeBase,
 } from "@quodsi/shared";
 import { SimulationStatus } from "../../types/SimulationStatus";
+import { useSimulation } from "../../messaging/MessageContext";
 
 import { StatusIndicator } from "../shared/StatusIndicator";
 import { getSimulationState } from "../../utils/simulationState";
@@ -67,72 +66,29 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   simulationStatus,
   onViewResults,
 }) => {
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<string>('');
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  // Get simulation state from context
+  const {
+    isRunning,
+    currentStep,
+    lastChecked: lastCheckedString,
+  } = useSimulation();
 
-  // Reset the simulation button state when status changes
-  useEffect(() => {
-    if (simulationStatus && isSimulating) {
-      // Check if the simulation is no longer running
-      const scenarioStatus = simulationStatus?.pageStatus?.scenarios?.[0];
-      if (
-        scenarioStatus?.runState === "RAN_SUCCESSFULLY" ||
-        scenarioStatus?.runState === "RAN_WITH_ERRORS"
-      ) {
-        setIsSimulating(false);
-      }
-    }
-  }, [simulationStatus]);
+  // Convert lastChecked string to Date for display
+  const lastChecked = lastCheckedString ? new Date(lastCheckedString) : null;
 
-  // Listen for MODEL_RUN_STATUS messages
-  useEffect(() => {
-    const handleStatusMessage = (event: MessageEvent) => {
-      const msg = event.data as EnvelopeBase;
-
-      // Check if this is a MODEL_RUN_STATUS message
-      if (msg?.type === EnvelopeMessageType.MODEL_RUN_STATUS) {
-        const data = msg.data as {
-          jobId?: string;
-          status?: string;
-          progress?: number;
-          currentStep?: string;
-          lastChecked?: string;
-          error?: string;
-        };
-
-        if (data.currentStep) {
-          setCurrentStatus(data.currentStep);
-        }
-
-        if (data.lastChecked) {
-          setLastChecked(new Date(data.lastChecked));
-        }
-
-        // Update isSimulating based on status
-        if (data.status === 'COMPLETED' || data.status === 'FAILED') {
-          setIsSimulating(false);
-        } else if (data.status === 'RUNNING' || data.status === 'PROCESSING' || data.status === 'QUEUED') {
-          setIsSimulating(true);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleStatusMessage);
-    return () => window.removeEventListener('message', handleStatusMessage);
-  }, []);
+  // Local state for triggering re-renders (for time ago display)
+  const [, setTick] = useState(0);
 
   // Timer to force re-render every second when simulating (to update "time ago" text)
   useEffect(() => {
-    if (!isSimulating) return;
+    if (!isRunning) return;
 
     const timer = setInterval(() => {
-      // Force re-render by updating a dummy state
-      setLastChecked(prev => prev ? new Date(prev.getTime()) : null);
+      setTick(prev => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isSimulating]);
+  }, [isRunning]);
 
   // Helper to get display name for the element
   const getDisplayName = (
@@ -161,9 +117,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   };
 
   const handleSimulateClick = () => {
-    setIsSimulating(true);
-    setCurrentStatus('Starting simulation...');
-    setLastChecked(new Date());
     if (onSimulate) {
       onSimulate("LucidChart");
     }
@@ -197,9 +150,9 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     if (elementType === SimulationObjectType.Model) {
       // Build button label with status indicator
       let buttonLabel: string;
-      if (isSimulating) {
+      if (isRunning) {
         const timeAgo = getTimeAgo(lastChecked);
-        const statusText = currentStatus || 'Running';
+        const statusText = currentStep || 'Running';
         buttonLabel = timeAgo ? `${statusText} (${timeAgo})` : statusText;
       } else {
         buttonLabel = getSimulationState(
@@ -213,11 +166,11 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           {onSimulate && (
             <button
               className={
-                isSimulating ? disabledButtonClasses : simulateButtonClasses
+                isRunning ? disabledButtonClasses : simulateButtonClasses
               }
               onClick={handleSimulateClick}
-              disabled={isSimulating}
-              title={isSimulating ? `Status: ${currentStatus || 'Running'}` : undefined}
+              disabled={isRunning}
+              title={isRunning ? `Status: ${currentStep || 'Running'}` : undefined}
             >
               {buttonLabel}
             </button>

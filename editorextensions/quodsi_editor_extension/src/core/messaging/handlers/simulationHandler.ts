@@ -1,7 +1,8 @@
-import { 
-  EnvelopeBase, 
-  EnvelopeMessageType, 
+import {
+  EnvelopeBase,
+  EnvelopeMessageType,
   SimulationStatus,
+  SimulationJob,
   ModelSerializerFactory,
   Model
 } from '@quodsi/shared';
@@ -24,16 +25,12 @@ const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 export class SimulationHandler {
   /**
    * Active simulation jobs
+   * Note: Uses Omit to exclude string-based timestamps and replace with Date objects for internal tracking
    */
-  private static activeJobs: Map<string, {
-    documentId: string;
-    scenarioId?: string;
-    scenarioName?: string;
-    status: SimulationStatus;
-    progress: number;
+  private static activeJobs: Map<string, Omit<SimulationJob, 'startTime' | 'lastUpdate'> & {
     startTime: Date;
     lastUpdate: Date;
-    pollInterval?: number;
+    pollInterval?: any;
   }> = new Map();
 
   /**
@@ -50,13 +47,10 @@ export class SimulationHandler {
           console.error('[SimulationHandler] Error in handleRunRequest:', error);
         });
         return true;
-        
-      case EnvelopeMessageType.MODEL_RUN_ACK:
-        return SimulationHandler.handleRunAck(msg);
-        
+
       case EnvelopeMessageType.MODEL_RUN_STATUS:
         return SimulationHandler.handleRunStatus(msg);
-        
+
       // Not a simulation message
       default:
         return false;
@@ -201,15 +195,50 @@ export class SimulationHandler {
           version: '1.0',
           data: {
             jobId: 'error',
+            documentId: data.documentId,
+            scenarioId: BASELINE_SCENARIO_ID,
+            scenarioName: data.scenarioName || 'New Scenario',
             status: SimulationStatus.FAILED,
             progress: 0,
+            lastChecked: new Date().toISOString(),
+            queuedAt: new Date().toISOString(),
             error: 'No model definition found. Please ensure the page contains Quodsi model elements.'
           }
         });
-        
+
         return true;
       }
-      
+
+      // Check for existing simulation for this document
+      const existingJob = Array.from(SimulationHandler.activeJobs.values())
+        .find(job => job.documentId === documentProxy.id &&
+                     (job.status === SimulationStatus.RUNNING ||
+                      job.status === SimulationStatus.PROCESSING ||
+                      job.status === SimulationStatus.QUEUED));
+
+      if (existingJob) {
+        console.warn('[SimulationHandler] Simulation already running for this document');
+        router.send('model', {
+          id: msg.id,
+          type: EnvelopeMessageType.MODEL_RUN_STATUS,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            jobId: 'error',
+            documentId: documentProxy.id,
+            scenarioId: BASELINE_SCENARIO_ID,
+            scenarioName: data.scenarioName || 'New Scenario',
+            status: SimulationStatus.FAILED,
+            progress: 0,
+            lastChecked: new Date().toISOString(),
+            queuedAt: new Date().toISOString(),
+            error: 'Simulation already running for this document. Please wait for it to complete.'
+          }
+        });
+        return true;
+      }
+
       // Serialize the model
       console.log('[SimulationHandler] Serializing model...');
       const serializer = ModelSerializerFactory.create(modelDefinition);
@@ -221,31 +250,41 @@ export class SimulationHandler {
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
       console.log('[SimulationHandler] SVG obtained successfully');
       
-      // Generate job ID
+      // Generate job ID and queuedAt timestamp
       const jobId = `job-${documentProxy.id}-${Date.now()}`;
-      
-      // Send acknowledgement first
+      const queuedAt = new Date().toISOString();
+
+      // Send initial status (replaces old MODEL_RUN_ACK)
       router.send('model', {
         id: msg.id,
-        type: EnvelopeMessageType.MODEL_RUN_ACK,
+        type: EnvelopeMessageType.MODEL_RUN_STATUS,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
         data: {
           jobId,
-          queuedAt: new Date().toISOString()
+          documentId: data.documentId,
+          scenarioId: BASELINE_SCENARIO_ID,
+          scenarioName: data.scenarioName || 'New Scenario',
+          status: SimulationStatus.QUEUED,
+          progress: 0,
+          currentStep: 'Submitting simulation to Azure',
+          lastChecked: queuedAt,
+          queuedAt: queuedAt
         }
       });
-      
+
       // Create job tracking
       SimulationHandler.activeJobs.set(jobId, {
+        jobId,
         documentId: data.documentId,
         scenarioId: BASELINE_SCENARIO_ID,
-        scenarioName: data.scenarioName,
+        scenarioName: data.scenarioName || 'New Scenario',
         status: SimulationStatus.QUEUED,
         progress: 0,
         startTime: new Date(),
-        lastUpdate: new Date()
+        lastUpdate: new Date(),
+        currentStep: 'Submitting simulation to Azure'
       });
       
       // Submit to data connector
@@ -284,9 +323,14 @@ export class SimulationHandler {
           version: '1.0',
           data: {
             jobId,
+            documentId: data.documentId,
+            scenarioId: BASELINE_SCENARIO_ID,
+            scenarioName: data.scenarioName || 'New Scenario',
             status: SimulationStatus.PROCESSING,
             progress: 10,
-            currentStep: 'Simulation submitted to backend'
+            currentStep: 'Simulation submitted to backend',
+            lastChecked: new Date().toISOString(),
+            queuedAt: queuedAt
           }
         });
         
@@ -312,16 +356,21 @@ export class SimulationHandler {
           version: '1.0',
           data: {
             jobId,
+            documentId: data.documentId,
+            scenarioId: BASELINE_SCENARIO_ID,
+            scenarioName: data.scenarioName || 'New Scenario',
             status: SimulationStatus.FAILED,
             progress: 0,
+            lastChecked: new Date().toISOString(),
+            queuedAt: queuedAt,
             error: `Failed to submit simulation: ${submitError instanceof Error ? submitError.message : String(submitError)}`
           }
         });
       }
-      
+
     } catch (error) {
       console.error('[SimulationHandler] Error handling simulation request:', error);
-      
+
       // Send general error response
       router.send('model', {
         id: msg.id,
@@ -331,8 +380,13 @@ export class SimulationHandler {
         version: '1.0',
         data: {
           jobId: 'error',
+          documentId: data.documentId,
+          scenarioId: BASELINE_SCENARIO_ID,
+          scenarioName: data.scenarioName || 'New Scenario',
           status: SimulationStatus.FAILED,
           progress: 0,
+          lastChecked: new Date().toISOString(),
+          queuedAt: new Date().toISOString(),
           error: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`
         }
       });
@@ -340,31 +394,7 @@ export class SimulationHandler {
     
     return true;
   }
-  
-  /**
-   * Handle run acknowledgement
-   * 
-   * @param msg MODEL_RUN_ACK message
-   * @returns True indicating message was handled
-   */
-  private static handleRunAck(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      jobId: string;
-      queuedAt: string;
-      estimatedCompletionTime?: string;
-    };
-    
-    console.log('[SimulationHandler] Simulation run acknowledged', {
-      jobId: data.jobId,
-      queuedAt: data.queuedAt
-    });
-    
-    // This is usually sent by the backend, not received by the extension
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
+
   /**
    * Handle run status update
    * 
@@ -481,6 +511,10 @@ export class SimulationHandler {
           job.lastUpdate = new Date();
         }
 
+        // Get job data for queuedAt and scenarioName
+        const queuedAt = job?.startTime?.toISOString() || new Date().toISOString();
+        const scenarioName = job?.scenarioName || 'New Scenario';
+
         // Send status update to React
         router.send('model', {
           id: '',
@@ -491,10 +525,13 @@ export class SimulationHandler {
           data: {
             jobId,
             documentId,
+            scenarioId,
+            scenarioName,
             status,
             progress,
             currentStep,
             lastChecked: new Date().toISOString(),
+            queuedAt,
             resultUrl: status === SimulationStatus.COMPLETED
               ? `/results/${documentId}/${scenario.id}`
               : undefined
@@ -516,6 +553,11 @@ export class SimulationHandler {
       } catch (error) {
         console.error('[SimulationHandler] Polling error:', error);
 
+        // Get job for additional fields
+        const job = SimulationHandler.activeJobs.get(jobId);
+        const queuedAt = job?.startTime?.toISOString() || new Date().toISOString();
+        const scenarioName = job?.scenarioName || 'New Scenario';
+
         // Send error status
         router.send('model', {
           id: '',
@@ -526,17 +568,19 @@ export class SimulationHandler {
           data: {
             jobId,
             documentId,
+            scenarioId,
+            scenarioName,
             status: SimulationStatus.FAILED,
             progress: 0,
             error: `Status polling failed: ${error.message}`,
-            lastChecked: new Date().toISOString()
+            lastChecked: new Date().toISOString(),
+            queuedAt
           }
         });
 
         clearInterval(pollInterval);
 
         // Clean up job tracking
-        const job = SimulationHandler.activeJobs.get(jobId);
         if (job) {
           job.status = SimulationStatus.FAILED;
         }
@@ -560,6 +604,21 @@ export class SimulationHandler {
       job.pollInterval = undefined;
       console.log('[SimulationHandler] Stopped polling for job', jobId);
     }
+  }
+
+  /**
+   * Stop all polling for a specific document
+   */
+  public static stopAllPollingForDocument(documentId: string): void {
+    console.log('[SimulationHandler] Stopping all polling for document', documentId);
+
+    SimulationHandler.activeJobs.forEach((job, jobId) => {
+      if (job.documentId === documentId) {
+        SimulationHandler.stopPolling(jobId);
+        SimulationHandler.activeJobs.delete(jobId);
+        console.log('[SimulationHandler] Cleaned up job', jobId);
+      }
+    });
   }
 
   /**
@@ -591,9 +650,9 @@ export class SimulationHandler {
    * Get all active simulation jobs
    */
   public static getActiveJobs() {
-    return Array.from(SimulationHandler.activeJobs.entries()).map(([jobId, job]) => ({
-      jobId,
-      ...job
+    return Array.from(SimulationHandler.activeJobs.entries()).map(([id, job]) => ({
+      ...job,
+      jobId: id
     }));
   }
   
@@ -602,6 +661,6 @@ export class SimulationHandler {
    */
   public static getJob(jobId: string) {
     const job = SimulationHandler.activeJobs.get(jobId);
-    return job ? { jobId, ...job } : null;
+    return job ? { ...job, jobId } : null;
   }
 }

@@ -5,7 +5,7 @@ import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
 import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
-import { ModelRunAckMessage, ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage } from './simulation/messages';
+import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
 
@@ -70,8 +70,8 @@ export {
 // Export simulation messages
 export {
   SimulationStatus,
+  SimulationJob,
   ModelRunRequestMessage,
-  ModelRunAckMessage,
   ModelRunStatusMessage,
   SimulationMessage
 } from './simulation/messages';
@@ -151,7 +151,6 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SELECTION_CHANGED]: SelectionChangedMessage['data'];
 
   [EnvelopeMessageType.MODEL_RUN_REQUEST]: ModelRunRequestMessage['data'];
-  [EnvelopeMessageType.MODEL_RUN_ACK]: ModelRunAckMessage['data'];
   [EnvelopeMessageType.MODEL_RUN_STATUS]: ModelRunStatusMessage['data'];
 
   [EnvelopeMessageType.MODEL_VALIDATE]: ModelValidateMessage['data'];

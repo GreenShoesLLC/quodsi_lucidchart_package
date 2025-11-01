@@ -17,16 +17,22 @@ class SimulationHandler {
   // Job tracking map
   private static activeJobs: Map<string, {
     documentId: string;
+    scenarioId: string;
     scenarioName?: string;
     status: SimulationStatus;
     progress: number;
     startTime: Date;
     lastUpdate: Date;
+    pollInterval?: NodeJS.Timeout;
   }> = new Map();
 }
 ```
 
 **Purpose:** Track all active simulation jobs in-memory
+
+**Additional Properties:**
+- `scenarioId` - Scenario identifier for this job
+- `pollInterval` - Interval handle for status polling (can be cleared)
 
 **Lifecycle:** Jobs remain in map until completion + 60 seconds
 
@@ -103,6 +109,36 @@ public static getJob(jobId: string): JobInfo | null
 **Location:** `simulationHandler.ts:521-524`
 
 **Purpose:** Query a specific simulation job by ID
+
+---
+
+#### stopPolling()
+
+**Signature:**
+```typescript
+public static stopPolling(jobId: string): void
+```
+
+**Location:** `simulationHandler.ts:556-569`
+
+**Purpose:** Stop polling for a specific job and clean up resources
+
+**Usage:** Called when user navigates away from page or cancels simulation
+
+---
+
+#### resumePollingIfNeeded()
+
+**Signature:**
+```typescript
+public static resumePollingIfNeeded(documentId: string): void
+```
+
+**Location:** `simulationHandler.ts:574-588`
+
+**Purpose:** Resume polling for any jobs associated with a document when panel is reopened
+
+**Usage:** Called when user returns to a page with active simulations
 
 ---
 
@@ -282,11 +318,13 @@ router.send('model', {
 ```typescript
 {
   documentId: string;
+  scenarioId: string;
   scenarioName?: string;
   status: SimulationStatus.QUEUED;
   progress: 0;
   startTime: new Date();
   lastUpdate: new Date();
+  pollInterval?: NodeJS.Timeout;
 }
 ```
 
@@ -294,6 +332,7 @@ router.send('model', {
 ```typescript
 SimulationHandler.activeJobs.set(jobId, {
   documentId: data.documentId,
+  scenarioId: scenarioId,
   scenarioName: data.scenarioName,
   status: SimulationStatus.QUEUED,
   progress: 0,
@@ -330,7 +369,7 @@ SimulationHandler.activeJobs.set(jobId, {
 **Success Path:**
 1. Update job status to `PROCESSING`
 2. Send initial status message
-3. Start mock polling: `mockSimulationProgress(jobId)`
+3. Start real Azure polling: `pollDocumentStatus(documentId, scenarioId, jobId)`
 
 **Error Path:**
 1. Update job status to `FAILED`
@@ -348,8 +387,8 @@ try {
     job.lastUpdate = new Date();
   }
 
-  // Start polling
-  SimulationHandler.mockSimulationProgress(jobId);
+  // Start real Azure polling
+  SimulationHandler.pollDocumentStatus(documentId, scenarioId, jobId);
 
 } catch (submitError) {
   // Error handling
@@ -360,97 +399,105 @@ try {
 
 ## Status Update System
 
-### mockSimulationProgress()
+### pollDocumentStatus()
 
-**Location:** `simulationHandler.ts:407-506`
+**Location:** `simulationHandler.ts:408-551`
 
-**Purpose:** Simulate status updates during development (placeholder for real polling)
+**Purpose:** Poll Azure for real-time simulation status updates
 
-**Update Schedule:**
-- **1s delay:** PROCESSING (5%)
-- **2s delay:** VALIDATING (15%)
-- **Every 2s:** RUNNING (+5-15% increments)
-- **At 95%:** Final delay, then COMPLETED (100%)
+**Polling Interval:** 10 seconds (configurable)
 
-**Implementation:**
+**Implementation Details:**
+
+#### Polling Logic
+
+**Step 1: Initialize Polling** (lines 419-431)
 ```typescript
-private static mockSimulationProgress(jobId: string) {
-  let progress = 0;
-  let status = SimulationStatus.QUEUED;
+private static async pollDocumentStatus(
+  documentId: string,
+  scenarioId: string,
+  jobId: string
+): Promise<void> {
+  const job = SimulationHandler.activeJobs.get(jobId);
+  if (!job) return;
 
-  // First update - processing
-  setTimeout(() => {
-    status = SimulationStatus.PROCESSING;
-    progress = 5;
-    // Send MODEL_RUN_STATUS
-  }, 1000);
+  // Store interval handle for cleanup
+  const intervalId = setInterval(async () => {
+    await this.checkStatus(documentId, scenarioId, jobId);
+  }, 10000); // Poll every 10 seconds
 
-  // Second update - validating
-  setTimeout(() => {
-    status = SimulationStatus.VALIDATING;
-    progress = 15;
-    // Send MODEL_RUN_STATUS
-  }, 2000);
+  job.pollInterval = intervalId;
+}
+```
 
-  // Regular updates - running
-  const interval = setInterval(() => {
-    if (progress >= 95) {
-      clearInterval(interval);
-      // Send COMPLETED status
-      return;
+**Step 2: Status Check via Data Action** (lines 439-464)
+
+Uses `LucidDataActionUtility.performDataAction()` with:
+- `actionName: 'GetDocumentStatus'`
+- `documentId` parameter
+- Returns `PageStatus` with scenario run states
+
+**Step 3: Map RunState to SimulationStatus** (lines 469-504)
+
+Status mapping:
+- `"RAN_SUCCESSFULLY"` → `SimulationStatus.COMPLETED` (100%)
+- `"RAN_WITH_ERRORS"` → `SimulationStatus.FAILED` (0%)
+- `"RUNNING"` → `SimulationStatus.RUNNING` (50-90%)
+- `"QUEUED"` → `SimulationStatus.QUEUED` (0%)
+- `null` or unknown → `SimulationStatus.PROCESSING` (10%)
+
+**Step 4: Send Status Update** (lines 509-526)
+
+Sends `MODEL_RUN_STATUS` message with:
+- Current status
+- Progress percentage
+- Current step description
+- Has results flag
+
+**Step 5: Cleanup on Completion** (lines 528-545)
+
+When status is `COMPLETED` or `FAILED`:
+1. Clear polling interval
+2. Send final status message
+3. Schedule job removal after 60 seconds
+
+#### Error Handling
+
+**Polling Errors** (lines 533-540)
+- Log error to console
+- Send FAILED status to React
+- Clear interval to stop polling
+- Keep job in tracking for debugging
+
+#### Job Lifecycle Management
+
+**Stopping Polling:**
+```typescript
+public static stopPolling(jobId: string): void {
+  const job = SimulationHandler.activeJobs.get(jobId);
+  if (job?.pollInterval) {
+    clearInterval(job.pollInterval);
+    job.pollInterval = undefined;
+  }
+}
+```
+
+**Resuming Polling:**
+```typescript
+public static resumePollingIfNeeded(documentId: string): void {
+  for (const [jobId, job] of SimulationHandler.activeJobs.entries()) {
+    if (job.documentId === documentId && !job.pollInterval) {
+      if (job.status !== SimulationStatus.COMPLETED &&
+          job.status !== SimulationStatus.FAILED) {
+        SimulationHandler.pollDocumentStatus(documentId, job.scenarioId, jobId);
+      }
     }
-
-    status = SimulationStatus.RUNNING;
-    progress += Math.floor(Math.random() * 10) + 5;
-    progress = Math.min(progress, 95);
-    // Send MODEL_RUN_STATUS
-  }, 2000);
+  }
 }
 ```
 
 **Job Cleanup:**
 - Jobs are removed from `activeJobs` map 60 seconds after completion
-
----
-
-### Real Polling (Planned)
-
-**Implementation Plan:**
-
-1. **Poll Endpoint:** `GET /api/dataConnector/status/{jobId}`
-
-2. **Polling Logic:**
-```typescript
-private static async pollSimulationStatus(jobId: string, documentId: string) {
-  const pollInterval = setInterval(async () => {
-    try {
-      const status = await dataConnectorService.getJobStatus(jobId);
-
-      router.send('model', {
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        data: {
-          jobId,
-          documentId,
-          status: status.state,
-          progress: status.progress,
-          hasResults: status.hasResults
-        }
-      });
-
-      if (status.state === 'completed' || status.state === 'failed') {
-        clearInterval(pollInterval);
-      }
-    } catch (error) {
-      // Error handling
-      clearInterval(pollInterval);
-    }
-  }, 5000);  // Poll every 5 seconds
-}
-```
-
-3. **Status Mapping:**
-   - Azure Batch task state → SimulationStatus enum
-   - Progress calculation based on task progress or elapsed time
 
 ---
 
