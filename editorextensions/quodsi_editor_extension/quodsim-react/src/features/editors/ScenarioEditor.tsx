@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle } from "lucide-react";
 import ScenarioCard from "./ScenarioCard";
 import { RunState, EnvelopeMessageType } from "@quodsi/shared";
@@ -33,10 +33,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isTabVisible, setIsTabVisible] = useState(true);
-  const scenarioSender = useScenarioSender();
+  const [deletingScenarios, setDeletingScenarios] = useState<Set<string>>(new Set());
+  const { listScenarios, deleteScenario } = useScenarioSender();
 
   // Load scenarios function
-  const loadScenarios = () => {
+  const loadScenarios = useCallback(() => {
     if (!documentId) {
       setError("No document ID available");
       return;
@@ -47,13 +48,13 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
 
     try {
       // Use the proper sender hook
-      scenarioSender.listScenarios(documentId);
+      listScenarios(documentId);
       // Response will be handled in the message listener below
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load scenarios");
       setLoading(false);
     }
-  };
+  }, [documentId, listScenarios]);
 
   // Handle messages from extension
   useEffect(() => {
@@ -72,26 +73,40 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
       } else if (message.type === EnvelopeMessageType.SCENARIO_DELETE_RESULT) {
         const result = message.data;
         if (result?.success) {
-          console.log('[ScenarioEditor] Scenario deleted successfully, refreshing list');
-          // Refresh the scenario list after successful deletion
+          console.log('[ScenarioEditor] Scenario deleted successfully');
+          // Remove from deleting set
+          setDeletingScenarios(prev => {
+            const updated = new Set(prev);
+            updated.delete(result.scenarioId);
+            return updated;
+          });
+          // Refresh the list to confirm server state
           loadScenarios();
         } else {
           console.error('[ScenarioEditor] Failed to delete scenario:', result?.error);
+          // Remove from deleting set and restore scenario by refreshing
+          setDeletingScenarios(prev => {
+            const updated = new Set(prev);
+            updated.delete(result.scenarioId);
+            return updated;
+          });
           setError(result?.error || "Failed to delete scenario");
+          // Refresh to restore the scenario in the list
+          loadScenarios();
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [documentId]);
+  }, [documentId, loadScenarios]);
 
   // Load scenarios on mount
   useEffect(() => {
     if (documentId) {
       loadScenarios();
     }
-  }, [documentId]);
+  }, [documentId, loadScenarios]);
 
   // Detect when tab/window becomes visible
   useEffect(() => {
@@ -108,7 +123,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
 
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [documentId]);
+  }, [documentId, loadScenarios]);
 
   // Auto-refresh when tab is visible AND scenarios are running
   useEffect(() => {
@@ -133,9 +148,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
       console.log('[ScenarioEditor] Clearing auto-refresh interval');
       clearInterval(interval);
     };
-  }, [scenarios, isTabVisible, documentId]);
+  }, [scenarios, isTabVisible, documentId, loadScenarios]);
 
-  const handleDeleteScenario = (scenarioId: string) => {
+  const handleDeleteScenario = useCallback((scenarioId: string) => {
     if (!documentId) {
       console.error('[ScenarioEditor] Cannot delete scenario: missing documentId');
       return;
@@ -143,10 +158,14 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
 
     console.log('[ScenarioEditor] Deleting scenario:', scenarioId);
 
+    // Optimistic update: immediately add to deleting set and remove from list
+    setDeletingScenarios(prev => new Set(prev).add(scenarioId));
+    setScenarios(prev => prev.filter(s => s.id !== scenarioId));
+
     // Send delete request
-    scenarioSender.deleteScenario(documentId, scenarioId);
+    deleteScenario(documentId, scenarioId);
     // Result will be handled in the message listener
-  };
+  }, [documentId, deleteScenario]);
 
   return (
     <div className="scenario-editor p-4">

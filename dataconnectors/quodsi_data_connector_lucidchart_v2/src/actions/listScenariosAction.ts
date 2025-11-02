@@ -102,49 +102,65 @@ export const listScenariosAction = async (
             try {
                 logger.debug(`Processing scenario: ${scenarioId}`);
 
-                // Try to read status.json from scenario folder
+                // ALWAYS read model.json first for configuration values
+                const modelJsonPath = `${scenarioId}/model.json`;
+                const modelJson = await storageService.getBlobContent(
+                    data.documentId,
+                    modelJsonPath
+                );
+
+                if (!modelJson) {
+                    logger.warn(`No model.json found for scenario ${scenarioId}, skipping`);
+                    continue;
+                }
+
+                // Parse model.json to get configuration values
+                let modelData: any = null;
+                try {
+                    modelData = JSON.parse(modelJson);
+                } catch (parseError) {
+                    logger.error(`Failed to parse model.json for scenario ${scenarioId}: ${parseError.message}`);
+                    continue;
+                }
+
+                // Build scenario info from model.json (configuration values)
+                let statusData: any = {
+                    id: scenarioId,
+                    name: scenarioId, // Use scenarioId (contains datetime from Azure Function)
+                    runState: RunState.NotRun,
+                    reps: modelData.model?.reps || 0,
+                    runClockPeriod: modelData.model?.runClockPeriod || 0,
+                    runClockPeriodUnit: modelData.model?.runClockPeriodUnit || 'Minutes',
+                    simulationTimeType: modelData.model?.simulationTimeType || 'Clock'
+                };
+
+                // Optionally read status.json for runtime state (runState, completedAt)
                 const statusJsonPath = `${scenarioId}/status.json`;
                 const statusJson = await storageService.getBlobContent(
                     data.documentId,
                     statusJsonPath
                 );
 
-                let statusData: any = null;
-
                 if (statusJson) {
-                    // Parse status.json if it exists
                     try {
-                        statusData = JSON.parse(statusJson);
+                        const runtimeData = JSON.parse(statusJson);
+
+                        // Merge runtime state from status.json (override NotRun if status exists)
+                        statusData.runState = runtimeData.runState || statusData.runState;
+                        statusData.completedAt = runtimeData.completedAt || runtimeData.lastUpdated;
+
+                        // Use status.json name if available (might be more user-friendly)
+                        if (runtimeData.name) {
+                            statusData.name = runtimeData.name;
+                        }
+
+                        logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}`);
                     } catch (parseError) {
                         logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
-                        // Continue to check for model.json
+                        // Continue with model.json data only
                     }
-                }
-
-                // If status.json doesn't exist or failed to parse, check for model.json as fallback
-                if (!statusData) {
-                    const modelJsonPath = `${scenarioId}/model.json`;
-                    const modelJson = await storageService.getBlobContent(
-                        data.documentId,
-                        modelJsonPath
-                    );
-
-                    if (!modelJson) {
-                        logger.warn(`No status.json or model.json found for scenario ${scenarioId}, skipping`);
-                        continue;
-                    }
-
-                    // Model.json exists, create default status data
-                    logger.info(`Using model.json for scenario ${scenarioId} (status.json not found)`);
-                    statusData = {
-                        id: scenarioId,
-                        name: scenarioId, // Use scenarioId as default name
-                        runState: RunState.NotRun,
-                        reps: 0,
-                        runClockPeriod: 0,
-                        runClockPeriodUnit: 'Minutes',
-                        simulationTimeType: 'Clock'
-                    };
+                } else {
+                    logger.debug(`No status.json for scenario ${scenarioId}, using model.json only`);
                 }
 
                 // Find any .zip file in the scenario folder
