@@ -75,71 +75,134 @@ export class ModelOpsHandler {
   
   /**
    * Handle model validation request
-   * 
+   *
    * @param msg MODEL_VALIDATE message
    * @returns True indicating message was handled
    */
   private static handleValidate(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
-    
+
     ModelOpsHandler.logger.log('Model validation requested', {
       documentId: data.documentId
     });
-    
-    // TODO: Perform actual validation
-    // For now, send a mock validation result
-    Promise.resolve().then(() => {
-      // Generate some mock issues
-      const issues: ValidationIssue[] = [
-        {
-          id: `issue-${Date.now()}-1`,
-          elementId: 'element-1',
-          severity: ValidationSeverity.ERROR,
-          code: 'missing_connection',
-          message: 'Entity has no outgoing connections'
-        },
-        {
-          id: `issue-${Date.now()}-2`,
-          elementId: 'element-2',
-          severity: ValidationSeverity.WARNING,
-          code: 'missing_property',
-          message: 'Resource capacity not specified'
-        },
-        {
-          id: `issue-${Date.now()}-3`,
-          severity: ValidationSeverity.INFO,
-          code: 'performance_tip',
-          message: 'Consider adding more parallel activities for better throughput'
-        }
-      ];
-      
+
+    // Perform async validation
+    ModelOpsHandler.performValidation(msg, data)
+      .catch(err => ModelOpsHandler.logger.error('Error handling MODEL_VALIDATE:', err));
+
+    return true;
+  }
+
+  /**
+   * Perform the actual validation using ModelManager
+   */
+  private static async performValidation(msg: EnvelopeBase, data: { documentId: string }): Promise<void> {
+    try {
+      const modelManager = ModelManager.getInstance();
+
+      // Call real validation service through ModelManager
+      const validationResult = await modelManager.validateModel();
+
+      if (!validationResult) {
+        ModelOpsHandler.logger.warn('Validation returned null result');
+
+        // Send empty result
+        router.send('model', {
+          id: msg.id,
+          type: EnvelopeMessageType.MODEL_VALIDATION_RESULT,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            isValid: true,
+            issues: [],
+            summary: {
+              errorCount: 0,
+              warningCount: 0,
+              infoCount: 0
+            }
+          }
+        });
+
+        return;
+      }
+
+      // Convert ValidationMessage[] to ValidationIssue[]
+      const issues: ValidationIssue[] = validationResult.messages.map(msg => ({
+        id: msg.code || `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        elementId: msg.elementId,
+        severity: msg.type === 'error' ? ValidationSeverity.ERROR :
+                  msg.type === 'warning' ? ValidationSeverity.WARNING :
+                  ValidationSeverity.INFO,
+        code: msg.code || 'validation_message',
+        message: msg.message
+      }));
+
+      // Count issues by severity
+      const errorCount = issues.filter(i => i.severity === ValidationSeverity.ERROR).length;
+      const warningCount = issues.filter(i => i.severity === ValidationSeverity.WARNING).length;
+      const infoCount = issues.filter(i => i.severity === ValidationSeverity.INFO).length;
+
       // Store validation result
       ModelOpsHandler.validationResults.set(data.documentId, {
-        isValid: false,
+        isValid: validationResult.isValid,
         issues,
         timestamp: new Date()
       });
-      
+
+      ModelOpsHandler.logger.log('Validation complete', {
+        isValid: validationResult.isValid,
+        errorCount,
+        warningCount,
+        infoCount
+      });
+
       // Send validation result
       router.send('model', {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_VALIDATION_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          isValid: validationResult.isValid,
+          issues,
+          summary: {
+            errorCount,
+            warningCount,
+            infoCount
+          }
+        }
+      });
+
+    } catch (error) {
+      ModelOpsHandler.logger.error('Error performing validation:', error);
+
+      // Send error as validation issue
+      const errorIssue: ValidationIssue = {
+        id: `validation-error-${Date.now()}`,
+        severity: ValidationSeverity.ERROR,
+        code: 'validation_failed',
+        message: error instanceof Error ? error.message : 'Validation failed with unknown error'
+      };
+
+      router.send('model', {
+        id: msg.id,
         type: EnvelopeMessageType.MODEL_VALIDATION_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
         data: {
           isValid: false,
-          issues,
+          issues: [errorIssue],
           summary: {
             errorCount: 1,
-            warningCount: 1,
-            infoCount: 1
+            warningCount: 0,
+            infoCount: 0
           }
         }
       });
-    });
-    
-    return true;
+    }
   }
   
   /**

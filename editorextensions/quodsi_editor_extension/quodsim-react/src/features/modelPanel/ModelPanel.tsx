@@ -3,7 +3,7 @@ import { useModelPanel } from '../../messaging/hooks/useModelPanel';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
-import { ValidationPanel } from './ValidationPanel';
+import { ValidationBanner } from './ValidationBanner';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
@@ -39,11 +39,8 @@ export const ModelPanel: React.FC = () => {
   // Get message sender for states
   const { updateStates: sendStatesUpdate } = useModelOpsSender();
 
-  // Local UI state for accordion sections
-  const [expandedSections, setExpandedSections] = useState({
-    elementEditor: true, // Always start with element editor expanded
-    validation: !!validationState?.summary?.errorCount
-  });
+  // Local UI state for validation banner
+  const [validationBannerExpanded, setValidationBannerExpanded] = useState(false);
 
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
   const states = useMemo(() => {
@@ -87,13 +84,12 @@ export const ModelPanel: React.FC = () => {
     sendStatesUpdate(serializedStates);
   };
 
-  // Toggle accordion sections
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
+  // Auto-expand validation banner when errors are detected
+  useEffect(() => {
+    if (validationState?.summary?.errorCount && validationState.summary.errorCount > 0) {
+      setValidationBannerExpanded(true);
+    }
+  }, [validationState?.summary?.errorCount]);
 
   useEffect(() => {
     // Handle element type issues
@@ -197,8 +193,15 @@ export const ModelPanel: React.FC = () => {
         onViewResults={onViewResults}
         referenceData={referenceData}
       />
-      
-      <div className="flex-1 bg-gray-50">
+
+      {/* Validation Banner - sticky at top */}
+      <ValidationBanner
+        validationState={validationState}
+        isExpanded={validationBannerExpanded}
+        onToggle={() => setValidationBannerExpanded(!validationBannerExpanded)}
+      />
+
+      <div className="flex-1 bg-gray-50 overflow-auto">
         {/* If current element exists and is either not unconverted or is a Model type */}
         {currentElement && ((!currentElement.isUnconverted) || isModelElement) && (
           <ElementEditor
@@ -214,22 +217,14 @@ export const ModelPanel: React.FC = () => {
             onSave={data => onElementUpdate(currentElement.id, data)}
             onRemoveModel={onRemoveModel}
             referenceData={referenceData}
-            isExpanded={expandedSections.elementEditor}
-            onToggle={() => toggleSection('elementEditor')}
             currentElement={currentElement}
             states={states}
             onStatesChange={handleStatesChange}
             resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}
+            validationState={validationState}
           />
         )}
-        
-        <ValidationPanel
-          validationState={validationState}
-          currentElementId={currentElement?.id}
-          isExpanded={expandedSections.validation}
-          onToggle={() => toggleSection('validation')}
-        />
       </div>
     </div>
   );

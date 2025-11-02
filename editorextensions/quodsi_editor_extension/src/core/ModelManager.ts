@@ -19,7 +19,10 @@ import {
     ResourceRequirement,
     ValidationMessages,
     ISerializedState,
-    ISerializedResourceRequirement
+    ISerializedResourceRequirement,
+    EnvelopeMessageType,
+    ValidationSeverity,
+    ValidationIssue
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
@@ -27,6 +30,7 @@ import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { ExtensionDebugService } from "./logging/ExtensionDebugService";
+import { router } from "./messaging";
 
 
 interface ChangeTracker {
@@ -361,6 +365,7 @@ export class ModelManager {
                     message: 'No model initialized'
                 }]
             };
+            this.broadcastValidationResults(this.currentValidationResult);
             return this.currentValidationResult;
         }
 
@@ -378,7 +383,60 @@ export class ModelManager {
         this.changeTracker.validationDirty = false;
         this.changeTracker.lastValidationUpdate = Date.now();
 
+        // Broadcast validation results to React UI
+        this.broadcastValidationResults(this.currentValidationResult);
+
         return this.currentValidationResult;
+    }
+
+    /**
+     * Broadcasts validation results to React UI panels
+     */
+    private broadcastValidationResults(result: ValidationResult): void {
+        try {
+            // Convert ValidationMessage[] to ValidationIssue[]
+            const issues: ValidationIssue[] = result.messages.map(msg => ({
+                id: msg.code || `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                elementId: msg.elementId,
+                severity: msg.type === 'error' ? ValidationSeverity.ERROR :
+                          msg.type === 'warning' ? ValidationSeverity.WARNING :
+                          ValidationSeverity.INFO,
+                code: msg.code || 'validation_message',
+                message: msg.message
+            }));
+
+            // Count issues by severity
+            const errorCount = issues.filter(i => i.severity === ValidationSeverity.ERROR).length;
+            const warningCount = issues.filter(i => i.severity === ValidationSeverity.WARNING).length;
+            const infoCount = issues.filter(i => i.severity === ValidationSeverity.INFO).length;
+
+            this.debug.log('Broadcasting validation results', {
+                isValid: result.isValid,
+                errorCount,
+                warningCount,
+                infoCount
+            });
+
+            // Send validation state changed message
+            router.send('model', {
+                id: `validation-${Date.now()}`,
+                type: EnvelopeMessageType.MODEL_VALIDATION_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: {
+                    isValid: result.isValid,
+                    issues,
+                    summary: {
+                        errorCount,
+                        warningCount,
+                        infoCount
+                    }
+                }
+            });
+        } catch (error) {
+            this.debug.error('Error broadcasting validation results:', error);
+        }
     }
 
     // Other helper methods remain the same...

@@ -8,6 +8,7 @@ import {
   ComponentType,
   EnvelopeMessageType,
   EnvelopeBase,
+  ValidationState,
 } from "@quodsi/shared";
 import { Settings, Hash, PlaySquare, FileJson, Info, Users, Wrench, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
@@ -28,6 +29,7 @@ import {
   prepareRequirementsForStorage,
   type ModelInput,
 } from "../utils/modelEditorHelpers";
+import { ValidationDashboard } from "./ValidationDashboard";
 
 import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
@@ -44,9 +46,10 @@ interface Props {
   onStatesChange: (states: StateListManager) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
+  validationState?: ValidationState | null;
 }
 
-type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities";
+type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities" | "validation";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -67,6 +70,12 @@ const TAB_CONFIG = [
     title: "Basic Settings",
     icon: Settings,
     tooltip: "Configure model name, simulation time settings, and runtime parameters"
+  },
+  {
+    id: "validation" as const,
+    title: "Validation",
+    icon: AlertTriangle,
+    tooltip: "View comprehensive model validation results and resolve any issues"
   },
   {
     id: "states" as const,
@@ -159,7 +168,7 @@ const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: str
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements, validationState }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -694,6 +703,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
             </div>
           </div>
         </div>
+      )}
+      {activeTab === "validation" && (
+        <ValidationDashboard
+          validationState={validationState || null}
+          referenceData={referenceData}
+        />
       )}
 
       {/* Resource Requirement Modal */}

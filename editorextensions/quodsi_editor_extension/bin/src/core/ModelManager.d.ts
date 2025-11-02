@@ -68,6 +68,10 @@ export declare class ModelManager {
      * Forces a model validation
      */
     validateModel(): Promise<ValidationResult>;
+    /**
+     * Broadcasts validation results to React UI panels
+     */
+    private broadcastValidationResults;
     private findElementProxy;
     getModel(): Model | null;
     /**

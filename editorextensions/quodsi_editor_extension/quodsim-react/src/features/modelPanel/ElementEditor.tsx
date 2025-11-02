@@ -4,8 +4,8 @@ import {
   EditorReferenceData,
   DiagramElementType,
   StateListManager,
+  ValidationState,
 } from "@quodsi/shared";
-import { AccordionSection } from "../shared/AccordionSection";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
@@ -22,13 +22,12 @@ interface ElementEditorProps {
   onSave: (data: any) => void;
   onRemoveModel?: () => void;
   referenceData: EditorReferenceData;
-  isExpanded: boolean;
-  onToggle: () => void;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
+  validationState?: ValidationState | null;
 }
 
 /**
@@ -40,28 +39,16 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   onSave,
   onRemoveModel,
   referenceData,
-  isExpanded,
-  onToggle,
   currentElement,
   states,
   onStatesChange,
   resourceRequirements,
   outgoingConnectors,
+  validationState,
 }) => {
-  // Helper to get descriptive title for the accordion section
-  const getElementTypeDisplay = () => {
-    return elementType === SimulationObjectType.Model
-      ? "Model Properties"
-      : elementType
-      ? `Edit ${elementType}`
-      : "Element Editor";
-  };
-
-  // Handles edit cancellation
+  // Simple cancel handler - no accordion state to manage
   const handleCancel = () => {
-    if (isExpanded) {
-      onToggle();
-    }
+    // Editors handle their own cancel behavior
   };
 
   // Renders the appropriate editor component based on element type
@@ -98,6 +85,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onStatesChange={onStatesChange}
             referenceData={referenceData}
             resourceRequirements={resourceRequirements}
+            validationState={validationState}
           />
         );
 
@@ -202,12 +190,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   }
 
   return (
-    <AccordionSection
-      title={getElementTypeDisplay()}
-      isExpanded={isExpanded}
-      onToggle={onToggle}
-    >
+    <div className="bg-white">
       {editorContent}
-    </AccordionSection>
+    </div>
   );
 };
