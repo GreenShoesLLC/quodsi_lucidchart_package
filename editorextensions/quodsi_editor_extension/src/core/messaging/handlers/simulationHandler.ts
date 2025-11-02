@@ -4,7 +4,8 @@ import {
   SimulationStatus,
   SimulationJob,
   ModelSerializerFactory,
-  Model
+  Model,
+  generateUUID
 } from '@quodsi/shared';
 import {
   DocumentProxy,
@@ -13,7 +14,6 @@ import {
   Viewport,
   EditorClient
 } from 'lucid-extension-sdk';
-import { v4 as uuidv4 } from 'uuid';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
@@ -250,7 +250,7 @@ export class SimulationHandler {
       console.log('[SimulationHandler] SVG obtained successfully');
       
       // Generate unique scenario ID and job ID
-      const scenarioId = uuidv4();
+      const scenarioId = generateUUID();
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;

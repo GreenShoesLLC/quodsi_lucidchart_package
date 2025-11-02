@@ -1,4 +1,4 @@
-import { v4 as uuid } from 'uuid';
+import { generateUUID } from '../utils/uuidUtils';
 import { EnvelopeMessageType, EnvelopMessagePayloads, EnvelopeBase, MessageSource, MessageTarget } from './index';
 
 /**
@@ -11,13 +11,13 @@ import { EnvelopeMessageType, EnvelopMessagePayloads, EnvelopeBase, MessageSourc
  * @returns A properly formatted message envelope
  */
 export function createBaseMessage<T extends EnvelopeMessageType>(
-  type: T, 
-  source: MessageSource, 
+  type: T,
+  source: MessageSource,
   target: MessageTarget,
   data: EnvelopMessagePayloads[T]
 ): EnvelopeBase & { type: T, data: EnvelopMessagePayloads[T] } {
   return {
-    id: uuid(),
+    id: generateUUID(),
     type,
     source,
     target,

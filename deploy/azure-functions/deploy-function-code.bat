@@ -30,7 +30,7 @@ if /I "%ENV%"=="dev" (
 )
 
 REM Get the root directory of the project
-set rootDir=%~dp0..\..\..\..
+set rootDir=%~dp0..\..
 set projectPath=%rootDir%\dataconnectors\quodsi_data_connector_lucidchart_v2
 
 REM Show settings

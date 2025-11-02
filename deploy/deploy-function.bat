@@ -6,7 +6,7 @@ REM   environment: dev (default), tst, prd
 set ENV=%1
 
 REM Call the actual deployment script
-call "%~dp0infrastructure\deployment\scripts\function-deployment\deploy-function.bat" %ENV%
+call "%~dp0azure-functions\deploy-function-code.bat" %ENV%
 
 REM Preserve exit code
 exit /b %ERRORLEVEL%

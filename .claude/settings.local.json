@@ -13,7 +13,12 @@
       "Bash(npm ls:*)",
       "Bash(npm install)",
       "Bash(npm run build:*)",
-      "Bash(npm run bundle:*)"
+      "Bash(npm run bundle:*)",
+      "Bash(tree:*)",
+      "Bash(find:*)",
+      "Bash(git mv:*)",
+      "Bash(az account show:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []

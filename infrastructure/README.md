@@ -1,23 +1,84 @@
-# Azure Infrastructure Management
+# Infrastructure Provisioning
 
-This folder contains the infrastructure as code (IaC) scripts and templates for managing Azure resources across development, testing, and production environments for the Quodsi Lucidchart Package.
+This directory contains Infrastructure as Code (IaC) for **provisioning Azure resources** (rare operation).
+
+**Looking for application deployment?** See `/deploy/` for deploying code to existing infrastructure.
+
+## Directory Structure
+
+```
+/infrastructure/
+├── batch/              # Azure Batch account and pools
+│   └── v1/            # Current version templates
+├── function-apps/      # Azure Function App infrastructure
+│   └── v1/            # Current version templates
+├── storage/            # Azure Storage accounts
+│   └── v1/            # Current version templates
+├── scripts/            # ARM deployment orchestration scripts
+├── extracted-config/   # Archived/reference configurations
+└── README.md          # This file
+```
+
+## What This Does vs. What It Doesn't Do
+
+**This directory (Infrastructure):**
+- ✅ Creates Azure resources (Batch, Function Apps, Storage)
+- ✅ Provisions infrastructure using ARM templates
+- ✅ Sets up environment-specific configurations
+- ✅ Manages resource groups and dependencies
+
+**This directory does NOT:**
+- ❌ Deploy function code (see `/deploy/azure-functions/`)
+- ❌ Build Lucid extension packages (see `/deploy/lucid-package/`)
+- ❌ Deploy application updates (see `/deploy/`)
 
 ## Contents
 
-- `extract-azure-config.ps1`: Script to extract configurations from existing Azure resources and convert them to Bicep templates
-- `extracted-config/`: Generated Bicep templates and deployment scripts based on existing resources
-  - `combined-template.bicep`: Main Bicep template for all resources
-  - Environment-specific parameter files: `dev.parameters.json`, `tst.parameters.json`, `prd.parameters.json`
-  - `deploy.ps1`: Script to deploy resources to all environments
+### Active Templates
+
+- **`batch/v1/`**: Azure Batch account and environment-specific pools
+- **`function-apps/v1/`**: Function App infrastructure (not the code)
+- **`storage/v1/`**: Storage accounts for Batch and simulations
+- **`scripts/`**: Shared ARM deployment utilities
+
+### Utilities
+
+- `extract-azure-config.ps1`: Extract configurations from existing Azure resources
+- `extracted-config/`: Archived templates and reference configurations
+
+## Quick Start
+
+### Provisioning a New Environment
+
+```powershell
+# 1. Deploy storage accounts
+cd storage/v1
+.\deploy-storage.ps1 -Environment dev -CreateResourceGroups
+
+# 2. Deploy Batch infrastructure (if first time)
+cd ../../batch/v1
+.\deploy-batch.ps1 -DeploymentType all -CreateResourceGroup
+
+# 3. Deploy Function App infrastructure
+cd ../../function-apps/v1
+.\deploy-function-nolinux.ps1 -Environment dev
+
+# 4. Then deploy application code (see /deploy/ directory)
+```
+
+**See component-specific READMEs in each subdirectory for detailed instructions.**
 
 ## Core Resources
 
-The infrastructure management in this folder is focused on the following key resources:
+The infrastructure provisions the following key resources per environment:
 
-- **Function App**: `dev-quodsi-func-lucid-v3` (East US)
-- **Batch Account**: `quodsisharedbatch01` (East US 2)
-- **Storage Account**: `qdsdeveus2stbatch01` (East US 2)
-- **Resource Group**: `dev-quodsi-rg-01` (East US)
+| Resource Type | Naming Pattern | Example (dev) |
+|--------------|----------------|---------------|
+| Resource Group | `{env}-quodsi-rg-01` | `dev-quodsi-rg-01` |
+| Function App | `{env}-quodsi-func-v1` | `dev-quodsi-func-v1` |
+| Storage Account | `{env}quodsist01` | `devquodsist01` |
+| Batch Account | `quodsisharedbatch01` (shared) | `quodsisharedbatch01` |
+| Batch Pool | `quodsi-{env}-python-pool-01` | `quodsi-dev-python-pool-01` |
 
 ## Environment Setup Process
 

@@ -79,6 +79,7 @@ export * from './types/accordion/AccordionState';
 // Service exports
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
+export * from './utils/uuidUtils';
 
 // Serialization exports
 export * from './serialization';

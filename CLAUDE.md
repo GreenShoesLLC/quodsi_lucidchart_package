@@ -161,13 +161,44 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 
 ## Deployment
 
-### Extension Deployment
-1. Build React app with production environment variables
-2. Copy React build to `public/quodsim-react`
-3. Run `npm run bundle` from root
-4. Upload resulting `package.zip` to LucidChart developer portal
+The project separates **infrastructure provisioning** (rare) from **application deployment** (frequent):
 
-### Data Connector Deployment
-- Uses PowerShell scripts in `infrastructure/deployment/`
-- Deploys to dev/test/prod based on parameters
-- Requires Azure CLI and appropriate permissions
+### Infrastructure Provisioning (`/infrastructure/`)
+Infrastructure as Code (ARM templates) for creating Azure resources:
+- **Batch**: `/infrastructure/batch/v1/` - Batch account and environment pools
+- **Function Apps**: `/infrastructure/function-apps/v1/` - Function App infrastructure
+- **Storage**: `/infrastructure/storage/v1/` - Storage accounts
+- **Shared Scripts**: `/infrastructure/scripts/` - ARM deployment utilities
+
+Provision infrastructure rarely, only when creating new environments or modifying resources.
+
+### Application Deployment (`/deploy/`)
+Scripts for deploying code to existing infrastructure:
+
+#### Function App Code Deployment
+```bash
+# Quick deployment (uses convenience wrapper)
+./deploy/deploy-function.bat dev
+
+# Or use PowerShell directly with options
+./deploy/azure-functions/deploy-function-code.ps1 -Environment dev -Force
+```
+
+#### Lucid Extension Package
+```bash
+# Build and bundle for specific environment
+./deploy/lucid-package/build-bundle.ps1 -TargetEnvironment PRD
+
+# Then upload package.zip to LucidChart developer portal
+```
+
+#### React App (optional standalone build)
+```bash
+# Usually bundled automatically by Lucid package build
+./deploy/react/build-react.ps1 -TargetEnvironment Dev
+```
+
+### Deployment Frequency
+- **Infrastructure**: Rarely (new environments or resource changes)
+- **Function Code**: Frequently (on backend changes)
+- **Lucid Extension**: Frequently (on extension/UI changes)

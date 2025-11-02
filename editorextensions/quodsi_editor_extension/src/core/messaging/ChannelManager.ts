@@ -1,4 +1,3 @@
-import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
 import { Channel, PanelRole } from './types';
 import { RoutablePanel } from './RoutablePanel';
