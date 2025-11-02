@@ -3,6 +3,7 @@
 import {
     BlobServiceClient,
     BlobUploadCommonResponse,
+    BlobDeleteIfExistsResponse,
     BlobSASPermissions,
     generateBlobSASQueryParameters,
     StorageSharedKeyCredential
@@ -77,6 +78,7 @@ export class AzureStorageService {
     private blobRetryOptions: PartialAttemptOptions<string>;
     private existsRetryOptions: PartialAttemptOptions<boolean>;
     private uploadRetryOptions: PartialAttemptOptions<BlobUploadCommonResponse>;
+    private deleteRetryOptions: PartialAttemptOptions<BlobDeleteIfExistsResponse>;
 
     constructor(connectionString: string) {
         storageImportant('[AzureStorageService] Initializing service');
@@ -123,6 +125,20 @@ export class AzureStorageService {
             timeout: 10000,     // 10 second timeout
             handleError: async (error: any, context: AttemptContext) => {
                 storageWarn('[AzureStorageService] Upload retry:', {
+                    attempt: context.attemptNum,
+                    error: error.message
+                });
+            }
+        };
+
+        // Configure delete retry options
+        this.deleteRetryOptions = {
+            maxAttempts: 3,
+            initialDelay: 200,
+            factor: 2,
+            timeout: 10000,     // 10 second timeout
+            handleError: async (error: any, context: AttemptContext) => {
+                storageWarn('[AzureStorageService] Delete retry:', {
                     attempt: context.attemptNum,
                     error: error.message
                 });
@@ -263,6 +279,58 @@ export class AzureStorageService {
             return true;
         } catch (error) {
             storageError('[AzureStorageService] Upload failed:', {
+                containerName,
+                blobName,
+                error: error.message,
+                durationMs: Date.now() - startTime
+            });
+            return false;
+        }
+    }
+
+    async deleteBlob(containerName: string, blobName: string): Promise<boolean> {
+        const startTime = Date.now();
+
+        try {
+            storageDebug('[AzureStorageService] Attempting to delete blob:', {
+                containerName,
+                blobName,
+                fullPath: `${containerName}/${blobName}`
+            });
+
+            const containerClient = this.blobServiceClient.getContainerClient(containerName);
+            const blobClient = containerClient.getBlobClient(blobName);
+
+            // Use deleteIfExists to avoid errors if blob doesn't exist
+            const deleteResult = await retry(async () => {
+                const deleteStart = Date.now();
+                const result = await blobClient.deleteIfExists();
+
+                storageDebug('[AzureStorageService] Blob delete operation:', {
+                    succeeded: result.succeeded,
+                    deleteMs: Date.now() - deleteStart
+                });
+
+                return result;
+            }, this.deleteRetryOptions);
+
+            if (deleteResult.succeeded) {
+                storageLog('[AzureStorageService] Blob deleted successfully:', {
+                    containerName,
+                    blobName,
+                    durationMs: Date.now() - startTime
+                });
+                return true;
+            } else {
+                storageLog('[AzureStorageService] Blob did not exist:', {
+                    containerName,
+                    blobName,
+                    durationMs: Date.now() - startTime
+                });
+                return false;
+            }
+        } catch (error) {
+            storageError('[AzureStorageService] Blob deletion failed:', {
                 containerName,
                 blobName,
                 error: error.message,

@@ -48,7 +48,8 @@
         "Poll": "poll",
         "HardRefresh": "hardRefresh",
         "GetDocumentStatus": "getDocumentStatusAction",
-        "ListScenarios": "listScenarios"
+        "ListScenarios": "listScenarios",
+        "DeleteScenario": "deleteScenario"
       }
     }
   ]

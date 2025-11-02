@@ -33,6 +33,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [relativeTime, setRelativeTime] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
   const modelOpsSender = useModelOpsSender();
 
   // Update expiry countdown
@@ -158,9 +159,18 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
   };
 
   const handleDelete = () => {
-    if (onDelete && confirm(`Are you sure you want to delete scenario "${scenario.name}"?`)) {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (onDelete) {
       onDelete(scenario.id);
     }
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   // Get status icon and color
@@ -281,17 +291,41 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
         </div>
       )}
 
-      {/* Delete Button (Future - currently disabled) */}
-      {onDelete && false && ( // Disabled for now
+      {/* Delete Confirmation / Delete Button */}
+      {onDelete && (
         <div className="border-t border-gray-200 pt-1.5 mt-1.5">
-          <button
-            onClick={handleDelete}
-            disabled
-            className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs text-gray-400 border border-gray-300 rounded hover:bg-gray-100 transition-colors cursor-not-allowed"
-          >
-            <Trash2 className="w-3 h-3" />
-            Delete
-          </button>
+          {showDeleteConfirm ? (
+            <div className="p-2 bg-red-50 border border-red-200 rounded">
+              <div className="text-xs font-medium text-red-900 mb-1">
+                Delete "{scenario.name}"?
+              </div>
+              <div className="text-xs text-red-700 mb-2">
+                This will permanently delete all scenario data. This action cannot be undone.
+              </div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors font-medium"
+                >
+                  Delete Scenario
+                </button>
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleDelete}
+              className="w-full flex items-center justify-center gap-1 px-2 py-1 text-xs text-red-600 border border-red-300 rounded hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-3 h-3" />
+              Delete
+            </button>
+          )}
         </div>
       )}
     </div>

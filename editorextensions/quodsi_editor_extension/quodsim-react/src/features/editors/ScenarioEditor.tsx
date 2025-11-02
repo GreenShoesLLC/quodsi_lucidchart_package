@@ -69,12 +69,22 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
         setError(message.data?.message || "Failed to load scenarios");
         setLoading(false);
         setScenarios([]);
+      } else if (message.type === EnvelopeMessageType.SCENARIO_DELETE_RESULT) {
+        const result = message.data;
+        if (result?.success) {
+          console.log('[ScenarioEditor] Scenario deleted successfully, refreshing list');
+          // Refresh the scenario list after successful deletion
+          loadScenarios();
+        } else {
+          console.error('[ScenarioEditor] Failed to delete scenario:', result?.error);
+          setError(result?.error || "Failed to delete scenario");
+        }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [documentId]);
 
   // Load scenarios on mount
   useEffect(() => {
@@ -126,9 +136,16 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
   }, [scenarios, isTabVisible, documentId]);
 
   const handleDeleteScenario = (scenarioId: string) => {
-    // TODO: Implement scenario deletion
-    console.log("Delete scenario:", scenarioId);
-    // This will be implemented in a future phase
+    if (!documentId) {
+      console.error('[ScenarioEditor] Cannot delete scenario: missing documentId');
+      return;
+    }
+
+    console.log('[ScenarioEditor] Deleting scenario:', scenarioId);
+
+    // Send delete request
+    scenarioSender.deleteScenario(documentId, scenarioId);
+    // Result will be handled in the message listener
   };
 
   return (

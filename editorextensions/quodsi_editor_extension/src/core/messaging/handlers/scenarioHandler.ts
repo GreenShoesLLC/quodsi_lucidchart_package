@@ -127,11 +127,27 @@ export class ScenarioHandler {
 
       ScenarioHandler.logger.log('Calling data connector DeleteScenario action...');
 
-      // TODO: Call the data connector to delete scenario
-      // For now, this is a placeholder that will be implemented later
-      ScenarioHandler.logger.warn('DeleteScenario action not yet implemented');
+      // Call the data connector to delete scenario
+      const result = await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_data_connector',
+        actionName: 'DeleteScenario',
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId
+        },
+        asynchronous: true
+      });
 
-      // Send success response (placeholder)
+      // Extract the actual data from the Lucid SDK wrapper
+      const responseData = result.json || result;
+
+      ScenarioHandler.logger.log('DeleteScenario action completed', {
+        success: responseData?.success,
+        documentId: data.documentId,
+        scenarioId: data.scenarioId
+      });
+
+      // Send success response
       router.send('model', {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.SCENARIO_DELETE_RESULT,
@@ -139,10 +155,10 @@ export class ScenarioHandler {
         target: 'model-iframe',
         version: '1.0',
         data: {
-          success: false,
+          success: responseData?.success || false,
           documentId: data.documentId,
           scenarioId: data.scenarioId,
-          error: 'Scenario deletion not yet implemented'
+          error: responseData?.error
         }
       });
 
