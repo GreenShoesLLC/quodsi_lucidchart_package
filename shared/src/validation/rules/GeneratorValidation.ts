@@ -44,7 +44,7 @@ export class GeneratorValidation extends ValidationRule {
 
         if (!hasOutgoingConnections) {
             this.log(`Validation failed: Generator ID ${generator.id} has no outgoing connections.`);
-            messages.push(ValidationMessages.isolatedElement('Generator', generator.id));
+            messages.push(ValidationMessages.isolatedElement('Generator', generator.id, generator.name));
         } else {
             this.log(`Validation passed: Generator ID ${generator.id} has outgoing connections.`);
         }
@@ -68,7 +68,7 @@ export class GeneratorValidation extends ValidationRule {
         // Validate the Generator's name
         if (!generator.name || generator.name.trim().length === 0) {
             this.log(`Validation failed: Generator ID ${generator.id} has an empty or missing name.`);
-            messages.push(ValidationMessages.missingName('Generator', generator.id));
+            messages.push(ValidationMessages.missingName('Generator', generator.id, generator.name));
         }
 
         // Validate entities per creation
@@ -79,7 +79,8 @@ export class GeneratorValidation extends ValidationRule {
             messages.push(ValidationMessages.generatorValidation(
                 'entities per creation',
                 generator.id,
-                `Must be between ${GeneratorValidation.MIN_ENTITIES_PER_CREATION} and ${GeneratorValidation.MAX_ENTITIES_PER_CREATION}`
+                `Must be between ${GeneratorValidation.MIN_ENTITIES_PER_CREATION} and ${GeneratorValidation.MAX_ENTITIES_PER_CREATION}`,
+                generator.name
             ));
         }
 
@@ -91,7 +92,8 @@ export class GeneratorValidation extends ValidationRule {
             messages.push(ValidationMessages.generatorValidation(
                 'periodic occurrences',
                 generator.id,
-                'Must be Infinity or a number greater than 0'
+                'Must be Infinity or a number greater than 0',
+                generator.name
             ));
         }
 
@@ -104,7 +106,8 @@ export class GeneratorValidation extends ValidationRule {
             messages.push(ValidationMessages.generatorValidation(
                 'maximum entities limit',
                 generator.id,
-                `Must be Infinity or between ${GeneratorValidation.MIN_MAX_ENTITIES} and ${GeneratorValidation.MAX_MAX_ENTITIES}`
+                `Must be Infinity or between ${GeneratorValidation.MIN_MAX_ENTITIES} and ${GeneratorValidation.MAX_MAX_ENTITIES}`,
+                generator.name
             ));
         }
 
@@ -171,7 +174,8 @@ export class GeneratorValidation extends ValidationRule {
             messages.push(ValidationMessages.generatorValidation(
                 'entity reference',
                 generator.id,
-                'Must specify an entity ID'
+                'Must specify an entity ID',
+                generator.name
             ));
         } else {
             const entityExists = state.modelDefinition.entities.get(generator.entityId);
@@ -180,7 +184,8 @@ export class GeneratorValidation extends ValidationRule {
                 messages.push(ValidationMessages.generatorValidation(
                     'entity reference',
                     generator.id,
-                    `References non-existent entity ${generator.entityId}`
+                    `References non-existent entity ${generator.entityId}`,
+                    generator.name
                 ));
             }
         }

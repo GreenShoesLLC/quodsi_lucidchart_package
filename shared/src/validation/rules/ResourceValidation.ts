@@ -1,5 +1,6 @@
 import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
+import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationMessage } from "../../types/validation";
 import { Resource } from "../../types/elements/Resource";
 import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
@@ -33,20 +34,12 @@ export class ResourceValidation extends ValidationRule {
 
         if (!resource.name || resource.name.trim().length === 0) {
             this.log(`Resource ID ${resource.id} has no name.`);
-            messages.push({
-                type: 'warning',
-                message: `Resource ${resource.id} has no name`,
-                elementId: resource.id
-            });
+            messages.push(ValidationMessages.missingName('Resource', resource.id, resource.name));
         }
 
         if (typeof resource.capacity !== 'number' || resource.capacity < 1) {
             this.log(`Resource ID ${resource.id} has invalid capacity: ${resource.capacity}`);
-            messages.push({
-                type: 'error',
-                message: `Resource ${resource.id} has invalid capacity (must be >= 1)`,
-                elementId: resource.id
-            });
+            messages.push(ValidationMessages.invalidCapacity('Resource', resource.id, 1, resource.name));
         }
 
         if (Math.floor(resource.capacity) !== resource.capacity) {
@@ -115,9 +108,16 @@ export class ResourceValidation extends ValidationRule {
         resourceUsage.forEach((usedByActivities, resourceId) => {
             if (usedByActivities.size === 0) {
                 this.log(`Resource ID ${resourceId} is not used by any activity.`);
+
+                // Look up resource to get name
+                const resource = resources.find(r => r.id === resourceId);
+                const displayName = resource?.name && resource.name.trim() !== ''
+                    ? `'${resource.name}'`
+                    : resourceId;
+
                 messages.push({
                     type: 'warning',
-                    message: `Resource ${resourceId} is not used by any activity`,
+                    message: `Resource ${displayName} is not used by any activity`,
                     elementId: resourceId
                 });
             }

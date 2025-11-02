@@ -21,3 +21,5 @@ export {
     ValidationMessage,
     ValidationResult
 } from '../types/validation';  // Assuming these types exist in your types folder
+
+export { ValidationRuleName } from './types/ValidationRuleName';

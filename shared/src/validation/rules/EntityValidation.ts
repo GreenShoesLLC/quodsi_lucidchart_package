@@ -37,7 +37,7 @@ export class EntityValidation extends ValidationRule {
 
         if (!entity.name || entity.name.trim().length === 0) {
             this.log(`Entity ID ${entity.id} has a missing name.`);
-            messages.push(ValidationMessages.missingName('Entity', entity.id));
+            messages.push(ValidationMessages.missingName('Entity', entity.id, entity.name));
         }
 
         if (!entity.id || entity.id.trim().length === 0) {
@@ -51,9 +51,14 @@ export class EntityValidation extends ValidationRule {
 
         if (entity.name === 'New Entity') {
             this.log(`Entity ID ${entity.id} is using the default name.`);
+
+            const displayName = entity.name && entity.name.trim() !== ''
+                ? `'${entity.name}'`
+                : entity.id;
+
             messages.push({
                 type: 'warning',
-                message: `Entity ${entity.id} is using default name`,
+                message: `Entity ${displayName} is using default name`,
                 elementId: entity.id
             });
         }
@@ -71,9 +76,14 @@ export class EntityValidation extends ValidationRule {
 
         if (!isUsedByGenerator) {
             this.log(`Entity ID ${entity.id} is not used by any generator.`);
+
+            const displayName = entity.name && entity.name.trim() !== ''
+                ? `'${entity.name}'`
+                : entity.id;
+
             messages.push({
                 type: 'warning',
-                message: `Entity ${entity.id} is not used by any generator`,
+                message: `Entity ${displayName} is not used by any generator`,
                 elementId: entity.id
             });
         }
@@ -85,9 +95,14 @@ export class EntityValidation extends ValidationRule {
 
         if (duplicateNames.length > 0) {
             this.log(`Entity ID ${entity.id} has a name conflict with other entities.`);
+
+            const displayName = entity.name && entity.name.trim() !== ''
+                ? `'${entity.name}'`
+                : entity.id;
+
             messages.push({
                 type: 'warning',
-                message: `Entity ${entity.id} has a name that conflicts with other entities`,
+                message: `Entity ${displayName} has a name that conflicts with other entities`,
                 elementId: entity.id
             });
         }

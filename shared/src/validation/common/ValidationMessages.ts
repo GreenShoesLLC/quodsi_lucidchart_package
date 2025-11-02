@@ -1,20 +1,35 @@
 import { ValidationMessage } from "../../types/validation";
 
 export class ValidationMessages {
+    /**
+     * Formats an element display name for validation messages.
+     * Shows name in quotes with ID as fallback if name is empty.
+     */
+    private static getDisplayName(name: string | undefined, id: string): string {
+        if (name && name.trim() !== '') {
+            return `'${name}'`;
+        }
+        return id;
+    }
+
     // Existing messages...
-    static missingName(elementType: string, elementId: string): ValidationMessage {
+    static missingName(elementType: string, elementId: string, elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'warning',
-            message: `${elementType} ${elementId} has no name`,
-            elementId
+            message: `${elementType} ${displayName} has no name`,
+            elementId,
+            code: 'missing_name'
         };
     }
 
-    static isolatedElement(elementType: string, elementId: string): ValidationMessage {
+    static isolatedElement(elementType: string, elementId: string, elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'error',
-            message: `${elementType} ${elementId} is isolated (no connections)`,
-            elementId
+            message: `${elementType} ${displayName} is isolated (no connections)`,
+            elementId,
+            code: 'isolated_element'
         };
     }
 
@@ -26,52 +41,64 @@ export class ValidationMessages {
         };
     }
 
-    static invalidCapacity(elementType: string, elementId: string, minimum: number = 1): ValidationMessage {
+    static invalidCapacity(elementType: string, elementId: string, minimum: number = 1, elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'error',
-            message: `${elementType} ${elementId} has invalid capacity (must be >= ${minimum})`,
-            elementId
+            message: `${elementType} ${displayName} has invalid capacity (must be >= ${minimum})`,
+            elementId,
+            code: 'invalid_capacity'
         };
     }
 
     // New messages for Activity validation
-    static noConnections(elementType: string, elementId: string, direction: 'incoming' | 'outgoing'): ValidationMessage {
+    static noConnections(elementType: string, elementId: string, direction: 'incoming' | 'outgoing', elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'warning',
-            message: `${elementType} ${elementId} has no ${direction} connections (potential ${direction === 'incoming' ? 'start' : 'end'} activity)`,
-            elementId
+            message: `${elementType} ${displayName} has no ${direction} connections (potential ${direction === 'incoming' ? 'start' : 'end'} activity)`,
+            elementId,
+            code: 'no_connections'
         };
     }
 
-    static largeBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output'): ValidationMessage {
+    static largeBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'warning',
-            message: `${elementType} ${elementId} has unusually large ${type} buffer capacity`,
-            elementId
+            message: `${elementType} ${displayName} has unusually large ${type} buffer capacity`,
+            elementId,
+            code: 'large_buffer_capacity'
         };
     }
 
-    static invalidBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output'): ValidationMessage {
+    static invalidBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(elementName, elementId);
         return {
             type: 'error',
-            message: `${elementType} ${elementId} has invalid ${type} buffer capacity`,
-            elementId
+            message: `${elementType} ${displayName} has invalid ${type} buffer capacity`,
+            elementId,
+            code: 'invalid_buffer_capacity'
         };
     }
 
-    static missingOperationSteps(elementId: string): ValidationMessage {
+    static missingOperationSteps(elementId: string, activityName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(activityName, elementId);
         return {
             type: 'error',
-            message: `Activity ${elementId} is missing operation steps property`,
-            elementId
+            message: `Activity ${displayName} is missing operation steps property`,
+            elementId,
+            code: 'missing_operation_steps'
         };
     }
 
-    static noOperationSteps(elementId: string): ValidationMessage {
+    static noOperationSteps(elementId: string, activityName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(activityName, elementId);
         return {
             type: 'warning',
-            message: `Activity ${elementId} has no operation steps defined`,
-            elementId
+            message: `Activity ${displayName} has no operation steps defined`,
+            elementId,
+            code: 'no_operation_steps'
         };
     }
 
@@ -123,27 +150,33 @@ export class ValidationMessages {
         };
     }
 
-    static smallInputBuffer(elementId: string): ValidationMessage {
+    static smallInputBuffer(elementId: string, activityName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(activityName, elementId);
         return {
             type: 'warning',
-            message: `Activity ${elementId} input buffer may be too small for incoming flow capacity`,
-            elementId
+            message: `Activity ${displayName} input buffer may be too small for incoming flow capacity`,
+            elementId,
+            code: 'small_input_buffer'
         };
     }
 
-    static circularDependency(elementId: string): ValidationMessage {
+    static circularDependency(elementId: string, activityName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(activityName, elementId);
         return {
             type: 'warning',
-            message: `Potential circular dependency detected involving activity ${elementId}`,
-            elementId
+            message: `Potential circular dependency detected involving activity ${displayName}`,
+            elementId,
+            code: 'circular_dependency'
         };
     }
 
-    static resourceLeak(elementId: string): ValidationMessage {
+    static resourceLeak(elementId: string, activityName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(activityName, elementId);
         return {
             type: 'warning',
-            message: `Activity ${elementId} requests resources but never releases them`,
-            elementId
+            message: `Activity ${displayName} requests resources but never releases them`,
+            elementId,
+            code: 'resource_leak'
         };
     }
 
@@ -163,11 +196,13 @@ export class ValidationMessages {
     }
 
     // Generator Validation
-    static generatorValidation(category: string, generatorId: string, detail: string): ValidationMessage {
+    static generatorValidation(category: string, generatorId: string, detail: string, generatorName?: string): ValidationMessage {
+        const displayName = this.getDisplayName(generatorName, generatorId);
         return {
             type: 'error',
-            message: `Generator ${generatorId} has invalid ${category}: ${detail}`,
-            elementId: generatorId
+            message: `Generator ${displayName} has invalid ${category}: ${detail}`,
+            elementId: generatorId,
+            code: 'generator_validation'
         };
     }
 

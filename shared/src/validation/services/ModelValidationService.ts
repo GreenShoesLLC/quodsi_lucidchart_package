@@ -1,11 +1,3 @@
-// import {
-//     ActivityRelationships,
-//     ModelDefinition,
-//     ModelDefinitionLogger,
-//     QuodsiLogger,
-//     ValidationMessage,
-//     ValidationResult
-// } from "@quodsi/shared";
 import { ActivityRelationships } from "../../types/ActivityRelationships";
 import { ModelDefinition } from "../../types/elements/ModelDefinition";
 import { ModelDefinitionLogger } from "../../types/elements/ModelDefinitionLogger";
@@ -21,7 +13,25 @@ import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
 import { ValidationResult } from "../../types/validation";
+import { ValidationRuleName } from "../types/ValidationRuleName";
 
+/**
+ * Service for validating ModelDefinition objects against business rules.
+ *
+ * Coordinates multiple validation rules and aggregates results into a single
+ * ValidationResult. Implements caching to avoid re-validating unchanged models.
+ *
+ * @example
+ * ```typescript
+ * const validator = new ModelValidationService();
+ * validator.setLogging(true);
+ * const result = validator.validate(modelDefinition);
+ *
+ * if (!result.isValid) {
+ *   console.error('Validation failed:', result.messages);
+ * }
+ * ```
+ */
 export class ModelValidationService extends QuodsiLogger {
     protected readonly LOG_PREFIX = "[ModelValidation]";
     private rules: ValidationRule[];
@@ -41,9 +51,18 @@ export class ModelValidationService extends QuodsiLogger {
         this.setLogging(false);
     }
 
+    /**
+     * Validates a ModelDefinition and returns structured validation results.
+     *
+     * Uses caching based on model hash. If the model hasn't changed since the
+     * last validation, returns cached results. Otherwise, runs all validation
+     * rules and caches the new results.
+     *
+     * @param modelDefinition - The model to validate
+     * @returns ValidationResult containing validation status, counts, and messages
+     */
     public validate(modelDefinition: ModelDefinition): ValidationResult {
         const messages: ValidationMessage[] = [];
-        // ModelDefinitionLogger.log(modelDefinition)
         try {
             // Generate a hash of the model definition for cache comparison
             const currentHash = this.generateModelHash(modelDefinition);
@@ -68,7 +87,8 @@ export class ModelValidationService extends QuodsiLogger {
             return result;
 
         } catch (error) {
-            this.logError('[ModelValidation] Validation error:', error);
+            // Always log critical validation errors, regardless of logging settings
+            console.error(`${this.LOG_PREFIX} Critical validation error:`, error);
             return {
                 isValid: false,
                 errorCount: 1,
@@ -78,37 +98,82 @@ export class ModelValidationService extends QuodsiLogger {
         }
     }
     /**
-     * Enable or disable logging for a specific validation rule by its class name.
-     * @param ruleName - The class name of the validation rule.
-     * @param enabled - True to enable logging, false to disable.
+     * Enables or disables logging for a specific validation rule.
+     *
+     * @param ruleName - Name of the validation rule class (use ValidationRuleName enum for type safety)
+     * @param enabled - Whether to enable logging for this rule
      */
-    public setRuleLogging(ruleName: string, enabled: boolean): void {
+    public setRuleLogging(ruleName: ValidationRuleName | string, enabled: boolean): void {
         const rule = this.rules.find(r => r.constructor.name === ruleName);
         if (rule) {
             rule.setLogging(enabled);
             this.log(`Logging for ${ruleName} set to ${enabled}`);
         } else {
-            console.warn(`[ModelValidationService] Validation rule ${ruleName} not found.`);
+            this.logWarning(`Validation rule ${ruleName} not found.`);
         }
     }
 
+    /**
+     * Generates a hash of the model to detect changes.
+     *
+     * Hash includes both element counts and content hash of key properties.
+     * Used for cache invalidation.
+     *
+     * @param modelDefinition - The model to hash
+     * @returns Hash string representing current model state
+     */
     private generateModelHash(modelDefinition: ModelDefinition): string {
-        // Create a simple hash based on model contents
-        const activities = modelDefinition.activities.size();
-        const connectors = modelDefinition.connectors.size();
-        const resources = modelDefinition.resources.size();
-        const generators = modelDefinition.generators.size();
+        // Include element counts and content hash
+        const counts = [
+            modelDefinition.activities.size(),
+            modelDefinition.connectors.size(),
+            modelDefinition.resources.size(),
+            modelDefinition.generators.size(),
+            modelDefinition.entities.size()
+        ].join('-');
 
-        return `${activities}-${connectors}-${resources}-${generators}`;
+        const contentHash = this.hashModelContent(modelDefinition);
+        return `${counts}:${contentHash}`;
+    }
+
+    private hashModelContent(modelDefinition: ModelDefinition): string {
+        // Hash key properties of elements
+        const activities = modelDefinition.activities.getAll()
+            .map(a => `${a.id}:${a.name}:${a.capacity}`)
+            .sort()
+            .join('|');
+
+        const connectors = modelDefinition.connectors.getAll()
+            .map(c => `${c.id}:${c.sourceId}:${c.targetId}:${c.weight}`)
+            .sort()
+            .join('|');
+
+        const resources = modelDefinition.resources.getAll()
+            .map(r => `${r.id}:${r.name}:${r.capacity}`)
+            .sort()
+            .join('|');
+
+        const combined = `${activities}||${connectors}||${resources}`;
+        return this.simpleStringHash(combined);
+    }
+
+    private simpleStringHash(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return hash.toString(36);
     }
 
     private getModelState(modelDefinition: ModelDefinition, currentHash: string): ModelDefinitionState {
         // Reuse cached state if model hasn't changed
         if (this.cachedState && this.lastModelDefinitionHash === currentHash) {
-            this.log(`Model Definition hasn't changed, reusing cached validation}`);
+            this.log(`Model Definition hasn't changed, reusing cached validation`);
             return this.cachedState;
         }
-        this.log(`Model Definition has change`);
+        this.log(`Model Definition has changed`);
         // Create new state
         const state: ModelDefinitionState = {
             modelDefinition,
@@ -126,20 +191,12 @@ export class ModelValidationService extends QuodsiLogger {
     private batchValidate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
         this.log("[ModelValidation] Starting batch validation.");
 
-        // ModelDefinitionLogger.logModelDefinition(state.modelDefinition)
-
-        // Validate all rules
-        const validationPromises = this.rules.map(rule => {
-            return new Promise<void>((resolve) => {
-                rule.validate(state, messages);
-                resolve();
-            });
+        // Synchronous validation - rules are all synchronous
+        this.rules.forEach(rule => {
+            rule.validate(state, messages);
         });
 
-        // Wait for all validations to complete
-        Promise.all(validationPromises).then(() => {
-            this.log("[ModelValidation] Batch validation completed.");
-        });
+        this.log("[ModelValidation] Batch validation completed.");
     }
 
 
@@ -165,57 +222,65 @@ export class ModelValidationService extends QuodsiLogger {
         });
     }
 
+    /**
+     * Builds a map of activity relationships for validation rules.
+     *
+     * Creates a comprehensive view of how activities are connected and
+     * which resources they use. Used by validation rules to check
+     * connectivity and resource usage.
+     *
+     * @param modelDefinition - The model to analyze
+     * @returns Map of activity IDs to their relationship data
+     */
     private buildActivityRelationships(
         modelDefinition: ModelDefinition
     ): Map<string, ActivityRelationships> {
         const relationships = new Map<string, ActivityRelationships>();
-
-        // Get resources and their requirements for lookup
+        const activities = modelDefinition.activities.getAll();
+        const connectors = modelDefinition.connectors.getAll();
         const resourceRequirements = modelDefinition.resourceRequirements?.getAll() || [];
+
+        // Build requirement map once
         const requirementMap = new Map(
             resourceRequirements.map(req => [req.id, req])
         );
 
-        // Initialize relationships map for better performance
-        const activities = modelDefinition.activities.getAll();
-        const connectors = modelDefinition.connectors.getAll();
-
-        // Pre-allocate relationships for all activities
+        // Single pass: initialize relationships and populate resource assignments
         activities.forEach(activity => {
-            relationships.set(activity.id, {
-                incomingConnectors: new Set<string>(),
-                outgoingConnectors: new Set<string>(),
-                assignedResources: new Set<string>()
-            });
-        });
+            const assignedResources = new Set<string>();
 
-        // Process connectors in batch
-        connectors.forEach(connector => {
-            const sourceRel = relationships.get(connector.sourceId);
-            const targetRel = relationships.get(connector.targetId);
-
-            if (sourceRel) sourceRel.outgoingConnectors.add(connector.id);
-            if (targetRel) targetRel.incomingConnectors.add(connector.id);
-        });
-
-        // Process resource assignments efficiently
-        activities.forEach(activity => {
-            const activityRel = relationships.get(activity.id);
-            if (!activityRel || !activity.operationSteps) return;
-
-            // Process resource requirements for each operation step
-            activity.operationSteps.forEach(step => {
+            // Process resource assignments immediately during initialization
+            activity.operationSteps?.forEach(step => {
                 if (step.requirementId) {
                     const requirement = requirementMap.get(step.requirementId);
                     if (requirement) {
                         requirement.rootClauses.forEach(clause => {
                             clause.requests.forEach(request => {
-                                activityRel.assignedResources.add(request.resourceId);
+                                assignedResources.add(request.resourceId);
                             });
-                        })
+                        });
                     }
                 }
             });
+
+            relationships.set(activity.id, {
+                incomingConnectors: new Set<string>(),
+                outgoingConnectors: new Set<string>(),
+                assignedResources
+            });
+        });
+
+        // Single pass for connectors
+        connectors.forEach(connector => {
+            const source = relationships.get(connector.sourceId);
+            const target = relationships.get(connector.targetId);
+
+            if (source) {
+                source.outgoingConnectors.add(connector.id);
+            }
+            if (target) {
+                target.incomingConnectors.add(connector.id);
+            }
         });
 
         return relationships;
