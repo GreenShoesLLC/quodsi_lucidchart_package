@@ -1,7 +1,7 @@
 import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
-import { ValidationMessage } from "../../types/validation";
+import { ValidationIssue } from "../../quodsi-messaging/validation/types";
 import { Activity } from "../../types/elements/Activity";
 import { OperationStep } from "../../types/elements/OperationStep";
 import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
@@ -13,23 +13,23 @@ export class ActivityValidation extends ValidationRule {
     private static readonly MIN_CYCLE_TIME = 0.001;
     private static readonly MAX_CYCLE_TIME = 86400; // 24 hours in seconds
 
-    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         const activities = state.modelDefinition.activities.getAll();
 
         activities.forEach((activity: Activity) => {
-            this.validateActivityConnectivity(activity, state, messages);
-            this.validateActivityData(activity, messages);
-            this.validateOperationSequence(activity, state, messages);
-            this.validateBufferConstraints(activity, state, messages);
+            this.validateActivityConnectivity(activity, state, issues);
+            this.validateActivityData(activity, issues);
+            this.validateOperationSequence(activity, state, issues);
+            this.validateBufferConstraints(activity, state, issues);
         });
 
-        this.validateActivityInteractions(state, messages);
+        this.validateActivityInteractions(state, issues);
     }
 
     private validateActivityConnectivity(
         activity: Activity,
         state: ModelDefinitionState,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Validates that an activity is properly connected.
@@ -41,27 +41,27 @@ export class ActivityValidation extends ValidationRule {
         const relationships = state.activityRelationships.get(activity.id);
         if (!relationships) {
             this.log(`Activity ID ${activity.id} is isolated.`);
-            messages.push(ValidationMessages.isolatedElement("Activity", activity.id, activity.name));
+            issues.push(ValidationMessages.isolatedElement("Activity", activity.id, activity.name));
             return;
         }
 
         if (relationships.incomingConnectors.size === 0 && relationships.outgoingConnectors.size === 0) {
             this.log(`Activity ID ${activity.id} has no incoming or outgoing connections.`);
-            messages.push(ValidationMessages.isolatedElement("Activity", activity.id, activity.name));
+            issues.push(ValidationMessages.isolatedElement("Activity", activity.id, activity.name));
         }
 
         if (relationships.incomingConnectors.size === 0) {
             this.log(`Activity ID ${activity.id} has no incoming connections.`);
-            messages.push(ValidationMessages.noConnections("Activity", activity.id, "incoming", activity.name));
+            issues.push(ValidationMessages.noConnections("Activity", activity.id, "incoming", activity.name));
         }
 
         if (relationships.outgoingConnectors.size === 0) {
             this.log(`Activity ID ${activity.id} has no outgoing connections.`);
-            messages.push(ValidationMessages.noConnections("Activity", activity.id, "outgoing", activity.name));
+            issues.push(ValidationMessages.noConnections("Activity", activity.id, "outgoing", activity.name));
         }
     }
 
-    private validateActivityData(activity: Activity, messages: ValidationMessage[]): void {
+    private validateActivityData(activity: Activity, issues: ValidationIssue[]): void {
         /**
          * Validates the core data of an activity, including its name, capacity, and buffer sizes.
          */
@@ -70,21 +70,21 @@ export class ActivityValidation extends ValidationRule {
 
         if (!activity.name?.trim()) {
             this.log(`Activity ID ${activity.id} has a missing name.`);
-            messages.push(ValidationMessages.missingName("Activity", activity.id, activity.name));
+            issues.push(ValidationMessages.missingName("Activity", activity.id, activity.name));
         }
 
         if (typeof activity.capacity !== "number" || activity.capacity < 1) {
             this.log(`Activity ID ${activity.id} has an invalid capacity: ${activity.capacity}`);
-            messages.push(ValidationMessages.invalidCapacity("Activity", activity.id, 1, activity.name));
+            issues.push(ValidationMessages.invalidCapacity("Activity", activity.id, 1, activity.name));
         }
 
-        this.validateBufferCapacities(activity, messages);
-        this.validateOperationSteps(activity, messages);
+        this.validateBufferCapacities(activity, issues);
+        this.validateOperationSteps(activity, issues);
     }
 
     private validateBufferCapacities(
         activity: Activity,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Validates the input and output buffer capacities of an activity.
@@ -94,24 +94,24 @@ export class ActivityValidation extends ValidationRule {
 
         if (typeof activity.inputBufferCapacity !== "number" || activity.inputBufferCapacity < 0) {
             this.log(`Activity ID ${activity.id} has an invalid input buffer capacity: ${activity.inputBufferCapacity}`);
-            messages.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "input", activity.name));
+            issues.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "input", activity.name));
         } else if (activity.inputBufferCapacity > ActivityValidation.MAX_BUFFER_SIZE) {
             this.log(`Activity ID ${activity.id} has a large input buffer capacity: ${activity.inputBufferCapacity}`);
-            messages.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "input", activity.name));
+            issues.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "input", activity.name));
         }
 
         if (typeof activity.outputBufferCapacity !== "number" || activity.outputBufferCapacity < 0) {
             this.log(`Activity ID ${activity.id} has an invalid output buffer capacity: ${activity.outputBufferCapacity}`);
-            messages.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "output", activity.name));
+            issues.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "output", activity.name));
         } else if (activity.outputBufferCapacity > ActivityValidation.MAX_BUFFER_SIZE) {
             this.log(`Activity ID ${activity.id} has a large output buffer capacity: ${activity.outputBufferCapacity}`);
-            messages.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "output", activity.name));
+            issues.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "output", activity.name));
         }
     }
 
     private validateOperationSteps(
         activity: Activity,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Validates the operation steps defined for an activity.
@@ -121,18 +121,18 @@ export class ActivityValidation extends ValidationRule {
 
         if (!Array.isArray(activity.operationSteps)) {
             this.log(`Activity ID ${activity.id} has no operation steps defined.`);
-            messages.push(ValidationMessages.missingOperationSteps(activity.id, activity.name));
+            issues.push(ValidationMessages.missingOperationSteps(activity.id, activity.name));
             return;
         }
 
         if (activity.operationSteps.length === 0) {
             this.log(`Activity ID ${activity.id} has an empty operation step list.`);
-            messages.push(ValidationMessages.noOperationSteps(activity.id, activity.name));
+            issues.push(ValidationMessages.noOperationSteps(activity.id, activity.name));
             return;
         }
 
         activity.operationSteps.forEach((step, index) => {
-            this.validateOperationStep(activity.id, step, index, messages);
+            this.validateOperationStep(activity.id, step, index, issues);
         });
     }
 
@@ -140,19 +140,19 @@ export class ActivityValidation extends ValidationRule {
         activityId: string,
         step: OperationStep,
         index: number,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         this.log(`Validating operation step ${index + 1} for Activity ID: ${activityId}`);
 
         // Validate duration
         // if (!step.duration?.durationLength) {
         //     this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an invalid duration.`);
-        //     messages.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
+        //     issues.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
         // } else {
         //     const duration = step.duration.durationLength;
         //     if (duration < ActivityValidation.MIN_CYCLE_TIME || duration > ActivityValidation.MAX_CYCLE_TIME) {
         //         this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an unusual duration: ${duration}`);
-        //         messages.push(ValidationMessages.unusualStepDuration(activityId, index + 1, duration));
+        //         issues.push(ValidationMessages.unusualStepDuration(activityId, index + 1, duration));
         //     }
         // }
 
@@ -163,7 +163,7 @@ export class ActivityValidation extends ValidationRule {
                 step.requirementId,
                 step.quantity,
                 index,
-                messages
+                issues
             );
         }
     }
@@ -173,22 +173,18 @@ export class ActivityValidation extends ValidationRule {
         requirementId: string,
         quantity: number,
         stepIndex: number,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         // You might want to pass ModelDefinitionState to this method to look up requirements
         if (quantity < 1) {
-            messages.push({
-                type: 'error',
-                message: `Operation step ${stepIndex + 1} has invalid quantity: ${quantity}`,
-                elementId: activityId
-            });
+            issues.push(ValidationMessages.invalidResourceQuantity(activityId, stepIndex + 1));
         }
     }
 
     private validateOperationSequence(
         activity: Activity,
         state: ModelDefinitionState,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         this.log(`Validating operation sequence for Activity ID: ${activity.id}`);
 
@@ -216,7 +212,7 @@ export class ActivityValidation extends ValidationRule {
 
         if (hasResourceRequest) {
             this.log(`Resource requests detected but no release logic for Activity ID: ${activity.id}`);
-            messages.push(ValidationMessages.resourceLeak(activity.id, activity.name));
+            issues.push(ValidationMessages.resourceLeak(activity.id, activity.name));
         }
     }
 
@@ -224,7 +220,7 @@ export class ActivityValidation extends ValidationRule {
     private validateBufferConstraints(
         activity: Activity,
         state: ModelDefinitionState,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         this.log(`Validating buffer constraints for Activity ID: ${activity.id}`);
 
@@ -244,13 +240,13 @@ export class ActivityValidation extends ValidationRule {
 
         if (incomingCapacity > activity.inputBufferCapacity * 2) {
             this.log(`Activity ID ${activity.id} has insufficient input buffer capacity.`);
-            messages.push(ValidationMessages.smallInputBuffer(activity.id, activity.name));
+            issues.push(ValidationMessages.smallInputBuffer(activity.id, activity.name));
         }
     }
 
     private validateActivityInteractions(
         state: ModelDefinitionState,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Validates interactions among activities to detect deadlocks or circular dependencies.
@@ -264,7 +260,7 @@ export class ActivityValidation extends ValidationRule {
 
         activities.forEach((activity: { id: string; }) => {
             if (!visited.has(activity.id)) {
-                this.detectCycles(activity.id, state, visited, stack, messages);
+                this.detectCycles(activity.id, state, visited, stack, issues);
             }
         });
     }
@@ -274,7 +270,7 @@ export class ActivityValidation extends ValidationRule {
         state: ModelDefinitionState,
         visited: Set<string>,
         stack: Set<string>,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Detects cycles within the activity graph.
@@ -290,11 +286,11 @@ export class ActivityValidation extends ValidationRule {
                 if (connector) {
                     const targetId = connector.targetId;
                     if (!visited.has(targetId)) {
-                        this.detectCycles(targetId, state, visited, stack, messages);
+                        this.detectCycles(targetId, state, visited, stack, issues);
                     } else if (stack.has(targetId)) {
                         this.log(`Circular dependency detected involving Activity ID ${activityId}`);
                         const activity = state.modelDefinition.activities.get(activityId);
-                        messages.push(ValidationMessages.circularDependency(activityId, activity?.name));
+                        issues.push(ValidationMessages.circularDependency(activityId, activity?.name));
                     }
                 }
             });

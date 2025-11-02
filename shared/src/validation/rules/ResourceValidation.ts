@@ -1,7 +1,7 @@
 import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
-import { ValidationMessage } from "../../types/validation";
+import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { Resource } from "../../types/elements/Resource";
 import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
 import { Activity } from "../../types/elements/Activity";
@@ -9,23 +9,23 @@ import { RequirementMode } from "../../types/elements/RequirementMode";
 
 
 export class ResourceValidation extends ValidationRule {
-    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         const resources = state.modelDefinition.resources.getAll();
 
         this.log("Starting validation of resources.");
 
         // First validate each resource's data
         resources.forEach(resource => {
-            this.validateResourceData(resource, messages);
+            this.validateResourceData(resource, issues);
         });
 
         // Then check resource usage across activities
-        this.validateResourceUsage(state, messages);
+        this.validateResourceUsage(state, issues);
 
         this.log("Completed validation of resources.");
     }
 
-    private validateResourceData(resource: Resource, messages: ValidationMessage[]): void {
+    private validateResourceData(resource: Resource, issues: ValidationIssue[]): void {
         /**
          * Validates the basic properties of a resource, such as name and capacity.
          */
@@ -34,34 +34,36 @@ export class ResourceValidation extends ValidationRule {
 
         if (!resource.name || resource.name.trim().length === 0) {
             this.log(`Resource ID ${resource.id} has no name.`);
-            messages.push(ValidationMessages.missingName('Resource', resource.id, resource.name));
+            issues.push(ValidationMessages.missingName('Resource', resource.id, resource.name));
         }
 
         if (typeof resource.capacity !== 'number' || resource.capacity < 1) {
             this.log(`Resource ID ${resource.id} has invalid capacity: ${resource.capacity}`);
-            messages.push(ValidationMessages.invalidCapacity('Resource', resource.id, 1, resource.name));
+            issues.push(ValidationMessages.invalidCapacity('Resource', resource.id, 1, resource.name));
         }
 
         if (Math.floor(resource.capacity) !== resource.capacity) {
             this.log(`Resource ID ${resource.id} has non-integer capacity: ${resource.capacity}`);
-            messages.push({
-                type: 'error',
-                message: `Resource ${resource.id} capacity must be a whole number`,
-                elementId: resource.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.ERROR,
+                'resource_non_integer_capacity',
+                `Resource ${resource.id} capacity must be a whole number`,
+                resource.id
+            ));
         }
 
         if (resource.capacity > 1000000) {
             this.log(`Resource ID ${resource.id} has unusually high capacity: ${resource.capacity}`);
-            messages.push({
-                type: 'warning',
-                message: `Resource ${resource.id} has unusually high capacity (${resource.capacity})`,
-                elementId: resource.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'resource_high_capacity',
+                `Resource ${resource.id} has unusually high capacity (${resource.capacity})`,
+                resource.id
+            ));
         }
     }
 
-    private validateResourceUsage(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    private validateResourceUsage(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         this.log("Validating resource usage across activities.");
 
         const resources = state.modelDefinition.resources.getAll();
@@ -90,14 +92,15 @@ export class ResourceValidation extends ValidationRule {
                                 requirement,
                                 activity,
                                 resourceUsage,
-                                messages
+                                issues
                             );
                         } else {
-                            messages.push({
-                                type: 'error',
-                                message: `Invalid resource requirement reference: ${step.requirementId}`,
-                                elementId: activity.id
-                            });
+                            issues.push(ValidationMessages.createIssue(
+                                ValidationSeverity.ERROR,
+                                'invalid_requirement_reference',
+                                `Invalid resource requirement reference: ${step.requirementId}`,
+                                activity.id
+                            ));
                         }
                     }
                 });
@@ -115,22 +118,23 @@ export class ResourceValidation extends ValidationRule {
                     ? `'${resource.name}'`
                     : resourceId;
 
-                messages.push({
-                    type: 'warning',
-                    message: `Resource ${displayName} is not used by any activity`,
-                    elementId: resourceId
-                });
+                issues.push(ValidationMessages.createIssue(
+                    ValidationSeverity.WARNING,
+                    'resource_not_used',
+                    `Resource ${displayName} is not used by any activity`,
+                    resourceId
+                ));
             }
         });
 
-        this.checkResourceConflicts(state, resourceUsage, messages);
+        this.checkResourceConflicts(state, resourceUsage, issues);
     }
 
     private processResourceRequirement(
         requirement: ResourceRequirement,
         activity: Activity,
         resourceUsage: Map<string, Set<string>>,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         requirement.rootClauses.forEach(clause => {
             // Process based on requirement mode
@@ -168,7 +172,7 @@ export class ResourceValidation extends ValidationRule {
         requests: Array<any>,
         activity: any,
         resourceUsage: Map<string, Set<string>>,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Processes resource requests within an activity's operation steps.
@@ -180,7 +184,7 @@ export class ResourceValidation extends ValidationRule {
                     request.requests,
                     activity,
                     resourceUsage,
-                    messages
+                    issues
                 );
                 return;
             }
@@ -194,19 +198,21 @@ export class ResourceValidation extends ValidationRule {
 
                     if (typeof request.quantity !== 'number' || request.quantity < 1) {
                         this.log(`Activity ID ${activity.id} has invalid resource quantity for Resource ID ${resourceId}`);
-                        messages.push({
-                            type: 'error',
-                            message: `Invalid resource quantity in activity ${activity.id} for resource ${resourceId}`,
-                            elementId: activity.id
-                        });
+                        issues.push(ValidationMessages.createIssue(
+                            ValidationSeverity.ERROR,
+                            'invalid_resource_quantity',
+                            `Invalid resource quantity in activity ${activity.id} for resource ${resourceId}`,
+                            activity.id
+                        ));
                     }
                 } else {
                     this.log(`Activity ID ${activity.id} references non-existent Resource ID ${resourceId}`);
-                    messages.push({
-                        type: 'error',
-                        message: `Activity ${activity.id} references non-existent resource ${resourceId}`,
-                        elementId: activity.id
-                    });
+                    issues.push(ValidationMessages.createIssue(
+                        ValidationSeverity.ERROR,
+                        'nonexistent_resource_reference',
+                        `Activity ${activity.id} references non-existent resource ${resourceId}`,
+                        activity.id
+                    ));
                 }
             }
         });
@@ -215,7 +221,7 @@ export class ResourceValidation extends ValidationRule {
     private checkResourceConflicts(
         state: ModelDefinitionState,
         resourceUsage: Map<string, Set<string>>,
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Checks for conflicts in resource usage, such as overutilization.
@@ -232,7 +238,7 @@ export class ResourceValidation extends ValidationRule {
                     state,
                     resource,
                     Array.from(usedByActivities),
-                    messages
+                    issues
                 );
             }
         });
@@ -242,7 +248,7 @@ export class ResourceValidation extends ValidationRule {
         state: ModelDefinitionState,
         resource: Resource,
         activityIds: string[],
-        messages: ValidationMessage[]
+        issues: ValidationIssue[]
     ): void {
         /**
          * Validates concurrent usage of a resource across multiple activities.
@@ -262,11 +268,12 @@ export class ResourceValidation extends ValidationRule {
 
         if (totalMaxPossibleDemand > resource.capacity) {
             this.log(`Resource ID ${resource.id} might be overutilized. Capacity: ${resource.capacity}, Demand: ${totalMaxPossibleDemand}`);
-            messages.push({
-                type: 'warning',
-                message: `Potential resource conflict: Resource ${resource.id} (capacity: ${resource.capacity}) might be overutilized. Maximum possible demand: ${totalMaxPossibleDemand}`,
-                elementId: resource.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'resource_overutilized',
+                `Potential resource conflict: Resource ${resource.id} (capacity: ${resource.capacity}) might be overutilized. Maximum possible demand: ${totalMaxPossibleDemand}`,
+                resource.id
+            ));
         }
     }
 

@@ -7,12 +7,12 @@ import {
   Viewport,
   PageProxy
 } from 'lucid-extension-sdk';
-import { 
+import {
   SelectionType,
   DiagramElementType,
   ValidationResult,
-  ValidationMessage,
-  ValidationMessageType
+  ValidationMessages,
+  ValidationSeverity
 } from '@quodsi/shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
@@ -87,25 +87,22 @@ export abstract class BaseSelectionProcessor {
       return result;
     } catch (error) {
       console.error('[BaseSelectionProcessor] Error getting validation result:', error);
-      
+
       // Create a properly formatted ValidationResult
-      const errorMessage: ValidationMessage = {
-        type: 'error', // Use string literal as defined in ValidationMessageType
-        message: 'Error validating model',
-        elementId: undefined, // Use undefined instead of null
-        code: 'VALIDATION_ERROR'
-      };
-      
-      // Create validation result with the same structure as ModelManager.validateModel
-      const messages = [errorMessage];
-      const errorCount = messages.filter(m => m.type === 'error').length;
-      const warningCount = messages.filter(m => m.type === 'warning').length;
-      
+      const errorIssue = ValidationMessages.createIssue(
+        ValidationSeverity.ERROR,
+        'VALIDATION_ERROR',
+        'Error validating model'
+      );
+
       return {
         isValid: false,
-        messages,
-        errorCount,
-        warningCount
+        issues: [errorIssue],
+        summary: {
+          errorCount: 1,
+          warningCount: 0,
+          infoCount: 0
+        }
       };
     }
   }

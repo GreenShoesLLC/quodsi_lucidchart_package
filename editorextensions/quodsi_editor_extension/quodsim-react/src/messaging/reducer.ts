@@ -34,7 +34,6 @@ import type {
   SelectionState,
   SimulationState,
   ValidationState,
-  ValidationError,
 
   // Action types
   MessagingAction,
@@ -57,7 +56,6 @@ export type {
   SelectionState,
   SimulationState,
   ValidationState,
-  ValidationError,
 
   // Action types
   MessagingAction,

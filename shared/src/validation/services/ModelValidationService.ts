@@ -2,7 +2,7 @@ import { ActivityRelationships } from "../../types/ActivityRelationships";
 import { ModelDefinition } from "../../types/elements/ModelDefinition";
 import { ModelDefinitionLogger } from "../../types/elements/ModelDefinitionLogger";
 import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
-import { ValidationMessage } from "../../types/validation"
+import { ValidationIssue, ValidationResult, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ActivityValidation } from "../rules/ActivityValidation";
@@ -12,7 +12,6 @@ import { GeneratorValidation } from "../rules/GeneratorValidation";
 import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
-import { ValidationResult } from "../../types/validation";
 import { ValidationRuleName } from "../types/ValidationRuleName";
 
 /**
@@ -59,10 +58,10 @@ export class ModelValidationService extends QuodsiLogger {
      * rules and caches the new results.
      *
      * @param modelDefinition - The model to validate
-     * @returns ValidationResult containing validation status, counts, and messages
+     * @returns ValidationResult containing validation status, summary counts, and issues
      */
     public validate(modelDefinition: ModelDefinition): ValidationResult {
-        const messages: ValidationMessage[] = [];
+        const issues: ValidationIssue[] = [];
         try {
             // Generate a hash of the model definition for cache comparison
             const currentHash = this.generateModelHash(modelDefinition);
@@ -71,15 +70,15 @@ export class ModelValidationService extends QuodsiLogger {
             const state = this.getModelState(modelDefinition, currentHash);
 
             // Batch validate all rules
-            this.batchValidate(state, messages);
+            this.batchValidate(state, issues);
 
             // Add success message if no issues found
-            if (messages.length === 0) {
-                messages.push(ValidationMessages.validationSuccess());
+            if (issues.length === 0) {
+                issues.push(ValidationMessages.validationSuccess());
             }
 
             // Calculate validation metrics
-            const result = this.calculateValidationMetrics(messages);
+            const result = this.calculateValidationMetrics(issues);
 
             // Log validation results
             this.logValidationResults(result);
@@ -91,9 +90,12 @@ export class ModelValidationService extends QuodsiLogger {
             console.error(`${this.LOG_PREFIX} Critical validation error:`, error);
             return {
                 isValid: false,
-                errorCount: 1,
-                warningCount: 0,
-                messages: [ValidationMessages.validationError(error)]
+                issues: [ValidationMessages.validationError(error)],
+                summary: {
+                    errorCount: 1,
+                    warningCount: 0,
+                    infoCount: 0
+                }
             };
         }
     }
@@ -188,37 +190,42 @@ export class ModelValidationService extends QuodsiLogger {
         return state;
     }
 
-    private batchValidate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    private batchValidate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         this.log("[ModelValidation] Starting batch validation.");
 
         // Synchronous validation - rules are all synchronous
         this.rules.forEach(rule => {
-            rule.validate(state, messages);
+            rule.validate(state, issues);
         });
 
         this.log("[ModelValidation] Batch validation completed.");
     }
 
 
-    private calculateValidationMetrics(messages: ValidationMessage[]): ValidationResult {
-        const errorCount = messages.filter(m => m.type === 'error').length;
-        const warningCount = messages.filter(m => m.type === 'warning').length;
+    private calculateValidationMetrics(issues: ValidationIssue[]): ValidationResult {
+        const errorCount = issues.filter(i => i.severity === ValidationSeverity.ERROR).length;
+        const warningCount = issues.filter(i => i.severity === ValidationSeverity.WARNING).length;
+        const infoCount = issues.filter(i => i.severity === ValidationSeverity.INFO).length;
 
         return {
             isValid: errorCount === 0,
-            errorCount,
-            warningCount,
-            messages
+            issues,
+            summary: {
+                errorCount,
+                warningCount,
+                infoCount
+            }
         };
     }
 
     private logValidationResults(result: ValidationResult): void {
         this.log('[ModelValidation] Validation results:', {
             isValid: result.isValid,
-            errorCount: result.errorCount,
-            warningCount: result.warningCount,
-            messageCount: result.messages.length,
-            messages: result.messages
+            errorCount: result.summary.errorCount,
+            warningCount: result.summary.warningCount,
+            infoCount: result.summary.infoCount,
+            issueCount: result.issues.length,
+            issues: result.issues
         });
     }
 

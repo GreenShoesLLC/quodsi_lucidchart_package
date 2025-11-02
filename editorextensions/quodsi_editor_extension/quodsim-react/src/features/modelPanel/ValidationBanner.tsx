@@ -1,9 +1,9 @@
 import React from 'react';
-import { ValidationState, ValidationMessage } from '@quodsi/shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity } from '@quodsi/shared';
 import { AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 interface ValidationBannerProps {
-  validationState: ValidationState | null;
+  validationState: ValidationResult | null;
   isExpanded: boolean;
   onToggle: () => void;
   onDismiss?: () => void;
@@ -27,22 +27,23 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
   const { errorCount, warningCount } = validationState.summary;
   const totalIssues = errorCount + warningCount;
 
-  // Helper to render validation message
-  const renderValidationMessage = (message: ValidationMessage, index: number) => {
-    const getMessageStyle = (type: string) => {
-      switch (type.toLowerCase()) {
-        case 'error':
+  // Helper to render validation issue
+  const renderValidationIssue = (issue: ValidationIssue, index: number) => {
+    const getIssueStyle = (severity: ValidationSeverity) => {
+      switch (severity) {
+        case ValidationSeverity.ERROR:
           return {
             container: 'bg-red-50 border-l-2 border-red-500 p-2 mb-1 rounded-r',
             icon: <XCircle className="h-3 w-3 text-red-500" />,
             text: 'text-red-700 font-medium',
           };
-        case 'warning':
+        case ValidationSeverity.WARNING:
           return {
             container: 'bg-yellow-50 border-l-2 border-yellow-500 p-2 mb-1 rounded-r',
             icon: <AlertTriangle className="h-3 w-3 text-yellow-500" />,
             text: 'text-yellow-700 font-medium',
           };
+        case ValidationSeverity.INFO:
         default:
           return {
             container: 'bg-blue-50 border-l-2 border-blue-500 p-2 mb-1 rounded-r',
@@ -52,16 +53,16 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
       }
     };
 
-    const style = getMessageStyle(message.type);
+    const style = getIssueStyle(issue.severity);
 
     return (
       <div key={`validation-${index}`} className={`${style.container} shadow-sm`}>
         <div className="flex">
           <div className="flex-shrink-0">{style.icon}</div>
           <div className="ml-2 flex-1">
-            <p className={`text-xs ${style.text} leading-tight`}>{message.message}</p>
-            {message.elementId && (
-              <p className="text-xs text-gray-500 mt-0.5">Element: {message.elementId}</p>
+            <p className={`text-xs ${style.text} leading-tight`}>{issue.message}</p>
+            {issue.elementId && (
+              <p className="text-xs text-gray-500 mt-0.5">Element: {issue.elementId}</p>
             )}
           </div>
         </div>
@@ -128,8 +129,8 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
             </span>
           </div>
           <div className="space-y-1">
-            {validationState.messages.map((message, index) =>
-              renderValidationMessage(message, index)
+            {validationState.issues.map((issue, index) =>
+              renderValidationIssue(issue, index)
             )}
           </div>
         </div>

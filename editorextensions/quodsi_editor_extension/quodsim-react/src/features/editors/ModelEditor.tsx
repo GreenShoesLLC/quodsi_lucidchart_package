@@ -8,7 +8,7 @@ import {
   ComponentType,
   EnvelopeMessageType,
   EnvelopeBase,
-  ValidationState,
+  ValidationResult,
 } from "@quodsi/shared";
 import { Settings, Hash, PlaySquare, FileJson, Info, Users, Wrench, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
@@ -46,7 +46,7 @@ interface Props {
   onStatesChange: (states: StateListManager) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
-  validationState?: ValidationState | null;
+  validationState?: ValidationResult | null;
 }
 
 type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities" | "validation";

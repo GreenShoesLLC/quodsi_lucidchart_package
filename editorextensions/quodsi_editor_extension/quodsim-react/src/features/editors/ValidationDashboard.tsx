@@ -1,9 +1,9 @@
 import React from 'react';
-import { ValidationState, ValidationMessage, EditorReferenceData } from '@quodsi/shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity, EditorReferenceData } from '@quodsi/shared';
 import { AlertTriangle, XCircle, Info, CheckCircle, Activity, Users, Package, Zap } from 'lucide-react';
 
 interface ValidationDashboardProps {
-  validationState: ValidationState | null;
+  validationState: ValidationResult | null;
   referenceData?: EditorReferenceData;
 }
 
@@ -15,20 +15,20 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   validationState,
   referenceData
 }) => {
-  // Group messages by severity
-  const groupMessagesBySeverity = () => {
-    if (!validationState?.messages) {
+  // Group issues by severity
+  const groupIssuesBySeverity = () => {
+    if (!validationState?.issues) {
       return { errors: [], warnings: [], info: [] };
     }
 
-    const errors = validationState.messages.filter(m => m.type === 'error');
-    const warnings = validationState.messages.filter(m => m.type === 'warning');
-    const info = validationState.messages.filter(m => m.type === 'info');
+    const errors = validationState.issues.filter(i => i.severity === ValidationSeverity.ERROR);
+    const warnings = validationState.issues.filter(i => i.severity === ValidationSeverity.WARNING);
+    const info = validationState.issues.filter(i => i.severity === ValidationSeverity.INFO);
 
     return { errors, warnings, info };
   };
 
-  const { errors, warnings, info } = groupMessagesBySeverity();
+  const { errors, warnings, info } = groupIssuesBySeverity();
   const totalIssues = errors.length + warnings.length + info.length;
 
   // Render summary cards
@@ -71,24 +71,25 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
     );
   };
 
-  // Render validation message
-  const renderValidationMessage = (message: ValidationMessage, index: number) => {
-    const getMessageStyle = (type: string) => {
-      switch (type.toLowerCase()) {
-        case 'error':
+  // Render validation issue
+  const renderValidationIssue = (issue: ValidationIssue, index: number) => {
+    const getIssueStyle = (severity: ValidationSeverity) => {
+      switch (severity) {
+        case ValidationSeverity.ERROR:
           return {
             container: 'bg-red-50 border-l-4 border-red-500 p-3 mb-2 rounded-r shadow-sm',
             icon: <XCircle className="h-4 w-4 text-red-500" />,
             text: 'text-red-800 font-medium',
             badge: 'bg-red-100 text-red-700',
           };
-        case 'warning':
+        case ValidationSeverity.WARNING:
           return {
             container: 'bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-2 rounded-r shadow-sm',
             icon: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
             text: 'text-yellow-800 font-medium',
             badge: 'bg-yellow-100 text-yellow-700',
           };
+        case ValidationSeverity.INFO:
         default:
           return {
             container: 'bg-blue-50 border-l-4 border-blue-500 p-3 mb-2 rounded-r shadow-sm',
@@ -99,24 +100,24 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
       }
     };
 
-    const style = getMessageStyle(message.type);
+    const style = getIssueStyle(issue.severity);
 
     return (
-      <div key={`validation-msg-${index}`} className={style.container}>
+      <div key={`validation-issue-${index}`} className={style.container}>
         <div className="flex items-start gap-2">
           <div className="flex-shrink-0 mt-0.5">{style.icon}</div>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm ${style.text} leading-snug mb-1`}>{message.message}</p>
-            {message.elementId && (
+            <p className={`text-sm ${style.text} leading-snug mb-1`}>{issue.message}</p>
+            {issue.elementId && (
               <div className="flex items-center gap-2 mt-2">
                 <span className={`text-xs px-2 py-0.5 rounded font-mono ${style.badge}`}>
-                  {message.elementId}
+                  {issue.elementId}
                 </span>
               </div>
             )}
-            {message.code && (
+            {issue.code && (
               <div className="text-xs text-gray-500 mt-1">
-                Code: {message.code}
+                Code: {issue.code}
               </div>
             )}
           </div>
@@ -125,20 +126,20 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
     );
   };
 
-  // Render message group
-  const renderMessageGroup = (messages: ValidationMessage[], title: string, icon: React.ReactNode, colorClass: string) => {
-    if (messages.length === 0) return null;
+  // Render issue group
+  const renderIssueGroup = (issues: ValidationIssue[], title: string, icon: React.ReactNode, colorClass: string) => {
+    if (issues.length === 0) return null;
 
     return (
       <div className="mb-4">
         <div className={`flex items-center gap-2 mb-2 pb-2 border-b ${colorClass}`}>
           {icon}
           <h3 className="text-sm font-semibold text-gray-800">
-            {title} ({messages.length})
+            {title} ({issues.length})
           </h3>
         </div>
         <div className="space-y-1">
-          {messages.map((message, index) => renderValidationMessage(message, index))}
+          {issues.map((issue, index) => renderValidationIssue(issue, index))}
         </div>
       </div>
     );
@@ -209,21 +210,21 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
       {renderSummaryCards()}
 
       <div className="space-y-4">
-        {renderMessageGroup(
+        {renderIssueGroup(
           errors,
           'Errors',
           <XCircle className="h-4 w-4 text-red-600" />,
           'border-red-200'
         )}
 
-        {renderMessageGroup(
+        {renderIssueGroup(
           warnings,
           'Warnings',
           <AlertTriangle className="h-4 w-4 text-yellow-600" />,
           'border-yellow-200'
         )}
 
-        {renderMessageGroup(
+        {renderIssueGroup(
           info,
           'Information',
           <Info className="h-4 w-4 text-blue-600" />,

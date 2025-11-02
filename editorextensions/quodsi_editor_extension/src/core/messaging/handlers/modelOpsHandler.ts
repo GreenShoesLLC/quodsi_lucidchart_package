@@ -127,34 +127,19 @@ export class ModelOpsHandler {
         return;
       }
 
-      // Convert ValidationMessage[] to ValidationIssue[]
-      const issues: ValidationIssue[] = validationResult.messages.map(msg => ({
-        id: msg.code || `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        elementId: msg.elementId,
-        severity: msg.type === 'error' ? ValidationSeverity.ERROR :
-                  msg.type === 'warning' ? ValidationSeverity.WARNING :
-                  ValidationSeverity.INFO,
-        code: msg.code || 'validation_message',
-        message: msg.message
-      }));
-
-      // Count issues by severity
-      const errorCount = issues.filter(i => i.severity === ValidationSeverity.ERROR).length;
-      const warningCount = issues.filter(i => i.severity === ValidationSeverity.WARNING).length;
-      const infoCount = issues.filter(i => i.severity === ValidationSeverity.INFO).length;
-
+      // ValidationResult already has the correct structure with issues and summary
       // Store validation result
       ModelOpsHandler.validationResults.set(data.documentId, {
         isValid: validationResult.isValid,
-        issues,
+        issues: validationResult.issues,
         timestamp: new Date()
       });
 
       ModelOpsHandler.logger.log('Validation complete', {
         isValid: validationResult.isValid,
-        errorCount,
-        warningCount,
-        infoCount
+        errorCount: validationResult.summary.errorCount,
+        warningCount: validationResult.summary.warningCount,
+        infoCount: validationResult.summary.infoCount
       });
 
       // Send validation result
@@ -166,12 +151,8 @@ export class ModelOpsHandler {
         version: '1.0',
         data: {
           isValid: validationResult.isValid,
-          issues,
-          summary: {
-            errorCount,
-            warningCount,
-            infoCount
-          }
+          issues: validationResult.issues,
+          summary: validationResult.summary
         }
       });
 

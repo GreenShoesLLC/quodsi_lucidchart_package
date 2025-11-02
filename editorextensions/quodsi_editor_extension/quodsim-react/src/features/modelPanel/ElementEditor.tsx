@@ -4,7 +4,7 @@ import {
   EditorReferenceData,
   DiagramElementType,
   StateListManager,
-  ValidationState,
+  ValidationResult,
 } from "@quodsi/shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
@@ -27,7 +27,7 @@ interface ElementEditorProps {
   onStatesChange: (states: StateListManager) => void;
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
-  validationState?: ValidationState | null;
+  validationState?: ValidationResult | null;
 }
 
 /**

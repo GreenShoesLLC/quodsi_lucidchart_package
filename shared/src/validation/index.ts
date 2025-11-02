@@ -16,10 +16,8 @@ export { ResourceValidation } from './rules/ResourceValidation';
 // Service exports
 export { ModelValidationService } from './services/ModelValidationService';
 
-// Export validation types
-export {
-    ValidationMessage,
-    ValidationResult
-} from '../types/validation';  // Assuming these types exist in your types folder
-
+// Export validation rule names
 export { ValidationRuleName } from './types/ValidationRuleName';
+
+// NOTE: ValidationIssue, ValidationSeverity, and ValidationResult are exported from
+// '../quodsi-messaging' at the top level, not here, to avoid duplicate exports

@@ -1,6 +1,17 @@
-import { ValidationMessage } from "../../types/validation";
+import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 
 export class ValidationMessages {
+    private static idCounter = 0;
+
+    /**
+     * Generates a unique ID for a validation issue.
+     */
+    private static generateId(code: string, elementId?: string): string {
+        this.idCounter++;
+        const base = elementId ? `${code}_${elementId}` : code;
+        return `${base}_${this.idCounter}`;
+    }
+
     /**
      * Formats an element display name for validation messages.
      * Shows name in quotes with ID as fallback if name is empty.
@@ -12,205 +23,278 @@ export class ValidationMessages {
         return id;
     }
 
+    /**
+     * Helper method to create a ValidationIssue from basic parameters.
+     * Use this for inline validations that don't have dedicated factory methods.
+     */
+    static createIssue(
+        severity: ValidationSeverity,
+        code: string,
+        message: string,
+        elementId?: string
+    ): ValidationIssue {
+        return {
+            id: this.generateId(code, elementId),
+            severity,
+            code,
+            message,
+            elementId
+        };
+    }
+
     // Existing messages...
-    static missingName(elementType: string, elementId: string, elementName?: string): ValidationMessage {
+    static missingName(elementType: string, elementId: string, elementName?: string): ValidationIssue {
+        const code = 'missing_name';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `${elementType} ${displayName} has no name`,
             elementId,
-            code: 'missing_name'
+            code
         };
     }
 
-    static isolatedElement(elementType: string, elementId: string, elementName?: string): ValidationMessage {
+    static isolatedElement(elementType: string, elementId: string, elementName?: string): ValidationIssue {
+        const code = 'isolated_element';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `${elementType} ${displayName} is isolated (no connections)`,
             elementId,
-            code: 'isolated_element'
+            code
         };
     }
 
-    static invalidConnection(connectorId: string, type: 'source' | 'target', elementId: string): ValidationMessage {
+    static invalidConnection(connectorId: string, type: 'source' | 'target', elementId: string): ValidationIssue {
+        const code = 'invalid_connection';
         return {
-            type: 'error',
+            id: this.generateId(code, connectorId),
+            severity: ValidationSeverity.ERROR,
             message: `Connector ${connectorId} has invalid ${type} (${elementId})`,
-            elementId: connectorId
+            elementId: connectorId,
+            code
         };
     }
 
-    static invalidCapacity(elementType: string, elementId: string, minimum: number = 1, elementName?: string): ValidationMessage {
+    static invalidCapacity(elementType: string, elementId: string, minimum: number = 1, elementName?: string): ValidationIssue {
+        const code = 'invalid_capacity';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `${elementType} ${displayName} has invalid capacity (must be >= ${minimum})`,
             elementId,
-            code: 'invalid_capacity'
+            code
         };
     }
 
     // New messages for Activity validation
-    static noConnections(elementType: string, elementId: string, direction: 'incoming' | 'outgoing', elementName?: string): ValidationMessage {
+    static noConnections(elementType: string, elementId: string, direction: 'incoming' | 'outgoing', elementName?: string): ValidationIssue {
+        const code = 'no_connections';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `${elementType} ${displayName} has no ${direction} connections (potential ${direction === 'incoming' ? 'start' : 'end'} activity)`,
             elementId,
-            code: 'no_connections'
+            code
         };
     }
 
-    static largeBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationMessage {
+    static largeBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationIssue {
+        const code = 'large_buffer_capacity';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `${elementType} ${displayName} has unusually large ${type} buffer capacity`,
             elementId,
-            code: 'large_buffer_capacity'
+            code
         };
     }
 
-    static invalidBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationMessage {
+    static invalidBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationIssue {
+        const code = 'invalid_buffer_capacity';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `${elementType} ${displayName} has invalid ${type} buffer capacity`,
             elementId,
-            code: 'invalid_buffer_capacity'
+            code
         };
     }
 
-    static missingOperationSteps(elementId: string, activityName?: string): ValidationMessage {
+    static missingOperationSteps(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'missing_operation_steps';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `Activity ${displayName} is missing operation steps property`,
             elementId,
-            code: 'missing_operation_steps'
+            code
         };
     }
 
-    static noOperationSteps(elementId: string, activityName?: string): ValidationMessage {
+    static noOperationSteps(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'no_operation_steps';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${displayName} has no operation steps defined`,
             elementId,
-            code: 'no_operation_steps'
+            code
         };
     }
 
-    static invalidStepDuration(elementId: string, stepNumber: number): ValidationMessage {
+    static invalidStepDuration(elementId: string, stepNumber: number): ValidationIssue {
+        const code = 'invalid_step_duration';
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `Activity ${elementId} operation step ${stepNumber} has invalid duration`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static unusualStepDuration(elementId: string, stepNumber: number, duration: number): ValidationMessage {
+    static unusualStepDuration(elementId: string, stepNumber: number, duration: number): ValidationIssue {
+        const code = 'unusual_step_duration';
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${elementId} operation step ${stepNumber} has unusual duration (${duration} seconds)`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static duplicateResourceRequest(elementId: string, stepNumber: number): ValidationMessage {
+    static duplicateResourceRequest(elementId: string, stepNumber: number): ValidationIssue {
+        const code = 'duplicate_resource_request';
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${elementId} operation step ${stepNumber} requests the same resource multiple times`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static invalidResourceQuantity(elementId: string, stepNumber: number): ValidationMessage {
+    static invalidResourceQuantity(elementId: string, stepNumber: number): ValidationIssue {
+        const code = 'invalid_resource_quantity';
         return {
-            type: 'error',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.ERROR,
             message: `Activity ${elementId} operation step ${stepNumber} has invalid resource quantity`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static unusualCycleTime(elementId: string, type: 'short' | 'long', time: number): ValidationMessage {
+    static unusualCycleTime(elementId: string, type: 'short' | 'long', time: number): ValidationIssue {
+        const code = 'unusual_cycle_time';
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${elementId} has unusually ${type} ${type === 'short' ? 'minimum' : 'maximum'} cycle time (${time} seconds)`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static bufferOverflowRisk(elementId: string): ValidationMessage {
+    static bufferOverflowRisk(elementId: string): ValidationIssue {
+        const code = 'buffer_overflow_risk';
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${elementId} may experience input buffer overflow at maximum throughput`,
-            elementId
+            elementId,
+            code
         };
     }
 
-    static smallInputBuffer(elementId: string, activityName?: string): ValidationMessage {
+    static smallInputBuffer(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'small_input_buffer';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${displayName} input buffer may be too small for incoming flow capacity`,
             elementId,
-            code: 'small_input_buffer'
+            code
         };
     }
 
-    static circularDependency(elementId: string, activityName?: string): ValidationMessage {
+    static circularDependency(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'circular_dependency';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Potential circular dependency detected involving activity ${displayName}`,
             elementId,
-            code: 'circular_dependency'
+            code
         };
     }
 
-    static resourceLeak(elementId: string, activityName?: string): ValidationMessage {
+    static resourceLeak(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'resource_leak';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
-            type: 'warning',
+            id: this.generateId(code, elementId),
+            severity: ValidationSeverity.WARNING,
             message: `Activity ${displayName} requests resources but never releases them`,
             elementId,
-            code: 'resource_leak'
+            code
         };
     }
 
     // Existing utility messages...
-    static validationSuccess(): ValidationMessage {
+    static validationSuccess(): ValidationIssue {
+        const code = 'validation_success';
         return {
-            type: 'info',
-            message: 'Model validation passed successfully'
+            id: this.generateId(code),
+            severity: ValidationSeverity.INFO,
+            message: 'Model validation passed successfully',
+            code
         };
     }
 
-    static validationError(error: Error | unknown): ValidationMessage {
+    static validationError(error: Error | unknown): ValidationIssue {
+        const code = 'validation_error';
         return {
-            type: 'error',
-            message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            id: this.generateId(code),
+            severity: ValidationSeverity.ERROR,
+            message: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            code
         };
     }
 
     // Generator Validation
-    static generatorValidation(category: string, generatorId: string, detail: string, generatorName?: string): ValidationMessage {
+    static generatorValidation(category: string, generatorId: string, detail: string, generatorName?: string): ValidationIssue {
+        const code = 'generator_validation';
         const displayName = this.getDisplayName(generatorName, generatorId);
         return {
-            type: 'error',
+            id: this.generateId(code, generatorId),
+            severity: ValidationSeverity.ERROR,
             message: `Generator ${displayName} has invalid ${category}: ${detail}`,
             elementId: generatorId,
-            code: 'generator_validation'
+            code
         };
     }
 
     // Element Counts
-    static missingRequiredElement(elementType: string): ValidationMessage {
+    static missingRequiredElement(elementType: string): ValidationIssue {
+        const code = 'missing_required_element';
         return {
-            type: 'error',
+            id: this.generateId(code),
+            severity: ValidationSeverity.ERROR,
             message: `Model must have at least one ${elementType}`,
+            code
         };
     }
 }

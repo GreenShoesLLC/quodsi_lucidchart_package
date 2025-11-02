@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationIssue } from '@quodsi/shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
@@ -30,14 +30,7 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
       // Extract validation result data
       const validationData = msg.data as {
         isValid: boolean;
-        issues: Array<{
-          id: string;
-          elementId?: string;
-          severity: string;
-          code: string;
-          message: string;
-          context?: Record<string, unknown>;
-        }>;
+        issues: ValidationIssue[];
         summary: {
           errorCount: number;
           warningCount: number;
@@ -45,20 +38,12 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         };
       };
 
-      // Convert issues to the expected format for VALIDATION_RESULT
-      const errors = validationData.issues.map(issue => ({
-        id: issue.id,
-        elementId: issue.elementId,
-        type: issue.code,
-        message: issue.message,
-        severity: issue.severity as 'error' | 'warning' | 'info'
-      }));
-
-      // Map to validation result action
+      // Map to validation result action (pass through issues and summary directly)
       return {
         type: 'VALIDATION_RESULT',
         isValid: validationData.isValid,
-        errors: errors
+        issues: validationData.issues,
+        summary: validationData.summary
       };
 
     case EnvelopeMessageType.MODEL_CONVERSION_RESULT:

@@ -149,18 +149,11 @@ export function useModelPanel() {
     logger.warn('[useModelPanel] No modelItemData created or found');
   }
   
-  // Transform validation data
-  const validationState = transformToValidationState(validation.errors ? {
-    summary: {
-      errorCount: validation.errors.filter(e => e.severity === 'error').length,
-      warningCount: validation.errors.filter(e => e.severity === 'warning').length
-    },
-    messages: validation.errors.map(e => ({
-      type: e.severity,
-      message: e.message,
-      elementId: e.elementId,
-      code: e.id
-    }))
+  // Transform validation data (use the validation state directly, it's already in the correct format)
+  const validationState = transformToValidationState(validation.issues.length > 0 ? {
+    isValid: validation.isValid,
+    issues: validation.issues,
+    summary: validation.summary
   } : null);
   
   // Determine loading and initialization states with enhanced logging

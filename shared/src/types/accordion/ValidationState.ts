@@ -1,10 +1,11 @@
-import { ValidationMessage } from "../validation/ValidationTypes";
+import { ValidationIssue } from "../../quodsi-messaging/validation/types";
 
 
 export interface ValidationState {
     summary: {
         errorCount: number;
         warningCount: number;
+        infoCount: number;
     };
-    messages: ValidationMessage[];
+    issues: ValidationIssue[];
 }

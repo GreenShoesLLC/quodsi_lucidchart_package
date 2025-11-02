@@ -1,13 +1,13 @@
 import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
-import { ValidationMessage } from "../../types/validation";
+import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { Entity } from "../../types/elements/Entity";
 import { Generator } from "../../types/elements/Generator";
 
 
 export class EntityValidation extends ValidationRule {
-    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         const entities = state.modelDefinition.entities.getAll();
 
         this.log("Starting validation of entities.");
@@ -15,20 +15,20 @@ export class EntityValidation extends ValidationRule {
         // Check if there's at least one entity defined
         if (entities.length === 0) {
             this.log("Validation failed: No entities defined.");
-            messages.push(ValidationMessages.missingRequiredElement('entity'));
+            issues.push(ValidationMessages.missingRequiredElement('entity'));
             return;
         }
 
         // Validate each entity
         entities.forEach((entity: Entity) => {
-            this.validateEntityData(entity, messages);
-            this.validateEntityUsage(entity, state, messages);
+            this.validateEntityData(entity, issues);
+            this.validateEntityUsage(entity, state, issues);
         });
 
         this.log("Completed validation of entities.");
     }
 
-    private validateEntityData(entity: Entity, messages: ValidationMessage[]): void {
+    private validateEntityData(entity: Entity, issues: ValidationIssue[]): void {
         /**
          * Validates the basic data properties of an entity.
          */
@@ -37,16 +37,17 @@ export class EntityValidation extends ValidationRule {
 
         if (!entity.name || entity.name.trim().length === 0) {
             this.log(`Entity ID ${entity.id} has a missing name.`);
-            messages.push(ValidationMessages.missingName('Entity', entity.id, entity.name));
+            issues.push(ValidationMessages.missingName('Entity', entity.id, entity.name));
         }
 
         if (!entity.id || entity.id.trim().length === 0) {
             this.log(`Entity ID ${entity.id} has missing or invalid ID.`);
-            messages.push({
-                type: 'error',
-                message: `Entity has missing or invalid ID`,
-                elementId: entity.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.ERROR,
+                'entity_missing_id',
+                `Entity has missing or invalid ID`,
+                entity.id
+            ));
         }
 
         if (entity.name === 'New Entity') {
@@ -56,15 +57,16 @@ export class EntityValidation extends ValidationRule {
                 ? `'${entity.name}'`
                 : entity.id;
 
-            messages.push({
-                type: 'warning',
-                message: `Entity ${displayName} is using default name`,
-                elementId: entity.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'entity_default_name',
+                `Entity ${displayName} is using default name`,
+                entity.id
+            ));
         }
     }
 
-    private validateEntityUsage(entity: Entity, state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    private validateEntityUsage(entity: Entity, state: ModelDefinitionState, issues: ValidationIssue[]): void {
         /**
          * Validates the usage of an entity within the model.
          */
@@ -81,11 +83,12 @@ export class EntityValidation extends ValidationRule {
                 ? `'${entity.name}'`
                 : entity.id;
 
-            messages.push({
-                type: 'warning',
-                message: `Entity ${displayName} is not used by any generator`,
-                elementId: entity.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'entity_not_used',
+                `Entity ${displayName} is not used by any generator`,
+                entity.id
+            ));
         }
 
         const entities = state.modelDefinition.entities.getAll();
@@ -100,11 +103,12 @@ export class EntityValidation extends ValidationRule {
                 ? `'${entity.name}'`
                 : entity.id;
 
-            messages.push({
-                type: 'warning',
-                message: `Entity ${displayName} has a name that conflicts with other entities`,
-                elementId: entity.id
-            });
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'entity_name_conflict',
+                `Entity ${displayName} has a name that conflicts with other entities`,
+                entity.id
+            ));
         }
     }
 }

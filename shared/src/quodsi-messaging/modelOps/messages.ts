@@ -1,37 +1,9 @@
 import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
+import { ValidationIssue, ValidationSeverity, ValidationResult } from '../validation/types';
 
-/**
- * Validation severity levels
- */
-export enum ValidationSeverity {
-  ERROR = 'error',
-  WARNING = 'warning',
-  INFO = 'info'
-}
-
-/**
- * Validation issue structure
- */
-export interface ValidationIssue {
-  /** Unique issue ID */
-  id: string;
-
-  /** Element ID the issue relates to */
-  elementId?: string;
-
-  /** Severity level */
-  severity: ValidationSeverity;
-
-  /** Error code */
-  code: string;
-
-  /** Human-readable message */
-  message: string;
-
-  /** Additional context */
-  context?: Record<string, unknown>;
-}
+// Re-export canonical validation types for convenience
+export { ValidationIssue, ValidationSeverity, ValidationResult };
 
 /**
  * Sent to request model validation

@@ -1,4 +1,4 @@
-import { ValidationMessage } from "../../types/validation";
+import { ValidationIssue } from "../../quodsi-messaging/validation/types";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 
 /**
@@ -35,6 +35,6 @@ export abstract class ValidationRule {
             console.log(`[${this.constructor.name}] ${message}`);
         }
     }
-    
-    abstract validate(state: ModelDefinitionState, messages: ValidationMessage[]): void;
+
+    abstract validate(state: ModelDefinitionState, issues: ValidationIssue[]): void;
 }

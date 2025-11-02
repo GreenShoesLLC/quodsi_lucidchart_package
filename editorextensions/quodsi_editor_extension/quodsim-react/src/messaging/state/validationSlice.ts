@@ -3,31 +3,35 @@
  * Manages model validation state and errors
  */
 
-// State shape
-export interface ValidationError {
-  id: string;
-  elementId?: string;
-  type: string;
-  message: string;
-  severity: 'error' | 'warning' | 'info';
-}
+import { ValidationIssue } from '@quodsi/shared';
 
+// State shape
 export interface ValidationState {
   isValid: boolean;
-  errors: ValidationError[];
+  issues: ValidationIssue[];
+  summary: {
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
+  };
   lastUpdated?: number;
 }
 
 // Initial state
 export const initialValidationState: ValidationState = {
   isValid: true,
-  errors: [],
+  issues: [],
+  summary: {
+    errorCount: 0,
+    warningCount: 0,
+    infoCount: 0
+  },
   lastUpdated: undefined,
 };
 
 // Action types
-export type ValidationAction = 
-  | { type: 'VALIDATION_RESULT'; isValid: boolean; errors: ValidationError[] }
+export type ValidationAction =
+  | { type: 'VALIDATION_RESULT'; isValid: boolean; issues: ValidationIssue[]; summary: { errorCount: number; warningCount: number; infoCount: number } }
   | { type: 'VALIDATION_RESET' };
 
 // Reducer
@@ -37,7 +41,8 @@ export function validationReducer(state: ValidationState = initialValidationStat
       return {
         ...state,
         isValid: action.isValid,
-        errors: action.errors,
+        issues: action.issues,
+        summary: action.summary,
         lastUpdated: Date.now(),
       };
     case 'VALIDATION_RESET':

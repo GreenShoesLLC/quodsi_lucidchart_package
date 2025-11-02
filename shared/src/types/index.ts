@@ -11,7 +11,6 @@ export * from './ProcessAnalysisResult';
 export * from './SelectionState';
 export * from './SelectionType';
 export * from './simComponentType';
-export * from './validation';
 export * from './MetaData';
 
 // Export element types

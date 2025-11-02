@@ -120,9 +120,9 @@ const validationResult = validationService.validate(modelDefinition);
 if (validationResult.isValid) {
     console.log('Model is valid');
 } else {
-    console.log(`Model has ${validationResult.errorCount} errors and ${validationResult.warningCount} warnings`);
-    validationResult.messages.forEach(msg => {
-        console.log(`${msg.type}: ${msg.message}`);
+    console.log(`Model has ${validationResult.summary.errorCount} errors and ${validationResult.summary.warningCount} warnings`);
+    validationResult.issues.forEach(issue => {
+        console.log(`${issue.severity}: ${issue.message}`);
     });
 }
 ```
@@ -140,26 +140,27 @@ The validation process follows these steps:
 ### Validation Results
 
 Validation produces a `ValidationResult` object with:
-- `isValid`: Boolean indicating overall validity
-- `errorCount`: Number of error messages
-- `warningCount`: Number of warning messages
-- `messages`: Array of validation messages
+- `isValid`: Boolean indicating overall validity (no errors)
+- `issues`: Array of ValidationIssue objects containing all validation findings
+- `summary`: Object with counts of errors, warnings, and info messages
+  - `errorCount`: Number of error issues
+  - `warningCount`: Number of warning issues
+  - `infoCount`: Number of informational issues
 
-### Message Types
+### Issue Severity Levels
 
-Messages can be of the following types:
-- `error`: Critical issues that must be fixed
-- `warning`: Non-critical issues that should be addressed
-- `info`: Informational messages
-- `success`: Positive validation results
+Each ValidationIssue has a severity level (ValidationSeverity enum):
+- `ERROR`: Critical issues that must be fixed before simulation
+- `WARNING`: Non-critical issues that should be addressed
+- `INFO`: Informational messages about the model
 
 ## Error Handling
 
 The validation system includes robust error handling:
 
-1. **Validation Failures**: Structured as ValidationMessages
-2. **Runtime Errors**: Caught and converted to ValidationMessages
-3. **Context Information**: Errors include reference to the related component
+1. **Validation Failures**: Structured as ValidationIssue objects
+2. **Runtime Errors**: Caught and converted to ValidationIssue objects
+3. **Context Information**: Issues include element ID and code for categorization
 4. **Recovery**: System continues validation even after errors
 
 ## Performance Optimization
@@ -184,20 +185,21 @@ Example:
 ```typescript
 import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from '../models/ModelDefinitionState';
-import { ValidationMessage } from '../../types/validation';
+import { ValidationIssue, ValidationSeverity } from '@quodsi/shared';
 import { ValidationMessages } from '../common/ValidationMessages';
 
 export class CustomValidationRule extends ValidationRule {
-    validate(state: ModelDefinitionState, messages: ValidationMessage[]): void {
+    validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         // Implement validation logic
         const { modelDefinition } = state;
-        
+
         // Check your validation conditions
         if (someConditionFails) {
-            messages.push(ValidationMessages.error(
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.ERROR,
                 'custom_rule_error',
                 'Description of the error',
-                'Suggestion to fix the issue'
+                elementId  // Optional: ID of the element with the issue
             ));
         }
     }
@@ -274,8 +276,8 @@ test('Model without activities fails validation', () => {
     const model = createModelWithoutActivities();
     const result = validationService.validate(model);
     expect(result.isValid).toBe(false);
-    expect(result.messages.some(m => 
-        m.code === 'missing_activities'
+    expect(result.issues.some(issue =>
+        issue.code === 'missing_activities'
     )).toBe(true);
 });
 ```

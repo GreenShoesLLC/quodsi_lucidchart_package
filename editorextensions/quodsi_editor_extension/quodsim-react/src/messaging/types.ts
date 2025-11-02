@@ -5,7 +5,9 @@ import {
   ElementShape,
   SimulationStatus,
   StorageProvider,
-  ConnectionStatus
+  ConnectionStatus,
+  ValidationIssue,
+  ValidationSeverity
 } from '@quodsi/shared';
 import { MessagingAction } from './state/types';
 import { MessagingState } from './state/rootReducer';
@@ -42,7 +44,7 @@ export interface MessageError {
 /**
  * Utility type for extracting specific properties from message payloads
  */
-export type ExtractPayload<T extends EnvelopeMessageType> = 
+export type ExtractPayload<T extends EnvelopeMessageType> =
   EnvelopeBase & { type: T } extends { data: infer D } ? D : never;
 
 /**
@@ -56,16 +58,6 @@ export interface MessagingContextValue extends MessagingState {
  * Type for the messaging dispatch function
  */
 export type MessagingDispatch = React.Dispatch<MessagingAction>;
-
-/**
- * Interface for validation message
- */
-export interface ValidationMessage {
-  type: string;
-  message: string;
-  elementId?: string;
-  code?: string;
-}
 
 /**
  * Selection state from the useSelectionState hook
@@ -118,18 +110,20 @@ export interface SimulationState {
  */
 export interface ValidationState {
   isValid: boolean;
-  errorCount: number;
-  warningCount: number;
-  infoCount: number;
-  messages: ValidationMessage[];
+  issues: ValidationIssue[];
+  summary: {
+    errorCount: number;
+    warningCount: number;
+    infoCount: number;
+  };
   lastValidated?: number;
   hasIssues: boolean;
   hasErrors: boolean;
   hasWarnings: boolean;
-  errors: ValidationMessage[];
-  warnings: ValidationMessage[];
-  infos: ValidationMessage[];
-  getMessagesForElement: (elementId: string) => ValidationMessage[];
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+  infos: ValidationIssue[];
+  getIssuesForElement: (elementId: string) => ValidationIssue[];
   validate: (documentId: string) => void;
 }
 

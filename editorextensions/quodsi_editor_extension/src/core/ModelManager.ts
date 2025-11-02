@@ -358,12 +358,16 @@ export class ModelManager {
         if (!modelDef) {
             this.currentValidationResult = {
                 isValid: false,
-                errorCount: 1,
-                warningCount: 0,
-                messages: [{
-                    type: 'error',
-                    message: 'No model initialized'
-                }]
+                issues: [ValidationMessages.createIssue(
+                    ValidationSeverity.ERROR,
+                    'no_model_initialized',
+                    'No model initialized'
+                )],
+                summary: {
+                    errorCount: 1,
+                    warningCount: 0,
+                    infoCount: 0
+                }
             };
             this.broadcastValidationResults(this.currentValidationResult);
             return this.currentValidationResult;
@@ -371,14 +375,8 @@ export class ModelManager {
 
         const result = await this.validationService.validate(modelDef);
 
-        const errorCount = result.messages.filter(m => m.type === 'error').length;
-        const warningCount = result.messages.filter(m => m.type === 'warning').length;
-
-        this.currentValidationResult = {
-            ...result,
-            errorCount,
-            warningCount
-        };
+        // Result already has the correct structure with issues and summary
+        this.currentValidationResult = result;
 
         this.changeTracker.validationDirty = false;
         this.changeTracker.lastValidationUpdate = Date.now();
@@ -394,27 +392,12 @@ export class ModelManager {
      */
     private broadcastValidationResults(result: ValidationResult): void {
         try {
-            // Convert ValidationMessage[] to ValidationIssue[]
-            const issues: ValidationIssue[] = result.messages.map(msg => ({
-                id: msg.code || `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                elementId: msg.elementId,
-                severity: msg.type === 'error' ? ValidationSeverity.ERROR :
-                          msg.type === 'warning' ? ValidationSeverity.WARNING :
-                          ValidationSeverity.INFO,
-                code: msg.code || 'validation_message',
-                message: msg.message
-            }));
-
-            // Count issues by severity
-            const errorCount = issues.filter(i => i.severity === ValidationSeverity.ERROR).length;
-            const warningCount = issues.filter(i => i.severity === ValidationSeverity.WARNING).length;
-            const infoCount = issues.filter(i => i.severity === ValidationSeverity.INFO).length;
-
+            // Result already has the correct structure with issues and summary
             this.debug.log('Broadcasting validation results', {
                 isValid: result.isValid,
-                errorCount,
-                warningCount,
-                infoCount
+                errorCount: result.summary.errorCount,
+                warningCount: result.summary.warningCount,
+                infoCount: result.summary.infoCount
             });
 
             // Send validation state changed message
@@ -426,12 +409,8 @@ export class ModelManager {
                 version: '1.0',
                 data: {
                     isValid: result.isValid,
-                    issues,
-                    summary: {
-                        errorCount,
-                        warningCount,
-                        infoCount
-                    }
+                    issues: result.issues,
+                    summary: result.summary
                 }
             });
         } catch (error) {

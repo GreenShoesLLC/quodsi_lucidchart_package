@@ -16,7 +16,6 @@ export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';
 export * from './types/SelectionType';
 export * from './types/simComponentType';
-export * from './types/validation';
 export * from './types/MetaData';
 
 // Element types

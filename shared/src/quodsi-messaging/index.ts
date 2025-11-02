@@ -81,6 +81,7 @@ export {
 export {
   ValidationSeverity,
   ValidationIssue,
+  ValidationResult,
   ModelValidateMessage,
   ModelValidationResultMessage,
   ModelConvertMessage,

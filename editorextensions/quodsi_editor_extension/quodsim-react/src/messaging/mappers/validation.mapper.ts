@@ -1,32 +1,33 @@
-import { ValidationState } from "@quodsi/shared";
+import { ValidationResult } from "@quodsi/shared";
 
 /**
- * Transforms validation data from the message format to the ValidationState format
+ * Transforms validation data from the message format to the ValidationResult format
  * expected by UI components
- * 
+ *
  * @param validationResult The validation data from the message
- * @returns ValidationState formatted object or null if no data
+ * @returns ValidationResult formatted object or null if no data
  */
-export function transformToValidationState(validationResult: any): ValidationState | null {
+export function transformToValidationState(validationResult: any): ValidationResult | null {
   if (!validationResult) return null;
-  
+
   return {
-    messages: validationResult.messages || [],
+    isValid: validationResult.isValid ?? (validationResult.summary?.errorCount === 0),
+    issues: validationResult.issues || [],
     summary: {
-      errorCount: validationResult.errorCount || 0,
-      warningCount: validationResult.warningCount || 0
+      errorCount: validationResult.summary?.errorCount || 0,
+      warningCount: validationResult.summary?.warningCount || 0,
+      infoCount: validationResult.summary?.infoCount || 0
     }
   };
 }
 
 /**
- * Determines if the validation state is valid (no errors)
- * Helper function since isValid is not part of the ValidationState interface
- * 
- * @param validationState The validation state
+ * Determines if the validation result is valid (no errors)
+ *
+ * @param validationResult The validation result
  * @returns true if validation is valid (no errors)
  */
-export function isValidationValid(validationState: ValidationState | null): boolean {
-  if (!validationState) return true;
-  return validationState.summary.errorCount === 0;
+export function isValidationValid(validationResult: ValidationResult | null): boolean {
+  if (!validationResult) return true;
+  return validationResult.isValid;
 }
