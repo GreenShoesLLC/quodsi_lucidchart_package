@@ -1,6 +1,8 @@
 # Quodsi Validation System
 
-This directory contains the validation framework for Quodsi simulation models. The validation system ensures that models meet all requirements for successful simulation execution.
+This document describes the validation framework for Quodsi simulation models. The validation system ensures that models meet all requirements for successful simulation execution.
+
+**Location:** `shared/src/validation/`
 
 ## Table of Contents
 
@@ -22,6 +24,7 @@ The validation system analyzes `ModelDefinition` objects to ensure they:
 2. Maintain proper relationships between components
 3. Have valid configuration values
 4. Meet structural requirements for the simulation engine
+5. Have complete entity flow paths (no dead-ends)
 
 Validation generates detailed messages indicating problems and provides guidance on how to fix issues.
 
@@ -30,19 +33,20 @@ Validation generates detailed messages indicating problems and provides guidance
 The validation system follows a modular architecture with these components:
 
 ```
-validation/
+shared/src/validation/
 ├── common/              # Common utilities and base classes
 │   ├── ValidationMessages.ts   # Standard message creation
 │   └── ValidationRule.ts       # Base rule class
 ├── models/              # Data models for validation
 │   └── ModelDefinitionState.ts # Validation context and caching
 ├── rules/               # Individual validation rules
-│   ├── ActivityValidation.ts     # Activity-specific rules
-│   ├── ConnectorValidation.ts    # Connector relationship rules
-│   ├── ElementCountsValidation.ts # Element count rules
-│   ├── EntityValidation.ts       # Entity-specific rules
-│   ├── GeneratorValidation.ts    # Generator-specific rules
-│   └── ResourceValidation.ts     # Resource-specific rules
+│   ├── ActivityValidation.ts        # Activity-specific rules
+│   ├── ConnectorValidation.ts       # Connector relationship rules
+│   ├── ElementCountsValidation.ts   # Element count rules
+│   ├── EntityValidation.ts          # Entity-specific rules
+│   ├── GeneratorValidation.ts       # Generator-specific rules
+│   ├── GeneratorPathValidation.ts   # Generator path reachability
+│   └── ResourceValidation.ts        # Resource-specific rules
 └── services/            # Validation orchestration
     └── ModelValidationService.ts # Main validation service
 ```
@@ -56,7 +60,7 @@ validation/
 
 ## Validation Rules
 
-The system includes the following validation rules:
+The system includes the following validation rules (7 total):
 
 ### 1. Element Counts Validation
 
@@ -65,6 +69,8 @@ Ensures the model has the minimum required elements:
 - At least one generator
 - At least one entity
 
+**Severity**: ERROR (blocks simulation)
+
 ### 2. Activity Validation
 
 Validates activity configuration:
@@ -72,14 +78,20 @@ Validates activity configuration:
 - Proper configuration of operation steps
 - Valid resource requirements
 - Buffer capacity validation
+- Cycle time analysis
+- Buffer overflow risk detection
+
+**Severity**: ERROR for critical issues, WARNING for optimization suggestions
 
 ### 3. Connector Validation
 
 Validates connections between elements:
 - Valid source and target elements
-- No circular references
-- Valid probability configurations
+- No circular references (WARNING if detected)
+- Valid weight configurations (routing probability)
 - Appropriate connection types
+
+**Severity**: ERROR for invalid connections, WARNING for circular references
 
 ### 4. Generator Validation
 
@@ -88,27 +100,60 @@ Validates generator configuration:
 - Proper timing configuration
 - Valid connections to activities
 - Proper entity creation settings
+- Entity generation rate validation
 
-### 5. Resource Validation
+**Severity**: ERROR for configuration issues, WARNING for rate concerns
+
+### 5. Generator Path Validation
+
+**NEW** - Validates entity flow paths:
+- All paths from each Generator must eventually reach a terminal Activity (activity with no outgoing connectors)
+- Detects dead-end paths where entities get stuck
+- Uses Breadth-First Search (BFS) to explore all reachable activities
+- Handles loops correctly (loops are allowed if an exit path exists)
+
+**Error Conditions:**
+- Generator has no outgoing connectors
+- No path exists to any terminal Activity
+- Paths lead to non-terminal Activities with no valid exit
+
+**Severity**: ERROR (blocks simulation)
+
+**Example Error Messages:**
+```
+ERROR: Generator 'EntityGenerator' has no outgoing connectors. Entities cannot flow into the system.
+
+ERROR: Generator 'EntityGenerator' has no path to a terminal Activity. All paths lead to dead-ends or loops without exits.
+
+ERROR: Generator 'EntityGenerator' has paths that lead to non-terminal Activities with no exit: 'ProcessStep', 'QualityCheck'. Entities may get stuck.
+```
+
+### 6. Resource Validation
 
 Validates resource configuration:
-- Valid capacity settings
+- Valid capacity settings (must be >= 1, whole number, reasonable max)
 - Proper resource requirement structure
 - Valid resource allocation configurations
+- Resource usage validation (no unused resources)
+- Potential overutilization warnings
 
-### 6. Entity Validation
+**Severity**: ERROR for capacity/configuration issues, WARNING for usage concerns
+
+### 7. Entity Validation
 
 Validates entity configuration:
 - Proper configuration
 - Used by at least one generator
 - Valid relationships
 
+**Severity**: ERROR for configuration issues, WARNING if unused
+
 ## Usage
 
 Basic usage example:
 
 ```typescript
-import { ModelValidationService } from 'shared/src/validation/services/ModelValidationService';
+import { ModelValidationService } from '@quodsi/shared';
 
 // Create validation service
 const validationService = new ModelValidationService();
@@ -132,8 +177,8 @@ if (validationResult.isValid) {
 The validation process follows these steps:
 
 1. **Preprocessing**: Build relationship maps and cache state
-2. **Rule Application**: Execute all validation rules
-3. **Message Collection**: Gather all validation messages
+2. **Rule Application**: Execute all validation rules in order
+3. **Message Collection**: Gather all validation issues
 4. **Result Calculation**: Determine overall validation status
 5. **Reporting**: Create a structured validation result
 
@@ -147,11 +192,25 @@ Validation produces a `ValidationResult` object with:
   - `warningCount`: Number of warning issues
   - `infoCount`: Number of informational issues
 
+### ValidationIssue Structure
+
+Each issue contains:
+```typescript
+{
+    id: string;           // Auto-generated unique ID
+    severity: ValidationSeverity;  // ERROR | WARNING | INFO
+    code: string;         // Machine-readable code (e.g., 'generator_no_terminal_path')
+    message: string;      // Human-readable message
+    elementId?: string;   // Optional: ID of the element with the issue
+    context?: Record<string, unknown>;  // Optional: Additional metadata
+}
+```
+
 ### Issue Severity Levels
 
 Each ValidationIssue has a severity level (ValidationSeverity enum):
-- `ERROR`: Critical issues that must be fixed before simulation
-- `WARNING`: Non-critical issues that should be addressed
+- `ERROR`: Critical issues that must be fixed before simulation (blocks simulation)
+- `WARNING`: Non-critical issues that should be addressed (allows simulation)
 - `INFO`: Informational messages about the model
 
 ## Error Handling
@@ -161,7 +220,7 @@ The validation system includes robust error handling:
 1. **Validation Failures**: Structured as ValidationIssue objects
 2. **Runtime Errors**: Caught and converted to ValidationIssue objects
 3. **Context Information**: Issues include element ID and code for categorization
-4. **Recovery**: System continues validation even after errors
+4. **Recovery**: System continues validation even after errors in individual rules
 
 ## Performance Optimization
 
@@ -170,7 +229,8 @@ The validation system includes several optimizations:
 1. **State Caching**: ModelDefinitionState caches relationship information
 2. **Hash-Based Caching**: Reuses validation results for unchanged models
 3. **Relationship Preprocessing**: Builds activity relationships once for multiple rules
-4. **Batch Validation**: Processes rules efficiently
+4. **Batch Validation**: Processes all rules efficiently in a single pass
+5. **BFS for Path Analysis**: Efficient graph traversal for Generator path validation
 
 ## Adding Custom Rules
 
@@ -178,7 +238,7 @@ To add a new validation rule:
 
 1. Create a new rule class extending `ValidationRule`
 2. Implement the `validate` method
-3. Register the rule in `ModelValidationService`
+3. Register the rule in `ModelValidationService` constructor
 
 Example:
 
@@ -193,6 +253,9 @@ export class CustomValidationRule extends ValidationRule {
         // Implement validation logic
         const { modelDefinition } = state;
 
+        // Use this.log() for debugging (disabled by default)
+        this.log('Starting custom validation');
+
         // Check your validation conditions
         if (someConditionFails) {
             issues.push(ValidationMessages.createIssue(
@@ -205,28 +268,33 @@ export class CustomValidationRule extends ValidationRule {
     }
 }
 
-// Add to ModelValidationService
+// Add to ModelValidationService constructor
 constructor() {
     super();
     this.rules = [
-        // Existing rules...
-        new CustomValidationRule()
+        new ElementCountsValidation(),
+        new ActivityValidation(),
+        new ConnectorValidation(),
+        new GeneratorValidation(),
+        new GeneratorPathValidation(),
+        new ResourceValidation(),
+        new EntityValidation(),
+        new CustomValidationRule()  // Add your rule here
     ];
+    this.setLogging(false);
 }
 ```
 
 ## Testing
 
-The validation system includes comprehensive test coverage:
+The validation system includes comprehensive test coverage.
 
 ### Test Structure
 
-Tests are located in `shared/tests/validation/` and include:
+Tests are located in `shared/tests/validation/services/` and include:
 
-1. **Valid Model Tests**: Tests using valid model configurations
-2. **Invalid Model Tests**: Tests using intentionally invalid models
-3. **Rule-Specific Tests**: Tests focusing on individual validation rules
-4. **Helper Functions**: Utilities for test model creation
+1. **ValidModelsValidation.test.ts**: Tests using valid model configurations
+2. **InvalidModelsValidation.test.ts**: Tests using intentionally invalid models
 
 ### Test Categories
 
@@ -242,12 +310,10 @@ The test suite covers:
 Tests can be run using the standard test runner:
 
 ```bash
+# Run all validation tests
 npm test -- --testPathPattern=validation
-```
 
-To run specific test files:
-
-```bash
+# Run specific test file
 npm test -- shared/tests/validation/services/ValidModelsValidation.test.ts
 ```
 
@@ -277,7 +343,17 @@ test('Model without activities fails validation', () => {
     const result = validationService.validate(model);
     expect(result.isValid).toBe(false);
     expect(result.issues.some(issue =>
-        issue.code === 'missing_activities'
+        issue.code === 'missing_required_element'
+    )).toBe(true);
+});
+
+// Testing Generator path validation
+test('Generator with no path to terminal fails validation', () => {
+    const model = createGeneratorWithDeadEndPath();
+    const result = validationService.validate(model);
+    expect(result.isValid).toBe(false);
+    expect(result.issues.some(issue =>
+        issue.code === 'generator_no_terminal_path'
     )).toBe(true);
 });
 ```
@@ -285,3 +361,10 @@ test('Model without activities fails validation', () => {
 ## Conclusion
 
 The Quodsi validation system provides a robust framework for ensuring model correctness before simulation execution. By following a modular design with clear separation of concerns, the system is both maintainable and extensible.
+
+**Key Features:**
+- 7 comprehensive validation rules
+- Path reachability analysis for entity flow
+- Efficient caching and preprocessing
+- Clear, actionable error messages
+- Extensible architecture for custom rules

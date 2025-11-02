@@ -9,6 +9,7 @@ import { ActivityValidation } from "../rules/ActivityValidation";
 import { ConnectorValidation } from "../rules/ConnectorValidation";
 import { ElementCountsValidation } from "../rules/ElementCountsValidation";
 import { GeneratorValidation } from "../rules/GeneratorValidation";
+import { GeneratorPathValidation } from "../rules/GeneratorPathValidation";
 import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
@@ -44,6 +45,7 @@ export class ModelValidationService extends QuodsiLogger {
             new ActivityValidation(),
             new ConnectorValidation(),
             new GeneratorValidation(),
+            new GeneratorPathValidation(),
             new ResourceValidation(),
             new EntityValidation()
         ];

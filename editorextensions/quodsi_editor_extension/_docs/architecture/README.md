@@ -22,6 +22,16 @@ Complete documentation of the message protocol enabling extension-React communic
 - React mapper system
 - All message types organized by category (framework, auth, selection, element-ops, model-ops, simulation)
 
+### [Validation System](./validation/)
+Documentation of the model validation framework that ensures simulation readiness.
+
+**Covers:**
+- 7 comprehensive validation rules
+- Generator path reachability analysis
+- ValidationResult and ValidationIssue structures
+- Adding custom validation rules
+- Performance optimizations and caching
+
 ### Panel Architecture (Coming Soon)
 Panel lifecycle, RoutablePanel interface, and panel-specific responsibilities.
 
@@ -41,6 +51,9 @@ StorageAdapter, ModelManager, and data persistence patterns.
 - [Message Protocol](./messaging/01_message_protocol.md)
 - [Message Lifecycle](./messaging/02_message_lifecycle.md)
 - [Mapper System](./messaging/03_mapper_system.md)
+
+**Validation:**
+- [Validation System Overview](./validation/README.md)
 
 ## For Developers
 

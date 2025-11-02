@@ -94,28 +94,25 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
     <div className={`border-b-2 ${getBannerColor()} shadow-sm`}>
       {/* Collapsed summary bar */}
       <div
-        className="flex items-center justify-between p-2 cursor-pointer hover:bg-opacity-80 transition-colors"
+        className="flex items-center justify-between py-0.5 px-2 cursor-pointer hover:bg-opacity-80 transition-colors"
         onClick={onToggle}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           {errorCount > 0 ? (
-            <XCircle className="h-4 w-4 text-red-600" />
+            <XCircle className="h-3 w-3 text-red-600" />
           ) : (
-            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertTriangle className="h-3 w-3 text-yellow-600" />
           )}
-          <span className="text-sm font-semibold text-gray-800">
+          <span className="text-xs font-semibold text-gray-800">
             {getSummaryText()} found
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-600">
-            {isExpanded ? 'Click to collapse' : 'Click to expand'}
-          </span>
+        <div className="flex items-center gap-1">
           {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-gray-600" />
+            <ChevronUp className="h-3 w-3 text-gray-600" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-gray-600" />
+            <ChevronDown className="h-3 w-3 text-gray-600" />
           )}
         </div>
       </div>
