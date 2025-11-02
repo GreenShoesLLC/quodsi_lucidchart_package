@@ -47,9 +47,11 @@ interface Props {
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
   validationState?: ValidationResult | null;
+  activeTab?: EditorTab;
+  onTabChange?: (tab: EditorTab) => void;
 }
 
-type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities" | "validation";
+export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities" | "validation";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -168,12 +170,17 @@ const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: str
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements, validationState }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
 
-  const [activeTab, setActiveTab] = useState<EditorTab>("basic");
+  // Local state for tab management (used as fallback if props not provided)
+  const [localActiveTab, setLocalActiveTab] = useState<EditorTab>("basic");
+
+  // Use props if provided, otherwise fall back to local state (backward compatible)
+  const activeTab = activeTabProp ?? localActiveTab;
+  const setActiveTab = onTabChangeProp ?? setLocalActiveTab;
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<EditingRequirement | null>(null);
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);

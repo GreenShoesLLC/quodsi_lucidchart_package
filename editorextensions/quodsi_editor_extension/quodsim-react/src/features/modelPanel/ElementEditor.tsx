@@ -9,7 +9,7 @@ import {
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
-import ModelEditor from "../editors/ModelEditor";
+import ModelEditor, { EditorTab } from "../editors/ModelEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
@@ -28,6 +28,8 @@ interface ElementEditorProps {
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
+  activeTab?: EditorTab;
+  onTabChange?: (tab: EditorTab) => void;
 }
 
 /**
@@ -45,6 +47,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   resourceRequirements,
   outgoingConnectors,
   validationState,
+  activeTab,
+  onTabChange,
 }) => {
   // Simple cancel handler - no accordion state to manage
   const handleCancel = () => {
@@ -86,6 +90,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             referenceData={referenceData}
             resourceRequirements={resourceRequirements}
             validationState={validationState}
+            activeTab={activeTab}
+            onTabChange={onTabChange}
           />
         );
 

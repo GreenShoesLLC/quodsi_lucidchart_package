@@ -102,25 +102,49 @@ export const listScenariosAction = async (
             try {
                 logger.debug(`Processing scenario: ${scenarioId}`);
 
-                // Read status.json from scenario folder
+                // Try to read status.json from scenario folder
                 const statusJsonPath = `${scenarioId}/status.json`;
                 const statusJson = await storageService.getBlobContent(
                     data.documentId,
                     statusJsonPath
                 );
 
-                if (!statusJson) {
-                    logger.warn(`No status.json found for scenario ${scenarioId}, skipping`);
-                    continue;
+                let statusData: any = null;
+
+                if (statusJson) {
+                    // Parse status.json if it exists
+                    try {
+                        statusData = JSON.parse(statusJson);
+                    } catch (parseError) {
+                        logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
+                        // Continue to check for model.json
+                    }
                 }
 
-                // Parse status.json
-                let statusData: any;
-                try {
-                    statusData = JSON.parse(statusJson);
-                } catch (parseError) {
-                    logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
-                    continue;
+                // If status.json doesn't exist or failed to parse, check for model.json as fallback
+                if (!statusData) {
+                    const modelJsonPath = `${scenarioId}/model.json`;
+                    const modelJson = await storageService.getBlobContent(
+                        data.documentId,
+                        modelJsonPath
+                    );
+
+                    if (!modelJson) {
+                        logger.warn(`No status.json or model.json found for scenario ${scenarioId}, skipping`);
+                        continue;
+                    }
+
+                    // Model.json exists, create default status data
+                    logger.info(`Using model.json for scenario ${scenarioId} (status.json not found)`);
+                    statusData = {
+                        id: scenarioId,
+                        name: scenarioId, // Use scenarioId as default name
+                        runState: RunState.NotRun,
+                        reps: 0,
+                        runClockPeriod: 0,
+                        runClockPeriodUnit: 'Minutes',
+                        simulationTimeType: 'Clock'
+                    };
                 }
 
                 // Find any .zip file in the scenario folder

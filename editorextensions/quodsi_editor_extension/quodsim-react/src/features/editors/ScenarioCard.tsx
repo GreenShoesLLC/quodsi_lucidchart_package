@@ -201,7 +201,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
           bgColor: "bg-white",
           borderColor: "border-gray-200",
           leftBorderColor: "border-l-gray-400",
-          label: "Queued"
+          label: "Not Started"
         };
     }
   };

@@ -7,6 +7,7 @@ import { ValidationBanner } from './ValidationBanner';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
+import { EditorTab } from '../editors/ModelEditor';
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -41,6 +42,15 @@ export const ModelPanel: React.FC = () => {
 
   // Local UI state for validation banner
   const [validationBannerExpanded, setValidationBannerExpanded] = useState(false);
+
+  // Tab state management for ModelEditor
+  const [activeTab, setActiveTab] = useState<EditorTab>("basic");
+
+  // Wrap onSimulate to auto-switch to scenarios tab after simulation starts
+  const handleSimulate = (scenarioName?: string) => {
+    onSimulate(scenarioName);
+    setActiveTab("scenarios");
+  };
 
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
   const states = useMemo(() => {
@@ -185,7 +195,7 @@ export const ModelPanel: React.FC = () => {
         validationState={validationState}
         currentElement={currentElement}
         onValidate={onValidate}
-        onSimulate={onSimulate}
+        onSimulate={handleSimulate}
         onRemoveModel={onRemoveModel}
         onElementTypeChange={onElementTypeChange}
         diagramElementType={diagramElementType}
@@ -223,6 +233,8 @@ export const ModelPanel: React.FC = () => {
             resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}
             validationState={validationState}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
           />
         )}
       </div>
