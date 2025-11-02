@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
@@ -44,6 +44,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   onViewResults,
   referenceData,
 }) => {
+  const [isSimulating, setIsSimulating] = useState(false);
+
   // Helper to get display name for the element
   const getDisplayName = (
     modelItemData: ExtendedModelItemData | null
@@ -72,18 +74,27 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
   const handleSimulateClick = () => {
     if (onSimulate) {
+      // Set loading state
+      setIsSimulating(true);
+
       // Generate user-friendly scenario name with timestamp
       const now = new Date();
       const year = now.getFullYear();
+      const twoDigitYear = String(year).slice(-2);
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const day = String(now.getDate()).padStart(2, '0');
       const hours = String(now.getHours()).padStart(2, '0');
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
 
-      const scenarioName = `Run ${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      const scenarioName = `${twoDigitYear}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
       onSimulate(scenarioName);
+
+      // Clear loading state after 2 seconds
+      setTimeout(() => {
+        setIsSimulating(false);
+      }, 2000);
     }
   };
 
@@ -189,11 +200,21 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           </button>
           {onSimulate && (
             <button
-              className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1"
+              className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSimulateClick}
+              disabled={isSimulating}
             >
-              <Play className="w-3 h-3" />
-              Run Simulation
+              {isSimulating ? (
+                <>
+                  <Loader className="w-3 h-3 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                <>
+                  <Play className="w-3 h-3" />
+                  Run Simulation
+                </>
+              )}
             </button>
           )}
         </div>

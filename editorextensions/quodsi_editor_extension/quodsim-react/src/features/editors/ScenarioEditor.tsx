@@ -36,6 +36,31 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
   const [deletingScenarios, setDeletingScenarios] = useState<Set<string>>(new Set());
   const { listScenarios, deleteScenario } = useScenarioSender();
 
+  // Helper function to check if scenario name is in datetime format (YY-MM-DD HH:mm:ss)
+  const isDatetimeFormat = useCallback((name: string): boolean => {
+    return /^\d{2}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(name);
+  }, []);
+
+  // Helper function to sort scenarios by name (most recent datetime first)
+  const sortScenarios = useCallback((scenarioList: Scenario[]): Scenario[] => {
+    return [...scenarioList].sort((a, b) => {
+      const aIsDatetime = isDatetimeFormat(a.name);
+      const bIsDatetime = isDatetimeFormat(b.name);
+
+      // If both are datetime format, sort descending (most recent first)
+      if (aIsDatetime && bIsDatetime) {
+        return b.name.localeCompare(a.name);
+      }
+
+      // If only one is datetime, datetime comes first
+      if (aIsDatetime) return -1;
+      if (bIsDatetime) return 1;
+
+      // If neither is datetime, maintain original order
+      return 0;
+    });
+  }, [isDatetimeFormat]);
+
   // Load scenarios function
   const loadScenarios = useCallback(() => {
     if (!documentId) {
@@ -63,7 +88,8 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
 
       // Check for envelope-formatted messages
       if (message.type === EnvelopeMessageType.SCENARIOS_LIST_RESULT) {
-        setScenarios(message.data?.scenarios || []);
+        const unsortedScenarios = message.data?.scenarios || [];
+        setScenarios(sortScenarios(unsortedScenarios));
         setLoading(false);
         setError(null);
       } else if (message.type === "ERROR" && message.data?.relatedTo === EnvelopeMessageType.SCENARIOS_LIST_REQUEST) {
@@ -94,12 +120,40 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
           // Refresh to restore the scenario in the list
           loadScenarios();
         }
+      } else if (message.type === EnvelopeMessageType.MODEL_RUN_STATUS) {
+        const statusData = message.data;
+
+        // Create optimistic scenario card when simulation starts (QUEUED or PROCESSING)
+        if (statusData && (statusData.status === 'QUEUED' || statusData.status === 'PROCESSING')) {
+          console.log('[ScenarioEditor] Simulation started, creating optimistic scenario card:', statusData.scenarioName);
+
+          // Check if this scenario already exists in the list
+          const scenarioExists = scenarios.some(s => s.id === statusData.scenarioId);
+
+          if (!scenarioExists) {
+            // Create optimistic scenario
+            const optimisticScenario: Scenario = {
+              id: statusData.scenarioId,
+              name: statusData.scenarioName || 'New Simulation',
+              runState: RunState.Running,
+              reps: statusData.reps || 0,
+              runClockPeriod: statusData.runClockPeriod || 0,
+              runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
+              simulationTimeType: statusData.simulationTimeType || 'Clock',
+              completedAt: statusData.queuedAt,
+              hasResults: false
+            };
+
+            // Add to scenarios list and sort
+            setScenarios(prev => sortScenarios([optimisticScenario, ...prev]));
+          }
+        }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [documentId, loadScenarios]);
+  }, [documentId, loadScenarios, scenarios, sortScenarios]);
 
   // Load scenarios on mount
   useEffect(() => {
@@ -168,20 +222,16 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
   }, [documentId, deleteScenario]);
 
   return (
-    <div className="scenario-editor p-4">
+    <div className="scenario-editor p-2">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center gap-2">
-          <PlaySquare className="w-4 h-4 text-blue-600" />
-          <h2 className="text-sm font-semibold text-gray-900">Simulation Scenarios</h2>
-        </div>
+      <div className="flex justify-end items-center mb-2">
         <button
           onClick={loadScenarios}
           disabled={loading}
-          className="flex items-center gap-1 px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Refresh scenarios"
         >
-          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          Refresh
+          <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${loading ? "animate-spin" : ""}`} />
         </button>
       </div>
 
