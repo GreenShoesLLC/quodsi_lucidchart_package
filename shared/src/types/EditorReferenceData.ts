@@ -18,6 +18,7 @@ export interface EditorReferenceData {
         connectType?: ConnectType,
         operationStepRequirementIds?: string[]  // Requirement IDs used by operation steps
     }>;
+    generators?: Array<{ id: string, name: string }>;
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
     states?: any[]; // Serialized state definitions for all components

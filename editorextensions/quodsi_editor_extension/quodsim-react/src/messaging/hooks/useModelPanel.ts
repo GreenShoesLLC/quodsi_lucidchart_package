@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useMessaging } from '../MessageProvider';
 import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
-import { JsonObject, SimulationObjectType, DiagramElementType } from '@quodsi/shared';
+import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData } from '@quodsi/shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationStatus } from '../../types/SimulationStatus';
@@ -232,17 +232,21 @@ export function useModelPanel() {
   };
   
   // Use reference data from selection state or provide empty default
-  const referenceData = selection.referenceData || {
+  const referenceData: EditorReferenceData = selection.referenceData || {
     activities: [],
+    generators: [],
     entities: [],
     resources: [],
-    resourceRequirements: []
+    resourceRequirements: [],
+    connectors: [],
+    states: []
   };
   
   // Debug log the reference data to track the fix
   logger.debug('Reference data from selection state:', {
     hasReferenceData: !!selection.referenceData,
     activitiesCount: referenceData.activities?.length || 0,
+    generatorsCount: referenceData.generators?.length || 0,
     resourcesCount: referenceData.resources?.length || 0,
     entitiesCount: referenceData.entities?.length || 0,
     resourceRequirementsCount: referenceData.resourceRequirements?.length || 0,

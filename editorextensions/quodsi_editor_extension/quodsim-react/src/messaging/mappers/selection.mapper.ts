@@ -77,6 +77,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         validationResult?: any;
         referenceData?: {
           activities?: Array<{ id: string; name: string }>;
+          generators?: Array<{ id: string; name: string }>;
           resources?: Array<{ id: string; name: string }>;
           entities?: Array<{ id: string; name: string }>;
           resourceRequirements?: any[];
@@ -97,6 +98,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
       console.log('[SelectionMapper] SELECTION_CHANGED referenceData check:', {
         hasReferenceData: !!selectionData.referenceData,
         referenceDataKeys: selectionData.referenceData ? Object.keys(selectionData.referenceData) : [],
+        generatorsCount: selectionData.referenceData?.generators?.length || 0,
         resourcesCount: selectionData.referenceData?.resources?.length || 0,
         resourceRequirementsCount: selectionData.referenceData?.resourceRequirements?.length || 0,
         connectorsCount: selectionData.referenceData?.connectors?.length || 0,
@@ -117,6 +119,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         hasReferenceData: !!selectionData.referenceData,
         referenceDataSummary: selectionData.referenceData ? {
           activities: selectionData.referenceData.activities?.length || 0,
+          generators: selectionData.referenceData.generators?.length || 0,
           resources: selectionData.referenceData.resources?.length || 0,
           entities: selectionData.referenceData.entities?.length || 0,
           resourceRequirements: selectionData.referenceData.resourceRequirements?.length || 0,
@@ -293,6 +296,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         hasReferenceData: !!(selectionAction as any).referenceData,
         referenceDataSummary: (selectionAction as any).referenceData ? {
           activities: (selectionAction as any).referenceData.activities?.length || 0,
+          generators: (selectionAction as any).referenceData.generators?.length || 0,
           resources: (selectionAction as any).referenceData.resources?.length || 0,
           entities: (selectionAction as any).referenceData.entities?.length || 0,
           connectors: (selectionAction as any).referenceData.connectors?.length || 0

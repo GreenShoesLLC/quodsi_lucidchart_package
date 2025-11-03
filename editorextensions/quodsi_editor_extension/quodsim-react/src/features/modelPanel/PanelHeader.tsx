@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
@@ -102,7 +102,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const getElementIcon = (type: SimulationObjectType) => {
     switch (type) {
       case SimulationObjectType.Model:
-        return Factory;
+        return Network;
       case SimulationObjectType.Activity:
         return Wrench;
       case SimulationObjectType.Resource:
@@ -110,7 +110,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       case SimulationObjectType.Entity:
         return Package;
       case SimulationObjectType.Generator:
-        return Zap;
+        return Factory;
       case SimulationObjectType.Connector:
         return ArrowRight;
       default:
@@ -129,36 +129,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     return { activities, resources, entities };
   };
 
-  // Helper to render validation badges
-  const renderValidationBadges = () => {
-    if (!validationState) return null;
-
-    const { errorCount, warningCount } = validationState.summary;
-
-    return (
-      <div className="flex items-center gap-1">
-        {errorCount > 0 && (
-          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
-            {errorCount}E
-          </span>
-        )}
-        {warningCount > 0 && (
-          <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-medium">
-            {warningCount}W
-          </span>
-        )}
-        {errorCount === 0 && warningCount === 0 && (
-          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
-            ✓ 0E
-          </span>
-        )}
-      </div>
-    );
-  };
 
   // Render Model header
   const renderModelHeader = () => {
-    const Icon = Factory;
+    const Icon = Network;
     const stats = getModelStats();
 
     return (
@@ -176,18 +150,15 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           </button>
         </div>
 
-        {/* Row 2: Statistics + Validation */}
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-gray-700 font-medium">
-            {stats && (
-              <>
-                <span>{stats.activities} Activities</span>
-                <span>•</span>
-                <span>{stats.resources} Resources</span>
-              </>
-            )}
-          </div>
-          {renderValidationBadges()}
+        {/* Row 2: Statistics */}
+        <div className="flex items-center gap-2 text-xs text-gray-700 font-medium">
+          {stats && (
+            <>
+              <span>{stats.activities} Activities</span>
+              <span>•</span>
+              <span>{stats.resources} Resources</span>
+            </>
+          )}
         </div>
 
         {/* Row 3: Action buttons */}
@@ -242,12 +213,9 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           </button>
         </div>
 
-        {/* Row 2: Context + Validation */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-600">
-            {typeLabel} in "{modelName}"
-          </span>
-          {renderValidationBadges()}
+        {/* Row 2: Context */}
+        <div className="text-xs text-gray-600">
+          {typeLabel} in "{modelName}"
         </div>
 
         {/* Row 3: Action buttons */}

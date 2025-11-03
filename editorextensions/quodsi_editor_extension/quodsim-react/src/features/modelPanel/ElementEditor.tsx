@@ -169,13 +169,45 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           );
         }
 
-        // Error: Source Activity not found - data integrity issue
-        console.error("[ElementEditor] Source Activity not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
+        // Check if source is a Generator instead
+        const sourceGeneratorRef = referenceData.generators?.find(
+          (g) => g.id === safeElementData.sourceId
+        );
+
+        if (sourceGeneratorRef) {
+          // Generator connectors don't have routing configuration
+          // Show read-only information
+          const targetActivity = referenceData.activities?.find(
+            (a) => a.id === safeElementData.targetId
+          );
+
+          return (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm space-y-2">
+              <div className="font-medium text-blue-900">Generator Connector</div>
+              <div className="text-xs text-blue-800 space-y-1">
+                <div>
+                  <span className="font-medium">Source:</span> {sourceGeneratorRef.name} (Generator)
+                </div>
+                <div>
+                  <span className="font-medium">Target:</span> {targetActivity?.name || safeElementData.targetId} (Activity)
+                </div>
+                <div className="mt-2 pt-2 border-t border-blue-300 text-blue-700">
+                  Generator connectors are simple point-to-point connections. They don't have routing
+                  configuration like Activity connectors because Generators always send entities to
+                  their designated target Activity.
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Error: Source not found in either Activities or Generators - data integrity issue
+        console.error("[ElementEditor] Source not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
         return (
           <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
             <div className="font-medium">Cannot edit connector</div>
             <div className="text-xs mt-1">
-              Source Activity not found. This indicates a data integrity issue.
+              Source element not found. This indicates a data integrity issue.
             </div>
           </div>
         );

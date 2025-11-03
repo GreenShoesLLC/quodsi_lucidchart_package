@@ -43,6 +43,11 @@ export const referenceDataBuilder = {
             .filter(id => id !== null) as string[]
         }));
 
+        referenceData.generators = modelDef.generators.getAll().map(g => ({
+          id: g.id,
+          name: g.name
+        }));
+
         referenceData.resources = modelDef.resources.getAll().map(r => ({
           id: r.id,
           name: r.name
@@ -71,6 +76,7 @@ export const referenceDataBuilder = {
 
         this.debug.log('Reference data built:', {
           activities: referenceData.activities?.length || 0,
+          generators: referenceData.generators?.length || 0,
           resources: referenceData.resources?.length || 0,
           entities: referenceData.entities?.length || 0,
           resourceRequirements: referenceData.resourceRequirements?.length || 0,
