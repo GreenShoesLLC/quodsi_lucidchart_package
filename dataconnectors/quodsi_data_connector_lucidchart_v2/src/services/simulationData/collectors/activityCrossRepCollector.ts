@@ -7,46 +7,48 @@ import { conditionalLog, conditionalError, conditionalWarn } from '../storageSer
 import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
-export const requiredColumns = getRequiredColumnsFromType<ActivityCrossRepSummaryData>([
-    'id',
-    'scenario_id',
-    'scenario_name',
+// Note: CSV uses _std suffix, not _std_dev. We'll map them after parsing.
+// Also, id, scenario_id, and scenario_name are already in CSV (no need to inject)
+// Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
+// since CSV column names don't match interface property names (_std vs _std_dev)
+// NOTE: CSV is missing median and CV fields - we'll provide defaults in the mapper
+export const requiredColumns: string[] = [
     'activity_id',
     'activity_name',
     'utilization_mean',
     'utilization_max',
-    'utilization_std_dev',
+    'utilization_std',  // CSV uses _std, not _std_dev
     'capacity_mean',
     'capacity_max',
-    'capacity_std_dev',
+    'capacity_std',
     'contents_mean',
     'contents_max',
-    'contents_std_dev',
+    'contents_std',
     'queue_length_mean',
     'queue_length_max',
-    'queue_length_std_dev',
+    'queue_length_std',
     'cycle_time_mean',
-    'cycle_time_median',
-    'cycle_time_std_dev',
-    'cycle_time_cv',
+    // 'cycle_time_median',  // NOT in CSV - will default to 0
+    'cycle_time_std',
+    // 'cycle_time_cv',      // NOT in CSV - will default to 0
     'waiting_time_mean',
-    'waiting_time_median',
-    'waiting_time_std_dev',
-    'waiting_time_cv',
+    // 'waiting_time_median', // NOT in CSV - will default to 0
+    'waiting_time_std',
+    // 'waiting_time_cv',     // NOT in CSV - will default to 0
     'blocked_time_mean',
-    'blocked_time_median',
-    'blocked_time_std_dev',
-    'blocked_time_cv',
+    // 'blocked_time_median', // NOT in CSV - will default to 0
+    'blocked_time_std',
+    // 'blocked_time_cv',     // NOT in CSV - will default to 0
     'arrivals_mean',
     'arrivals_max',
-    'arrivals_std_dev',
+    'arrivals_std',
     'captures_mean',
     'captures_max',
-    'captures_std_dev',
+    'captures_std',
     'releases_mean',
     'releases_max',
-    'releases_std_dev'
-]);
+    'releases_std'
+];
 
 /**
  * Fetches activity cross-replication summary data from storage
@@ -66,8 +68,9 @@ export async function fetchActivityCrossRep(
     conditionalLog(`[activityCrossRep] Document ID: ${documentId}`);
     conditionalLog(`[activityCrossRep] Scenario ID: ${scenarioId}`);
 
-    // Use the correct path structure: scenarioId/filename.csv
-    const baseBlobName = 'activity_cross_rep_summary.csv';
+    // Use the correct path structure: scenarioId/cross_rep/filename.csv
+    // Note: CSV files are in cross_rep subfolder, and use _summary_summary naming
+    const baseBlobName = 'cross_rep/activity_summary_summary.csv';
     const blobName = `${scenarioId}/${baseBlobName}`;
     conditionalLog(`[activityCrossRep] Target file path: ${containerName}/${blobName}`);
 
@@ -125,7 +128,7 @@ export async function fetchActivityCrossRep(
 
         // Now fetch the data since we know the file exists
         conditionalLog(`[activityCrossRep] File exists. Fetching data...`);
-        let result = await fetchCsvData<ActivityCrossRepSummaryData>(
+        let result = await fetchCsvData<any>(  // Use 'any' since CSV has different column names
             containerName,
             blobName,
             documentId,
@@ -134,8 +137,74 @@ export async function fetchActivityCrossRep(
 
         conditionalLog(`[activityCrossRep] Fetched ${result.length} activity cross-rep records`);
         if (result.length > 0) {
-            conditionalLog(`[activityCrossRep] First record sample: ${JSON.stringify(result[0])}`);
+            conditionalLog(`[activityCrossRep] First record sample (before mapping): ${JSON.stringify(result[0])}`);
         }
+
+        // Map CSV column names to schema field names
+        // CSV uses _std suffix, schema expects _std_dev
+        // Also inject scenario_id, scenario_name, and generate composite ID
+        const mappedResult: ActivityCrossRepSummaryData[] = result.map((item: any) => ({
+            // Generate composite ID from scenario and activity
+            id: `${scenarioId}_${item.activity_id}`,
+            scenario_id: scenarioId,
+            scenario_name: documentId,  // Use documentId as scenario name for now
+
+            // Copy identifier fields
+            activity_id: item.activity_id,
+            activity_name: item.activity_name,
+
+            // Map all _std fields to _std_dev
+            utilization_mean: item.utilization_mean,
+            utilization_max: item.utilization_max,
+            utilization_std_dev: item.utilization_std,  // Map _std to _std_dev
+
+            capacity_mean: item.capacity_mean,
+            capacity_max: item.capacity_max,
+            capacity_std_dev: item.capacity_std,
+
+            contents_mean: item.contents_mean,
+            contents_max: item.contents_max,
+            contents_std_dev: item.contents_std,
+
+            queue_length_mean: item.queue_length_mean,
+            queue_length_max: item.queue_length_max,
+            queue_length_std_dev: item.queue_length_std,
+
+            cycle_time_mean: item.cycle_time_mean,
+            cycle_time_median: 0,  // NOT in CSV, default to 0
+            cycle_time_std_dev: item.cycle_time_std,
+            cycle_time_cv: 0,  // NOT in CSV, default to 0
+
+            waiting_time_mean: item.waiting_time_mean,
+            waiting_time_median: 0,  // NOT in CSV, default to 0
+            waiting_time_std_dev: item.waiting_time_std,
+            waiting_time_cv: 0,  // NOT in CSV, default to 0
+
+            blocked_time_mean: item.blocked_time_mean,
+            blocked_time_median: 0,  // NOT in CSV, default to 0
+            blocked_time_std_dev: item.blocked_time_std,
+            blocked_time_cv: 0,  // NOT in CSV, default to 0
+
+            arrivals_mean: item.arrivals_mean,
+            arrivals_max: item.arrivals_max,
+            arrivals_std_dev: item.arrivals_std,
+
+            captures_mean: item.captures_mean,
+            captures_max: item.captures_max,
+            captures_std_dev: item.captures_std,
+
+            releases_mean: item.releases_mean,
+            releases_max: item.releases_max,
+            releases_std_dev: item.releases_std
+        }));
+
+        conditionalLog(`[activityCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
+        if (mappedResult.length > 0) {
+            conditionalLog(`[activityCrossRep] First mapped record sample: ${JSON.stringify(mappedResult[0])}`);
+        }
+
+        // Replace result with mapped result
+        result = mappedResult;
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {

@@ -7,18 +7,19 @@ import { conditionalLog, conditionalError, conditionalWarn } from '../storageSer
 import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
-export const requiredColumns = getRequiredColumnsFromType<ResourceCrossRepData>([
-    'id',
-    'scenario_id',
-    'scenario_name',
+// Note: CSV uses utilization_rate_* (not utilization_*), and utilization_rate_std (not _std_dev)
+// CSV is missing id/scenario_id/scenario_name and bottleneck_frequency - these will be injected during mapping
+// Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
+// since CSV column names don't match interface property names
+export const requiredColumns: string[] = [
     'resource_id',
     'resource_name',
-    'utilization_mean',
-    'utilization_min',
-    'utilization_max',
-    'utilization_std_dev',
-    'bottleneck_frequency'
-]);
+    'utilization_rate_mean',  // CSV uses utilization_rate_*, not utilization_*
+    'utilization_rate_min',
+    'utilization_rate_max',
+    'utilization_rate_std'  // CSV uses _std, not _std_dev
+    // 'bottleneck_frequency'  // NOT in CSV - will default to 0
+];
 
 /**
  * Fetches resource cross-replication data from storage
@@ -38,8 +39,9 @@ export async function fetchResourceCrossRep(
     conditionalLog(`[resourceCrossRep] Document ID: ${documentId}`);
     conditionalLog(`[resourceCrossRep] Scenario ID: ${scenarioId}`);
 
-    // Use the correct path structure: scenarioId/filename.csv
-    const baseBlobName = 'resource_cross_rep_summary.csv';
+    // Use the correct path structure: scenarioId/cross_rep/filename.csv
+    // Note: CSV files are in cross_rep subfolder, and use _summary_summary naming
+    const baseBlobName = 'cross_rep/resource_summary_summary.csv';
     const blobName = `${scenarioId}/${baseBlobName}`;
     conditionalLog(`[resourceCrossRep] Target file path: ${containerName}/${blobName}`);
 
@@ -97,7 +99,7 @@ export async function fetchResourceCrossRep(
 
         // Now fetch the data since we know the file exists
         conditionalLog(`[resourceCrossRep] File exists. Fetching data...`);
-        let result = await fetchCsvData<ResourceCrossRepData>(
+        let result = await fetchCsvData<any>(  // Use 'any' since CSV has different column names
             containerName,
             blobName,
             documentId,
@@ -106,8 +108,41 @@ export async function fetchResourceCrossRep(
 
         conditionalLog(`[resourceCrossRep] Fetched ${result.length} resource cross-rep records`);
         if (result.length > 0) {
-            conditionalLog(`[resourceCrossRep] First record sample: ${JSON.stringify(result[0])}`);
+            conditionalLog(`[resourceCrossRep] First record sample (before mapping): ${JSON.stringify(result[0])}`);
         }
+
+        // Map CSV column names to schema field names
+        // CSV uses utilization_rate_* prefix, schema expects utilization_*
+        // CSV uses utilization_rate_std suffix, schema expects utilization_std_dev
+        // CSV is missing bottleneck_frequency - will default to 0
+        // Also inject scenario_id, scenario_name, and generate composite ID
+        const mappedResult: ResourceCrossRepData[] = result.map((item: any) => ({
+            // Generate composite ID from scenario and resource
+            id: `${scenarioId}_${item.resource_id}`,
+            scenario_id: scenarioId,
+            scenario_name: documentId,  // Use documentId as scenario name for now
+
+            // Copy identifier fields
+            resource_id: item.resource_id,
+            resource_name: item.resource_name,
+
+            // Map utilization_rate_* to utilization_*, and _std to _std_dev
+            utilization_mean: item.utilization_rate_mean,  // Map utilization_rate_mean to utilization_mean
+            utilization_min: item.utilization_rate_min,    // Map utilization_rate_min to utilization_min
+            utilization_max: item.utilization_rate_max,    // Map utilization_rate_max to utilization_max
+            utilization_std_dev: item.utilization_rate_std,  // Map utilization_rate_std to utilization_std_dev
+
+            // Bottleneck frequency not in CSV - default to 0
+            bottleneck_frequency: 0  // NOT in CSV, default to 0
+        }));
+
+        conditionalLog(`[resourceCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
+        if (mappedResult.length > 0) {
+            conditionalLog(`[resourceCrossRep] First mapped record sample: ${JSON.stringify(mappedResult[0])}`);
+        }
+
+        // Replace result with mapped result
+        result = mappedResult;
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {

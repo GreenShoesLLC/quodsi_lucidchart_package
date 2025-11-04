@@ -7,57 +7,59 @@ import { conditionalLog, conditionalError, conditionalWarn } from '../storageSer
 import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
-export const requiredColumns = getRequiredColumnsFromType<EntityCrossRepSummaryData>([
-    'id',
-    'scenario_id',
-    'scenario_name',
-    'entity_id',
-    'entity_name',
-    'count_mean',
-    'count_median',
-    'count_std_dev',
+// Note: CSV uses _std suffix (not _std_dev), and is missing many median/CV/exit fields
+// Also, id, scenario_id, scenario_name are already in CSV (no need to inject)
+// Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
+// since CSV column names don't match interface property names
+// NOTE: CSV is missing 15 fields - we'll provide defaults in the mapper
+export const requiredColumns: string[] = [
+    'entity_type',  // CSV has entity_type instead of entity_id/entity_name
+    'total_count_mean',
+    'total_count_std',
     'completed_count_mean',
-    'completed_count_median',
-    'completed_count_std_dev',
+    'completed_count_std',
     'in_progress_count_mean',
-    'in_progress_count_median',
-    'in_progress_count_std_dev',
+    'in_progress_count_std',
     'throughput_rate_mean',
-    'throughput_rate_median',
-    'throughput_rate_std_dev',
-    'throughput_rate_cv',
+    // 'throughput_rate_median',  // NOT in CSV - will default to 0
+    'throughput_rate_std',
+    // 'throughput_rate_cv',      // NOT in CSV - will default to 0
     'interval_mean',
-    'interval_median',
-    'interval_std_dev',
-    'interval_cv',
+    // 'interval_median',         // NOT in CSV - will default to 0
+    'interval_std',
+    // 'interval_cv',             // NOT in CSV - will default to 0
     'overall_interval_mean',
-    'overall_interval_median',
-    'overall_interval_std_dev',
-    'overall_interval_cv',
+    // 'overall_interval_median', // NOT in CSV - will default to 0
+    'overall_interval_std',
+    // 'overall_interval_cv',     // NOT in CSV - will default to 0
+    // 'first_exit_mean',         // NOT in CSV - will default to 0
+    // 'first_exit_std',          // NOT in CSV - will default to 0
+    // 'last_exit_mean',          // NOT in CSV - will default to 0
+    // 'last_exit_std',           // NOT in CSV - will default to 0
     'time_in_system_mean',
-    'time_in_system_median',
-    'time_in_system_std_dev',
+    // 'time_in_system_median',   // NOT in CSV - will default to 0
+    'time_in_system_std',
     'time_waiting_mean',
-    'time_waiting_median',
-    'time_waiting_std_dev',
+    // 'time_waiting_median',     // NOT in CSV - will default to 0
+    'time_waiting_std',
     'time_blocked_mean',
-    'time_blocked_median',
-    'time_blocked_std_dev',
+    // 'time_blocked_median',     // NOT in CSV - will default to 0
+    'time_blocked_std',
     'time_in_operation_mean',
-    'time_in_operation_median',
-    'time_in_operation_std_dev',
+    // 'time_in_operation_median', // NOT in CSV - will default to 0
+    'time_in_operation_std',
     'time_connecting_mean',
-    'time_connecting_median',
-    'time_connecting_std_dev',
+    // 'time_connecting_median',  // NOT in CSV - will default to 0
+    'time_connecting_std',
     'percent_waiting_mean',
-    'percent_waiting_std_dev',
+    'percent_waiting_std',
     'percent_blocked_mean',
-    'percent_blocked_std_dev',
+    'percent_blocked_std',
     'percent_operation_mean',
-    'percent_operation_std_dev',
+    'percent_operation_std',
     'percent_connecting_mean',
-    'percent_connecting_std_dev'
-]);
+    'percent_connecting_std'
+];
 
 /**
  * Fetches entity cross-replication summary data from storage
@@ -77,8 +79,9 @@ export async function fetchEntityCrossRep(
     conditionalLog(`[entityCrossRep] Document ID: ${documentId}`);
     conditionalLog(`[entityCrossRep] Scenario ID: ${scenarioId}`);
 
-    // Use the correct path structure: scenarioId/filename.csv
-    const baseBlobName = 'entity_cross_rep_summary.csv';
+    // Use the correct path structure: scenarioId/cross_rep/filename.csv
+    // Note: CSV files are in cross_rep subfolder, and use _summary_summary naming
+    const baseBlobName = 'cross_rep/entity_summary_summary.csv';
     const blobName = `${scenarioId}/${baseBlobName}`;
     conditionalLog(`[entityCrossRep] Target file path: ${containerName}/${blobName}`);
 
@@ -136,7 +139,7 @@ export async function fetchEntityCrossRep(
 
         // Now fetch the data since we know the file exists
         conditionalLog(`[entityCrossRep] File exists. Fetching data...`);
-        let result = await fetchCsvData<EntityCrossRepSummaryData>(
+        let result = await fetchCsvData<any>(  // Use 'any' since CSV has different column names
             containerName,
             blobName,
             documentId,
@@ -145,8 +148,109 @@ export async function fetchEntityCrossRep(
 
         conditionalLog(`[entityCrossRep] Fetched ${result.length} entity cross-rep records`);
         if (result.length > 0) {
-            conditionalLog(`[entityCrossRep] First record sample: ${JSON.stringify(result[0])}`);
+            conditionalLog(`[entityCrossRep] First record sample (before mapping): ${JSON.stringify(result[0])}`);
         }
+
+        // Map CSV column names to schema field names
+        // CSV uses _std suffix, schema expects _std_dev
+        // CSV has entity_type instead of entity_id/entity_name
+        // CSV is missing 5 median fields - provide defaults
+        // Also inject scenario_id, scenario_name, and generate composite ID
+        const mappedResult: EntityCrossRepSummaryData[] = result.map((item: any) => ({
+            // Generate composite ID from scenario and entity type
+            id: `${scenarioId}_${item.entity_type}`,
+            scenario_id: scenarioId,
+            scenario_name: documentId,  // Use documentId as scenario name for now
+
+            // Map entity_type to both entity_id and entity_name
+            entity_id: item.entity_type,
+            entity_name: item.entity_type,
+
+            // Count statistics - map _std to _std_dev, add missing median with default
+            count_mean: item.total_count_mean,  // Note: CSV uses total_count_mean
+            count_median: 0,  // Missing in CSV, default to 0
+            count_std_dev: item.total_count_std,
+
+            // Completed count statistics
+            completed_count_mean: item.completed_count_mean,
+            completed_count_median: 0,  // Missing in CSV, default to 0
+            completed_count_std_dev: item.completed_count_std,
+
+            // In progress count statistics
+            in_progress_count_mean: item.in_progress_count_mean,
+            in_progress_count_median: 0,  // Missing in CSV, default to 0
+            in_progress_count_std_dev: item.in_progress_count_std,
+
+            // Throughput rate statistics
+            throughput_rate_mean: item.throughput_rate_mean,
+            throughput_rate_median: 0,  // NOT in CSV, default to 0
+            throughput_rate_std_dev: item.throughput_rate_std,
+            throughput_rate_cv: 0,  // NOT in CSV, default to 0
+
+            // Interval statistics
+            interval_mean: item.interval_mean,
+            interval_median: 0,  // NOT in CSV, default to 0
+            interval_std_dev: item.interval_std,
+            interval_cv: 0,  // NOT in CSV, default to 0
+
+            // Overall interval statistics
+            overall_interval_mean: item.overall_interval_mean,
+            overall_interval_median: 0,  // NOT in CSV, default to 0
+            overall_interval_std_dev: item.overall_interval_std,
+            overall_interval_cv: 0,  // NOT in CSV, default to 0
+
+            // First exit statistics
+            first_exit_mean: 0,  // NOT in CSV, default to 0
+            first_exit_median: 0,  // NOT in CSV, default to 0
+            first_exit_std_dev: 0,  // NOT in CSV, default to 0
+
+            // Last exit statistics
+            last_exit_mean: 0,  // NOT in CSV, default to 0
+            last_exit_median: 0,  // NOT in CSV, default to 0
+            last_exit_std_dev: 0,  // NOT in CSV, default to 0
+
+            // Time metrics - map _std to _std_dev
+            time_in_system_mean: item.time_in_system_mean,
+            time_in_system_median: 0,  // NOT in CSV, default to 0
+            time_in_system_std_dev: item.time_in_system_std,
+
+            time_waiting_mean: item.time_waiting_mean,
+            time_waiting_median: 0,  // NOT in CSV, default to 0
+            time_waiting_std_dev: item.time_waiting_std,
+
+            time_blocked_mean: item.time_blocked_mean,
+            time_blocked_median: 0,  // NOT in CSV, default to 0
+            time_blocked_std_dev: item.time_blocked_std,
+
+            time_in_operation_mean: item.time_in_operation_mean,
+            time_in_operation_median: 0,  // NOT in CSV, default to 0
+            time_in_operation_std_dev: item.time_in_operation_std,
+
+            time_connecting_mean: item.time_connecting_mean,
+            time_connecting_median: 0,  // NOT in CSV, default to 0
+            time_connecting_std_dev: item.time_connecting_std,
+
+            // Percentage metrics - map _std to _std_dev
+            percent_waiting_mean: item.percent_waiting_mean,
+            percent_waiting_std_dev: item.percent_waiting_std,
+
+            percent_blocked_mean: item.percent_blocked_mean,
+            percent_blocked_std_dev: item.percent_blocked_std,
+
+            percent_operation_mean: item.percent_operation_mean,
+            percent_operation_std_dev: item.percent_operation_std,
+
+            percent_connecting_mean: item.percent_connecting_mean,
+            percent_connecting_std_dev: item.percent_connecting_std
+        }));
+
+        conditionalLog(`[entityCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
+        if (mappedResult.length > 0) {
+            conditionalLog(`[entityCrossRep] First mapped record sample: ${JSON.stringify(mappedResult[0])}`);
+        }
+
+        // Replace result with mapped result
+        result = mappedResult;
 
         // Validate and provide defaults for any missing fields to prevent null values
         const validatedResult = result.map(item => {

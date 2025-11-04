@@ -54,18 +54,18 @@ export function useModelOpsSender() {
   
   /**
    * Send a RESULTS_PAGE_CREATE message
-   * 
-   * @param jobId Job ID of the completed simulation
+   *
+   * @param scenarioId Scenario ID of the completed simulation
    * @param documentId Document ID to create results page in
    * @param pageTitle Optional page title
    */
   const createResultsPage = (
-    jobId: string,
+    scenarioId: string,
     documentId: string,
     pageTitle?: string
   ) => {
     send(EnvelopeMessageType.RESULTS_PAGE_CREATE, {
-      jobId,
+      scenarioId,
       documentId,
       pageTitle
     });

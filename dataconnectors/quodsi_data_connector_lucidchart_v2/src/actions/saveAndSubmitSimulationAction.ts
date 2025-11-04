@@ -4,7 +4,6 @@ import { LucidSimulationJobSubmissionService } from "../services/lucidSimulation
 import { BatchConfigurationError, BatchJobCreationError } from "../services/errors/batchErrors";
 import { getConfig } from "../config";
 import { ActionLogger } from '../utils/logging';
-import { updateModelData } from '../services';
 import { LoggingLevel } from '../utils/loggingLevels';
 
 interface SaveAndSubmitRequest {

@@ -45,8 +45,6 @@
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
         "SubmitSimulationJob": "submitSimulationJobAction",
         "UploadModelDefinition": "uploadModelDefinitionAction",
-        "Poll": "poll",
-        "HardRefresh": "hardRefresh",
         "GetDocumentStatus": "getDocumentStatusAction",
         "ListScenarios": "listScenarios",
         "DeleteScenario": "deleteScenario"

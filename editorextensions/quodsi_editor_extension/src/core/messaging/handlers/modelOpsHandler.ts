@@ -595,29 +595,29 @@ export class ModelOpsHandler {
   
   /**
    * Handle results page creation request
-   * 
+   *
    * @param msg RESULTS_PAGE_CREATE message
    * @returns True indicating message was handled
    */
   private static handleResultsPageCreate(msg: EnvelopeBase): boolean {
     const data = msg.data as {
-      jobId: string;
+      scenarioId: string;
       documentId: string;
       pageTitle?: string;
       createDashboard?: boolean;
     };
-    
+
     ModelOpsHandler.logger.log('Results page creation requested', {
-      jobId: data.jobId,
+      scenarioId: data.scenarioId,
       documentId: data.documentId,
       pageTitle: data.pageTitle,
       createDashboard: data.createDashboard
     });
-    
+
     // Start async process but return true immediately
     ModelOpsHandler.createResultsPage(msg, data)
       .catch(err => ModelOpsHandler.logger.error('Error creating results page:', err));
-    
+
     return true;
   }
   
@@ -625,33 +625,37 @@ export class ModelOpsHandler {
    * Async method to create the results page
    */
   private static async createResultsPage(msg: EnvelopeBase, data: {
-    jobId: string;
+    scenarioId: string;
     documentId: string;
     pageTitle?: string;
     createDashboard?: boolean;
   }): Promise<void> {
     try {
       ModelOpsHandler.logger.log('Creating simulation results dashboard...');
-      
+
       const client = ModelManager.getClient();
-      
-      // Import results if needed
-      if (data.createDashboard) {
-        await LucidDataActionUtility.performDataAction(client, {
-          dataConnectorName: 'quodsi_data_connector',
-          actionName: 'ImportSimulationResults',
-          actionData: {
-            documentId: data.documentId,
-            scenarioId: data.jobId || '00000000-0000-0000-0000-000000000000',
-            collectionsToImport: [
-              'activity_cross_rep',
-              'entity_cross_rep',
-              'resource_cross_rep',
-            ]
-          },
-          asynchronous: true
-        });
+
+      // Validate required parameters
+      if (!data.scenarioId) {
+        throw new Error('scenarioId is required to create results page');
       }
+
+      // Always import results before creating dashboard
+      // Note: Every results page needs data, so we always call ImportSimulationResults
+      await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_data_connector',
+        actionName: 'ImportSimulationResults',
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          collectionsToImport: [
+            'activity_cross_rep',
+            'entity_cross_rep',
+            'resource_cross_rep',
+          ]
+        },
+        asynchronous: true
+      });
       
       // Create dashboard instance
       const dashboard = new SimulationResultsDashboard(client);
@@ -679,9 +683,9 @@ export class ModelOpsHandler {
       await LucidDataActionUtility.performDataAction(client, {
         dataConnectorName: 'quodsi_data_connector',
         actionName: 'MarkResultsViewed',
-        actionData: { 
-          documentId: data.documentId, 
-          scenarioId: data.jobId || '00000000-0000-0000-0000-000000000000' 
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId
         },
         asynchronous: true
       });
