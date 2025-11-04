@@ -40,14 +40,16 @@
       "dataActions": {
         "Simulate": "simulate",
         "MarkResultsViewed": "markResultsViewed",
-        "GetActivityUtilization": "getActivityUtilizationAction",
         "ImportSimulationResults": "importSimulationResults",
         "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
         "SubmitSimulationJob": "submitSimulationJobAction",
         "UploadModelDefinition": "uploadModelDefinitionAction",
         "GetDocumentStatus": "getDocumentStatusAction",
         "ListScenarios": "listScenarios",
-        "DeleteScenario": "deleteScenario"
+        "DeleteScenario": "deleteScenario",
+        "GetActivityCrossRepData": "getActivityCrossRepData",
+        "GetEntityCrossRepData": "getEntityCrossRepData",
+        "GetResourceCrossRepData": "getResourceCrossRepData"
       }
     }
   ]

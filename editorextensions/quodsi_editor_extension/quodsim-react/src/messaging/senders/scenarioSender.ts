@@ -34,8 +34,28 @@ export function useScenarioSender() {
     });
   }, [send]);
 
+  /**
+   * Send a CROSS_REP_DATA_REQUEST message
+   *
+   * @param documentId Document ID containing the scenario
+   * @param scenarioId Scenario ID to fetch data for
+   * @param dataType Type of cross-rep data to fetch (activity, entity, or resource)
+   */
+  const getCrossRepData = useCallback((
+    documentId: string,
+    scenarioId: string,
+    dataType: 'activity' | 'entity' | 'resource'
+  ) => {
+    send(EnvelopeMessageType.CROSS_REP_DATA_REQUEST, {
+      documentId,
+      scenarioId,
+      dataType
+    });
+  }, [send]);
+
   return {
     listScenarios,
-    deleteScenario
+    deleteScenario,
+    getCrossRepData
   };
 }

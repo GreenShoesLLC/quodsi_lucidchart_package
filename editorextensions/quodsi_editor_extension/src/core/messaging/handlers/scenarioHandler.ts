@@ -32,6 +32,13 @@ export class ScenarioHandler {
         });
         return true;
 
+      case EnvelopeMessageType.CROSS_REP_DATA_REQUEST:
+        // Handle async method - fire and forget, return true immediately
+        ScenarioHandler.handleCrossRepDataRequest(msg).catch(error => {
+          ScenarioHandler.logger.error('Error in handleCrossRepDataRequest:', error);
+        });
+        return true;
+
       // Not a scenario message
       default:
         return false;
@@ -177,6 +184,91 @@ export class ScenarioHandler {
           documentId: data.documentId,
           scenarioId: data.scenarioId,
           error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle cross-rep data request
+   *
+   * @param msg CROSS_REP_DATA_REQUEST message
+   */
+  private static async handleCrossRepDataRequest(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as {
+      documentId: string;
+      scenarioId: string;
+      dataType: 'activity' | 'entity' | 'resource'
+    };
+
+    ScenarioHandler.logger.log('Cross-rep data requested', {
+      documentId: data.documentId,
+      scenarioId: data.scenarioId,
+      dataType: data.dataType
+    });
+
+    try {
+      // Get the EditorClient
+      const client = ModelManager.getClient();
+
+      // Map data type to action name
+      const actionMap = {
+        activity: 'GetActivityCrossRepData',
+        entity: 'GetEntityCrossRepData',
+        resource: 'GetResourceCrossRepData'
+      };
+
+      const actionName = actionMap[data.dataType];
+
+      ScenarioHandler.logger.log(`Calling data connector ${actionName} action...`);
+
+      // Call the data connector to fetch cross-rep data
+      const result = await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_data_connector',
+        actionName: actionName,
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId
+        },
+        asynchronous: true
+      });
+
+      // Extract the actual data from the Lucid SDK wrapper
+      const responseData = result.json || result;
+
+      ScenarioHandler.logger.log(`${actionName} action completed successfully`, {
+        success: responseData?.success,
+        recordCount: responseData?.recordCount || responseData?.data?.length || 0
+      });
+
+      // Send success response with the unwrapped data and include dataType
+      router.send('model', {
+        id: msg.id, // Use same ID for correlation
+        type: EnvelopeMessageType.CROSS_REP_DATA_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          ...responseData,
+          dataType: data.dataType // Include dataType so React knows which data this is
+        }
+      });
+
+    } catch (error) {
+      ScenarioHandler.logger.error('Error fetching cross-rep data:', error);
+
+      // Send error response
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.ERROR,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          code: 'CROSS_REP_DATA_FAILED',
+          message: error instanceof Error ? error.message : String(error),
+          relatedTo: EnvelopeMessageType.CROSS_REP_DATA_REQUEST,
+          dataType: data.dataType
         }
       });
     }

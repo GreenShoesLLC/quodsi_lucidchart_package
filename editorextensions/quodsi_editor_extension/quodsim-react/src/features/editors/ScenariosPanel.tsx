@@ -58,9 +58,10 @@ const ScenariosPanel: React.FC<ScenariosPanelProps> = ({ documentId }) => {
             onAnalyze={handleAnalyzeScenario}
           />
         )}
-        {activeSubTab === "analysis" && selectedScenarioId && (
+        {activeSubTab === "analysis" && selectedScenarioId && documentId && (
           <ScenarioAnalysisDashboard
             scenarioId={selectedScenarioId}
+            documentId={documentId}
             onBackToList={handleBackToList}
           />
         )}

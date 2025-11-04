@@ -34,8 +34,14 @@ The data connector actions can be categorized into several types:
 
 ### Data Access
 
-- `getActivityUtilizationAction.ts` - Retrieves activity utilization data
 - `patchAction.ts` - Reserved Lucid action that handles changes made to data in LucidChart
+- `getActivityCrossRepDataAction.ts` - Retrieves activity cross-replication summary data for a scenario
+- `getEntityCrossRepDataAction.ts` - Retrieves entity cross-replication summary data for a scenario
+- `getResourceCrossRepDataAction.ts` - Retrieves resource cross-replication summary data for a scenario
+- `getDocumentStatusAction.ts` - Retrieves the status of a document
+- `listScenariosAction.ts` - Lists all scenarios for a document
+- `deleteScenarioAction.ts` - Deletes a scenario and its results
+- `markResultsViewedAction.ts` - Marks simulation results as viewed by the user
 
 ## Integration with LucidChart
 

@@ -54,8 +54,30 @@ export interface ScenarioDeleteResultMessage extends EnvelopeBase {
   };
 }
 
+export interface CrossRepDataRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.CROSS_REP_DATA_REQUEST;
+  data: {
+    documentId: string;
+    scenarioId: string;
+    dataType: 'activity' | 'entity' | 'resource';
+  };
+}
+
+export interface CrossRepDataResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.CROSS_REP_DATA_RESULT;
+  data: {
+    success: boolean;
+    data: any[];
+    recordCount: number;
+    dataType: 'activity' | 'entity' | 'resource';
+    error?: string;
+  };
+}
+
 export type ScenarioMessage =
   | ScenarioListRequestMessage
   | ScenarioListResultMessage
   | ScenarioDeleteMessage
-  | ScenarioDeleteResultMessage;
+  | ScenarioDeleteResultMessage
+  | CrossRepDataRequestMessage
+  | CrossRepDataResultMessage;

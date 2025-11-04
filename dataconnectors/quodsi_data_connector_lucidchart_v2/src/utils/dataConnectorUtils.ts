@@ -2,7 +2,6 @@ import { DataConnector, DataConnectorClient } from 'lucid-extension-sdk';
 import * as crypto from 'crypto';
 
 import { simulateAction } from '../actions/simulateAction';
-import { getActivityUtilizationAction } from '../actions/getActivityUtilizationAction';
 import { pollAction } from '../actions/pollAction';
 import { patchAction } from '../actions/patchAction';
 import { hardRefreshAction } from '../actions/hardRefreshAction';
@@ -14,13 +13,15 @@ import { markResultsViewedAction } from '../actions/markResultsViewedAction';
 import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
 import { listScenariosAction } from '../actions/listScenariosAction';
 import { deleteScenarioAction } from '../actions/deleteScenarioAction';
+import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
+import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
+import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
 
 
 export const createDataConnector = () => {
     const client = new DataConnectorClient({ crypto, Buffer });
     const connector = new DataConnector(client)
         .defineAsynchronousAction("Simulate", simulateAction)
-        .defineAsynchronousAction("GetActivityUtilization", getActivityUtilizationAction)
         .defineAsynchronousAction("Poll", pollAction)
         .defineAction("Patch", patchAction)
         .defineAsynchronousAction("HardRefresh", hardRefreshAction)
@@ -31,7 +32,10 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction)
         .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction)
         .defineAsynchronousAction("ListScenarios", listScenariosAction)
-        .defineAsynchronousAction("DeleteScenario", deleteScenarioAction);
+        .defineAsynchronousAction("DeleteScenario", deleteScenarioAction)
+        .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
+        .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
+        .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction);
 
     return connector;
 };

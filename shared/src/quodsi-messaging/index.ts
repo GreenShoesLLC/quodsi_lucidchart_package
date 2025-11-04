@@ -8,7 +8,7 @@ import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from '
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
-import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioMessage, ScenarioInfo } from './scenario/messages';
+import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, ScenarioMessage, ScenarioInfo } from './scenario/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -126,6 +126,8 @@ export {
   ScenarioListResultMessage,
   ScenarioDeleteMessage,
   ScenarioDeleteResultMessage,
+  CrossRepDataRequestMessage,
+  CrossRepDataResultMessage,
   ScenarioMessage
 } from './scenario/messages';
 
@@ -195,6 +197,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SCENARIOS_LIST_RESULT]: ScenarioListResultMessage['data'];
   [EnvelopeMessageType.SCENARIO_DELETE]: ScenarioDeleteMessage['data'];
   [EnvelopeMessageType.SCENARIO_DELETE_RESULT]: ScenarioDeleteResultMessage['data'];
+  [EnvelopeMessageType.CROSS_REP_DATA_REQUEST]: CrossRepDataRequestMessage['data'];
+  [EnvelopeMessageType.CROSS_REP_DATA_RESULT]: CrossRepDataResultMessage['data'];
 }
 
 /**
