@@ -13,7 +13,7 @@ import {
 import { Settings, Hash, PlaySquare, FileJson, Info, Users, Wrench, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import ScenarioEditor from "./ScenarioEditor";
+import ScenariosPanel from "./ScenariosPanel";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
@@ -656,7 +656,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
             title="Simulation Scenarios"
             tooltip="Configure and manage simulation scenarios with different parameter sets and run configurations"
           />
-          <ScenarioEditor
+          <ScenariosPanel
             documentId={selection.documentContext?.documentId}
           />
         </div>

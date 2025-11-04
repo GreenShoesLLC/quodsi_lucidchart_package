@@ -27,9 +27,10 @@ interface ScenarioCardProps {
   scenario: Scenario;
   documentId: string;
   onDelete?: (scenarioId: string) => void;
+  onAnalyze?: (scenarioId: string) => void;
 }
 
-const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDelete }) => {
+const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDelete, onAnalyze }) => {
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [relativeTime, setRelativeTime] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
@@ -160,8 +161,9 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
 
   const handleAnalyze = () => {
     console.log('[ScenarioCard] Analyze button clicked for scenario:', scenario.id);
-    // TODO: Implement navigation to React dashboard view
-    // This will eventually show an interactive dashboard with charts and analysis
+    if (onAnalyze) {
+      onAnalyze(scenario.id);
+    }
   };
 
   const handleDelete = () => {

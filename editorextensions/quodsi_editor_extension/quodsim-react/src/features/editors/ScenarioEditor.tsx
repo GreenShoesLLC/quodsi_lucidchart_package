@@ -26,9 +26,10 @@ interface Scenario {
 
 interface ScenarioEditorProps {
   documentId?: string;
+  onAnalyze?: (scenarioId: string) => void;
 }
 
-const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
+const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }) => {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -282,6 +283,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId }) => {
               scenario={scenario}
               documentId={documentId || ""}
               onDelete={handleDeleteScenario}
+              onAnalyze={onAnalyze}
             />
           ))}
         </div>
