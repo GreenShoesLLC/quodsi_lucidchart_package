@@ -175,7 +175,104 @@ export const resourceColumns: TableColumn[] = [
   },
 ];
 
-export type CrossRepDataType = "activity" | "entity" | "resource";
+// Activity Contents Timeseries Columns
+export const activityContentsTimeseriesColumns: TableColumn[] = [
+  {
+    key: "object_id",
+    label: "Activity",
+  },
+  {
+    key: "period_start_clock",
+    label: "Time",
+    format: (v) => formatDecimal(v, 1),
+  },
+  {
+    key: "mean",
+    label: "Mean",
+    format: (v) => formatDecimal(v, 3),
+  },
+  {
+    key: "std",
+    label: "StdDev",
+    format: (v) => formatDecimal(v, 3),
+  },
+  {
+    key: "min",
+    label: "Min",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "max",
+    label: "Max",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "sample_size",
+    label: "N",
+    format: formatInteger,
+  },
+];
+
+// State Summary Columns
+export const stateSummaryColumns: TableColumn[] = [
+  {
+    key: "component_type",
+    label: "Type",
+  },
+  {
+    key: "component_name",
+    label: "Component",
+  },
+  {
+    key: "state_name",
+    label: "State",
+  },
+  {
+    key: "state_type",
+    label: "DataType",
+  },
+  {
+    key: "mean_change_count",
+    label: "Changes",
+    format: (v) => formatDecimal(v, 1),
+  },
+  {
+    key: "mean_final_value",
+    label: "Final",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "final_value_std_dev",
+    label: "FinalSD",
+    format: (v) => formatDecimal(v, 3),
+  },
+  {
+    key: "mean_time_weighted_avg",
+    label: "Avg",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "mean_min_value",
+    label: "Min",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "mean_max_value",
+    label: "Max",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "most_common_category",
+    label: "Category",
+  },
+  {
+    key: "num_replications",
+    label: "N",
+    format: formatInteger,
+  },
+];
+
+export type CrossRepDataType = "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary";
 
 export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[] => {
   switch (dataType) {
@@ -185,6 +282,10 @@ export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[]
       return entityColumns;
     case "resource":
       return resourceColumns;
+    case "activity-contents-timeseries":
+      return activityContentsTimeseriesColumns;
+    case "state-summary":
+      return stateSummaryColumns;
     default:
       return [];
   }

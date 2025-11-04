@@ -49,7 +49,9 @@
         "DeleteScenario": "deleteScenario",
         "GetActivityCrossRepData": "getActivityCrossRepData",
         "GetEntityCrossRepData": "getEntityCrossRepData",
-        "GetResourceCrossRepData": "getResourceCrossRepData"
+        "GetResourceCrossRepData": "getResourceCrossRepData",
+        "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
+        "GetStateSummary": "getStateSummary"
       }
     }
   ]

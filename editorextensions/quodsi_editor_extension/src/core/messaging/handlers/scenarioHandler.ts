@@ -198,7 +198,7 @@ export class ScenarioHandler {
     const data = msg.data as {
       documentId: string;
       scenarioId: string;
-      dataType: 'activity' | 'entity' | 'resource'
+      dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary'
     };
 
     ScenarioHandler.logger.log('Cross-rep data requested', {
@@ -215,7 +215,9 @@ export class ScenarioHandler {
       const actionMap = {
         activity: 'GetActivityCrossRepData',
         entity: 'GetEntityCrossRepData',
-        resource: 'GetResourceCrossRepData'
+        resource: 'GetResourceCrossRepData',
+        'activity-contents-timeseries': 'GetActivityContentsTimeseries',
+        'state-summary': 'GetStateSummary'
       };
 
       const actionName = actionMap[data.dataType];

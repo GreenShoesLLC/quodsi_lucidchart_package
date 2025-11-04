@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, BarChart3, Activity, Users, Wrench } from "lucide-react";
+import { ArrowLeft, BarChart3 } from "lucide-react";
 import { EnvelopeMessageType } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import DataTable from "../../components/DataTable";
@@ -24,6 +24,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<string>("all");
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
@@ -96,26 +97,40 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   // Get columns for current data type
   const columns = getColumnsForDataType(dataType);
 
-  // Data type button config
-  const dataTypeButtons = [
-    {
-      type: "activity" as CrossRepDataType,
-      label: "Activities",
-      icon: Activity,
-      color: "blue",
-    },
-    {
-      type: "entity" as CrossRepDataType,
-      label: "Entities",
-      icon: Users,
-      color: "green",
-    },
-    {
-      type: "resource" as CrossRepDataType,
-      label: "Resources",
-      icon: Wrench,
-      color: "orange",
-    },
+  // Get unique activities for filtering (when timeseries is selected)
+  const uniqueActivities = React.useMemo(() => {
+    if (dataType === "activity-contents-timeseries" && data.length > 0) {
+      const activities = Array.from(
+        new Set(data.map((item: any) => item.object_id))
+      ).sort();
+      return activities;
+    }
+    return [];
+  }, [data, dataType]);
+
+  // Filter data by selected activity (for timeseries only)
+  const filteredData = React.useMemo(() => {
+    if (
+      dataType === "activity-contents-timeseries" &&
+      selectedActivity !== "all"
+    ) {
+      return data.filter((item: any) => item.object_id === selectedActivity);
+    }
+    return data;
+  }, [data, dataType, selectedActivity]);
+
+  // Reset selected activity when data type changes
+  useEffect(() => {
+    setSelectedActivity("all");
+  }, [dataType]);
+
+  // Data type options for dropdown
+  const dataTypeOptions = [
+    { value: "activity", label: "Activity Summary" },
+    { value: "entity", label: "Entity Summary" },
+    { value: "resource", label: "Resource Summary" },
+    { value: "activity-contents-timeseries", label: "Activity Contents Timeseries" },
+    { value: "state-summary", label: "State Summary" },
   ];
 
   return (
@@ -144,25 +159,45 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       </div>
 
       {/* Data Type Selector */}
-      <div className="flex gap-2">
-        {dataTypeButtons.map((btn) => {
-          const Icon = btn.icon;
-          const isActive = dataType === btn.type;
-          const colorClasses = isActive
-            ? `bg-${btn.color}-600 text-white`
-            : `bg-gray-100 text-gray-700 hover:bg-gray-200`;
+      <div className="flex gap-3 items-center">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-medium text-gray-700">
+            Data Type:
+          </label>
+          <select
+            value={dataType}
+            onChange={(e) => setDataType(e.target.value as CrossRepDataType)}
+            className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {dataTypeOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          return (
-            <button
-              key={btn.type}
-              onClick={() => setDataType(btn.type)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${colorClasses}`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {btn.label}
-            </button>
-          );
-        })}
+        {/* Activity Filter (only for timeseries) */}
+        {dataType === "activity-contents-timeseries" &&
+          uniqueActivities.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-700">
+                Filter by Activity:
+              </label>
+              <select
+                value={selectedActivity}
+                onChange={(e) => setSelectedActivity(e.target.value)}
+                className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Activities</option>
+                {uniqueActivities.map((activity) => (
+                  <option key={activity} value={activity}>
+                    {activity}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
       </div>
 
       {/* Data Table */}
@@ -172,11 +207,13 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             {dataType === "activity" && "Activity Cross-Replication Summary"}
             {dataType === "entity" && "Entity Cross-Replication Summary"}
             {dataType === "resource" && "Resource Cross-Replication Summary"}
+            {dataType === "activity-contents-timeseries" && "Activity Contents Timeseries"}
+            {dataType === "state-summary" && "State Summary"}
           </h3>
         </div>
         <div className="p-3">
           <DataTable
-            data={data}
+            data={filteredData}
             columns={columns}
             loading={loading}
             error={error}

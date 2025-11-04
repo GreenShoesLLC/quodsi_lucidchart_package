@@ -16,6 +16,8 @@ import { deleteScenarioAction } from '../actions/deleteScenarioAction';
 import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
+import { getActivityContentsTimeseriesAction } from '../actions/getActivityContentsTimeseriesAction';
+import { getStateSummaryAction } from '../actions/getStateSummaryAction';
 
 
 export const createDataConnector = () => {
@@ -35,7 +37,9 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("DeleteScenario", deleteScenarioAction)
         .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
-        .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction);
+        .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)
+        .defineAsynchronousAction("GetActivityContentsTimeseries", getActivityContentsTimeseriesAction)
+        .defineAsynchronousAction("GetStateSummary", getStateSummaryAction);
 
     return connector;
 };
