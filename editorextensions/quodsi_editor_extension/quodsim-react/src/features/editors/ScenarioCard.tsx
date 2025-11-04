@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Check, FileText, Trash2 } from "lucide-react";
+import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Check, FileText, Trash2, Download, TrendingUp } from "lucide-react";
 import { RunState } from "@quodsi/shared";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
@@ -158,6 +158,12 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
     modelOpsSender.createResultsPage(scenario.id, documentId, pageTitle);
   };
 
+  const handleAnalyze = () => {
+    console.log('[ScenarioCard] Analyze button clicked for scenario:', scenario.id);
+    // TODO: Implement navigation to React dashboard view
+    // This will eventually show an interactive dashboard with charts and analysis
+  };
+
   const handleDelete = () => {
     setShowDeleteConfirm(true);
   };
@@ -247,33 +253,38 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
       {/* Action Buttons */}
       {scenario.hasResults && scenario.downloadInfo && (
         <div className="border-t border-gray-200 pt-1.5">
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="flex items-center gap-1 mb-1">
+            <span className="text-xs font-medium text-gray-700">Results</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               onClick={handleCreateResultsPage}
-              className="flex items-center justify-center gap-1 px-1.5 py-1 rounded text-xs font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              title="Create results page in LucidChart"
+              className="flex items-center justify-center p-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 transition-colors"
             >
-              <FileText className="w-3 h-3" />
-              Results Page
+              <FileText className="w-4 h-4" />
             </button>
             <button
               onClick={handleCopyLink}
-              className={`flex items-center justify-center gap-1 px-1.5 py-1 rounded text-xs font-medium transition-colors ${
+              title={copied ? "Copied!" : "Copy zip file download URL to clipboard"}
+              className={`flex items-center justify-center p-1.5 rounded transition-colors ${
                 copied
                   ? 'bg-green-600 text-white hover:bg-green-700'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
               {copied ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Copied!
-                </>
+                <Check className="w-4 h-4" />
               ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  Copy Link
-                </>
+                <Download className="w-4 h-4" />
               )}
+            </button>
+            <button
+              onClick={handleAnalyze}
+              title="Analyze simulation results with interactive charts"
+              className="flex items-center justify-center p-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+            >
+              <TrendingUp className="w-4 h-4" />
             </button>
           </div>
           {timeRemaining && (
