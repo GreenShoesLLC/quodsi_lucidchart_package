@@ -4,6 +4,29 @@ import ScenarioCard from "./ScenarioCard";
 import { RunState, EnvelopeMessageType } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 
+/**
+ * Maps SimulationStatus string values to RunState enum values
+ * Note: SimulationStatus enum values are lowercase
+ * Active statuses (queued, processing, validating, running) are all treated as Running
+ * to ensure the UI shows the pulsing icon and auto-refresh polling activates
+ */
+function mapStatusToRunState(status: string): RunState {
+  switch (status.toLowerCase()) {
+    case 'queued':
+    case 'processing':
+    case 'validating':
+    case 'running':
+      return RunState.Running;
+    case 'completed':
+      return RunState.RanSuccessfully;
+    case 'failed':
+    case 'error':
+      return RunState.RanWithErrors;
+    default:
+      return RunState.NotRun;
+  }
+}
+
 interface ScenarioDownloadInfo {
   zipUrl: string;
   fileSizeBytes: number;
@@ -124,37 +147,67 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
       } else if (message.type === EnvelopeMessageType.MODEL_RUN_STATUS) {
         const statusData = message.data;
 
-        // Create optimistic scenario card when simulation starts (QUEUED or PROCESSING)
-        if (statusData && (statusData.status === 'QUEUED' || statusData.status === 'PROCESSING')) {
-          console.log('[ScenarioEditor] Simulation started, creating optimistic scenario card:', statusData.scenarioName);
+        if (statusData && statusData.scenarioId) {
+          console.log('[ScenarioEditor] Received MODEL_RUN_STATUS:', {
+            scenarioId: statusData.scenarioId,
+            scenarioName: statusData.scenarioName,
+            status: statusData.status
+          });
 
-          // Check if this scenario already exists in the list
-          const scenarioExists = scenarios.some(s => s.id === statusData.scenarioId);
-
-          if (!scenarioExists) {
-            // Create optimistic scenario
-            const optimisticScenario: Scenario = {
-              id: statusData.scenarioId,
-              name: statusData.scenarioName || 'New Simulation',
-              runState: RunState.Running,
-              reps: statusData.reps || 0,
-              runClockPeriod: statusData.runClockPeriod || 0,
-              runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
-              simulationTimeType: statusData.simulationTimeType || 'Clock',
-              completedAt: statusData.queuedAt,
-              hasResults: false
-            };
-
-            // Add to scenarios list and sort
-            setScenarios(prev => sortScenarios([optimisticScenario, ...prev]));
+          // Special handling for error scenarios
+          if (statusData.scenarioId === 'error' && statusData.status === 'failed') {
+            console.error('[ScenarioEditor] Simulation failed:', statusData.error);
+            setError(statusData.error || 'Simulation failed to start');
+            setLoading(false);
+            return; // Don't try to create/update scenario card
           }
+
+          // Use functional state update to access current scenarios without dependency
+          setScenarios(prev => {
+            const existingIndex = prev.findIndex(s => s.id === statusData.scenarioId);
+
+            if (existingIndex >= 0) {
+              // UPDATE existing scenario
+              console.log('[ScenarioEditor] Updating existing scenario:', statusData.scenarioName);
+              const updated = [...prev];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                runState: mapStatusToRunState(statusData.status),
+                completedAt: statusData.lastChecked || statusData.queuedAt,
+                hasResults: statusData.status === 'completed' || statusData.hasResults || false
+              };
+              return updated;
+            } else {
+              // CREATE new scenario (only for initial statuses)
+              if (statusData.status === 'queued' || statusData.status === 'processing') {
+                console.log('[ScenarioEditor] Creating new optimistic scenario:', statusData.scenarioName);
+                const newScenario: Scenario = {
+                  id: statusData.scenarioId,
+                  name: statusData.scenarioName || 'New Simulation',
+                  runState: mapStatusToRunState(statusData.status),
+                  reps: statusData.reps || 0,
+                  runClockPeriod: statusData.runClockPeriod || 0,
+                  runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
+                  simulationTimeType: statusData.simulationTimeType || 'Clock',
+                  completedAt: statusData.queuedAt,
+                  hasResults: false
+                };
+                return sortScenarios([newScenario, ...prev]);
+              }
+              // Status came for unknown scenario that's not in initial state - ignore
+              console.warn('[ScenarioEditor] Received status for unknown scenario (not QUEUED/PROCESSING):', statusData.scenarioId);
+              return prev;
+            }
+          });
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [documentId, loadScenarios, scenarios, sortScenarios]);
+  }, [documentId, loadScenarios, sortScenarios]);
+  // Note: 'scenarios' removed from dependencies to prevent event listener recreation
+  // Use functional state updates (setScenarios(prev => ...)) to access current state
 
   // Load scenarios on mount
   useEffect(() => {

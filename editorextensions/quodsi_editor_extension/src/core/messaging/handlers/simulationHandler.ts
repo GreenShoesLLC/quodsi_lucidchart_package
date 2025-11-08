@@ -102,8 +102,13 @@ export class SimulationHandler {
             version: '1.0',
             data: {
               jobId: 'error',
+              documentId: data.documentId,
+              scenarioId: 'error',
+              scenarioName: data.scenarioName || 'Error',
               status: SimulationStatus.FAILED,
               progress: 0,
+              lastChecked: new Date().toISOString(),
+              queuedAt: new Date().toISOString(),
               error: 'Editor client not initialized. Please try again.'
             }
           });
@@ -130,8 +135,13 @@ export class SimulationHandler {
           version: '1.0',
           data: {
             jobId: 'error',
+            documentId: data.documentId,
+            scenarioId: 'error',
+            scenarioName: data.scenarioName || 'Error',
             status: SimulationStatus.FAILED,
             progress: 0,
+            lastChecked: new Date().toISOString(),
+            queuedAt: new Date().toISOString(),
             error: 'No active page found'
           }
         });
@@ -162,8 +172,13 @@ export class SimulationHandler {
               version: '1.0',
               data: {
                 jobId: 'error',
+                documentId: data.documentId,
+                scenarioId: 'error',
+                scenarioName: data.scenarioName || 'Error',
                 status: SimulationStatus.FAILED,
                 progress: 0,
+                lastChecked: new Date().toISOString(),
+                queuedAt: new Date().toISOString(),
                 error: 'Current page is not a Quodsi model. Please convert it first.'
               }
             });
