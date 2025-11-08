@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle } from "lucide-react";
 import ScenarioCard from "./ScenarioCard";
-import { RunState, EnvelopeMessageType } from "@quodsi/shared";
+import { RunState, EnvelopeMessageType, MAX_SCENARIOS } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import { useScenarios, useMessagingDispatch } from "../../messaging/MessageProvider";
 import { selectScenarios, selectScenariosLoading, selectScenariosError } from "../../messaging/state/scenarioSlice";
@@ -292,10 +292,20 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
     // Result will be handled in the message listener
   }, [documentId, deleteScenario, dispatch, scenarios]);
 
+  // Helper to get badge color based on scenario count
+  const getBadgeColor = () => {
+    if (scenarios.length >= MAX_SCENARIOS) return "bg-red-100 text-red-800 border-red-300";
+    if (scenarios.length === MAX_SCENARIOS - 1) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    return "bg-green-100 text-green-800 border-green-300";
+  };
+
   return (
     <div className="scenario-editor p-2">
       {/* Header */}
-      <div className="flex justify-end items-center mb-2">
+      <div className="flex justify-between items-center mb-2">
+        <div className={`px-2 py-1 text-xs font-medium border rounded ${getBadgeColor()}`}>
+          Scenarios: {scenarios.length}/{MAX_SCENARIOS}
+        </div>
         <button
           onClick={loadScenarios}
           disabled={loading}
@@ -361,13 +371,23 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
 
       {/* Info Footer */}
       {!loading && !error && scenarios.length > 0 && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-xs text-blue-800">
-            <strong>Tip:</strong> Running scenarios auto-refresh every 10 seconds.
-            Download links are refreshed automatically when they expire.
-            Click Refresh to manually reload.
-          </p>
-        </div>
+        <>
+          {scenarios.length >= MAX_SCENARIOS && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs text-red-800">
+                <strong>Scenario Limit Reached:</strong> You have reached the maximum of {MAX_SCENARIOS} scenarios.
+                Delete a scenario to run a new simulation.
+              </p>
+            </div>
+          )}
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-800">
+              <strong>Tip:</strong> Running scenarios auto-refresh every 10 seconds.
+              Download links are refreshed automatically when they expire.
+              Click Refresh to manually reload.
+            </p>
+          </div>
+        </>
       )}
     </div>
   );

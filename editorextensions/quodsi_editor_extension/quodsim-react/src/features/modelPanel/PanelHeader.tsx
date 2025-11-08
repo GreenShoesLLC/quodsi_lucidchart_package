@@ -6,11 +6,14 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
+  MAX_SCENARIOS,
 } from "@quodsi/shared";
 import { SimulationStatus } from "../../types/SimulationStatus";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
+import { useScenarios } from "../../messaging/MessageProvider";
+import { selectScenarios } from "../../messaging/state/scenarioSlice";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -47,6 +50,11 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   const hasActiveJobs = useHasActiveJobs();
+
+  // Get scenarios to check limit
+  const scenarioState = useScenarios();
+  const scenarios = selectScenarios({ scenarios: scenarioState });
+  const atScenarioLimit = scenarios.length >= MAX_SCENARIOS;
 
   // Helper to get display name for the element
   const getDisplayName = (
@@ -175,10 +183,21 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             <button
               className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSimulateClick}
-              disabled={isSimulating || hasActiveJobs}
-              title={hasActiveJobs ? "Another simulation is running. Please wait for it to complete." : "Run simulation"}
+              disabled={isSimulating || hasActiveJobs || atScenarioLimit}
+              title={
+                atScenarioLimit
+                  ? `Maximum ${MAX_SCENARIOS} scenarios reached. Delete a scenario to continue.`
+                  : hasActiveJobs
+                  ? "Another simulation is running. Please wait for it to complete."
+                  : "Run simulation"
+              }
             >
-              {hasActiveJobs ? (
+              {atScenarioLimit ? (
+                <>
+                  <AlertTriangle className="w-3 h-3" />
+                  Scenario Limit Reached
+                </>
+              ) : hasActiveJobs ? (
                 <>
                   <Loader className="w-3 h-3 animate-spin" />
                   Simulation Running...

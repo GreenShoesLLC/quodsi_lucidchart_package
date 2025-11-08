@@ -3,6 +3,10 @@ export * from './platform';
 export * from './core/logging/QuodsiLogger';
 export * from './core/logging/ComponentLogger';
 
+// Constants
+export * from './constants/limits';
+export * from './constants/version';
+
 // Type exports
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';

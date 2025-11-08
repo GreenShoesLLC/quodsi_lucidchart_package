@@ -2,9 +2,26 @@ import { DataConnectorAsynchronousAction } from 'lucid-extension-sdk';
 import { AzureStorageService } from "../services/azureStorageService";
 import { LucidSimulationJobSubmissionService } from "../services/lucidSimulationJobSubmissionService";
 import { BatchConfigurationError, BatchJobCreationError } from "../services/errors/batchErrors";
-import { getConfig } from "../config";
+import { getConfig, MAX_SCENARIOS } from "../config";
 import { ActionLogger } from '../utils/logging';
 import { LoggingLevel } from '../utils/loggingLevels';
+
+/**
+ * Helper function to extract unique scenario folder names from blob list
+ */
+function extractScenarioIds(blobNames: string[]): string[] {
+    const scenarioIds = new Set<string>();
+
+    for (const blobName of blobNames) {
+        // Extract the first part of the path (scenario folder name)
+        const parts = blobName.split('/');
+        if (parts.length > 1) {
+            scenarioIds.add(parts[0]);
+        }
+    }
+
+    return Array.from(scenarioIds);
+}
 
 interface SaveAndSubmitRequest {
     documentId: string;
@@ -47,6 +64,31 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             return { success: false };
         }
 
+        // Initialize storage service
+        const storageService = new AzureStorageService(config.azureStorageConnectionString);
+
+        // Check scenario limit before proceeding
+        logger.info('Checking scenario count limit');
+        const hasContainer = await storageService.containerExists(documentId);
+
+        if (hasContainer) {
+            // List all blobs to count existing scenarios
+            const allBlobs = await storageService.listBlobs(documentId);
+            const existingScenarioIds = extractScenarioIds(allBlobs);
+
+            logger.info(`Found ${existingScenarioIds.length} existing scenarios: ${existingScenarioIds.join(', ')}`);
+
+            // Check if we're adding a new scenario (not updating existing one)
+            if (!existingScenarioIds.includes(scenarioId) && existingScenarioIds.length >= MAX_SCENARIOS) {
+                const errorMsg = `Maximum ${MAX_SCENARIOS} scenarios per document reached. Delete a scenario to continue.`;
+                logger.error(errorMsg);
+                return {
+                    success: false,
+                    error: errorMsg
+                };
+            }
+        }
+
         // Get configuration
         logger.info(`Operating in environment: ${config.environment}`);
         logger.debug(`Using storage account: ${config.azureStorageConnectionString.includes('AccountName=') ? 
@@ -55,8 +97,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         logger.debug(`Using application: ${config.defaultApplicationId}`);
         // Phase 1: Upload model to blob storage
         const uploadStart = Date.now();
-        const storageService = new AzureStorageService(config.azureStorageConnectionString);
-        
+
         // Include scenario ID in the blob name for uniqueness
         const blobName = `${scenarioId}/model.json`;
         const modelJson = JSON.stringify(model, null, 2);

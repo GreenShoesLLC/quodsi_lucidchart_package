@@ -3,6 +3,12 @@ import { LoggingLevel, parseLoggingLevel } from "./utils/loggingLevels";
 
 export type Environment = 'dev' | 'tst' | 'prd' | 'local';
 
+/**
+ * Maximum number of scenarios allowed per document
+ * This limit ensures reasonable Azure Storage usage and good UX
+ */
+export const MAX_SCENARIOS = 5;
+
 export function detectEnvironment(): Environment {
   // When running in Azure, use the Function App name to detect environment
   const functionAppName = process.env.WEBSITE_SITE_NAME || '';
