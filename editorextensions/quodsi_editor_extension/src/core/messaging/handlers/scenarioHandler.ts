@@ -3,6 +3,7 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { SimulationHandler } from './simulationHandler';
 
 /**
  * Handler for scenario management messages
@@ -86,6 +87,15 @@ export class ScenarioHandler {
         scenarioCount: responseData?.scenarios?.length || 0
       });
 
+      // Reconcile active simulation jobs with scenario list
+      // This replaces the need for separate GetDocumentStatus polling
+      if (responseData?.scenarios) {
+        SimulationHandler.reconcileWithScenarioList(
+          data.documentId,
+          responseData.scenarios
+        );
+      }
+
       // Send success response with the unwrapped data
       router.send('model', {
         id: msg.id, // Use same ID for correlation
@@ -153,6 +163,12 @@ export class ScenarioHandler {
         documentId: data.documentId,
         scenarioId: data.scenarioId
       });
+
+      // Clean up any active simulation jobs for this scenario
+      if (responseData?.success) {
+        ScenarioHandler.logger.log('Cleaning up job tracking for deleted scenario');
+        SimulationHandler.stopPollingForScenario(data.scenarioId);
+      }
 
       // Send success response
       router.send('model', {
