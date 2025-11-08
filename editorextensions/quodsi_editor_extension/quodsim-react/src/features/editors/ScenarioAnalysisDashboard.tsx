@@ -99,7 +99,10 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
   // Get unique activities for filtering (when timeseries is selected)
   const uniqueActivities = React.useMemo(() => {
-    if (dataType === "activity-contents-timeseries" && data.length > 0) {
+    const isTimeseriesType = dataType === "activity-contents-timeseries" ||
+                             dataType === "activity-input-buffer-timeseries" ||
+                             dataType === "activity-output-buffer-timeseries";
+    if (isTimeseriesType && data.length > 0) {
       const activities = Array.from(
         new Set(data.map((item: any) => item.object_id))
       ).sort();
@@ -110,10 +113,10 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
   // Filter data by selected activity (for timeseries only)
   const filteredData = React.useMemo(() => {
-    if (
-      dataType === "activity-contents-timeseries" &&
-      selectedActivity !== "all"
-    ) {
+    const isTimeseriesType = dataType === "activity-contents-timeseries" ||
+                             dataType === "activity-input-buffer-timeseries" ||
+                             dataType === "activity-output-buffer-timeseries";
+    if (isTimeseriesType && selectedActivity !== "all") {
       return data.filter((item: any) => item.object_id === selectedActivity);
     }
     return data;
@@ -130,6 +133,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     { value: "entity", label: "Entity Summary" },
     { value: "resource", label: "Resource Summary" },
     { value: "activity-contents-timeseries", label: "Activity Contents Timeseries" },
+    { value: "activity-input-buffer-timeseries", label: "Activity Input Buffer Timeseries" },
+    { value: "activity-output-buffer-timeseries", label: "Activity Output Buffer Timeseries" },
     { value: "state-summary", label: "State Summary" },
   ];
 
@@ -178,7 +183,9 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         </div>
 
         {/* Activity Filter (only for timeseries) */}
-        {dataType === "activity-contents-timeseries" &&
+        {(dataType === "activity-contents-timeseries" ||
+          dataType === "activity-input-buffer-timeseries" ||
+          dataType === "activity-output-buffer-timeseries") &&
           uniqueActivities.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-700">
@@ -208,6 +215,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             {dataType === "entity" && "Entity Cross-Replication Summary"}
             {dataType === "resource" && "Resource Cross-Replication Summary"}
             {dataType === "activity-contents-timeseries" && "Activity Contents Timeseries"}
+            {dataType === "activity-input-buffer-timeseries" && "Activity Input Buffer Timeseries"}
+            {dataType === "activity-output-buffer-timeseries" && "Activity Output Buffer Timeseries"}
             {dataType === "state-summary" && "State Summary"}
           </h3>
         </div>

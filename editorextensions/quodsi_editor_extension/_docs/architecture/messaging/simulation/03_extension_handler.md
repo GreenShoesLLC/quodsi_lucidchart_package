@@ -61,16 +61,12 @@ switch (msg.type) {
     });
     return true;
 
-  case EnvelopeMessageType.MODEL_RUN_ACK:
-    return SimulationHandler.handleRunAck(msg);
-
-  case EnvelopeMessageType.MODEL_RUN_STATUS:
-    return SimulationHandler.handleRunStatus(msg);
-
   default:
     return false;  // Not a simulation message
 }
 ```
+
+**Note:** The handler only processes MODEL_RUN_REQUEST messages. Status updates are initiated internally via polling, not through incoming messages.
 
 **Returns:** `true` if message was handled, `false` otherwise
 
@@ -279,16 +275,23 @@ const jobId = `job-${documentProxy.id}-${Date.now()}`;
 
 ---
 
-#### Phase 6: Send Acknowledgment (lines 226-236)
+#### Phase 6: Send Initial Status (lines 260-277)
 
-**Purpose:** Inform React that request was received and processing started
+**Purpose:** Inform React that request was received and job is queued
 
-**Message:** `MODEL_RUN_ACK`
+**Message:** `MODEL_RUN_STATUS` with status `QUEUED`
 
 **Payload:**
 ```typescript
 {
   jobId,
+  documentId,
+  scenarioId,
+  scenarioName,
+  status: SimulationStatus.QUEUED,
+  progress: 0,
+  currentStep: 'Queued for execution',
+  lastChecked: new Date().toISOString(),
   queuedAt: new Date().toISOString()
 }
 ```
@@ -296,17 +299,26 @@ const jobId = `job-${documentProxy.id}-${Date.now()}`;
 **Code Reference:**
 ```typescript
 router.send('model', {
-  id: msg.id,  // Same ID as request for correlation
-  type: EnvelopeMessageType.MODEL_RUN_ACK,
+  id: '',  // New ID for status message
+  type: EnvelopeMessageType.MODEL_RUN_STATUS,
   source: 'host',
   target: 'model-iframe',
   version: '1.0',
   data: {
     jobId,
+    documentId: data.documentId,
+    scenarioId,
+    scenarioName: data.scenarioName,
+    status: SimulationStatus.QUEUED,
+    progress: 0,
+    currentStep: 'Queued for execution',
+    lastChecked: new Date().toISOString(),
     queuedAt: new Date().toISOString()
   }
 });
 ```
+
+**Note:** This initial MODEL_RUN_STATUS message replaces the previous MODEL_RUN_ACK pattern, serving as both acknowledgment and initial status update.
 
 ---
 
@@ -356,15 +368,17 @@ SimulationHandler.activeJobs.set(jobId, {
   actionName: 'SaveAndSubmitSimulation',
   actionData: {
     documentId: documentProxy.id,
-    scenarioId: BASELINE_SCENARIO_ID,  // "00000000-0000-0000-0000-000000000000"
+    scenarioId: scenarioId,  // Unique UUID generated via generateUUID()
     model: serializedModel,
-    scenarioName: data.scenarioName || 'New Scenario',
+    scenarioName: data.scenarioName || 'Generated timestamp name',
     diagramSvg: diagramSvg,
     appVersion: '1.0'
   },
   asynchronous: true
 }
 ```
+
+**Note:** Each simulation run gets a unique `scenarioId` generated via `generateUUID()` (line 253).
 
 **Success Path:**
 1. Update job status to `PROCESSING`
@@ -535,17 +549,22 @@ All errors send a `MODEL_RUN_STATUS` message with:
 
 ---
 
-## Constants
+## Scenario ID Generation
 
-### BASELINE_SCENARIO_ID
+### generateUUID()
 
+**Location:** Line 253 (within handleRunRequest)
+
+**Implementation:**
 ```typescript
-const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
+const scenarioId = generateUUID();
 ```
 
-**Location:** Line 19
+**Purpose:** Generate a unique identifier for each simulation run
 
-**Purpose:** Default scenario ID for all simulations
+**Format:** Standard UUID v4 (e.g., "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+
+**Note:** Each simulation gets a unique `scenarioId`, not a constant. This allows multiple scenarios per document to be tracked independently in Azure Storage
 
 ---
 

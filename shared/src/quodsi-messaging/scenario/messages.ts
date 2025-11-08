@@ -59,7 +59,7 @@ export interface CrossRepDataRequestMessage extends EnvelopeBase {
   data: {
     documentId: string;
     scenarioId: string;
-    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary';
+    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries';
   };
 }
 
@@ -69,7 +69,7 @@ export interface CrossRepDataResultMessage extends EnvelopeBase {
     success: boolean;
     data: any[];
     recordCount: number;
-    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary';
+    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries';
     error?: string;
   };
 }

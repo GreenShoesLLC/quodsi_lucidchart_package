@@ -96,16 +96,17 @@ const response = await LucidDataActionUtility.performDataAction(client, {
 **Response Structure:**
 ```typescript
 {
-  pageStatus: {
-    scenarios: [{
-      scenarioId: string;
-      scenarioName: string;
-      runState: "QUEUED" | "RUNNING" | "RAN_SUCCESSFULLY" | "RAN_WITH_ERRORS" | null;
-      hasResults: boolean;
-    }]
+  success: boolean;
+  scenario: {
+    scenarioId: string;
+    scenarioName: string;
+    runState: "QUEUED" | "RUNNING" | "RAN_SUCCESSFULLY" | "RAN_WITH_ERRORS" | null;
+    hasResults: boolean;
   }
 }
 ```
+
+**Note:** The response returns a single scenario object directly, not an array of scenarios within a pageStatus wrapper. The code accesses this via `result.scenario`.
 
 ---
 
@@ -151,13 +152,23 @@ router.send('model', {
   version: '1.0',
   data: {
     jobId,
+    documentId,
+    scenarioId,
+    scenarioName: scenario.scenarioName,
     status: mappedStatus,
     progress: mappedProgress,
     currentStep: 'Running simulation',
+    lastChecked: new Date().toISOString(),
     hasResults: scenario.hasResults
   }
 });
 ```
+
+**Enhanced Fields:**
+- `documentId` - LucidChart document ID for tracking
+- `scenarioId` - Unique scenario identifier
+- `scenarioName` - User-friendly scenario name
+- `lastChecked` - Timestamp of this status check
 
 **Frequency:** Every 10 seconds until completion
 

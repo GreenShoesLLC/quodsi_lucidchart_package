@@ -4,7 +4,7 @@ Detailed documentation of message sequencing, payloads, and timing for simulatio
 
 ## Overview
 
-The simulation flow involves three message types exchanged between React and the Extension in a request-acknowledgment-status pattern. This document details each message's structure, timing, and purpose.
+The simulation flow involves two message types exchanged between React and the Extension in a request-status pattern. The initial MODEL_RUN_STATUS message with status "QUEUED" serves as the acknowledgment. This document details each message's structure, timing, and purpose.
 
 ## Message Sequence Diagram
 
@@ -17,9 +17,9 @@ React UI                    Extension                   Azure Function          
    │                            │  2. Serialize                │                         │
    │                            │  3. Capture SVG              │                         │
    │                            │  4. Track job                │                         │
-   │  MODEL_RUN_ACK             │                              │                         │
+   │  MODEL_RUN_STATUS [QUEUED] │                              │                         │
    │<───────────────────────────┤                              │                         │
-   │  (jobId, queuedAt)         │                              │                         │
+   │  (Initial ack, progress 0%)│                              │                         │
    │                            │  performDataAction()         │                         │
    │                            ├─────────────────────────────>│                         │
    │                            │                              │  Upload to Blob         │
@@ -96,7 +96,7 @@ const requestSimulation = (
 ```typescript
 {
   documentId: string;          // LucidChart document ID
-  scenarioName?: string;        // Name for this simulation run (default: "LucidChart")
+  scenarioName?: string;        // Name for this simulation run (auto-generated timestamp: "YY-MM-DD HH:MM:SS")
   durationDays?: number;        // Simulation duration (DEPRECATED)
   repetitions?: number;         // Number of replications (DEPRECATED)
   parameters?: Record<string, unknown>;  // Additional simulation parameters
@@ -126,83 +126,16 @@ const requestSimulation = (
 
 ---
 
-### 2. MODEL_RUN_ACK
+### 2. MODEL_RUN_STATUS
 
 **Direction:** Extension → React
-**Purpose:** Acknowledge simulation request received and job submitted
-**Timing:** Sent immediately after job tracking created, before Azure submission completes
-
-#### Sender
-
-**File:** `src/core/messaging/handlers/simulationHandler.ts:226-236`
-
-**Context:** Within `handleRunRequest()` after model serialization and job ID generation
-
-**Implementation:**
-```typescript
-router.send('model', {
-  id: msg.id,
-  type: EnvelopeMessageType.MODEL_RUN_ACK,
-  source: 'host',
-  target: 'model-iframe',
-  version: '1.0',
-  data: {
-    jobId,
-    queuedAt: new Date().toISOString()
-  }
-});
-```
-
-#### Payload Schema
-
-```typescript
-{
-  jobId: string;                // Format: "job-{documentId}-{timestamp}"
-  queuedAt: string;             // ISO 8601 timestamp
-  estimatedCompletionTime?: string;  // Future feature
-}
-```
-
-#### Envelope Structure
-
-```typescript
-{
-  id: string;                   // Same as request message ID (for correlation)
-  type: "MODEL_RUN_ACK";
-  source: "host";
-  target: "model-iframe";
-  version: "1.0";
-  data: {/* payload above */}
-}
-```
-
-#### Handler
-
-**File:** `quodsim-react/src/messaging/mappers/simulation.mapper.ts:25-37`
-
-**Method:** `mapSimulation()`
-
-**Action Dispatched:**
-```typescript
-{
-  type: 'SIMULATION_START',
-  jobId: ackData.jobId
-}
-```
-
-**UI Effect:**
-- Stores `jobId` in simulation state
-- Keeps button in "Running..." state
-- Prepares for status updates
-
----
-
-### 3. MODEL_RUN_STATUS
-
-**Direction:** Extension → React
-**Purpose:** Provide periodic updates on simulation execution progress
-**Timing:** Every 10 seconds during simulation
+**Purpose:** Acknowledge submission (initial message with QUEUED status) and provide periodic updates on simulation execution progress
+**Timing:**
+- **Initial:** Sent immediately after job tracking created (serves as acknowledgment)
+- **Subsequent:** Every 10 seconds during simulation via Azure polling
 **Count:** Multiple messages (typically 6-60 depending on duration)
+
+**Note:** The initial MODEL_RUN_STATUS message with status "QUEUED" replaces the previous MODEL_RUN_ACK message pattern, providing both acknowledgment and initial status in a single message type.
 
 #### Sender
 
@@ -247,11 +180,17 @@ router.send('model', {
 ```typescript
 {
   jobId: string;                // Job identifier for tracking
+  documentId: string;           // LucidChart document ID
+  scenarioId: string;           // Unique UUID for this simulation run
+  scenarioName: string;         // User-friendly scenario name (timestamp format)
   status: string;               // Current status (see Status Values below)
   progress: number;             // 0-100 percentage
   currentStep?: string;         // Human-readable step description
+  lastChecked: string;          // ISO timestamp of last status check
+  queuedAt: string;             // ISO timestamp when job was queued (initial message only)
   error?: string;               // Error message (if status is 'failed')
   resultUrl?: string;           // Results URL (if status is 'completed')
+  hasResults?: boolean;         // Whether results are available
   details?: Record<string, unknown>;  // Additional status details
 }
 ```
@@ -335,17 +274,15 @@ T+0ms      User clicks "Run Simulation"
 T+10ms     MODEL_RUN_REQUEST sent
 T+20ms     Extension receives message
 T+500ms    Model serialized, SVG captured
-T+520ms    MODEL_RUN_ACK sent
-T+540ms    React receives ACK, updates UI
+T+520ms    MODEL_RUN_STATUS sent (QUEUED, progress 0%) - Initial acknowledgment
+T+540ms    React receives STATUS, updates UI
 T+1000ms   Azure submission starts
-T+3000ms   First MODEL_RUN_STATUS (QUEUED)
-T+4000ms   MODEL_RUN_STATUS (PROCESSING)
-T+5000ms   MODEL_RUN_STATUS (VALIDATING)
-T+7000ms   MODEL_RUN_STATUS (RUNNING, 20%)
-T+9000ms   MODEL_RUN_STATUS (RUNNING, 35%)
-...        (every 2s)
-T+30000ms  MODEL_RUN_STATUS (RUNNING, 95%)
-T+31000ms  MODEL_RUN_STATUS (COMPLETED, 100%)
+T+10000ms  MODEL_RUN_STATUS (QUEUED or PROCESSING)
+T+20000ms  MODEL_RUN_STATUS (RUNNING, 70%)
+T+30000ms  MODEL_RUN_STATUS (RUNNING, 70%)
+...        (every 10s)
+T+60000ms  MODEL_RUN_STATUS (RUNNING, 70%)
+T+70000ms  MODEL_RUN_STATUS (COMPLETED, 100%)
 ```
 
 ### Message Frequency
@@ -353,8 +290,7 @@ T+31000ms  MODEL_RUN_STATUS (COMPLETED, 100%)
 | Message Type | Count | Frequency |
 |-------------|-------|-----------|
 | MODEL_RUN_REQUEST | 1 | One-time (per simulation) |
-| MODEL_RUN_ACK | 1 | One-time (immediate response) |
-| MODEL_RUN_STATUS | 6-60 | Every 10s until completion |
+| MODEL_RUN_STATUS | 7-61 | Initial (acknowledgment) + Every 10s until completion |
 
 ---
 
@@ -362,19 +298,20 @@ T+31000ms  MODEL_RUN_STATUS (COMPLETED, 100%)
 
 ### Guaranteed Ordering
 
-1. `MODEL_RUN_REQUEST` always precedes `MODEL_RUN_ACK`
-2. `MODEL_RUN_ACK` always precedes first `MODEL_RUN_STATUS`
-3. Status updates are monotonically increasing in progress (never decrease)
+1. `MODEL_RUN_REQUEST` always precedes all `MODEL_RUN_STATUS` messages
+2. First `MODEL_RUN_STATUS` (QUEUED) is sent immediately after request processing
+3. Status updates typically progress forward (QUEUED → RUNNING → COMPLETED)
 
 ### No Ordering Guarantees
 
-- Multiple `MODEL_RUN_STATUS` messages may arrive out of order (use progress % to detect)
+- Multiple `MODEL_RUN_STATUS` messages may arrive out of order due to async polling
 - Status messages may be dropped (network issues) - UI should handle missing updates gracefully
+- Progress values may not increase monotonically (Azure may report same status multiple times)
 
 ### Correlation
 
-- `MODEL_RUN_ACK` uses same `id` as `MODEL_RUN_REQUEST` for correlation
-- All `MODEL_RUN_STATUS` messages include the same `jobId` for tracking
+- All `MODEL_RUN_STATUS` messages include the same `jobId` and `scenarioId` for tracking
+- React components use `jobId` to match status updates to the initiated simulation
 
 ---
 
@@ -482,24 +419,27 @@ All messages must include:
 
 ### Planned Features
 
-1. **Real Azure Batch Polling**
-   - Replace mock status with actual batch job status
-   - Poll Azure Function endpoint: `GET /api/status/{jobId}`
-   - Configurable polling interval
-
-2. **Progress Details**
+1. **Enhanced Progress Details**
    - Current replication number
    - Estimated time remaining
-   - Resource utilization
+   - Resource utilization metrics
+   - Detailed step-by-step progress
 
-3. **Cancellation Support**
+2. **Cancellation Support**
    - New message type: `MODEL_RUN_CANCEL`
-   - Cancel Azure Batch job
+   - Cancel Azure Batch job via data connector
    - Send final status: `cancelled`
+   - Clean up resources on cancellation
 
-4. **Result Notifications**
-   - Push notification when simulation completes
-   - Include result summary in status message
+3. **Result Notifications**
+   - Push notification when simulation completes (browser notifications)
+   - Include result summary in completion status message
+   - Preview of key metrics in notification
+
+4. **Configurable Polling**
+   - User-adjustable polling interval (5s - 30s)
+   - Adaptive polling (faster when near completion)
+   - Pause/resume polling capability
 
 ---
 

@@ -23,21 +23,24 @@ export const requiredColumns: string[] = [
  * @param containerName Azure container name
  * @param documentId Document ID
  * @param scenarioId Scenario ID (folder name within container)
+ * @param fileName CSV file name (e.g., 'activity_contents_timeseries_cross_rep.csv')
  * @returns Array of activity contents timeseries data
  */
 export async function fetchActivityContentsTimeseries(
     containerName: string,
     documentId: string,
-    scenarioId: string
+    scenarioId: string,
+    fileName: string = 'activity_contents_timeseries_cross_rep.csv'
 ): Promise<ActivityContentsTimeseriesData[]> {
     // Enhanced logging to help diagnose issues
     conditionalLog(`[activityContentsTimeseries] Starting fetch operation`);
     conditionalLog(`[activityContentsTimeseries] Container name: ${containerName}`);
     conditionalLog(`[activityContentsTimeseries] Document ID: ${documentId}`);
     conditionalLog(`[activityContentsTimeseries] Scenario ID: ${scenarioId}`);
+    conditionalLog(`[activityContentsTimeseries] File name: ${fileName}`);
 
     // Use the correct path structure: scenarioId/cross_rep/filename.csv
-    const baseBlobName = 'cross_rep/activity_contents_timeseries_cross_rep.csv';
+    const baseBlobName = `cross_rep/${fileName}`;
     const blobName = `${scenarioId}/${baseBlobName}`;
     conditionalLog(`[activityContentsTimeseries] Target file path: ${containerName}/${blobName}`);
 

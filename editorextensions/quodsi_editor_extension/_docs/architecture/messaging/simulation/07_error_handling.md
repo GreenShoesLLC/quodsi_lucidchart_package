@@ -122,6 +122,50 @@ Errors can occur at different points in the simulation lifecycle:
 
 ---
 
+### Phase 2.5: Duplicate Simulation Prevention
+
+**Location:** `simulationHandler.ts:212-239`
+
+#### Error: Simulation Already Running
+
+**Cause:** User attempts to start a new simulation while one is already running for the same document
+
+**Check Logic:**
+```typescript
+// Check for existing running simulation
+for (const [existingJobId, existingJob] of SimulationHandler.activeJobs.entries()) {
+  if (existingJob.documentId === documentId &&
+      existingJob.status !== SimulationStatus.COMPLETED &&
+      existingJob.status !== SimulationStatus.FAILED) {
+    // Simulation already running
+  }
+}
+```
+
+**Message:**
+```typescript
+{
+  jobId: 'error',
+  status: SimulationStatus.FAILED,
+  progress: 0,
+  error: 'A simulation is already running for this document. Please wait for it to complete.'
+}
+```
+
+**Recovery:**
+- Manual: Wait for current simulation to complete
+- Manual: Stop current simulation (if stop feature implemented)
+- Prevention: Disable "Run Simulation" button when simulation active
+
+**UI Behavior:**
+- Button should be disabled while simulation running
+- Status indicator should show current simulation progress
+- User should see clear feedback about active simulation
+
+**Code Reference:** Lines 212-239
+
+---
+
 ### Phase 3: Serialization Errors
 
 **Location:** `simulationHandler.ts:212-215`

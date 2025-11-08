@@ -34,15 +34,15 @@ The simulation lifecycle spans four major systems and involves approximately 11 
 │  1. Load model                                                    │
 │  2. Serialize ModelDefinition                                     │
 │  3. Get SVG                                                       │
-│  4. Send MODEL_RUN_ACK ────────────────┐                         │
+│  4. Send MODEL_RUN_STATUS (QUEUED) ───┐                         │
 │  5. Submit to Data Connector           │                         │
 └──────────────────────┬────────────────┘│                         │
                        │                 │                         │
                        ▼                 ▼                         │
 ┌─────────────────────────────┐  ┌──────────────────────────────┐ │
-│  LucidDataActionUtility      │  │  React receives ACK          │ │
+│  LucidDataActionUtility      │  │  React receives STATUS       │ │
 │  LucidDataActionUtility.ts:31│  │  simulation.mapper.ts:25     │ │
-│  OAuth + performDataAction   │  │  → SIMULATION_START action   │ │
+│  OAuth + performDataAction   │  │  → SIMULATION_PROGRESS       │ │
 └─────────────────────┬────────┘  └──────────────────────────────┘ │
                       │                                             │
                       ▼                                             │
@@ -76,23 +76,41 @@ The simulation lifecycle spans four major systems and involves approximately 11 
 
 ### Step 1: User Initiates Simulation
 
-**Location:** `quodsim-react/src/features/modelPanel/PanelHeader.tsx:124-129`
+**Location:** `quodsim-react/src/features/modelPanel/PanelHeader.tsx:75-98`
 
 **Action:**
 1. User clicks "Run Simulation" button (only visible when Model element is selected)
 2. `handleSimulateClick()` is called
-3. Local state `isSimulating` set to `true` (disables button)
-4. Calls `onSimulate("LucidChart")`
+3. Local state `isSimulating` set to `true` (disables button for 2 seconds)
+4. Generates timestamp-based scenario name in format: `YY-MM-DD HH:MM:SS`
+5. Calls `onSimulate(scenarioName)`
 
 **Code Reference:**
 ```typescript
 const handleSimulateClick = () => {
-  setIsSimulating(true);
   if (onSimulate) {
-    onSimulate("LucidChart");
+    setIsSimulating(true);
+
+    // Generate user-friendly scenario name with timestamp
+    const now = new Date();
+    const year = now.getFullYear();
+    const twoDigitYear = String(year).slice(-2);
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    const scenarioName = `${twoDigitYear}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    onSimulate(scenarioName);
+
+    // Clear loading state after 2 seconds
+    setTimeout(() => setIsSimulating(false), 2000);
   }
 };
 ```
+
+**Scenario Name Format:** `YY-MM-DD HH:MM:SS` (e.g., "25-01-08 14:32:45")
 
 **Next:** Triggers hook chain
 
@@ -189,10 +207,17 @@ const diagramSvg = await activePageProxy.getSvg(undefined, true);
 const jobId = `job-${documentProxy.id}-${Date.now()}`;
 ```
 
-#### 5f. Send Acknowledgment (lines 226-236)
-Sends `MODEL_RUN_ACK` message back to React with:
+#### 5f. Send Status Update (lines 260-277)
+Sends `MODEL_RUN_STATUS` message with status "QUEUED" back to React with:
 - `jobId`
-- `queuedAt` timestamp
+- `documentId`
+- `scenarioId` (unique UUID for this simulation run)
+- `scenarioName`
+- `status: SimulationStatus.QUEUED`
+- `progress: 0`
+- `currentStep` (optional)
+- `lastChecked` (timestamp)
+- `queuedAt` (timestamp)
 
 #### 5g. Create Job Tracking (lines 238-246)
 Stores job in `SimulationHandler.activeJobs` Map:

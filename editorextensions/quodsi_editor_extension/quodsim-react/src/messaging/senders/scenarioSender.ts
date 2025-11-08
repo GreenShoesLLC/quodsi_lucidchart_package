@@ -39,12 +39,12 @@ export function useScenarioSender() {
    *
    * @param documentId Document ID containing the scenario
    * @param scenarioId Scenario ID to fetch data for
-   * @param dataType Type of cross-rep data to fetch (activity, entity, resource, activity-contents-timeseries, or state-summary)
+   * @param dataType Type of cross-rep data to fetch (activity, entity, resource, activity-contents-timeseries, state-summary, activity-input-buffer-timeseries, or activity-output-buffer-timeseries)
    */
   const getCrossRepData = useCallback((
     documentId: string,
     scenarioId: string,
-    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary'
+    dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries'
   ) => {
     send(EnvelopeMessageType.CROSS_REP_DATA_REQUEST, {
       documentId,

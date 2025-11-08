@@ -51,6 +51,8 @@
         "GetEntityCrossRepData": "getEntityCrossRepData",
         "GetResourceCrossRepData": "getResourceCrossRepData",
         "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
+        "GetActivityInputBufferTimeseries": "getActivityInputBufferTimeseries",
+        "GetActivityOutputBufferTimeseries": "getActivityOutputBufferTimeseries",
         "GetStateSummary": "getStateSummary"
       }
     }

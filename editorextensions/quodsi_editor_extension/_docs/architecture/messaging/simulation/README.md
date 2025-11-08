@@ -32,7 +32,7 @@ Complete end-to-end flow from button click to results display.
 Detailed message sequencing and payload schemas.
 
 **Contents:**
-- MODEL_RUN_REQUEST → MODEL_RUN_ACK → MODEL_RUN_STATUS
+- MODEL_RUN_REQUEST → MODEL_RUN_STATUS (QUEUED → RUNNING → COMPLETED)
 - Message timing and ordering
 - Payload structures
 - React sender → Extension handler → React mapper chains
@@ -131,13 +131,14 @@ Common issues and solutions.
 
 ## Message Types
 
-This subsystem handles three primary message types:
+This subsystem handles two primary message types:
 
 | Message Type | Direction | Purpose |
 |--------------|-----------|---------|
 | `MODEL_RUN_REQUEST` | React → Extension | Initiate simulation |
-| `MODEL_RUN_ACK` | Extension → React | Acknowledge submission |
-| `MODEL_RUN_STATUS` | Extension → React | Progress updates |
+| `MODEL_RUN_STATUS` | Extension → React | Acknowledgment (QUEUED) and progress updates |
+
+**Note:** The initial `MODEL_RUN_STATUS` message with status "QUEUED" serves as the acknowledgment that the simulation has been accepted and queued for execution.
 
 For detailed message protocol, see [simulation-run.md](./simulation-run.md)
 
@@ -156,8 +157,8 @@ For detailed message protocol, see [simulation-run.md](./simulation-run.md)
 │  │ SimulationHandler                                         │  │
 │  │  • Validate & serialize model                            │  │
 │  │  • Capture diagram SVG                                   │  │
-│  │  • Send MODEL_RUN_ACK ────────────┐                     │  │
-│  │  • Track job                       │                     │  │
+│  │  • Send MODEL_RUN_STATUS (QUEUED) ──┐                   │  │
+│  │  • Track job & start polling        │                   │  │
 │  └────────────────┬───────────────────┘                     │  │
 │                   │                                          │  │
 │  ┌────────────────▼───────────────────────────────────────┐ │  │
@@ -222,14 +223,14 @@ For detailed message protocol, see [simulation-run.md](./simulation-run.md)
 
 | Status | Meaning | Source |
 |--------|---------|--------|
-| `QUEUED` | Waiting to start | Extension mock |
-| `PROCESSING` | Initializing | Extension mock |
-| `VALIDATING` | Model validation | Extension mock |
-| `RUNNING` | Executing simulation | Extension mock |
-| `COMPLETED` | Finished successfully | Extension mock |
-| `FAILED` | Error occurred | Extension mock |
+| `QUEUED` | Waiting to start | Azure Batch RunState |
+| `PROCESSING` | Initializing | Azure Batch RunState |
+| `VALIDATING` | Model validation | Azure Batch RunState |
+| `RUNNING` | Executing simulation | Azure Batch RunState |
+| `COMPLETED` | Finished successfully | Azure Batch RunState |
+| `FAILED` | Error occurred | Azure Batch RunState |
 
-**Note:** Current implementation uses mock status updates. Real Azure Batch polling is planned.
+**Note:** Status updates are obtained by polling the GetDocumentStatus data action every 10 seconds, which retrieves the current Azure Batch job state from status.json in blob storage.
 
 ## For Developers
 

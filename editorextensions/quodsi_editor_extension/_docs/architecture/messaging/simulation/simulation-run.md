@@ -31,33 +31,7 @@ Simulation run messages handle the complete lifecycle of running a simulation: r
 - File: `src/core/messaging/handlers/simulationHandler.ts`
 - Function: `SimulationHandler.handleRunRequest`
 
-**Response:** `MODEL_RUN_ACK`
-
----
-
-### MODEL_RUN_ACK: Extension → React
-
-**Direction:** Extension → React  
-**Purpose:** Acknowledge simulation request received and processed  
-**Auth Required:** Yes  
-
-**Payload:**
-```typescript
-{
-  success: boolean,
-  jobId?: string,
-  documentId: string,
-  errorMessage?: string
-}
-```
-
-**Sender:** 
-- File: `src/core/messaging/handlers/simulationHandler.ts`
-- Function: `SimulationHandler.handleRunRequest`
-
-**Handler:**
-- File: `quodsim-react/src/messaging/mappers/simulation.mapper.ts`
-- Function: `mapSimulation`
+**Response:** `MODEL_RUN_STATUS` (initial status with QUEUED)
 
 ---
 
@@ -72,12 +46,24 @@ Simulation run messages handle the complete lifecycle of running a simulation: r
 {
   jobId: string,
   documentId: string,
-  status: 'pending' | 'running' | 'completed' | 'failed',
-  progress?: number,
+  scenarioId: string,
+  scenarioName: string,
+  status: 'queued' | 'processing' | 'running' | 'completed' | 'failed',
+  progress: number,
+  currentStep?: string,
+  lastChecked: string,
+  queuedAt?: string,
   errorMessage?: string,
   hasResults?: boolean
 }
 ```
+
+**Enhanced Fields:**
+- `scenarioId` - Unique UUID for this simulation run
+- `scenarioName` - User-friendly name (timestamp format: "YY-MM-DD HH:MM:SS")
+- `currentStep` - Human-readable description of current execution phase
+- `lastChecked` - ISO timestamp of last status check
+- `queuedAt` - ISO timestamp when job was first queued (initial message only)
 
 **Sender:** 
 - File: `src/core/messaging/handlers/simulationHandler.ts`
@@ -91,28 +77,32 @@ Simulation run messages handle the complete lifecycle of running a simulation: r
 
 | Message Type | React Sender | Extension Handler | Extension Sender | React Handler |
 |--------------|--------------|-------------------|------------------|---------------|
-| MODEL_RUN_REQUEST | ✅ simulationSender.runSimulation | ✅ SimulationHandler.handleRunRequest | ➖ N/A | ➖ N/A |
-| MODEL_RUN_ACK | ➖ N/A | ➖ N/A | ✅ SimulationHandler.handleRunRequest | ✅ mapSimulation |
-| MODEL_RUN_STATUS | ➖ N/A | ➖ N/A | ✅ SimulationHandler.checkAndUpdateStatus | ✅ mapSimulation |
+| MODEL_RUN_REQUEST | ✅ simulationSender.requestSimulation | ✅ SimulationHandler.handleRunRequest | ➖ N/A | ➖ N/A |
+| MODEL_RUN_STATUS | ➖ N/A | ➖ N/A | ✅ SimulationHandler.handleRunRequest + pollDocumentStatus | ✅ mapSimulation |
+
+**Note:** The initial MODEL_RUN_STATUS message (with status QUEUED) is sent from handleRunRequest and serves as the acknowledgment. Subsequent STATUS messages are sent by pollDocumentStatus every 10 seconds.
 
 ## Complete Simulation Sequence
 
-1. User clicks "Run Simulation" button
-2. **MODEL_RUN_REQUEST** sent to extension
+1. User clicks "Run Simulation" button (generates timestamp-based scenario name)
+2. **MODEL_RUN_REQUEST** sent to extension with documentId and scenarioName
 3. Extension validates model is ready for simulation
-4. Extension submits job to Azure Data Connector
-5. **MODEL_RUN_ACK** sent to React (with jobId)
-6. React shows "simulation in progress" UI
-7. Extension starts periodic status polling
-8. **MODEL_RUN_STATUS** updates sent to React:
-   - `status: 'pending'` - Job queued
-   - `status: 'running'` - Simulation executing
-   - `status: 'completed'` - Finished successfully
-   - `status: 'failed'` - Error occurred
-9. React updates progress indicator
-10. When completed, React enables "View Results" button
-11. User clicks "View Results"
-12. React sends **RESULTS_PAGE_CREATE** request
+4. Extension generates unique scenarioId (UUID)
+5. Extension serializes model and captures SVG
+6. **MODEL_RUN_STATUS** sent to React with status 'queued' (serves as acknowledgment)
+7. React shows "simulation in progress" UI
+8. Extension submits job to Azure Data Connector
+9. Extension starts periodic status polling (every 10s via GetDocumentStatus data action)
+10. **MODEL_RUN_STATUS** updates sent to React:
+    - `status: 'queued'` - Job queued, waiting to start
+    - `status: 'processing'` - Initializing
+    - `status: 'running'` - Simulation actively executing
+    - `status: 'completed'` - Finished successfully (hasResults: true)
+    - `status: 'failed'` - Error occurred
+11. React updates progress indicator with each status message
+12. When completed, React enables "View Results" button
+13. User clicks "View Results"
+14. React sends **RESULTS_PAGE_CREATE** request
 
 ## Implementation Details
 

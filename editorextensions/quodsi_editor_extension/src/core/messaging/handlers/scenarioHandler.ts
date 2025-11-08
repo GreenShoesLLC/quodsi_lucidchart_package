@@ -198,7 +198,7 @@ export class ScenarioHandler {
     const data = msg.data as {
       documentId: string;
       scenarioId: string;
-      dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary'
+      dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries'
     };
 
     ScenarioHandler.logger.log('Cross-rep data requested', {
@@ -217,6 +217,8 @@ export class ScenarioHandler {
         entity: 'GetEntityCrossRepData',
         resource: 'GetResourceCrossRepData',
         'activity-contents-timeseries': 'GetActivityContentsTimeseries',
+        'activity-input-buffer-timeseries': 'GetActivityInputBufferTimeseries',
+        'activity-output-buffer-timeseries': 'GetActivityOutputBufferTimeseries',
         'state-summary': 'GetStateSummary'
       };
 

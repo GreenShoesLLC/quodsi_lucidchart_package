@@ -17,6 +17,8 @@ import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDat
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
 import { getActivityContentsTimeseriesAction } from '../actions/getActivityContentsTimeseriesAction';
+import { getActivityInputBufferTimeseriesAction } from '../actions/getActivityInputBufferTimeseriesAction';
+import { getActivityOutputBufferTimeseriesAction } from '../actions/getActivityOutputBufferTimeseriesAction';
 import { getStateSummaryAction } from '../actions/getStateSummaryAction';
 
 
@@ -39,6 +41,8 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
         .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)
         .defineAsynchronousAction("GetActivityContentsTimeseries", getActivityContentsTimeseriesAction)
+        .defineAsynchronousAction("GetActivityInputBufferTimeseries", getActivityInputBufferTimeseriesAction)
+        .defineAsynchronousAction("GetActivityOutputBufferTimeseries", getActivityOutputBufferTimeseriesAction)
         .defineAsynchronousAction("GetStateSummary", getStateSummaryAction);
 
     return connector;
