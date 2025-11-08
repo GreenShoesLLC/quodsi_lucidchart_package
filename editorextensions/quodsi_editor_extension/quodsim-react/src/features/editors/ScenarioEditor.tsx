@@ -3,6 +3,8 @@ import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle } from "lucide-rea
 import ScenarioCard from "./ScenarioCard";
 import { RunState, EnvelopeMessageType } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
+import { useScenarios, useMessagingDispatch } from "../../messaging/MessageProvider";
+import { selectScenarios, selectScenariosLoading, selectScenariosError } from "../../messaging/state/scenarioSlice";
 
 /**
  * Maps SimulationStatus string values to RunState enum values
@@ -53,9 +55,14 @@ interface ScenarioEditorProps {
 }
 
 const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }) => {
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Redux state
+  const scenarioState = useScenarios();
+  const scenarios = selectScenarios({ scenarios: scenarioState });
+  const loading = selectScenariosLoading({ scenarios: scenarioState });
+  const error = selectScenariosError({ scenarios: scenarioState });
+  const dispatch = useMessagingDispatch();
+
+  // Local state (not in Redux)
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [deletingScenarios, setDeletingScenarios] = useState<Set<string>>(new Set());
   const { listScenarios, deleteScenario } = useScenarioSender();
@@ -88,22 +95,23 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
   // Load scenarios function
   const loadScenarios = useCallback(() => {
     if (!documentId) {
-      setError("No document ID available");
+      dispatch({ type: 'SCENARIOS_ERROR', error: "No document ID available" });
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    dispatch({ type: 'SCENARIOS_LOADING' });
 
     try {
       // Use the proper sender hook
       listScenarios(documentId);
       // Response will be handled in the message listener below
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load scenarios");
-      setLoading(false);
+      dispatch({
+        type: 'SCENARIOS_ERROR',
+        error: err instanceof Error ? err.message : "Failed to load scenarios"
+      });
     }
-  }, [documentId, listScenarios]);
+  }, [documentId, listScenarios, dispatch]);
 
   // Handle messages from extension
   useEffect(() => {
@@ -113,13 +121,15 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
       // Check for envelope-formatted messages
       if (message.type === EnvelopeMessageType.SCENARIOS_LIST_RESULT) {
         const unsortedScenarios = message.data?.scenarios || [];
-        setScenarios(sortScenarios(unsortedScenarios));
-        setLoading(false);
-        setError(null);
+        dispatch({
+          type: 'SCENARIOS_SUCCESS',
+          scenarios: sortScenarios(unsortedScenarios)
+        });
       } else if (message.type === "ERROR" && message.data?.relatedTo === EnvelopeMessageType.SCENARIOS_LIST_REQUEST) {
-        setError(message.data?.message || "Failed to load scenarios");
-        setLoading(false);
-        setScenarios([]);
+        dispatch({
+          type: 'SCENARIOS_ERROR',
+          error: message.data?.message || "Failed to load scenarios"
+        });
       } else if (message.type === EnvelopeMessageType.SCENARIO_DELETE_RESULT) {
         const result = message.data;
         if (result?.success) {
@@ -140,7 +150,10 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
             updated.delete(result.scenarioId);
             return updated;
           });
-          setError(result?.error || "Failed to delete scenario");
+          dispatch({
+            type: 'SCENARIOS_ERROR',
+            error: result?.error || "Failed to delete scenario"
+          });
           // Refresh to restore the scenario in the list
           loadScenarios();
         }
@@ -157,57 +170,58 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           // Special handling for error scenarios
           if (statusData.scenarioId === 'error' && statusData.status === 'failed') {
             console.error('[ScenarioEditor] Simulation failed:', statusData.error);
-            setError(statusData.error || 'Simulation failed to start');
-            setLoading(false);
+            dispatch({
+              type: 'SCENARIOS_ERROR',
+              error: statusData.error || 'Simulation failed to start'
+            });
             return; // Don't try to create/update scenario card
           }
 
-          // Use functional state update to access current scenarios without dependency
-          setScenarios(prev => {
-            const existingIndex = prev.findIndex(s => s.id === statusData.scenarioId);
+          // Check if scenario exists in current state
+          const existingScenario = scenarios.find(s => s.id === statusData.scenarioId);
 
-            if (existingIndex >= 0) {
-              // UPDATE existing scenario
-              console.log('[ScenarioEditor] Updating existing scenario:', statusData.scenarioName);
-              const updated = [...prev];
-              updated[existingIndex] = {
-                ...updated[existingIndex],
+          if (existingScenario) {
+            // UPDATE existing scenario via Redux
+            console.log('[ScenarioEditor] Updating existing scenario in Redux:', statusData.scenarioName);
+            dispatch({
+              type: 'SCENARIO_UPDATE_STATUS',
+              scenarioId: statusData.scenarioId,
+              runState: mapStatusToRunState(statusData.status),
+              hasResults: statusData.status === 'completed' || statusData.hasResults || false
+            });
+          } else {
+            // CREATE new scenario optimistically (only for initial statuses)
+            if (statusData.status === 'queued' || statusData.status === 'processing') {
+              console.log('[ScenarioEditor] Creating new optimistic scenario:', statusData.scenarioName);
+              const newScenario: Scenario = {
+                id: statusData.scenarioId,
+                name: statusData.scenarioName || 'New Simulation',
                 runState: mapStatusToRunState(statusData.status),
-                completedAt: statusData.lastChecked || statusData.queuedAt,
-                hasResults: statusData.status === 'completed' || statusData.hasResults || false
+                reps: statusData.reps || 0,
+                runClockPeriod: statusData.runClockPeriod || 0,
+                runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
+                simulationTimeType: statusData.simulationTimeType || 'Clock',
+                completedAt: statusData.queuedAt,
+                hasResults: false
               };
-              return updated;
+              // Add to existing scenarios
+              dispatch({
+                type: 'SCENARIOS_SUCCESS',
+                scenarios: sortScenarios([newScenario, ...scenarios])
+              });
             } else {
-              // CREATE new scenario (only for initial statuses)
-              if (statusData.status === 'queued' || statusData.status === 'processing') {
-                console.log('[ScenarioEditor] Creating new optimistic scenario:', statusData.scenarioName);
-                const newScenario: Scenario = {
-                  id: statusData.scenarioId,
-                  name: statusData.scenarioName || 'New Simulation',
-                  runState: mapStatusToRunState(statusData.status),
-                  reps: statusData.reps || 0,
-                  runClockPeriod: statusData.runClockPeriod || 0,
-                  runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
-                  simulationTimeType: statusData.simulationTimeType || 'Clock',
-                  completedAt: statusData.queuedAt,
-                  hasResults: false
-                };
-                return sortScenarios([newScenario, ...prev]);
-              }
               // Status came for unknown scenario that's not in initial state - ignore
               console.warn('[ScenarioEditor] Received status for unknown scenario (not QUEUED/PROCESSING):', statusData.scenarioId);
-              return prev;
             }
-          });
+          }
         }
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [documentId, loadScenarios, sortScenarios]);
-  // Note: 'scenarios' removed from dependencies to prevent event listener recreation
-  // Use functional state updates (setScenarios(prev => ...)) to access current state
+  }, [documentId, loadScenarios, sortScenarios, dispatch, scenarios]);
+  // Note: scenarios now needed since we check existingScenario directly
 
   // Load scenarios on mount
   useEffect(() => {
@@ -268,12 +282,15 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
 
     // Optimistic update: immediately add to deleting set and remove from list
     setDeletingScenarios(prev => new Set(prev).add(scenarioId));
-    setScenarios(prev => prev.filter(s => s.id !== scenarioId));
+    dispatch({
+      type: 'SCENARIOS_SUCCESS',
+      scenarios: scenarios.filter(s => s.id !== scenarioId)
+    });
 
     // Send delete request
     deleteScenario(documentId, scenarioId);
     // Result will be handled in the message listener
-  }, [documentId, deleteScenario]);
+  }, [documentId, deleteScenario, dispatch, scenarios]);
 
   return (
     <div className="scenario-editor p-2">

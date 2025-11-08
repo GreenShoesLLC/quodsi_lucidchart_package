@@ -99,4 +99,5 @@ export {
   useSelection,
   useSimulation,
   useValidation,
+  useScenarios,
 } from "./MessageContext";

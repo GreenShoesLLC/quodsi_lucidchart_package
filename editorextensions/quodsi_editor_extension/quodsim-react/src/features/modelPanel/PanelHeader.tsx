@@ -10,6 +10,7 @@ import {
 import { SimulationStatus } from "../../types/SimulationStatus";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
+import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -45,6 +46,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   referenceData,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
+  const hasActiveJobs = useHasActiveJobs();
 
   // Helper to get display name for the element
   const getDisplayName = (
@@ -173,9 +175,15 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             <button
               className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSimulateClick}
-              disabled={isSimulating}
+              disabled={isSimulating || hasActiveJobs}
+              title={hasActiveJobs ? "Another simulation is running. Please wait for it to complete." : "Run simulation"}
             >
-              {isSimulating ? (
+              {hasActiveJobs ? (
+                <>
+                  <Loader className="w-3 h-3 animate-spin" />
+                  Simulation Running...
+                </>
+              ) : isSimulating ? (
                 <>
                   <Loader className="w-3 h-3 animate-spin" />
                   Starting...

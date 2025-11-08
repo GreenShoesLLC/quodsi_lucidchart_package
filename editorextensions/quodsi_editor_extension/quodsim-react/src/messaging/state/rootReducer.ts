@@ -9,6 +9,7 @@ import { SelectionState, initialSelectionState, selectionReducer, SelectionActio
 import { SimulationState, initialSimulationState, simulationReducer, SimulationAction } from './simulationSlice';
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
+import { ScenarioState, initialScenarioState, scenarioReducer, ScenarioAction } from './scenarioSlice';
 
 // Combined state type
 export interface MessagingState {
@@ -17,6 +18,7 @@ export interface MessagingState {
   simulation: SimulationState;
   validation: ValidationState;
   elementOps: ElementOpsState;
+  scenarios: ScenarioState;
 }
 
 // Export RootState as an alias for MessagingState (common Redux pattern)
@@ -29,6 +31,7 @@ export const initialState: MessagingState = {
   simulation: initialSimulationState,
   validation: initialValidationState,
   elementOps: initialElementOpsState,
+  scenarios: initialScenarioState,
 };
 
 /**
@@ -42,5 +45,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     simulation: simulationReducer(state.simulation, action as SimulationAction),
     validation: validationReducer(state.validation, action as ValidationAction),
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
+    scenarios: scenarioReducer(state.scenarios, action as ScenarioAction),
   };
 }

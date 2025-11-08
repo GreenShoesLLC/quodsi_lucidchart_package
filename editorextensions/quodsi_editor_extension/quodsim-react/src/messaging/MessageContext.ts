@@ -70,3 +70,11 @@ export function useElementOps() {
   const { elementOps } = useMessaging();
   return elementOps;
 }
+
+/**
+ * Hook to access scenarios state
+ */
+export function useScenarios() {
+  const { scenarios } = useMessaging();
+  return scenarios;
+}
