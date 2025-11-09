@@ -20,6 +20,7 @@ import { getActivityContentsTimeseriesAction } from '../actions/getActivityConte
 import { getActivityInputBufferTimeseriesAction } from '../actions/getActivityInputBufferTimeseriesAction';
 import { getActivityOutputBufferTimeseriesAction } from '../actions/getActivityOutputBufferTimeseriesAction';
 import { getStateSummaryAction } from '../actions/getStateSummaryAction';
+import { getStateValuesTimeseriesAction } from '../actions/getStateValuesTimeseriesAction';
 
 
 export const createDataConnector = () => {
@@ -43,7 +44,8 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("GetActivityContentsTimeseries", getActivityContentsTimeseriesAction)
         .defineAsynchronousAction("GetActivityInputBufferTimeseries", getActivityInputBufferTimeseriesAction)
         .defineAsynchronousAction("GetActivityOutputBufferTimeseries", getActivityOutputBufferTimeseriesAction)
-        .defineAsynchronousAction("GetStateSummary", getStateSummaryAction);
+        .defineAsynchronousAction("GetStateSummary", getStateSummaryAction)
+        .defineAsynchronousAction("GetStateValuesTimeseries", getStateValuesTimeseriesAction);
 
     return connector;
 };

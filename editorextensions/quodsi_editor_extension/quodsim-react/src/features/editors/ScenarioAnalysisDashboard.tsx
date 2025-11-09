@@ -101,7 +101,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const uniqueActivities = React.useMemo(() => {
     const isTimeseriesType = dataType === "activity-contents-timeseries" ||
                              dataType === "activity-input-buffer-timeseries" ||
-                             dataType === "activity-output-buffer-timeseries";
+                             dataType === "activity-output-buffer-timeseries" ||
+                             dataType === "state-values-timeseries";
     if (isTimeseriesType && data.length > 0) {
       const activities = Array.from(
         new Set(data.map((item: any) => item.object_id))
@@ -115,7 +116,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const filteredData = React.useMemo(() => {
     const isTimeseriesType = dataType === "activity-contents-timeseries" ||
                              dataType === "activity-input-buffer-timeseries" ||
-                             dataType === "activity-output-buffer-timeseries";
+                             dataType === "activity-output-buffer-timeseries" ||
+                             dataType === "state-values-timeseries";
     if (isTimeseriesType && selectedActivity !== "all") {
       return data.filter((item: any) => item.object_id === selectedActivity);
     }
@@ -136,6 +138,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     { value: "activity-input-buffer-timeseries", label: "Activity Input Buffer Timeseries" },
     { value: "activity-output-buffer-timeseries", label: "Activity Output Buffer Timeseries" },
     { value: "state-summary", label: "State Summary" },
+    { value: "state-values-timeseries", label: "State Values Timeseries" },
   ];
 
   return (
@@ -185,7 +188,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         {/* Activity Filter (only for timeseries) */}
         {(dataType === "activity-contents-timeseries" ||
           dataType === "activity-input-buffer-timeseries" ||
-          dataType === "activity-output-buffer-timeseries") &&
+          dataType === "activity-output-buffer-timeseries" ||
+          dataType === "state-values-timeseries") &&
           uniqueActivities.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-700">
@@ -218,6 +222,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             {dataType === "activity-input-buffer-timeseries" && "Activity Input Buffer Timeseries"}
             {dataType === "activity-output-buffer-timeseries" && "Activity Output Buffer Timeseries"}
             {dataType === "state-summary" && "State Summary"}
+            {dataType === "state-values-timeseries" && "State Values Timeseries"}
           </h3>
         </div>
         <div className="p-3">

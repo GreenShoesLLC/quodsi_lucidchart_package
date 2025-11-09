@@ -221,7 +221,7 @@ export class ScenarioHandler {
     const data = msg.data as {
       documentId: string;
       scenarioId: string;
-      dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries'
+      dataType: 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-input-buffer-timeseries' | 'activity-output-buffer-timeseries' | 'state-values-timeseries'
     };
 
     ScenarioHandler.logger.log('Cross-rep data requested', {
@@ -242,7 +242,8 @@ export class ScenarioHandler {
         'activity-contents-timeseries': 'GetActivityContentsTimeseries',
         'activity-input-buffer-timeseries': 'GetActivityInputBufferTimeseries',
         'activity-output-buffer-timeseries': 'GetActivityOutputBufferTimeseries',
-        'state-summary': 'GetStateSummary'
+        'state-summary': 'GetStateSummary',
+        'state-values-timeseries': 'GetStateValuesTimeseries'
       };
 
       const actionName = actionMap[data.dataType];

@@ -53,7 +53,8 @@
         "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
         "GetActivityInputBufferTimeseries": "getActivityInputBufferTimeseries",
         "GetActivityOutputBufferTimeseries": "getActivityOutputBufferTimeseries",
-        "GetStateSummary": "getStateSummary"
+        "GetStateSummary": "getStateSummary",
+        "GetStateValuesTimeseries": "getStateValuesTimeseries"
       }
     }
   ]
