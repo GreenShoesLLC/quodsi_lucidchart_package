@@ -65,6 +65,15 @@ export interface ScenarioDeleteResultMessage extends EnvelopeBase {
   };
 }
 
+export interface ScenarioResimulateRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST;
+  data: {
+    documentId: string;
+    scenarioId: string;
+    scenarioName: string;
+  };
+}
+
 export interface CrossRepDataRequestMessage extends EnvelopeBase {
   type: EnvelopeMessageType.CROSS_REP_DATA_REQUEST;
   data: {
@@ -90,5 +99,6 @@ export type ScenarioMessage =
   | ScenarioListResultMessage
   | ScenarioDeleteMessage
   | ScenarioDeleteResultMessage
+  | ScenarioResimulateRequestMessage
   | CrossRepDataRequestMessage
   | CrossRepDataResultMessage;

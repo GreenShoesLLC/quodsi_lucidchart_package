@@ -40,6 +40,13 @@ export class ScenarioHandler {
         });
         return true;
 
+      case EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST:
+        // Handle async method - fire and forget, return true immediately
+        ScenarioHandler.handleResimulateRequest(msg).catch(error => {
+          ScenarioHandler.logger.error('Error in handleResimulateRequest:', error);
+        });
+        return true;
+
       // Not a scenario message
       default:
         return false;
@@ -289,6 +296,99 @@ export class ScenarioHandler {
           message: error instanceof Error ? error.message : String(error),
           relatedTo: EnvelopeMessageType.CROSS_REP_DATA_REQUEST,
           dataType: data.dataType
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle scenario resimulate request
+   *
+   * @param msg SCENARIO_RESIMULATE_REQUEST message
+   */
+  private static async handleResimulateRequest(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { documentId: string; scenarioId: string; scenarioName: string };
+
+    ScenarioHandler.logger.log('Scenario resimulate requested', {
+      documentId: data.documentId,
+      scenarioId: data.scenarioId,
+      scenarioName: data.scenarioName
+    });
+
+    try {
+      // Get the EditorClient
+      const client = ModelManager.getClient();
+
+      ScenarioHandler.logger.log('Calling data connector SubmitSimulationJob action...');
+
+      // Call the data connector to submit simulation job (reuses existing model.json)
+      const result = await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_data_connector',
+        actionName: 'SubmitSimulationJob',
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          scenarioName: data.scenarioName,
+          appVersion: '2.0'
+        },
+        asynchronous: true
+      });
+
+      // Extract the actual data from the Lucid SDK wrapper
+      const responseData = result.json || result;
+
+      ScenarioHandler.logger.log('SubmitSimulationJob action completed', {
+        success: responseData?.success,
+        documentId: data.documentId,
+        scenarioId: data.scenarioId
+      });
+
+      if (responseData?.success) {
+        // Job submitted successfully
+        // Note: Status updates will come from ListScenarios reconciliation
+        // (called by ScenarioEditor periodically) using scenarioId
+        const timestamp = new Date().toISOString();
+
+        // Send initial MODEL_RUN_STATUS with PROCESSING state
+        router.send('model', {
+          id: msg.id,
+          type: EnvelopeMessageType.MODEL_RUN_STATUS,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            documentId: data.documentId,
+            scenarioId: data.scenarioId,
+            scenarioName: data.scenarioName,
+            status: 'PROCESSING',
+            progress: 10,
+            currentStep: 'Simulation resubmitted to backend',
+            lastChecked: timestamp,
+            queuedAt: timestamp
+          }
+        });
+      } else {
+        // Job submission failed
+        throw new Error(responseData?.error || 'Failed to submit simulation job');
+      }
+
+    } catch (error) {
+      ScenarioHandler.logger.error('Error resimulating scenario:', error);
+
+      // Send MODEL_RUN_STATUS with FAILED status
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.MODEL_RUN_STATUS,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          scenarioName: data.scenarioName,
+          status: 'FAILED',
+          error: error instanceof Error ? error.message : String(error),
+          message: 'Failed to start resimulation'
         }
       });
     }

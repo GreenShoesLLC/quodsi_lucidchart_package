@@ -35,6 +35,25 @@ export function useScenarioSender() {
   }, [send]);
 
   /**
+   * Send a SCENARIO_RESIMULATE_REQUEST message
+   *
+   * @param documentId Document ID containing the scenario
+   * @param scenarioId Scenario ID to resimulate
+   * @param scenarioName Scenario name for display
+   */
+  const resimulateScenario = useCallback((
+    documentId: string,
+    scenarioId: string,
+    scenarioName: string
+  ) => {
+    send(EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST, {
+      documentId,
+      scenarioId,
+      scenarioName
+    });
+  }, [send]);
+
+  /**
    * Send a CROSS_REP_DATA_REQUEST message
    *
    * @param documentId Document ID containing the scenario
@@ -56,6 +75,7 @@ export function useScenarioSender() {
   return {
     listScenarios,
     deleteScenario,
+    resimulateScenario,
     getCrossRepData
   };
 }
