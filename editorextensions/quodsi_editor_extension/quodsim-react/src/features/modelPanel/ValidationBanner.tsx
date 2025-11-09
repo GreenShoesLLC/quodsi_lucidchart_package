@@ -39,9 +39,9 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
           };
         case ValidationSeverity.WARNING:
           return {
-            container: 'bg-yellow-50 border-l-2 border-yellow-500 p-2 mb-1 rounded-r',
-            icon: <AlertTriangle className="h-3 w-3 text-yellow-500" />,
-            text: 'text-yellow-700 font-medium',
+            container: 'bg-blue-50 border-l-2 border-blue-400 p-2 mb-1 rounded-r',
+            icon: <Info className="h-3 w-3 text-blue-500" />,
+            text: 'text-blue-700 font-medium',
           };
         case ValidationSeverity.INFO:
         default:
@@ -73,7 +73,8 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
   // Get summary text
   const getSummaryText = (): string => {
     const errorText = errorCount > 0 ? `${errorCount} error${errorCount !== 1 ? 's' : ''}` : '';
-    const warningText = warningCount > 0 ? `${warningCount} warning${warningCount !== 1 ? 's' : ''}` : '';
+    // Use "suggestions" instead of "warnings" for a more positive tone
+    const warningText = warningCount > 0 ? `${warningCount} suggestion${warningCount !== 1 ? 's' : ''}` : '';
 
     if (errorCount > 0 && warningCount > 0) {
       return `${errorText}, ${warningText}`;
@@ -87,7 +88,8 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
     if (errorCount > 0) {
       return 'bg-red-100 border-red-500';
     }
-    return 'bg-yellow-100 border-yellow-500';
+    // Use blue for informative/neutral tone (suggestions only)
+    return 'bg-blue-50 border-blue-400';
   };
 
   return (
@@ -101,10 +103,10 @@ export const ValidationBanner: React.FC<ValidationBannerProps> = ({
           {errorCount > 0 ? (
             <XCircle className="h-3 w-3 text-red-600" />
           ) : (
-            <AlertTriangle className="h-3 w-3 text-yellow-600" />
+            <Info className="h-3 w-3 text-blue-600" />
           )}
           <span className="text-xs font-semibold text-gray-800">
-            {getSummaryText()} found
+            {getSummaryText()}
           </span>
         </div>
 

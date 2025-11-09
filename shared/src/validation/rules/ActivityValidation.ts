@@ -19,7 +19,6 @@ export class ActivityValidation extends ValidationRule {
         activities.forEach((activity: Activity) => {
             this.validateActivityConnectivity(activity, state, issues);
             this.validateActivityData(activity, issues);
-            this.validateOperationSequence(activity, state, issues);
             this.validateBufferConstraints(activity, state, issues);
         });
 
@@ -53,11 +52,6 @@ export class ActivityValidation extends ValidationRule {
         if (relationships.incomingConnectors.size === 0) {
             this.log(`Activity ID ${activity.id} has no incoming connections.`);
             issues.push(ValidationMessages.noConnections("Activity", activity.id, "incoming", activity.name));
-        }
-
-        if (relationships.outgoingConnectors.size === 0) {
-            this.log(`Activity ID ${activity.id} has no outgoing connections.`);
-            issues.push(ValidationMessages.noConnections("Activity", activity.id, "outgoing", activity.name));
         }
     }
 
@@ -180,42 +174,6 @@ export class ActivityValidation extends ValidationRule {
             issues.push(ValidationMessages.invalidResourceQuantity(activityId, stepIndex + 1));
         }
     }
-
-    private validateOperationSequence(
-        activity: Activity,
-        state: ModelDefinitionState,
-        issues: ValidationIssue[]
-    ): void {
-        this.log(`Validating operation sequence for Activity ID: ${activity.id}`);
-
-        if (!activity.operationSteps?.length) return;
-
-        const resourceRequirements: ResourceRequirement[] = state.modelDefinition.resourceRequirements?.getAll() || [];
-        const requirementMap = new Map<string, ResourceRequirement>(
-            resourceRequirements.map(req => [req.id, req])
-        );
-
-        let hasResourceRequest = false;
-
-        activity.operationSteps.forEach((step) => {
-            if (step.requirementId) {
-                const requirement = requirementMap.get(step.requirementId);
-                if (requirement && requirement.rootClauses) {
-                    requirement.rootClauses.forEach(clause => {
-                        if (clause && clause.requests.length > 0) {
-                            hasResourceRequest = true;
-                        }
-                    });
-                }
-            }
-        });
-
-        if (hasResourceRequest) {
-            this.log(`Resource requests detected but no release logic for Activity ID: ${activity.id}`);
-            issues.push(ValidationMessages.resourceLeak(activity.id, activity.name));
-        }
-    }
-
 
     private validateBufferConstraints(
         activity: Activity,

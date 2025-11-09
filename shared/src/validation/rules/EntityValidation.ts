@@ -4,6 +4,7 @@ import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { Entity } from "../../types/elements/Entity";
 import { Generator } from "../../types/elements/Generator";
+import { ModelDefaults } from "../../types/elements/ModelDefaults";
 
 
 export class EntityValidation extends ValidationRule {
@@ -72,6 +73,12 @@ export class EntityValidation extends ValidationRule {
          */
 
         this.log(`Validating usage for Entity ID: ${entity.id}`);
+
+        // Skip validation for the default entity
+        if (entity.id === ModelDefaults.DEFAULT_ENTITY_ID) {
+            this.log(`Skipping usage validation for default entity.`);
+            return;
+        }
 
         const isUsedByGenerator = state.modelDefinition.generators.getAll()
             .some((generator: Generator) => generator.entityId === entity.id);
