@@ -3,28 +3,9 @@ import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { getConfig } from "../config";
 import { AzureStorageService } from "../services/azureStorageService";
 import { RunState } from "../types/documentStatus";
+import { ScenarioInfo, ScenarioDownloadInfo } from "../types/scenarios";
 import { ActionLogger } from "../utils/logging";
 import { LoggingLevel } from "../utils/loggingLevels";
-
-interface ScenarioDownloadInfo {
-    zipUrl: string;
-    fileSizeBytes: number;
-    fileSizeMB: string;
-    expiresAt: string;
-}
-
-interface ScenarioInfo {
-    id: string;
-    name: string;
-    runState: RunState;
-    reps: number;
-    runClockPeriod: number;
-    runClockPeriodUnit: string;
-    simulationTimeType: string;
-    completedAt?: string;
-    hasResults: boolean;
-    downloadInfo?: ScenarioDownloadInfo;
-}
 
 /**
  * Helper function to format bytes to MB
@@ -154,7 +135,37 @@ export const listScenariosAction = async (
                             statusData.name = runtimeData.name;
                         }
 
-                        logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}`);
+                        // Extract progress tracking fields
+                        if (runtimeData.currentReplication !== undefined) {
+                            statusData.currentReplication = runtimeData.currentReplication;
+                        }
+
+                        // Extract error fields (populated by Python runner when simulation fails)
+                        if (runtimeData.error) {
+                            statusData.error = runtimeData.error;
+                        }
+                        if (runtimeData.errorType) {
+                            statusData.errorType = runtimeData.errorType;
+                        }
+                        if (runtimeData.errorDetails) {
+                            statusData.errorDetails = runtimeData.errorDetails;
+                        }
+                        if (runtimeData.errorSuggestions) {
+                            statusData.errorSuggestions = runtimeData.errorSuggestions;
+                        }
+
+                        // Extract timing fields (populated by Python runner)
+                        if (runtimeData.start_time) {
+                            statusData.startTime = runtimeData.start_time;
+                        }
+                        if (runtimeData.end_time) {
+                            statusData.endTime = runtimeData.end_time;
+                        }
+                        if (runtimeData.metrics) {
+                            statusData.metrics = runtimeData.metrics;
+                        }
+
+                        logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}, hasError=${!!statusData.error}`);
                     } catch (parseError) {
                         logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
                         // Continue with model.json data only
@@ -173,6 +184,20 @@ export const listScenariosAction = async (
 
                 logger.debug(`Scenario ${scenarioId}: hasResults=${hasResults}, zipFile=${resultsZipPath}, runState=${statusData.runState}`);
 
+                // Timeout detection: Check if scenario has been RUNNING for too long
+                if (statusData.runState === RunState.Running) {
+                    const lastUpdate = new Date(statusData.completedAt || statusData.lastUpdated || Date.now());
+                    const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
+
+                    if (hoursSinceUpdate > 1) {
+                        logger.warn(`Scenario ${scenarioId} timed out: running for ${hoursSinceUpdate.toFixed(1)} hours`);
+                        statusData.runState = RunState.RanWithErrors;
+                        statusData.error = "Simulation timed out or task crashed";
+                        statusData.errorType = "TIMEOUT_ERROR";
+                        statusData.errorDetails = `No status update for ${hoursSinceUpdate.toFixed(1)} hours. Task may have crashed or exceeded max runtime.`;
+                    }
+                }
+
                 // Build scenario info
                 const scenarioInfo: ScenarioInfo = {
                     id: statusData.id || scenarioId,
@@ -183,7 +208,18 @@ export const listScenariosAction = async (
                     runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
                     simulationTimeType: statusData.simulationTimeType || 'Clock',
                     completedAt: statusData.completedAt || statusData.lastUpdated,
-                    hasResults
+                    hasResults,
+                    // Progress tracking
+                    currentReplication: statusData.currentReplication,
+                    // Error fields
+                    error: statusData.error,
+                    errorType: statusData.errorType,
+                    errorDetails: statusData.errorDetails,
+                    errorSuggestions: statusData.errorSuggestions,
+                    // Timing fields
+                    startTime: statusData.startTime,
+                    endTime: statusData.endTime,
+                    metrics: statusData.metrics
                 };
 
                 // Generate SAS URL only if results exist and status is successful

@@ -7,8 +7,15 @@ export interface Scenario extends SimulationObject {
     forecastDays: number;
     runState: RunState;
     type: SimulationObjectType.Scenario;
-    // Add the new properties
-    resultsLastUpdated?: string;
-    resultsLastImported?: string;
-    resultsViewed?: boolean;
+    // Progress tracking
+    currentReplication?: number;  // Current replication being executed (1 to reps)
+    // Error fields (populated when runState === RanWithErrors)
+    error?: string;  // User-friendly error message
+    errorType?: string;  // Error category (VALIDATION_ERROR, RUNTIME_ERROR, TIMEOUT_ERROR, etc.)
+    errorDetails?: string;  // Technical details/stack trace
+    errorSuggestions?: string[];  // Actionable suggestions from Python runner
+    // Timing fields (populated by Python runner)
+    startTime?: string;  // ISO timestamp when simulation started
+    endTime?: string;    // ISO timestamp when simulation completed
+    metrics?: Record<string, any>;  // Performance and execution metrics
 }

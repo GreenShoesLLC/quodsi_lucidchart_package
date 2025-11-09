@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Check, FileText, Trash2, Download, TrendingUp } from "lucide-react";
+import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Check, FileText, Trash2, Download, TrendingUp, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { RunState } from "@quodsi/shared";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
@@ -21,6 +21,13 @@ interface Scenario {
   completedAt?: string;
   hasResults: boolean;
   downloadInfo?: ScenarioDownloadInfo;
+  // Progress tracking
+  currentReplication?: number;
+  // Error fields
+  error?: string;
+  errorType?: string;
+  errorDetails?: string;
+  errorSuggestions?: string[];
 }
 
 interface ScenarioCardProps {
@@ -35,6 +42,8 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
   const [relativeTime, setRelativeTime] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [errorExpanded, setErrorExpanded] = useState<boolean>(false);
+  const [detailsExpanded, setDetailsExpanded] = useState<boolean>(false);
   const modelOpsSender = useModelOpsSender();
 
   // Update expiry countdown
@@ -251,6 +260,108 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
           </div>
         )}
       </div>
+
+      {/* Progress Bar - Show when Running */}
+      {scenario.runState === RunState.Running && scenario.currentReplication && scenario.reps > 0 && (
+        <div className="border-t border-gray-200 pt-1.5 mt-1.5">
+          <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
+            <span className="font-medium">Progress:</span>
+            <span className="font-semibold">{scenario.currentReplication} / {scenario.reps}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${Math.min((scenario.currentReplication / scenario.reps) * 100, 100)}%` }}
+            />
+          </div>
+          <div className="text-xs text-center text-gray-600 mt-0.5">
+            {Math.round((scenario.currentReplication / scenario.reps) * 100)}% Complete
+          </div>
+        </div>
+      )}
+
+      {/* Error Section - Show when RanWithErrors */}
+      {scenario.runState === RunState.RanWithErrors && scenario.error && (
+        <div className="border-t border-gray-200 pt-1.5 mt-1.5">
+          <div
+            className="bg-red-50 border border-red-200 rounded-lg overflow-hidden"
+          >
+            {/* Error Header - Collapsible */}
+            <button
+              onClick={() => setErrorExpanded(!errorExpanded)}
+              className="w-full px-2 py-1.5 flex items-center justify-between hover:bg-red-100 transition-colors"
+            >
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-xs font-semibold text-red-900 text-left">
+                  {scenario.error}
+                </span>
+              </div>
+              {errorExpanded ? (
+                <ChevronUp className="w-4 h-4 text-red-600 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-red-600 flex-shrink-0" />
+              )}
+            </button>
+
+            {/* Expanded Error Details */}
+            {errorExpanded && (
+              <div className="px-2 pb-2 space-y-1.5 border-t border-red-200 bg-white">
+                {/* Error Type Badge */}
+                {scenario.errorType && (
+                  <div className="pt-1.5">
+                    <span className="inline-block px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded border border-red-300">
+                      {scenario.errorType}
+                    </span>
+                  </div>
+                )}
+
+                {/* Error Suggestions */}
+                {scenario.errorSuggestions && scenario.errorSuggestions.length > 0 && (
+                  <div>
+                    <div className="text-xs font-semibold text-gray-900 mb-1">
+                      Suggested Fixes:
+                    </div>
+                    <ul className="space-y-0.5">
+                      {scenario.errorSuggestions.map((suggestion, index) => (
+                        <li key={index} className="text-xs text-gray-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                          • {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Technical Details - Nested Accordion */}
+                {scenario.errorDetails && (
+                  <div>
+                    <button
+                      onClick={() => setDetailsExpanded(!detailsExpanded)}
+                      className="w-full flex items-center justify-between px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      <span className="text-xs font-semibold text-gray-900">
+                        Technical Details
+                      </span>
+                      {detailsExpanded ? (
+                        <ChevronUp className="w-3 h-3 text-gray-600" />
+                      ) : (
+                        <ChevronDown className="w-3 h-3 text-gray-600" />
+                      )}
+                    </button>
+                    {detailsExpanded && (
+                      <div className="mt-1 px-2 py-1.5 bg-gray-50 border border-gray-300 rounded">
+                        <pre className="text-xs text-gray-800 font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+                          {scenario.errorDetails}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons */}
       {scenario.hasResults && scenario.downloadInfo && (

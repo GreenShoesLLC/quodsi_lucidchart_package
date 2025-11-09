@@ -5,7 +5,7 @@ import { transformToValidationState } from '../mappers/validation.mapper';
 import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData } from '@quodsi/shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
-import { SimulationStatus } from '../../types/SimulationStatus';
+import { SimulationPollState } from '../../types/SimulationStatus';
 import { debugService } from '../utils/debugService';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -312,9 +312,9 @@ export function useModelPanel() {
     // Do not automatically set Activity for blocks - allow user to choose
   }
   
-  // Create a proxy SimulationStatus object to match the expected interface
-  // This transforms from the state SimulationStatus to the component SimulationStatus
-  const simulationStatusProxy: SimulationStatus = {
+  // Create a proxy SimulationPollState object to match the expected interface
+  // This transforms from the state simulation to the component SimulationPollState
+  const simulationStatusProxy: SimulationPollState = {
     pageStatus: null,  // We don't have this in the state
     isPollingSimState: false,  // Default value
     errorMessage: simulation.error || null,

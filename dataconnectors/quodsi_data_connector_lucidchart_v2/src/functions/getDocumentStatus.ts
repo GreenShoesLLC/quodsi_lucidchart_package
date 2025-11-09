@@ -62,28 +62,13 @@ export async function getDocumentStatus(request: HttpRequest, context: Invocatio
                             reps: s.reps,
                             forecastDays: s.forecastDays,
                             seed: s.seed,
-                            type: s.type,
-                            // Include the new fields for results tracking
-                            resultsLastUpdated: s.resultsLastUpdated || null,
-                            resultsLastImported: s.resultsLastImported || null,
-                            resultsViewed: typeof s.resultsViewed === 'boolean' ? s.resultsViewed : false
+                            type: s.type
                         };
                         return scenario;
                     }),
                     lastUpdated: parsedData.lastUpdated || new Date().toISOString()
                 };
                 context.log(`[${requestId}] Parsed ${scenarios.scenarios?.length ?? 0} scenarios`);
-                
-                // Log information about results availability
-                const scenariosWithNewResults = scenarios.scenarios.filter(s => 
-                    s.runState === RunState.RanSuccessfully && 
-                    s.resultsLastUpdated && 
-                    !s.resultsViewed
-                );
-                
-                if (scenariosWithNewResults.length > 0) {
-                    context.log(`[${requestId}] Found ${scenariosWithNewResults.length} scenarios with new results`);
-                }
             } catch (parseError) {
                 context.log(`[${requestId}] Error parsing scenarios JSON:`, {
                     error: parseError.message,

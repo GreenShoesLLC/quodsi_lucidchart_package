@@ -4,26 +4,10 @@
  * Provides state for detecting active simulations
  */
 
-import { RunState } from '@quodsi/shared';
+import { RunState, ScenarioInfo } from '@quodsi/shared';
 
-// Scenario interface matching data from ListScenarios action
-export interface Scenario {
-  id: string;
-  name: string;
-  runState: RunState;
-  reps: number;
-  runClockPeriod: number;
-  runClockPeriodUnit: string;
-  simulationTimeType: string;
-  completedAt?: string;
-  hasResults: boolean;
-  downloadInfo?: {
-    zipUrl: string;
-    fileSizeBytes: number;
-    fileSizeMB: string;
-    expiresAt: string;
-  };
-}
+// Use ScenarioInfo from shared package and alias as Scenario for backward compatibility
+export type Scenario = ScenarioInfo;
 
 // State shape
 export interface ScenarioState {

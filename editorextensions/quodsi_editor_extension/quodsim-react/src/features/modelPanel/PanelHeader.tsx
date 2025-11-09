@@ -8,7 +8,7 @@ import {
   EditorReferenceData,
   MAX_SCENARIOS,
 } from "@quodsi/shared";
-import { SimulationStatus } from "../../types/SimulationStatus";
+import { SimulationPollState } from "../../types/SimulationStatus";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
@@ -27,7 +27,7 @@ interface PanelHeaderProps {
     newType: SimulationObjectType
   ) => void;
   diagramElementType?: DiagramElementType;
-  simulationStatus?: SimulationStatus;
+  simulationStatus?: SimulationPollState;
   onViewResults?: () => void;
   referenceData?: EditorReferenceData;
 }

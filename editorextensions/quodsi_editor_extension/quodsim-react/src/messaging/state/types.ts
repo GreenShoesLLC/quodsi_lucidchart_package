@@ -5,7 +5,7 @@
 
 import {
   ElementShape,
-  SimulationStatus as SharedSimulationStatus
+  SimulationStatus
 } from '@quodsi/shared';
 
 // Re-export shared types
@@ -13,17 +13,8 @@ export type {
   ElementShape
 };
 
-// Re-export SimulationStatus as both type and value
-export enum SimulationStatus {
-  IDLE = 'idle',
-  QUEUED = 'queued',
-  VALIDATING = 'validating',
-  RUNNING = 'running',
-  PROCESSING = 'processing',
-  COMPLETED = 'completed',
-  ERROR = 'error',
-  CANCELLED = 'cancelled'
-}
+// Re-export SimulationStatus enum from shared package
+export { SimulationStatus };
 
 // Pending request tracking
 export interface PendingRequest {
