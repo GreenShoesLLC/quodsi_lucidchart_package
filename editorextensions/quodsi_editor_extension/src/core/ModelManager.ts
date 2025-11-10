@@ -353,6 +353,8 @@ export class ModelManager {
      * Forces a model validation
      */
     public async validateModel(): Promise<ValidationResult> {
+        // Force rebuild from storage to pick up any deleted elements
+        this.changeTracker.modelDefinitionDirty = true;
         const modelDef = await this.ensureModelDefinition();
 
         if (!modelDef) {

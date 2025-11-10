@@ -17,39 +17,12 @@ export class GeneratorValidation extends ValidationRule {
         const generators = state.modelDefinition.generators.getAll();
 
         generators.forEach((generator: Generator) => {
-            this.validateGeneratorConnectivity(generator, state, issues);
             this.validateGeneratorData(generator, state, issues);
             this.validateDurationSettings(generator, issues);
             this.validateEntitySettings(generator, state, issues);
         });
 
         this.validateGeneratorInteractions(generators, issues);
-    }
-
-    private validateGeneratorConnectivity(
-        generator: Generator,
-        state: ModelDefinitionState,
-        issues: ValidationIssue[]
-    ): void {
-        /**
-         * Validates the connectivity of a Generator to ensure it has at least one outgoing connection.
-         * Logs the validation process and any connectivity issues if logging is enabled.
-         */
-
-        this.log(`Starting connectivity validation for Generator ID: ${generator.id}, Name: ${generator.name}`);
-
-        // Check for outgoing connections using the connections map
-        const hasOutgoingConnections = Array.from(state.connections.values())
-            .some(connection => connection.sourceId === generator.id);
-
-        if (!hasOutgoingConnections) {
-            this.log(`Validation failed: Generator ID ${generator.id} has no outgoing connections.`);
-            issues.push(ValidationMessages.isolatedElement('Generator', generator.id, generator.name));
-        } else {
-            this.log(`Validation passed: Generator ID ${generator.id} has outgoing connections.`);
-        }
-
-        this.log(`Completed connectivity validation for Generator ID: ${generator.id}`);
     }
 
     private validateGeneratorData(
