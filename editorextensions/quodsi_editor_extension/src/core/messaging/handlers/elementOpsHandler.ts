@@ -128,11 +128,11 @@ export class ElementOpsHandler {
         }
       });
 
-      // Refresh the UI by sending updated selection data
-      // Send SELECTION_CHANGED message to refresh React with new data
-      // This works for all element types without changing the selection
-      console.log('[ElementOpsHandler] Triggering SELECTION_CHANGED after save:', data.type);
-      await SelectionHandler.sendSelectionChangedMessage();
+      // Refresh the UI by re-processing the current selection
+      // This ensures React receives fresh data with the updated element
+      console.log('[ElementOpsHandler] Re-processing selection after save:', data.type);
+      const selectedItems = viewport.getSelectedItems();
+      await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
       return true;
       
@@ -265,9 +265,11 @@ export class ElementOpsHandler {
         }
       });
 
-      // Refresh the UI by sending updated selection data
-      console.log('[ElementOpsHandler] Triggering SELECTION_CHANGED after convert:', data.newType);
-      await SelectionHandler.sendSelectionChangedMessage();
+      // Refresh the UI by re-processing the current selection
+      // This ensures React receives fresh data with the updated element type
+      console.log('[ElementOpsHandler] Re-processing selection after convert:', data.newType);
+      const selectedItems = viewport.getSelectedItems();
+      await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
       return true;
 
