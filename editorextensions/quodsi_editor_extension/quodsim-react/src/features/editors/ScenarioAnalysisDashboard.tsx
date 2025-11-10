@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, BarChart3 } from "lucide-react";
+import { ArrowLeft, BarChart3, Table2, LayoutGrid } from "lucide-react";
 import { EnvelopeMessageType } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import DataTable from "../../components/DataTable";
+import {
+  ChartContainer,
+  TimeseriesChart,
+  ComparisonBarChart,
+} from "../../components/charts";
 import {
   CrossRepDataType,
   getColumnsForDataType,
@@ -25,6 +30,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("table");
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
@@ -141,6 +147,110 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     { value: "state-values-timeseries", label: "State Values Timeseries" },
   ];
 
+  // Render chart based on data type
+  const renderChart = () => {
+    const isTimeseriesType =
+      dataType === "activity-contents-timeseries" ||
+      dataType === "activity-input-buffer-timeseries" ||
+      dataType === "activity-output-buffer-timeseries" ||
+      dataType === "state-values-timeseries";
+
+    if (isTimeseriesType) {
+      // Timeseries line chart
+      return (
+        <ChartContainer
+          data={filteredData}
+          loading={loading}
+          error={error}
+          emptyMessage={`No ${dataType} data available for this scenario`}
+        >
+          <TimeseriesChart
+            data={filteredData}
+            xKey="period_start_clock"
+            yKeys={["mean", "min", "max"]}
+            xLabel="Time"
+            yLabel="Value"
+            height={350}
+          />
+        </ChartContainer>
+      );
+    } else if (dataType === "activity") {
+      // Activity summary bar chart
+      return (
+        <ChartContainer
+          data={filteredData}
+          loading={loading}
+          error={error}
+          emptyMessage="No activity data available for this scenario"
+        >
+          <ComparisonBarChart
+            data={filteredData}
+            xKey="activity_name"
+            yKeys={["utilization_mean", "cycle_time_mean", "queue_length_mean"]}
+            yLabel="Value"
+            height={350}
+          />
+        </ChartContainer>
+      );
+    } else if (dataType === "entity") {
+      // Entity summary bar chart
+      return (
+        <ChartContainer
+          data={filteredData}
+          loading={loading}
+          error={error}
+          emptyMessage="No entity data available for this scenario"
+        >
+          <ComparisonBarChart
+            data={filteredData}
+            xKey="entity_name"
+            yKeys={["throughput_rate_mean", "time_in_system_mean", "time_waiting_mean"]}
+            yLabel="Value"
+            height={350}
+          />
+        </ChartContainer>
+      );
+    } else if (dataType === "resource") {
+      // Resource summary bar chart
+      return (
+        <ChartContainer
+          data={filteredData}
+          loading={loading}
+          error={error}
+          emptyMessage="No resource data available for this scenario"
+        >
+          <ComparisonBarChart
+            data={filteredData}
+            xKey="resource_name"
+            yKeys={["utilization_mean", "utilization_min", "utilization_max"]}
+            yLabel="Utilization"
+            height={350}
+          />
+        </ChartContainer>
+      );
+    } else if (dataType === "state-summary") {
+      // State summary bar chart
+      return (
+        <ChartContainer
+          data={filteredData}
+          loading={loading}
+          error={error}
+          emptyMessage="No state summary data available for this scenario"
+        >
+          <ComparisonBarChart
+            data={filteredData}
+            xKey="state_name"
+            yKeys={["mean_final_value", "mean_min_value", "mean_max_value"]}
+            yLabel="Value"
+            height={350}
+          />
+        </ChartContainer>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -166,8 +276,9 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         </div>
       </div>
 
-      {/* Data Type Selector */}
-      <div className="flex gap-3 items-center">
+      {/* Controls Row */}
+      <div className="flex gap-3 items-center flex-wrap">
+        {/* Data Type Selector */}
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-gray-700">
             Data Type:
@@ -183,6 +294,49 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-2 ml-4">
+          <label className="text-xs font-medium text-gray-700">View:</label>
+          <div className="flex gap-1 border border-gray-300 rounded">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "table"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Table view"
+            >
+              <Table2 className="w-3 h-3" />
+              Table
+            </button>
+            <button
+              onClick={() => setViewMode("chart")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "chart"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Chart view"
+            >
+              <BarChart3 className="w-3 h-3" />
+              Chart
+            </button>
+            <button
+              onClick={() => setViewMode("both")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "both"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Both table and chart"
+            >
+              <LayoutGrid className="w-3 h-3" />
+              Both
+            </button>
+          </div>
         </div>
 
         {/* Activity Filter (only for timeseries) */}
@@ -211,30 +365,39 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
           )}
       </div>
 
+      {/* Chart View */}
+      {(viewMode === "chart" || viewMode === "both") && (
+        <div className="space-y-2">
+          {renderChart()}
+        </div>
+      )}
+
       {/* Data Table */}
-      <div className="border border-gray-200 rounded-lg bg-white">
-        <div className="p-3 border-b border-gray-200">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-            {dataType === "activity" && "Activity Cross-Replication Summary"}
-            {dataType === "entity" && "Entity Cross-Replication Summary"}
-            {dataType === "resource" && "Resource Cross-Replication Summary"}
-            {dataType === "activity-contents-timeseries" && "Activity Contents Timeseries"}
-            {dataType === "activity-input-buffer-timeseries" && "Activity Input Buffer Timeseries"}
-            {dataType === "activity-output-buffer-timeseries" && "Activity Output Buffer Timeseries"}
-            {dataType === "state-summary" && "State Summary"}
-            {dataType === "state-values-timeseries" && "State Values Timeseries"}
-          </h3>
+      {(viewMode === "table" || viewMode === "both") && (
+        <div className="border border-gray-200 rounded-lg bg-white">
+          <div className="p-3 border-b border-gray-200">
+            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
+              {dataType === "activity" && "Activity Cross-Replication Summary"}
+              {dataType === "entity" && "Entity Cross-Replication Summary"}
+              {dataType === "resource" && "Resource Cross-Replication Summary"}
+              {dataType === "activity-contents-timeseries" && "Activity Contents Timeseries"}
+              {dataType === "activity-input-buffer-timeseries" && "Activity Input Buffer Timeseries"}
+              {dataType === "activity-output-buffer-timeseries" && "Activity Output Buffer Timeseries"}
+              {dataType === "state-summary" && "State Summary"}
+              {dataType === "state-values-timeseries" && "State Values Timeseries"}
+            </h3>
+          </div>
+          <div className="p-3">
+            <DataTable
+              data={filteredData}
+              columns={columns}
+              loading={loading}
+              error={error}
+              emptyMessage={`No ${dataType} data available for this scenario`}
+            />
+          </div>
         </div>
-        <div className="p-3">
-          <DataTable
-            data={filteredData}
-            columns={columns}
-            loading={loading}
-            error={error}
-            emptyMessage={`No ${dataType} data available for this scenario`}
-          />
-        </div>
-      </div>
+      )}
     </div>
   );
 };
