@@ -88,28 +88,24 @@ function getDefaultLoggingConfig(env: Environment): LoggingConfig {
 
 function getEnvironmentSpecificConfig(env: Environment): Partial<QuodsiConfig> {
   // Environment-specific configurations
+  // Note: Pool and application settings are now managed via environment variables
+  // set by the Azure Function App deployment (see ARM template)
   const envConfigs: Record<Environment, Partial<QuodsiConfig>> = {
     'dev': {
       azureStorageConnectionString: process.env.AzureStorageConnectionString || 'DefaultEndpointsProtocol=https;AccountName=devquodsist01;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net',
-      batchPoolId: 'quodsi-dev-python-pool-01',
-      defaultApplicationId: 'dev_quodsim'
     },
     'tst': {
       azureStorageConnectionString: process.env.AzureStorageConnectionString || 'DefaultEndpointsProtocol=https;AccountName=tstquodsist01;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net',
-      batchPoolId: 'quodsi-tst-python-pool-01',
-      defaultApplicationId: 'tst_quodsim'
     },
     'prd': {
       azureStorageConnectionString: process.env.AzureStorageConnectionString || 'DefaultEndpointsProtocol=https;AccountName=prdquodsist01;AccountKey=YOUR_KEY;EndpointSuffix=core.windows.net',
-      batchPoolId: 'quodsi-prd-python-pool-01',
-      defaultApplicationId: 'prd_quodsim'
     },
     'local': {
       // Local development will use whatever is in the environment variables
       // or the defaults defined in the main config
     }
   };
-  
+
   return envConfigs[env];
 }
 
