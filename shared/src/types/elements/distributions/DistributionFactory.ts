@@ -8,7 +8,8 @@ import {
     ConstantDistribution, ConstantParameters,
     UniformDistribution, UniformParameters,
     TriangularDistribution, TriangularParameters,
-    NormalDistribution, NormalParameters
+    NormalDistribution, NormalParameters,
+    ExponentialDistribution, ExponentialParameters
 } from './index';
 
 /**
@@ -24,6 +25,8 @@ export function createDefaultDistribution(type: DistributionType): Distribution 
             return TriangularDistribution.createDefault();
         case DistributionType.NORMAL:
             return NormalDistribution.createDefault();
+        case DistributionType.EXPONENTIAL:
+            return ExponentialDistribution.createDefault();
         default:
             // Default to CONSTANT if type is not supported
             return ConstantDistribution.createDefault();
@@ -44,6 +47,8 @@ export function getDistributionEffectiveValue(distribution: Distribution): numbe
             return TriangularDistribution.getEffectiveValue(distribution.parameters as TriangularParameters);
         case DistributionType.NORMAL:
             return NormalDistribution.getEffectiveValue(distribution.parameters as NormalParameters);
+        case DistributionType.EXPONENTIAL:
+            return ExponentialDistribution.getEffectiveValue(distribution.parameters as ExponentialParameters);
         default:
             return 0;
     }
@@ -66,6 +71,8 @@ export function validateDistributionParameters(
             return TriangularDistribution.validateParameters(parameters as TriangularParameters);
         case DistributionType.NORMAL:
             return NormalDistribution.validateParameters(parameters as NormalParameters);
+        case DistributionType.EXPONENTIAL:
+            return ExponentialDistribution.validateParameters(parameters as ExponentialParameters);
         default:
             return false;
     }

@@ -385,9 +385,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                   />
                   {/* Model Name - Always Visible WITH LABEL */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Model Name
-                    </label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-gray-700">
+                        Model Name
+                      </label>
+                      <span title="A unique identifier for this simulation model. This name helps you organize and identify different models in your workspace.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <input
                       type="text"
                       name="name"
@@ -401,9 +406,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                 {/* Run Time - Conditional: Only in Clock mode */}
                 {localModelDraft.simulationTimeType === SimulationTimeType.Clock && (
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Run Time
-                    </label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-gray-700">
+                        Run Time
+                      </label>
+                      <span title="The total duration the simulation will run in Clock mode. Specify the time period and unit (e.g., 8 Hours, 30 Days).">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <div className="grid grid-cols-2 gap-1">
                       <input
                         type="number"
@@ -438,9 +448,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                   <div className="space-y-2">
                     {/* Replications */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Replications
-                      </label>
+                      <div className="flex items-center gap-1 mb-1">
+                        <label className="text-xs font-medium text-gray-700">
+                          Replications
+                        </label>
+                        <span title="The number of independent simulation runs to perform. Multiple replications help account for randomness and provide statistical confidence in the results.">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         name="reps"
@@ -453,9 +468,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
 
                     {/* Time Mode */}
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Time Mode
-                      </label>
+                      <div className="flex items-center gap-1 mb-1">
+                        <label className="text-xs font-medium text-gray-700">
+                          Time Mode
+                        </label>
+                        <span title="Select how time is represented in the simulation. Clock mode uses relative time periods (e.g., Hour 0 to Hour 100), while Calendar Date mode uses actual dates and times.">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <select
                         name="simulationTimeType"
                         className="w-full px-2 py-1 text-xs border rounded bg-white"
@@ -475,9 +495,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                       <>
                         {/* Clock Unit */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Clock Unit
-                          </label>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Clock Unit
+                            </label>
+                            <span title="The base time unit for the simulation clock (e.g., Minutes, Hours, Days). All time-based values in the model will be expressed in relation to this unit.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
                           <select
                             name="oneClockUnit"
                             className="w-full px-2 py-1 text-xs border rounded bg-white"
@@ -494,9 +519,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
 
                         {/* Warmup Time - Simple number + dropdown */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Warmup Time
-                          </label>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Warmup Time
+                            </label>
+                            <span title="The initial period during which the simulation reaches steady state. Statistics collected during warmup are discarded to ensure more accurate results.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
                           <div className="grid grid-cols-2 gap-1">
                             <input
                               type="number"
@@ -527,9 +557,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                     {localModelDraft.simulationTimeType === SimulationTimeType.CalendarDate && (
                       <>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Start Date
-                          </label>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Start Date
+                            </label>
+                            <span title="The calendar date and time when the simulation begins in Calendar Date mode. Use this to model processes that align with specific real-world dates.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
                           <input
                             type="datetime-local"
                             name="startDateTime"
@@ -539,9 +574,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Finish Date
-                          </label>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Finish Date
+                            </label>
+                            <span title="The calendar date and time when the simulation ends in Calendar Date mode. The simulation will run from Start Date to this Finish Date.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
                           <input
                             type="datetime-local"
                             name="finishDateTime"
@@ -551,9 +591,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Warmup Date
-                          </label>
+                          <div className="flex items-center gap-1 mb-1">
+                            <label className="text-xs font-medium text-gray-700">
+                              Warmup Date
+                            </label>
+                            <span title="The calendar date and time when the warmup period ends and statistics collection begins in Calendar Date mode. Set this between Start Date and Finish Date.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
                           <input
                             type="datetime-local"
                             name="warmupDateTime"

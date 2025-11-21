@@ -7,6 +7,7 @@ import {
   UniformParameters,
   TriangularParameters,
   NormalParameters,
+  ExponentialParameters,
   createDefaultDistribution,
 } from "@quodsi/shared";
 
@@ -14,6 +15,7 @@ import { ConstantParameterEditor } from "./parameters/ConstantParameterEditor";
 import { UniformParameterEditor } from "./parameters/UniformParameterEditor";
 import { TriangularParameterEditor } from "./parameters/TriangularParameterEditor";
 import { NormalParameterEditor } from "./parameters/NormalParameterEditor";
+import { ExponentialParameterEditor } from "./parameters/ExponentialParameterEditor";
 
 interface DistributionParametersEditorProps {
   elementId?: string;
@@ -117,6 +119,15 @@ export const DistributionParametersEditor: React.FC<
           <NormalParameterEditor
             elementId={elementId}
             parameters={effectiveDistribution.parameters as NormalParameters}
+            onChange={handleParameterUpdate}
+            disabled={disabled}
+          />
+        );
+      case DistributionType.EXPONENTIAL:
+        return (
+          <ExponentialParameterEditor
+            elementId={elementId}
+            parameters={effectiveDistribution.parameters as ExponentialParameters}
             onChange={handleParameterUpdate}
             disabled={disabled}
           />

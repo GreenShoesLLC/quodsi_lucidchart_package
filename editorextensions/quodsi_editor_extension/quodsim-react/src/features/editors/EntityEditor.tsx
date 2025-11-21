@@ -269,9 +269,14 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
             <div className="space-y-4">
               {/* Name Section */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Entity Name
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Entity Name
+                  </label>
+                  <span title="Unique identifier for this entity template. Entity templates define the types of entities that flow through the simulation (e.g., Customer, Order, Patient).">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <input
                   type="text"
                   name="name"
@@ -280,9 +285,6 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                   onChange={handleInputChange}
                   placeholder="Enter entity name"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Unique identifier for this entity template
-                </p>
               </div>
             </div>
           </div>

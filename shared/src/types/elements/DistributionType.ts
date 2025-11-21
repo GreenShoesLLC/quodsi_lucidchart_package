@@ -44,6 +44,8 @@ export function getDistributionDisplayName(type: DistributionType): string {
             return "Triangular";
         case DistributionType.NORMAL:
             return "Normal";
+        case DistributionType.EXPONENTIAL:
+            return "Exponential";
         // ... other cases
         default:
             return type.toString().replace(/_/g, ' ').toLowerCase()
@@ -56,10 +58,11 @@ export function isDistributionTypeSupported(type: DistributionType): boolean {
     const supportedTypes = [
         DistributionType.CONSTANT,
         DistributionType.UNIFORM,
-        DistributionType.TRIANGULAR, 
-        DistributionType.NORMAL
+        DistributionType.TRIANGULAR,
+        DistributionType.NORMAL,
+        DistributionType.EXPONENTIAL
     ];
-    
+
     return supportedTypes.includes(type);
 }
 

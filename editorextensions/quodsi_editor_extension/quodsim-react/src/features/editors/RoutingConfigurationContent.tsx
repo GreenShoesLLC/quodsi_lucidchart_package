@@ -67,7 +67,12 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
         <div className="space-y-1">
           {/* Routing Type Selection */}
           <div>
-            <label className="block text-xs text-gray-600 mb-0.5">Routing Type</label>
+            <div className="flex items-center gap-1 mb-0.5">
+              <label className="text-xs text-gray-600">Routing Type</label>
+              <span title="Determines how entities are distributed across outgoing connectors: Probability (weighted random), State Condition (based on state values), or Entity (based on template type). With only one connector, routing type is automatically set to Probability.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             <select
               name="connectType"
               className="w-full px-2 py-1 text-xs border rounded bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -85,11 +90,6 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
                 Entity
               </option>
             </select>
-            {outgoingConnectors.length === 1 && (
-              <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                Only one connector - routing type locked to Probability
-              </p>
-            )}
           </div>
 
           {/* Routing Configuration Panel */}

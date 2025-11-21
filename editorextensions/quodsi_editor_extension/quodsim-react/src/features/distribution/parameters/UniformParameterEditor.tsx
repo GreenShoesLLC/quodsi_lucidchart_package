@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Info } from "lucide-react";
 import {
   UniformParameters,
   UNIFORM_PARAMETER_METADATA,
@@ -114,10 +115,24 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
 
   return (
     <div className="space-y-2">
+      {/* Distribution Overview */}
+      <div className="mb-2 pb-2 border-b">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
+          <span title="The uniform distribution generates values with equal probability across a range. All values between minimum and maximum are equally likely. Useful for modeling completely random selection within known bounds.">
+            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
+          </span>
+        </div>
+      </div>
+
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {lowMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Lower bound)</span>
+          <span className="inline-flex items-center gap-1">
+            {lowMetadata.label}
+            <span title="The lower bound of the uniform distribution. Values will be randomly generated with equal probability between Minimum and Maximum.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -138,8 +153,12 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
       </div>
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {highMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Upper bound)</span>
+          <span className="inline-flex items-center gap-1">
+            {highMetadata.label}
+            <span title="The upper bound of the uniform distribution. Values will be randomly generated with equal probability between Minimum and Maximum.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -157,9 +176,6 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
           }`}
         />
         {errors.high && <p className="text-xs text-red-500 mt-1">{errors.high}</p>}
-      </div>
-      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
-        Uniform distribution generates random values with equal probability between Minimum and Maximum.
       </div>
     </div>
   );

@@ -356,9 +356,14 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
             <div className="space-y-4">
               {/* Name Section */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Resource Name
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Resource Name
+                  </label>
+                  <span title="A descriptive name for this resource. Resources are constraining factors that entities must acquire (seize) before performing activities (e.g., machines, workers, rooms, tools).">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <input
                   type="text"
                   name="name"
@@ -372,15 +377,22 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
               {/* Capacity Section */}
               <div className="pt-3 border-t">
                 <div className="mb-2">
-                  <div className="text-xs font-medium text-gray-700 mb-0.5">
-                    Capacity Configuration
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Maximum number of concurrent uses for this resource
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <div className="text-xs font-medium text-gray-700">
+                      Capacity Configuration
+                    </div>
+                    <span title="Maximum number of concurrent uses for this resource. Determines how many entities can simultaneously seize this resource.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Capacity</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs text-gray-600">Capacity</label>
+                    <span title="The number of entities that can use this resource at the same time. For example, capacity of 3 means up to 3 entities can seize the resource simultaneously.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   <input
                     type="number"
                     name="capacity"
@@ -422,7 +434,12 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
               <div className="space-y-0.5 pt-1">
                 <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
                 <div>
-                  <label className="block text-xs text-gray-600">Cost Per Seize</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs text-gray-600">Cost Per Seize</label>
+                    <span title="Fixed cost applied each time an entity acquires (seizes) this resource. This is a one-time cost per usage, regardless of how long the resource is held.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   <input
                     type="number"
                     className="w-full px-2 py-1 text-xs border rounded"
@@ -435,12 +452,14 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                     step="0.01"
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-500">
-                    Fixed cost applied each time the resource is seized
-                  </p>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600">Cost Per Hour Utilized</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs text-gray-600">Cost Per Hour Utilized</label>
+                    <span title="Hourly cost incurred while the resource is actively being used by entities. This cost accumulates continuously based on how long the resource is seized.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   <input
                     type="number"
                     className="w-full px-2 py-1 text-xs border rounded"
@@ -456,12 +475,14 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                     step="0.01"
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-500">
-                    Hourly cost while resource is being used
-                  </p>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600">Cost Per Hour Idle</label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs text-gray-600">Cost Per Hour Idle</label>
+                    <span title="Hourly cost incurred while the resource has available capacity (not being used). This represents overhead costs like maintenance, rent, or salaries paid even when the resource sits idle.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   <input
                     type="number"
                     className="w-full px-2 py-1 text-xs border rounded"
@@ -474,9 +495,6 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                     step="0.01"
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-500">
-                    Hourly cost while resource has available capacity
-                  </p>
                 </div>
               </div>
             </div>

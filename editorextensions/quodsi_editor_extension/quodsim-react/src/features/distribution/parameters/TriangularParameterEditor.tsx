@@ -1,4 +1,5 @@
 import React from "react";
+import { Info } from "lucide-react";
 import {
   TriangularParameters,
   TRIANGULAR_PARAMETER_METADATA,
@@ -122,10 +123,24 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
 
   return (
     <div className="space-y-2">
+      {/* Distribution Overview */}
+      <div className="mb-2 pb-2 border-b">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
+          <span title="The triangular distribution models situations where you know the minimum, maximum, and most likely (mode) value. It's shaped like a triangle with values most frequently occurring near the mode. Useful for modeling task durations or quantities when you have a best estimate and min/max bounds.">
+            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
+          </span>
+        </div>
+      </div>
+
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {leftMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Minimum value)</span>
+          <span className="inline-flex items-center gap-1">
+            {leftMetadata.label}
+            <span title="The minimum possible value of the triangular distribution. This is the lower bound of the range.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -145,8 +160,12 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
       </div>
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {modeMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Most likely value)</span>
+          <span className="inline-flex items-center gap-1">
+            {modeMetadata.label}
+            <span title="The most likely (peak) value of the triangular distribution. Values near the mode occur more frequently than values near the minimum or maximum.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -166,8 +185,12 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
       </div>
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {rightMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Maximum value)</span>
+          <span className="inline-flex items-center gap-1">
+            {rightMetadata.label}
+            <span title="The maximum possible value of the triangular distribution. This is the upper bound of the range.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -184,9 +207,6 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
               : "border-gray-300"
           }`}
         />
-      </div>
-      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
-        Triangular distribution generates random values with increasing probability up to the Mode (peak) and then decreasing probability to the Maximum. Most likely value is the Mode.
       </div>
     </div>
   );

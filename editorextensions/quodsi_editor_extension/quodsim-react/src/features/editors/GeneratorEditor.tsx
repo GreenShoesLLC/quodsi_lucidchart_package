@@ -459,9 +459,14 @@ const GeneratorEditor: React.FC<Props> = ({
             <div className="space-y-2">
               {/* Name Section */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Generator Name
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Generator Name
+                  </label>
+                  <span title="A descriptive name for this generator. Generators create entities at specified intervals and inject them into the simulation through activities.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <input
                   type="text"
                   name="name"
@@ -475,11 +480,13 @@ const GeneratorEditor: React.FC<Props> = ({
               {/* Entity Selection */}
               <div className="pt-2 border-t">
                 <div className="mb-1">
-                  <div className="text-xs font-medium text-gray-700 mb-0.5">
-                    Entity
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Type of entity this generator creates
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <div className="text-xs font-medium text-gray-700">
+                      Entity
+                    </div>
+                    <span title="The type of entity this generator creates. Each time the generator fires, it will create instances of this entity type (e.g., Customer, Order, Patient).">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
                 </div>
                 <select
@@ -503,9 +510,14 @@ const GeneratorEditor: React.FC<Props> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Entities Per Creation
-                    </label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">
+                        Entities Per Creation
+                      </label>
+                      <span title="How many entities are created each time the generator fires. For example, a value of 5 means 5 entities arrive simultaneously at each creation event.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <input
                       type="number"
                       name="entitiesPerCreation"
@@ -514,14 +526,16 @@ const GeneratorEditor: React.FC<Props> = ({
                       onChange={handleInputChange}
                       min="1"
                     />
-                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                      Per creation event
-                    </p>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Max Entities
-                    </label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">
+                        Max Entities
+                      </label>
+                      <span title={`Maximum total number of entities this generator will create across all occurrences. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <input
                       type="number"
                       name="maxEntities"
@@ -530,9 +544,6 @@ const GeneratorEditor: React.FC<Props> = ({
                       onChange={handleInputChange}
                       min="1"
                     />
-                    <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                      Limit ({INFINITY_DISPLAY_VALUE} = ∞)
-                    </p>
                   </div>
                 </div>
               </div>
@@ -550,9 +561,14 @@ const GeneratorEditor: React.FC<Props> = ({
             <div className="space-y-2">
               {/* Interarrival Time */}
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Interarrival Time
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Interarrival Time
+                  </label>
+                  <span title="The time interval between consecutive entity creation events. This defines how frequently the generator produces entities (e.g., every 5 minutes, every 2 hours).">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <EnhancedDurationEditor
                   periodUnit={
                     localGeneratorDraft.periodIntervalDuration.durationPeriodUnit
@@ -569,16 +585,18 @@ const GeneratorEditor: React.FC<Props> = ({
                   }
                   compact={true}
                 />
-                <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                  Between creations
-                </p>
               </div>
 
               {/* Periodic Occurrences */}
               <div className="pt-2 border-t">
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Periodic Occurrences
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Periodic Occurrences
+                  </label>
+                  <span title={`How many times the generator will fire (create entities). For example, 10 occurrences means the generator creates entities 10 times total. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <input
                   type="number"
                   name="periodicOccurrences"
@@ -587,9 +605,6 @@ const GeneratorEditor: React.FC<Props> = ({
                   onChange={handleInputChange}
                   min="0"
                 />
-                <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                  Times to create ({INFINITY_DISPLAY_VALUE} = ∞)
-                </p>
               </div>
             </div>
           </div>
@@ -604,9 +619,14 @@ const GeneratorEditor: React.FC<Props> = ({
             />
             <div className="space-y-2">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
-                  Start Delay
-                </label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Start Delay
+                  </label>
+                  <span title="Time to wait before the generator creates its first entity. For example, a 10-minute delay means the first creation occurs at simulation time 10 minutes. Use 0 for immediate start.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <EnhancedDurationEditor
                   periodUnit={
                     localGeneratorDraft.periodicStartDuration.durationPeriodUnit
@@ -621,9 +641,6 @@ const GeneratorEditor: React.FC<Props> = ({
                   }
                   compact={true}
                 />
-                <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                  Initial delay
-                </p>
               </div>
             </div>
           </div>

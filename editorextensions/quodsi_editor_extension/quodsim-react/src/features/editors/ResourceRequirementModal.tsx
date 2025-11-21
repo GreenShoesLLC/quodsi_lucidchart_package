@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Check } from 'lucide-react';
+import { Plus, X, Trash2, Check, Info } from 'lucide-react';
 import { ResourceRequirement } from '@quodsi/shared';
 import { TeamStructure, generatePreview } from '../../utils/resourceRequirementConverter';
 
@@ -286,9 +286,14 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
         <div className="flex-1 overflow-y-auto p-2" style={{ minHeight: 0 }}>
           {/* Name Input */}
           <div className="mb-2">
-            <label className="block text-sm font-medium mb-0.5">
-              Requirement Name <span className="text-red-500">*</span>
-            </label>
+            <div className="flex items-center gap-1 mb-0.5">
+              <label className="text-sm font-medium">
+                Requirement Name <span className="text-red-500">*</span>
+              </label>
+              <span title="A descriptive name for this reusable resource requirement template. This name will appear when selecting resource requirements for operation steps.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             <input
               type="text"
               value={name}
@@ -301,7 +306,12 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
           {/* Templates Tab */}
           {activeTab === 'templates' && (
             <div className="space-y-1">
-              <p className="text-xs text-gray-600 mb-1">Choose a template to get started:</p>
+              <div className="flex items-center gap-1 mb-1">
+                <p className="text-xs text-gray-600">Choose a template to get started:</p>
+                <span title="Templates provide pre-configured resource requirement patterns. Select one to quickly set up common scenarios, then customize as needed in the Build Custom tab.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
+              </div>
               {templates.length === 0 ? (
                 <p className="text-xs text-gray-500 text-center py-3">
                   No resources available to create templates
@@ -326,7 +336,12 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
             <div>
               {/* Mode Selector */}
               <div className="mb-2 p-1.5 bg-gray-50 rounded border">
-                <label className="block text-sm font-medium mb-1">Op Step needs:</label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-sm font-medium">Op Step needs:</label>
+                  <span title="Choose whether operation steps using this requirement need ALL teams (e.g., need both a developer AND a tester) or ANY ONE team (e.g., need either a senior developer OR two junior developers).">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
                 <select
                   value={requirement.mode}
                   onChange={(e) => setRequirement({ ...requirement, mode: e.target.value as 'ALL' | 'ANY' })}
@@ -366,6 +381,12 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
                     {/* Team Mode Selector - only show if team has multiple resources */}
                     {team.requests.length > 1 && (
                       <div className="mb-1">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span className="text-xs font-medium text-purple-900">This team needs:</span>
+                          <span title="Within this team, choose whether ALL resources are needed together (e.g., 1 Developer AND 1 Designer) or ANY ONE resource is sufficient (e.g., 1 Senior Dev OR 2 Junior Devs).">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
                         <select
                           value={team.mode}
                           onChange={(e) => updateTeamMode(teamIdx, e.target.value as 'ALL' | 'ANY')}

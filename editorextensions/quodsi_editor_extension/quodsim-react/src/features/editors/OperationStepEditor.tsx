@@ -6,7 +6,7 @@ import {
   Distribution,
   ResourceRequirement,
 } from "@quodsi/shared";
-import { X, Edit2, Plus } from "lucide-react";
+import { X, Edit2, Plus, Info } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import { convertRootClausesToStructure, generatePreview } from "../../utils/resourceRequirementConverter";
 
@@ -116,7 +116,14 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
         />
 
         <div>
-          <label className="block text-xs text-gray-600 mb-0.5">Resource Requirement</label>
+          <label className="block text-xs text-gray-600 mb-0.5">
+            <span className="inline-flex items-center gap-1">
+              Resource Requirement
+              <span title="Specify which resources must be available for this operation step to execute. Resources are seized at the start of the step and released when complete.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </span>
+          </label>
           <div className="flex gap-1">
             <select
               value={step.requirementId || ""}
@@ -164,7 +171,14 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
         {/* Quantity field - only show when requirement is selected */}
         {step.requirementId && step.requirementId !== "__new__" && (
           <div>
-            <label className="block text-xs text-gray-600 mb-0.5">Quantity</label>
+            <label className="block text-xs text-gray-600 mb-0.5">
+              <span className="inline-flex items-center gap-1">
+                Quantity
+                <span title="Number of resource units needed to satisfy this requirement. The activity will wait until this many units are available.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
+              </span>
+            </label>
             <input
               type="number"
               value={step.quantity}

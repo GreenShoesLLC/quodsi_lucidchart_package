@@ -422,20 +422,25 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
             <span className="text-xs font-medium text-gray-700">Results</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
+            {/* Preview feature button - de-emphasized */}
             <button
               onClick={handleCreateResultsPage}
-              title="Create results page in LucidChart"
-              className="flex items-center justify-center p-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              title="Create results page in LucidChart (Preview Feature)"
+              className="relative flex items-center justify-center p-1.5 rounded bg-purple-100 text-purple-600 border border-purple-300 hover:bg-purple-200 transition-colors"
             >
               <FileText className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 px-1 py-0.5 text-[9px] font-bold bg-purple-500 text-white rounded-sm shadow-sm">
+                PREVIEW
+              </span>
             </button>
+            {/* Primary action - most encouraged */}
             <button
               onClick={handleCopyLink}
               title={copied ? "Copied!" : "Copy zip file download URL to clipboard"}
-              className={`flex items-center justify-center p-1.5 rounded transition-colors ${
+              className={`flex items-center justify-center p-1.5 rounded transition-colors shadow-md ${
                 copied
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-green-600 text-white hover:bg-green-700 ring-2 ring-green-300'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-300'
               }`}
             >
               {copied ? (
@@ -444,10 +449,11 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
                 <Download className="w-4 h-4" />
               )}
             </button>
+            {/* Secondary action - close second priority */}
             <button
               onClick={handleAnalyze}
               title="Analyze simulation results with interactive charts"
-              className="flex items-center justify-center p-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+              className="flex items-center justify-center p-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-sm ring-1 ring-orange-300"
             >
               <TrendingUp className="w-4 h-4" />
             </button>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Info } from "lucide-react";
 import { StateModification, StateListManager, ComponentType } from "@quodsi/shared";
 import StateModificationFormDialog from "./StateModificationFormDialog";
 import StateModificationListItem from "./StateModificationListItem";
@@ -130,10 +130,12 @@ const StateModificationsEditor: React.FC<Props> = ({
     <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-1">
           <div className="text-xs font-medium text-gray-700">{title}</div>
           {description && (
-            <div className="text-xs text-gray-500 mt-0.5">{description}</div>
+            <span title={description}>
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           )}
         </div>
         <button

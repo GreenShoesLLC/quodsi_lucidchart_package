@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Plus, Trash2 } from "lucide-react";
+import { X, Plus, Trash2, Info } from "lucide-react";
 import { State, StateType, ComponentType, StateListManager } from "@quodsi/shared";
 
 interface Props {
@@ -195,9 +195,14 @@ const StateFormDialog: React.FC<Props> = ({
 
           {/* Name */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Name *
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-xs font-medium text-gray-700">
+                Name *
+              </label>
+              <span title="Must start with letter or underscore, and contain only letters, numbers, or underscores (e.g., entityCount, isActive, _internalState)">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             <input
               type="text"
               className="w-full px-2 py-1.5 text-xs border rounded"
@@ -205,16 +210,18 @@ const StateFormDialog: React.FC<Props> = ({
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., entityCount, isActive"
             />
-            <p className="text-xs text-gray-500 mt-0.5">
-              Must start with letter/underscore, contain only letters/numbers/underscores
-            </p>
           </div>
 
           {/* Component Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Component Type *
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-xs font-medium text-gray-700">
+                Component Type *
+              </label>
+              <span title="Determines which component type can access and modify this state. Activity states are specific to this activity, while Entity, Resource, and Model states can be accessed across components.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             <select
               className="w-full px-2 py-1.5 text-xs border rounded bg-white"
               value={componentType}
@@ -230,9 +237,14 @@ const StateFormDialog: React.FC<Props> = ({
 
           {/* Data Type */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Data Type *
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-xs font-medium text-gray-700">
+                Data Type *
+              </label>
+              <span title="Select the type of data this state will store. Number for numeric values, String for text, Boolean for true/false, or Category for a predefined set of values.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             <select
               className="w-full px-2 py-1.5 text-xs border rounded bg-white"
               value={dataType}
@@ -263,9 +275,14 @@ const StateFormDialog: React.FC<Props> = ({
           {/* Category Values (only for CATEGORY type) */}
           {dataType === StateType.CATEGORY && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Category Values *
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Category Values *
+                </label>
+                <span title="Define the allowed values for this category state. The state can only be set to one of these predefined values during simulation.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
+              </div>
               <div className="space-y-1">
                 {categoryValues.map((value, index) => (
                   <div key={index} className="flex gap-1">
@@ -301,9 +318,14 @@ const StateFormDialog: React.FC<Props> = ({
 
           {/* Initial Value */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Initial Value *
-            </label>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-xs font-medium text-gray-700">
+                Initial Value *
+              </label>
+              <span title="The starting value for this state when the simulation begins. For Category types, must be one of the defined category values.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
+            </div>
             {dataType === StateType.BOOLEAN ? (
               <select
                 className="w-full px-2 py-1.5 text-xs border rounded bg-white"
@@ -351,6 +373,9 @@ const StateFormDialog: React.FC<Props> = ({
             <label htmlFor="collectStatistics" className="text-xs text-gray-700">
               Collect statistics for this state
             </label>
+            <span title="When enabled, the simulation will track statistical information (min, max, mean, standard deviation) for this state variable over time. Useful for analyzing state behavior across simulation runs.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </div>
         </div>
 

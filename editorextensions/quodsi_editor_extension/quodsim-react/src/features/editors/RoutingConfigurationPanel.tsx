@@ -289,10 +289,11 @@ export const RoutingConfigurationPanel: React.FC<
       {/* Probability Routing */}
       {connectType === ConnectType.Probability && (
         <div className="space-y-2">
-          <div className="text-xs text-gray-600 mb-2">
-            {localConnectors.length === 1
-              ? "Single connector - always 100%"
-              : "Set weight for each connector. Probability = weight / sum of all weights."}
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-xs font-medium text-gray-700">Probability Weights</span>
+            <span title="For multiple connectors: Set weight for each connector. Entities are routed probabilistically based on relative weights (probability = weight / sum of all weights). For single connector: Automatically routes 100% of entities to the only available path.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </div>
 
           {/* Connector list */}
@@ -320,7 +321,12 @@ export const RoutingConfigurationPanel: React.FC<
                 {localConnectors.length > 1 && (
                   <div className="p-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs text-gray-600">Weight:</label>
+                      <div className="flex items-center gap-1">
+                        <label className="text-xs text-gray-600">Weight</label>
+                        <span title="Enter a positive integer weight. Higher weight increases the routing chance for this connector. For example, if two connectors have weights of 3 and 1, the first gets 75% (3/4) of entities and the second gets 25% (1/4).">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-24 px-2 py-1 text-xs border rounded"
@@ -330,15 +336,7 @@ export const RoutingConfigurationPanel: React.FC<
                         }
                         min="1"
                         step="1"
-                        title="Enter weight (positive integer). Higher weight = higher routing chance."
                       />
-                    </div>
-                  </div>
-                )}
-                {localConnectors.length === 1 && (
-                  <div className="p-3">
-                    <div className="text-xs text-gray-500">
-                      Single connector automatically routes 100% of entities.
                     </div>
                   </div>
                 )}
@@ -351,9 +349,11 @@ export const RoutingConfigurationPanel: React.FC<
       {/* State Condition Routing */}
       {connectType === ConnectType.StateCondition && (
         <div className="space-y-2">
-          <div className="text-xs text-gray-600 mb-2">
-            Set state-based conditions for each outgoing connector. Entities
-            will be routed based on their state values.
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-xs font-medium text-gray-700">State-Based Routing Conditions</span>
+            <span title="Configure conditions for each connector based on entity state values. When an entity exits this activity, it will be routed to the first connector whose condition evaluates to true. Conditions are evaluated in the order shown.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </div>
 
           {entityStateOptions.length === 0 && (
@@ -527,9 +527,11 @@ export const RoutingConfigurationPanel: React.FC<
       {/* Entity Template Routing */}
       {connectType === ConnectType.EntityTemplate && (
         <div className="space-y-2">
-          <div className="text-xs text-gray-600 mb-2">
-            Select the entity template for each outgoing connector. Entities
-            will be routed based on their template type.
+          <div className="flex items-center gap-1 mb-2">
+            <span className="text-xs font-medium text-gray-700">Entity Template Routing</span>
+            <span title="Assign an entity template to each connector. Entities will automatically be routed to the connector that matches their template type. Each connector should be assigned a different entity template.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </div>
 
           {availableEntities.length === 0 && (

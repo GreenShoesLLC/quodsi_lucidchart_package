@@ -817,11 +817,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   {/* Capacity Section */}
                   <div className="pt-2 border-t">
                     <div className="mb-1">
-                      <div className="text-xs font-medium text-gray-700 mb-0.5">
-                        Capacity Configuration
-                      </div>
-                      <div className="text-[10px] text-gray-500 leading-tight">
-                        Max parallel entities
+                      <div className="flex items-center gap-1">
+                        <div className="text-xs font-medium text-gray-700">
+                          Capacity Configuration
+                        </div>
+                        <span title="Maximum number of entities that can be processed simultaneously in this activity">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
                       </div>
                     </div>
                     <div>
@@ -841,11 +843,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   {/* Buffer Section */}
                   <div className="pt-2 border-t">
                     <div className="mb-1">
-                      <div className="text-xs font-medium text-gray-700 mb-0.5">
-                        Buffer Configuration
-                      </div>
-                      <div className="text-[10px] text-gray-500 leading-tight">
-                        Queue limits ({INFINITY_DISPLAY_VALUE} = ∞)
+                      <div className="flex items-center gap-1">
+                        <div className="text-xs font-medium text-gray-700">
+                          Buffer Configuration
+                        </div>
+                        <span title="Queue capacity limits for entities waiting to enter (input buffer) or exit (output buffer) this activity. Enter 999999 to represent unlimited capacity (∞)">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -955,9 +959,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
                   {/* Cost Components */}
                   <div className="space-y-0.5">
-                    <div className="text-xs font-medium text-gray-600 mb-0.5">Cost Components</div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-xs font-medium text-gray-600">Cost Components</span>
+                      <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-0.5">Fixed Cost</label>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <label className="text-xs text-gray-600">Fixed Cost</label>
+                        <span title="One-time cost incurred each time this activity is activated or started, regardless of how many entities are processed">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -975,7 +989,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-0.5">Cost Per Entity</label>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <label className="text-xs text-gray-600">Cost Per Entity</label>
+                        <span title="Cost charged for each entity that completes processing through this activity. Total cost = (number of entities processed) × (cost per entity)">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -993,7 +1012,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-0.5">Cost/Hr Active</label>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <label className="text-xs text-gray-600">Cost/Hr Active</label>
+                        <span title="Hourly cost incurred while the activity is actively processing entities. Charged proportionally based on actual processing time.">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -1011,7 +1035,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-0.5">Cost/Hr Idle</label>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <label className="text-xs text-gray-600">Cost/Hr Idle</label>
+                        <span title="Hourly cost incurred while the activity is available but not actively processing entities. Useful for modeling overhead or standby costs.">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"
@@ -1032,9 +1061,19 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
                   {/* Resource Cost Settings */}
                   <div className="space-y-0.5 pt-0.5 border-t">
-                    <div className="text-xs font-medium text-gray-600 mb-0.5">Resource Cost</div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <span className="text-xs font-medium text-gray-600">Resource Cost</span>
+                      <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <div>
-                      <label className="block text-xs text-gray-600 mb-0.5">Cost Multiplier</label>
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <label className="text-xs text-gray-600">Cost Multiplier</label>
+                        <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
                       <input
                         type="number"
                         className="w-full px-2 py-1 text-xs border rounded"

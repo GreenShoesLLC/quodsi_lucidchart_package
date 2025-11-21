@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Info } from "lucide-react";
 import {
   NormalParameters,
   NORMAL_PARAMETER_METADATA,
@@ -77,10 +78,24 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
 
   return (
     <div className="space-y-2">
+      {/* Distribution Overview */}
+      <div className="mb-2 pb-2 border-b">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
+          <span title="The normal (Gaussian) distribution models naturally occurring variation with a bell curve shape. Values cluster around the mean with decreasing probability further away. The standard deviation controls how spread out values are. Useful for modeling measurement variations, human-driven processes, and many natural phenomena.">
+            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
+          </span>
+        </div>
+      </div>
+
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {meanMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Average value)</span>
+          <span className="inline-flex items-center gap-1">
+            {meanMetadata.label}
+            <span title="The average (center) value of the normal distribution. This is where the bell curve peaks.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -101,8 +116,12 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
       </div>
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
-          {stdMetadata.label}
-          <span className="text-xs text-gray-400 ml-1 font-normal">(Variability around mean)</span>
+          <span className="inline-flex items-center gap-1">
+            {stdMetadata.label}
+            <span title="Controls the spread of values around the mean. About 68% of values fall within 1 standard deviation, 95% within 2, and 99.7% within 3 standard deviations of the mean.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
           {isDirty && <span className="ml-1 text-orange-500 text-[10px]">*</span>}
           {isSaving && <span className="ml-1 text-blue-500 text-[10px]">(saving...)</span>}
         </label>
@@ -120,9 +139,6 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
           }`}
         />
         {errors.std && <p className="text-xs text-red-500 mt-1">{errors.std}</p>}
-      </div>
-      <div className="text-[10px] text-gray-500 mt-1 italic leading-tight">
-        Normal distribution generates a bell curve centered at the Mean with most values falling within 3 Standard Deviations from the Mean.
       </div>
     </div>
   );

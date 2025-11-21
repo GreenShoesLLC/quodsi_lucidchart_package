@@ -1,4 +1,5 @@
 import React from "react";
+import { Info } from "lucide-react";
 import {
   PeriodUnit,
   Distribution,
@@ -102,6 +103,14 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
 
       {/* Period Unit Selector */}
       <div>
+        <label className="block text-xs text-gray-600 font-medium mb-0.5">
+          <span className="inline-flex items-center gap-1">
+            Time Unit
+            <span title="The time unit for the duration values. All duration parameters will be interpreted in this unit.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
+          </span>
+        </label>
         <select
           name="durationPeriodUnit"
           className="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white"

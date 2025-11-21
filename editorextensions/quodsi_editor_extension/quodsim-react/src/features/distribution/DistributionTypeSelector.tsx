@@ -1,5 +1,6 @@
 import React from "react";
-import { 
+import { Info } from "lucide-react";
+import {
   DistributionType,
   getDistributionDisplayName,
   isDistributionTypeSupported } from "@quodsi/shared";
@@ -43,7 +44,12 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   return (
     <div>
       <label className="block text-xs text-gray-600 font-medium mb-0.5">
-        Distribution Type
+        <span className="inline-flex items-center gap-1">
+          Distribution Type
+          <span title="The statistical distribution used to generate random values. Different distributions model different real-world variability patterns.">
+            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+          </span>
+        </span>
       </label>
       <select
         value={distributionType}

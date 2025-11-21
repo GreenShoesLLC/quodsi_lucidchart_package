@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { X, ChevronDown, ChevronUp } from "lucide-react";
+import { X, ChevronDown, ChevronUp, Info } from "lucide-react";
 import {
   StateModification,
   State,
@@ -206,9 +206,14 @@ const StateModificationFormDialog: React.FC<Props> = ({
           {/* Operation Selection */}
           {selectedState && (
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                Operation *
-              </label>
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Operation *
+                </label>
+                <span title="Choose how to modify the state value. Arithmetic operations (Add, Subtract, Multiply, Divide) are available for NUMBER states. Other state types only support assignment (=).">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
+              </div>
               <select
                 className="w-full px-2 py-1.5 text-xs border rounded bg-white"
                 value={operation}
@@ -228,11 +233,6 @@ const StateModificationFormDialog: React.FC<Props> = ({
                   </option>
                 ))}
               </select>
-              <p className="text-xs text-gray-500 mt-1">
-                {selectedState.dataType === StateType.NUMBER
-                  ? "Arithmetic operations available for NUMBER states"
-                  : "Only assignment (=) available for this state type"}
-              </p>
             </div>
           )}
 
@@ -322,9 +322,14 @@ const StateModificationFormDialog: React.FC<Props> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Component Unique ID
-                    </label>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs font-medium text-gray-700">
+                        Component Unique ID
+                      </label>
+                      <span title="Specify a unique component ID to modify states on a different component. Leave empty to target the current component's state.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
                     <input
                       type="text"
                       className="w-full px-2 py-1.5 text-xs border rounded font-mono"
@@ -332,9 +337,6 @@ const StateModificationFormDialog: React.FC<Props> = ({
                       onChange={(e) => setComponentUniqueId(e.target.value)}
                       placeholder="Specific component ID (optional)"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Leave empty to target current component
-                    </p>
                   </div>
                 </div>
               )}
