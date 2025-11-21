@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle } from "lucide-react";
 import ScenarioCard from "./ScenarioCard";
-import { RunState, EnvelopeMessageType, MAX_SCENARIOS } from "@quodsi/shared";
+import { RunState, EnvelopeMessageType, MAX_SCENARIOS, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import { useScenarios, useMessagingDispatch } from "../../messaging/MessageProvider";
 import { selectScenarios, selectScenariosLoading, selectScenariosError } from "../../messaging/state/scenarioSlice";
@@ -27,13 +27,6 @@ function mapStatusToRunState(status: string): RunState {
     default:
       return RunState.NotRun;
   }
-}
-
-interface ScenarioDownloadInfo {
-  zipUrl: string;
-  fileSizeBytes: number;
-  fileSizeMB: string;
-  expiresAt: string;
 }
 
 interface Scenario {

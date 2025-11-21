@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import ScenarioEditor from "./ScenarioEditor";
 import ScenarioAnalysisDashboard from "./ScenarioAnalysisDashboard";
+import { useScenarios } from "../../messaging/MessageProvider";
+import { selectScenarios, Scenario } from "../../messaging/state/scenarioSlice";
+import { ScenarioDownloadInfo } from "@quodsi/shared";
 
 type ScenarioSubTab = "list" | "analysis";
 
@@ -11,9 +14,17 @@ interface ScenariosPanelProps {
 const ScenariosPanel: React.FC<ScenariosPanelProps> = ({ documentId }) => {
   const [activeSubTab, setActiveSubTab] = useState<ScenarioSubTab>("list");
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [selectedDownloadInfo, setSelectedDownloadInfo] = useState<ScenarioDownloadInfo | undefined>(undefined);
+
+  // Get scenarios from Redux state
+  const scenarioState = useScenarios();
+  const scenarios = selectScenarios({ scenarios: scenarioState });
 
   const handleAnalyzeScenario = (scenarioId: string) => {
+    // Find the scenario to get its downloadInfo
+    const scenario = scenarios.find((s: Scenario) => s.id === scenarioId);
     setSelectedScenarioId(scenarioId);
+    setSelectedDownloadInfo(scenario?.downloadInfo);
     setActiveSubTab("analysis");
   };
 
@@ -63,6 +74,7 @@ const ScenariosPanel: React.FC<ScenariosPanelProps> = ({ documentId }) => {
             scenarioId={selectedScenarioId}
             documentId={documentId}
             onBackToList={handleBackToList}
+            downloadInfo={selectedDownloadInfo}
           />
         )}
       </div>

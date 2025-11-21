@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, BarChart3, Table2, LayoutGrid } from "lucide-react";
-import { EnvelopeMessageType } from "@quodsi/shared";
+import { ArrowLeft, BarChart3, Table2, LayoutGrid, Download, Check } from "lucide-react";
+import { EnvelopeMessageType, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import DataTable from "../../components/DataTable";
 import {
@@ -17,12 +17,14 @@ interface ScenarioAnalysisDashboardProps {
   scenarioId: string;
   documentId: string;
   onBackToList: () => void;
+  downloadInfo?: ScenarioDownloadInfo;
 }
 
 const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   scenarioId,
   documentId,
   onBackToList,
+  downloadInfo,
 }) => {
   // State
   const [dataType, setDataType] = useState<CrossRepDataType>("activity");
@@ -31,9 +33,38 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("table");
+  const [zipCopied, setZipCopied] = useState<boolean>(false);
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
+
+  // Handle ZIP download link copy
+  const handleCopyZipLink = () => {
+    if (!downloadInfo?.zipUrl) return;
+
+    try {
+      // Use old-school execCommand approach for sandboxed iframes
+      const textarea = document.createElement('textarea');
+      textarea.value = downloadInfo.zipUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      if (successful) {
+        console.log('[ScenarioAnalysisDashboard] ZIP link copied to clipboard');
+        setZipCopied(true);
+        setTimeout(() => setZipCopied(false), 2000);
+      } else {
+        console.error('[ScenarioAnalysisDashboard] execCommand copy failed');
+      }
+    } catch (error) {
+      console.error('[ScenarioAnalysisDashboard] Failed to copy ZIP link:', error);
+    }
+  };
 
   // Fetch data when dataType changes
   const fetchData = useCallback(() => {
@@ -269,7 +300,30 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             Analysis Dashboard
           </h2>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-3">
+          {downloadInfo && (
+            <button
+              onClick={handleCopyZipLink}
+              title={zipCopied ? "Copied!" : "Copy complete results package URL (ZIP)"}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                zipCopied
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {zipCopied ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  Download ZIP
+                </>
+              )}
+            </button>
+          )}
           <p className="text-xs text-gray-500">
             Scenario: <span className="font-mono">{scenarioId}</span>
           </p>

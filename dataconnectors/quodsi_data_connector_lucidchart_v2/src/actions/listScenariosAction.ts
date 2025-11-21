@@ -179,10 +179,16 @@ export const listScenariosAction = async (
                     blobName.startsWith(`${scenarioId}/`) && blobName.endsWith('.zip')
                 );
 
+                // Find Excel file in the scenario folder (standalone, not inside ZIP)
+                const scenarioExcelBlobs = allBlobs.filter(blobName =>
+                    blobName.startsWith(`${scenarioId}/`) && (blobName.endsWith('.xlsx') || blobName.endsWith('.xls'))
+                );
+
                 const hasResults = scenarioZipBlobs.length > 0;
                 const resultsZipPath = hasResults ? scenarioZipBlobs[0] : null;
+                const resultsExcelPath = scenarioExcelBlobs.length > 0 ? scenarioExcelBlobs[0] : null;
 
-                logger.debug(`Scenario ${scenarioId}: hasResults=${hasResults}, zipFile=${resultsZipPath}, runState=${statusData.runState}`);
+                logger.debug(`Scenario ${scenarioId}: hasResults=${hasResults}, zipFile=${resultsZipPath}, excelFile=${resultsExcelPath}, runState=${statusData.runState}`);
 
                 // Timeout detection: Check if scenario has been RUNNING for too long
                 if (statusData.runState === RunState.Running) {
@@ -222,17 +228,17 @@ export const listScenariosAction = async (
                     metrics: statusData.metrics
                 };
 
-                // Generate SAS URL only if results exist and status is successful
+                // Generate SAS URLs only if results exist and status is successful
                 if (hasResults && resultsZipPath && statusData.runState === RunState.RanSuccessfully) {
                     try {
-                        // Get blob metadata
-                        const metadata = await storageService.getBlobMetadata(
+                        // Get ZIP blob metadata
+                        const zipMetadata = await storageService.getBlobMetadata(
                             data.documentId,
                             resultsZipPath
                         );
 
-                        // Generate SAS URL with 30-minute expiry
-                        const sasUrl = await storageService.generateBlobSasUrl(
+                        // Generate ZIP SAS URL with 30-minute expiry
+                        const zipSasUrl = await storageService.generateBlobSasUrl(
                             data.documentId,
                             resultsZipPath,
                             30
@@ -241,16 +247,36 @@ export const listScenariosAction = async (
                         // Calculate expiry time
                         const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
+                        // Initialize download info with ZIP
                         scenarioInfo.downloadInfo = {
-                            zipUrl: sasUrl,
-                            fileSizeBytes: metadata.sizeBytes,
-                            fileSizeMB: formatBytes(metadata.sizeBytes),
+                            zipUrl: zipSasUrl,
+                            excelUrl: '', // Will be populated below if Excel file exists
+                            fileSizeBytes: zipMetadata.sizeBytes,
+                            fileSizeMB: formatBytes(zipMetadata.sizeBytes),
                             expiresAt
                         };
 
-                        logger.info(`Generated SAS URL for scenario ${scenarioId} (${resultsZipPath}), expires at ${expiresAt}`);
+                        logger.info(`Generated ZIP SAS URL for scenario ${scenarioId} (${resultsZipPath}), expires at ${expiresAt}`);
+
+                        // Generate Excel SAS URL if Excel file exists
+                        if (resultsExcelPath) {
+                            try {
+                                const excelSasUrl = await storageService.generateBlobSasUrl(
+                                    data.documentId,
+                                    resultsExcelPath,
+                                    30
+                                );
+                                scenarioInfo.downloadInfo.excelUrl = excelSasUrl;
+                                logger.info(`Generated Excel SAS URL for scenario ${scenarioId} (${resultsExcelPath})`);
+                            } catch (excelSasError) {
+                                logger.error(`Failed to generate Excel SAS URL for scenario ${scenarioId}: ${excelSasError.message}`);
+                                // Continue with ZIP URL only
+                            }
+                        } else {
+                            logger.warn(`No Excel file found for scenario ${scenarioId}, excelUrl will be empty`);
+                        }
                     } catch (sasError) {
-                        logger.error(`Failed to generate SAS URL for scenario ${scenarioId}: ${sasError.message}`);
+                        logger.error(`Failed to generate SAS URLs for scenario ${scenarioId}: ${sasError.message}`);
                         // Continue without download info
                     }
                 }

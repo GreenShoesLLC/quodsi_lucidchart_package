@@ -10,6 +10,7 @@ import { RunState } from "./documentStatus";
 
 export interface ScenarioDownloadInfo {
     zipUrl: string;
+    excelUrl: string;
     fileSizeBytes: number;
     fileSizeMB: string;
     expiresAt: string;

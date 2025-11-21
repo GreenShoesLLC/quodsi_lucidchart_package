@@ -9,6 +9,14 @@ export interface ScenarioListRequestMessage extends EnvelopeBase {
   };
 }
 
+export interface ScenarioDownloadInfo {
+  zipUrl: string;
+  excelUrl: string;
+  fileSizeBytes: number;
+  fileSizeMB: string;
+  expiresAt: string;
+}
+
 export interface ScenarioInfo {
   id: string;
   name: string;
@@ -19,12 +27,7 @@ export interface ScenarioInfo {
   simulationTimeType: string;
   completedAt?: string;
   hasResults: boolean;
-  downloadInfo?: {
-    zipUrl: string;
-    fileSizeBytes: number;
-    fileSizeMB: string;
-    expiresAt: string;
-  };
+  downloadInfo?: ScenarioDownloadInfo;
   // Progress tracking
   currentReplication?: number;  // Current replication being executed (1 to reps)
   // Error fields (populated when runState === RanWithErrors)

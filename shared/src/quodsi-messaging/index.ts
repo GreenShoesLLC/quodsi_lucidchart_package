@@ -8,7 +8,7 @@ import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from '
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
-import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, ScenarioMessage, ScenarioInfo } from './scenario/messages';
+import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, ScenarioMessage, ScenarioInfo, ScenarioDownloadInfo } from './scenario/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -122,6 +122,7 @@ export {
 // Export scenario messages
 export {
   ScenarioInfo,
+  ScenarioDownloadInfo,
   ScenarioListRequestMessage,
   ScenarioListResultMessage,
   ScenarioDeleteMessage,

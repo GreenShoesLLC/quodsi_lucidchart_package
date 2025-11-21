@@ -1,15 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle, Clock, XCircle, AlertCircle, Copy, Check, FileText, Trash2, Download, TrendingUp, ChevronDown, ChevronUp, AlertTriangle, RefreshCw } from "lucide-react";
-import { RunState } from "@quodsi/shared";
+import { RunState, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
-
-interface ScenarioDownloadInfo {
-  zipUrl: string;
-  fileSizeBytes: number;
-  fileSizeMB: string;
-  expiresAt: string;
-}
 
 interface Scenario {
   id: string;
@@ -113,13 +106,13 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
     return () => clearInterval(interval);
   }, [scenario.completedAt]);
 
-  const handleCopyLink = () => {
-    if (!scenario.downloadInfo?.zipUrl) return;
+  const handleCopyExcelLink = () => {
+    if (!scenario.downloadInfo?.excelUrl) return;
 
     try {
       // Use old-school execCommand approach for sandboxed iframes
       const textarea = document.createElement('textarea');
-      textarea.value = scenario.downloadInfo.zipUrl;
+      textarea.value = scenario.downloadInfo.excelUrl;
       textarea.style.position = 'fixed';
       textarea.style.opacity = '0';
       document.body.appendChild(textarea);
@@ -129,7 +122,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
       document.body.removeChild(textarea);
 
       if (successful) {
-        console.log('[ScenarioCard] Link copied to clipboard using execCommand');
+        console.log('[ScenarioCard] Excel link copied to clipboard using execCommand');
 
         // Show "Copied!" feedback for 2 seconds
         setCopied(true);
@@ -138,7 +131,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
         console.error('[ScenarioCard] execCommand copy failed');
       }
     } catch (error) {
-      console.error('[ScenarioCard] Failed to copy link:', error);
+      console.error('[ScenarioCard] Failed to copy Excel link:', error);
     }
   };
 
@@ -422,6 +415,33 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
             <span className="text-xs font-medium text-gray-700">Results</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
+            {/* Primary action - most encouraged */}
+            <button
+              onClick={handleCopyExcelLink}
+              title={copied ? "Copied!" : `Copy Excel file URL to clipboard${timeRemaining ? ` (${timeRemaining})` : ''}`}
+              className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded transition-colors shadow-md ${
+                copied
+                  ? 'bg-green-600 text-white hover:bg-green-700 ring-2 ring-green-300'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-300'
+              }`}
+            >
+              {copied ? (
+                <Check className="w-4 h-4" />
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  <span className="text-[9px] font-bold">XLS</span>
+                </>
+              )}
+            </button>
+            {/* Secondary action - close second priority */}
+            <button
+              onClick={handleAnalyze}
+              title="Analyze simulation results with interactive charts"
+              className="flex items-center justify-center p-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-sm ring-1 ring-orange-300"
+            >
+              <TrendingUp className="w-4 h-4" />
+            </button>
             {/* Preview feature button - de-emphasized */}
             <button
               onClick={handleCreateResultsPage}
@@ -433,36 +453,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
                 PREVIEW
               </span>
             </button>
-            {/* Primary action - most encouraged */}
-            <button
-              onClick={handleCopyLink}
-              title={copied ? "Copied!" : "Copy zip file download URL to clipboard"}
-              className={`flex items-center justify-center p-1.5 rounded transition-colors shadow-md ${
-                copied
-                  ? 'bg-green-600 text-white hover:bg-green-700 ring-2 ring-green-300'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 ring-2 ring-blue-300'
-              }`}
-            >
-              {copied ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-            </button>
-            {/* Secondary action - close second priority */}
-            <button
-              onClick={handleAnalyze}
-              title="Analyze simulation results with interactive charts"
-              className="flex items-center justify-center p-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-sm ring-1 ring-orange-300"
-            >
-              <TrendingUp className="w-4 h-4" />
-            </button>
           </div>
-          {timeRemaining && (
-            <div className="text-xs text-center text-gray-500 mt-1">
-              {timeRemaining}
-            </div>
-          )}
         </div>
       )}
 
