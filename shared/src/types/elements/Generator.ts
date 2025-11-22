@@ -5,9 +5,17 @@ import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
 import { ConstantDistribution } from "./distributions";
 import { StateModification } from "./StateModification";
+import { GeneratorType } from "./GeneratorType";
 
 export class Generator extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Generator;
+
+    /**
+     * Generator type discriminator
+     * - FREQUENCY: Traditional periodic interval-based generation (default)
+     * - TIME_DISTRIBUTED: Time-pattern-based distribution
+     */
+    generatorType: GeneratorType = GeneratorType.FREQUENCY;
 
     /**
      * Initial state modifications for created entities
@@ -37,6 +45,11 @@ export class Generator extends PositionedSimulationObject {
         return generator;
     }
 
+    /**
+     * List of TimeDistributedConfig IDs (used for TIME_DISTRIBUTED generators)
+     */
+    timeDistributedConfigIds: string[] = [];
+
     constructor(
         public id: string,
         public name: string,
@@ -49,7 +62,7 @@ export class Generator extends PositionedSimulationObject {
         public maxEntities: number = Infinity,
         x: number = 0,
         y: number = 0
-    ) { 
+    ) {
         super();
         // Set location using inherited method
         this.setLocation(x, y);

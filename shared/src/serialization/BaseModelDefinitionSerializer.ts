@@ -13,6 +13,8 @@ import { OperationStep } from '../types/elements/OperationStep';
 import { State } from '../types/elements/State';
 import { ComponentType } from '../types/elements/ComponentType';
 import { StateType } from '../types/elements/StateType';
+import { TimePattern } from '../types/elements/TimePattern';
+import { TimeDistributedConfig } from '../types/elements/TimeDistributedConfig';
 
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 import { ISerializedModel } from './interfaces/ISerializedModel';
@@ -27,6 +29,8 @@ import { ISerializedOperationStep } from './interfaces/ISerializedOperationStep'
 import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 import { ISerializedState } from './interfaces/ISerializedState';
+import { ISerializedTimePattern } from './interfaces/ISerializedTimePattern';
+import { ISerializedTimeDistributedConfig } from './interfaces/ISerializedTimeDistributedConfig';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
 import { SerializationError } from './errors/SerializationError';
 import { InvalidModelError } from './errors/InvalidModelError';
@@ -186,6 +190,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 id: generator.id,
                 name: generator.name,
                 type: generator.type,
+                generator_type: generator.generatorType, // NEW field
                 x: generator.x,
                 y: generator.y,
                 activityKeyId: generator.activityKeyId,
@@ -201,6 +206,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             // Add optional properties if they exist
             if (generator.initialStateModifications && generator.initialStateModifications.length > 0) {
                 serialized.initialStateModifications = generator.initialStateModifications.map(m => m.toJSON());
+            }
+
+            // Add time distributed config IDs if they exist (for TIME_DISTRIBUTED generators)
+            if (generator.timeDistributedConfigIds && generator.timeDistributedConfigIds.length > 0) {
+                serialized.time_distributed_config_ids = generator.timeDistributedConfigIds;
             }
 
             return serialized;
@@ -367,6 +377,45 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             );
         } catch (error) {
             throw new SerializationError('State', `Failed to deserialize state ${data.id}`, error instanceof Error ? error : undefined);
+        }
+    }
+
+    protected serializeTimePattern(pattern: TimePattern): ISerializedTimePattern {
+        try {
+            if (!pattern.id || !pattern.name) {
+                throw new InvalidModelError('TimePattern must have id and name');
+            }
+
+            return {
+                unique_id: pattern.id,
+                name: pattern.name,
+                weekly_weights: pattern.weeklyWeights.length > 0 ? pattern.weeklyWeights : undefined,
+                day_of_week_weights: pattern.dayOfWeekWeights.length > 0 ? pattern.dayOfWeekWeights : undefined,
+                day_of_week_hour_weights: pattern.dayOfWeekHourWeights.length > 0 ? pattern.dayOfWeekHourWeights : undefined,
+                minute_distribution_def: this.serializeDuration(pattern.minuteDistribution)
+            };
+        } catch (error) {
+            throw new SerializationError('TimePattern', `Failed to serialize time pattern ${pattern.id}`, error instanceof Error ? error : undefined);
+        }
+    }
+
+    protected serializeTimeDistributedConfig(config: TimeDistributedConfig): ISerializedTimeDistributedConfig {
+        try {
+            if (!config.id || !config.name) {
+                throw new InvalidModelError('TimeDistributedConfig must have id and name');
+            }
+
+            return {
+                unique_id: config.id,
+                name: config.name,
+                time_pattern_id: config.timePatternId,
+                total_volume: config.totalVolume,
+                volume_period_basis: config.volumePeriodBasis,
+                start_date: config.startDate,
+                end_date: config.endDate
+            };
+        } catch (error) {
+            throw new SerializationError('TimeDistributedConfig', `Failed to serialize time distributed config ${config.id}`, error instanceof Error ? error : undefined);
         }
     }
 

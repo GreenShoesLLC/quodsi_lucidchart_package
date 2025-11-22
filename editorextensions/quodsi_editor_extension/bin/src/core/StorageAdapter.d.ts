@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 /**
  * Shape data storage format
@@ -15,6 +15,8 @@ export declare class StorageAdapter {
     private static readonly SIMULATION_STATUS_KEY;
     private static readonly STATES_KEY;
     private static readonly RESOURCE_REQUIREMENTS_KEY;
+    private static readonly TIME_PATTERNS_KEY;
+    private static readonly TIME_DISTRIBUTED_CONFIGS_KEY;
     private static readonly CURRENT_VERSION;
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -63,6 +65,30 @@ export declare class StorageAdapter {
      * Clears the resource requirements array for a page
      */
     clearResourceRequirements(page: ElementProxy): void;
+    /**
+     * Sets the time patterns array for a page
+     */
+    setTimePatterns(page: ElementProxy, patterns: ISerializedTimePattern[]): void;
+    /**
+     * Gets the time patterns array for a page
+     */
+    getTimePatterns(page: ElementProxy): ISerializedTimePattern[];
+    /**
+     * Clears the time patterns array for a page
+     */
+    clearTimePatterns(page: ElementProxy): void;
+    /**
+     * Sets the time distributed configs array for a page
+     */
+    setTimeDistributedConfigs(page: ElementProxy, configs: ISerializedTimeDistributedConfig[]): void;
+    /**
+     * Gets the time distributed configs array for a page
+     */
+    getTimeDistributedConfigs(page: ElementProxy): ISerializedTimeDistributedConfig[];
+    /**
+     * Clears the time distributed configs array for a page
+     */
+    clearTimeDistributedConfigs(page: ElementProxy): void;
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */

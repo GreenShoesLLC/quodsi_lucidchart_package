@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
 
 /**
@@ -22,6 +22,8 @@ export class StorageAdapter {
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly STATES_KEY = 'q_states';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
+    private static readonly TIME_PATTERNS_KEY = 'q_time_patterns';
+    private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
@@ -212,6 +214,108 @@ export class StorageAdapter {
             this.log('Successfully cleared resource requirements');
         } catch (error) {
             this.logError('Error clearing resource requirements:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the time patterns array for a page
+     */
+    public setTimePatterns(page: ElementProxy, patterns: ISerializedTimePattern[]): void {
+        try {
+            this.log('Setting time patterns for page:', {
+                pageId: page.id,
+                patternsCount: patterns.length
+            });
+            const serializedPatterns = JSON.stringify(patterns);
+            page.shapeData.set(StorageAdapter.TIME_PATTERNS_KEY, serializedPatterns);
+            this.log('Successfully set time patterns');
+        } catch (error) {
+            this.logError('Error setting time patterns:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the time patterns array for a page
+     */
+    public getTimePatterns(page: ElementProxy): ISerializedTimePattern[] {
+        try {
+            this.log('Getting time patterns for page:', page.id);
+            const patternsStr = page.shapeData.get(StorageAdapter.TIME_PATTERNS_KEY);
+            if (!patternsStr || typeof patternsStr !== 'string') {
+                this.log('No time patterns found, returning empty array');
+                return [];
+            }
+            const patterns = JSON.parse(patternsStr) as ISerializedTimePattern[];
+            this.log('Retrieved time patterns:', { count: patterns.length });
+            return patterns;
+        } catch (error) {
+            this.logError('Error getting time patterns:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the time patterns array for a page
+     */
+    public clearTimePatterns(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.TIME_PATTERNS_KEY);
+            this.log('Successfully cleared time patterns');
+        } catch (error) {
+            this.logError('Error clearing time patterns:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the time distributed configs array for a page
+     */
+    public setTimeDistributedConfigs(page: ElementProxy, configs: ISerializedTimeDistributedConfig[]): void {
+        try {
+            this.log('Setting time distributed configs for page:', {
+                pageId: page.id,
+                configsCount: configs.length
+            });
+            const serializedConfigs = JSON.stringify(configs);
+            page.shapeData.set(StorageAdapter.TIME_DISTRIBUTED_CONFIGS_KEY, serializedConfigs);
+            this.log('Successfully set time distributed configs');
+        } catch (error) {
+            this.logError('Error setting time distributed configs:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the time distributed configs array for a page
+     */
+    public getTimeDistributedConfigs(page: ElementProxy): ISerializedTimeDistributedConfig[] {
+        try {
+            this.log('Getting time distributed configs for page:', page.id);
+            const configsStr = page.shapeData.get(StorageAdapter.TIME_DISTRIBUTED_CONFIGS_KEY);
+            if (!configsStr || typeof configsStr !== 'string') {
+                this.log('No time distributed configs found, returning empty array');
+                return [];
+            }
+            const configs = JSON.parse(configsStr) as ISerializedTimeDistributedConfig[];
+            this.log('Retrieved time distributed configs:', { count: configs.length });
+            return configs;
+        } catch (error) {
+            this.logError('Error getting time distributed configs:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the time distributed configs array for a page
+     */
+    public clearTimeDistributedConfigs(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.TIME_DISTRIBUTED_CONFIGS_KEY);
+            this.log('Successfully cleared time distributed configs');
+        } catch (error) {
+            this.logError('Error clearing time distributed configs:', error);
             throw error;
         }
     }
@@ -458,6 +562,8 @@ export class StorageAdapter {
             this.clearSimulationStatus(page);
             this.clearStates(page);
             this.clearResourceRequirements(page);
+            this.clearTimePatterns(page);
+            this.clearTimeDistributedConfigs(page);
 
             // Clear data from all blocks
             for (const [, block] of page.allBlocks) {

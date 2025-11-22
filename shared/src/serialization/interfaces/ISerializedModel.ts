@@ -6,6 +6,8 @@ import { ISerializedResource } from './ISerializedResource';
 import { ISerializedGenerator } from './ISerializedGenerator';
 import { ISerializedResourceRequirement } from './ISerializedResourceRequirement';
 import { ISerializedState } from './ISerializedState';
+import { ISerializedTimePattern } from './ISerializedTimePattern';
+import { ISerializedTimeDistributedConfig } from './ISerializedTimeDistributedConfig';
 
 export interface ISerializedMetadata {
     version: string;
@@ -35,4 +37,6 @@ export interface ISerializedModel {
     generators: ISerializedGenerator[];
     resourceRequirements: ISerializedResourceRequirement[];
     states: ISerializedState[];
+    time_patterns?: ISerializedTimePattern[];
+    time_distributed_configs?: ISerializedTimeDistributedConfig[];
 }

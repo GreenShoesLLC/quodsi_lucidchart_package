@@ -74,12 +74,6 @@ const TAB_CONFIG = [
     tooltip: "Configure model name, simulation time settings, and runtime parameters"
   },
   {
-    id: "validation" as const,
-    title: "Validation",
-    icon: AlertTriangle,
-    tooltip: "View comprehensive model validation results and resolve any issues"
-  },
-  {
     id: "states" as const,
     title: "State Definitions",
     icon: Hash,
@@ -96,6 +90,12 @@ const TAB_CONFIG = [
     title: "Simulation Scenarios",
     icon: PlaySquare,
     tooltip: "Configure and manage simulation scenarios with different parameter sets and run configurations"
+  },
+  {
+    id: "validation" as const,
+    title: "Validation",
+    icon: AlertTriangle,
+    tooltip: "View comprehensive model validation results and resolve any issues"
   },
   {
     id: "utilities" as const,

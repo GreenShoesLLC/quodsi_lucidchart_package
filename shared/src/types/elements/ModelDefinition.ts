@@ -11,6 +11,10 @@ import { StateListManager } from "./StateListManager";
 import { State } from "./State";
 import { ComponentType } from "./ComponentType";
 import { StateModification } from "./StateModification";
+import { TimePatternListManager } from "./TimePatternListManager";
+import { TimeDistributedConfigListManager } from "./TimeDistributedConfigListManager";
+import { TimePattern } from "./TimePattern";
+import { TimeDistributedConfig } from "./TimeDistributedConfig";
 
 export class ModelDefinition {
     public readonly activities: ActivityListManager;
@@ -20,6 +24,8 @@ export class ModelDefinition {
     public readonly entities: EntityListManager;
     public readonly resourceRequirements: ResourceRequirementListManager;
     public readonly states: StateListManager;
+    public readonly timePatterns: TimePatternListManager;
+    public readonly timeDistributedConfigs: TimeDistributedConfigListManager;
 
     constructor(
         public readonly model: Model
@@ -31,6 +37,8 @@ export class ModelDefinition {
         this.generators = new GeneratorListManager();
         this.entities = new EntityListManager();
         this.states = new StateListManager();
+        this.timePatterns = new TimePatternListManager();
+        this.timeDistributedConfigs = new TimeDistributedConfigListManager();
 
         // Add default entity
         const defaultEntity = new Entity(
