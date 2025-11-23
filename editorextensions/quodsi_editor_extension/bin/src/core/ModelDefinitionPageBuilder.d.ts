@@ -47,6 +47,14 @@ export declare class ModelDefinitionPageBuilder {
      */
     private loadStates;
     /**
+     * Loads time patterns from storage and adds them to the model definition.
+     */
+    private loadTimePatterns;
+    /**
+     * Loads time distributed configs from storage and adds them to the model definition.
+     */
+    private loadTimeDistributedConfigs;
+    /**
      * Logs a summary of the ModelDefinition contents
      */
     private logModelDefinitionSummary;

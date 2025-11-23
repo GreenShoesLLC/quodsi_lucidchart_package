@@ -4,7 +4,7 @@ import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationBanner } from './ValidationBanner';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';
@@ -37,8 +37,12 @@ export const ModelPanel: React.FC = () => {
     onViewResults
   } = useModelPanel();
 
-  // Get message sender for states
-  const { updateStates: sendStatesUpdate } = useModelOpsSender();
+  // Get message senders
+  const {
+    updateStates: sendStatesUpdate,
+    updateTimePatterns: sendTimePatternsUpdate,
+    updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate
+  } = useModelOpsSender();
 
   // Local UI state for validation banner
   const [validationBannerExpanded, setValidationBannerExpanded] = useState(false);
@@ -92,6 +96,16 @@ export const ModelPanel: React.FC = () => {
     }));
 
     sendStatesUpdate(serializedStates);
+  };
+
+  const handleTimePatternsChange = (updatedTimePatterns: ISerializedTimePattern[]) => {
+    // Time patterns are already in serialized format, send directly to extension
+    sendTimePatternsUpdate(updatedTimePatterns);
+  };
+
+  const handleTimeDistributedConfigsChange = (updatedConfigs: ISerializedTimeDistributedConfig[]) => {
+    // Time distributed configs are already in serialized format, send directly to extension
+    sendTimeDistributedConfigsUpdate(updatedConfigs);
   };
 
   // Auto-expand validation banner when errors are detected
@@ -235,6 +249,8 @@ export const ModelPanel: React.FC = () => {
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            onTimePatternsChange={handleTimePatternsChange}
+            onTimeDistributedConfigsChange={handleTimeDistributedConfigsChange}
           />
         )}
       </div>

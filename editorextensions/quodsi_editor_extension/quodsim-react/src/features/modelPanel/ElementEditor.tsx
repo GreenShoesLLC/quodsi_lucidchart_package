@@ -4,6 +4,8 @@ import {
   EditorReferenceData,
   DiagramElementType,
   StateListManager,
+  ISerializedTimePattern,
+  ISerializedTimeDistributedConfig,
   ValidationResult,
 } from "@quodsi/shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
@@ -25,6 +27,8 @@ interface ElementEditorProps {
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  onTimePatternsChange?: (patterns: ISerializedTimePattern[]) => void;
+  onTimeDistributedConfigsChange?: (configs: ISerializedTimeDistributedConfig[]) => void;
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
@@ -44,6 +48,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   currentElement,
   states,
   onStatesChange,
+  onTimePatternsChange = () => {},
+  onTimeDistributedConfigsChange = () => {},
   resourceRequirements,
   outgoingConnectors,
   validationState,
@@ -119,6 +125,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             referenceData={referenceData}
             states={states}
             onStatesChange={onStatesChange}
+            onTimePatternsChange={onTimePatternsChange}
+            onTimeDistributedConfigsChange={onTimeDistributedConfigsChange}
           />
         );
 

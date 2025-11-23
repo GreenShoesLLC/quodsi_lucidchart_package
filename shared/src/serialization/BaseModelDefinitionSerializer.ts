@@ -190,7 +190,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 id: generator.id,
                 name: generator.name,
                 type: generator.type,
-                generator_type: generator.generatorType, // NEW field
+                generatorType: generator.generatorType, // NEW field
                 x: generator.x,
                 y: generator.y,
                 activityKeyId: generator.activityKeyId,
@@ -210,7 +210,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             // Add time distributed config IDs if they exist (for TIME_DISTRIBUTED generators)
             if (generator.timeDistributedConfigIds && generator.timeDistributedConfigIds.length > 0) {
-                serialized.time_distributed_config_ids = generator.timeDistributedConfigIds;
+                serialized.timeDistributedConfigIds = generator.timeDistributedConfigIds;
             }
 
             return serialized;
@@ -389,10 +389,10 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 unique_id: pattern.id,
                 name: pattern.name,
-                weekly_weights: pattern.weeklyWeights.length > 0 ? pattern.weeklyWeights : undefined,
-                day_of_week_weights: pattern.dayOfWeekWeights.length > 0 ? pattern.dayOfWeekWeights : undefined,
-                day_of_week_hour_weights: pattern.dayOfWeekHourWeights.length > 0 ? pattern.dayOfWeekHourWeights : undefined,
-                minute_distribution_def: this.serializeDuration(pattern.minuteDistribution)
+                weeklyWeights: pattern.weeklyWeights.length > 0 ? pattern.weeklyWeights : undefined,
+                dayOfWeekWeights: pattern.dayOfWeekWeights.length > 0 ? pattern.dayOfWeekWeights : undefined,
+                dayOfWeekHourWeights: pattern.dayOfWeekHourWeights.length > 0 ? pattern.dayOfWeekHourWeights : undefined,
+                minuteDistributionDef: this.serializeDuration(pattern.minuteDistribution)
             };
         } catch (error) {
             throw new SerializationError('TimePattern', `Failed to serialize time pattern ${pattern.id}`, error instanceof Error ? error : undefined);
@@ -408,11 +408,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 unique_id: config.id,
                 name: config.name,
-                time_pattern_id: config.timePatternId,
-                total_volume: config.totalVolume,
-                volume_period_basis: config.volumePeriodBasis,
-                start_date: config.startDate,
-                end_date: config.endDate
+                timePatternId: config.timePatternId,
+                totalVolume: config.totalVolume,
+                volumePeriodBasis: config.volumePeriodBasis,
+                startDate: config.startDate,
+                endDate: config.endDate
             };
         } catch (error) {
             throw new SerializationError('TimeDistributedConfig', `Failed to serialize time distributed config ${config.id}`, error instanceof Error ? error : undefined);

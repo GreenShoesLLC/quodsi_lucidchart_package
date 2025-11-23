@@ -3,6 +3,8 @@ import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { JsonObject } from '../../types/common';
 import { ISerializedState } from '../../serialization/interfaces/ISerializedState';
 import { ISerializedResourceRequirement } from '../../serialization/interfaces/ISerializedResourceRequirement';
+import { ISerializedTimePattern } from '../../serialization/interfaces/ISerializedTimePattern';
+import { ISerializedTimeDistributedConfig } from '../../serialization/interfaces/ISerializedTimeDistributedConfig';
 
 /**
  * Sent to request element update
@@ -122,6 +124,56 @@ export interface ResourceRequirementsUpdateResultMessage extends EnvelopeBase {
   };
 }
 
+/**
+ * Sent to request time patterns update
+ */
+export interface TimePatternsUpdateMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.TIME_PATTERNS_UPDATE;
+  data: {
+    /** Serialized time patterns array */
+    timePatterns: ISerializedTimePattern[];
+  };
+}
+
+/**
+ * Sent with time patterns update results
+ */
+export interface TimePatternsUpdateResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.TIME_PATTERNS_UPDATE_RESULT;
+  data: {
+    /** Success flag */
+    success: boolean;
+
+    /** Error message if update failed */
+    errorMessage?: string;
+  };
+}
+
+/**
+ * Sent to request time distributed configs update
+ */
+export interface TimeDistributedConfigsUpdateMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE;
+  data: {
+    /** Serialized time distributed configs array */
+    timeDistributedConfigs: ISerializedTimeDistributedConfig[];
+  };
+}
+
+/**
+ * Sent with time distributed configs update results
+ */
+export interface TimeDistributedConfigsUpdateResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE_RESULT;
+  data: {
+    /** Success flag */
+    success: boolean;
+
+    /** Error message if update failed */
+    errorMessage?: string;
+  };
+}
+
 /** Union type of all element operations messages */
 export type ElementOpsMessage =
   | ElementUpdateMessage
@@ -131,4 +183,8 @@ export type ElementOpsMessage =
   | StatesUpdateMessage
   | StatesUpdateResultMessage
   | ResourceRequirementsUpdateMessage
-  | ResourceRequirementsUpdateResultMessage;
+  | ResourceRequirementsUpdateResultMessage
+  | TimePatternsUpdateMessage
+  | TimePatternsUpdateResultMessage
+  | TimeDistributedConfigsUpdateMessage
+  | TimeDistributedConfigsUpdateResultMessage;

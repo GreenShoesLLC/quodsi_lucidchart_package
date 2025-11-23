@@ -37,6 +37,6 @@ export interface ISerializedModel {
     generators: ISerializedGenerator[];
     resourceRequirements: ISerializedResourceRequirement[];
     states: ISerializedState[];
-    time_patterns?: ISerializedTimePattern[];
-    time_distributed_configs?: ISerializedTimeDistributedConfig[];
+    timePatterns?: ISerializedTimePattern[];
+    timeDistributedConfigs?: ISerializedTimeDistributedConfig[];
 }

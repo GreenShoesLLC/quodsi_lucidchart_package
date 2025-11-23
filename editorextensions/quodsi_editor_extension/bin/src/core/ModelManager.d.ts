@@ -109,6 +109,14 @@ export declare class ModelManager {
      */
     saveElementData(element: ElementProxy, data: any, type: SimulationObjectType, page: PageProxy): Promise<void>;
     /**
+     * Clean up all references to a deleted time pattern
+     */
+    private cleanupTimePatternReferences;
+    /**
+     * Clean up all references to a deleted time distributed config
+     */
+    private cleanupTimeDistributedConfigReferences;
+    /**
      * Clean up all references to a deleted state
      */
     private cleanupStateReferences;
@@ -124,6 +132,14 @@ export declare class ModelManager {
      * Updates the resource requirements array for the model
      */
     updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void>;
+    /**
+     * Updates the time patterns array for the model
+     */
+    updateTimePatterns(patterns: any[], page: PageProxy): Promise<void>;
+    /**
+     * Updates the time distributed configs array for the model
+     */
+    updateTimeDistributedConfigs(configs: any[], page: PageProxy): Promise<void>;
     /**
      * Handles converting an element to a new simulation type
      * Uses LucidElementFactory for proper element creation with all required fields

@@ -6,6 +6,7 @@ import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
 import { StatesHandler } from './statesHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
+import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { ScenarioHandler } from './scenarioHandler';
@@ -61,6 +62,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Time pattern operations messages
+    if (TimePatternHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -86,6 +92,7 @@ export {
   ElementOpsHandler,
   StatesHandler,
   ResourceRequirementsHandler,
+  TimePatternHandler,
   StorageHandler,
   ScenarioHandler
 };

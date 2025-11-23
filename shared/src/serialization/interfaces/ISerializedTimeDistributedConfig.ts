@@ -5,9 +5,9 @@
 export interface ISerializedTimeDistributedConfig {
     unique_id: string;
     name: string;
-    time_pattern_id: string;
-    total_volume: number;
-    volume_period_basis: string; // 'TOTAL' | 'ANNUAL' | 'WEEKLY' | 'DAILY'
-    start_date: string;          // ISO 8601: YYYY-MM-DD
-    end_date: string;            // ISO 8601: YYYY-MM-DD
+    timePatternId: string;
+    totalVolume: number;
+    volumePeriodBasis: string; // 'TOTAL' | 'ANNUAL' | 'WEEKLY' | 'DAILY'
+    startDate: string;          // ISO 8601: YYYY-MM-DD
+    endDate: string;            // ISO 8601: YYYY-MM-DD
 }

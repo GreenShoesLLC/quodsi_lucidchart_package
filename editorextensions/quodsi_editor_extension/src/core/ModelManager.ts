@@ -612,6 +612,69 @@ export class ModelManager {
     }
 
     /**
+     * Clean up all references to a deleted time pattern
+     */
+    private async cleanupTimePatternReferences(patternId: string, page: PageProxy): Promise<void> {
+        this.debug.log('Cleaning up references to time pattern:', patternId);
+
+        // Get time distributed configs and remove any that reference this pattern
+        const configs = this.storageAdapter.getTimeDistributedConfigs(page) || [];
+        const updatedConfigs = configs.filter(c => c.timePatternId !== patternId);
+
+        if (updatedConfigs.length < configs.length) {
+            this.debug.log(`Removed ${configs.length - updatedConfigs.length} time distributed configs referencing pattern ${patternId}`);
+            this.storageAdapter.setTimeDistributedConfigs(page, updatedConfigs);
+        }
+
+        // Process all generators to remove references to configs that were deleted
+        const deletedConfigIds = configs
+            .filter(c => c.timePatternId === patternId)
+            .map(c => c.unique_id);
+
+        if (deletedConfigIds.length > 0) {
+            for (const [, block] of page.allBlocks) {
+                const elementData = this.storageAdapter.getElementData<any>(block);
+
+                if (elementData?.type === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
+                    const originalLength = elementData.timeDistributedConfigIds.length;
+                    elementData.timeDistributedConfigIds = elementData.timeDistributedConfigIds.filter(
+                        (id: string) => !deletedConfigIds.includes(id)
+                    );
+
+                    if (elementData.timeDistributedConfigIds.length < originalLength) {
+                        this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
+                        this.debug.log('Updated generator after time pattern cleanup:', block.id);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Clean up all references to a deleted time distributed config
+     */
+    private async cleanupTimeDistributedConfigReferences(configId: string, page: PageProxy): Promise<void> {
+        this.debug.log('Cleaning up references to time distributed config:', configId);
+
+        // Process all generators
+        for (const [, block] of page.allBlocks) {
+            const elementData = this.storageAdapter.getElementData<any>(block);
+
+            if (elementData?.type === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
+                const originalLength = elementData.timeDistributedConfigIds.length;
+                elementData.timeDistributedConfigIds = elementData.timeDistributedConfigIds.filter(
+                    (id: string) => id !== configId
+                );
+
+                if (elementData.timeDistributedConfigIds.length < originalLength) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
+                    this.debug.log('Updated generator after time distributed config cleanup:', block.id);
+                }
+            }
+        }
+    }
+
+    /**
      * Clean up all references to a deleted state
      */
     private async cleanupStateReferences(stateId: string, page: PageProxy): Promise<void> {
@@ -787,6 +850,84 @@ export class ModelManager {
             });
         } catch (error) {
             this.debug.error('Error in updateResourceRequirements:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Updates the time patterns array for the model
+     */
+    public async updateTimePatterns(patterns: any[], page: PageProxy): Promise<void> {
+        this.debug.log('updateTimePatterns - Start', {
+            patternsCount: patterns.length,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Get current patterns to detect deletions
+            const currentPatterns = this.storageAdapter.getTimePatterns(page) || [];
+            const newPatternIds = new Set(patterns.map(p => p.unique_id));
+
+            // Find deleted patterns
+            const deletedPatterns = currentPatterns.filter(p => !newPatternIds.has(p.unique_id));
+
+            // Clean up references for each deleted pattern
+            for (const deletedPattern of deletedPatterns) {
+                this.debug.log('Detected deleted time pattern, cleaning up references:', deletedPattern.unique_id);
+                await this.cleanupTimePatternReferences(deletedPattern.unique_id, page);
+            }
+
+            // Save time patterns to page storage
+            this.storageAdapter.setTimePatterns(page, patterns);
+
+            // Mark model as dirty to force rebuild on next access
+            this.markModelDirty();
+
+            this.debug.log('updateTimePatterns - Complete with cascading cleanup', {
+                deletedCount: deletedPatterns.length
+            });
+        } catch (error) {
+            this.debug.error('Error in updateTimePatterns:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Updates the time distributed configs array for the model
+     */
+    public async updateTimeDistributedConfigs(configs: any[], page: PageProxy): Promise<void> {
+        this.debug.log('updateTimeDistributedConfigs - Start', {
+            configsCount: configs.length,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Get current configs to detect deletions
+            const currentConfigs = this.storageAdapter.getTimeDistributedConfigs(page) || [];
+            const newConfigIds = new Set(configs.map(c => c.unique_id));
+
+            // Find deleted configs
+            const deletedConfigs = currentConfigs.filter(c => !newConfigIds.has(c.unique_id));
+
+            // Clean up references for each deleted config
+            for (const deletedConfig of deletedConfigs) {
+                this.debug.log('Detected deleted time distributed config, cleaning up references:', deletedConfig.unique_id);
+                await this.cleanupTimeDistributedConfigReferences(deletedConfig.unique_id, page);
+            }
+
+            // Save time distributed configs to page storage
+            this.storageAdapter.setTimeDistributedConfigs(page, configs);
+
+            // Mark model as dirty to force rebuild on next access
+            this.markModelDirty();
+
+            this.debug.log('updateTimeDistributedConfigs - Complete with cascading cleanup', {
+                deletedCount: deletedConfigs.length
+            });
+        } catch (error) {
+            this.debug.error('Error in updateTimeDistributedConfigs:', error);
             throw error;
         }
     }

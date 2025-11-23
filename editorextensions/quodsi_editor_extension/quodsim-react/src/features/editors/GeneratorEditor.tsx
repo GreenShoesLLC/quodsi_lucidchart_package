@@ -2,16 +2,21 @@ import React, { useState } from "react";
 import {
   Duration,
   Generator,
+  GeneratorType,
+  ISerializedTimePattern,
+  ISerializedTimeDistributedConfig,
   EditorReferenceData,
   PeriodUnit,
   Distribution,
   StateListManager,
   ComponentType,
 } from "@quodsi/shared";
-import { Timer, Flag, Settings, Hash, Zap, Info } from "lucide-react";
+import { Timer, Flag, Settings, Hash, Zap, Info, Clock } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
+import TimePatternEditorModal from "./TimePatternEditorModal";
+import TimeDistributedConfigEditorModal from "./TimeDistributedConfigEditorModal";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
 
@@ -35,13 +40,13 @@ const TAB_CONFIG = [
     id: "frequency" as const,
     title: "Frequency Settings",
     icon: Timer,
-    tooltip: "Set the time interval between entity creation events and total number of occurrences"
+    tooltip: "Set the time interval between entity creation events, total occurrences, and start delay"
   },
   {
-    id: "start" as const,
-    title: "Start Configuration",
-    icon: Flag,
-    tooltip: "Define when the generator begins creating entities (initial delay)"
+    id: "distribution" as const,
+    title: "Time Distribution",
+    icon: Clock,
+    tooltip: "Define temporal patterns and time-distributed configurations for entity creation"
   },
   {
     id: "events" as const,
@@ -86,26 +91,30 @@ interface Props {
   onSave: (generator: Generator) => void;
   /** Callback when user clicks Cancel */
   onCancel: () => void;
-  /** Reference data for dropdowns (entities, etc.) */
+  /** Reference data for dropdowns (entities, etc.) - includes timePatterns and timeDistributedConfigs */
   referenceData: EditorReferenceData;
   /** State manager for model-level states */
   states: StateListManager;
   /** Callback when states are modified */
   onStatesChange: (states: StateListManager) => void;
+  /** Callback when time patterns are modified */
+  onTimePatternsChange: (patterns: ISerializedTimePattern[]) => void;
+  /** Callback when time distributed configs are modified */
+  onTimeDistributedConfigsChange: (configs: ISerializedTimeDistributedConfig[]) => void;
 }
 
 /**
  * Available tabs in the generator editor
  */
-type GeneratorTab = "basic" | "frequency" | "start" | "states" | "events";
+type GeneratorTab = "basic" | "frequency" | "distribution" | "states" | "events";
 
 /**
  * GeneratorEditor - Comprehensive editor for Generator simulation objects
  *
  * This component provides a tabbed interface for editing all aspects of a Generator:
- * - Basic: Name, entity type, entities per creation, max entities
- * - Frequency: Interarrival time and periodic occurrences
- * - Start: Initial delay before first entity creation
+ * - Basic: Name, generator type, entity type, entities per creation, max entities
+ * - Frequency: Interarrival time, periodic occurrences, and start delay (FREQUENCY generators only)
+ * - Distribution: Time patterns and configurations (TIME_DISTRIBUTED generators only)
  * - Events: Initial state modifications for created entities
  * - States: State variable definitions
  *
@@ -116,6 +125,8 @@ type GeneratorTab = "basic" | "frequency" | "start" | "states" | "events";
  * - Mixed save behavior: Most fields use Save button, state modifications auto-save
  *
  * Key Features:
+ * - Generator type selector determines which tabs are visible (FREQUENCY vs TIME_DISTRIBUTED)
+ * - Automatic tab switching when generator type changes
  * - Dirty state tracking (hasPendingChanges) enables/disables Save button
  * - Guard conditions prevent data loss when switching generators
  * - Immutable updates via updateGeneratorImmutably helper
@@ -129,7 +140,80 @@ const GeneratorEditor: React.FC<Props> = ({
   referenceData,
   states,
   onStatesChange,
+  onTimePatternsChange,
+  onTimeDistributedConfigsChange,
 }) => {
+  // Access timePatterns and timeDistributedConfigs from referenceData (serialized format)
+  const serializedTimePatterns = referenceData.timePatterns || [];
+  const serializedTimeDistributedConfigs = referenceData.timeDistributedConfigs || [];
+
+  // ============================================================================
+  // CONVERSION UTILITIES (Serialized ↔ Class Instances)
+  // ============================================================================
+
+  /**
+   * Converts ISerializedTimePattern to TimePattern-like object for modal editing
+   */
+  const deserializeTimePattern = (serialized: ISerializedTimePattern): any => {
+    const pattern: any = {
+      id: serialized.unique_id,
+      name: serialized.name,
+      weeklyWeights: serialized.weeklyWeights || [],
+      dayOfWeekWeights: serialized.dayOfWeekWeights || [],
+      dayOfWeekHourWeights: serialized.dayOfWeekHourWeights || [],
+      minuteDistribution: {
+        durationPeriodUnit: serialized.minuteDistributionDef.durationPeriodUnit,
+        distribution: serialized.minuteDistributionDef.distribution
+      }
+    };
+    return pattern;
+  };
+
+  /**
+   * Converts TimePattern-like object to ISerializedTimePattern
+   */
+  const serializeTimePattern = (pattern: any): ISerializedTimePattern => ({
+    unique_id: pattern.id,
+    name: pattern.name,
+    weeklyWeights: pattern.weeklyWeights,
+    dayOfWeekWeights: pattern.dayOfWeekWeights,
+    dayOfWeekHourWeights: pattern.dayOfWeekHourWeights,
+    minuteDistributionDef: {
+      durationPeriodUnit: pattern.minuteDistribution.durationPeriodUnit,
+      distribution: pattern.minuteDistribution.distribution
+    }
+  });
+
+  /**
+   * Converts ISerializedTimeDistributedConfig to TimeDistributedConfig class instance
+   */
+  const deserializeTimeDistributedConfig = (serialized: ISerializedTimeDistributedConfig): any => ({
+    id: serialized.unique_id,
+    name: serialized.name,
+    timePatternId: serialized.timePatternId,
+    totalVolume: serialized.totalVolume,
+    volumePeriodBasis: serialized.volumePeriodBasis,
+    startDate: serialized.startDate,
+    endDate: serialized.endDate
+  });
+
+  /**
+   * Converts TimeDistributedConfig class instance to ISerializedTimeDistributedConfig
+   */
+  const serializeTimeDistributedConfig = (config: any): ISerializedTimeDistributedConfig => ({
+    unique_id: config.id,
+    name: config.name,
+    timePatternId: config.timePatternId,
+    totalVolume: config.totalVolume,
+    volumePeriodBasis: config.volumePeriodBasis,
+    startDate: config.startDate,
+    endDate: config.endDate
+  });
+
+  // Convert serialized arrays to class instances for use in modals
+  const timePatterns = serializedTimePatterns.map(deserializeTimePattern);
+  const timeDistributedConfigs = serializedTimeDistributedConfigs.map(deserializeTimeDistributedConfig);
+
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
@@ -167,6 +251,12 @@ const GeneratorEditor: React.FC<Props> = ({
       data.y || 0
     );
 
+    // Preserve generator type and time distributed config IDs
+    extractedGenerator.generatorType = data.generatorType || GeneratorType.FREQUENCY;
+    extractedGenerator.timeDistributedConfigIds = data.timeDistributedConfigIds
+      ? [...data.timeDistributedConfigIds]
+      : [];
+
     // Always create new array to ensure reference changes for proper change detection
     extractedGenerator.initialStateModifications = data.initialStateModifications
       ? [...data.initialStateModifications]
@@ -194,12 +284,14 @@ const GeneratorEditor: React.FC<Props> = ({
       name: string;
       activityKeyId: string;
       entityId: string;
+      generatorType: GeneratorType;
       periodicOccurrences: number;
       periodIntervalDuration: Duration;
       entitiesPerCreation: number;
       periodicStartDuration: Duration;
       maxEntities: number;
       initialStateModifications: any[];
+      timeDistributedConfigIds: string[];
     }>
   ): Generator => {
     const updated = new Generator(
@@ -215,6 +307,10 @@ const GeneratorEditor: React.FC<Props> = ({
       base.x,
       base.y
     );
+
+    // Preserve/update generator type and time distributed configs
+    updated.generatorType = updates.generatorType ?? base.generatorType;
+    updated.timeDistributedConfigIds = updates.timeDistributedConfigIds ?? base.timeDistributedConfigIds;
 
     // Preserve/update state modifications
     updated.initialStateModifications =
@@ -256,6 +352,22 @@ const GeneratorEditor: React.FC<Props> = ({
    * Currently active tab in the editor.
    */
   const [activeTab, setActiveTab] = useState<GeneratorTab>("basic");
+
+  /**
+   * Modal state for TimePattern editor
+   */
+  const [patternModalState, setPatternModalState] = useState<{
+    isOpen: boolean;
+    pattern: any | null;
+  }>({ isOpen: false, pattern: null });
+
+  /**
+   * Modal state for TimeDistributedConfig editor
+   */
+  const [configModalState, setConfigModalState] = useState<{
+    isOpen: boolean;
+    config: any | null;
+  }>({ isOpen: false, config: null });
 
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
@@ -307,6 +419,14 @@ const GeneratorEditor: React.FC<Props> = ({
 
       if (name === 'name') {
         updates.name = value;
+      } else if (name === 'generatorType') {
+        updates.generatorType = value as GeneratorType;
+        // Switch to appropriate tab when generator type changes
+        if (value === GeneratorType.FREQUENCY && activeTab === 'distribution') {
+          setActiveTab('frequency');
+        } else if (value === GeneratorType.TIME_DISTRIBUTED && activeTab === 'frequency') {
+          setActiveTab('distribution');
+        }
       } else if (name === 'entityId') {
         updates.entityId = value;
       } else if (name === 'periodicOccurrences') {
@@ -417,6 +537,128 @@ const GeneratorEditor: React.FC<Props> = ({
     setHasPendingChanges(false);
   };
 
+  /**
+   * Opens the TimePattern editor modal for creating a new pattern
+   */
+  const handleAddPattern = () => {
+    setPatternModalState({ isOpen: true, pattern: null });
+  };
+
+  /**
+   * Opens the TimePattern editor modal for editing an existing pattern
+   */
+  const handleEditPattern = (pattern: any) => {
+    setPatternModalState({ isOpen: true, pattern });
+  };
+
+  /**
+   * Handles saving a TimePattern (create or update)
+   */
+  const handleSavePattern = (pattern: any) => {
+    const existingIndex = timePatterns.findIndex(p => p.id === pattern.id);
+    let updatedPatterns: any[];
+
+    if (existingIndex >= 0) {
+      // Update existing
+      updatedPatterns = [...timePatterns];
+      updatedPatterns[existingIndex] = pattern;
+    } else {
+      // Add new
+      updatedPatterns = [...timePatterns, pattern];
+    }
+
+    // Serialize before sending to parent
+    const serializedPatterns = updatedPatterns.map(serializeTimePattern);
+    onTimePatternsChange(serializedPatterns);
+    setPatternModalState({ isOpen: false, pattern: null });
+  };
+
+  /**
+   * Handles deleting a TimePattern
+   */
+  const handleDeletePattern = (patternId: string) => {
+    if (window.confirm("Are you sure you want to delete this pattern? Configurations using it will become invalid.")) {
+      const updatedPatterns = timePatterns.filter(p => p.id !== patternId);
+      // Serialize before sending to parent
+      const serializedPatterns = updatedPatterns.map(serializeTimePattern);
+      onTimePatternsChange(serializedPatterns);
+    }
+  };
+
+  /**
+   * Opens the TimeDistributedConfig editor modal for creating a new config
+   */
+  const handleAddConfig = () => {
+    setConfigModalState({ isOpen: true, config: null });
+  };
+
+  /**
+   * Opens the TimeDistributedConfig editor modal for editing an existing config
+   */
+  const handleEditConfig = (config: any) => {
+    setConfigModalState({ isOpen: true, config });
+  };
+
+  /**
+   * Handles saving a TimeDistributedConfig (create or update)
+   */
+  const handleSaveConfig = (config: any) => {
+    const existingIndex = timeDistributedConfigs.findIndex(c => c.id === config.id);
+    let updatedConfigs: any[];
+
+    if (existingIndex >= 0) {
+      // Update existing
+      updatedConfigs = [...timeDistributedConfigs];
+      updatedConfigs[existingIndex] = config;
+    } else {
+      // Add new
+      updatedConfigs = [...timeDistributedConfigs, config];
+    }
+
+    // Serialize before sending to parent
+    const serializedConfigs = updatedConfigs.map(serializeTimeDistributedConfig);
+    onTimeDistributedConfigsChange(serializedConfigs);
+    setConfigModalState({ isOpen: false, config: null });
+  };
+
+  /**
+   * Handles deleting a TimeDistributedConfig
+   */
+  const handleDeleteConfig = (configId: string) => {
+    if (window.confirm("Are you sure you want to delete this configuration?")) {
+      const updatedConfigs = timeDistributedConfigs.filter(c => c.id !== configId);
+      // Serialize before sending to parent
+      const serializedConfigs = updatedConfigs.map(serializeTimeDistributedConfig);
+      onTimeDistributedConfigsChange(serializedConfigs);
+
+      // Remove from generator's config IDs if present
+      if (localGeneratorDraft.timeDistributedConfigIds.includes(configId)) {
+        const updatedConfigIds = localGeneratorDraft.timeDistributedConfigIds.filter(id => id !== configId);
+        setLocalGeneratorDraft(prev => updateGeneratorImmutably(prev, {
+          timeDistributedConfigIds: updatedConfigIds
+        }));
+        setHasPendingChanges(true);
+      }
+    }
+  };
+
+  /**
+   * Toggles a config association with the current generator
+   */
+  const handleToggleConfigAssociation = (configId: string) => {
+    const currentIds = localGeneratorDraft.timeDistributedConfigIds;
+    const isCurrentlySelected = currentIds.includes(configId);
+
+    const updatedIds = isCurrentlySelected
+      ? currentIds.filter(id => id !== configId)
+      : [...currentIds, configId];
+
+    setLocalGeneratorDraft(prev => updateGeneratorImmutably(prev, {
+      timeDistributedConfigIds: updatedIds
+    }));
+    setHasPendingChanges(true);
+  };
+
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -426,7 +668,17 @@ const GeneratorEditor: React.FC<Props> = ({
       {/* Tab Navigation */}
       <div className="border-b bg-gray-50">
         <div className="flex">
-          {TAB_CONFIG.map((tab) => {
+          {TAB_CONFIG.filter(tab => {
+            // Hide Frequency tab for TIME_DISTRIBUTED generators
+            if (tab.id === 'frequency' && localGeneratorDraft.generatorType === GeneratorType.TIME_DISTRIBUTED) {
+              return false;
+            }
+            // Hide Distribution tab for FREQUENCY generators
+            if (tab.id === 'distribution' && localGeneratorDraft.generatorType === GeneratorType.FREQUENCY) {
+              return false;
+            }
+            return true;
+          }).map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -475,6 +727,27 @@ const GeneratorEditor: React.FC<Props> = ({
                   onChange={handleInputChange}
                   placeholder="Enter generator name"
                 />
+              </div>
+
+              {/* Generator Type Selection */}
+              <div className="pt-2 border-t">
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Generator Type
+                  </label>
+                  <span title="FREQUENCY: Creates entities at regular intervals using interarrival time. TIME_DISTRIBUTED: Creates entities based on temporal patterns (weekly, daily, hourly weights) and date ranges.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </div>
+                <select
+                  name="generatorType"
+                  className="w-full px-2 py-1.5 text-xs border rounded bg-white"
+                  value={localGeneratorDraft.generatorType}
+                  onChange={handleInputChange}
+                >
+                  <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
+                  <option value={GeneratorType.TIME_DISTRIBUTED}>Time-Distributed</option>
+                </select>
               </div>
 
               {/* Entity Selection */}
@@ -556,7 +829,7 @@ const GeneratorEditor: React.FC<Props> = ({
             <TabHeader
               icon={Timer}
               title="Frequency Settings"
-              tooltip="Set the time interval between entity creation events and total number of occurrences"
+              tooltip="Set the time interval between entity creation events, total occurrences, and start delay"
             />
             <div className="space-y-2">
               {/* Interarrival Time */}
@@ -606,19 +879,9 @@ const GeneratorEditor: React.FC<Props> = ({
                   min="0"
                 />
               </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === "start" && (
-          <div>
-            <TabHeader
-              icon={Flag}
-              title="Start Configuration"
-              tooltip="Define when the generator begins creating entities (initial delay)"
-            />
-            <div className="space-y-2">
-              <div>
+              {/* Start Delay */}
+              <div className="pt-2 border-t">
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
                     Start Delay
@@ -641,6 +904,149 @@ const GeneratorEditor: React.FC<Props> = ({
                   }
                   compact={true}
                 />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "distribution" && (
+          <div>
+            <TabHeader
+              icon={Clock}
+              title="Time Distribution"
+              tooltip="Define temporal patterns and time-distributed configurations for entity creation"
+            />
+            <div className="space-y-3">
+              {/* Time Patterns Section */}
+              <div className="bg-gray-50 p-2 rounded border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium text-gray-700">Time Patterns</span>
+                    <span title="Reusable temporal distribution patterns defining weekly, daily, and hourly weights">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddPattern}
+                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Add Pattern
+                  </button>
+                </div>
+                {timePatterns.length === 0 ? (
+                  <div className="text-xs text-gray-500 italic">
+                    No patterns defined yet. Click "Add Pattern" to create one.
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {timePatterns.map((pattern) => (
+                      <div
+                        key={pattern.id}
+                        className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 hover:border-blue-300"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-gray-700 truncate">
+                            {pattern.name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {pattern.weeklyWeights.length > 0 && `Weekly: ${pattern.weeklyWeights.length} weights`}
+                            {pattern.dayOfWeekWeights.length > 0 && ` • Daily: ${pattern.dayOfWeekWeights.length} weights`}
+                            {pattern.dayOfWeekHourWeights.length > 0 && ` • Hourly: ${pattern.dayOfWeekHourWeights.length} weights`}
+                            {pattern.weeklyWeights.length === 0 && pattern.dayOfWeekWeights.length === 0 && pattern.dayOfWeekHourWeights.length === 0 && "Uniform distribution"}
+                          </div>
+                        </div>
+                        <div className="flex gap-1 ml-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditPattern(pattern)}
+                            className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePattern(pattern.id)}
+                            className="px-2 py-1 text-xs border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Time Distributed Configs Section */}
+              <div className="bg-gray-50 p-2 rounded border">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-medium text-gray-700">Distribution Configurations</span>
+                    <span title="Configurations combining a time pattern with volume and date range. Select which configs this generator uses.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddConfig}
+                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Add Config
+                  </button>
+                </div>
+                {timeDistributedConfigs.length === 0 ? (
+                  <div className="text-xs text-gray-500 italic">
+                    No configurations defined yet. Click "Add Config" to create one.
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    {timeDistributedConfigs.map((config) => {
+                      const isSelected = localGeneratorDraft.timeDistributedConfigIds.includes(config.id);
+                      const pattern = timePatterns.find(p => p.id === config.timePatternId);
+
+                      return (
+                        <div
+                          key={config.id}
+                          className={`flex items-center gap-2 bg-white p-2 rounded border ${
+                            isSelected ? "border-blue-400 bg-blue-50" : "border-gray-200"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => handleToggleConfigAssociation(config.id)}
+                            className="flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium text-gray-700 truncate">
+                              {config.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {pattern?.name || "Unknown pattern"} • {config.totalVolume} {config.volumePeriodBasis.toLowerCase()} • {config.startDate} to {config.endDate}
+                            </div>
+                          </div>
+                          <div className="flex gap-1 ml-2 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleEditConfig(config)}
+                              className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteConfig(config.id)}
+                              className="px-2 py-1 text-xs border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -704,6 +1110,24 @@ const GeneratorEditor: React.FC<Props> = ({
             Save
           </button>
         </div>
+      )}
+
+      {/* Modals */}
+      {patternModalState.isOpen && (
+        <TimePatternEditorModal
+          pattern={patternModalState.pattern}
+          onSave={handleSavePattern}
+          onCancel={() => setPatternModalState({ isOpen: false, pattern: null })}
+        />
+      )}
+
+      {configModalState.isOpen && (
+        <TimeDistributedConfigEditorModal
+          config={configModalState.config}
+          availablePatterns={timePatterns}
+          onSave={handleSaveConfig}
+          onCancel={() => setConfigModalState({ isOpen: false, config: null })}
+        />
       )}
     </div>
   );

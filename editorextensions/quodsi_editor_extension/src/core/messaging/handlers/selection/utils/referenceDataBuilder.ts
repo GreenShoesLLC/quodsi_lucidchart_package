@@ -74,6 +74,30 @@ export const referenceDataBuilder = {
           collectStatistics: state.collectStatistics
         }));
 
+        // Include time patterns - serialize TimePattern objects to ISerializedTimePattern format
+        referenceData.timePatterns = modelDef.timePatterns.getAll().map(pattern => ({
+          unique_id: pattern.id,
+          name: pattern.name,
+          weeklyWeights: pattern.weeklyWeights,
+          dayOfWeekWeights: pattern.dayOfWeekWeights,
+          dayOfWeekHourWeights: pattern.dayOfWeekHourWeights,
+          minuteDistributionDef: {
+            durationPeriodUnit: pattern.minuteDistribution.durationPeriodUnit,
+            distribution: pattern.minuteDistribution.distribution
+          }
+        }));
+
+        // Include time distributed configs - serialize TimeDistributedConfig objects to ISerializedTimeDistributedConfig format
+        referenceData.timeDistributedConfigs = modelDef.timeDistributedConfigs.getAll().map(config => ({
+          unique_id: config.id,
+          name: config.name,
+          timePatternId: config.timePatternId,
+          totalVolume: config.totalVolume,
+          volumePeriodBasis: config.volumePeriodBasis,
+          startDate: config.startDate,
+          endDate: config.endDate
+        }));
+
         this.debug.log('Reference data built:', {
           activities: referenceData.activities?.length || 0,
           generators: referenceData.generators?.length || 0,
@@ -81,7 +105,9 @@ export const referenceDataBuilder = {
           entities: referenceData.entities?.length || 0,
           resourceRequirements: referenceData.resourceRequirements?.length || 0,
           connectors: referenceData.connectors?.length || 0,
-          states: referenceData.states?.length || 0
+          states: referenceData.states?.length || 0,
+          timePatterns: referenceData.timePatterns?.length || 0,
+          timeDistributedConfigs: referenceData.timeDistributedConfigs?.length || 0
         });
       } else {
         this.debug.warn('No model definition available');

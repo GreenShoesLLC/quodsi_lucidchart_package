@@ -4,7 +4,11 @@ import {
     SimulationObjectType,
     ResourceRequirement,
     RequirementClause,
-    State
+    State,
+    TimePattern,
+    TimeDistributedConfig,
+    Duration,
+    VolumePeriodBasis
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
@@ -186,6 +190,12 @@ export class ModelDefinitionPageBuilder {
             // Load states from storage
             this.loadStates(page, modelDefinition);
 
+            // Load time patterns from storage
+            this.loadTimePatterns(page, modelDefinition);
+
+            // Load time distributed configs from storage
+            this.loadTimeDistributedConfigs(page, modelDefinition);
+
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
@@ -329,6 +339,88 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final states count: ${modelDefinition.states.size()}`);
+    }
+
+    /**
+     * Loads time patterns from storage and adds them to the model definition.
+     */
+    private loadTimePatterns(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading time patterns from storage');
+
+        // Get time patterns from page storage
+        const serializedPatterns = this.storageAdapter.getTimePatterns(page);
+        this.log(`Found ${serializedPatterns.length} time patterns in storage`);
+
+        // Deserialize and add each time pattern to the model definition
+        for (const serializedPattern of serializedPatterns) {
+            try {
+                const pattern = new TimePattern(
+                    serializedPattern.unique_id,
+                    serializedPattern.name
+                );
+
+                // Set optional weight arrays
+                if (serializedPattern.weeklyWeights) {
+                    pattern.weeklyWeights = serializedPattern.weeklyWeights;
+                }
+                if (serializedPattern.dayOfWeekWeights) {
+                    pattern.dayOfWeekWeights = serializedPattern.dayOfWeekWeights;
+                }
+                if (serializedPattern.dayOfWeekHourWeights) {
+                    pattern.dayOfWeekHourWeights = serializedPattern.dayOfWeekHourWeights;
+                }
+
+                // Deserialize Duration for minute distribution
+                if (serializedPattern.minuteDistributionDef) {
+                    const dist = serializedPattern.minuteDistributionDef;
+                    pattern.minuteDistribution = new Duration(
+                        dist.durationPeriodUnit,
+                        dist.distribution || undefined
+                    );
+                }
+
+                modelDefinition.timePatterns.add(pattern);
+                this.log(`Added time pattern: ${pattern.name}`);
+            } catch (error) {
+                this.log(`Error deserializing time pattern: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final time patterns count: ${modelDefinition.timePatterns.size()}`);
+    }
+
+    /**
+     * Loads time distributed configs from storage and adds them to the model definition.
+     */
+    private loadTimeDistributedConfigs(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading time distributed configs from storage');
+
+        // Get time distributed configs from page storage
+        const serializedConfigs = this.storageAdapter.getTimeDistributedConfigs(page);
+        this.log(`Found ${serializedConfigs.length} time distributed configs in storage`);
+
+        // Deserialize and add each config to the model definition
+        for (const serializedConfig of serializedConfigs) {
+            try {
+                const config = new TimeDistributedConfig(
+                    serializedConfig.unique_id,
+                    serializedConfig.name
+                );
+
+                config.timePatternId = serializedConfig.timePatternId;
+                config.totalVolume = serializedConfig.totalVolume;
+                config.volumePeriodBasis = serializedConfig.volumePeriodBasis as VolumePeriodBasis;
+                config.startDate = serializedConfig.startDate;
+                config.endDate = serializedConfig.endDate;
+
+                modelDefinition.timeDistributedConfigs.add(config);
+                this.log(`Added time distributed config: ${config.name}`);
+            } catch (error) {
+                this.log(`Error deserializing time distributed config: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final time distributed configs count: ${modelDefinition.timeDistributedConfigs.size()}`);
     }
 
     /**

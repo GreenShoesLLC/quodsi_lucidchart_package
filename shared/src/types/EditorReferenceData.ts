@@ -1,6 +1,8 @@
 import { ResourceRequirement } from "./elements/ResourceRequirement";
 import { Connector } from "./elements/Connector";
 import { ConnectType } from "./elements/ConnectType";
+import { ISerializedTimePattern } from "../serialization/interfaces/ISerializedTimePattern";
+import { ISerializedTimeDistributedConfig } from "../serialization/interfaces/ISerializedTimeDistributedConfig";
 
 /**
  * Reference data for React editors containing model-wide lookup data.
@@ -22,4 +24,6 @@ export interface EditorReferenceData {
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
     states?: any[]; // Serialized state definitions for all components
+    timePatterns?: ISerializedTimePattern[]; // Serialized time pattern definitions
+    timeDistributedConfigs?: ISerializedTimeDistributedConfig[]; // Serialized time distributed config definitions
 }

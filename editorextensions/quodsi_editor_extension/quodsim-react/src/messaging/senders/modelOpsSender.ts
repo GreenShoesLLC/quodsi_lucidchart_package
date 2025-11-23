@@ -1,4 +1,4 @@
-import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement } from '@quodsi/shared';
+import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -158,6 +158,30 @@ export function useModelOpsSender() {
   };
 
   /**
+   * Send a request to update the time patterns array
+   *
+   * @param timePatterns Array of serialized time pattern definitions
+   */
+  const updateTimePatterns = (timePatterns: ISerializedTimePattern[]) => {
+    // Use TIME_PATTERNS_UPDATE for updating time patterns
+    send(EnvelopeMessageType.TIME_PATTERNS_UPDATE, {
+      timePatterns
+    });
+  };
+
+  /**
+   * Send a request to update the time distributed configs array
+   *
+   * @param timeDistributedConfigs Array of serialized time distributed config definitions
+   */
+  const updateTimeDistributedConfigs = (timeDistributedConfigs: ISerializedTimeDistributedConfig[]) => {
+    // Use TIME_DISTRIBUTED_CONFIGS_UPDATE for updating time distributed configs
+    send(EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE, {
+      timeDistributedConfigs
+    });
+  };
+
+  /**
    * Send a request for the serialized model JSON
    *
    * @param documentId Document ID to get model JSON from
@@ -179,6 +203,8 @@ export function useModelOpsSender() {
     convertPage,
     updateStates,
     updateResourceRequirements,
+    updateTimePatterns,
+    updateTimeDistributedConfigs,
     requestModelJson
   };
 }
