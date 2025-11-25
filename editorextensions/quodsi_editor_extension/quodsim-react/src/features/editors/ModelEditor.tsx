@@ -186,6 +186,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
   const [modelJson, setModelJson] = useState<object | null>(null);
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const { selection } = useMessaging();
   const { requestModelJson, updateResourceRequirements } = useModelOpsSender();
 
@@ -741,17 +742,52 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                 including all activities, resources, entities, generators, connectors, scenarios,
                 and configuration. The document will be restored to its original state.
               </p>
-              <p className="text-xs font-semibold text-red-600 mb-2">
-                ⚠️ This action cannot be undone.
-              </p>
-              <button
-                type="button"
-                className="w-full text-xs px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors font-medium"
-                onClick={onRemoveModel}
-                title="Remove all Quodsi data from this document"
-              >
-                Remove All Quodsi Data
-              </button>
+              {!showRemoveConfirm ? (
+                <button
+                  type="button"
+                  className="w-full text-xs px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors font-medium"
+                  onClick={() => setShowRemoveConfirm(true)}
+                  title="Remove all Quodsi data from this document"
+                >
+                  Remove All Quodsi Data
+                </button>
+              ) : (
+                <div className="p-2 bg-red-50 border border-red-200 rounded">
+                  <div className="text-xs font-medium text-red-900 mb-2">
+                    Remove All Quodsi Data?
+                  </div>
+                  <div className="text-xs text-red-700 mb-2">
+                    This will permanently remove all simulation data including:
+                  </div>
+                  <ul className="text-xs text-red-600 ml-4 mb-2 list-disc">
+                    <li>Activities, resources, and entities</li>
+                    <li>Generators and connectors</li>
+                    <li>Scenarios and configuration</li>
+                  </ul>
+                  <div className="text-xs font-semibold text-red-700 mb-3">
+                    This action cannot be undone.
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onRemoveModel?.();
+                        setShowRemoveConfirm(false);
+                      }}
+                      className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Remove All Data
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRemoveConfirm(false)}
+                      className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
 
 
 export class ActivityValidation extends ValidationRule {
-    private static readonly MAX_BUFFER_SIZE = 10000;
+    private static readonly MAX_BUFFER_SIZE = 999999;
     private static readonly MIN_CYCLE_TIME = 0.001;
     private static readonly MAX_CYCLE_TIME = 86400; // 24 hours in seconds
 
