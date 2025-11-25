@@ -43,8 +43,8 @@ export class Activity extends PositionedSimulationObject {
             id,
             'New Activity',
             1, // capacity
-            1, // inputBufferCapacity
-            1, // outputBufferCapacity
+            999999, // inputBufferCapacity
+            999999, // outputBufferCapacity
             [defaultOperationStep], // operationSteps
         );
 

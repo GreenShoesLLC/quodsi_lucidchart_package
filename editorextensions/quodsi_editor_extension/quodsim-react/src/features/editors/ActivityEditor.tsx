@@ -957,140 +957,139 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     </label>
                   </div>
 
-                  {/* Cost Components */}
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <span className="text-xs font-medium text-gray-600">Cost Components</span>
-                      <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <label className="text-xs text-gray-600">Fixed Cost</label>
-                        <span title="One-time cost incurred each time this activity is activated or started, regardless of how many entities are processed">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
+                  {/* Cost Components - Only shown when financial tracking is enabled */}
+                  {localActivityDraft.financialProperties?.enabled && (
+                    <>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span className="text-xs font-medium text-gray-600">Cost Components</span>
+                          <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <label className="text-xs text-gray-600">Fixed Cost</label>
+                            <span title="One-time cost incurred each time this activity is activated or started, regardless of how many entities are processed">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={localActivityDraft.financialProperties?.fixedCost || 0}
+                            onChange={(e) =>
+                              handleFinancialChange(
+                                "fixedCost",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <label className="text-xs text-gray-600">Cost Per Entity</label>
+                            <span title="Cost charged for each entity that completes processing through this activity. Total cost = (number of entities processed) × (cost per entity)">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={localActivityDraft.financialProperties?.costPerEntityProcessed || 0}
+                            onChange={(e) =>
+                              handleFinancialChange(
+                                "costPerEntityProcessed",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <label className="text-xs text-gray-600">Cost/Hr Active</label>
+                            <span title="Hourly cost incurred while the activity is actively processing entities. Charged proportionally based on actual processing time.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={localActivityDraft.financialProperties?.costPerHourActive || 0}
+                            onChange={(e) =>
+                              handleFinancialChange(
+                                "costPerHourActive",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <label className="text-xs text-gray-600">Cost/Hr Idle</label>
+                            <span title="Hourly cost incurred while the activity is available but not actively processing entities. Useful for modeling overhead or standby costs.">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={localActivityDraft.financialProperties?.costPerHourIdle || 0}
+                            onChange={(e) =>
+                              handleFinancialChange(
+                                "costPerHourIdle",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.financialProperties?.fixedCost || 0}
-                        onChange={(e) =>
-                          handleFinancialChange(
-                            "fixedCost",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        disabled={!localActivityDraft.financialProperties?.enabled}
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <label className="text-xs text-gray-600">Cost Per Entity</label>
-                        <span title="Cost charged for each entity that completes processing through this activity. Total cost = (number of entities processed) × (cost per entity)">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.financialProperties?.costPerEntityProcessed || 0}
-                        onChange={(e) =>
-                          handleFinancialChange(
-                            "costPerEntityProcessed",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        disabled={!localActivityDraft.financialProperties?.enabled}
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <label className="text-xs text-gray-600">Cost/Hr Active</label>
-                        <span title="Hourly cost incurred while the activity is actively processing entities. Charged proportionally based on actual processing time.">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.financialProperties?.costPerHourActive || 0}
-                        onChange={(e) =>
-                          handleFinancialChange(
-                            "costPerHourActive",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        disabled={!localActivityDraft.financialProperties?.enabled}
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <label className="text-xs text-gray-600">Cost/Hr Idle</label>
-                        <span title="Hourly cost incurred while the activity is available but not actively processing entities. Useful for modeling overhead or standby costs.">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
-                      </div>
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.financialProperties?.costPerHourIdle || 0}
-                        onChange={(e) =>
-                          handleFinancialChange(
-                            "costPerHourIdle",
-                            parseFloat(e.target.value) || 0
-                          )
-                        }
-                        disabled={!localActivityDraft.financialProperties?.enabled}
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Resource Cost Settings */}
-                  <div className="space-y-0.5 pt-0.5 border-t">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <span className="text-xs font-medium text-gray-600">Resource Cost</span>
-                      <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <label className="text-xs text-gray-600">Cost Multiplier</label>
-                        <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
+                      {/* Resource Cost Settings */}
+                      <div className="space-y-0.5 pt-0.5 border-t">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span className="text-xs font-medium text-gray-600">Resource Cost</span>
+                          <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <label className="text-xs text-gray-600">Cost Multiplier</label>
+                            <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
+                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            className="w-full px-2 py-1 text-xs border rounded"
+                            value={localActivityDraft.financialProperties?.resourceCostMultiplier || 1}
+                            onChange={(e) =>
+                              handleFinancialChange(
+                                "resourceCostMultiplier",
+                                parseFloat(e.target.value) || 1
+                              )
+                            }
+                            min="0"
+                            step="0.1"
+                            placeholder="1.0"
+                          />
+                        </div>
                       </div>
-                      <input
-                        type="number"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.financialProperties?.resourceCostMultiplier || 1}
-                        onChange={(e) =>
-                          handleFinancialChange(
-                            "resourceCostMultiplier",
-                            parseFloat(e.target.value) || 1
-                          )
-                        }
-                        disabled={!localActivityDraft.financialProperties?.enabled}
-                        min="0"
-                        step="0.1"
-                        placeholder="1.0"
-                      />
-                    </div>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

@@ -430,73 +430,72 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 </label>
               </div>
 
-              {/* Cost Components */}
-              <div className="space-y-0.5 pt-1">
-                <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
-                <div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs text-gray-600">Cost Per Seize</label>
-                    <span title="Fixed cost applied each time an entity acquires (seizes) this resource. This is a one-time cost per usage, regardless of how long the resource is held.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
+              {/* Cost Components - Only shown when financial tracking is enabled */}
+              {localResourceDraft.financialProperties?.enabled && (
+                <div className="space-y-0.5 pt-1">
+                  <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">Cost Per Seize</label>
+                      <span title="Fixed cost applied each time an entity acquires (seizes) this resource. This is a one-time cost per usage, regardless of how long the resource is held.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localResourceDraft.financialProperties?.costPerSeize || 0}
+                      onChange={(e) =>
+                        handleFinancialChange("costPerSeize", parseFloat(e.target.value) || 0)
+                      }
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={localResourceDraft.financialProperties?.costPerSeize || 0}
-                    onChange={(e) =>
-                      handleFinancialChange("costPerSeize", parseFloat(e.target.value) || 0)
-                    }
-                    disabled={!localResourceDraft.financialProperties?.enabled}
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs text-gray-600">Cost Per Hour Utilized</label>
-                    <span title="Hourly cost incurred while the resource is actively being used by entities. This cost accumulates continuously based on how long the resource is seized.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">Cost Per Hour Utilized</label>
+                      <span title="Hourly cost incurred while the resource is actively being used by entities. This cost accumulates continuously based on how long the resource is seized.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localResourceDraft.financialProperties?.costPerHourUtilized || 0}
+                      onChange={(e) =>
+                        handleFinancialChange(
+                          "costPerHourUtilized",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={localResourceDraft.financialProperties?.costPerHourUtilized || 0}
-                    onChange={(e) =>
-                      handleFinancialChange(
-                        "costPerHourUtilized",
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
-                    disabled={!localResourceDraft.financialProperties?.enabled}
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs text-gray-600">Cost Per Hour Idle</label>
-                    <span title="Hourly cost incurred while the resource has available capacity (not being used). This represents overhead costs like maintenance, rent, or salaries paid even when the resource sits idle.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">Cost Per Hour Idle</label>
+                      <span title="Hourly cost incurred while the resource has available capacity (not being used). This represents overhead costs like maintenance, rent, or salaries paid even when the resource sits idle.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localResourceDraft.financialProperties?.costPerHourIdle || 0}
+                      onChange={(e) =>
+                        handleFinancialChange("costPerHourIdle", parseFloat(e.target.value) || 0)
+                      }
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={localResourceDraft.financialProperties?.costPerHourIdle || 0}
-                    onChange={(e) =>
-                      handleFinancialChange("costPerHourIdle", parseFloat(e.target.value) || 0)
-                    }
-                    disabled={!localResourceDraft.financialProperties?.enabled}
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
                 </div>
-              </div>
+              )}
             </div>
           </div>
         )}

@@ -6,6 +6,7 @@ import { PeriodUnit } from "./PeriodUnit";
 import { ConstantDistribution } from "./distributions";
 import { StateModification } from "./StateModification";
 import { GeneratorType } from "./GeneratorType";
+import { ExponentialDistribution } from "./distributions";
 
 export class Generator extends PositionedSimulationObject {
     type: SimulationObjectType = SimulationObjectType.Generator;
@@ -32,11 +33,11 @@ export class Generator extends PositionedSimulationObject {
             'New Generator',
             '{SomeActivityName}',
             ModelDefaults.DEFAULT_ENTITY_ID,
-            10, // periodicOccurrences
-            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // periodIntervalDuration
+            999999, // periodicOccurrences
+            new Duration(PeriodUnit.HOURS, ExponentialDistribution.create(1)), // periodIntervalDuration
             1, // entitiesPerCreation
-            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)), // periodicStartDuration
-            999 // maxEntities
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)), // periodicStartDuration
+            999999 // maxEntities
         );
 
         // Set location using inherited method
