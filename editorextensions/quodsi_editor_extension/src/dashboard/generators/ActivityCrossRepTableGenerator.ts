@@ -36,16 +36,16 @@ export class ActivityCrossRepTableGenerator extends BaseTableGenerator {
                 'utilization_std_dev',
                 'capacity_mean',
                 'capacity_max',
-                'contents_mean',
-                'contents_max',
+                'avg_number_allocated_mean',
+                'avg_number_allocated_max',
                 'queue_length_mean',
                 'queue_length_max',
                 'cycle_time_mean',
-                'waiting_time_mean',
-                'blocked_time_mean',
-                'arrivals_mean',
-                'captures_mean',
-                'releases_mean'
+                'total_time_waiting_for_resource_mean',
+                'total_time_blocked_mean',
+                'total_arrivals_mean',
+                'total_allocations_mean',
+                'throughput_mean'
             ]
         };
     }

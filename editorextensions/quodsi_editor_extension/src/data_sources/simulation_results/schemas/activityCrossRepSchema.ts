@@ -20,10 +20,10 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "capacity_max", type: ScalarFieldTypeEnum.NUMBER },
         { name: "capacity_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
-        // Contents metrics
-        { name: "contents_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "contents_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "contents_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        // Avg Number Allocated metrics (formerly contents)
+        { name: "avg_number_allocated_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "avg_number_allocated_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "avg_number_allocated_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Queue metrics
         { name: "queue_length_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -36,28 +36,28 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "cycle_time_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         { name: "cycle_time_cv", type: ScalarFieldTypeEnum.NUMBER },
         
-        // Waiting time metrics
-        { name: "waiting_time_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "waiting_time_median", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "waiting_time_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "waiting_time_cv", type: ScalarFieldTypeEnum.NUMBER },
-        
-        // Blocked time metrics
-        { name: "blocked_time_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "blocked_time_median", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "blocked_time_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "blocked_time_cv", type: ScalarFieldTypeEnum.NUMBER },
+        // Total Time Waiting for Resource metrics (formerly waiting time)
+        { name: "total_time_waiting_for_resource_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_waiting_for_resource_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_waiting_for_resource_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_waiting_for_resource_cv", type: ScalarFieldTypeEnum.NUMBER },
+
+        // Total Time Blocked metrics (formerly blocked time)
+        { name: "total_time_blocked_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_blocked_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_blocked_cv", type: ScalarFieldTypeEnum.NUMBER },
         
         // Flow statistics
-        { name: "arrivals_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "arrivals_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "arrivals_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "captures_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "captures_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "captures_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "releases_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "releases_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "releases_std_dev", type: ScalarFieldTypeEnum.NUMBER }
+        { name: "total_arrivals_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_arrivals_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_arrivals_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_allocations_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_allocations_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_allocations_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "throughput_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "throughput_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "throughput_std_dev", type: ScalarFieldTypeEnum.NUMBER }
     ],
     primaryKey: ["id"],
     fieldLabels: {
@@ -77,10 +77,10 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'capacity_max': 'Max Capacity',
         'capacity_std_dev': 'Capacity Std Dev',
         
-        // Contents metrics
-        'contents_mean': 'Mean Contents',
-        'contents_max': 'Max Contents',
-        'contents_std_dev': 'Contents Std Dev',
+        // Avg Number Allocated metrics
+        'avg_number_allocated_mean': 'Mean Avg Number Allocated',
+        'avg_number_allocated_max': 'Max Avg Number Allocated',
+        'avg_number_allocated_std_dev': 'Avg Number Allocated Std Dev',
         
         // Queue metrics
         'queue_length_mean': 'Mean Queue Length',
@@ -93,27 +93,27 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'cycle_time_std_dev': 'Cycle Time Std Dev',
         'cycle_time_cv': 'Cycle Time CV',
         
-        // Waiting time metrics
-        'waiting_time_mean': 'Mean Waiting Time',
-        'waiting_time_median': 'Median Waiting Time',
-        'waiting_time_std_dev': 'Waiting Time Std Dev',
-        'waiting_time_cv': 'Waiting Time CV',
-        
-        // Blocked time metrics
-        'blocked_time_mean': 'Mean Blocked Time',
-        'blocked_time_median': 'Median Blocked Time',
-        'blocked_time_std_dev': 'Blocked Time Std Dev',
-        'blocked_time_cv': 'Blocked Time CV',
+        // Total Time Waiting for Resource metrics
+        'total_time_waiting_for_resource_mean': 'Mean Total Time Waiting',
+        'total_time_waiting_for_resource_median': 'Median Total Time Waiting',
+        'total_time_waiting_for_resource_std_dev': 'Total Time Waiting Std Dev',
+        'total_time_waiting_for_resource_cv': 'Total Time Waiting CV',
+
+        // Total Time Blocked metrics
+        'total_time_blocked_mean': 'Mean Total Time Blocked',
+        'total_time_blocked_median': 'Median Total Time Blocked',
+        'total_time_blocked_std_dev': 'Total Time Blocked Std Dev',
+        'total_time_blocked_cv': 'Total Time Blocked CV',
         
         // Flow statistics
-        'arrivals_mean': 'Mean Arrivals',
-        'arrivals_max': 'Max Arrivals',
-        'arrivals_std_dev': 'Arrivals Std Dev',
-        'captures_mean': 'Mean Captures',
-        'captures_max': 'Max Captures',
-        'captures_std_dev': 'Captures Std Dev',
-        'releases_mean': 'Mean Releases',
-        'releases_max': 'Max Releases',
-        'releases_std_dev': 'Releases Std Dev'
+        'total_arrivals_mean': 'Mean Total Arrivals',
+        'total_arrivals_max': 'Max Total Arrivals',
+        'total_arrivals_std_dev': 'Total Arrivals Std Dev',
+        'total_allocations_mean': 'Mean Total Allocations',
+        'total_allocations_max': 'Max Total Allocations',
+        'total_allocations_std_dev': 'Total Allocations Std Dev',
+        'throughput_mean': 'Mean Throughput',
+        'throughput_max': 'Max Throughput',
+        'throughput_std_dev': 'Throughput Std Dev'
     }
 };

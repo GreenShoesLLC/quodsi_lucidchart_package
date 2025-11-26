@@ -3,43 +3,43 @@
 Orchestrates the build process for the Quodsi Lucidchart package bundle.
 
 .DESCRIPTION
-This script sets the required environment variables based on the target environment.
-Optionally, it can first call the separate React application build script (`Build-QuodsimReact.ps1`).
-By default, the separate React build is SKIPPED.
-It then changes the working directory to the main package root, cleans up specific
-build/public artifact directories, and finally executes the `npx lucid-package@latest bundle`
-command, which will perform its own build using the environment variables set by this script.
+This script:
+1. Sets the required environment variables based on the target environment
+2. Cleans build artifacts (extension.js, React build folders) to force a fresh build
+3. Copies the environment-specific manifest file
+4. Runs 'npx lucid-package build-editor-extension' which builds both the extension AND React app
+5. Runs 'npx lucid-package bundle' to create the final package.zip
+6. Restores the original manifest.json
+
+The React build is triggered automatically by the webpack plugin when building the editor extension.
 
 .PARAMETER TargetEnvironment
 Specifies the target environment for the build. This value determines which environment
-variables are set. Must be one of 'Dev', 'TST', or 'PRD'.
+variables and manifest file are used. Must be one of 'Dev', 'TST', or 'PRD'.
 
 .PARAMETER RunReactBuild
-A switch parameter. If included, the script will first execute the separate
-`Build-QuodsimReact.ps1` script before proceeding to the Lucid bundle step.
-If omitted (default), the separate React build step is skipped.
+DEPRECATED - The React build now happens automatically as part of the editor extension build.
+This parameter is kept for backwards compatibility but has no effect.
 
 .EXAMPLE
-# Build the bundle using DEV settings, skipping the separate React build (default)
-.\Build-Lucid-Bundle.ps1 -TargetEnvironment Dev
+# Build the bundle for Development environment
+.\build-bundle.ps1 -TargetEnvironment Dev
 
 .EXAMPLE
-# Build the bundle using TST settings, FORCING the separate React build first
-.\Build-Lucid-Bundle.ps1 -TargetEnvironment TST -RunReactBuild
+# Build the bundle for Test environment
+.\build-bundle.ps1 -TargetEnvironment TST
 
 .EXAMPLE
-# Build using PRD settings, skipping separate React build, using full path
-C:\path\to\scripts\lucid-package-bundle\Build-Lucid-Bundle.ps1 -TargetEnvironment PRD
+# Build the bundle for Production environment
+.\build-bundle.ps1 -TargetEnvironment PRD
 
 .NOTES
-Author: Gemini AI based on user input
-Date:   2025-03-30 (Modified)
+Date:   2025-11-25 (Modified)
 Requires:
  - PowerShell
  - Node.js/npm/npx installed and in PATH
- - The Build-QuodsimReact.ps1 script located at the specified path (if using -RunReactBuild).
- - The lucid-package tool (installed via npx).
-Ensure paths defined in the script ($ReactBuildScriptPath, $LucidPackageDir, $ReactBuildOutputDir, $PublicReactDir) are correct.
+ - The lucid-package tool (installed via npx)
+Ensure paths defined in the script ($LucidPackageDir, $ReactBuildOutputDir, $PublicReactDir) are correct.
 #>
 param(
     [Parameter(Mandatory=$true, Position=0)]
@@ -143,10 +143,24 @@ catch {
 }
 
 
-# --- Step 4: Clean Target Directories Before Bundle --- (NEW STEP)
+# --- Step 4: Clean Target Directories Before Bundle ---
 Write-Host "--------------------------------------------------"
 Write-Host "Step 4: Cleaning target directories before bundling..."
 Write-Host "--------------------------------------------------"
+
+# Clean extension.js to force a full rebuild (which triggers the React build)
+$ExtensionJsPath = "editorextensions\quodsi_editor_extension\bin\extension.js"
+Write-Host "Attempting to remove: $ExtensionJsPath"
+if (Test-Path -Path $ExtensionJsPath -PathType Leaf) {
+    try {
+        Remove-Item -Path $ExtensionJsPath -Force -ErrorAction Stop
+        Write-Host "Successfully removed: $ExtensionJsPath (forces rebuild)" -ForegroundColor Green
+    } catch {
+        Write-Warning "Could not remove '$ExtensionJsPath'. Error: $($_.Exception.Message)"
+    }
+} else {
+    Write-Host "File does not exist, no cleanup needed: $ExtensionJsPath" -ForegroundColor Yellow
+}
 
 # Clean React Build Output Directory (if it exists)
 Write-Host "Attempting to remove directory: $ReactBuildOutputDir"
@@ -162,7 +176,7 @@ if (Test-Path -Path $ReactBuildOutputDir -PathType Container) {
     Write-Host "Directory does not exist, no cleanup needed: $ReactBuildOutputDir" -ForegroundColor Yellow
 }
 
-# Clean Public React Directory (if it exists)
+# Clean Public React Directory (if it exists) - will be recreated by the build
 Write-Host "Attempting to remove directory: $PublicReactDir"
 if (Test-Path -Path $PublicReactDir -PathType Container) {
      try {
@@ -247,9 +261,30 @@ if ($ManifestSource) {
 Write-Host ""
 
 
-# --- Step 5: Run Lucid Package Bundle Command (Always Runs) --- (Renumbered)
+# --- Step 5: Build Editor Extension (includes React build) ---
 Write-Host "--------------------------------------------------"
-Write-Host "Step 5: Running Lucid Package Bundle (using set Env Vars)..."
+Write-Host "Step 5: Building Editor Extension (includes React build)..."
+Write-Host "--------------------------------------------------"
+
+Write-Host "Executing 'npx lucid-package@latest build-editor-extension quodsi_editor_extension' in $(Get-Location)..."
+try {
+    npx lucid-package@latest build-editor-extension quodsi_editor_extension *>&1 | Write-Host
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "'npx lucid-package@latest build-editor-extension' command failed with exit code $LASTEXITCODE."
+        exit $LASTEXITCODE
+    } else {
+        Write-Host "Editor extension build completed successfully." -ForegroundColor Green
+    }
+}
+catch {
+    Write-Error "An error occurred while attempting to run 'npx lucid-package@latest build-editor-extension'. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+# --- Step 5.5: Create Package Bundle ---
+Write-Host "--------------------------------------------------"
+Write-Host "Step 5.5: Creating Package Bundle..."
 Write-Host "--------------------------------------------------"
 
 Write-Host "Executing 'npx lucid-package@latest bundle' in $(Get-Location)..."

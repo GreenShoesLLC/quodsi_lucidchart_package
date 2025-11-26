@@ -21,10 +21,10 @@ export interface ActivityCrossRep {
   capacity_max: number;
   capacity_std_dev: number;
   
-  // Contents metrics
-  contents_mean: number;
-  contents_max: number;
-  contents_std_dev: number;
+  // Avg Number Allocated metrics (formerly contents)
+  avg_number_allocated_mean: number;
+  avg_number_allocated_max: number;
+  avg_number_allocated_std_dev: number;
   
   // Queue metrics
   queue_length_mean: number;
@@ -37,28 +37,28 @@ export interface ActivityCrossRep {
   cycle_time_std_dev: number;
   cycle_time_cv: number;
   
-  // Waiting time metrics
-  waiting_time_mean: number;
-  waiting_time_median: number;
-  waiting_time_std_dev: number;
-  waiting_time_cv: number;
-  
-  // Blocked time metrics
-  blocked_time_mean: number;
-  blocked_time_median: number;
-  blocked_time_std_dev: number;
-  blocked_time_cv: number;
+  // Total Time Waiting for Resource metrics (formerly waiting time)
+  total_time_waiting_for_resource_mean: number;
+  total_time_waiting_for_resource_median: number;
+  total_time_waiting_for_resource_std_dev: number;
+  total_time_waiting_for_resource_cv: number;
+
+  // Total Time Blocked metrics (formerly blocked time)
+  total_time_blocked_mean: number;
+  total_time_blocked_median: number;
+  total_time_blocked_std_dev: number;
+  total_time_blocked_cv: number;
   
   // Flow statistics
-  arrivals_mean: number;
-  arrivals_max: number;
-  arrivals_std_dev: number;
-  captures_mean: number;
-  captures_max: number;
-  captures_std_dev: number;
-  releases_mean: number;
-  releases_max: number;
-  releases_std_dev: number;
+  total_arrivals_mean: number;
+  total_arrivals_max: number;
+  total_arrivals_std_dev: number;
+  total_allocations_mean: number;
+  total_allocations_max: number;
+  total_allocations_std_dev: number;
+  throughput_mean: number;
+  throughput_max: number;
+  throughput_std_dev: number;
 }
 
 /**
@@ -84,10 +84,10 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     capacity_max: itemFields.get('capacity_max') as number,
     capacity_std_dev: itemFields.get('capacity_std_dev') as number,
     
-    // Contents metrics
-    contents_mean: itemFields.get('contents_mean') as number,
-    contents_max: itemFields.get('contents_max') as number,
-    contents_std_dev: itemFields.get('contents_std_dev') as number,
+    // Avg Number Allocated metrics
+    avg_number_allocated_mean: itemFields.get('avg_number_allocated_mean') as number,
+    avg_number_allocated_max: itemFields.get('avg_number_allocated_max') as number,
+    avg_number_allocated_std_dev: itemFields.get('avg_number_allocated_std_dev') as number,
     
     // Queue metrics
     queue_length_mean: itemFields.get('queue_length_mean') as number,
@@ -100,27 +100,27 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     cycle_time_std_dev: itemFields.get('cycle_time_std_dev') as number,
     cycle_time_cv: itemFields.get('cycle_time_cv') as number,
     
-    // Waiting time metrics
-    waiting_time_mean: itemFields.get('waiting_time_mean') as number,
-    waiting_time_median: itemFields.get('waiting_time_median') as number,
-    waiting_time_std_dev: itemFields.get('waiting_time_std_dev') as number,
-    waiting_time_cv: itemFields.get('waiting_time_cv') as number,
-    
-    // Blocked time metrics
-    blocked_time_mean: itemFields.get('blocked_time_mean') as number,
-    blocked_time_median: itemFields.get('blocked_time_median') as number,
-    blocked_time_std_dev: itemFields.get('blocked_time_std_dev') as number,
-    blocked_time_cv: itemFields.get('blocked_time_cv') as number,
+    // Total Time Waiting for Resource metrics
+    total_time_waiting_for_resource_mean: itemFields.get('total_time_waiting_for_resource_mean') as number,
+    total_time_waiting_for_resource_median: itemFields.get('total_time_waiting_for_resource_median') as number,
+    total_time_waiting_for_resource_std_dev: itemFields.get('total_time_waiting_for_resource_std_dev') as number,
+    total_time_waiting_for_resource_cv: itemFields.get('total_time_waiting_for_resource_cv') as number,
+
+    // Total Time Blocked metrics
+    total_time_blocked_mean: itemFields.get('total_time_blocked_mean') as number,
+    total_time_blocked_median: itemFields.get('total_time_blocked_median') as number,
+    total_time_blocked_std_dev: itemFields.get('total_time_blocked_std_dev') as number,
+    total_time_blocked_cv: itemFields.get('total_time_blocked_cv') as number,
     
     // Flow statistics
-    arrivals_mean: itemFields.get('arrivals_mean') as number,
-    arrivals_max: itemFields.get('arrivals_max') as number,
-    arrivals_std_dev: itemFields.get('arrivals_std_dev') as number,
-    captures_mean: itemFields.get('captures_mean') as number,
-    captures_max: itemFields.get('captures_max') as number,
-    captures_std_dev: itemFields.get('captures_std_dev') as number,
-    releases_mean: itemFields.get('releases_mean') as number,
-    releases_max: itemFields.get('releases_max') as number,
-    releases_std_dev: itemFields.get('releases_std_dev') as number
+    total_arrivals_mean: itemFields.get('total_arrivals_mean') as number,
+    total_arrivals_max: itemFields.get('total_arrivals_max') as number,
+    total_arrivals_std_dev: itemFields.get('total_arrivals_std_dev') as number,
+    total_allocations_mean: itemFields.get('total_allocations_mean') as number,
+    total_allocations_max: itemFields.get('total_allocations_max') as number,
+    total_allocations_std_dev: itemFields.get('total_allocations_std_dev') as number,
+    throughput_mean: itemFields.get('throughput_mean') as number,
+    throughput_max: itemFields.get('throughput_max') as number,
+    throughput_std_dev: itemFields.get('throughput_std_dev') as number
   };
 }

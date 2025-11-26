@@ -6,7 +6,7 @@
       "name": "quodsi_editor_extension",
       "title": "Quodsim",
       "products": ["chart"],
-      "codePath": "editorextensions\\quodsi_editor_extension\\bin\\extension.js",
+      "codePath": "editorextensions/quodsi_editor_extension/bin/extension.js",
       "scopes": [
         "READ",
         "WRITE",

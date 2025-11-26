@@ -48,8 +48,8 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "waiting_time_mean",
-    label: "Wait",
+    key: "total_time_waiting_for_resource_mean",
+    label: "Total Time Waiting",
     format: (v) => formatDecimal(v, 2),
   },
   {
@@ -63,18 +63,18 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "arrivals_mean",
-    label: "Arrivals",
+    key: "total_arrivals_mean",
+    label: "Total Arrivals",
     format: formatInteger,
   },
   {
-    key: "captures_mean",
-    label: "Captures",
+    key: "total_allocations_mean",
+    label: "Total Allocations",
     format: formatInteger,
   },
   {
-    key: "releases_mean",
-    label: "Releases",
+    key: "throughput_mean",
+    label: "Throughput",
     format: formatInteger,
   },
 ];

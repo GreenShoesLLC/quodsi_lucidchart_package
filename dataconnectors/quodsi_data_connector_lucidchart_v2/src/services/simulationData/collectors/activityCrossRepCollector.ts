@@ -21,9 +21,9 @@ export const requiredColumns: string[] = [
     'capacity_mean',
     'capacity_max',
     'capacity_std',
-    'contents_mean',
-    'contents_max',
-    'contents_std',
+    'avg_number_allocated_mean',  // was contents_mean
+    'avg_number_allocated_max',   // was contents_max
+    'avg_number_allocated_std',   // was contents_std
     'queue_length_mean',
     'queue_length_max',
     'queue_length_std',
@@ -31,23 +31,23 @@ export const requiredColumns: string[] = [
     // 'cycle_time_median',  // NOT in CSV - will default to 0
     'cycle_time_std',
     // 'cycle_time_cv',      // NOT in CSV - will default to 0
-    'waiting_time_mean',
-    // 'waiting_time_median', // NOT in CSV - will default to 0
-    'waiting_time_std',
-    // 'waiting_time_cv',     // NOT in CSV - will default to 0
-    'blocked_time_mean',
-    // 'blocked_time_median', // NOT in CSV - will default to 0
-    'blocked_time_std',
-    // 'blocked_time_cv',     // NOT in CSV - will default to 0
-    'arrivals_mean',
-    'arrivals_max',
-    'arrivals_std',
-    'captures_mean',
-    'captures_max',
-    'captures_std',
-    'releases_mean',
-    'releases_max',
-    'releases_std'
+    'total_time_waiting_for_resource_mean',  // was waiting_time_mean
+    // 'total_time_waiting_for_resource_median', // NOT in CSV - will default to 0
+    'total_time_waiting_for_resource_std',   // was waiting_time_std
+    // 'total_time_waiting_for_resource_cv',     // NOT in CSV - will default to 0
+    'total_time_blocked_mean',  // was blocked_time_mean
+    // 'total_time_blocked_median', // NOT in CSV - will default to 0
+    'total_time_blocked_std',   // was blocked_time_std
+    // 'total_time_blocked_cv',     // NOT in CSV - will default to 0
+    'total_arrivals_mean',      // was arrivals_mean
+    'total_arrivals_max',       // was arrivals_max
+    'total_arrivals_std',       // was arrivals_std
+    'total_allocations_mean',   // was captures_mean
+    'total_allocations_max',    // was captures_max
+    'total_allocations_std',    // was captures_std
+    'throughput_mean',          // was releases_mean
+    'throughput_max',           // was releases_max
+    'throughput_std'            // was releases_std
 ];
 
 /**
@@ -162,9 +162,9 @@ export async function fetchActivityCrossRep(
             capacity_max: item.capacity_max,
             capacity_std_dev: item.capacity_std,
 
-            contents_mean: item.contents_mean,
-            contents_max: item.contents_max,
-            contents_std_dev: item.contents_std,
+            avg_number_allocated_mean: item.avg_number_allocated_mean,
+            avg_number_allocated_max: item.avg_number_allocated_max,
+            avg_number_allocated_std_dev: item.avg_number_allocated_std,
 
             queue_length_mean: item.queue_length_mean,
             queue_length_max: item.queue_length_max,
@@ -175,27 +175,27 @@ export async function fetchActivityCrossRep(
             cycle_time_std_dev: item.cycle_time_std,
             cycle_time_cv: 0,  // NOT in CSV, default to 0
 
-            waiting_time_mean: item.waiting_time_mean,
-            waiting_time_median: 0,  // NOT in CSV, default to 0
-            waiting_time_std_dev: item.waiting_time_std,
-            waiting_time_cv: 0,  // NOT in CSV, default to 0
+            total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean,
+            total_time_waiting_for_resource_median: 0,  // NOT in CSV, default to 0
+            total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std,
+            total_time_waiting_for_resource_cv: 0,  // NOT in CSV, default to 0
 
-            blocked_time_mean: item.blocked_time_mean,
-            blocked_time_median: 0,  // NOT in CSV, default to 0
-            blocked_time_std_dev: item.blocked_time_std,
-            blocked_time_cv: 0,  // NOT in CSV, default to 0
+            total_time_blocked_mean: item.total_time_blocked_mean,
+            total_time_blocked_median: 0,  // NOT in CSV, default to 0
+            total_time_blocked_std_dev: item.total_time_blocked_std,
+            total_time_blocked_cv: 0,  // NOT in CSV, default to 0
 
-            arrivals_mean: item.arrivals_mean,
-            arrivals_max: item.arrivals_max,
-            arrivals_std_dev: item.arrivals_std,
+            total_arrivals_mean: item.total_arrivals_mean,
+            total_arrivals_max: item.total_arrivals_max,
+            total_arrivals_std_dev: item.total_arrivals_std,
 
-            captures_mean: item.captures_mean,
-            captures_max: item.captures_max,
-            captures_std_dev: item.captures_std,
+            total_allocations_mean: item.total_allocations_mean,
+            total_allocations_max: item.total_allocations_max,
+            total_allocations_std_dev: item.total_allocations_std,
 
-            releases_mean: item.releases_mean,
-            releases_max: item.releases_max,
-            releases_std_dev: item.releases_std
+            throughput_mean: item.throughput_mean,
+            throughput_max: item.throughput_max,
+            throughput_std_dev: item.throughput_std
         }));
 
         conditionalLog(`[activityCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
@@ -215,55 +215,55 @@ export async function fetchActivityCrossRep(
                 scenario_name: String(item.scenario_name || "Unknown"),
                 activity_id: String(item.activity_id || "Unknown"),
                 activity_name: String(item.activity_name || "Unknown"),
-                
+
                 // Utilization metrics
                 utilization_mean: item.utilization_mean ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
-                
+
                 // Capacity metrics
                 capacity_mean: item.capacity_mean ?? 0,
                 capacity_max: item.capacity_max ?? 0,
                 capacity_std_dev: item.capacity_std_dev ?? 0,
-                
-                // Contents metrics
-                contents_mean: item.contents_mean ?? 0,
-                contents_max: item.contents_max ?? 0,
-                contents_std_dev: item.contents_std_dev ?? 0,
-                
+
+                // Avg Number Allocated metrics
+                avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
+                avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
+                avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
+
                 // Queue metrics
                 queue_length_mean: item.queue_length_mean ?? 0,
                 queue_length_max: item.queue_length_max ?? 0,
                 queue_length_std_dev: item.queue_length_std_dev ?? 0,
-                
+
                 // Cycle time metrics
                 cycle_time_mean: item.cycle_time_mean ?? 0,
                 cycle_time_median: item.cycle_time_median ?? 0,
                 cycle_time_std_dev: item.cycle_time_std_dev ?? 0,
                 cycle_time_cv: item.cycle_time_cv ?? 0,
-                
-                // Waiting time metrics
-                waiting_time_mean: item.waiting_time_mean ?? 0,
-                waiting_time_median: item.waiting_time_median ?? 0,
-                waiting_time_std_dev: item.waiting_time_std_dev ?? 0,
-                waiting_time_cv: item.waiting_time_cv ?? 0,
-                
-                // Blocked time metrics
-                blocked_time_mean: item.blocked_time_mean ?? 0,
-                blocked_time_median: item.blocked_time_median ?? 0,
-                blocked_time_std_dev: item.blocked_time_std_dev ?? 0,
-                blocked_time_cv: item.blocked_time_cv ?? 0,
-                
+
+                // Total Time Waiting for Resource metrics
+                total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean ?? 0,
+                total_time_waiting_for_resource_median: item.total_time_waiting_for_resource_median ?? 0,
+                total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std_dev ?? 0,
+                total_time_waiting_for_resource_cv: item.total_time_waiting_for_resource_cv ?? 0,
+
+                // Total Time Blocked metrics
+                total_time_blocked_mean: item.total_time_blocked_mean ?? 0,
+                total_time_blocked_median: item.total_time_blocked_median ?? 0,
+                total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
+                total_time_blocked_cv: item.total_time_blocked_cv ?? 0,
+
                 // Flow statistics
-                arrivals_mean: item.arrivals_mean ?? 0,
-                arrivals_max: item.arrivals_max ?? 0,
-                arrivals_std_dev: item.arrivals_std_dev ?? 0,
-                captures_mean: item.captures_mean ?? 0,
-                captures_max: item.captures_max ?? 0,
-                captures_std_dev: item.captures_std_dev ?? 0,
-                releases_mean: item.releases_mean ?? 0,
-                releases_max: item.releases_max ?? 0,
-                releases_std_dev: item.releases_std_dev ?? 0
+                total_arrivals_mean: item.total_arrivals_mean ?? 0,
+                total_arrivals_max: item.total_arrivals_max ?? 0,
+                total_arrivals_std_dev: item.total_arrivals_std_dev ?? 0,
+                total_allocations_mean: item.total_allocations_mean ?? 0,
+                total_allocations_max: item.total_allocations_max ?? 0,
+                total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
+                throughput_mean: item.throughput_mean ?? 0,
+                throughput_max: item.throughput_max ?? 0,
+                throughput_std_dev: item.throughput_std_dev ?? 0
             };
 
             return validItem;
@@ -301,55 +301,55 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             scenario_name: String(item.scenario_name || "Unknown"),
             activity_id: String(item.activity_id || "Unknown"),
             activity_name: String(item.activity_name || "Unknown"),
-            
+
             // Utilization metrics
             utilization_mean: item.utilization_mean ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
-            
+
             // Capacity metrics
             capacity_mean: item.capacity_mean ?? 0,
             capacity_max: item.capacity_max ?? 0,
             capacity_std_dev: item.capacity_std_dev ?? 0,
-            
-            // Contents metrics
-            contents_mean: item.contents_mean ?? 0,
-            contents_max: item.contents_max ?? 0,
-            contents_std_dev: item.contents_std_dev ?? 0,
-            
+
+            // Avg Number Allocated metrics
+            avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
+            avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
+            avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
+
             // Queue metrics
             queue_length_mean: item.queue_length_mean ?? 0,
             queue_length_max: item.queue_length_max ?? 0,
             queue_length_std_dev: item.queue_length_std_dev ?? 0,
-            
+
             // Cycle time metrics
             cycle_time_mean: item.cycle_time_mean ?? 0,
             cycle_time_median: item.cycle_time_median ?? 0,
             cycle_time_std_dev: item.cycle_time_std_dev ?? 0,
             cycle_time_cv: item.cycle_time_cv ?? 0,
-            
-            // Waiting time metrics
-            waiting_time_mean: item.waiting_time_mean ?? 0,
-            waiting_time_median: item.waiting_time_median ?? 0,
-            waiting_time_std_dev: item.waiting_time_std_dev ?? 0,
-            waiting_time_cv: item.waiting_time_cv ?? 0,
-            
-            // Blocked time metrics
-            blocked_time_mean: item.blocked_time_mean ?? 0,
-            blocked_time_median: item.blocked_time_median ?? 0,
-            blocked_time_std_dev: item.blocked_time_std_dev ?? 0,
-            blocked_time_cv: item.blocked_time_cv ?? 0,
-            
+
+            // Total Time Waiting for Resource metrics
+            total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean ?? 0,
+            total_time_waiting_for_resource_median: item.total_time_waiting_for_resource_median ?? 0,
+            total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std_dev ?? 0,
+            total_time_waiting_for_resource_cv: item.total_time_waiting_for_resource_cv ?? 0,
+
+            // Total Time Blocked metrics
+            total_time_blocked_mean: item.total_time_blocked_mean ?? 0,
+            total_time_blocked_median: item.total_time_blocked_median ?? 0,
+            total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
+            total_time_blocked_cv: item.total_time_blocked_cv ?? 0,
+
             // Flow statistics
-            arrivals_mean: item.arrivals_mean ?? 0,
-            arrivals_max: item.arrivals_max ?? 0,
-            arrivals_std_dev: item.arrivals_std_dev ?? 0,
-            captures_mean: item.captures_mean ?? 0,
-            captures_max: item.captures_max ?? 0,
-            captures_std_dev: item.captures_std_dev ?? 0,
-            releases_mean: item.releases_mean ?? 0,
-            releases_max: item.releases_max ?? 0,
-            releases_std_dev: item.releases_std_dev ?? 0
+            total_arrivals_mean: item.total_arrivals_mean ?? 0,
+            total_arrivals_max: item.total_arrivals_max ?? 0,
+            total_arrivals_std_dev: item.total_arrivals_std_dev ?? 0,
+            total_allocations_mean: item.total_allocations_mean ?? 0,
+            total_allocations_max: item.total_allocations_max ?? 0,
+            total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
+            throughput_mean: item.throughput_mean ?? 0,
+            throughput_max: item.throughput_max ?? 0,
+            throughput_std_dev: item.throughput_std_dev ?? 0
         };
 
         // Add to our collection using the ID as the key
