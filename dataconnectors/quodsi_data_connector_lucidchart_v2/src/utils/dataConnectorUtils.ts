@@ -16,6 +16,7 @@ import { deleteScenarioAction } from '../actions/deleteScenarioAction';
 import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
+import { getScenarioCrossRepDataAction } from '../actions/getScenarioCrossRepDataAction';
 import { getActivityContentsTimeseriesAction } from '../actions/getActivityContentsTimeseriesAction';
 import { getActivityInputBufferTimeseriesAction } from '../actions/getActivityInputBufferTimeseriesAction';
 import { getActivityOutputBufferTimeseriesAction } from '../actions/getActivityOutputBufferTimeseriesAction';
@@ -41,6 +42,7 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
         .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)
+        .defineAsynchronousAction("GetScenarioCrossRepData", getScenarioCrossRepDataAction)
         .defineAsynchronousAction("GetActivityContentsTimeseries", getActivityContentsTimeseriesAction)
         .defineAsynchronousAction("GetActivityInputBufferTimeseries", getActivityInputBufferTimeseriesAction)
         .defineAsynchronousAction("GetActivityOutputBufferTimeseries", getActivityOutputBufferTimeseriesAction)

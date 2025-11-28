@@ -142,6 +142,54 @@ export const entityColumns: TableColumn[] = [
   },
 ];
 
+// Scenario Cross-Rep Summary Columns
+export const scenarioColumns: TableColumn[] = [
+  {
+    key: "scenario_name",
+    label: "Scenario",
+  },
+  {
+    key: "total_throughput_mean",
+    label: "Throughput",
+    format: formatInteger,
+  },
+  {
+    key: "total_entities_created_mean",
+    label: "Created",
+    format: formatInteger,
+  },
+  {
+    key: "entities_in_progress_mean",
+    label: "WIP",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "avg_cycle_time_mean",
+    label: "Cycle Time",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "avg_time_in_system_mean",
+    label: "Sys Time",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "avg_entities_in_system_mean",
+    label: "Avg In Sys",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "total_cost_mean",
+    label: "Total Cost",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "num_replications",
+    label: "Reps",
+    format: formatInteger,
+  },
+];
+
 // Resource Cross-Rep Summary Columns
 export const resourceColumns: TableColumn[] = [
   {
@@ -272,10 +320,12 @@ export const stateSummaryColumns: TableColumn[] = [
   },
 ];
 
-export type CrossRepDataType = "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary" | "activity-input-buffer-timeseries" | "activity-output-buffer-timeseries" | "state-values-timeseries";
+export type CrossRepDataType = "scenario" | "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary" | "activity-input-buffer-timeseries" | "activity-output-buffer-timeseries" | "state-values-timeseries";
 
 export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[] => {
   switch (dataType) {
+    case "scenario":
+      return scenarioColumns;
     case "activity":
       return activityColumns;
     case "entity":

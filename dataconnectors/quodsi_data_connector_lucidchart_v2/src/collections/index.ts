@@ -14,3 +14,5 @@ export * from './entityRepSchema';
 
 export * from './resourceCrossRepSchema';
 export * from './resourceRepSummarySchema';
+
+export * from './scenarioCrossRepSchema';

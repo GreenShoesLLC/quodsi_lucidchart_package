@@ -50,6 +50,7 @@
         "GetActivityCrossRepData": "getActivityCrossRepData",
         "GetEntityCrossRepData": "getEntityCrossRepData",
         "GetResourceCrossRepData": "getResourceCrossRepData",
+        "GetScenarioCrossRepData": "getScenarioCrossRepData",
         "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
         "GetActivityInputBufferTimeseries": "getActivityInputBufferTimeseries",
         "GetActivityOutputBufferTimeseries": "getActivityOutputBufferTimeseries",

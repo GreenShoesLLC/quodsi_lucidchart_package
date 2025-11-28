@@ -9,5 +9,4 @@ export { EntityCrossRepSummaryData } from './EntityCrossRepSummaryData';
 export { EntityRepSummaryData } from './EntityRepSummaryData';
 export { ResourceRepSummaryData } from './ResourceRepSummaryData';
 export { ResourceCrossRepData } from './ResourceCrossRepData';
-
-
+export { ScenarioCrossRepSummaryData } from './ScenarioCrossRepSummaryData';
