@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowLeft, BarChart3, Table2, LayoutGrid, Download, Check, List } from "lucide-react";
+import { ArrowLeft, BarChart3, Table2, LayoutGrid, Download, Check, List, X } from "lucide-react";
 import { EnvelopeMessageType, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import DataTable from "../../components/DataTable";
@@ -38,6 +38,35 @@ const formatPercent = (value: number | null | undefined): string => {
   return `${(value * 100).toFixed(1)}%`;
 };
 
+// Metric options for chart by data type
+const metricOptions: Record<string, { value: string; label: string }[]> = {
+  activity: [
+    { value: "utilization_mean", label: "Utilization" },
+    { value: "cycle_time_mean", label: "Cycle Time" },
+    { value: "queue_length_mean", label: "Queue Length" },
+  ],
+  entity: [
+    { value: "throughput_rate_mean", label: "Throughput Rate" },
+    { value: "time_in_system_mean", label: "Time in System" },
+    { value: "time_waiting_mean", label: "Time Waiting" },
+  ],
+  resource: [
+    { value: "utilization_mean", label: "Utilization" },
+    { value: "utilization_min", label: "Util (Min)" },
+    { value: "utilization_max", label: "Util (Max)" },
+  ],
+  "state-summary": [
+    { value: "mean_final_value", label: "Final Value" },
+    { value: "mean_min_value", label: "Min Value" },
+    { value: "mean_max_value", label: "Max Value" },
+  ],
+  scenario: [
+    { value: "total_throughput_mean", label: "Throughput" },
+    { value: "total_entities_created_mean", label: "Entities Created" },
+    { value: "avg_cycle_time_mean", label: "Avg Cycle Time" },
+  ],
+};
+
 const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   scenarioId,
   documentId,
@@ -64,6 +93,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("table");
   const [zipCopied, setZipCopied] = useState<boolean>(false);
+  const [selectedMetric, setSelectedMetric] = useState<string>("utilization_mean");
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
@@ -93,6 +123,15 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     } catch (error) {
       console.error('[ScenarioAnalysisDashboard] Failed to copy ZIP link:', error);
     }
+  };
+
+  // Handle drill-down from Summary to Detailed view
+  const handleDrillDown = (type: CrossRepDataType, filterValue?: string) => {
+    setDataType(type);
+    if (filterValue) {
+      setSelectedActivity(filterValue);
+    }
+    setViewType('detailed');
   };
 
   // Fetch summary data (all 3 types in parallel)
@@ -204,50 +243,64 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   // Get columns for current data type (detailed view)
   const columns = getColumnsForDataType(dataType);
 
-  // Get unique activities for filtering (when timeseries is selected)
-  const uniqueActivities = React.useMemo(() => {
+  // Check if data type supports filtering
+  const isFilterableType = dataType === "activity" ||
+                           dataType === "entity" ||
+                           dataType === "resource" ||
+                           dataType === "activity-contents-timeseries" ||
+                           dataType === "activity-input-buffer-timeseries" ||
+                           dataType === "activity-output-buffer-timeseries" ||
+                           dataType === "state-values-timeseries";
+
+  // Get unique items for filtering based on data type
+  const uniqueFilterItems = React.useMemo(() => {
+    if (!isFilterableType || data.length === 0) return [];
+
     const isTimeseriesType = dataType === "activity-contents-timeseries" ||
                              dataType === "activity-input-buffer-timeseries" ||
                              dataType === "activity-output-buffer-timeseries" ||
                              dataType === "state-values-timeseries";
-    if (isTimeseriesType && data.length > 0) {
-      const activities = Array.from(
-        new Set(data.map((item: any) => item.object_id))
-      ).sort();
-      return activities;
-    }
-    return [];
-  }, [data, dataType]);
 
-  // Filter data by selected activity (for timeseries only)
+    let key = "object_id"; // Default for timeseries
+    if (dataType === "activity") key = "activity_name";
+    else if (dataType === "entity") key = "entity_name";
+    else if (dataType === "resource") key = "resource_name";
+
+    const items = Array.from(
+      new Set(data.map((item: any) => item[key]))
+    ).filter(Boolean).sort();
+    return items as string[];
+  }, [data, dataType, isFilterableType]);
+
+  // Filter data by selected item
   const filteredData = React.useMemo(() => {
+    if (!isFilterableType || selectedActivity === "all") {
+      return data;
+    }
+
     const isTimeseriesType = dataType === "activity-contents-timeseries" ||
                              dataType === "activity-input-buffer-timeseries" ||
                              dataType === "activity-output-buffer-timeseries" ||
                              dataType === "state-values-timeseries";
-    if (isTimeseriesType && selectedActivity !== "all") {
-      return data.filter((item: any) => item.object_id === selectedActivity);
-    }
-    return data;
-  }, [data, dataType, selectedActivity]);
 
-  // Reset selected activity when data type changes
+    let key = "object_id"; // Default for timeseries
+    if (dataType === "activity") key = "activity_name";
+    else if (dataType === "entity") key = "entity_name";
+    else if (dataType === "resource") key = "resource_name";
+
+    return data.filter((item: any) => item[key] === selectedActivity);
+  }, [data, dataType, selectedActivity, isFilterableType]);
+
+  // Reset selected activity and metric when data type changes
   useEffect(() => {
     setSelectedActivity("all");
+    // Set default metric for the new data type
+    const options = metricOptions[dataType];
+    if (options && options.length > 0) {
+      setSelectedMetric(options[0].value);
+    }
   }, [dataType]);
 
-  // Data type options for dropdown (detailed view)
-  const dataTypeOptions = [
-    { value: "scenario", label: "Scenario Summary" },
-    { value: "activity", label: "Activity Summary" },
-    { value: "entity", label: "Entity Summary" },
-    { value: "resource", label: "Resource Summary" },
-    { value: "activity-contents-timeseries", label: "Activity Contents Timeseries" },
-    { value: "activity-input-buffer-timeseries", label: "Activity Input Buffer Timeseries" },
-    { value: "activity-output-buffer-timeseries", label: "Activity Output Buffer Timeseries" },
-    { value: "state-summary", label: "State Summary" },
-    { value: "state-values-timeseries", label: "State Values Timeseries" },
-  ];
 
   // Render chart based on data type (detailed view)
   const renderChart = () => {
@@ -257,6 +310,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       dataType === "activity-output-buffer-timeseries" ||
       dataType === "state-values-timeseries";
 
+    // Timeseries chart (line chart)
     if (isTimeseriesType) {
       return (
         <ChartContainer
@@ -271,92 +325,34 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             yKeys={["mean", "min", "max"]}
             xLabel="Time"
             yLabel="Value"
-            height={350}
+            height={300}
           />
         </ChartContainer>
       );
-    } else if (dataType === "activity") {
+    }
+
+    // Bar chart for summary types with selectable metric
+    if (metricOptions[dataType]) {
+      const nameKey =
+        dataType === "activity" ? "activity_name" :
+        dataType === "entity" ? "entity_name" :
+        dataType === "resource" ? "resource_name" :
+        dataType === "state-summary" ? "state_name" :
+        "scenario_name";
+
       return (
         <ChartContainer
           data={filteredData}
           loading={loading}
           error={error}
-          emptyMessage="No activity data available for this scenario"
+          emptyMessage={`No ${dataType} data available for this scenario`}
         >
           <ComparisonBarChart
             data={filteredData}
-            xKey="activity_name"
-            yKeys={["utilization_mean", "cycle_time_mean", "queue_length_mean"]}
-            yLabel="Value"
-            height={350}
-          />
-        </ChartContainer>
-      );
-    } else if (dataType === "entity") {
-      return (
-        <ChartContainer
-          data={filteredData}
-          loading={loading}
-          error={error}
-          emptyMessage="No entity data available for this scenario"
-        >
-          <ComparisonBarChart
-            data={filteredData}
-            xKey="entity_name"
-            yKeys={["throughput_rate_mean", "time_in_system_mean", "time_waiting_mean"]}
-            yLabel="Value"
-            height={350}
-          />
-        </ChartContainer>
-      );
-    } else if (dataType === "resource") {
-      return (
-        <ChartContainer
-          data={filteredData}
-          loading={loading}
-          error={error}
-          emptyMessage="No resource data available for this scenario"
-        >
-          <ComparisonBarChart
-            data={filteredData}
-            xKey="resource_name"
-            yKeys={["utilization_mean", "utilization_min", "utilization_max"]}
-            yLabel="Utilization"
-            height={350}
-          />
-        </ChartContainer>
-      );
-    } else if (dataType === "state-summary") {
-      return (
-        <ChartContainer
-          data={filteredData}
-          loading={loading}
-          error={error}
-          emptyMessage="No state summary data available for this scenario"
-        >
-          <ComparisonBarChart
-            data={filteredData}
-            xKey="state_name"
-            yKeys={["mean_final_value", "mean_min_value", "mean_max_value"]}
-            yLabel="Value"
-            height={350}
-          />
-        </ChartContainer>
-      );
-    } else if (dataType === "scenario") {
-      return (
-        <ChartContainer
-          data={filteredData}
-          loading={loading}
-          error={error}
-          emptyMessage="No scenario summary data available"
-        >
-          <ComparisonBarChart
-            data={filteredData}
-            xKey="scenario_name"
-            yKeys={["total_throughput_mean", "total_entities_created_mean", "avg_cycle_time_mean"]}
-            yLabel="Value"
-            height={350}
+            xKey={nameKey}
+            yKeys={[selectedMetric]}
+            height={300}
+            layout="vertical"
           />
         </ChartContainer>
       );
@@ -438,8 +434,13 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
                   </tr>
                 ) : (
                   activities.map((activity, idx) => (
-                    <tr key={activity.activity_id || idx} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-2 py-1.5 truncate max-w-[100px]" title={activity.activity_name}>
+                    <tr
+                      key={activity.activity_id || idx}
+                      className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => handleDrillDown('activity', activity.activity_name)}
+                      title="Click to view details"
+                    >
+                      <td className="px-2 py-1.5 truncate max-w-[100px] text-blue-600 hover:text-blue-800" title={activity.activity_name}>
                         {activity.activity_name}
                       </td>
                       <td className="px-2 py-1.5 text-right">{formatPercent(activity.utilization_mean)}</td>
@@ -474,8 +475,13 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
                   </tr>
                 ) : (
                   resources.map((resource, idx) => (
-                    <tr key={resource.resource_id || idx} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-2 py-1.5 truncate max-w-[120px]" title={resource.resource_name}>
+                    <tr
+                      key={resource.resource_id || idx}
+                      className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => handleDrillDown('resource', resource.resource_name)}
+                      title="Click to view details"
+                    >
+                      <td className="px-2 py-1.5 truncate max-w-[120px] text-blue-600 hover:text-blue-800" title={resource.resource_name}>
                         {resource.resource_name}
                       </td>
                       <td className="px-2 py-1.5 text-right">{formatPercent(resource.utilization_mean)}</td>
@@ -491,97 +497,124 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     );
   };
 
+  // Get filter label based on data type
+  const getFilterLabel = () => {
+    if (dataType === "activity") return "Activity";
+    if (dataType === "entity") return "Entity";
+    if (dataType === "resource") return "Resource";
+    return "Item";
+  };
+
   // Render Detailed View (existing functionality)
   const renderDetailedView = () => {
     return (
       <>
-        {/* Controls Row */}
-        <div className="flex gap-3 items-center flex-wrap">
-          {/* Data Type Selector */}
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-gray-700">
-              Data Type:
-            </label>
-            <select
-              value={dataType}
-              onChange={(e) => setDataType(e.target.value as CrossRepDataType)}
-              className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* Consolidated Controls Row */}
+        <div className="flex gap-2 items-center flex-wrap">
+          {/* Data Type Selector with optgroups */}
+          <select
+            value={dataType}
+            onChange={(e) => setDataType(e.target.value as CrossRepDataType)}
+            className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <optgroup label="Summaries">
+              <option value="scenario">Scenario</option>
+              <option value="activity">Activity</option>
+              <option value="entity">Entity</option>
+              <option value="resource">Resource</option>
+              <option value="state-summary">State</option>
+            </optgroup>
+            <optgroup label="Timeseries">
+              <option value="activity-contents-timeseries">Activity Contents</option>
+              <option value="activity-input-buffer-timeseries">Input Buffer</option>
+              <option value="activity-output-buffer-timeseries">Output Buffer</option>
+              <option value="state-values-timeseries">State Values</option>
+            </optgroup>
+          </select>
+
+          {/* View Mode Toggle */}
+          <div className="flex border border-gray-300 rounded">
+            <button
+              onClick={() => setViewMode("table")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors rounded-l ${
+                viewMode === "table"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Table view"
             >
-              {dataTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <Table2 className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setViewMode("chart")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
+                viewMode === "chart"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Chart view"
+            >
+              <BarChart3 className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setViewMode("both")}
+              className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors rounded-r ${
+                viewMode === "both"
+                  ? "bg-blue-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+              title="Both table and chart"
+            >
+              <LayoutGrid className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Metric selector (only for chart view with bar charts) */}
+          {(viewMode === "chart" || viewMode === "both") && metricOptions[dataType] && (
+            <select
+              value={selectedMetric}
+              onChange={(e) => setSelectedMetric(e.target.value)}
+              className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {metricOptions[dataType].map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>
-          </div>
+          )}
 
-          {/* View Mode Toggle */}
-          <div className="flex items-center gap-2 ml-4">
-            <label className="text-xs font-medium text-gray-700">View:</label>
-            <div className="flex gap-1 border border-gray-300 rounded">
+          {/* Filter dropdown (for filterable types) */}
+          {isFilterableType && uniqueFilterItems.length > 1 && (
+            <select
+              value={selectedActivity}
+              onChange={(e) => setSelectedActivity(e.target.value)}
+              className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All {getFilterLabel()}s</option>
+              {uniqueFilterItems.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {/* Active filter indicator chip */}
+          {selectedActivity !== "all" && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+              <span className="truncate max-w-[100px]" title={selectedActivity}>
+                {selectedActivity}
+              </span>
               <button
-                onClick={() => setViewMode("table")}
-                className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
-                  viewMode === "table"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-                title="Table view"
+                onClick={() => setSelectedActivity("all")}
+                className="hover:text-blue-900 ml-0.5"
+                title="Clear filter"
               >
-                <Table2 className="w-3 h-3" />
-                Table
-              </button>
-              <button
-                onClick={() => setViewMode("chart")}
-                className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
-                  viewMode === "chart"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-                title="Chart view"
-              >
-                <BarChart3 className="w-3 h-3" />
-                Chart
-              </button>
-              <button
-                onClick={() => setViewMode("both")}
-                className={`px-2 py-1 text-xs font-medium flex items-center gap-1 transition-colors ${
-                  viewMode === "both"
-                    ? "bg-blue-600 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                }`}
-                title="Both table and chart"
-              >
-                <LayoutGrid className="w-3 h-3" />
-                Both
+                <X className="w-3 h-3" />
               </button>
             </div>
-          </div>
-
-          {/* Activity Filter (only for timeseries) */}
-          {(dataType === "activity-contents-timeseries" ||
-            dataType === "activity-input-buffer-timeseries" ||
-            dataType === "activity-output-buffer-timeseries" ||
-            dataType === "state-values-timeseries") &&
-            uniqueActivities.length > 0 && (
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-gray-700">
-                  Filter by Activity:
-                </label>
-                <select
-                  value={selectedActivity}
-                  onChange={(e) => setSelectedActivity(e.target.value)}
-                  className="px-3 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Activities</option>
-                  {uniqueActivities.map((activity) => (
-                    <option key={activity} value={activity}>
-                      {activity}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+          )}
         </div>
 
         {/* Chart View */}
@@ -593,30 +626,13 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
         {/* Data Table */}
         {(viewMode === "table" || viewMode === "both") && (
-          <div className="border border-gray-200 rounded-lg bg-white">
-            <div className="p-3 border-b border-gray-200">
-              <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                {dataType === "scenario" && "Scenario Cross-Replication Summary"}
-                {dataType === "activity" && "Activity Cross-Replication Summary"}
-                {dataType === "entity" && "Entity Cross-Replication Summary"}
-                {dataType === "resource" && "Resource Cross-Replication Summary"}
-                {dataType === "activity-contents-timeseries" && "Activity Contents Timeseries"}
-                {dataType === "activity-input-buffer-timeseries" && "Activity Input Buffer Timeseries"}
-                {dataType === "activity-output-buffer-timeseries" && "Activity Output Buffer Timeseries"}
-                {dataType === "state-summary" && "State Summary"}
-                {dataType === "state-values-timeseries" && "State Values Timeseries"}
-              </h3>
-            </div>
-            <div className="p-3">
-              <DataTable
-                data={filteredData}
-                columns={columns}
-                loading={loading}
-                error={error}
-                emptyMessage={`No ${dataType} data available for this scenario`}
-              />
-            </div>
-          </div>
+          <DataTable
+            data={filteredData}
+            columns={columns}
+            loading={loading}
+            error={error}
+            emptyMessage={`No ${dataType} data available for this scenario`}
+          />
         )}
       </>
     );

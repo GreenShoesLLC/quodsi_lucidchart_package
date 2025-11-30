@@ -49,17 +49,22 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
   // Custom label formatter for long names
   const formatLabel = (value: any) => {
     const str = String(value);
-    if (str.length > 15) {
-      return str.substring(0, 12) + "...";
+    if (str.length > 10) {
+      return str.substring(0, 8) + "...";
     }
     return str;
   };
+
+  // Compact margins for vertical (horizontal bars) layout
+  const margins = layout === "vertical"
+    ? { top: 5, right: 10, left: 5, bottom: 5 }
+    : { top: 5, right: 30, left: 20, bottom: 60 };
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart
         data={data}
-        margin={{ top: 5, right: 30, left: 20, bottom: 60 }}
+        margin={margins}
         layout={layout}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -84,17 +89,17 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
           <>
             <XAxis
               type="number"
-              label={{ value: xLabel, position: "insideBottom", offset: -5 }}
-              tick={{ fontSize: 11 }}
+              tick={{ fontSize: 9 }}
               stroke="#6b7280"
+              tickCount={4}
             />
             <YAxis
               type="category"
               dataKey={xKey}
-              tick={{ fontSize: 10 }}
+              tick={{ fontSize: 9 }}
               tickFormatter={formatLabel}
               stroke="#6b7280"
-              width={100}
+              width={60}
             />
           </>
         )}
@@ -103,7 +108,7 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
             backgroundColor: "white",
             border: "1px solid #e5e7eb",
             borderRadius: "0.375rem",
-            fontSize: "12px",
+            fontSize: "11px",
           }}
           formatter={(value: any) => {
             if (typeof value === "number") {
@@ -113,8 +118,8 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
           }}
         />
         <Legend
-          wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }}
-          iconSize={12}
+          wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }}
+          iconSize={8}
         />
         {yKeys.map((key, index) => (
           <Bar
