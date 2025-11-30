@@ -25,12 +25,7 @@ export interface ActivityCrossRep {
   avg_number_allocated_mean: number;
   avg_number_allocated_max: number;
   avg_number_allocated_std_dev: number;
-  
-  // Queue metrics
-  queue_length_mean: number;
-  queue_length_max: number;
-  queue_length_std_dev: number;
-  
+
   // Cycle time metrics
   cycle_time_mean: number;
   cycle_time_median: number;
@@ -88,12 +83,7 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     avg_number_allocated_mean: itemFields.get('avg_number_allocated_mean') as number,
     avg_number_allocated_max: itemFields.get('avg_number_allocated_max') as number,
     avg_number_allocated_std_dev: itemFields.get('avg_number_allocated_std_dev') as number,
-    
-    // Queue metrics
-    queue_length_mean: itemFields.get('queue_length_mean') as number,
-    queue_length_max: itemFields.get('queue_length_max') as number,
-    queue_length_std_dev: itemFields.get('queue_length_std_dev') as number,
-    
+
     // Cycle time metrics
     cycle_time_mean: itemFields.get('cycle_time_mean') as number,
     cycle_time_median: itemFields.get('cycle_time_median') as number,

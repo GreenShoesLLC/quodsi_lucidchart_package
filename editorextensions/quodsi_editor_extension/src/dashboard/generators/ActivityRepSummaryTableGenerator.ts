@@ -40,8 +40,7 @@ export class ActivityRepSummaryTableGenerator extends BaseTableGenerator {
                 'average_contents',
                 'maximum_contents',
                 'current_contents',
-                'average_time_per_entry',
-                'average_queue_length'
+                'average_time_per_entry'
             ]
         };
     }

@@ -53,16 +53,6 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "queue_length_mean",
-    label: "Queue",
-    format: (v) => formatDecimal(v, 2),
-  },
-  {
-    key: "queue_length_max",
-    label: "MaxQ",
-    format: (v) => formatDecimal(v, 2),
-  },
-  {
     key: "total_arrivals_mean",
     label: "Total Arrivals",
     format: formatInteger,

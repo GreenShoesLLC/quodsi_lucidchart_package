@@ -25,11 +25,6 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "avg_number_allocated_max", type: ScalarFieldTypeEnum.NUMBER },
         { name: "avg_number_allocated_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
-        // Queue metrics
-        { name: "queue_length_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "queue_length_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "queue_length_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        
         // Cycle time metrics
         { name: "cycle_time_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "cycle_time_median", type: ScalarFieldTypeEnum.NUMBER },
@@ -81,12 +76,7 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'avg_number_allocated_mean': 'Mean Avg Number Allocated',
         'avg_number_allocated_max': 'Max Avg Number Allocated',
         'avg_number_allocated_std_dev': 'Avg Number Allocated Std Dev',
-        
-        // Queue metrics
-        'queue_length_mean': 'Mean Queue Length',
-        'queue_length_max': 'Max Queue Length',
-        'queue_length_std_dev': 'Queue Length Std Dev',
-        
+
         // Cycle time metrics
         'cycle_time_mean': 'Mean Cycle Time',
         'cycle_time_median': 'Median Cycle Time',

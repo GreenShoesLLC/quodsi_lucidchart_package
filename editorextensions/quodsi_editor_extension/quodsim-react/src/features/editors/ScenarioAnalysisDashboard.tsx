@@ -43,7 +43,6 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
   activity: [
     { value: "utilization_mean", label: "Utilization" },
     { value: "cycle_time_mean", label: "Cycle Time" },
-    { value: "queue_length_mean", label: "Queue Length" },
   ],
   entity: [
     { value: "throughput_rate_mean", label: "Throughput Rate" },

@@ -24,9 +24,6 @@ export const requiredColumns: string[] = [
     'avg_number_allocated_mean',  // was contents_mean
     'avg_number_allocated_max',   // was contents_max
     'avg_number_allocated_std',   // was contents_std
-    'queue_length_mean',
-    'queue_length_max',
-    'queue_length_std',
     'cycle_time_mean',
     // 'cycle_time_median',  // NOT in CSV - will default to 0
     'cycle_time_std',
@@ -166,10 +163,6 @@ export async function fetchActivityCrossRep(
             avg_number_allocated_max: item.avg_number_allocated_max,
             avg_number_allocated_std_dev: item.avg_number_allocated_std,
 
-            queue_length_mean: item.queue_length_mean,
-            queue_length_max: item.queue_length_max,
-            queue_length_std_dev: item.queue_length_std,
-
             cycle_time_mean: item.cycle_time_mean,
             cycle_time_median: 0,  // NOT in CSV, default to 0
             cycle_time_std_dev: item.cycle_time_std,
@@ -230,11 +223,6 @@ export async function fetchActivityCrossRep(
                 avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
                 avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
                 avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
-
-                // Queue metrics
-                queue_length_mean: item.queue_length_mean ?? 0,
-                queue_length_max: item.queue_length_max ?? 0,
-                queue_length_std_dev: item.queue_length_std_dev ?? 0,
 
                 // Cycle time metrics
                 cycle_time_mean: item.cycle_time_mean ?? 0,
@@ -316,11 +304,6 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
             avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
             avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
-
-            // Queue metrics
-            queue_length_mean: item.queue_length_mean ?? 0,
-            queue_length_max: item.queue_length_max ?? 0,
-            queue_length_std_dev: item.queue_length_std_dev ?? 0,
 
             // Cycle time metrics
             cycle_time_mean: item.cycle_time_mean ?? 0,

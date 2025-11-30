@@ -23,7 +23,6 @@ export interface ActivityRepSummaryData {
     current_contents: number;
     utilization_0_to_1: number;
     average_time_per_entry: number;
-    average_queue_length: number;
     input_buffer_utilization: number;
     output_buffer_utilization: number;
     input_buffer_queue_time: number;

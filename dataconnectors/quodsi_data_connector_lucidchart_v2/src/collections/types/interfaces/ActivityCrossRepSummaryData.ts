@@ -27,11 +27,6 @@ export interface ActivityCrossRepSummaryData {
     avg_number_allocated_max: number;   // Maximum average number allocated
     avg_number_allocated_std_dev: number;  // Avg number allocated standard deviation
 
-    // Queue metrics
-    queue_length_mean: number;  // Mean queue length
-    queue_length_max: number;   // Maximum queue length
-    queue_length_std_dev: number;  // Queue length standard deviation
-
     // Cycle time metrics
     cycle_time_mean: number;  // Mean cycle time
     cycle_time_median: number;  // Median cycle time

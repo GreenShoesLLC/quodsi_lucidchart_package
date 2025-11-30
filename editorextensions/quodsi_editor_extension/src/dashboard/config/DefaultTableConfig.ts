@@ -26,8 +26,7 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'average_contents',
                 'maximum_contents',
                 'current_contents',
-                'average_time_per_entry',
-                'average_queue_length'
+                'average_time_per_entry'
             ],
             exclude: ['id', 'scenario_id']
         }
@@ -46,8 +45,6 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'capacity_max',
                 'avg_number_allocated_mean',
                 'avg_number_allocated_max',
-                'queue_length_mean',
-                'queue_length_max',
                 'cycle_time_mean',
                 'total_time_waiting_for_resource_mean',
                 'total_time_blocked_mean',
@@ -61,7 +58,6 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'activity_id',
                 'capacity_std_dev',
                 'avg_number_allocated_std_dev',
-                'queue_length_std_dev',
                 'cycle_time_median',
                 'cycle_time_std_dev',
                 'cycle_time_cv',

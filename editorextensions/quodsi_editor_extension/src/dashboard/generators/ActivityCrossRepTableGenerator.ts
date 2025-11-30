@@ -38,8 +38,6 @@ export class ActivityCrossRepTableGenerator extends BaseTableGenerator {
                 'capacity_max',
                 'avg_number_allocated_mean',
                 'avg_number_allocated_max',
-                'queue_length_mean',
-                'queue_length_max',
                 'cycle_time_mean',
                 'total_time_waiting_for_resource_mean',
                 'total_time_blocked_mean',
