@@ -57,4 +57,25 @@ export interface ActivityCrossRepSummaryData {
     throughput_mean: number;  // Mean throughput (formerly releases)
     throughput_max: number;   // Maximum throughput
     throughput_std_dev: number;  // Throughput standard deviation
+
+    // Cost metrics
+    fixed_cost_mean: number;  // Mean fixed cost
+    fixed_cost_std_dev: number;  // Fixed cost standard deviation
+    fixed_cost_min: number;  // Minimum fixed cost
+    fixed_cost_max: number;  // Maximum fixed cost
+
+    processing_cost_mean: number;  // Mean processing cost
+    processing_cost_std_dev: number;  // Processing cost standard deviation
+    processing_cost_min: number;  // Minimum processing cost
+    processing_cost_max: number;  // Maximum processing cost
+
+    operational_cost_mean: number;  // Mean operational cost
+    operational_cost_std_dev: number;  // Operational cost standard deviation
+    operational_cost_min: number;  // Minimum operational cost
+    operational_cost_max: number;  // Maximum operational cost
+
+    total_cost_mean: number;  // Mean total cost
+    total_cost_std_dev: number;  // Total cost standard deviation
+    total_cost_min: number;  // Minimum total cost
+    total_cost_max: number;  // Maximum total cost
 }

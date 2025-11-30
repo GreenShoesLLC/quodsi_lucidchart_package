@@ -52,7 +52,25 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "total_allocations_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         { name: "throughput_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "throughput_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "throughput_std_dev", type: ScalarFieldTypeEnum.NUMBER }
+        { name: "throughput_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+
+        // Cost metrics
+        { name: "fixed_cost_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "fixed_cost_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "fixed_cost_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "fixed_cost_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "processing_cost_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "processing_cost_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "processing_cost_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "processing_cost_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "operational_cost_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "operational_cost_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "operational_cost_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "operational_cost_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_cost_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_cost_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_cost_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_cost_max", type: ScalarFieldTypeEnum.NUMBER }
     ],
     primaryKey: ["id"],
     fieldLabels: {
@@ -104,6 +122,24 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'total_allocations_std_dev': 'Total Allocations Std Dev',
         'throughput_mean': 'Mean Throughput',
         'throughput_max': 'Max Throughput',
-        'throughput_std_dev': 'Throughput Std Dev'
+        'throughput_std_dev': 'Throughput Std Dev',
+
+        // Cost metrics
+        'fixed_cost_mean': 'Mean Fixed Cost',
+        'fixed_cost_std_dev': 'Fixed Cost Std Dev',
+        'fixed_cost_min': 'Min Fixed Cost',
+        'fixed_cost_max': 'Max Fixed Cost',
+        'processing_cost_mean': 'Mean Processing Cost',
+        'processing_cost_std_dev': 'Processing Cost Std Dev',
+        'processing_cost_min': 'Min Processing Cost',
+        'processing_cost_max': 'Max Processing Cost',
+        'operational_cost_mean': 'Mean Operational Cost',
+        'operational_cost_std_dev': 'Operational Cost Std Dev',
+        'operational_cost_min': 'Min Operational Cost',
+        'operational_cost_max': 'Max Operational Cost',
+        'total_cost_mean': 'Mean Total Cost',
+        'total_cost_std_dev': 'Total Cost Std Dev',
+        'total_cost_min': 'Min Total Cost',
+        'total_cost_max': 'Max Total Cost'
     }
 };

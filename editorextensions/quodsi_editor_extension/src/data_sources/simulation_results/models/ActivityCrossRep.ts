@@ -54,6 +54,24 @@ export interface ActivityCrossRep {
   throughput_mean: number;
   throughput_max: number;
   throughput_std_dev: number;
+
+  // Cost metrics
+  fixed_cost_mean: number;
+  fixed_cost_std_dev: number;
+  fixed_cost_min: number;
+  fixed_cost_max: number;
+  processing_cost_mean: number;
+  processing_cost_std_dev: number;
+  processing_cost_min: number;
+  processing_cost_max: number;
+  operational_cost_mean: number;
+  operational_cost_std_dev: number;
+  operational_cost_min: number;
+  operational_cost_max: number;
+  total_cost_mean: number;
+  total_cost_std_dev: number;
+  total_cost_min: number;
+  total_cost_max: number;
 }
 
 /**
@@ -111,6 +129,24 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     total_allocations_std_dev: itemFields.get('total_allocations_std_dev') as number,
     throughput_mean: itemFields.get('throughput_mean') as number,
     throughput_max: itemFields.get('throughput_max') as number,
-    throughput_std_dev: itemFields.get('throughput_std_dev') as number
+    throughput_std_dev: itemFields.get('throughput_std_dev') as number,
+
+    // Cost metrics
+    fixed_cost_mean: itemFields.get('fixed_cost_mean') as number,
+    fixed_cost_std_dev: itemFields.get('fixed_cost_std_dev') as number,
+    fixed_cost_min: itemFields.get('fixed_cost_min') as number,
+    fixed_cost_max: itemFields.get('fixed_cost_max') as number,
+    processing_cost_mean: itemFields.get('processing_cost_mean') as number,
+    processing_cost_std_dev: itemFields.get('processing_cost_std_dev') as number,
+    processing_cost_min: itemFields.get('processing_cost_min') as number,
+    processing_cost_max: itemFields.get('processing_cost_max') as number,
+    operational_cost_mean: itemFields.get('operational_cost_mean') as number,
+    operational_cost_std_dev: itemFields.get('operational_cost_std_dev') as number,
+    operational_cost_min: itemFields.get('operational_cost_min') as number,
+    operational_cost_max: itemFields.get('operational_cost_max') as number,
+    total_cost_mean: itemFields.get('total_cost_mean') as number,
+    total_cost_std_dev: itemFields.get('total_cost_std_dev') as number,
+    total_cost_min: itemFields.get('total_cost_min') as number,
+    total_cost_max: itemFields.get('total_cost_max') as number
   };
 }

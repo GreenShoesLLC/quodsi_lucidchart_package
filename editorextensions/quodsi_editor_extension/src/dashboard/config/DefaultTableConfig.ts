@@ -50,7 +50,8 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'total_time_blocked_mean',
                 'total_arrivals_mean',
                 'total_allocations_mean',
-                'throughput_mean'
+                'throughput_mean',
+                'total_cost_mean'
             ],
             exclude: [
                 'id',
@@ -72,7 +73,22 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'total_allocations_max',
                 'total_allocations_std_dev',
                 'throughput_max',
-                'throughput_std_dev'
+                'throughput_std_dev',
+                'fixed_cost_mean',
+                'fixed_cost_std_dev',
+                'fixed_cost_min',
+                'fixed_cost_max',
+                'processing_cost_mean',
+                'processing_cost_std_dev',
+                'processing_cost_min',
+                'processing_cost_max',
+                'operational_cost_mean',
+                'operational_cost_std_dev',
+                'operational_cost_min',
+                'operational_cost_max',
+                'total_cost_std_dev',
+                'total_cost_min',
+                'total_cost_max'
             ]
         }
     },
@@ -209,12 +225,28 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'utilization_min',
                 'utilization_max',
                 'utilization_std_dev',
-                'bottleneck_frequency'
+                'bottleneck_frequency',
+                'total_cost_mean'
             ],
             exclude: [
                 'id',
                 'scenario_id',
-                'resource_id'
+                'resource_id',
+                'seize_cost_mean',
+                'seize_cost_std_dev',
+                'seize_cost_min',
+                'seize_cost_max',
+                'utilization_cost_mean',
+                'utilization_cost_std_dev',
+                'utilization_cost_min',
+                'utilization_cost_max',
+                'idle_cost_mean',
+                'idle_cost_std_dev',
+                'idle_cost_min',
+                'idle_cost_max',
+                'total_cost_std_dev',
+                'total_cost_min',
+                'total_cost_max'
             ]
         }
     }

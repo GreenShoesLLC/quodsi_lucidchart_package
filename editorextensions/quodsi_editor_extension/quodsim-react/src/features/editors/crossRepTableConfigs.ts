@@ -67,6 +67,11 @@ export const activityColumns: TableColumn[] = [
     label: "Throughput",
     format: formatInteger,
   },
+  {
+    key: "total_cost_mean",
+    label: "Total Cost",
+    format: (v) => formatDecimal(v, 2),
+  },
 ];
 
 // Entity Cross-Rep Summary Columns
@@ -210,6 +215,11 @@ export const resourceColumns: TableColumn[] = [
     key: "bottleneck_frequency",
     label: "Bottleneck",
     format: formatInteger,
+  },
+  {
+    key: "total_cost_mean",
+    label: "Total Cost",
+    format: (v) => formatDecimal(v, 2),
   },
 ];
 

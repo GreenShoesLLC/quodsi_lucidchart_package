@@ -17,8 +17,25 @@ export const requiredColumns: string[] = [
     'utilization_rate_mean',  // CSV uses utilization_rate_*, not utilization_*
     'utilization_rate_min',
     'utilization_rate_max',
-    'utilization_rate_std'  // CSV uses _std, not _std_dev
+    'utilization_rate_std',  // CSV uses _std, not _std_dev
     // 'bottleneck_frequency'  // NOT in CSV - will default to 0
+    // Cost metrics (CSV uses _std suffix)
+    'seize_cost_mean',
+    'seize_cost_std',
+    'seize_cost_min',
+    'seize_cost_max',
+    'utilization_cost_mean',
+    'utilization_cost_std',
+    'utilization_cost_min',
+    'utilization_cost_max',
+    'idle_cost_mean',
+    'idle_cost_std',
+    'idle_cost_min',
+    'idle_cost_max',
+    'total_cost_mean',
+    'total_cost_std',
+    'total_cost_min',
+    'total_cost_max'
 ];
 
 /**
@@ -133,7 +150,25 @@ export async function fetchResourceCrossRep(
             utilization_std_dev: item.utilization_rate_std,  // Map utilization_rate_std to utilization_std_dev
 
             // Bottleneck frequency not in CSV - default to 0
-            bottleneck_frequency: 0  // NOT in CSV, default to 0
+            bottleneck_frequency: 0,  // NOT in CSV, default to 0
+
+            // Cost metrics (map _std to _std_dev)
+            seize_cost_mean: item.seize_cost_mean,
+            seize_cost_std_dev: item.seize_cost_std,
+            seize_cost_min: item.seize_cost_min,
+            seize_cost_max: item.seize_cost_max,
+            utilization_cost_mean: item.utilization_cost_mean,
+            utilization_cost_std_dev: item.utilization_cost_std,
+            utilization_cost_min: item.utilization_cost_min,
+            utilization_cost_max: item.utilization_cost_max,
+            idle_cost_mean: item.idle_cost_mean,
+            idle_cost_std_dev: item.idle_cost_std,
+            idle_cost_min: item.idle_cost_min,
+            idle_cost_max: item.idle_cost_max,
+            total_cost_mean: item.total_cost_mean,
+            total_cost_std_dev: item.total_cost_std,
+            total_cost_min: item.total_cost_min,
+            total_cost_max: item.total_cost_max
         }));
 
         conditionalLog(`[resourceCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
@@ -157,7 +192,24 @@ export async function fetchResourceCrossRep(
                 utilization_min: item.utilization_min ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
-                bottleneck_frequency: item.bottleneck_frequency ?? 0
+                bottleneck_frequency: item.bottleneck_frequency ?? 0,
+                // Cost metrics
+                seize_cost_mean: item.seize_cost_mean ?? 0,
+                seize_cost_std_dev: item.seize_cost_std_dev ?? 0,
+                seize_cost_min: item.seize_cost_min ?? 0,
+                seize_cost_max: item.seize_cost_max ?? 0,
+                utilization_cost_mean: item.utilization_cost_mean ?? 0,
+                utilization_cost_std_dev: item.utilization_cost_std_dev ?? 0,
+                utilization_cost_min: item.utilization_cost_min ?? 0,
+                utilization_cost_max: item.utilization_cost_max ?? 0,
+                idle_cost_mean: item.idle_cost_mean ?? 0,
+                idle_cost_std_dev: item.idle_cost_std_dev ?? 0,
+                idle_cost_min: item.idle_cost_min ?? 0,
+                idle_cost_max: item.idle_cost_max ?? 0,
+                total_cost_mean: item.total_cost_mean ?? 0,
+                total_cost_std_dev: item.total_cost_std_dev ?? 0,
+                total_cost_min: item.total_cost_min ?? 0,
+                total_cost_max: item.total_cost_max ?? 0
             };
 
             return validItem;
@@ -199,7 +251,24 @@ export function prepareResourceCrossRepUpdate(data: ResourceCrossRepData[]) {
             utilization_min: item.utilization_min ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
-            bottleneck_frequency: item.bottleneck_frequency ?? 0
+            bottleneck_frequency: item.bottleneck_frequency ?? 0,
+            // Cost metrics
+            seize_cost_mean: item.seize_cost_mean ?? 0,
+            seize_cost_std_dev: item.seize_cost_std_dev ?? 0,
+            seize_cost_min: item.seize_cost_min ?? 0,
+            seize_cost_max: item.seize_cost_max ?? 0,
+            utilization_cost_mean: item.utilization_cost_mean ?? 0,
+            utilization_cost_std_dev: item.utilization_cost_std_dev ?? 0,
+            utilization_cost_min: item.utilization_cost_min ?? 0,
+            utilization_cost_max: item.utilization_cost_max ?? 0,
+            idle_cost_mean: item.idle_cost_mean ?? 0,
+            idle_cost_std_dev: item.idle_cost_std_dev ?? 0,
+            idle_cost_min: item.idle_cost_min ?? 0,
+            idle_cost_max: item.idle_cost_max ?? 0,
+            total_cost_mean: item.total_cost_mean ?? 0,
+            total_cost_std_dev: item.total_cost_std_dev ?? 0,
+            total_cost_min: item.total_cost_min ?? 0,
+            total_cost_max: item.total_cost_max ?? 0
         };
 
         // Add to our collection using the ID as the key

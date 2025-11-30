@@ -44,7 +44,24 @@ export const requiredColumns: string[] = [
     'total_allocations_std',    // was captures_std
     'throughput_mean',          // was releases_mean
     'throughput_max',           // was releases_max
-    'throughput_std'            // was releases_std
+    'throughput_std',           // was releases_std
+    // Cost metrics
+    'fixed_cost_mean',
+    'fixed_cost_std',
+    'fixed_cost_min',
+    'fixed_cost_max',
+    'processing_cost_mean',
+    'processing_cost_std',
+    'processing_cost_min',
+    'processing_cost_max',
+    'operational_cost_mean',
+    'operational_cost_std',
+    'operational_cost_min',
+    'operational_cost_max',
+    'total_cost_mean',
+    'total_cost_std',
+    'total_cost_min',
+    'total_cost_max'
 ];
 
 /**
@@ -188,7 +205,25 @@ export async function fetchActivityCrossRep(
 
             throughput_mean: item.throughput_mean,
             throughput_max: item.throughput_max,
-            throughput_std_dev: item.throughput_std
+            throughput_std_dev: item.throughput_std,
+
+            // Cost metrics
+            fixed_cost_mean: item.fixed_cost_mean,
+            fixed_cost_std_dev: item.fixed_cost_std,
+            fixed_cost_min: item.fixed_cost_min,
+            fixed_cost_max: item.fixed_cost_max,
+            processing_cost_mean: item.processing_cost_mean,
+            processing_cost_std_dev: item.processing_cost_std,
+            processing_cost_min: item.processing_cost_min,
+            processing_cost_max: item.processing_cost_max,
+            operational_cost_mean: item.operational_cost_mean,
+            operational_cost_std_dev: item.operational_cost_std,
+            operational_cost_min: item.operational_cost_min,
+            operational_cost_max: item.operational_cost_max,
+            total_cost_mean: item.total_cost_mean,
+            total_cost_std_dev: item.total_cost_std,
+            total_cost_min: item.total_cost_min,
+            total_cost_max: item.total_cost_max
         }));
 
         conditionalLog(`[activityCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
@@ -251,7 +286,25 @@ export async function fetchActivityCrossRep(
                 total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
                 throughput_mean: item.throughput_mean ?? 0,
                 throughput_max: item.throughput_max ?? 0,
-                throughput_std_dev: item.throughput_std_dev ?? 0
+                throughput_std_dev: item.throughput_std_dev ?? 0,
+
+                // Cost metrics
+                fixed_cost_mean: item.fixed_cost_mean ?? 0,
+                fixed_cost_std_dev: item.fixed_cost_std_dev ?? 0,
+                fixed_cost_min: item.fixed_cost_min ?? 0,
+                fixed_cost_max: item.fixed_cost_max ?? 0,
+                processing_cost_mean: item.processing_cost_mean ?? 0,
+                processing_cost_std_dev: item.processing_cost_std_dev ?? 0,
+                processing_cost_min: item.processing_cost_min ?? 0,
+                processing_cost_max: item.processing_cost_max ?? 0,
+                operational_cost_mean: item.operational_cost_mean ?? 0,
+                operational_cost_std_dev: item.operational_cost_std_dev ?? 0,
+                operational_cost_min: item.operational_cost_min ?? 0,
+                operational_cost_max: item.operational_cost_max ?? 0,
+                total_cost_mean: item.total_cost_mean ?? 0,
+                total_cost_std_dev: item.total_cost_std_dev ?? 0,
+                total_cost_min: item.total_cost_min ?? 0,
+                total_cost_max: item.total_cost_max ?? 0
             };
 
             return validItem;
@@ -332,7 +385,25 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
             throughput_mean: item.throughput_mean ?? 0,
             throughput_max: item.throughput_max ?? 0,
-            throughput_std_dev: item.throughput_std_dev ?? 0
+            throughput_std_dev: item.throughput_std_dev ?? 0,
+
+            // Cost metrics
+            fixed_cost_mean: item.fixed_cost_mean ?? 0,
+            fixed_cost_std_dev: item.fixed_cost_std_dev ?? 0,
+            fixed_cost_min: item.fixed_cost_min ?? 0,
+            fixed_cost_max: item.fixed_cost_max ?? 0,
+            processing_cost_mean: item.processing_cost_mean ?? 0,
+            processing_cost_std_dev: item.processing_cost_std_dev ?? 0,
+            processing_cost_min: item.processing_cost_min ?? 0,
+            processing_cost_max: item.processing_cost_max ?? 0,
+            operational_cost_mean: item.operational_cost_mean ?? 0,
+            operational_cost_std_dev: item.operational_cost_std_dev ?? 0,
+            operational_cost_min: item.operational_cost_min ?? 0,
+            operational_cost_max: item.operational_cost_max ?? 0,
+            total_cost_mean: item.total_cost_mean ?? 0,
+            total_cost_std_dev: item.total_cost_std_dev ?? 0,
+            total_cost_min: item.total_cost_min ?? 0,
+            total_cost_max: item.total_cost_max ?? 0
         };
 
         // Add to our collection using the ID as the key

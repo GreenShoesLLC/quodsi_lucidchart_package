@@ -41,28 +41,56 @@ const formatPercent = (value: number | null | undefined): string => {
 // Metric options for chart by data type
 const metricOptions: Record<string, { value: string; label: string }[]> = {
   activity: [
-    { value: "utilization_mean", label: "Utilization" },
-    { value: "cycle_time_mean", label: "Cycle Time" },
+    { value: "utilization_mean", label: "Utilization (Mean)" },
+    { value: "utilization_max", label: "Utilization (Max)" },
+    { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
+    { value: "cycle_time_mean", label: "Cycle Time (Mean)" },
+    { value: "cycle_time_median", label: "Cycle Time (Median)" },
+    { value: "total_time_waiting_for_resource_mean", label: "Time Waiting for Resource" },
+    { value: "total_arrivals_mean", label: "Total Arrivals" },
+    { value: "total_allocations_mean", label: "Total Allocations" },
+    { value: "throughput_mean", label: "Throughput" },
+    { value: "total_cost_mean", label: "Total Cost" },
   ],
   entity: [
+    { value: "count_mean", label: "Count" },
+    { value: "completed_count_mean", label: "Completed Count" },
+    { value: "in_progress_count_mean", label: "In Progress (WIP)" },
     { value: "throughput_rate_mean", label: "Throughput Rate" },
     { value: "time_in_system_mean", label: "Time in System" },
+    { value: "time_in_system_median", label: "Time in System (Median)" },
     { value: "time_waiting_mean", label: "Time Waiting" },
+    { value: "time_in_operation_mean", label: "Time in Operation" },
+    { value: "percent_waiting_mean", label: "% Waiting" },
+    { value: "percent_operation_mean", label: "% In Operation" },
+    { value: "percent_blocked_mean", label: "% Blocked" },
   ],
   resource: [
-    { value: "utilization_mean", label: "Utilization" },
-    { value: "utilization_min", label: "Util (Min)" },
-    { value: "utilization_max", label: "Util (Max)" },
+    { value: "utilization_mean", label: "Utilization (Mean)" },
+    { value: "utilization_min", label: "Utilization (Min)" },
+    { value: "utilization_max", label: "Utilization (Max)" },
+    { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
+    { value: "bottleneck_frequency", label: "Bottleneck Frequency" },
+    { value: "seize_cost_mean", label: "Seize Cost" },
+    { value: "utilization_cost_mean", label: "Utilization Cost" },
+    { value: "idle_cost_mean", label: "Idle Cost" },
+    { value: "total_cost_mean", label: "Total Cost" },
   ],
   "state-summary": [
     { value: "mean_final_value", label: "Final Value" },
     { value: "mean_min_value", label: "Min Value" },
     { value: "mean_max_value", label: "Max Value" },
+    { value: "mean_time_weighted_avg", label: "Time-Weighted Avg" },
+    { value: "mean_change_count", label: "Change Count" },
   ],
   scenario: [
-    { value: "total_throughput_mean", label: "Throughput" },
+    { value: "total_throughput_mean", label: "Total Throughput" },
     { value: "total_entities_created_mean", label: "Entities Created" },
+    { value: "entities_in_progress_mean", label: "Entities In Progress" },
     { value: "avg_cycle_time_mean", label: "Avg Cycle Time" },
+    { value: "avg_time_in_system_mean", label: "Avg Time in System" },
+    { value: "avg_entities_in_system_mean", label: "Avg Entities in System" },
+    { value: "total_cost_mean", label: "Total Cost" },
   ],
 };
 
@@ -444,7 +472,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
                       </td>
                       <td className="px-2 py-1.5 text-right">{formatPercent(activity.utilization_mean)}</td>
                       <td className="px-2 py-1.5 text-right">{formatNumber(activity.cycle_time_mean, 1)}</td>
-                      <td className="px-2 py-1.5 text-right text-gray-400">-</td>
+                      <td className="px-2 py-1.5 text-right">{formatNumber(activity.total_cost_mean, 2)}</td>
                     </tr>
                   ))
                 )}
@@ -484,7 +512,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
                         {resource.resource_name}
                       </td>
                       <td className="px-2 py-1.5 text-right">{formatPercent(resource.utilization_mean)}</td>
-                      <td className="px-2 py-1.5 text-right text-gray-400">-</td>
+                      <td className="px-2 py-1.5 text-right">{formatNumber(resource.total_cost_mean, 2)}</td>
                     </tr>
                   ))
                 )}

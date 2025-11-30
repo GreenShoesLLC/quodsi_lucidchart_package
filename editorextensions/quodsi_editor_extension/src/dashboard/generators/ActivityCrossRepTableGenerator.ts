@@ -43,7 +43,8 @@ export class ActivityCrossRepTableGenerator extends BaseTableGenerator {
                 'total_time_blocked_mean',
                 'total_arrivals_mean',
                 'total_allocations_mean',
-                'throughput_mean'
+                'throughput_mean',
+                'total_cost_mean'
             ]
         };
     }

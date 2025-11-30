@@ -15,6 +15,24 @@ export interface ResourceCrossRep {
   utilization_max: number;
   utilization_std_dev: number;
   bottleneck_frequency: number;
+
+  // Cost metrics
+  seize_cost_mean: number;
+  seize_cost_std_dev: number;
+  seize_cost_min: number;
+  seize_cost_max: number;
+  utilization_cost_mean: number;
+  utilization_cost_std_dev: number;
+  utilization_cost_min: number;
+  utilization_cost_max: number;
+  idle_cost_mean: number;
+  idle_cost_std_dev: number;
+  idle_cost_min: number;
+  idle_cost_max: number;
+  total_cost_mean: number;
+  total_cost_std_dev: number;
+  total_cost_min: number;
+  total_cost_max: number;
 }
 
 /**
@@ -33,6 +51,24 @@ export function mapToResourceCrossRep(itemFields: MapProxy<string, any>): Resour
     utilization_min: itemFields.get('utilization_min') as number,
     utilization_max: itemFields.get('utilization_max') as number,
     utilization_std_dev: itemFields.get('utilization_std_dev') as number,
-    bottleneck_frequency: itemFields.get('bottleneck_frequency') as number
+    bottleneck_frequency: itemFields.get('bottleneck_frequency') as number,
+
+    // Cost metrics
+    seize_cost_mean: itemFields.get('seize_cost_mean') as number,
+    seize_cost_std_dev: itemFields.get('seize_cost_std_dev') as number,
+    seize_cost_min: itemFields.get('seize_cost_min') as number,
+    seize_cost_max: itemFields.get('seize_cost_max') as number,
+    utilization_cost_mean: itemFields.get('utilization_cost_mean') as number,
+    utilization_cost_std_dev: itemFields.get('utilization_cost_std_dev') as number,
+    utilization_cost_min: itemFields.get('utilization_cost_min') as number,
+    utilization_cost_max: itemFields.get('utilization_cost_max') as number,
+    idle_cost_mean: itemFields.get('idle_cost_mean') as number,
+    idle_cost_std_dev: itemFields.get('idle_cost_std_dev') as number,
+    idle_cost_min: itemFields.get('idle_cost_min') as number,
+    idle_cost_max: itemFields.get('idle_cost_max') as number,
+    total_cost_mean: itemFields.get('total_cost_mean') as number,
+    total_cost_std_dev: itemFields.get('total_cost_std_dev') as number,
+    total_cost_min: itemFields.get('total_cost_min') as number,
+    total_cost_max: itemFields.get('total_cost_max') as number
   };
 }
