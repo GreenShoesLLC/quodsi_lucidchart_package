@@ -24,7 +24,7 @@ export const ResourceRepSummarySchema: SchemaDefinition = {
         { name: "current_utilization", type: ScalarFieldTypeEnum.NUMBER },
         { name: "average_wait_time", type: ScalarFieldTypeEnum.NUMBER },
         { name: "max_wait_time", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "average_queue_length", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "average_entities", type: ScalarFieldTypeEnum.NUMBER },
         { name: "max_queue_length", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_conflicts", type: ScalarFieldTypeEnum.NUMBER },
         { name: "conflict_frequency", type: ScalarFieldTypeEnum.NUMBER }
@@ -52,7 +52,7 @@ export const ResourceRepSummarySchema: SchemaDefinition = {
         'current_utilization': 'Current Utilization',
         'average_wait_time': 'Average Wait Time',
         'max_wait_time': 'Max Wait Time',
-        'average_queue_length': 'Average Queue Length',
+        'average_entities': 'Average Queue Length',
         'max_queue_length': 'Max Queue Length',
         'total_conflicts': 'Total Conflicts',
         'conflict_frequency': 'Conflict Frequency'

@@ -30,7 +30,7 @@ export interface ResourceRepSummaryData {
     // Performance metrics
     average_wait_time: number;
     max_wait_time: number;
-    average_queue_length: number;
+    average_entities: number;
     max_queue_length: number;
     // Conflict metrics
     total_conflicts: number;

@@ -14,7 +14,7 @@ export class ResourceRepSummaryTableGenerator extends BaseTableGenerator {
     getTableType(): string {
         return 'resourceRepSummary';
     }
-    
+
     /**
      * Gets the schema mapping for resource replication summary tables
      * @returns Schema mapping object
@@ -34,11 +34,11 @@ export class ResourceRepSummaryTableGenerator extends BaseTableGenerator {
                 'peak_utilization',
                 'average_wait_time',
                 'max_queue_length',
-                'average_queue_length'
+                'average_entities'
             ]
         };
     }
-    
+
     /**
      * Gets resource replication summary data
      * @returns Promise resolving with array of resource replication summary data
@@ -46,7 +46,7 @@ export class ResourceRepSummaryTableGenerator extends BaseTableGenerator {
     async getData(): Promise<ResourceRepSummary[]> {
         return this.resultsReader.getResourceRepSummaryData();
     }
-    
+
     /**
      * Gets the default title for resource replication summary tables
      * @returns Default title string

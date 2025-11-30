@@ -91,7 +91,7 @@ export async function fetchResourceRepSummary(
                 // Performance metrics
                 average_wait_time: item.average_wait_time ?? 0,
                 max_wait_time: item.max_wait_time ?? 0,
-                average_queue_length: item.average_queue_length ?? 0,
+                average_entities: item.average_entities ?? 0,
                 max_queue_length: item.max_queue_length ?? 0,
                 // Conflict metrics
                 total_conflicts: item.total_conflicts ?? 0,
@@ -152,7 +152,7 @@ export function prepareResourceRepSummaryUpdate(data: ResourceRepSummaryData[]) 
             // Performance metrics
             average_wait_time: item.average_wait_time ?? 0,
             max_wait_time: item.max_wait_time ?? 0,
-            average_queue_length: item.average_queue_length ?? 0,
+            average_entities: item.average_entities ?? 0,
             max_queue_length: item.max_queue_length ?? 0,
             // Conflict metrics
             total_conflicts: item.total_conflicts ?? 0,

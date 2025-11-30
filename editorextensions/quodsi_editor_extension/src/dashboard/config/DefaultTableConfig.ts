@@ -192,7 +192,7 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'peak_utilization',
                 'average_wait_time',
                 'max_wait_time',
-                'average_queue_length',
+                'average_entities',
                 'max_queue_length'
             ],
             exclude: ['id', 'scenario_id']
