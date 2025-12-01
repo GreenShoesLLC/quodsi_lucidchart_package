@@ -70,11 +70,11 @@
     }
   },
   "variables": {
-    "osOffer": "ubuntu-server-container",
-    "osPublisher": "microsoft-azure-batch",
-    "osSku": "20-04-lts",
-    "nodeAgentSkuId": "batch.node.ubuntu 20.04",
-    "startTaskCommandLine": "[concat('/bin/bash -c \"sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install --reinstall -y software-properties-common && sudo add-apt-repository ppa:deadsnakes/ppa -y && sudo apt-get update && sudo apt-get install --reinstall -y python3.10 python3.10-venv python3-pip libssl-dev && python3.10 -m venv batch_env && source batch_env/bin/activate && pip install --upgrade pip setuptools wheel && pip install testresources && export PATH=$PATH:$HOME/.local/bin && pip install --no-cache-dir -r $AZ_BATCH_APP_PACKAGE_', replace(parameters('appPackageName'), '-', '_'), '_', replace(parameters('appPackageVersion'), '.', '_'), '/requirements.txt && echo ''Python packages installed successfully'' && pip list\"')]"
+    "osOffer": "ubuntu-24_04-lts",
+    "osPublisher": "canonical",
+    "osSku": "server",
+    "nodeAgentSkuId": "batch.node.ubuntu 24.04",
+    "startTaskCommandLine": "[concat('/bin/bash -c ''echo \"=== System Information ===\"; cat /etc/os-release; echo \"==========================\"; wait_for_apt_lock() { while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do echo \"Waiting for apt lock...\"; sleep 5; done; }; wait_for_apt_lock; sudo apt-get update; wait_for_apt_lock; sudo apt-get upgrade -y; wait_for_apt_lock; sudo apt-get install --reinstall -y python3-venv python3-pip libssl-dev; echo \"=== Python Version ===\"; python3 --version; echo \"======================\"; python3 -m venv batch_env; source batch_env/bin/activate; pip install --upgrade pip setuptools wheel; pip install testresources; export PATH=$PATH:$HOME/.local/bin; pip install --no-cache-dir -r $AZ_BATCH_APP_PACKAGE_', replace(parameters('appPackageName'), '-', '_'), '_', replace(parameters('appPackageVersion'), '.', '_'), '/requirements.txt; echo \"=== Python Packages Installed Successfully ===\"; pip list; python --version; echo \"===============================================\"''')]"
   },
   "resources": [
     {

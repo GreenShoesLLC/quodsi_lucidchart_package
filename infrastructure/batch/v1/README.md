@@ -108,8 +108,8 @@ az batch pool resize --pool-id quodsi-prd-python-pool-01 --target-dedicated-node
 - The storage account can be in a different resource group than the Batch account
 - All pools are created with 0 nodes initially to avoid costs until needed
 - The shared resource group approach simplifies management of shared resources
-- The start task installs Python 3.10 and required dependencies on each node
-- All pools use Ubuntu 20.04 LTS container images
+- The start task uses native Python 3.12 and installs required dependencies on each node
+- All pools use Ubuntu 24.04 LTS (Canonical) images with native Python 3.12
 - The managed identity `quodsisharedbatch01-identity` is used for the Batch account
 
 ## Updating Function Apps
