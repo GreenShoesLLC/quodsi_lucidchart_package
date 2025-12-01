@@ -215,22 +215,28 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         // Handle summary view data
         if (viewType === 'summary') {
           if (success) {
-            setSummaryData(prev => {
-              const newData = { ...prev };
-              if (receivedType === 'scenario') {
-                newData.scenario = receivedData?.[0] || null;
-                summaryDataReceived.current.scenario = true;
-              } else if (receivedType === 'activity') {
-                newData.activities = receivedData || [];
-                summaryDataReceived.current.activity = true;
-              } else if (receivedType === 'resource') {
-                newData.resources = receivedData || [];
-                summaryDataReceived.current.resource = true;
-              }
-              return newData;
-            });
+            // Update refs BEFORE setSummaryData so they're synchronous
+            if (receivedType === 'scenario') {
+              summaryDataReceived.current.scenario = true;
+              setSummaryData(prev => ({
+                ...prev,
+                scenario: receivedData?.[0] || null
+              }));
+            } else if (receivedType === 'activity') {
+              summaryDataReceived.current.activity = true;
+              setSummaryData(prev => ({
+                ...prev,
+                activities: receivedData || []
+              }));
+            } else if (receivedType === 'resource') {
+              summaryDataReceived.current.resource = true;
+              setSummaryData(prev => ({
+                ...prev,
+                resources: receivedData || []
+              }));
+            }
 
-            // Check if all data received
+            // Now this check works because refs were updated synchronously above
             if (summaryDataReceived.current.scenario &&
                 summaryDataReceived.current.activity &&
                 summaryDataReceived.current.resource) {
