@@ -42,6 +42,7 @@ interface Props {
   onSave: (model: Model) => void;
   onCancel: () => void;
   onRemoveModel?: () => void;
+  onValidate?: () => void;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
   referenceData?: EditorReferenceData;
@@ -170,7 +171,7 @@ const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: str
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -243,6 +244,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Trigger validation when validation tab is selected
+  useEffect(() => {
+    if (activeTab === 'validation' && onValidate) {
+      onValidate();
+    }
+  }, [activeTab, onValidate]);
 
   // Guard against invalid model data
   if (!localModelDraft?.id) {
@@ -727,68 +735,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
               <FileJson className="w-3 h-3" />
               View Model JSON
             </button>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="border-2 border-red-200 rounded-lg p-2 bg-red-50">
-            <div className="flex items-center gap-1 mb-2">
-              <AlertTriangle className="w-4 h-4 text-red-600" />
-              <h3 className="text-xs font-semibold text-red-700">Danger Zone</h3>
-            </div>
-            <div className="bg-white border border-red-200 rounded p-2 mb-2">
-              <h4 className="text-xs font-semibold text-gray-900 mb-1">Remove Quodsi Data</h4>
-              <p className="text-xs text-gray-600 mb-2">
-                This will permanently remove all Quodsi simulation data from this document,
-                including all activities, resources, entities, generators, connectors, scenarios,
-                and configuration. The document will be restored to its original state.
-              </p>
-              {!showRemoveConfirm ? (
-                <button
-                  type="button"
-                  className="w-full text-xs px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors font-medium"
-                  onClick={() => setShowRemoveConfirm(true)}
-                  title="Remove all Quodsi data from this document"
-                >
-                  Remove All Quodsi Data
-                </button>
-              ) : (
-                <div className="p-2 bg-red-50 border border-red-200 rounded">
-                  <div className="text-xs font-medium text-red-900 mb-2">
-                    Remove All Quodsi Data?
-                  </div>
-                  <div className="text-xs text-red-700 mb-2">
-                    This will permanently remove all simulation data including:
-                  </div>
-                  <ul className="text-xs text-red-600 ml-4 mb-2 list-disc">
-                    <li>Activities, resources, and entities</li>
-                    <li>Generators and connectors</li>
-                    <li>Scenarios and configuration</li>
-                  </ul>
-                  <div className="text-xs font-semibold text-red-700 mb-3">
-                    This action cannot be undone.
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onRemoveModel?.();
-                        setShowRemoveConfirm(false);
-                      }}
-                      className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                    >
-                      Remove All Data
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowRemoveConfirm(false)}
-                      className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

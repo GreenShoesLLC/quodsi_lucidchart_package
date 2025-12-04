@@ -10,6 +10,7 @@ import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { ScenarioHandler } from './scenarioHandler';
+import { ConversionPreviewHandler } from './conversionPreviewHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -46,7 +47,12 @@ export class MessageHandlers {
     if (ModelOpsHandler.handleMessage(msg)) {
       return true;
     }
-    
+
+    // Conversion preview messages
+    if (ConversionPreviewHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Element operations messages
     if (ElementOpsHandler.handleMessage(msg)) {
       return true;
@@ -94,5 +100,6 @@ export {
   ResourceRequirementsHandler,
   TimePatternHandler,
   StorageHandler,
-  ScenarioHandler
+  ScenarioHandler,
+  ConversionPreviewHandler
 };

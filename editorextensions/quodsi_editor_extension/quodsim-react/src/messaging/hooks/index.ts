@@ -6,3 +6,4 @@ export { useValidationState } from './useValidationState';
 export { useElementOpsState } from './useElementOpsState';
 export { useParameterEditorState, useMultiParameterEditorState } from './useParameterEditorState';
 export { useModelPanel } from './useModelPanel';
+export { useConversionPreview } from './useConversionPreview';

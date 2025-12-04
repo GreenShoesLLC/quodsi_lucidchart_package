@@ -23,6 +23,7 @@ interface ElementEditorProps {
   elementData: any;
   onSave: (data: any) => void;
   onRemoveModel?: () => void;
+  onValidate?: () => void;
   referenceData: EditorReferenceData;
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
@@ -44,6 +45,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   elementData,
   onSave,
   onRemoveModel,
+  onValidate,
   referenceData,
   currentElement,
   states,
@@ -91,6 +93,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onSave={onSave}
             onCancel={handleCancel}
             onRemoveModel={onRemoveModel}
+            onValidate={onValidate}
             states={states}
             onStatesChange={onStatesChange}
             referenceData={referenceData}

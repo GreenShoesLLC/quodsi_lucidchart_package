@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
+import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationBanner } from './ValidationBanner';
+import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
@@ -43,6 +45,14 @@ export const ModelPanel: React.FC = () => {
     updateTimePatterns: sendTimePatternsUpdate,
     updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate
   } = useModelOpsSender();
+
+  // Get conversion preview state and actions
+  const {
+    isVisible: isPreviewVisible,
+    isApplying,
+    openPreview,
+    applyDefaults
+  } = useConversionPreview();
 
   // Local UI state for validation banner
   const [validationBannerExpanded, setValidationBannerExpanded] = useState(false);
@@ -145,6 +155,11 @@ export const ModelPanel: React.FC = () => {
     }
   }, [modelName, currentElement, diagramElementType]);
   
+  // Show conversion preview panel when visible
+  if (isPreviewVisible) {
+    return <ConversionPreviewPanel onRemoveModel={onRemoveModel} />;
+  }
+
   // Handle initialization state
   if (needsInitialization) {
     return (
@@ -152,12 +167,21 @@ export const ModelPanel: React.FC = () => {
         <div className="text-center p-8 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">Initialize Model</h2>
           <p className="text-gray-600 mb-6">Create a new Quodsi simulation model from this document.</p>
-          <button
-            className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-medium"
-            onClick={onConvertPage}
-          >
-            Initialize Quodsi Model
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+              onClick={applyDefaults}
+              disabled={isApplying}
+            >
+              {isApplying ? 'Converting...' : 'Quick Convert'}
+            </button>
+            <button
+              className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-medium"
+              onClick={openPreview}
+            >
+              Preview First
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -208,9 +232,9 @@ export const ModelPanel: React.FC = () => {
         modelName={modelName}
         validationState={validationState}
         currentElement={currentElement}
-        onValidate={onValidate}
         onSimulate={handleSimulate}
         onRemoveModel={onRemoveModel}
+        onOpenDiagramMapping={openPreview}
         onElementTypeChange={onElementTypeChange}
         diagramElementType={diagramElementType}
         simulationStatus={simulationStatus}
@@ -240,6 +264,7 @@ export const ModelPanel: React.FC = () => {
             )}
             onSave={data => onElementUpdate(currentElement.id, data)}
             onRemoveModel={onRemoveModel}
+            onValidate={onValidate}
             referenceData={referenceData}
             currentElement={currentElement}
             states={states}

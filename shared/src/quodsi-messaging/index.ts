@@ -9,6 +9,7 @@ import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, Simul
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
 import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, ScenarioMessage, ScenarioInfo, ScenarioDownloadInfo } from './scenario/messages';
+import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -137,6 +138,15 @@ export {
   ScenarioMessage
 } from './scenario/messages';
 
+// Export conversion preview messages
+export {
+  ConversionPreviewRequestMessage,
+  ConversionPreviewResultMessage,
+  ConversionApplyMessage,
+  ConversionApplyResultMessage,
+  ConversionPreviewMessage
+} from './conversionPreview/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage
@@ -147,7 +157,8 @@ export type QuodsiMessage =
   | ModelOpsMessage
   | ElementOpsMessage
   | StorageMessage
-  | ScenarioMessage;
+  | ScenarioMessage
+  | ConversionPreviewMessage;
 
 // Define payload type mapping
 export interface EnvelopMessagePayloads {
@@ -210,6 +221,11 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST]: ScenarioResimulateRequestMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_REQUEST]: CrossRepDataRequestMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_RESULT]: CrossRepDataResultMessage['data'];
+
+  [EnvelopeMessageType.CONVERSION_PREVIEW_REQUEST]: ConversionPreviewRequestMessage['data'];
+  [EnvelopeMessageType.CONVERSION_PREVIEW_RESULT]: ConversionPreviewResultMessage['data'];
+  [EnvelopeMessageType.CONVERSION_APPLY]: ConversionApplyMessage['data'];
+  [EnvelopeMessageType.CONVERSION_APPLY_RESULT]: ConversionApplyResultMessage['data'];
 }
 
 /**

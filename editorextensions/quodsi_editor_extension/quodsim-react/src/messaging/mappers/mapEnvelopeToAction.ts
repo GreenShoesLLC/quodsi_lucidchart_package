@@ -5,6 +5,7 @@ import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
 import { mapElementOps } from './elementOps.mapper';
 import { mapStorage } from './storage.mapper';
+import { mapConversionPreview } from './conversionPreview.mapper';
 import { debugService } from '../utils/debugService';
 import { MessagingAction } from '../state/types';
 
@@ -20,6 +21,7 @@ const mappers = [
   mapSelection,
   mapSimulation,
   mapModelOps,
+  mapConversionPreview,
   mapElementOps,
   mapStorage
 ];

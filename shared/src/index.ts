@@ -11,6 +11,7 @@ export * from './constants/version';
 export * from './types/ActivityRelationships';
 export * from './types/BlockAnalysis';
 export * from './types/common';
+export * from './types/ConversionPreview';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
 export * from './types/ModelItemData';

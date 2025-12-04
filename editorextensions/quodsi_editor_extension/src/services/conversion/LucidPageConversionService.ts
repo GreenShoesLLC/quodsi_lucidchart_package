@@ -1,4 +1,4 @@
-import { PageProxy } from 'lucid-extension-sdk';
+import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import {
     ConversionResult,
     Model,
@@ -6,7 +6,8 @@ import {
     Connector,
     ConnectType,
     QuodsiLogger,
-    ProcessAnalysisResult
+    ProcessAnalysisResult,
+    DiagramElementKind
 } from '@quodsi/shared';
 
 import { StorageAdapter } from '../../core/StorageAdapter';
@@ -104,6 +105,189 @@ export class LucidPageConversionService extends QuodsiLogger {
             this.logError('Conversion failed:', error);
             throw error;
         }
+    }
+
+    /**
+     * Converts a LucidChart page to a Quodsi simulation model using explicit mappings.
+     * This allows users to override the automatic type detection.
+     *
+     * @param page The page to convert
+     * @param mappings Map of element ID to target simulation type (null means skip)
+     */
+    public async convertPageWithMappings(
+        page: PageProxy,
+        mappings: Map<string, SimulationObjectType | null>
+    ): Promise<ConversionResult> {
+        this.log('Starting page conversion with explicit mappings');
+
+        try {
+            // Check if this is a re-conversion (page already has model data)
+            const isReconversion = this.storageAdapter.isQuodsiModel(page);
+
+            if (isReconversion) {
+                this.log('Re-conversion: applying partial updates');
+                // For re-conversion, only clear data for elements that are in the mappings
+                // This allows updating specific elements without affecting others
+                for (const [blockId, block] of page.allBlocks) {
+                    if (mappings.has(blockId)) {
+                        this.storageAdapter.clearElementData(block);
+                    }
+                }
+                for (const [lineId, line] of page.allLines) {
+                    if (mappings.has(lineId)) {
+                        this.storageAdapter.clearElementData(line);
+                    }
+                }
+            } else {
+                // First-time conversion: create the model
+                const modelLucid = this.elementFactory.createPlatformObject(
+                    page,
+                    SimulationObjectType.Model,
+                    true // isConversion
+                );
+
+                const model = modelLucid.getSimulationObject();
+                await this.modelManager.initializeModel(model, page);
+
+                if (!this.storageAdapter.isQuodsiModel(page)) {
+                    throw new Error('Failed to initialize model on page');
+                }
+            }
+
+            // Convert elements using explicit mappings
+            const counts = await this.convertElementsWithMappings(page, mappings);
+
+            // Validate the converted model
+            const validationResult = await this.modelManager.validateModel();
+            this.log('Validation result:', validationResult);
+
+            return {
+                success: true,
+                modelId: page.id,
+                elementCount: {
+                    activities: counts.activities,
+                    generators: counts.generators,
+                    resources: counts.resources,
+                    connectors: counts.connectors
+                }
+            };
+        } catch (error) {
+            this.logError('Conversion with mappings failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Converts elements using explicit type mappings
+     */
+    private async convertElementsWithMappings(
+        page: PageProxy,
+        mappings: Map<string, SimulationObjectType | null>
+    ): Promise<{ activities: number; generators: number; resources: number; connectors: number }> {
+        let activities = 0;
+        let generators = 0;
+        let resources = 0;
+        let connectors = 0;
+
+        // Calculate outgoing connections for probability calculation
+        const outgoingConnectionCounts = new Map<string, number>();
+        for (const [lineId, line] of page.allLines) {
+            const endpoint1 = line.getEndpoint1();
+            if (endpoint1?.connection) {
+                const sourceId = endpoint1.connection.id;
+                outgoingConnectionCounts.set(
+                    sourceId,
+                    (outgoingConnectionCounts.get(sourceId) || 0) + 1
+                );
+            }
+        }
+
+        // Process blocks
+        for (const [blockId, block] of page.allBlocks) {
+            const targetType = mappings.get(blockId);
+
+            // Skip if null or not in mappings
+            if (targetType === null || targetType === undefined) {
+                this.log(`Skipping block ${blockId} (no mapping or explicitly skipped)`);
+                continue;
+            }
+
+            try {
+                this.log(`Converting block ${blockId} to ${targetType}`);
+
+                const platformObject = this.elementFactory.createPlatformObject(
+                    block,
+                    targetType,
+                    true // isConversion
+                );
+
+                const element = platformObject.getSimulationObject();
+                await this.modelManager.registerElement(element, block);
+
+                switch (targetType) {
+                    case SimulationObjectType.Activity:
+                        activities++;
+                        break;
+                    case SimulationObjectType.Generator:
+                        generators++;
+                        break;
+                    case SimulationObjectType.Resource:
+                        resources++;
+                        break;
+                }
+            } catch (error) {
+                this.logError(`Failed to convert block ${blockId}:`, error);
+                throw error;
+            }
+        }
+
+        // Process lines
+        for (const [lineId, line] of page.allLines) {
+            const targetType = mappings.get(lineId);
+
+            // Skip if null or not a Connector
+            if (targetType !== SimulationObjectType.Connector) {
+                this.log(`Skipping line ${lineId} (not mapped to Connector)`);
+                continue;
+            }
+
+            const endpoint1 = line.getEndpoint1();
+            const endpoint2 = line.getEndpoint2();
+
+            if (!endpoint1?.connection || !endpoint2?.connection) {
+                this.log(`Line ${lineId} has invalid endpoints, skipping`);
+                continue;
+            }
+
+            try {
+                this.log(`Converting line ${lineId} to Connector`);
+
+                const sourceId = endpoint1.connection.id;
+                const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
+                const probability = 1.0 / outgoingCount;
+
+                const platformObject = this.elementFactory.createPlatformObject(
+                    line,
+                    SimulationObjectType.Connector,
+                    true // isConversion
+                );
+
+                const connector = platformObject.getSimulationObject() as Connector;
+                connector.sourceId = sourceId;
+                connector.targetId = endpoint2.connection.id;
+                connector.weight = probability;
+
+                platformObject.updateFromPlatform();
+                await this.modelManager.registerElement(connector, line);
+                connectors++;
+            } catch (error) {
+                this.logError(`Failed to convert line ${lineId}:`, error);
+                throw error;
+            }
+        }
+
+        this.log('Conversion counts:', { activities, generators, resources, connectors });
+        return { activities, generators, resources, connectors };
     }
 
     /**

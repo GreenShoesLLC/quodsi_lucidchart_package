@@ -1,0 +1,264 @@
+import {
+    EnvelopeBase,
+    EnvelopeMessageType,
+    ConversionPreviewData,
+    ConversionApplyRequest,
+    ElementMappingOverride,
+    SimulationObjectType
+} from '@quodsi/shared';
+import { router } from '../index';
+import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
+import { ModelManager } from '../../ModelManager';
+import { StorageAdapter } from '../../StorageAdapter';
+import { LucidElementFactory } from '../../../services/LucidElementFactory';
+import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
+import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
+import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+
+// Simple ID generator for extension context
+const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/**
+ * Handler for conversion preview operations (analyze, preview, apply)
+ */
+export class ConversionPreviewHandler {
+    private static logger = ExtensionDebugService.forComponent('ConversionPreviewHandler');
+
+    /**
+     * Handle messages related to conversion preview operations
+     *
+     * @param msg The received message
+     * @returns Whether the message was handled
+     */
+    public static handleMessage(msg: EnvelopeBase): boolean {
+        switch (msg.type) {
+            case EnvelopeMessageType.CONVERSION_PREVIEW_REQUEST:
+                ConversionPreviewHandler.handlePreviewRequest(msg)
+                    .catch(err => ConversionPreviewHandler.logger.error('Error handling CONVERSION_PREVIEW_REQUEST:', err));
+                return true;
+
+            case EnvelopeMessageType.CONVERSION_APPLY:
+                ConversionPreviewHandler.handleApplyConversion(msg)
+                    .catch(err => ConversionPreviewHandler.logger.error('Error handling CONVERSION_APPLY:', err));
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Handle conversion preview request - analyze the page and return preview data
+     */
+    private static async handlePreviewRequest(msg: EnvelopeBase): Promise<void> {
+        try {
+            ConversionPreviewHandler.logger.log('Conversion preview requested');
+
+            const client = ModelManager.getClient();
+            const viewport = new Viewport(client);
+            const currentPage = viewport.getCurrentPage();
+
+            if (!currentPage) {
+                throw new Error('No current page available');
+            }
+
+            // Create required services
+            const storageAdapter = new StorageAdapter();
+            const pageAnalyzer = new LucidPageAnalyzer();
+
+            // Analyze the page for preview
+            const previewData = pageAnalyzer.analyzePageForPreview(currentPage, storageAdapter);
+
+            ConversionPreviewHandler.logger.log('Preview analysis complete:', {
+                pageId: previewData.pageId,
+                isAlreadyConverted: previewData.isAlreadyConverted,
+                totalMappings: previewData.mappings.length,
+                summary: previewData.summary
+            });
+
+            // Send preview result
+            router.send('model', {
+                id: msg.id,
+                type: EnvelopeMessageType.CONVERSION_PREVIEW_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: previewData
+            });
+
+        } catch (error) {
+            ConversionPreviewHandler.logger.error('Error generating conversion preview:', error);
+
+            // Send error response
+            router.send('model', {
+                id: msg.id,
+                type: EnvelopeMessageType.CONVERSION_PREVIEW_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: {
+                    error: error instanceof Error ? error.message : String(error)
+                }
+            });
+        }
+    }
+
+    /**
+     * Handle apply conversion with user overrides
+     */
+    private static async handleApplyConversion(msg: EnvelopeBase): Promise<void> {
+        try {
+            const data = msg.data as ConversionApplyRequest;
+
+            ConversionPreviewHandler.logger.log('Applying conversion with overrides:', {
+                pageId: data.pageId,
+                overrideCount: data.overrides?.length ?? 0
+            });
+
+            const client = ModelManager.getClient();
+            const modelManager = ModelManager.getInstance();
+            const viewport = new Viewport(client);
+            const currentPage = viewport.getCurrentPage();
+            const document = new DocumentProxy(client);
+
+            if (!currentPage) {
+                throw new Error('No current page available');
+            }
+
+            // Create required services
+            const storageAdapter = new StorageAdapter();
+            const lucidElementFactory = new LucidElementFactory(storageAdapter);
+            const pageConversionService = new LucidPageConversionService(
+                modelManager,
+                lucidElementFactory,
+                storageAdapter
+            );
+            const pageAnalyzer = new LucidPageAnalyzer();
+
+            // Get the preview data to start with proposed mappings
+            const previewData = pageAnalyzer.analyzePageForPreview(currentPage, storageAdapter);
+
+            // Build the final mappings
+            const finalMappings = new Map<string, SimulationObjectType | null>();
+
+            if (previewData.isAlreadyConverted) {
+                // For already-converted pages, only apply override mappings
+                // Leave non-overridden elements unchanged
+                if (data.overrides && data.overrides.length > 0) {
+                    for (const override of data.overrides) {
+                        finalMappings.set(override.elementId, override.targetType);
+                    }
+                }
+                ConversionPreviewHandler.logger.log('Already converted page - applying overrides only:', {
+                    overrideCount: finalMappings.size
+                });
+            } else {
+                // For new conversions, start with all proposed mappings
+                for (const mapping of previewData.mappings) {
+                    finalMappings.set(mapping.elementId, mapping.proposedType);
+                }
+
+                // Apply user overrides
+                if (data.overrides && data.overrides.length > 0) {
+                    for (const override of data.overrides) {
+                        finalMappings.set(override.elementId, override.targetType);
+                    }
+                }
+
+                ConversionPreviewHandler.logger.log('New conversion - full mappings prepared:', {
+                    totalMappings: finalMappings.size
+                });
+            }
+
+            // Perform conversion with the final mappings
+            const result = await pageConversionService.convertPageWithMappings(
+                currentPage,
+                finalMappings
+            );
+
+            ConversionPreviewHandler.logger.log('Conversion complete:', result);
+
+            // Send success response
+            router.send('model', {
+                id: msg.id,
+                type: EnvelopeMessageType.CONVERSION_APPLY_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: {
+                    success: true,
+                    result
+                }
+            });
+
+            // Send context refresh messages (same pattern as MODEL_CONVERT)
+            Promise.resolve().then(() => {
+                const documentId = document.id;
+                const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
+                const title = document.getTitle() || 'Untitled Document';
+
+                // Send MODEL_CONTEXT message
+                router.send('model', {
+                    id: generateId(),
+                    type: EnvelopeMessageType.MODEL_CONTEXT,
+                    source: 'host',
+                    target: 'model-iframe',
+                    version: '1.0',
+                    data: {
+                        documentId,
+                        title,
+                        pageId: currentPage.id,
+                        isQuodsiModel,
+                        hasValidModel: isQuodsiModel
+                    }
+                });
+
+                // Send SELECTION_CHANGED message to force complete UI refresh
+                router.send('model', {
+                    id: generateId(),
+                    type: EnvelopeMessageType.SELECTION_CHANGED,
+                    source: 'host',
+                    target: 'model-iframe',
+                    version: '1.0',
+                    data: {
+                        selectionType: 'page',
+                        documentId: documentId,
+                        hasModel: true,
+                        selectionState: {
+                            pageId: currentPage.id,
+                            selectedIds: [],
+                            selectionType: 'page'
+                        },
+                        documentContext: {
+                            documentId,
+                            pageId: currentPage.id,
+                            title,
+                            isQuodsiModel,
+                            metadata: {}
+                        }
+                    }
+                });
+
+                ConversionPreviewHandler.logger.log('Sent context refresh messages after conversion');
+            }).catch(error => {
+                ConversionPreviewHandler.logger.error('Error sending context refresh messages:', error);
+            });
+
+        } catch (error) {
+            ConversionPreviewHandler.logger.error('Error applying conversion:', error);
+
+            // Send error response
+            router.send('model', {
+                id: msg.id,
+                type: EnvelopeMessageType.CONVERSION_APPLY_RESULT,
+                source: 'host',
+                target: 'model-iframe',
+                version: '1.0',
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error)
+                }
+            });
+        }
+    }
+}

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
@@ -19,9 +19,9 @@ interface PanelHeaderProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ExtendedModelItemData | null;
-  onValidate: () => void;
   onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
+  onOpenDiagramMapping?: () => void;
   onElementTypeChange: (
     elementId: string,
     newType: SimulationObjectType
@@ -39,9 +39,9 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   modelName,
   validationState,
   currentElement,
-  onValidate,
   onSimulate,
   onRemoveModel,
+  onOpenDiagramMapping,
   onElementTypeChange,
   diagramElementType,
   simulationStatus,
@@ -173,12 +173,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
         {/* Row 3: Action buttons */}
         <div className="flex gap-2">
-          <button
-            className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-            onClick={onValidate}
-          >
-            Validate Model
-          </button>
           {onSimulate && (
             <button
               className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -215,6 +209,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               )}
             </button>
           )}
+          {onOpenDiagramMapping && (
+            <button
+              className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center justify-center gap-1"
+              onClick={onOpenDiagramMapping}
+              title="View and modify element type mappings"
+            >
+              <Map className="w-3 h-3" />
+              Diagram Mapping
+            </button>
+          )}
         </div>
       </>
     );
@@ -243,16 +247,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Row 2: Context */}
         <div className="text-xs text-gray-600">
           {typeLabel} in "{modelName}"
-        </div>
-
-        {/* Row 3: Action buttons */}
-        <div className="flex gap-2">
-          <button
-            className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
-            onClick={onValidate}
-          >
-            Validate
-          </button>
         </div>
       </>
     );

@@ -1,10 +1,15 @@
-import { PageProxy, BlockProxy } from 'lucid-extension-sdk';
+import { PageProxy, BlockProxy, LineProxy } from 'lucid-extension-sdk';
 import {
     ProcessAnalysisResult,
     BlockAnalysis,
     SimulationObjectType,
-    QuodsiLogger
+    QuodsiLogger,
+    ConversionPreviewData,
+    ElementMappingPreview,
+    DiagramElementKind,
+    ConversionPreviewSummary
 } from '@quodsi/shared';
+import { StorageAdapter } from '../../core/StorageAdapter';
 
 export class LucidPageAnalyzer extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[LucidPageAnalyzer]';
@@ -36,6 +41,225 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         this.logFinalAnalysis(blockAnalysis);
 
         return { blockAnalysis };
+    }
+
+    /**
+     * Analyzes a page and returns preview data for the conversion UI.
+     * This includes both blocks and lines, element names, and current simulation types.
+     */
+    public analyzePageForPreview(
+        page: PageProxy,
+        storageAdapter: StorageAdapter
+    ): ConversionPreviewData {
+        this.log('Analyzing page for preview');
+
+        // First, run the standard analysis to get block types
+        const analysis = this.analyzePage(page);
+
+        // Check if page is already a Quodsi model
+        const isAlreadyConverted = storageAdapter.isQuodsiModel(page);
+
+        const mappings: ElementMappingPreview[] = [];
+
+        // Process all blocks
+        for (const [blockId, block] of page.allBlocks) {
+            const blockAnalysis = analysis.blockAnalysis.get(blockId);
+            const currentMeta = storageAdapter.getMetadata(block);
+            const currentType = currentMeta?.type ?? null;
+
+            // Get proposed type from analysis (null if isolated/skipped)
+            const proposedType = blockAnalysis?.elementType ?? null;
+
+            // Get block dimensions
+            const boundingBox = block.getBoundingBox();
+            const width = boundingBox ? Math.round(boundingBox.w) : undefined;
+            const height = boundingBox ? Math.round(boundingBox.h) : undefined;
+
+            // Determine if block is isolated (no connections)
+            const incomingCount = blockAnalysis?.incomingCount ?? 0;
+            const outgoingCount = blockAnalysis?.outgoingCount ?? 0;
+            const isIsolated = incomingCount === 0 && outgoingCount === 0;
+
+            mappings.push({
+                elementId: blockId,
+                elementName: this.getBlockName(block),
+                elementKind: DiagramElementKind.BLOCK,
+                currentType: currentType,
+                proposedType: proposedType,
+                incomingCount,
+                outgoingCount,
+                blockClassName: block.getClassName() || undefined,
+                width,
+                height,
+                isIsolated
+            });
+        }
+
+        // Process all lines
+        for (const [lineId, line] of page.allLines) {
+            const currentMeta = storageAdapter.getMetadata(line);
+            const currentType = currentMeta?.type ?? null;
+
+            // Check if line has valid connections
+            const endpoint1 = line.getEndpoint1();
+            const endpoint2 = line.getEndpoint2();
+            const hasValidConnections = !!(endpoint1?.connection && endpoint2?.connection);
+
+            // Lines with valid connections become Connectors, otherwise skipped
+            const proposedType = hasValidConnections ? SimulationObjectType.Connector : null;
+
+            // Get source and target block names for better display
+            let sourceBlockName: string | undefined;
+            let targetBlockName: string | undefined;
+
+            if (endpoint1?.connection) {
+                const sourceBlock = page.allBlocks.get(endpoint1.connection.id);
+                if (sourceBlock) {
+                    sourceBlockName = this.getBlockName(sourceBlock);
+                }
+            }
+
+            if (endpoint2?.connection) {
+                const targetBlock = page.allBlocks.get(endpoint2.connection.id);
+                if (targetBlock) {
+                    targetBlockName = this.getBlockName(targetBlock);
+                }
+            }
+
+            // Build element name from source/target if available
+            const elementName = (sourceBlockName && targetBlockName)
+                ? `${sourceBlockName} → ${targetBlockName}`
+                : this.getLineName(line, lineId);
+
+            // Get line label from text areas
+            const lineLabel = this.getLineLabel(line);
+
+            mappings.push({
+                elementId: lineId,
+                elementName: elementName,
+                elementKind: DiagramElementKind.LINE,
+                currentType: currentType,
+                proposedType: proposedType,
+                incomingCount: 0,
+                outgoingCount: 0,
+                sourceBlockName,
+                targetBlockName,
+                lineLabel,
+                isIsolated: !hasValidConnections
+            });
+        }
+
+        // Calculate summary
+        const summary = this.calculateSummary(mappings);
+
+        return {
+            pageId: page.id,
+            isAlreadyConverted,
+            mappings,
+            summary
+        };
+    }
+
+    /**
+     * Gets a display name from a block's text areas or class name
+     */
+    private getBlockName(block: BlockProxy): string {
+        // Try to get name from text areas
+        if (block.textAreas && block.textAreas.size > 0) {
+            for (const text of block.textAreas.values()) {
+                if (text && text.trim()) {
+                    return text.trim();
+                }
+            }
+        }
+
+        // Fallback to class name
+        const className = block.getClassName();
+        if (className) {
+            return className;
+        }
+
+        return `Block ${block.id.substring(0, 8)}`;
+    }
+
+    /**
+     * Gets a display name for a line
+     */
+    private getLineName(line: LineProxy, lineId: string): string {
+        // Lines typically don't have text, use a generated name
+        const endpoint1 = line.getEndpoint1();
+        const endpoint2 = line.getEndpoint2();
+
+        if (endpoint1?.connection && endpoint2?.connection) {
+            const sourceId = endpoint1.connection.id.substring(0, 6);
+            const targetId = endpoint2.connection.id.substring(0, 6);
+            return `Line ${sourceId}→${targetId}`;
+        }
+
+        return `Line ${lineId.substring(0, 8)}`;
+    }
+
+    /**
+     * Gets text label from a line's text areas (e.g., "Yes", "No", condition labels)
+     */
+    private getLineLabel(line: LineProxy): string | undefined {
+        if (line.textAreas && line.textAreas.size > 0) {
+            for (const text of line.textAreas.values()) {
+                if (text && text.trim()) {
+                    return text.trim();
+                }
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Calculates summary counts from the mappings
+     */
+    private calculateSummary(mappings: ElementMappingPreview[]): ConversionPreviewSummary {
+        const summary: ConversionPreviewSummary = {
+            totalBlocks: 0,
+            totalLines: 0,
+            generators: 0,
+            activities: 0,
+            resources: 0,
+            entities: 0,
+            connectors: 0,
+            skipped: 0
+        };
+
+        for (const mapping of mappings) {
+            // Count by element kind
+            if (mapping.elementKind === DiagramElementKind.BLOCK) {
+                summary.totalBlocks++;
+            } else {
+                summary.totalLines++;
+            }
+
+            // Count by proposed type
+            switch (mapping.proposedType) {
+                case SimulationObjectType.Generator:
+                    summary.generators++;
+                    break;
+                case SimulationObjectType.Activity:
+                    summary.activities++;
+                    break;
+                case SimulationObjectType.Resource:
+                    summary.resources++;
+                    break;
+                case SimulationObjectType.Entity:
+                    summary.entities++;
+                    break;
+                case SimulationObjectType.Connector:
+                    summary.connectors++;
+                    break;
+                case null:
+                    summary.skipped++;
+                    break;
+            }
+        }
+
+        return summary;
     }
 
     private initializeBlocks(

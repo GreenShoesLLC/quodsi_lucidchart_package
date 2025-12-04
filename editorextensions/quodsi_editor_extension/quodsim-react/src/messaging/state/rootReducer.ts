@@ -10,6 +10,7 @@ import { SimulationState, initialSimulationState, simulationReducer, SimulationA
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
 import { ScenarioState, initialScenarioState, scenarioReducer, ScenarioAction } from './scenarioSlice';
+import { ConversionPreviewState, initialConversionPreviewState, conversionPreviewReducer, ConversionPreviewAction } from './conversionPreviewSlice';
 
 // Combined state type
 export interface MessagingState {
@@ -19,6 +20,7 @@ export interface MessagingState {
   validation: ValidationState;
   elementOps: ElementOpsState;
   scenarios: ScenarioState;
+  conversionPreview: ConversionPreviewState;
 }
 
 // Export RootState as an alias for MessagingState (common Redux pattern)
@@ -32,6 +34,7 @@ export const initialState: MessagingState = {
   validation: initialValidationState,
   elementOps: initialElementOpsState,
   scenarios: initialScenarioState,
+  conversionPreview: initialConversionPreviewState,
 };
 
 /**
@@ -46,5 +49,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     validation: validationReducer(state.validation, action as ValidationAction),
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
     scenarios: scenarioReducer(state.scenarios, action as ScenarioAction),
+    conversionPreview: conversionPreviewReducer(state.conversionPreview, action as ConversionPreviewAction),
   };
 }

@@ -33,6 +33,7 @@ import { SimulationAction } from './simulationSlice';
 import { ValidationAction } from './validationSlice';
 import { ElementOpsAction } from './elementOpsSlice';
 import { ScenarioAction } from './scenarioSlice';
+import { ConversionPreviewAction } from './conversionPreviewSlice';
 
 // Re-export the action types
 export type {
@@ -41,7 +42,8 @@ export type {
   SimulationAction,
   ValidationAction,
   ElementOpsAction,
-  ScenarioAction
+  ScenarioAction,
+  ConversionPreviewAction
 };
 
 // Union type that encompasses all possible actions
@@ -51,4 +53,5 @@ export type MessagingAction =
   | SimulationAction
   | ValidationAction
   | ElementOpsAction
-  | ScenarioAction;
+  | ScenarioAction
+  | ConversionPreviewAction;

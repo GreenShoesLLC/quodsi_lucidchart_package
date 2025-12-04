@@ -78,3 +78,11 @@ export function useScenarios() {
   const { scenarios } = useMessaging();
   return scenarios;
 }
+
+/**
+ * Hook to access conversion preview state
+ */
+export function useConversionPreviewState() {
+  const { conversionPreview } = useMessaging();
+  return conversionPreview;
+}
