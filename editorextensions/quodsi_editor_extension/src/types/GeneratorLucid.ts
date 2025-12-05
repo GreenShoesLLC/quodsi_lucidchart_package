@@ -9,7 +9,9 @@ import {
     PeriodUnit,
     SimulationObjectType,
     ComponentLogger,
-    StateModification
+    StateModification,
+    parseStructuredName,
+    extractGeneratorFields
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -194,43 +196,63 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): GeneratorLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}`);
-        
+
         // Extract location
         const location = block.getLocation();
-        
+
         // Create default generator using the static method with location
         const defaultGenerator = Generator.createDefault(
-            block.id, 
-            location.x ?? 0, 
+            block.id,
+            location.x ?? 0,
             location.y ?? 0
         );
-        
-        const name = SimObjectLucid.getNameFromBlock(block, 'Generator');
 
-        // Convert to StoredGeneratorData format
+        // Get raw name and parse for structured data
+        const rawName = SimObjectLucid.getNameFromBlock(block, 'Generator');
+        const parsed = parseStructuredName(rawName);
+        const fields = extractGeneratorFields(parsed);
+
+        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+
+        // Update shape text to clean name if we parsed structured data
+        if (rawName.includes('|') && fields.name) {
+            SimObjectLucid.updateBlockText(block, fields.name);
+        }
+
+        // Determine period interval duration - use parsed interval if provided
+        let periodIntervalDuration = {
+            durationPeriodUnit: defaultGenerator.periodIntervalDuration.durationPeriodUnit,
+            distribution: defaultGenerator.periodIntervalDuration.distribution
+        };
+        if (fields.interval !== undefined) {
+            periodIntervalDuration = {
+                durationPeriodUnit: PeriodUnit.MINUTES,
+                distribution: ConstantDistribution.create(fields.interval)
+            };
+            ComponentLogger.log(LOG_PREFIX, `Using parsed interval: ${fields.interval} minutes`);
+        }
+
+        // Convert to StoredGeneratorData format, using parsed values where available
         const storedData: StoredGeneratorData = {
             id: defaultGenerator.id,
-            name: name,
-            x: defaultGenerator.x,  // Include x coordinate
-            y: defaultGenerator.y,  // Include y coordinate
+            name: fields.name || rawName,
+            x: defaultGenerator.x,
+            y: defaultGenerator.y,
             activityKeyId: defaultGenerator.activityKeyId,
             entityId: defaultGenerator.entityId,
-            periodicOccurrences: defaultGenerator.periodicOccurrences,
-            periodIntervalDuration: {
-                durationPeriodUnit: defaultGenerator.periodIntervalDuration.durationPeriodUnit,
-                distribution: defaultGenerator.periodIntervalDuration.distribution
-            },
-            entitiesPerCreation: defaultGenerator.entitiesPerCreation,
+            periodicOccurrences: fields.periodicOccurrences ?? defaultGenerator.periodicOccurrences,
+            periodIntervalDuration: periodIntervalDuration,
+            entitiesPerCreation: fields.entitiesPerCreation ?? defaultGenerator.entitiesPerCreation,
             periodicStartDuration: {
                 durationPeriodUnit: defaultGenerator.periodicStartDuration.durationPeriodUnit,
                 distribution: defaultGenerator.periodicStartDuration.distribution
             },
-            maxEntities: defaultGenerator.maxEntities,
+            maxEntities: fields.maxEntities ?? defaultGenerator.maxEntities,
             initialStateModifications: defaultGenerator.initialStateModifications.map(m => m.toJSON())
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted generator, block ID: ${block.id}`, storedData);
-        
+
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,

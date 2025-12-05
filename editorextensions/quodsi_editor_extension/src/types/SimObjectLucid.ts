@@ -124,4 +124,16 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
         ComponentLogger.log(LOG_PREFIX, `Generated name for element ID ${block.id}: ${name}`);
         return name;
     }
+
+    /**
+     * Static utility method to update a block's displayed text
+     * Used to clean up structured names after parsing (e.g., "name: Triage | duration: 5" -> "Triage")
+     */
+    static updateBlockText(block: BlockProxy, newText: string): void {
+        if (block.textAreas && block.textAreas.size > 0) {
+            const firstKey = Array.from(block.textAreas.keys())[0];
+            block.textAreas.set(firstKey, newText);
+            ComponentLogger.log(LOG_PREFIX, `Updated block ${block.id} text to: ${newText}`);
+        }
+    }
 }

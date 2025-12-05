@@ -7,7 +7,9 @@ import {
     ConversionPreviewData,
     ElementMappingPreview,
     DiagramElementKind,
-    ConversionPreviewSummary
+    ConversionPreviewSummary,
+    parseStructuredName,
+    extractSimulationType
 } from '@quodsi/shared';
 import { StorageAdapter } from '../../core/StorageAdapter';
 
@@ -31,8 +33,8 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         this.initializeBlocks(page, blockAnalysis);
         this.analyzeConnections(page, blockAnalysis);
 
-        // Second pass: Determine types based on connection patterns
-        this.determineTypesFromConnections(blockAnalysis);
+        // Second pass: Determine types based on explicit type field and connection patterns
+        this.determineTypesFromConnections(page, blockAnalysis);
 
         // Third pass: Apply block-specific overrides only if needed
         this.applyBlockSpecificLogic(page, blockAnalysis);
@@ -318,12 +320,44 @@ export class LucidPageAnalyzer extends QuodsiLogger {
     }
 
     private determineTypesFromConnections(
+        page: PageProxy,
         blockAnalysis: Map<string, BlockAnalysis>
     ): void {
-        this.log('Determining types from connection patterns');
+        this.log('Determining types from explicit type field and connection patterns');
 
         for (const [blockId, analysis] of blockAnalysis) {
-            // Determine type based on connection patterns
+            const block = page.allBlocks.get(blockId);
+            if (!block) continue;
+
+            // First: Check for explicit type in structured name
+            const blockName = this.getBlockName(block);
+            const parsed = parseStructuredName(blockName);
+            const explicitType = extractSimulationType(parsed);
+
+            if (explicitType) {
+                // Explicit type overrides connection-based logic
+                switch (explicitType) {
+                    case 'resource':
+                        analysis.elementType = SimulationObjectType.Resource;
+                        break;
+                    case 'activity':
+                        analysis.elementType = SimulationObjectType.Activity;
+                        break;
+                    case 'generator':
+                        analysis.elementType = SimulationObjectType.Generator;
+                        break;
+                    case 'entity':
+                        analysis.elementType = SimulationObjectType.Entity;
+                        break;
+                }
+                this.log(`Block ${blockId} set as ${explicitType} based on explicit type field`, {
+                    blockName,
+                    explicitType
+                });
+                continue; // Skip connection-based logic
+            }
+
+            // Fallback: Determine type based on connection patterns
             if (analysis.incomingCount === 0 && analysis.outgoingCount > 0) {
                 analysis.elementType = SimulationObjectType.Generator;
                 this.log(`Block ${blockId} set as Generator based on connections`, {

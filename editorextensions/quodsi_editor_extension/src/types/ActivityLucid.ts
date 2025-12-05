@@ -6,7 +6,13 @@ import {
     ComponentLogger,
     StateModification,
     ActivityFinancialProperties,
-    ConnectType
+    ConnectType,
+    parseStructuredName,
+    extractActivityFields,
+    Duration,
+    PeriodUnit,
+    ConstantDistribution,
+    createOperationStep
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -37,6 +43,7 @@ interface StoredActivityData {
     postProcessingStateModifications?: any[];
     financialProperties?: any;
     connectType?: string;
+    resourceName?: string;  // Resource name to auto-create during conversion
 }
 
 /**
@@ -179,37 +186,59 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ActivityLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}`);
-        
+
         // Extract location
         const location = block.getLocation();
-        
+
         // Create default activity using the static method with location
         const defaultActivity = Activity.createDefault(
-            block.id, 
-            location.x ?? 0, 
+            block.id,
+            location.x ?? 0,
             location.y ?? 0
         );
-        
-        const name = SimObjectLucid.getNameFromBlock(block, 'Act');
 
-        // Convert to StoredActivityData format
+        // Get raw name and parse for structured data
+        const rawName = SimObjectLucid.getNameFromBlock(block, 'Act');
+        const parsed = parseStructuredName(rawName);
+        const fields = extractActivityFields(parsed);
+
+        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+
+        // Update shape text to clean name if we parsed structured data
+        if (rawName.includes('|') && fields.name) {
+            SimObjectLucid.updateBlockText(block, fields.name);
+        }
+
+        // Determine operation steps - use parsed duration if provided
+        let operationSteps = defaultActivity.operationSteps;
+        if (fields.duration !== undefined) {
+            const duration = new Duration(
+                PeriodUnit.MINUTES,
+                ConstantDistribution.create(fields.duration)
+            );
+            operationSteps = [createOperationStep(duration)];
+            ComponentLogger.log(LOG_PREFIX, `Using parsed duration: ${fields.duration} minutes`);
+        }
+
+        // Convert to StoredActivityData format, using parsed values where available
         const storedData: StoredActivityData = {
             id: defaultActivity.id,
-            name: name,
+            name: fields.name || rawName,
             x: defaultActivity.x,
             y: defaultActivity.y,
-            capacity: defaultActivity.capacity,
-            inputBufferCapacity: defaultActivity.inputBufferCapacity,
-            outputBufferCapacity: defaultActivity.outputBufferCapacity,
-            operationSteps: defaultActivity.operationSteps,
+            capacity: fields.capacity ?? defaultActivity.capacity,
+            inputBufferCapacity: fields.inputBufferCapacity ?? defaultActivity.inputBufferCapacity,
+            outputBufferCapacity: fields.outputBufferCapacity ?? defaultActivity.outputBufferCapacity,
+            operationSteps: operationSteps,
             preProcessingStateModifications: defaultActivity.preProcessingStateModifications.map(m => m.toJSON()),
             postProcessingStateModifications: defaultActivity.postProcessingStateModifications.map(m => m.toJSON()),
             financialProperties: defaultActivity.financialProperties?.toJSON(),
-            connectType: defaultActivity.connectType
+            connectType: defaultActivity.connectType,
+            resourceName: fields.resource  // Store for auto-creation during conversion
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted activity, block ID: ${block.id}`, storedData);
-        
+
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,

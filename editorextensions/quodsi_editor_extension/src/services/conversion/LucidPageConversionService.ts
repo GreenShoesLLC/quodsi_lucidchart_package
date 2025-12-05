@@ -7,13 +7,27 @@ import {
     ConnectType,
     QuodsiLogger,
     ProcessAnalysisResult,
-    DiagramElementKind
+    DiagramElementKind,
+    Resource,
+    ResourceRequirement
 } from '@quodsi/shared';
 
 import { StorageAdapter } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
+
+// Interface for stored activity data (matches ActivityLucid's StoredActivityData)
+interface StoredActivityData {
+    id: string;
+    name?: string;
+    resourceName?: string;
+    operationSteps?: Array<{
+        requirementId: string | null;
+        [key: string]: any;
+    }>;
+    [key: string]: any;
+}
 
 export class LucidPageConversionService extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[LucidPageConversionService]';
@@ -286,6 +300,10 @@ export class LucidPageConversionService extends QuodsiLogger {
             }
         }
 
+        // Process auto-created resources from Activity resourceName fields
+        const autoResourceCount = await this.processAutoCreatedResources(page);
+        resources += autoResourceCount;
+
         this.log('Conversion counts:', { activities, generators, resources, connectors });
         return { activities, generators, resources, connectors };
     }
@@ -352,6 +370,10 @@ export class LucidPageConversionService extends QuodsiLogger {
                 throw error;
             }
         }
+
+        // Process auto-created resources from Activity resourceName fields
+        const autoResourceCount = await this.processAutoCreatedResources(page);
+        resources += autoResourceCount;
 
         return { activities, generators, resources };
     }
@@ -422,5 +444,114 @@ export class LucidPageConversionService extends QuodsiLogger {
 
         this.log(`Converted ${connectorCount} connections`);
         return connectorCount;
+    }
+
+    /**
+     * Creates visual Resource blocks for any Activities that have a resourceName field.
+     * This allows users to embed resource references in Activity names like:
+     * "name: Triage | duration: 5 | resource: Nurse"
+     *
+     * The method:
+     * 1. Collects all unique resource names from converted Activities
+     * 2. Creates new visual blocks on the page for each unique resource
+     * 3. Converts those blocks to Resources
+     * 4. Links the Activities' OperationSteps to the ResourceRequirements
+     */
+    private async processAutoCreatedResources(page: PageProxy): Promise<number> {
+        this.log('Processing auto-created resources from Activity resourceName fields');
+
+        // Collect unique resource names from Activities
+        const resourceNamesFromActivities = new Map<string, string[]>(); // resourceName -> blockIds
+
+        for (const [blockId, block] of page.allBlocks) {
+            const storedData = this.storageAdapter.getElementData<StoredActivityData>(block);
+            if (storedData?.resourceName) {
+                const existing = resourceNamesFromActivities.get(storedData.resourceName) || [];
+                existing.push(blockId);
+                resourceNamesFromActivities.set(storedData.resourceName, existing);
+            }
+        }
+
+        if (resourceNamesFromActivities.size === 0) {
+            this.log('No auto-resources to create');
+            return 0;
+        }
+
+        this.log(`Found ${resourceNamesFromActivities.size} unique resource names to create`);
+
+        // Calculate position for new Resource blocks (right side of diagram)
+        const rightmostX = this.findRightmostX(page);
+        let resourceY = 100;
+        const resourceSpacing = 80;
+
+        // Load block class for creating new shapes
+        const client = ModelManager.getClient();
+        await client.loadBlockClasses(['ProcessBlock']);
+
+        const createdResources = new Map<string, BlockProxy>();
+
+        // Create visual blocks for each unique resource name
+        for (const [resourceName, activityBlockIds] of resourceNamesFromActivities) {
+            this.log(`Creating Resource block for: ${resourceName}`);
+
+            // Add new block to page
+            const newBlock = page.addBlock({
+                className: 'ProcessBlock',
+                boundingBox: {
+                    x: rightmostX + 100,
+                    y: resourceY,
+                    w: 120,
+                    h: 60
+                }
+            });
+            newBlock.textAreas.set('Text', resourceName);
+            resourceY += resourceSpacing;
+
+            // Convert to Resource using existing flow
+            const platformObject = this.elementFactory.createPlatformObject(
+                newBlock,
+                SimulationObjectType.Resource,
+                true // isConversion
+            );
+            const resource = platformObject.getSimulationObject();
+            await this.modelManager.registerElement(resource, newBlock);
+
+            createdResources.set(resourceName, newBlock);
+
+            this.log(`Created Resource block ${newBlock.id} for: ${resourceName}`);
+
+            // Update all Activities that reference this resource
+            for (const activityBlockId of activityBlockIds) {
+                const activityBlock = page.allBlocks.get(activityBlockId);
+                if (!activityBlock) continue;
+
+                const storedData = this.storageAdapter.getElementData<StoredActivityData>(activityBlock);
+
+                if (storedData && storedData.operationSteps && storedData.operationSteps.length > 0) {
+                    // ResourceRequirement ID equals Resource ID (from block.id)
+                    storedData.operationSteps[0].requirementId = newBlock.id;
+                    this.storageAdapter.updateElementData(activityBlock, storedData);
+                    this.log(`Linked Activity ${activityBlockId} to Resource ${newBlock.id}`);
+                }
+            }
+        }
+
+        this.log(`Created ${createdResources.size} auto-resources`);
+        return createdResources.size;
+    }
+
+    /**
+     * Finds the rightmost X coordinate of all blocks on the page.
+     * Used to position auto-created Resource blocks to the right of existing shapes.
+     */
+    private findRightmostX(page: PageProxy): number {
+        let maxX = 0;
+        for (const [, block] of page.allBlocks) {
+            const box = block.getBoundingBox();
+            if (box) {
+                maxX = Math.max(maxX, box.x + box.w);
+            }
+        }
+        return maxX;
     }
 }

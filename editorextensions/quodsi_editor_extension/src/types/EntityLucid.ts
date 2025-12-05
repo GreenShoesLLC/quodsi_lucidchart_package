@@ -1,8 +1,10 @@
 import { BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     Entity,
     SimulationObjectType,
-    ComponentLogger
+    ComponentLogger,
+    parseStructuredName,
+    extractEntityFields
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -128,29 +130,39 @@ export class EntityLucid extends SimObjectLucid<Entity> {
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): EntityLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid from conversion for block ID: ${block.id}`);
-        
+
         // Extract location
         const location = block.getLocation();
-        
+
         // Create default entity using the static method with location
         const defaultEntity = Entity.createDefault(
-            block.id, 
-            location.x ?? 0, 
+            block.id,
+            location.x ?? 0,
             location.y ?? 0
         );
-        
-        const name = SimObjectLucid.getNameFromBlock(block, 'Entity');
 
-        // Convert to StoredEntityData format
+        // Get raw name and parse for structured data
+        const rawName = SimObjectLucid.getNameFromBlock(block, 'Entity');
+        const parsed = parseStructuredName(rawName);
+        const fields = extractEntityFields(parsed);
+
+        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+
+        // Update shape text to clean name if we parsed structured data
+        if (rawName.includes('|') && fields.name) {
+            SimObjectLucid.updateBlockText(block, fields.name);
+        }
+
+        // Convert to StoredEntityData format, using parsed values where available
         const storedData: StoredEntityData = {
             id: defaultEntity.id,
-            name: name,
-            x: defaultEntity.x,  // Include x coordinate
-            y: defaultEntity.y   // Include y coordinate
+            name: fields.name || rawName,
+            x: defaultEntity.x,
+            y: defaultEntity.y
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted entity, block ID: ${block.id}`, storedData);
-        
+
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,

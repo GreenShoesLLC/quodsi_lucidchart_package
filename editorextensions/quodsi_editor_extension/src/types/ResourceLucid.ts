@@ -3,7 +3,9 @@ import {
     Resource,
     SimulationObjectType,
     ComponentLogger,
-    ResourceFinancialProperties
+    ResourceFinancialProperties,
+    parseStructuredName,
+    extractResourceFields
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -146,31 +148,41 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
 
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}`);
-        
+
         // Extract location
         const location = block.getLocation();
-        
+
         // Create default resource using the static method with location
         const defaultResource = Resource.createDefault(
-            block.id, 
-            location.x ?? 0, 
+            block.id,
+            location.x ?? 0,
             location.y ?? 0
         );
-        
-        const name = SimObjectLucid.getNameFromBlock(block, 'Resource');
 
-        // Convert to StoredResourceData format
+        // Get raw name and parse for structured data
+        const rawName = SimObjectLucid.getNameFromBlock(block, 'Resource');
+        const parsed = parseStructuredName(rawName);
+        const fields = extractResourceFields(parsed);
+
+        ComponentLogger.log(LOG_PREFIX, `Parsed structured name for block ${block.id}:`, { rawName, fields });
+
+        // Update shape text to clean name if we parsed structured data
+        if (rawName.includes('|') && fields.name) {
+            SimObjectLucid.updateBlockText(block, fields.name);
+        }
+
+        // Convert to StoredResourceData format, using parsed values where available
         const storedData: StoredResourceData = {
             id: defaultResource.id,
-            name: name,
-            x: defaultResource.x,  // Include x coordinate
-            y: defaultResource.y,  // Include y coordinate
-            capacity: defaultResource.capacity,
+            name: fields.name || rawName,
+            x: defaultResource.x,
+            y: defaultResource.y,
+            capacity: fields.capacity ?? defaultResource.capacity,
             financialProperties: defaultResource.financialProperties?.toJSON()
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted resource, block ID: ${block.id}`, storedData);
-        
+
         // Set up both data and metadata using setElementData
         storageAdapter.setElementData(
             block,
