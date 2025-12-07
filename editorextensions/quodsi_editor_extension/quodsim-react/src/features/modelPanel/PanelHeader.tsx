@@ -248,6 +248,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         <div className="text-xs text-gray-600">
           {typeLabel} in "{modelName}"
         </div>
+
+        {/* Row 3: Type Selector (to change or revert type) */}
+        <div>
+          {currentElement && (
+            <SimulationComponentSelector
+              elementId={currentElement.id}
+              selectedType={elementType}
+              diagramElementType={diagramElementType}
+              onTypeChange={handleTypeChange}
+            />
+          )}
+        </div>
       </>
     );
   };
