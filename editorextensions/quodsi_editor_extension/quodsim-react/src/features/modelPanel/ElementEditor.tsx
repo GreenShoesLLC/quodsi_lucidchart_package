@@ -165,12 +165,16 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         );
 
         if (sourceActivityRef) {
-          // Show ConnectorsEditor with routing configuration
-          // Note: We're passing a minimal activity object - ConnectorsEditor will handle it
+          // Filter connectors by source Activity ID
+          // (outgoingConnectors prop is filtered by selected element ID, which is wrong for Connectors)
+          const activityOutgoingConnectors = referenceData.connectors?.filter(
+            (conn) => conn.sourceId === sourceActivityRef.id
+          ) || [];
+
           return (
             <ConnectorsEditor
               activity={sourceActivityRef as any}
-              outgoingConnectors={outgoingConnectors || []}
+              outgoingConnectors={activityOutgoingConnectors}
               selectedConnectorId={safeElementData.id}
               onSave={onSave}
               onCancel={handleCancel}
