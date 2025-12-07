@@ -320,7 +320,7 @@ export const stateSummaryColumns: TableColumn[] = [
   },
 ];
 
-export type CrossRepDataType = "scenario" | "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary" | "activity-input-buffer-timeseries" | "activity-output-buffer-timeseries" | "state-values-timeseries";
+export type CrossRepDataType = "scenario" | "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary" | "activity-inbound-queue-timeseries" | "activity-outbound-queue-timeseries" | "state-values-timeseries";
 
 export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[] => {
   switch (dataType) {
@@ -334,9 +334,9 @@ export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[]
       return resourceColumns;
     case "activity-contents-timeseries":
       return activityContentsTimeseriesColumns;
-    case "activity-input-buffer-timeseries":
+    case "activity-inbound-queue-timeseries":
       return activityContentsTimeseriesColumns;
-    case "activity-output-buffer-timeseries":
+    case "activity-outbound-queue-timeseries":
       return activityContentsTimeseriesColumns;
     case "state-summary":
       return stateSummaryColumns;

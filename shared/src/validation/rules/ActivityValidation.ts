@@ -9,7 +9,7 @@ import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
 
 
 export class ActivityValidation extends ValidationRule {
-    private static readonly MAX_BUFFER_SIZE = 999999;
+    private static readonly MAX_QUEUE_SIZE = 999999;
     private static readonly MIN_CYCLE_TIME = 0.001;
     private static readonly MAX_CYCLE_TIME = 86400; // 24 hours in seconds
 
@@ -19,7 +19,7 @@ export class ActivityValidation extends ValidationRule {
         activities.forEach((activity: Activity) => {
             this.validateActivityConnectivity(activity, state, issues);
             this.validateActivityData(activity, issues);
-            this.validateBufferConstraints(activity, state, issues);
+            this.validateQueueConstraints(activity, state, issues);
         });
 
         this.validateActivityInteractions(state, issues);
@@ -72,34 +72,34 @@ export class ActivityValidation extends ValidationRule {
             issues.push(ValidationMessages.invalidCapacity("Activity", activity.id, 1, activity.name));
         }
 
-        this.validateBufferCapacities(activity, issues);
+        this.validateQueueCapacities(activity, issues);
         this.validateOperationSteps(activity, issues);
     }
 
-    private validateBufferCapacities(
+    private validateQueueCapacities(
         activity: Activity,
         issues: ValidationIssue[]
     ): void {
         /**
-         * Validates the input and output buffer capacities of an activity.
+         * Validates the inbound and outbound queue capacities of an activity.
          */
 
-        this.log(`Validating buffer capacities for Activity ID: ${activity.id}`);
+        this.log(`Validating queue capacities for Activity ID: ${activity.id}`);
 
-        if (typeof activity.inputBufferCapacity !== "number" || activity.inputBufferCapacity < 0) {
-            this.log(`Activity ID ${activity.id} has an invalid input buffer capacity: ${activity.inputBufferCapacity}`);
-            issues.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "input", activity.name));
-        } else if (activity.inputBufferCapacity > ActivityValidation.MAX_BUFFER_SIZE) {
-            this.log(`Activity ID ${activity.id} has a large input buffer capacity: ${activity.inputBufferCapacity}`);
-            issues.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "input", activity.name));
+        if (typeof activity.inboundQueueCapacity !== "number" || activity.inboundQueueCapacity < 0) {
+            this.log(`Activity ID ${activity.id} has an invalid inbound queue capacity: ${activity.inboundQueueCapacity}`);
+            issues.push(ValidationMessages.invalidQueueCapacity("Activity", activity.id, "inbound", activity.name));
+        } else if (activity.inboundQueueCapacity > ActivityValidation.MAX_QUEUE_SIZE) {
+            this.log(`Activity ID ${activity.id} has a large inbound queue capacity: ${activity.inboundQueueCapacity}`);
+            issues.push(ValidationMessages.largeQueueCapacity("Activity", activity.id, "inbound", activity.name));
         }
 
-        if (typeof activity.outputBufferCapacity !== "number" || activity.outputBufferCapacity < 0) {
-            this.log(`Activity ID ${activity.id} has an invalid output buffer capacity: ${activity.outputBufferCapacity}`);
-            issues.push(ValidationMessages.invalidBufferCapacity("Activity", activity.id, "output", activity.name));
-        } else if (activity.outputBufferCapacity > ActivityValidation.MAX_BUFFER_SIZE) {
-            this.log(`Activity ID ${activity.id} has a large output buffer capacity: ${activity.outputBufferCapacity}`);
-            issues.push(ValidationMessages.largeBufferCapacity("Activity", activity.id, "output", activity.name));
+        if (typeof activity.outboundQueueCapacity !== "number" || activity.outboundQueueCapacity < 0) {
+            this.log(`Activity ID ${activity.id} has an invalid outbound queue capacity: ${activity.outboundQueueCapacity}`);
+            issues.push(ValidationMessages.invalidQueueCapacity("Activity", activity.id, "outbound", activity.name));
+        } else if (activity.outboundQueueCapacity > ActivityValidation.MAX_QUEUE_SIZE) {
+            this.log(`Activity ID ${activity.id} has a large outbound queue capacity: ${activity.outboundQueueCapacity}`);
+            issues.push(ValidationMessages.largeQueueCapacity("Activity", activity.id, "outbound", activity.name));
         }
     }
 
@@ -175,12 +175,12 @@ export class ActivityValidation extends ValidationRule {
         }
     }
 
-    private validateBufferConstraints(
+    private validateQueueConstraints(
         activity: Activity,
         state: ModelDefinitionState,
         issues: ValidationIssue[]
     ): void {
-        this.log(`Validating buffer constraints for Activity ID: ${activity.id}`);
+        this.log(`Validating queue constraints for Activity ID: ${activity.id}`);
 
         const relationships = state.activityRelationships.get(activity.id);
         if (!relationships) return;
@@ -196,9 +196,9 @@ export class ActivityValidation extends ValidationRule {
             return total;
         }, 0);
 
-        if (incomingCapacity > activity.inputBufferCapacity * 2) {
-            this.log(`Activity ID ${activity.id} has insufficient input buffer capacity.`);
-            issues.push(ValidationMessages.smallInputBuffer(activity.id, activity.name));
+        if (incomingCapacity > activity.inboundQueueCapacity * 2) {
+            this.log(`Activity ID ${activity.id} has insufficient inbound queue capacity.`);
+            issues.push(ValidationMessages.smallInboundQueue(activity.id, activity.name));
         }
     }
 

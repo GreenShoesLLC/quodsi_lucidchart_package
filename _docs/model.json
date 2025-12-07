@@ -57,8 +57,8 @@
       "x": -459.32692562968623,
       "y": 353.43085216045597,
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -140,8 +140,8 @@
       "x": -192.88461708645764,
       "y": 353.43085216045597,
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -185,8 +185,8 @@
       "x": -459.33269769595313,
       "y": 150.25467581946646,
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -213,8 +213,8 @@
       "x": 73.55769145677164,
       "y": 353.43085216045597,
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -258,8 +258,8 @@
       "x": 340.0000000000002,
       "y": 373.43085216045597,
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -302,8 +302,8 @@
       "x": -725.769234172915,
       "y": 353.43085216045597,
       "capacity": 1,
-      "inputBufferCapacity": 2,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 2,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {

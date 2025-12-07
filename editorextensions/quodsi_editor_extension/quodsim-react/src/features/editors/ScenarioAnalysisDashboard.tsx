@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { ArrowLeft, BarChart3, Table2, LayoutGrid, Download, Check, List, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  Table2,
+  LayoutGrid,
+  Download,
+  Check,
+  List,
+  X,
+} from "lucide-react";
 import { EnvelopeMessageType, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
 import DataTable from "../../components/DataTable";
@@ -28,7 +37,10 @@ interface SummaryData {
 }
 
 // Format helpers for summary view
-const formatNumber = (value: number | null | undefined, decimals: number = 2): string => {
+const formatNumber = (
+  value: number | null | undefined,
+  decimals: number = 2
+): string => {
   if (value === null || value === undefined || isNaN(value)) return "-";
   return value.toFixed(decimals);
 };
@@ -46,7 +58,10 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
     { value: "cycle_time_mean", label: "Cycle Time (Mean)" },
     { value: "cycle_time_median", label: "Cycle Time (Median)" },
-    { value: "total_time_waiting_for_resource_mean", label: "Time Waiting for Resource" },
+    {
+      value: "total_time_waiting_for_resource_mean",
+      label: "Time Waiting for Resource",
+    },
     { value: "total_arrivals_mean", label: "Total Arrivals" },
     { value: "total_allocations_mean", label: "Total Allocations" },
     { value: "throughput_mean", label: "Throughput" },
@@ -110,7 +125,11 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     resources: [],
   });
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const summaryDataReceived = useRef({ scenario: false, activity: false, resource: false });
+  const summaryDataReceived = useRef({
+    scenario: false,
+    activity: false,
+    resource: false,
+  });
 
   // Detailed view state (existing)
   const [dataType, setDataType] = useState<CrossRepDataType>("activity");
@@ -120,7 +139,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("table");
   const [zipCopied, setZipCopied] = useState<boolean>(false);
-  const [selectedMetric, setSelectedMetric] = useState<string>("utilization_mean");
+  const [selectedMetric, setSelectedMetric] =
+    useState<string>("utilization_mean");
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
@@ -130,25 +150,28 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     if (!downloadInfo?.zipUrl) return;
 
     try {
-      const textarea = document.createElement('textarea');
+      const textarea = document.createElement("textarea");
       textarea.value = downloadInfo.zipUrl;
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
       document.body.appendChild(textarea);
       textarea.select();
 
-      const successful = document.execCommand('copy');
+      const successful = document.execCommand("copy");
       document.body.removeChild(textarea);
 
       if (successful) {
-        console.log('[ScenarioAnalysisDashboard] ZIP link copied to clipboard');
+        console.log("[ScenarioAnalysisDashboard] ZIP link copied to clipboard");
         setZipCopied(true);
         setTimeout(() => setZipCopied(false), 2000);
       } else {
-        console.error('[ScenarioAnalysisDashboard] execCommand copy failed');
+        console.error("[ScenarioAnalysisDashboard] execCommand copy failed");
       }
     } catch (error) {
-      console.error('[ScenarioAnalysisDashboard] Failed to copy ZIP link:', error);
+      console.error(
+        "[ScenarioAnalysisDashboard] Failed to copy ZIP link:",
+        error
+      );
     }
   };
 
@@ -158,21 +181,25 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     if (filterValue) {
       setSelectedActivity(filterValue);
     }
-    setViewType('detailed');
+    setViewType("detailed");
   };
 
   // Fetch summary data (all 3 types in parallel)
   const fetchSummaryData = useCallback(() => {
     if (!documentId || !scenarioId) return;
 
-    console.log('[ScenarioAnalysisDashboard] Fetching summary data...');
+    console.log("[ScenarioAnalysisDashboard] Fetching summary data...");
     setSummaryLoading(true);
-    summaryDataReceived.current = { scenario: false, activity: false, resource: false };
+    summaryDataReceived.current = {
+      scenario: false,
+      activity: false,
+      resource: false,
+    };
 
     // Fetch all 3 data types
-    getCrossRepData(documentId, scenarioId, 'scenario');
-    getCrossRepData(documentId, scenarioId, 'activity');
-    getCrossRepData(documentId, scenarioId, 'resource');
+    getCrossRepData(documentId, scenarioId, "scenario");
+    getCrossRepData(documentId, scenarioId, "activity");
+    getCrossRepData(documentId, scenarioId, "resource");
   }, [documentId, scenarioId, getCrossRepData]);
 
   // Fetch detailed data (single type)
@@ -195,7 +222,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
   // Fetch data based on view type
   useEffect(() => {
-    if (viewType === 'summary') {
+    if (viewType === "summary") {
       fetchSummaryData();
     } else {
       fetchDetailedData();
@@ -208,45 +235,54 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       const message = event.data;
 
       if (message.type === EnvelopeMessageType.CROSS_REP_DATA_RESULT) {
-        console.log("[ScenarioAnalysisDashboard] Received cross-rep data:", message.data);
+        console.log(
+          "[ScenarioAnalysisDashboard] Received cross-rep data:",
+          message.data
+        );
 
-        const { dataType: receivedType, success, data: receivedData } = message.data;
+        const {
+          dataType: receivedType,
+          success,
+          data: receivedData,
+        } = message.data;
 
         // Handle summary view data
-        if (viewType === 'summary') {
+        if (viewType === "summary") {
           if (success) {
             // Update refs BEFORE setSummaryData so they're synchronous
-            if (receivedType === 'scenario') {
+            if (receivedType === "scenario") {
               summaryDataReceived.current.scenario = true;
-              setSummaryData(prev => ({
+              setSummaryData((prev) => ({
                 ...prev,
-                scenario: receivedData?.[0] || null
+                scenario: receivedData?.[0] || null,
               }));
-            } else if (receivedType === 'activity') {
+            } else if (receivedType === "activity") {
               summaryDataReceived.current.activity = true;
-              setSummaryData(prev => ({
+              setSummaryData((prev) => ({
                 ...prev,
-                activities: receivedData || []
+                activities: receivedData || [],
               }));
-            } else if (receivedType === 'resource') {
+            } else if (receivedType === "resource") {
               summaryDataReceived.current.resource = true;
-              setSummaryData(prev => ({
+              setSummaryData((prev) => ({
                 ...prev,
-                resources: receivedData || []
+                resources: receivedData || [],
               }));
             }
 
             // Now this check works because refs were updated synchronously above
-            if (summaryDataReceived.current.scenario &&
-                summaryDataReceived.current.activity &&
-                summaryDataReceived.current.resource) {
+            if (
+              summaryDataReceived.current.scenario &&
+              summaryDataReceived.current.activity &&
+              summaryDataReceived.current.resource
+            ) {
               setSummaryLoading(false);
             }
           }
         }
 
         // Handle detailed view data
-        if (viewType === 'detailed' && receivedType === dataType) {
+        if (viewType === "detailed" && receivedType === dataType) {
           if (success) {
             setData(receivedData || []);
             setLoading(false);
@@ -259,9 +295,11 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
       // Handle error response
       if (message.type === EnvelopeMessageType.ERROR) {
-        if (message.data?.relatedTo === EnvelopeMessageType.CROSS_REP_DATA_REQUEST) {
+        if (
+          message.data?.relatedTo === EnvelopeMessageType.CROSS_REP_DATA_REQUEST
+        ) {
           console.error("[ScenarioAnalysisDashboard] Error:", message.data);
-          if (viewType === 'detailed' && message.data?.dataType === dataType) {
+          if (viewType === "detailed" && message.data?.dataType === dataType) {
             setError(message.data.message || "An error occurred");
             setLoading(false);
           }
@@ -277,31 +315,33 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const columns = getColumnsForDataType(dataType);
 
   // Check if data type supports filtering
-  const isFilterableType = dataType === "activity" ||
-                           dataType === "entity" ||
-                           dataType === "resource" ||
-                           dataType === "activity-contents-timeseries" ||
-                           dataType === "activity-input-buffer-timeseries" ||
-                           dataType === "activity-output-buffer-timeseries" ||
-                           dataType === "state-values-timeseries";
+  const isFilterableType =
+    dataType === "activity" ||
+    dataType === "entity" ||
+    dataType === "resource" ||
+    dataType === "activity-contents-timeseries" ||
+    dataType === "activity-inbound-queue-timeseries" ||
+    dataType === "activity-outbound-queue-timeseries" ||
+    dataType === "state-values-timeseries";
 
   // Get unique items for filtering based on data type
   const uniqueFilterItems = React.useMemo(() => {
     if (!isFilterableType || data.length === 0) return [];
 
-    const isTimeseriesType = dataType === "activity-contents-timeseries" ||
-                             dataType === "activity-input-buffer-timeseries" ||
-                             dataType === "activity-output-buffer-timeseries" ||
-                             dataType === "state-values-timeseries";
+    const isTimeseriesType =
+      dataType === "activity-contents-timeseries" ||
+      dataType === "activity-inbound-queue-timeseries" ||
+      dataType === "activity-outbound-queue-timeseries" ||
+      dataType === "state-values-timeseries";
 
     let key = "object_id"; // Default for timeseries
     if (dataType === "activity") key = "activity_name";
     else if (dataType === "entity") key = "entity_name";
     else if (dataType === "resource") key = "resource_name";
 
-    const items = Array.from(
-      new Set(data.map((item: any) => item[key]))
-    ).filter(Boolean).sort();
+    const items = Array.from(new Set(data.map((item: any) => item[key])))
+      .filter(Boolean)
+      .sort();
     return items as string[];
   }, [data, dataType, isFilterableType]);
 
@@ -311,10 +351,11 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       return data;
     }
 
-    const isTimeseriesType = dataType === "activity-contents-timeseries" ||
-                             dataType === "activity-input-buffer-timeseries" ||
-                             dataType === "activity-output-buffer-timeseries" ||
-                             dataType === "state-values-timeseries";
+    const isTimeseriesType =
+      dataType === "activity-contents-timeseries" ||
+      dataType === "activity-inbound-queue-timeseries" ||
+      dataType === "activity-outbound-queue-timeseries" ||
+      dataType === "state-values-timeseries";
 
     let key = "object_id"; // Default for timeseries
     if (dataType === "activity") key = "activity_name";
@@ -334,13 +375,12 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     }
   }, [dataType]);
 
-
   // Render chart based on data type (detailed view)
   const renderChart = () => {
     const isTimeseriesType =
       dataType === "activity-contents-timeseries" ||
-      dataType === "activity-input-buffer-timeseries" ||
-      dataType === "activity-output-buffer-timeseries" ||
+      dataType === "activity-inbound-queue-timeseries" ||
+      dataType === "activity-outbound-queue-timeseries" ||
       dataType === "state-values-timeseries";
 
     // Timeseries chart (line chart)
@@ -367,11 +407,15 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     // Bar chart for summary types with selectable metric
     if (metricOptions[dataType]) {
       const nameKey =
-        dataType === "activity" ? "activity_name" :
-        dataType === "entity" ? "entity_name" :
-        dataType === "resource" ? "resource_name" :
-        dataType === "state-summary" ? "state_name" :
-        "scenario_name";
+        dataType === "activity"
+          ? "activity_name"
+          : dataType === "entity"
+          ? "entity_name"
+          : dataType === "resource"
+          ? "resource_name"
+          : dataType === "state-summary"
+          ? "state_name"
+          : "scenario_name";
 
       return (
         <ChartContainer
@@ -412,35 +456,49 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         <div className="bg-gray-50 rounded p-3 space-y-1">
           <div className="flex justify-between text-xs">
             <span className="font-medium text-gray-600">Scenario Name</span>
-            <span className="text-gray-800 truncate ml-2">{scenario?.scenario_name || scenarioId}</span>
+            <span className="text-gray-800 truncate ml-2">
+              {scenario?.scenario_name || scenarioId}
+            </span>
           </div>
         </div>
 
         {/* System Performance */}
         <div className="border border-gray-200 rounded">
           <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase">System Performance</h4>
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">
+              System Performance
+            </h4>
           </div>
           <div className="p-3 space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">Total Throughput</span>
-              <span className="font-medium">{formatNumber(scenario?.total_throughput_mean, 0)}</span>
+              <span className="font-medium">
+                {formatNumber(scenario?.total_throughput_mean, 0)}
+              </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">Total Cost</span>
-              <span className="font-medium">{formatNumber(scenario?.total_cost_mean, 2)}</span>
+              <span className="font-medium">
+                {formatNumber(scenario?.total_cost_mean, 2)}
+              </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">Avg Cycle Time</span>
-              <span className="font-medium">{formatNumber(scenario?.avg_cycle_time_mean, 2)}</span>
+              <span className="font-medium">
+                {formatNumber(scenario?.avg_cycle_time_mean, 2)}
+              </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">Avg Time in System</span>
-              <span className="font-medium">{formatNumber(scenario?.avg_time_in_system_mean, 2)}</span>
+              <span className="font-medium">
+                {formatNumber(scenario?.avg_time_in_system_mean, 2)}
+              </span>
             </div>
             <div className="flex justify-between text-xs">
               <span className="text-gray-600">Avg # in System</span>
-              <span className="font-medium">{formatNumber(scenario?.avg_entities_in_system_mean, 2)}</span>
+              <span className="font-medium">
+                {formatNumber(scenario?.avg_entities_in_system_mean, 2)}
+              </span>
             </div>
           </div>
         </div>
@@ -448,37 +506,63 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         {/* Activities Summary */}
         <div className="border border-gray-200 rounded">
           <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase">Activities Summary</h4>
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">
+              Activities Summary
+            </h4>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">Name</th>
-                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">Util</th>
-                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">Cycle</th>
-                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">Cost</th>
+                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">
+                    Name
+                  </th>
+                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                    Util
+                  </th>
+                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                    Cycle
+                  </th>
+                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                    Cost
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {activities.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-2 py-3 text-center text-gray-500">No activities</td>
+                    <td
+                      colSpan={4}
+                      className="px-2 py-3 text-center text-gray-500"
+                    >
+                      No activities
+                    </td>
                   </tr>
                 ) : (
                   activities.map((activity, idx) => (
                     <tr
                       key={activity.activity_id || idx}
                       className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
-                      onClick={() => handleDrillDown('activity', activity.activity_name)}
+                      onClick={() =>
+                        handleDrillDown("activity", activity.activity_name)
+                      }
                       title="Click to view details"
                     >
-                      <td className="px-2 py-1.5 truncate max-w-[100px] text-blue-600 hover:text-blue-800" title={activity.activity_name}>
+                      <td
+                        className="px-2 py-1.5 truncate max-w-[100px] text-blue-600 hover:text-blue-800"
+                        title={activity.activity_name}
+                      >
                         {activity.activity_name}
                       </td>
-                      <td className="px-2 py-1.5 text-right">{formatPercent(activity.utilization_mean)}</td>
-                      <td className="px-2 py-1.5 text-right">{formatNumber(activity.cycle_time_mean, 1)}</td>
-                      <td className="px-2 py-1.5 text-right">{formatNumber(activity.total_cost_mean, 2)}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        {formatPercent(activity.utilization_mean)}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        {formatNumber(activity.cycle_time_mean, 1)}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        {formatNumber(activity.total_cost_mean, 2)}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -490,35 +574,57 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         {/* Resources Summary */}
         <div className="border border-gray-200 rounded">
           <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase">Resource Summary</h4>
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">
+              Resource Summary
+            </h4>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">Name</th>
-                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">Util</th>
-                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">Cost</th>
+                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">
+                    Name
+                  </th>
+                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                    Util
+                  </th>
+                  <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                    Cost
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {resources.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-2 py-3 text-center text-gray-500">No resources</td>
+                    <td
+                      colSpan={3}
+                      className="px-2 py-3 text-center text-gray-500"
+                    >
+                      No resources
+                    </td>
                   </tr>
                 ) : (
                   resources.map((resource, idx) => (
                     <tr
                       key={resource.resource_id || idx}
                       className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
-                      onClick={() => handleDrillDown('resource', resource.resource_name)}
+                      onClick={() =>
+                        handleDrillDown("resource", resource.resource_name)
+                      }
                       title="Click to view details"
                     >
-                      <td className="px-2 py-1.5 truncate max-w-[120px] text-blue-600 hover:text-blue-800" title={resource.resource_name}>
+                      <td
+                        className="px-2 py-1.5 truncate max-w-[120px] text-blue-600 hover:text-blue-800"
+                        title={resource.resource_name}
+                      >
                         {resource.resource_name}
                       </td>
-                      <td className="px-2 py-1.5 text-right">{formatPercent(resource.utilization_mean)}</td>
-                      <td className="px-2 py-1.5 text-right">{formatNumber(resource.total_cost_mean, 2)}</td>
+                      <td className="px-2 py-1.5 text-right">
+                        {formatPercent(resource.utilization_mean)}
+                      </td>
+                      <td className="px-2 py-1.5 text-right">
+                        {formatNumber(resource.total_cost_mean, 2)}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -558,9 +664,15 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
               <option value="state-summary">State</option>
             </optgroup>
             <optgroup label="Timeseries">
-              <option value="activity-contents-timeseries">Activity Contents</option>
-              <option value="activity-input-buffer-timeseries">Input Buffer</option>
-              <option value="activity-output-buffer-timeseries">Output Buffer</option>
+              <option value="activity-contents-timeseries">
+                Activity Contents
+              </option>
+              <option value="activity-inbound-queue-timeseries">
+                Inbound Queue
+              </option>
+              <option value="activity-outbound-queue-timeseries">
+                Outbound Queue
+              </option>
               <option value="state-values-timeseries">State Values</option>
             </optgroup>
           </select>
@@ -603,19 +715,20 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
           </div>
 
           {/* Metric selector (only for chart view with bar charts) */}
-          {(viewMode === "chart" || viewMode === "both") && metricOptions[dataType] && (
-            <select
-              value={selectedMetric}
-              onChange={(e) => setSelectedMetric(e.target.value)}
-              className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {metricOptions[dataType].map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          )}
+          {(viewMode === "chart" || viewMode === "both") &&
+            metricOptions[dataType] && (
+              <select
+                value={selectedMetric}
+                onChange={(e) => setSelectedMetric(e.target.value)}
+                className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {metricOptions[dataType].map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            )}
 
           {/* Filter dropdown (for filterable types) */}
           {isFilterableType && uniqueFilterItems.length > 1 && (
@@ -652,9 +765,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
 
         {/* Chart View */}
         {(viewMode === "chart" || viewMode === "both") && (
-          <div className="space-y-2">
-            {renderChart()}
-          </div>
+          <div className="space-y-2">{renderChart()}</div>
         )}
 
         {/* Data Table */}
@@ -685,9 +796,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
         </button>
         <div className="flex items-center gap-1">
           <BarChart3 className="w-4 h-4 text-blue-600" />
-          <h2 className="text-xs font-semibold text-gray-800">
-            Analysis
-          </h2>
+          <h2 className="text-xs font-semibold text-gray-800">Analysis</h2>
         </div>
         {downloadInfo && (
           <button
@@ -695,11 +804,15 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
             title={zipCopied ? "Copied!" : "Copy ZIP URL"}
             className={`ml-auto flex items-center gap-1 px-2 py-1 text-xs font-medium rounded transition-colors ${
               zipCopied
-                ? 'bg-green-600 text-white'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                ? "bg-green-600 text-white"
+                : "bg-blue-600 text-white hover:bg-blue-700"
             }`}
           >
-            {zipCopied ? <Check className="w-3 h-3" /> : <Download className="w-3 h-3" />}
+            {zipCopied ? (
+              <Check className="w-3 h-3" />
+            ) : (
+              <Download className="w-3 h-3" />
+            )}
             {zipCopied ? "Copied" : "ZIP"}
           </button>
         )}

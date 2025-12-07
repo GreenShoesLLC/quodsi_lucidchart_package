@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Settings, Plus, Layers, DollarSign, Hash, ArrowRightLeft, Zap, Info } from "lucide-react";
+import {
+  Settings,
+  Plus,
+  Layers,
+  DollarSign,
+  Hash,
+  ArrowRightLeft,
+  Zap,
+  Info,
+} from "lucide-react";
 import {
   Activity,
   OperationStep,
@@ -20,7 +29,11 @@ import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
-import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
+import {
+  convertStructureToRootClauses,
+  convertRootClausesToStructure,
+  TeamStructure,
+} from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -29,7 +42,7 @@ import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
 // CONSTANTS
 // ============================================================================
 
-// Constant representing "infinity" for buffer capacity display
+// Constant representing "infinity" for queue capacity display
 // (999999 is used to represent unlimited capacity in the UI)
 const INFINITY_DISPLAY_VALUE = 999999;
 
@@ -42,37 +55,43 @@ const TAB_CONFIG = [
     id: "basic" as const,
     title: "Basic Settings",
     icon: Settings,
-    tooltip: "Configure activity name, processing capacity (parallel entities), and queue buffer limits"
+    tooltip:
+      "Configure activity name, processing capacity (parallel entities), and queue capacity limits",
   },
   {
     id: "opsteps" as const,
     title: "Operation Steps",
     icon: Layers,
-    tooltip: "Define sequential processing steps with durations and resource requirements for this activity"
+    tooltip:
+      "Define sequential processing steps with durations and resource requirements for this activity",
   },
   {
     id: "financial" as const,
     title: "Financial Settings",
     icon: DollarSign,
-    tooltip: "Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
+    tooltip:
+      "Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers",
   },
   {
     id: "connectors" as const,
     title: "Routing Configuration",
     icon: ArrowRightLeft,
-    tooltip: "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
+    tooltip:
+      "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates",
   },
   {
     id: "events" as const,
     title: "Event Modifications",
     icon: Zap,
-    tooltip: "Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
+    tooltip:
+      "Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity",
   },
   {
     id: "states" as const,
     title: "State Definitions",
     icon: Hash,
-    tooltip: "Define custom state variables that this activity can track and modify"
+    tooltip:
+      "Define custom state variables that this activity can track and modify",
   },
 ];
 
@@ -86,11 +105,11 @@ const TAB_CONFIG = [
  * @param title - Tab section title
  * @param tooltip - Helpful description shown on hover
  */
-const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
-  icon: Icon,
-  title,
-  tooltip,
-}) => (
+const TabHeader: React.FC<{
+  icon: React.ElementType;
+  title: string;
+  tooltip: string;
+}> = ({ icon: Icon, title, tooltip }) => (
   <div className="flex items-center gap-1 mb-1">
     <Icon className="w-3 h-3 text-blue-500" />
     <span className="text-xs font-medium text-gray-700">{title}</span>
@@ -141,13 +160,19 @@ interface ActivityEditorProps {
 /**
  * Available tabs in the activity editor
  */
-type ActivityTab = "basic" | "opsteps" | "financial" | "connectors" | "states" | "events";
+type ActivityTab =
+  | "basic"
+  | "opsteps"
+  | "financial"
+  | "connectors"
+  | "states"
+  | "events";
 
 /**
  * ActivityEditor - Comprehensive editor for Activity simulation objects
  *
  * This component provides a tabbed interface for editing all aspects of an Activity:
- * - Basic: Name, capacity, buffer sizes
+ * - Basic: Name, capacity, queue sizes
  * - Operation Steps: Processing durations and resource requirements
  * - Financial: Cost tracking properties
  * - Connectors: Routing rules for outgoing connectors
@@ -176,7 +201,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<ActivityTab>("basic");
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
-  const [editingRequirement, setEditingRequirement] = useState<EditingRequirement | null>(null);
+  const [editingRequirement, setEditingRequirement] =
+    useState<EditingRequirement | null>(null);
 
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
@@ -189,20 +215,20 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // ============================================================================
 
   /**
-   * Converts internal buffer capacity values to display values for the UI.
+   * Converts internal queue capacity values to display values for the UI.
    *
-   * Buffer capacities are stored as either a number or Infinity (unlimited).
+   * Queue capacities are stored as either a number or Infinity (unlimited).
    * This converts null/undefined (representing unlimited) to a large number
    * (999999) that's more user-friendly in input fields.
    *
-   * @param value - Internal buffer capacity (null/undefined = unlimited)
+   * @param value - Internal queue capacity (null/undefined = unlimited)
    * @returns Display value for UI (999999 represents unlimited)
    */
-  const bufferToDisplay = (value: number | null | undefined): number =>
+  const queueToDisplay = (value: number | null | undefined): number =>
     value === null || value === undefined ? INFINITY_DISPLAY_VALUE : value;
 
   /**
-   * Converts display values from the UI back to internal buffer capacity values.
+   * Converts display values from the UI back to internal queue capacity values.
    *
    * Users enter 999999 to represent unlimited capacity. This converts that
    * back to JavaScript's Infinity for internal storage.
@@ -222,7 +248,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * - Missing/null values (creates default activity)
    *
    * Key responsibilities:
-   * - Normalizes buffer capacities for display (null → 999999)
+   * - Normalizes queue capacities for display (null → 999999)
    * - Ensures financialProperties are properly initialized
    * - Creates new array references for state modifications (for change detection)
    * - Applies sensible defaults for missing values
@@ -237,8 +263,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         "", // Empty ID
         "New Activity",
         1, // Default capacity
-        bufferToDisplay(null),
-        bufferToDisplay(null),
+        queueToDisplay(null),
+        queueToDisplay(null),
         [],
         0,
         0
@@ -255,8 +281,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       id,
       data.name || "New Activity",
       data.capacity || 1,
-      bufferToDisplay(data.inputBufferCapacity),
-      bufferToDisplay(data.outputBufferCapacity),
+      queueToDisplay(data.inboundQueueCapacity),
+      queueToDisplay(data.outboundQueueCapacity),
       data.operationSteps || [],
       data.x || 0,
       data.y || 0
@@ -271,12 +297,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       : new ActivityFinancialProperties();
 
     // Always create new arrays to ensure reference changes for proper change detection
-    activity.preProcessingStateModifications = data.preProcessingStateModifications
-      ? [...data.preProcessingStateModifications]
-      : [];
-    activity.postProcessingStateModifications = data.postProcessingStateModifications
-      ? [...data.postProcessingStateModifications]
-      : [];
+    activity.preProcessingStateModifications =
+      data.preProcessingStateModifications
+        ? [...data.preProcessingStateModifications]
+        : [];
+    activity.postProcessingStateModifications =
+      data.postProcessingStateModifications
+        ? [...data.postProcessingStateModifications]
+        : [];
 
     return activity;
   };
@@ -299,8 +327,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     updates: Partial<{
       name: string;
       capacity: number;
-      inputBufferCapacity: number;
-      outputBufferCapacity: number;
+      inboundQueueCapacity: number;
+      outboundQueueCapacity: number;
       operationSteps: OperationStep[];
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
@@ -312,8 +340,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       base.id,
       updates.name ?? base.name,
       updates.capacity ?? base.capacity,
-      updates.inputBufferCapacity ?? base.inputBufferCapacity,
-      updates.outputBufferCapacity ?? base.outputBufferCapacity,
+      updates.inboundQueueCapacity ?? base.inboundQueueCapacity,
+      updates.outboundQueueCapacity ?? base.outboundQueueCapacity,
       updates.operationSteps ?? base.operationSteps,
       base.x,
       base.y
@@ -321,11 +349,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Preserve/update complex properties
     updated.connectType = updates.connectType ?? base.connectType;
-    updated.financialProperties = updates.financialProperties ?? base.financialProperties;
+    updated.financialProperties =
+      updates.financialProperties ?? base.financialProperties;
     updated.preProcessingStateModifications =
-      updates.preProcessingStateModifications ?? base.preProcessingStateModifications;
+      updates.preProcessingStateModifications ??
+      base.preProcessingStateModifications;
     updated.postProcessingStateModifications =
-      updates.postProcessingStateModifications ?? base.postProcessingStateModifications;
+      updates.postProcessingStateModifications ??
+      base.postProcessingStateModifications;
 
     return updated;
   };
@@ -343,7 +374,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    *
    * Initialized with extractActivityData() to normalize incoming props.
    */
-  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() => extractActivityData(activity));
+  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() =>
+    extractActivityData(activity)
+  );
 
   /**
    * Flag indicating whether user has made changes that haven't been saved.
@@ -366,8 +399,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * These are managed by Redux elementOpsState to coordinate saves across
    * multiple editor instances.
    */
-  const isSaving = localActivityDraft.id ? elementOpsState.isSaving(localActivityDraft.id) : false;
-  const optimisticData = localActivityDraft.id ? elementOpsState.getOptimisticData(localActivityDraft.id) : null;
+  const isSaving = localActivityDraft.id
+    ? elementOpsState.isSaving(localActivityDraft.id)
+    : false;
+  const optimisticData = localActivityDraft.id
+    ? elementOpsState.getOptimisticData(localActivityDraft.id)
+    : null;
 
   // Custom hooks for state synchronization
   useFormSync(
@@ -385,34 +422,34 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // ============================================================================
 
   /**
-   * Handles changes to basic input fields (name, capacity, buffer capacities).
+   * Handles changes to basic input fields (name, capacity, queue capacities).
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
    * but not persisted until user clicks Save button.
    *
-   * Special handling for buffer capacities: Converts display values (999999)
+   * Special handling for queue capacities: Converts display values (999999)
    * back to internal format (Infinity) using displayToBuffer helper.
    */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
-    setLocalActivityDraft(prev => {
+    setLocalActivityDraft((prev) => {
       // Build updates object based on which field changed
       const updates: Partial<{
         name: string;
         capacity: number;
-        inputBufferCapacity: number;
-        outputBufferCapacity: number;
+        inboundQueueCapacity: number;
+        outboundQueueCapacity: number;
       }> = {};
 
-      if (name === 'name') {
+      if (name === "name") {
         updates.name = value;
-      } else if (name === 'capacity') {
+      } else if (name === "capacity") {
         updates.capacity = parseInt(value) || 1;
-      } else if (name === 'inputBufferCapacity') {
-        updates.inputBufferCapacity = displayToBuffer(parseInt(value) || 0);
-      } else if (name === 'outputBufferCapacity') {
-        updates.outputBufferCapacity = displayToBuffer(parseInt(value) || 0);
+      } else if (name === "inboundQueueCapacity") {
+        updates.inboundQueueCapacity = displayToBuffer(parseInt(value) || 0);
+      } else if (name === "outboundQueueCapacity") {
+        updates.outboundQueueCapacity = displayToBuffer(parseInt(value) || 0);
       }
 
       return updateActivityImmutably(prev, updates);
@@ -438,8 +475,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       localActivityDraft.id,
       localActivityDraft.name,
       localActivityDraft.capacity,
-      displayToBuffer(localActivityDraft.inputBufferCapacity),
-      displayToBuffer(localActivityDraft.outputBufferCapacity),
+      displayToBuffer(localActivityDraft.inboundQueueCapacity),
+      displayToBuffer(localActivityDraft.outboundQueueCapacity),
       localActivityDraft.operationSteps,
       localActivityDraft.x,
       localActivityDraft.y
@@ -452,8 +489,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     activityToSave.financialProperties = localActivityDraft.financialProperties;
 
     // Preserve state modifications
-    activityToSave.preProcessingStateModifications = localActivityDraft.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications = localActivityDraft.postProcessingStateModifications;
+    activityToSave.preProcessingStateModifications =
+      localActivityDraft.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications =
+      localActivityDraft.postProcessingStateModifications;
 
     // Save is handled through Redux - modelOpsSender will dispatch ELEMENT_SAVE_START
     onSave(activityToSave);
@@ -489,13 +528,16 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * @param index - Array index of the operation step being updated
    * @param updatedStep - New operation step data
    */
-  const handleOperationStepChange = (index: number, updatedStep: OperationStep) => {
-    setLocalActivityDraft(prev => {
+  const handleOperationStepChange = (
+    index: number,
+    updatedStep: OperationStep
+  ) => {
+    setLocalActivityDraft((prev) => {
       const newOperationSteps = [...prev.operationSteps];
       newOperationSteps[index] = updatedStep;
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps
+        operationSteps: newOperationSteps,
       });
     });
     setHasPendingChanges(true);
@@ -522,11 +564,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
-    setLocalActivityDraft(prev => {
+    setLocalActivityDraft((prev) => {
       const newOperationSteps = [...prev.operationSteps, newStep];
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps
+        operationSteps: newOperationSteps,
       });
     });
     setHasPendingChanges(true);
@@ -549,11 +591,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * @param index - Array index of the operation step to delete
    */
   const handleOperationStepDelete = React.useCallback((index: number) => {
-    setLocalActivityDraft(prev => {
-      const newOperationSteps = prev.operationSteps.filter((_, i) => i !== index);
+    setLocalActivityDraft((prev) => {
+      const newOperationSteps = prev.operationSteps.filter(
+        (_, i) => i !== index
+      );
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps
+        operationSteps: newOperationSteps,
       });
     });
     setHasPendingChanges(true);
@@ -578,9 +622,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * @param field - The financial property field to update
    * @param value - The new value for the field
    */
-  const handleFinancialChange = (field: keyof ActivityFinancialProperties, value: any) => {
-    setLocalActivityDraft(prev => {
-      const currentFinancial = prev.financialProperties || new ActivityFinancialProperties();
+  const handleFinancialChange = (
+    field: keyof ActivityFinancialProperties,
+    value: any
+  ) => {
+    setLocalActivityDraft((prev) => {
+      const currentFinancial =
+        prev.financialProperties || new ActivityFinancialProperties();
       const updatedFinancial = new ActivityFinancialProperties({
         enabled: currentFinancial.enabled,
         fixedCost: currentFinancial.fixedCost,
@@ -592,7 +640,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       });
 
       return updateActivityImmutably(prev, {
-        financialProperties: updatedFinancial
+        financialProperties: updatedFinancial,
       });
     });
     setHasPendingChanges(true);
@@ -613,11 +661,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    *
    * @param e - Change event from select or input element
    */
-  const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+  const handleConnectTypeChange = (
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
+  ) => {
     const newConnectType = e.target.value as ConnectType;
-    setLocalActivityDraft(prev => {
+    setLocalActivityDraft((prev) => {
       return updateActivityImmutably(prev, {
-        connectType: newConnectType
+        connectType: newConnectType,
       });
     });
     setHasPendingChanges(true);
@@ -638,7 +688,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const handlePreProcessingChange = (mods: any[]) => {
     const updatedActivity = updateActivityImmutably(localActivityDraft, {
-      preProcessingStateModifications: mods
+      preProcessingStateModifications: mods,
     });
 
     // Auto-save immediately (Redux manages save state)
@@ -662,7 +712,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const handlePostProcessingChange = (mods: any[]) => {
     const updatedActivity = updateActivityImmutably(localActivityDraft, {
-      postProcessingStateModifications: mods
+      postProcessingStateModifications: mods,
     });
 
     // Auto-save immediately (Redux manages save state)
@@ -680,7 +730,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * @param requirementId - ID of the resource requirement to edit
    */
   const handleOpenRequirementModal = (requirementId: string) => {
-    const req = referenceData?.resourceRequirements?.find(r => r.id === requirementId);
+    const req = referenceData?.resourceRequirements?.find(
+      (r) => r.id === requirementId
+    );
     if (req) {
       const structure = convertRootClausesToStructure(req.rootClauses);
       setEditingRequirement({ id: req.id, name: req.name, structure });
@@ -709,7 +761,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    *
    * @param data - Requirement name and team structure from modal
    */
-  const handleSaveRequirement = (data: { name: string; structure: TeamStructure }) => {
+  const handleSaveRequirement = (data: {
+    name: string;
+    structure: TeamStructure;
+  }) => {
     const rootClauses = convertStructureToRootClauses(data.structure);
 
     // Get the current requirements array
@@ -719,13 +774,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     if (editingRequirement) {
       // Update existing requirement
-      updatedRequirements = currentRequirements.map(req =>
+      updatedRequirements = currentRequirements.map((req) =>
         req.id === editingRequirement.id
           ? {
               id: req.id,
               name: data.name,
               type: SimulationObjectType.ResourceRequirement,
-              rootClauses
+              rootClauses,
             }
           : req
       );
@@ -735,7 +790,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         id: `rr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: data.name,
         type: SimulationObjectType.ResourceRequirement,
-        rootClauses
+        rootClauses,
       };
       updatedRequirements = [...currentRequirements, newRequirement];
     }
@@ -757,7 +812,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     return (
       <div className="p-2 bg-red-50 border border-red-200 rounded text-sm">
         <div className="text-red-600 font-medium">Invalid activity data</div>
-        <div className="text-xs text-red-500 mt-1">Activity data missing required properties</div>
+        <div className="text-xs text-red-500 mt-1">
+          Activity data missing required properties
+        </div>
       </div>
     );
   }
@@ -765,404 +822,453 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   return (
     <>
       <div className="space-y-2">
-          {/* Tab Navigation */}
-          <div className="border-b bg-gray-50">
-            <div className="flex">
-              {TAB_CONFIG.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    title={tab.title}
-                    className={`px-3 py-2 border-b-2 ${
-                      activeTab === tab.id
-                        ? "border-blue-600 text-blue-600"
-                        : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                );
-              })}
-            </div>
+        {/* Tab Navigation */}
+        <div className="border-b bg-gray-50">
+          <div className="flex">
+            {TAB_CONFIG.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  title={tab.title}
+                  className={`px-3 py-2 border-b-2 ${
+                    activeTab === tab.id
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Tab Content */}
-          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-            {activeTab === "basic" && (
-              <div>
-                <TabHeader
-                  icon={Settings}
-                  title="Basic Settings"
-                  tooltip="Configure activity name, processing capacity (parallel entities), and queue buffer limits"
-                />
-                <div className="space-y-2">
-                  {/* Name Section */}
+        {/* Tab Content */}
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {activeTab === "basic" && (
+            <div>
+              <TabHeader
+                icon={Settings}
+                title="Basic Settings"
+                tooltip="Configure activity name, processing capacity (parallel entities), and queue capacity limits"
+              />
+              <div className="space-y-2">
+                {/* Name Section */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Activity Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    className="w-full px-2 py-1.5 text-xs border rounded"
+                    value={localActivityDraft.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter activity name"
+                  />
+                </div>
+
+                {/* Capacity Section */}
+                <div className="pt-2 border-t">
+                  <div className="mb-1">
+                    <div className="flex items-center gap-1">
+                      <div className="text-xs font-medium text-gray-700">
+                        Capacity Configuration
+                      </div>
+                      <span title="Maximum number of entities that can be processed simultaneously in this activity">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Activity Name
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Capacity
                     </label>
                     <input
-                      type="text"
-                      name="name"
-                      className="w-full px-2 py-1.5 text-xs border rounded"
-                      value={localActivityDraft.name}
+                      type="number"
+                      name="capacity"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localActivityDraft.capacity}
                       onChange={handleInputChange}
-                      placeholder="Enter activity name"
+                      min="1"
+                      placeholder="1"
                     />
                   </div>
+                </div>
 
-                  {/* Capacity Section */}
-                  <div className="pt-2 border-t">
-                    <div className="mb-1">
-                      <div className="flex items-center gap-1">
-                        <div className="text-xs font-medium text-gray-700">
-                          Capacity Configuration
-                        </div>
-                        <span title="Maximum number of entities that can be processed simultaneously in this activity">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
+                {/* Queue Section */}
+                <div className="pt-2 border-t">
+                  <div className="mb-1">
+                    <div className="flex items-center gap-1">
+                      <div className="text-xs font-medium text-gray-700">
+                        Queue Configuration
                       </div>
+                      <span title="Queue capacity limits for entities waiting to enter (inbound queue) or exit (outbound queue) this activity. Enter 999999 to represent unlimited capacity (∞)">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
                     </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Capacity</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Inbound Queue
+                      </label>
                       <input
                         type="number"
-                        name="capacity"
+                        name="inboundQueueCapacity"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localActivityDraft.capacity}
+                        value={
+                          localActivityDraft.inboundQueueCapacity === Infinity
+                            ? INFINITY_DISPLAY_VALUE
+                            : localActivityDraft.inboundQueueCapacity
+                        }
                         onChange={handleInputChange}
-                        min="1"
-                        placeholder="1"
+                        min="0"
+                        max={INFINITY_DISPLAY_VALUE}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Outbound Queue
+                      </label>
+                      <input
+                        type="number"
+                        name="outboundQueueCapacity"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={
+                          localActivityDraft.outboundQueueCapacity === Infinity
+                            ? INFINITY_DISPLAY_VALUE
+                            : localActivityDraft.outboundQueueCapacity
+                        }
+                        onChange={handleInputChange}
+                        min="0"
+                        max={INFINITY_DISPLAY_VALUE}
+                        placeholder="0"
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-                  {/* Buffer Section */}
-                  <div className="pt-2 border-t">
-                    <div className="mb-1">
-                      <div className="flex items-center gap-1">
-                        <div className="text-xs font-medium text-gray-700">
-                          Buffer Configuration
-                        </div>
-                        <span title="Queue capacity limits for entities waiting to enter (input buffer) or exit (output buffer) this activity. Enter 999999 to represent unlimited capacity (∞)">
+          {activeTab === "opsteps" && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <TabHeader
+                  icon={Layers}
+                  title="Operation Steps"
+                  tooltip="Define sequential processing steps with durations and resource requirements for this activity"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddOperationStep}
+                  className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
+                >
+                  <Plus className="w-3 h-3" />
+                  Add
+                </button>
+              </div>
+              <div className="space-y-1">
+                {localActivityDraft.operationSteps.map((step, index) => (
+                  <OperationStepEditor
+                    key={index}
+                    activityId={localActivityDraft.id}
+                    step={step}
+                    index={index}
+                    onChange={(updatedStep) =>
+                      handleOperationStepChange(index, updatedStep)
+                    }
+                    onDelete={() => handleOperationStepDelete(index)}
+                    resourceRequirements={referenceData?.resourceRequirements}
+                    availableResources={referenceData?.resources}
+                    onOpenRequirementModal={handleOpenRequirementModal}
+                    onCreateRequirement={handleCreateRequirement}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "financial" && (
+            <div>
+              <TabHeader
+                icon={DollarSign}
+                title="Financial Settings"
+                tooltip="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
+              />
+              <div className="space-y-1">
+                {/* Enable Financial Tracking */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="financialEnabled"
+                    checked={
+                      localActivityDraft.financialProperties?.enabled || false
+                    }
+                    onChange={(e) =>
+                      handleFinancialChange("enabled", e.target.checked)
+                    }
+                    className="w-3 h-3"
+                  />
+                  <label
+                    htmlFor="financialEnabled"
+                    className="text-xs font-medium text-gray-700"
+                  >
+                    Enable Financial Tracking
+                  </label>
+                </div>
+
+                {/* Cost Components - Only shown when financial tracking is enabled */}
+                {localActivityDraft.financialProperties?.enabled && (
+                  <>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span className="text-xs font-medium text-gray-600">
+                          Cost Components
+                        </span>
+                        <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
                           <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                         </span>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Input Buffer</label>
-                        <input
-                          type="number"
-                          name="inputBufferCapacity"
-                          className="w-full px-2 py-1 text-xs border rounded"
-                          value={
-                            localActivityDraft.inputBufferCapacity === Infinity
-                              ? INFINITY_DISPLAY_VALUE
-                              : localActivityDraft.inputBufferCapacity
-                          }
-                          onChange={handleInputChange}
-                          min="0"
-                          max={INFINITY_DISPLAY_VALUE}
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">Output Buffer</label>
-                        <input
-                          type="number"
-                          name="outputBufferCapacity"
-                          className="w-full px-2 py-1 text-xs border rounded"
-                          value={
-                            localActivityDraft.outputBufferCapacity === Infinity
-                              ? INFINITY_DISPLAY_VALUE
-                              : localActivityDraft.outputBufferCapacity
-                          }
-                          onChange={handleInputChange}
-                          min="0"
-                          max={INFINITY_DISPLAY_VALUE}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "opsteps" && (
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <TabHeader
-                    icon={Layers}
-                    title="Operation Steps"
-                    tooltip="Define sequential processing steps with durations and resource requirements for this activity"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddOperationStep}
-                    className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Add
-                  </button>
-                </div>
-                <div className="space-y-1">
-                  {localActivityDraft.operationSteps.map((step, index) => (
-                    <OperationStepEditor
-                      key={index}
-                      activityId={localActivityDraft.id}
-                      step={step}
-                      index={index}
-                      onChange={(updatedStep) =>
-                        handleOperationStepChange(index, updatedStep)
-                      }
-                      onDelete={() =>
-                        handleOperationStepDelete(index)
-                      }
-                      resourceRequirements={referenceData?.resourceRequirements}
-                      availableResources={referenceData?.resources}
-                      onOpenRequirementModal={handleOpenRequirementModal}
-                      onCreateRequirement={handleCreateRequirement}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === "financial" && (
-              <div>
-                <TabHeader
-                  icon={DollarSign}
-                  title="Financial Settings"
-                  tooltip="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
-                />
-                <div className="space-y-1">
-                  {/* Enable Financial Tracking */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="financialEnabled"
-                      checked={localActivityDraft.financialProperties?.enabled || false}
-                      onChange={(e) =>
-                        handleFinancialChange("enabled", e.target.checked)
-                      }
-                      className="w-3 h-3"
-                    />
-                    <label htmlFor="financialEnabled" className="text-xs font-medium text-gray-700">
-                      Enable Financial Tracking
-                    </label>
-                  </div>
-
-                  {/* Cost Components - Only shown when financial tracking is enabled */}
-                  {localActivityDraft.financialProperties?.enabled && (
-                    <>
-                      <div className="space-y-0.5">
                         <div className="flex items-center gap-1 mb-0.5">
-                          <span className="text-xs font-medium text-gray-600">Cost Components</span>
-                          <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
+                          <label className="text-xs text-gray-600">
+                            Fixed Cost
+                          </label>
+                          <span title="One-time cost incurred each time this activity is activated or started, regardless of how many entities are processed">
                             <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                           </span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <label className="text-xs text-gray-600">Fixed Cost</label>
-                            <span title="One-time cost incurred each time this activity is activated or started, regardless of how many entities are processed">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localActivityDraft.financialProperties?.fixedCost || 0}
-                            onChange={(e) =>
-                              handleFinancialChange(
-                                "fixedCost",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <label className="text-xs text-gray-600">Cost Per Entity</label>
-                            <span title="Cost charged for each entity that completes processing through this activity. Total cost = (number of entities processed) × (cost per entity)">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localActivityDraft.financialProperties?.costPerEntityProcessed || 0}
-                            onChange={(e) =>
-                              handleFinancialChange(
-                                "costPerEntityProcessed",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <label className="text-xs text-gray-600">Cost/Hr Active</label>
-                            <span title="Hourly cost incurred while the activity is actively processing entities. Charged proportionally based on actual processing time.">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localActivityDraft.financialProperties?.costPerHourActive || 0}
-                            onChange={(e) =>
-                              handleFinancialChange(
-                                "costPerHourActive",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <label className="text-xs text-gray-600">Cost/Hr Idle</label>
-                            <span title="Hourly cost incurred while the activity is available but not actively processing entities. Useful for modeling overhead or standby costs.">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localActivityDraft.financialProperties?.costPerHourIdle || 0}
-                            onChange={(e) =>
-                              handleFinancialChange(
-                                "costPerHourIdle",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                          />
-                        </div>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.financialProperties?.fixedCost ||
+                            0
+                          }
+                          onChange={(e) =>
+                            handleFinancialChange(
+                              "fixedCost",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
                       </div>
-
-                      {/* Resource Cost Settings */}
-                      <div className="space-y-0.5 pt-0.5 border-t">
+                      <div>
                         <div className="flex items-center gap-1 mb-0.5">
-                          <span className="text-xs font-medium text-gray-600">Resource Cost</span>
-                          <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
+                          <label className="text-xs text-gray-600">
+                            Cost Per Entity
+                          </label>
+                          <span title="Cost charged for each entity that completes processing through this activity. Total cost = (number of entities processed) × (cost per entity)">
                             <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                           </span>
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <label className="text-xs text-gray-600">Cost Multiplier</label>
-                            <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
-                              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={localActivityDraft.financialProperties?.resourceCostMultiplier || 1}
-                            onChange={(e) =>
-                              handleFinancialChange(
-                                "resourceCostMultiplier",
-                                parseFloat(e.target.value) || 1
-                              )
-                            }
-                            min="0"
-                            step="0.1"
-                            placeholder="1.0"
-                          />
-                        </div>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.financialProperties
+                              ?.costPerEntityProcessed || 0
+                          }
+                          onChange={(e) =>
+                            handleFinancialChange(
+                              "costPerEntityProcessed",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
+                      <div>
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <label className="text-xs text-gray-600">
+                            Cost/Hr Active
+                          </label>
+                          <span title="Hourly cost incurred while the activity is actively processing entities. Charged proportionally based on actual processing time.">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.financialProperties
+                              ?.costPerHourActive || 0
+                          }
+                          onChange={(e) =>
+                            handleFinancialChange(
+                              "costPerHourActive",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <label className="text-xs text-gray-600">
+                            Cost/Hr Idle
+                          </label>
+                          <span title="Hourly cost incurred while the activity is available but not actively processing entities. Useful for modeling overhead or standby costs.">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.financialProperties
+                              ?.costPerHourIdle || 0
+                          }
+                          onChange={(e) =>
+                            handleFinancialChange(
+                              "costPerHourIdle",
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
 
-            {activeTab === "connectors" && (
-              <div>
-                <TabHeader
-                  icon={ArrowRightLeft}
-                  title="Routing Configuration"
-                  tooltip="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
-                />
-                <RoutingConfigurationContent
-                  localData={localActivityDraft}
-                  handleChange={handleConnectTypeChange}
-                  outgoingConnectors={outgoingConnectors}
-                  referenceData={referenceData || { activities: [], resources: [], entities: [], resourceRequirements: [] }}
+                    {/* Resource Cost Settings */}
+                    <div className="space-y-0.5 pt-0.5 border-t">
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <span className="text-xs font-medium text-gray-600">
+                          Resource Cost
+                        </span>
+                        <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
+                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                        </span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <label className="text-xs text-gray-600">
+                            Cost Multiplier
+                          </label>
+                          <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.financialProperties
+                              ?.resourceCostMultiplier || 1
+                          }
+                          onChange={(e) =>
+                            handleFinancialChange(
+                              "resourceCostMultiplier",
+                              parseFloat(e.target.value) || 1
+                            )
+                          }
+                          min="0"
+                          step="0.1"
+                          placeholder="1.0"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "connectors" && (
+            <div>
+              <TabHeader
+                icon={ArrowRightLeft}
+                title="Routing Configuration"
+                tooltip="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
+              />
+              <RoutingConfigurationContent
+                localData={localActivityDraft}
+                handleChange={handleConnectTypeChange}
+                outgoingConnectors={outgoingConnectors}
+                referenceData={
+                  referenceData || {
+                    activities: [],
+                    resources: [],
+                    entities: [],
+                    resourceRequirements: [],
+                  }
+                }
+                states={states}
+                showHeader={false}
+              />
+            </div>
+          )}
+
+          {activeTab === "events" && (
+            <div className="space-y-2">
+              <TabHeader
+                icon={Zap}
+                title="Event Modifications"
+                tooltip="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
+              />
+
+              {/* Pre-Processing State Modifications */}
+              <div className="border-b pb-2">
+                <StateModificationsEditor
+                  modifications={
+                    localActivityDraft.preProcessingStateModifications || []
+                  }
+                  onModificationsChange={handlePreProcessingChange}
                   states={states}
-                  showHeader={false}
+                  title="Pre-Processing State Modifications"
+                  description="Applied before entry"
+                  allowCrossComponent={true}
                 />
               </div>
-            )}
 
-            {activeTab === "events" && (
-              <div className="space-y-2">
-                <TabHeader
-                  icon={Zap}
-                  title="Event Modifications"
-                  tooltip="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
-                />
-
-                {/* Pre-Processing State Modifications */}
-                <div className="border-b pb-2">
-                  <StateModificationsEditor
-                    modifications={localActivityDraft.preProcessingStateModifications || []}
-                    onModificationsChange={handlePreProcessingChange}
-                    states={states}
-                    title="Pre-Processing State Modifications"
-                    description="Applied before entry"
-                    allowCrossComponent={true}
-                  />
-                </div>
-
-                {/* Post-Processing State Modifications */}
-                <div>
-                  <StateModificationsEditor
-                    modifications={localActivityDraft.postProcessingStateModifications || []}
-                    onModificationsChange={handlePostProcessingChange}
-                    states={states}
-                    title="Post-Processing State Modifications"
-                    description="Applied after completion"
-                    allowCrossComponent={true}
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === "states" && (
+              {/* Post-Processing State Modifications */}
               <div>
-                <TabHeader
-                  icon={Hash}
-                  title="State Definitions"
-                  tooltip="Define custom state variables that this activity can track and modify"
-                />
-                <StatesEditor
+                <StateModificationsEditor
+                  modifications={
+                    localActivityDraft.postProcessingStateModifications || []
+                  }
+                  onModificationsChange={handlePostProcessingChange}
                   states={states}
-                  onStatesChange={onStatesChange}
-                  defaultComponentType={ComponentType.ACTIVITY}
+                  title="Post-Processing State Modifications"
+                  description="Applied after completion"
+                  allowCrossComponent={true}
                 />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-      {/*
+          {activeTab === "states" && (
+            <div>
+              <TabHeader
+                icon={Hash}
+                title="State Definitions"
+                tooltip="Define custom state variables that this activity can track and modify"
+              />
+              <StatesEditor
+                states={states}
+                onStatesChange={onStatesChange}
+                defaultComponentType={ComponentType.ACTIVITY}
+              />
+            </div>
+          )}
+        </div>
+
+        {/*
         Save/Cancel Buttons - Conditional display based on tab type
 
         Hidden for tabs with auto-save behavior:
@@ -1172,46 +1278,46 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         Shown for manual-save tabs:
         - basic, opsteps, financial, connectors
       */}
-      {activeTab !== "states" && activeTab !== "events" && (
-        <div className="flex justify-end gap-2 pt-2 border-t">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className={`px-3 py-1.5 text-xs border rounded ${
-              isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-            }`}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!hasPendingChanges || isSaving}
-            className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && !isSaving
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      )}
-    </div>
-    
-    {/* Resource Requirement Modal */}
-    <ResourceRequirementModal
-      isOpen={requirementModalOpen}
-      onClose={() => {
-        setRequirementModalOpen(false);
-        setEditingRequirement(null);
-      }}
-      onSave={handleSaveRequirement}
-      editingRequirement={editingRequirement}
-      availableResources={referenceData?.resources || []}
-    />
-  </>
+        {activeTab !== "states" && activeTab !== "events" && (
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={isSaving}
+              className={`px-3 py-1.5 text-xs border rounded ${
+                isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!hasPendingChanges || isSaving}
+              className={`px-3 py-1.5 text-xs rounded ${
+                hasPendingChanges && !isSaving
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              {isSaving ? "Saving..." : "Save"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Resource Requirement Modal */}
+      <ResourceRequirementModal
+        isOpen={requirementModalOpen}
+        onClose={() => {
+          setRequirementModalOpen(false);
+          setEditingRequirement(null);
+        }}
+        onSave={handleSaveRequirement}
+        editingRequirement={editingRequirement}
+        availableResources={referenceData?.resources || []}
+      />
+    </>
   );
 };
 

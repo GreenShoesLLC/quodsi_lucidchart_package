@@ -10,8 +10,8 @@ export interface ISerializedActivity {
     x: number;
     y: number;
     capacity: number;
-    inputBufferCapacity: number;
-    outputBufferCapacity: number;
+    inboundQueueCapacity: number;
+    outboundQueueCapacity: number;
     operationSteps: ISerializedOperationStep[];
     connectors: ISerializedConnector[];
     financialProperties?: any;

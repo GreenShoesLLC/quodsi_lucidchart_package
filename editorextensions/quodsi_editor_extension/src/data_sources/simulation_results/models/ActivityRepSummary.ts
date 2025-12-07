@@ -25,10 +25,10 @@ export interface ActivityRepSummary {
   utilization_0_to_1: number;
   throughput_rate: number;
   average_time_per_entry: number;
-  input_buffer_utilization: number;
-  output_buffer_utilization: number;
-  input_buffer_queue_time: number;
-  output_buffer_queue_time: number;
+  inbound_queue_utilization: number;
+  outbound_queue_utilization: number;
+  inbound_queue_queue_time: number;
+  outbound_queue_queue_time: number;
   total_time_blocked_upstream: number;
   total_time_blocked_downstream: number;
   blocking_frequency: number;
@@ -64,10 +64,10 @@ export function mapToActivityRepSummary(itemFields: MapProxy<string, any>): Acti
     utilization_0_to_1: itemFields.get('utilization_0_to_1') as number,
     throughput_rate: itemFields.get('throughput_rate') as number,
     average_time_per_entry: itemFields.get('average_time_per_entry') as number,
-    input_buffer_utilization: itemFields.get('input_buffer_utilization') as number,
-    output_buffer_utilization: itemFields.get('output_buffer_utilization') as number,
-    input_buffer_queue_time: itemFields.get('input_buffer_queue_time') as number,
-    output_buffer_queue_time: itemFields.get('output_buffer_queue_time') as number,
+    inbound_queue_utilization: itemFields.get('inbound_queue_utilization') as number,
+    outbound_queue_utilization: itemFields.get('outbound_queue_utilization') as number,
+    inbound_queue_queue_time: itemFields.get('inbound_queue_queue_time') as number,
+    outbound_queue_queue_time: itemFields.get('outbound_queue_queue_time') as number,
     total_time_blocked_upstream: itemFields.get('total_time_blocked_upstream') as number,
     total_time_blocked_downstream: itemFields.get('total_time_blocked_downstream') as number,
     blocking_frequency: itemFields.get('blocking_frequency') as number,

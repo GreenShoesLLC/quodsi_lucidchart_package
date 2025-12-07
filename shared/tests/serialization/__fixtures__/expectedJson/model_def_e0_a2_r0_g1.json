@@ -32,8 +32,8 @@
       "name": "Activity1",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -68,8 +68,8 @@
       "name": "Activity2",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {

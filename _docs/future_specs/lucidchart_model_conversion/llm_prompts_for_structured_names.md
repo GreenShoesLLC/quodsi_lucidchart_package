@@ -24,6 +24,7 @@ name: Forklift | type: res | capacity: 2
 ```
 
 Supported type values and aliases:
+
 - Resource: `resource`, `res`, `r`
 - Activity: `activity`, `act`, `a`
 - Generator: `generator`, `gen`, `g`
@@ -40,6 +41,7 @@ name: Treatment | duration: 30 | capacity: 6 | resource: Nurse
 ```
 
 During conversion, Quodsi will:
+
 1. **Create Resource shapes** automatically on the right side of the diagram
 2. **Reuse Resources** - if multiple Activities reference "Nurse", only one Resource is created
 3. **Link Activities** - each Activity's operation step is automatically linked to the Resource
@@ -249,40 +251,44 @@ Include realistic loan processing steps like document review, verification, unde
 ## Field Reference by Shape Type
 
 ### Activities (Process Steps)
-| Key | Aliases | Description | Example |
-|-----|---------|-------------|---------|
-| `name` | - | Display name | `name: Triage` |
-| `type` | `t` | Explicit type (optional) | `type: activity` |
-| `duration` | - | Processing time in minutes | `duration: 5` |
-| `capacity` | - | Simultaneous entities | `capacity: 2` |
-| `inputBuffer` | `input` | Input queue capacity | `inputBuffer: 10` |
-| `outputBuffer` | `output` | Output queue capacity | `outputBuffer: 10` |
-| `resource` | - | **Auto-create and assign a Resource** | `resource: Nurse` |
+
+| Key             | Aliases  | Description                           | Example             |
+| --------------- | -------- | ------------------------------------- | ------------------- |
+| `name`          | -        | Display name                          | `name: Triage`      |
+| `type`          | `t`      | Explicit type (optional)              | `type: activity`    |
+| `duration`      | -        | Processing time in minutes            | `duration: 5`       |
+| `capacity`      | -        | Simultaneous entities                 | `capacity: 2`       |
+| `inboundQueue`  | `input`  | Input queue capacity                  | `inboundQueue: 10`  |
+| `outboundQueue` | `output` | Output queue capacity                 | `outboundQueue: 10` |
+| `resource`      | -        | **Auto-create and assign a Resource** | `resource: Nurse`   |
 
 > **Auto-Created Resources:** When an Activity includes a `resource` field, Quodsi will automatically create a Resource shape on the page (positioned to the right), convert it, and link the Activity's operation step to it. Multiple Activities can reference the same resource name—only one Resource shape will be created and shared.
 
 ### Generators (Arrival Points)
-| Key | Aliases | Description | Example |
-|-----|---------|-------------|---------|
-| `name` | - | Display name | `name: Arrivals` |
-| `type` | `t` | Explicit type (optional) | `type: generator` |
-| `interval` | - | Time between arrivals (minutes) | `interval: 10` |
-| `entities` | `batch` | Entities per arrival | `entities: 2` |
-| `max` | `maxEntities` | Maximum total entities | `max: 100` |
-| `occurrences` | - | Number of arrival events | `occurrences: 50` |
+
+| Key           | Aliases       | Description                     | Example           |
+| ------------- | ------------- | ------------------------------- | ----------------- |
+| `name`        | -             | Display name                    | `name: Arrivals`  |
+| `type`        | `t`           | Explicit type (optional)        | `type: generator` |
+| `interval`    | -             | Time between arrivals (minutes) | `interval: 10`    |
+| `entities`    | `batch`       | Entities per arrival            | `entities: 2`     |
+| `max`         | `maxEntities` | Maximum total entities          | `max: 100`        |
+| `occurrences` | -             | Number of arrival events        | `occurrences: 50` |
 
 ### Resources (Staff/Equipment)
-| Key | Aliases | Description | Example |
-|-----|---------|-------------|---------|
-| `name` | - | Display name | `name: Doctor` |
-| `type` | `t` | **Required for resources** | `type: resource` |
-| `capacity` | - | Number of units | `capacity: 3` |
+
+| Key        | Aliases | Description                | Example          |
+| ---------- | ------- | -------------------------- | ---------------- |
+| `name`     | -       | Display name               | `name: Doctor`   |
+| `type`     | `t`     | **Required for resources** | `type: resource` |
+| `capacity` | -       | Number of units            | `capacity: 3`    |
 
 ### Entities (Items Being Processed)
-| Key | Aliases | Description | Example |
-|-----|---------|-------------|---------|
-| `name` | - | Display name | `name: Patient` |
-| `type` | `t` | Explicit type (optional) | `type: entity` |
+
+| Key    | Aliases | Description              | Example         |
+| ------ | ------- | ------------------------ | --------------- |
+| `name` | -       | Display name             | `name: Patient` |
+| `type` | `t`     | Explicit type (optional) | `type: entity`  |
 
 ---
 

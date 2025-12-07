@@ -83,8 +83,8 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`  Activity ID: ${activity.id}`);
         this.log(`    Name: ${activity.name}`);
         this.log(`    Capacity: ${activity.capacity}`);
-        this.log(`    Input Buffer Capacity: ${activity.inputBufferCapacity}`);
-        this.log(`    Output Buffer Capacity: ${activity.outputBufferCapacity}`);
+        this.log(`    Inbound Queue Capacity: ${activity.inboundQueueCapacity}`);
+        this.log(`    Outbound Queue Capacity: ${activity.outboundQueueCapacity}`);
         this.log(`    Number of Operation Steps: ${activity.operationSteps?.length || 0}`);
 
         activity.operationSteps?.forEach((step, index) => {

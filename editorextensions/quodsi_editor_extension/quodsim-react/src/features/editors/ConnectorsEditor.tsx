@@ -48,15 +48,15 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   referenceData,
   states,
 }) => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = process.env.NODE_ENV === "development";
 
   if (isDevelopment) {
-    console.log('[ConnectorsEditor] Rendered with:', {
+    console.log("[ConnectorsEditor] Rendered with:", {
       activityId: activity?.id,
       activityName: activity?.name,
       connectorsCount: outgoingConnectors?.length,
       selectedConnectorId,
-      hasReferenceData: !!referenceData
+      hasReferenceData: !!referenceData,
     });
   }
 
@@ -84,8 +84,8 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       data.id,
       data.name,
       data.capacity || 1,
-      data.inputBufferCapacity || Infinity,
-      data.outputBufferCapacity || Infinity,
+      data.inboundQueueCapacity || Infinity,
+      data.outboundQueueCapacity || Infinity,
       data.operationSteps || [],
       data.x || 0,
       data.y || 0
@@ -96,8 +96,10 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
     // Preserve other properties
     safeActivity.financialProperties = data.financialProperties;
-    safeActivity.preProcessingStateModifications = data.preProcessingStateModifications || [];
-    safeActivity.postProcessingStateModifications = data.postProcessingStateModifications || [];
+    safeActivity.preProcessingStateModifications =
+      data.preProcessingStateModifications || [];
+    safeActivity.postProcessingStateModifications =
+      data.postProcessingStateModifications || [];
 
     return safeActivity;
   };
@@ -106,7 +108,9 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   // STATE MANAGEMENT
   // ============================================================================
 
-  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() => extractActivityData(activity));
+  const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() =>
+    extractActivityData(activity)
+  );
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
   // Redux-based save state tracking
@@ -133,15 +137,17 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
    * Handles changes to the activity's routing type (ConnectType).
    * Updates the local draft and marks the form as having pending changes.
    */
-  const handleConnectTypeChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
+  const handleConnectTypeChange = (
+    e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
+  ) => {
     const newConnectType = e.target.value as ConnectType;
-    setLocalActivityDraft(prev => {
+    setLocalActivityDraft((prev) => {
       const updatedActivity = new Activity(
         prev.id,
         prev.name,
         prev.capacity,
-        prev.inputBufferCapacity,
-        prev.outputBufferCapacity,
+        prev.inboundQueueCapacity,
+        prev.outboundQueueCapacity,
         prev.operationSteps,
         prev.x,
         prev.y
@@ -152,8 +158,10 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
       // Preserve other properties
       updatedActivity.financialProperties = prev.financialProperties;
-      updatedActivity.preProcessingStateModifications = prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications = prev.postProcessingStateModifications;
+      updatedActivity.preProcessingStateModifications =
+        prev.preProcessingStateModifications;
+      updatedActivity.postProcessingStateModifications =
+        prev.postProcessingStateModifications;
 
       return updatedActivity;
     });
@@ -169,8 +177,8 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       localActivityDraft.id,
       localActivityDraft.name,
       localActivityDraft.capacity,
-      localActivityDraft.inputBufferCapacity,
-      localActivityDraft.outputBufferCapacity,
+      localActivityDraft.inboundQueueCapacity,
+      localActivityDraft.outboundQueueCapacity,
       localActivityDraft.operationSteps,
       localActivityDraft.x,
       localActivityDraft.y
@@ -181,8 +189,10 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
     // Preserve other properties
     activityToSave.financialProperties = localActivityDraft.financialProperties;
-    activityToSave.preProcessingStateModifications = localActivityDraft.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications = localActivityDraft.postProcessingStateModifications;
+    activityToSave.preProcessingStateModifications =
+      localActivityDraft.preProcessingStateModifications;
+    activityToSave.postProcessingStateModifications =
+      localActivityDraft.postProcessingStateModifications;
 
     onSave(activityToSave);
   };

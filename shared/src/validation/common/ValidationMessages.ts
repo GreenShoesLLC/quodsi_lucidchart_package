@@ -103,25 +103,25 @@ export class ValidationMessages {
         };
     }
 
-    static largeBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationIssue {
-        const code = 'large_buffer_capacity';
+    static largeQueueCapacity(elementType: string, elementId: string, type: 'inbound' | 'outbound', elementName?: string): ValidationIssue {
+        const code = 'large_queue_capacity';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.WARNING,
-            message: `${elementType} ${displayName} has unusually large ${type} buffer capacity`,
+            message: `${elementType} ${displayName} has unusually large ${type} queue capacity`,
             elementId,
             code
         };
     }
 
-    static invalidBufferCapacity(elementType: string, elementId: string, type: 'input' | 'output', elementName?: string): ValidationIssue {
-        const code = 'invalid_buffer_capacity';
+    static invalidQueueCapacity(elementType: string, elementId: string, type: 'inbound' | 'outbound', elementName?: string): ValidationIssue {
+        const code = 'invalid_queue_capacity';
         const displayName = this.getDisplayName(elementName, elementId);
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.ERROR,
-            message: `${elementType} ${displayName} has invalid ${type} buffer capacity`,
+            message: `${elementType} ${displayName} has invalid ${type} queue capacity`,
             elementId,
             code
         };
@@ -206,24 +206,24 @@ export class ValidationMessages {
         };
     }
 
-    static bufferOverflowRisk(elementId: string): ValidationIssue {
-        const code = 'buffer_overflow_risk';
+    static queueOverflowRisk(elementId: string): ValidationIssue {
+        const code = 'queue_overflow_risk';
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.WARNING,
-            message: `Activity ${elementId} may experience input buffer overflow at maximum throughput`,
+            message: `Activity ${elementId} may experience inbound queue overflow at maximum throughput`,
             elementId,
             code
         };
     }
 
-    static smallInputBuffer(elementId: string, activityName?: string): ValidationIssue {
-        const code = 'small_input_buffer';
+    static smallInboundQueue(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'small_inbound_queue';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.WARNING,
-            message: `Activity ${displayName} input buffer may be too small for incoming flow capacity`,
+            message: `Activity ${displayName} inbound queue may be too small for incoming flow capacity`,
             elementId,
             code
         };

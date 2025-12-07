@@ -15,18 +15,21 @@ This directory contains the LucidChart-specific implementation of Quodsi's versi
 ## Components
 
 ### LucidVersionManager
+
 - Coordinates version checking and upgrades
 - Manages user notifications
 - Handles page load checks
 - Integrates with LucidChart UI
 
 ### LucidVersionUpgrader
+
 - Implements platform-specific upgrade logic
 - Manages LucidChart shape data
 - Handles backup and rollback
 - Applies transformations to elements
 
 ### LucidPreflightChecker
+
 - Validates page and element metadata
 - Ensures consistent versions
 - Checks data integrity
@@ -37,35 +40,37 @@ This directory contains the LucidChart-specific implementation of Quodsi's versi
 Quodsi uses LucidChart's shape data capability to store:
 
 ### Metadata (q_meta)
+
 ```json
 {
-    "type": "Activity",
-    "version": "1.0.0",
-    "lastModified": "2025-02-23T21:35:11.848Z",
-    "id": "7sEVil4ffwLR"
+  "type": "Activity",
+  "version": "1.0.0",
+  "lastModified": "2025-02-23T21:35:11.848Z",
+  "id": "7sEVil4ffwLR"
 }
 ```
 
 ### Data (q_data)
+
 ```json
 {
-    "id": "7sEVil4ffwLR",
-    "name": "Process",
-    "capacity": 1,
-    "inputBufferCapacity": 1,
-    "outputBufferCapacity": 1,
-    "operationSteps": [
-        {
-            "requirementId": null,
-            "quantity": 1,
-            "duration": {
-                "durationLength": 1,
-                "durationPeriodUnit": "MINUTES",
-                "durationType": "CONSTANT",
-                "distribution": null
-            }
-        }
-    ]
+  "id": "7sEVil4ffwLR",
+  "name": "Process",
+  "capacity": 1,
+  "inboundQueueCapacity": 1,
+  "outboundQueueCapacity": 1,
+  "operationSteps": [
+    {
+      "requirementId": null,
+      "quantity": 1,
+      "duration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "MINUTES",
+        "durationType": "CONSTANT",
+        "distribution": null
+      }
+    }
+  ]
 }
 ```
 
@@ -89,11 +94,13 @@ await versionManager.handlePageLoad(page);
 ## Error Handling
 
 ### Validation Errors
+
 - Missing metadata
 - Version mismatches
 - Invalid data structures
 
 ### Upgrade Errors
+
 - Transform failures
 - Storage failures
 - Backup/restore issues
@@ -101,16 +108,19 @@ await versionManager.handlePageLoad(page);
 ## Transaction Safety
 
 1. **Preflight**
+
    - Check all elements
    - Validate data structures
    - Ensure upgrade possible
 
 2. **Backup**
+
    - Store current state
    - Include metadata and data
    - Track all elements
 
 3. **Upgrade**
+
    - Apply transformations
    - Update versions
    - Verify changes
@@ -123,11 +133,13 @@ await versionManager.handlePageLoad(page);
 ## Best Practices
 
 1. **Shape Data**
+
    - Always validate types
    - Handle missing data
    - Use JSON parse/stringify
 
 2. **Error Handling**
+
    - Provide clear messages
    - Include element details
    - Log important failures
@@ -140,6 +152,7 @@ await versionManager.handlePageLoad(page);
 ## Testing
 
 Test scenarios should cover:
+
 1. Page load handling
 2. Element version checking
 3. Data transformation

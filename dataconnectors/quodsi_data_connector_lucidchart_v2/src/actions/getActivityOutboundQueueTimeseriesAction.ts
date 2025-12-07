@@ -1,4 +1,4 @@
-// actions/getActivityInputBufferTimeseriesAction.ts
+// actions/getActivityOutboundQueueTimeseriesAction.ts
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { getConfig } from "../config";
 import { ActionLogger } from "../utils/logging";
@@ -7,19 +7,19 @@ import { initializeStorageService } from "../services/simulationData";
 import { fetchActivityContentsTimeseries } from "../services/simulationData/collectors/activityContentsTimeseriesCollector";
 
 /**
- * Action to retrieve activity input buffer timeseries cross-replication data for a scenario
+ * Action to retrieve activity outbound queue timeseries cross-replication data for a scenario
  * @param action The asynchronous action context
- * @returns Promise resolving with activity input buffer timeseries data
+ * @returns Promise resolving with activity outbound queue timeseries data
  */
-export const getActivityInputBufferTimeseriesAction = async (
+export const getActivityOutboundQueueTimeseriesAction = async (
     action: DataConnectorAsynchronousAction
 ) => {
     const config = getConfig();
     const loggingLevel = config.logging?.hardRefreshActionLoggingLevel || LoggingLevel.NORMAL;
-    const logger = new ActionLogger('[GetActivityInputBufferTimeseries]', loggingLevel);
+    const logger = new ActionLogger('[GetActivityOutboundBufferTimeseries]', loggingLevel);
 
     try {
-        logger.important("=== Get Activity Input Buffer Timeseries Action Started ===");
+        logger.important("=== Get Activity Outbound Queue Timeseries Action Started ===");
 
         // Initialize storage service
         initializeStorageService(config.azureStorageConnectionString);
@@ -47,21 +47,21 @@ export const getActivityInputBufferTimeseriesAction = async (
             };
         }
 
-        logger.info(`Fetching activity input buffer timeseries data for scenario: ${data.scenarioId} in document: ${data.documentId}`);
+        logger.info(`Fetching activity outbound queue timeseries data for scenario: ${data.scenarioId} in document: ${data.documentId}`);
 
         // Container name is the documentId
         const containerName = data.documentId;
 
-        // Fetch activity input buffer timeseries data using the collector
+        // Fetch activity outbound queue timeseries data using the collector
         const timeseriesData = await fetchActivityContentsTimeseries(
             containerName,
             data.documentId,
             data.scenarioId,
-            'activity_input_buffer_timeseries_cross_rep.csv'
+            'activity_outbound_queue_timeseries_cross_rep.csv'
         );
 
-        logger.info(`Retrieved ${timeseriesData.length} activity input buffer timeseries records`);
-        logger.important("=== Get Activity Input Buffer Timeseries Action Completed ===");
+        logger.info(`Retrieved ${timeseriesData.length} activity outbound queue timeseries records`);
+        logger.important("=== Get Activity Outbound Queue Timeseries Action Completed ===");
 
         return {
             success: true,
@@ -70,7 +70,7 @@ export const getActivityInputBufferTimeseriesAction = async (
         };
 
     } catch (error) {
-        logger.error("=== Error in Get Activity Input Buffer Timeseries Action ===");
+        logger.error("=== Error in Get Activity Outbound Queue Timeseries Action ===");
         logger.error(`Error details: ${error.message}`);
         if (error.stack) {
             logger.error(`Stack trace: ${error.stack}`);

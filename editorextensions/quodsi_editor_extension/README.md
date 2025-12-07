@@ -62,6 +62,7 @@ The extension follows a modular architecture with clear separation of concerns:
 ### Data Sources
 
 Provides access to data stored within LucidChart documents:
+
 - **DataSourceReader**: Base class for data source access
 - **SimulationResultsReader**: Specialized reader for simulation results
 
@@ -70,6 +71,7 @@ Provides access to data stored within LucidChart documents:
 ### Dashboard
 
 Generates visualization dashboards for simulation results:
+
 - **SimulationResultsDashboard**: Creates dashboard pages
 - **Table Generators**: Creates specialized tables for different data types
 
@@ -78,6 +80,7 @@ Generates visualization dashboards for simulation results:
 ### Versioning
 
 Manages version compatibility and upgrades:
+
 - **LucidVersionManager**: Coordinates version checking and upgrades
 - **LucidVersionUpgrader**: Platform-specific upgrade implementation
 
@@ -130,35 +133,37 @@ These apps are built using the quodsim-react project and are embedded as iframes
 The extension stores model data within LucidChart's shape data:
 
 ### Metadata (q_meta)
+
 ```json
 {
-    "type": "Activity",
-    "version": "1.0.0",
-    "lastModified": "2025-02-23T21:35:11.848Z",
-    "id": "7sEVil4ffwLR"
+  "type": "Activity",
+  "version": "1.0.0",
+  "lastModified": "2025-02-23T21:35:11.848Z",
+  "id": "7sEVil4ffwLR"
 }
 ```
 
 ### Data (q_data)
+
 ```json
 {
-    "id": "7sEVil4ffwLR",
-    "name": "Process",
-    "capacity": 1,
-    "inputBufferCapacity": 1,
-    "outputBufferCapacity": 1,
-    "operationSteps": [
-        {
-            "requirementId": null,
-            "quantity": 1,
-            "duration": {
-                "durationLength": 1,
-                "durationPeriodUnit": "MINUTES",
-                "durationType": "CONSTANT",
-                "distribution": null
-            }
-        }
-    ]
+  "id": "7sEVil4ffwLR",
+  "name": "Process",
+  "capacity": 1,
+  "inboundQueueCapacity": 1,
+  "outboundQueueCapacity": 1,
+  "operationSteps": [
+    {
+      "requirementId": null,
+      "quantity": 1,
+      "duration": {
+        "durationLength": 1,
+        "durationPeriodUnit": "MINUTES",
+        "durationType": "CONSTANT",
+        "distribution": null
+      }
+    }
+  ]
 }
 ```
 
@@ -237,11 +242,11 @@ The extension is deployed through the LucidChart Extension Marketplace. The buil
 
 The project is in the process of transitioning from a tightly coupled architecture to a more modular design:
 
-| Old Architecture | New Architecture |
-|-----------------|------------------|
-| AuthPanel | ContentDockPanel |
-| ModelPanel | RightDockPanel |
-| Direct messaging | MessageRouter system |
+| Old Architecture  | New Architecture            |
+| ----------------- | --------------------------- |
+| AuthPanel         | ContentDockPanel            |
+| ModelPanel        | RightDockPanel              |
+| Direct messaging  | MessageRouter system        |
 | Monolithic panels | Feature-specific components |
 
 The transition is managed with a feature flag (`useNewMessaging`) in the extension entry point.
@@ -259,11 +264,13 @@ The transition is managed with a feature flag (`useNewMessaging`) in the extensi
 ### Common Issues
 
 1. **Communication Failures**:
+
    - Check that all panels are properly registered with the MessageRouter
    - Verify that message formats match the shared definitions
    - Check browser console for error messages
 
 2. **Storage Issues**:
+
    - Verify permissions to store custom data in LucidChart
    - Check for storage format compatibility
 

@@ -32,8 +32,8 @@ export class Activity extends PositionedSimulationObject {
     connectType: ConnectType = ConnectType.Probability;
 
     static createDefault(
-        id: string, 
-        x: number = 0, 
+        id: string,
+        x: number = 0,
         y: number = 0
     ): Activity {
         const defaultDuration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
@@ -43,8 +43,8 @@ export class Activity extends PositionedSimulationObject {
             id,
             'New Activity',
             1, // capacity
-            999999, // inputBufferCapacity
-            999999, // outputBufferCapacity
+            999999, // inboundQueueCapacity
+            999999, // outboundQueueCapacity
             [defaultOperationStep], // operationSteps
         );
 
@@ -58,12 +58,12 @@ export class Activity extends PositionedSimulationObject {
         public id: string,
         public name: string,
         public capacity: number = 1,
-        public inputBufferCapacity: number = 1,
-        public outputBufferCapacity: number = 1,
+        public inboundQueueCapacity: number = 1,
+        public outboundQueueCapacity: number = 1,
         public operationSteps: OperationStep[] = [],
         x: number = 0,
         y: number = 0
-    ) { 
+    ) {
         super();
         // Set location using inherited method
         this.setLocation(x, y);

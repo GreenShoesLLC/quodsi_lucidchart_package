@@ -116,8 +116,8 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 x: activity.x,
                 y: activity.y,
                 capacity: activity.capacity,
-                inputBufferCapacity: activity.inputBufferCapacity,
-                outputBufferCapacity: activity.outputBufferCapacity,
+                inboundQueueCapacity: activity.inboundQueueCapacity,
+                outboundQueueCapacity: activity.outboundQueueCapacity,
                 operationSteps: activity.operationSteps.map(step =>
                     this.serializeOperationStep(step)
                 ),

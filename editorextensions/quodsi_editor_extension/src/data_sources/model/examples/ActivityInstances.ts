@@ -52,24 +52,24 @@ export async function createExampleInstances(data: DataProxy) {
                 id: "activity-1",
                 name: "Simple Activity",
                 capacity: 1,
-                inputBufferCapacity: 1,
-                outputBufferCapacity: 1,
+                inboundQueueCapacity: 1,
+                outboundQueueCapacity: 1,
                 type: "Activity"
             },
             {
                 id: "activity-2",
                 name: "Moderate Activity",
                 capacity: 5,
-                inputBufferCapacity: 3,
-                outputBufferCapacity: 3,
+                inboundQueueCapacity: 3,
+                outboundQueueCapacity: 3,
                 type: "Activity"
             },
             {
                 id: "activity-3",
                 name: "Complex Activity",
                 capacity: 10,
-                inputBufferCapacity: 5,
-                outputBufferCapacity: 5,
+                inboundQueueCapacity: 5,
+                outboundQueueCapacity: 5,
                 type: "Activity"
             }
         ]

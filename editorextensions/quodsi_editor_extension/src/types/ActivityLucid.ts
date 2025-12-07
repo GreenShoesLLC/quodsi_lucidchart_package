@@ -36,8 +36,8 @@ interface StoredActivityData {
     y?: number;
     name?: string;
     capacity?: number;
-    inputBufferCapacity?: number;
-    outputBufferCapacity?: number;
+    inboundQueueCapacity?: number;
+    outboundQueueCapacity?: number;
     operationSteps?: OperationStep[];
     preProcessingStateModifications?: any[];
     postProcessingStateModifications?: any[];
@@ -71,8 +71,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             this.platformElementId,
             storedData?.name || 'New Activity',
             storedData?.capacity ?? 1,
-            storedData?.inputBufferCapacity ?? 1,
-            storedData?.outputBufferCapacity ?? 1,
+            storedData?.inboundQueueCapacity ?? 1,
+            storedData?.outboundQueueCapacity ?? 1,
             storedData?.operationSteps || [],
             storedData?.x ?? 0,
             storedData?.y ?? 0
@@ -109,7 +109,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
     private updatePlatformSpecificFields(activity: Activity): void {
         const block = this.element as BlockProxy;
-        
+
         // Update location from current platform
         const location = block.getLocation();
         activity.setLocation(location.x ?? activity.x, location.y ?? activity.y);
@@ -128,13 +128,13 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Activity from platform for element ID: ${this.platformElementId}`);
-        
+
         // Extract location from platform
         const location = (this.element as BlockProxy).getLocation();
-        
+
         // Update location
         this.simObject.setLocation(
-            location.x ?? this.simObject.x, 
+            location.x ?? this.simObject.x,
             location.y ?? this.simObject.y
         );
 
@@ -150,8 +150,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name,
             capacity: this.simObject.capacity,
-            inputBufferCapacity: this.simObject.inputBufferCapacity,
-            outputBufferCapacity: this.simObject.outputBufferCapacity,
+            inboundQueueCapacity: this.simObject.inboundQueueCapacity,
+            outboundQueueCapacity: this.simObject.outboundQueueCapacity,
             operationSteps: this.simObject.operationSteps,
             preProcessingStateModifications: this.simObject.preProcessingStateModifications.map(m => m.toJSON()),
             postProcessingStateModifications: this.simObject.postProcessingStateModifications.map(m => m.toJSON()),
@@ -227,8 +227,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             x: defaultActivity.x,
             y: defaultActivity.y,
             capacity: fields.capacity ?? defaultActivity.capacity,
-            inputBufferCapacity: fields.inputBufferCapacity ?? defaultActivity.inputBufferCapacity,
-            outputBufferCapacity: fields.outputBufferCapacity ?? defaultActivity.outputBufferCapacity,
+            inboundQueueCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundQueueCapacity,
+            outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,
             operationSteps: operationSteps,
             preProcessingStateModifications: defaultActivity.preProcessingStateModifications.map(m => m.toJSON()),
             postProcessingStateModifications: defaultActivity.postProcessingStateModifications.map(m => m.toJSON()),

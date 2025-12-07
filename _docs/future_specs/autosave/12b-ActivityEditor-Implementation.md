@@ -5,14 +5,16 @@ This guide provides detailed instructions for implementing autosave functionalit
 ## Original ActivityEditor Structure
 
 The ActivityEditor consists of several sections:
+
 1. Basic Settings (name, capacity)
 2. Buffer Capacities (input, output)
 3. Operation Steps (complex nested components)
 
 The primary fields that are good candidates for autosave are:
+
 - capacity (simple numeric value)
-- inputBufferCapacity (simple numeric value)
-- outputBufferCapacity (simple numeric value)
+- inboundQueueCapacity (simple numeric value)
+- outboundQueueCapacity (simple numeric value)
 
 ## Implementation Steps
 
@@ -38,11 +40,11 @@ import {
 import BaseEditor from "./BaseEditor";
 import { OperationStepEditor } from "./OperationStepEditor";
 import { AutosaveField } from "./common/AutosaveField";
-import { 
-  validateRequired, 
-  validateNumeric, 
-  validatePositive, 
-  validateInteger 
+import {
+  validateRequired,
+  validateNumeric,
+  validatePositive,
+  validateInteger,
 } from "../utils/validation";
 
 // Main Activity Editor Component
@@ -73,8 +75,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       name: data.name || "New Activity",
       type: SimulationObjectType.Activity,
       capacity: data.capacity || 1,
-      inputBufferCapacity: bufferToDisplay(data.inputBufferCapacity),
-      outputBufferCapacity: bufferToDisplay(data.outputBufferCapacity),
+      inboundQueueCapacity: bufferToDisplay(data.inboundQueueCapacity),
+      outboundQueueCapacity: bufferToDisplay(data.outboundQueueCapacity),
       operationSteps: data.operationSteps || [],
     };
   };
@@ -94,9 +96,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     const activityToSave: Activity = {
       ...updatedActivity,
       type: SimulationObjectType.Activity,
-      inputBufferCapacity: displayToBuffer(updatedActivity.inputBufferCapacity),
-      outputBufferCapacity: displayToBuffer(
-        updatedActivity.outputBufferCapacity
+      inboundQueueCapacity: displayToBuffer(
+        updatedActivity.inboundQueueCapacity
+      ),
+      outboundQueueCapacity: displayToBuffer(
+        updatedActivity.outboundQueueCapacity
       ),
     };
 
@@ -166,74 +170,92 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       onCancel={onCancel}
       messageType="activitySaved"
     >
-      {(localData, handleChange, setAutoSaveFields, setValidators, validationErrors) => {
+      {(
+        localData,
+        handleChange,
+        setAutoSaveFields,
+        setValidators,
+        validationErrors
+      ) => {
         // Register autosave fields
         useEffect(() => {
           setAutoSaveFields([
-            'capacity',
-            'inputBufferCapacity',
-            'outputBufferCapacity'
+            "capacity",
+            "inboundQueueCapacity",
+            "outboundQueueCapacity",
           ]);
         }, [setAutoSaveFields]);
-        
+
         // Register field validators
         useEffect(() => {
           setValidators([
             {
-              field: 'name',
-              validate: (value) => validateRequired(value, 'Name')
+              field: "name",
+              validate: (value) => validateRequired(value, "Name"),
             },
             {
-              field: 'capacity',
+              field: "capacity",
               validate: (value) => {
-                const requiredError = validateRequired(value, 'Capacity');
+                const requiredError = validateRequired(value, "Capacity");
                 if (requiredError) return requiredError;
-                
-                const numericError = validateNumeric(value, 'Capacity');
+
+                const numericError = validateNumeric(value, "Capacity");
                 if (numericError) return numericError;
-                
-                const positiveError = validatePositive(value, 'Capacity');
+
+                const positiveError = validatePositive(value, "Capacity");
                 if (positiveError) return positiveError;
-                
-                const integerError = validateInteger(value, 'Capacity');
+
+                const integerError = validateInteger(value, "Capacity");
                 if (integerError) return integerError;
-                
+
                 return null;
-              }
+              },
             },
             {
-              field: 'inputBufferCapacity',
+              field: "inboundQueueCapacity",
               validate: (value) => {
-                const numericError = validateNumeric(value, 'Input Buffer Capacity');
+                const numericError = validateNumeric(
+                  value,
+                  "Inbound Queue Capacity"
+                );
                 if (numericError) return numericError;
-                
-                const integerError = validateInteger(value, 'Input Buffer Capacity');
+
+                const integerError = validateInteger(
+                  value,
+                  "Inbound Queue Capacity"
+                );
                 if (integerError) return integerError;
-                
+
                 return null;
-              }
+              },
             },
             {
-              field: 'outputBufferCapacity',
+              field: "outboundQueueCapacity",
               validate: (value) => {
-                const numericError = validateNumeric(value, 'Output Buffer Capacity');
+                const numericError = validateNumeric(
+                  value,
+                  "Outbound Queue Capacity"
+                );
                 if (numericError) return numericError;
-                
-                const integerError = validateInteger(value, 'Output Buffer Capacity');
+
+                const integerError = validateInteger(
+                  value,
+                  "Outbound Queue Capacity"
+                );
                 if (integerError) return integerError;
-                
+
                 return null;
-              }
-            }
+              },
+            },
           ]);
         }, [setValidators]);
-        
+
         // Helper function to get validation error for a field
         const getFieldError = (fieldName: string) => {
-          const error = validationErrors.find(e => e.fieldName === fieldName);
+          const error = validationErrors.find((e) => e.fieldName === fieldName);
           return error ? error.message : undefined;
         };
-        
+
         return (
           <div className="space-y-4 p-2">
             {/* Basic Info Section */}
@@ -251,7 +273,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     name="name"
                     value={localData.name}
                     onChange={handleChange}
-                    error={getFieldError('name')}
+                    error={getFieldError("name")}
                     isAutosave={false} // Name requires manual save
                   />
                 </div>
@@ -263,7 +285,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     onChange={handleChange}
                     type="number"
                     min="1"
-                    error={getFieldError('capacity')}
+                    error={getFieldError("capacity")}
                     isAutosave={true}
                   />
                 </div>
@@ -282,34 +304,34 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 <div>
                   <AutosaveField
                     label="Input"
-                    name="inputBufferCapacity"
+                    name="inboundQueueCapacity"
                     value={
-                      localData.inputBufferCapacity === Infinity
+                      localData.inboundQueueCapacity === Infinity
                         ? 999999
-                        : localData.inputBufferCapacity
+                        : localData.inboundQueueCapacity
                     }
                     onChange={handleChange}
                     type="number"
                     min="0"
                     max="999999"
-                    error={getFieldError('inputBufferCapacity')}
+                    error={getFieldError("inboundQueueCapacity")}
                     isAutosave={true}
                   />
                 </div>
                 <div>
                   <AutosaveField
                     label="Output"
-                    name="outputBufferCapacity"
+                    name="outboundQueueCapacity"
                     value={
-                      localData.outputBufferCapacity === Infinity
+                      localData.outboundQueueCapacity === Infinity
                         ? 999999
-                        : localData.outputBufferCapacity
+                        : localData.outboundQueueCapacity
                     }
                     onChange={handleChange}
                     type="number"
                     min="0"
                     max="999999"
-                    error={getFieldError('outputBufferCapacity')}
+                    error={getFieldError("outboundQueueCapacity")}
                     isAutosave={true}
                   />
                 </div>
@@ -368,16 +390,16 @@ Since Operation Steps are complex nested components, they require special handli
 ```typescript
 // src/components/OperationStepEditor.tsx (partial update)
 
-import React, { useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
-import { 
-  OperationStep, 
-  PeriodUnit, 
-  DistributionType, 
-  ResourceRequirement
-} from '@quodsi/shared';
-import { AutosaveField } from './common/AutosaveField';
-import { validateNumeric, validatePositive } from '../utils/validation';
+import React, { useEffect } from "react";
+import { Trash2 } from "lucide-react";
+import {
+  OperationStep,
+  PeriodUnit,
+  DistributionType,
+  ResourceRequirement,
+} from "@quodsi/shared";
+import { AutosaveField } from "./common/AutosaveField";
+import { validateNumeric, validatePositive } from "../utils/validation";
 
 interface OperationStepEditorProps {
   step: OperationStep;
@@ -394,20 +416,20 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
   onChange,
   onDelete,
   resourceRequirements = [],
-  enableAutosave = true // Default to true for existing steps
+  enableAutosave = true, // Default to true for existing steps
 }) => {
   // Existing state and handlers...
-  
+
   // Register this step for autosave in parent component
   useEffect(() => {
     if (enableAutosave) {
       // This is a simplified approach - you'll need a more robust communication method
       // Option 1: Use custom events
-      const event = new CustomEvent('registerOperationStepAutosave', {
-        detail: { index, fields: ['duration.value', 'resourceQuantity'] }
+      const event = new CustomEvent("registerOperationStepAutosave", {
+        detail: { index, fields: ["duration.value", "resourceQuantity"] },
       });
       document.dispatchEvent(event);
-      
+
       // Option 2: Pass dedicated callbacks from ActivityEditor
       // if (registerForAutosave) {
       //   registerForAutosave(`operationSteps[${index}].duration.value`);
@@ -415,30 +437,30 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
       // }
     }
   }, [enableAutosave, index]);
-  
+
   // Handle value change with autosave signaling
   const handleValueChange = (fieldName: string, value: any) => {
     const updatedStep = { ...step };
-    
+
     // Update the appropriate field
-    if (fieldName === 'duration.value') {
+    if (fieldName === "duration.value") {
       updatedStep.duration.value = value;
-    } else if (fieldName === 'resourceQuantity') {
+    } else if (fieldName === "resourceQuantity") {
       updatedStep.resourceQuantity = value;
     } // ... handle other fields
-    
+
     // Notify parent
     onChange(updatedStep);
-    
+
     // Signal that this change should be autosaved
     if (enableAutosave) {
-      const event = new CustomEvent('operationStepChanged', {
-        detail: { index, fieldName, autoSave: true }
+      const event = new CustomEvent("operationStepChanged", {
+        detail: { index, fieldName, autoSave: true },
       });
       document.dispatchEvent(event);
     }
   };
-  
+
   return (
     <div className="operation-step border p-2 rounded">
       {/* Step header with delete button */}
@@ -452,7 +474,7 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
-      
+
       {/* Duration fields */}
       <div className="grid grid-cols-3 gap-2 mb-2">
         <div className="col-span-2">
@@ -460,7 +482,9 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
             label="Duration"
             name={`operationSteps[${index}].duration.value`}
             value={step.duration.value}
-            onChange={(e) => handleValueChange('duration.value', parseFloat(e.target.value))}
+            onChange={(e) =>
+              handleValueChange("duration.value", parseFloat(e.target.value))
+            }
             type="number"
             min="0"
             step="0.1"
@@ -479,13 +503,15 @@ export const OperationStepEditor: React.FC<OperationStepEditorProps> = ({
               onChange(updatedStep);
             }}
           >
-            {Object.keys(PeriodUnit).map(unit => (
-              <option key={unit} value={unit}>{unit}</option>
+            {Object.keys(PeriodUnit).map((unit) => (
+              <option key={unit} value={unit}>
+                {unit}
+              </option>
             ))}
           </select>
         </div>
       </div>
-      
+
       {/* Other fields as needed */}
     </div>
   );
@@ -504,18 +530,18 @@ useEffect(() => {
   const handleStepAutosave = (event: Event) => {
     const customEvent = event as CustomEvent;
     const { index, fieldName, autoSave } = customEvent.detail;
-    
+
     if (autoSave) {
       // Trigger autosave for the entire activity
       // This is a simplified approach - you might want to debounce this
       setTimeout(() => handleSave(localData), 800);
     }
   };
-  
-  document.addEventListener('operationStepChanged', handleStepAutosave);
-  
+
+  document.addEventListener("operationStepChanged", handleStepAutosave);
+
   return () => {
-    document.removeEventListener('operationStepChanged', handleStepAutosave);
+    document.removeEventListener("operationStepChanged", handleStepAutosave);
   };
 }, [localData, handleSave]);
 ```
@@ -526,22 +552,26 @@ Here's the rationale for which fields should use autosave in the ActivityEditor:
 
 ### Fields to Autosave
 
-1. **capacity**: 
+1. **capacity**:
+
    - Simple numeric value
    - Frequently adjusted when tuning the model
    - Has straightforward validation
 
-2. **inputBufferCapacity**:
+2. **inboundQueueCapacity**:
+
    - Simple numeric value
    - Often adjusted to optimize flow
    - Has straightforward validation
 
-3. **outputBufferCapacity**:
-   - Simple numeric value 
+3. **outboundQueueCapacity**:
+
+   - Simple numeric value
    - Often adjusted to optimize flow
    - Has straightforward validation
 
 4. **Operation Step - duration.value**:
+
    - Frequently tuned numeric value
    - Simple validation
 
@@ -552,11 +582,13 @@ Here's the rationale for which fields should use autosave in the ActivityEditor:
 ### Fields Not to Autosave
 
 1. **name**:
+
    - Critical identifier
    - Rarely changed after initial setup
    - Changes might affect references elsewhere
 
 2. **Operation Step - duration.unit**:
+
    - Categorical value
    - Changes dramatically affect the model (e.g., seconds vs. hours)
    - Rarely changed after initial setup
@@ -572,27 +604,31 @@ The validation rules for ActivityEditor are more complex than ConnectorEditor:
 
 1. **name**: Required field
 2. **capacity**: Required, numeric, positive, integer
-3. **inputBufferCapacity**: Numeric, integer
-4. **outputBufferCapacity**: Numeric, integer
+3. **inboundQueueCapacity**: Numeric, integer
+4. **outboundQueueCapacity**: Numeric, integer
 5. **Operation Steps**: Each step has its own validation requirements
 
 ## Testing Recommendations
 
 When testing the ActivityEditor implementation, focus on:
 
-1. **Field Autosave**: 
-   - Verify capacity, inputBufferCapacity, and outputBufferCapacity autosave correctly
+1. **Field Autosave**:
+
+   - Verify capacity, inboundQueueCapacity, and outboundQueueCapacity autosave correctly
    - Check that name still requires manual save
 
 2. **Nested Components**:
+
    - Test that changes to operation step duration values trigger autosave
    - Verify resource quantity changes autosave correctly
 
 3. **Complex Validation**:
+
    - Test all validation rules for each field
    - Verify operation steps with invalid values block autosave
 
 4. **Mixed Changes**:
+
    - Test making changes to both autosave and manual-save fields
    - Ensure manual save button appears when needed
 
@@ -604,8 +640,9 @@ When testing the ActivityEditor implementation, focus on:
 ### Operation Step Identification
 
 Since operation steps are dynamic components, their field names need to include their index:
+
 - `operationSteps[0].duration.value`
-- `operationSteps[1].duration.value` 
+- `operationSteps[1].duration.value`
 
 This ensures they're properly tracked for validation and autosave.
 
@@ -614,16 +651,20 @@ This ensures they're properly tracked for validation and autosave.
 When validating nested properties, use a path pattern for access:
 
 ```typescript
-const validateNestedValue = (obj: any, path: string, validator: (value: any) => string | null): string | null => {
-  const pathParts = path.split('.');
+const validateNestedValue = (
+  obj: any,
+  path: string,
+  validator: (value: any) => string | null
+): string | null => {
+  const pathParts = path.split(".");
   let current = obj;
-  
+
   // Traverse the path
   for (const part of pathParts) {
     if (current === undefined || current === null) return null;
     current = current[part];
   }
-  
+
   return validator(current);
 };
 ```
@@ -637,16 +678,16 @@ When adding or removing operation steps, ensure the autosave registrations are u
 useEffect(() => {
   // Re-register all autosave fields when steps change
   const fieldsToAutosave = [
-    'capacity',
-    'inputBufferCapacity',
-    'outputBufferCapacity',
+    "capacity",
+    "inboundQueueCapacity",
+    "outboundQueueCapacity",
     // Include all operation step fields
     ...localData.operationSteps.flatMap((_, index) => [
       `operationSteps[${index}].duration.value`,
-      `operationSteps[${index}].resourceQuantity`
-    ])
+      `operationSteps[${index}].resourceQuantity`,
+    ]),
   ];
-  
+
   setAutoSaveFields(fieldsToAutosave);
 }, [localData.operationSteps.length, setAutoSaveFields]);
 ```

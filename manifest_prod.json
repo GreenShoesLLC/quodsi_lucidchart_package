@@ -52,8 +52,8 @@
         "GetResourceCrossRepData": "getResourceCrossRepData",
         "GetScenarioCrossRepData": "getScenarioCrossRepData",
         "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
-        "GetActivityInputBufferTimeseries": "getActivityInputBufferTimeseries",
-        "GetActivityOutputBufferTimeseries": "getActivityOutputBufferTimeseries",
+        "GetActivityInboundQueueTimeseries": "getActivityInboundQueueTimeseries",
+        "GetActivityOutboundQueueTimeseries": "getActivityOutboundQueueTimeseries",
         "GetStateSummary": "getStateSummary",
         "GetStateValuesTimeseries": "getStateValuesTimeseries"
       }

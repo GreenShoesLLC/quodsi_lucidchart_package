@@ -28,6 +28,7 @@ This directory contains the core domain model for the Quodsi simulation system. 
 The elements directory defines the type system for Quodsi simulation models. These types are platform-agnostic and serve as the bridge between the UI (LucidChart extension) and the simulation engine (Quodsim Python). The types in this directory define the structure, relationships, and properties of a discrete event simulation model.
 
 The architecture follows a clear separation of concerns:
+
 1. UI representation (LucidChart extension)
 2. Type definition (TypeScript elements)
 3. Simulation execution (Quodsim Python engine)
@@ -51,17 +52,17 @@ The main components of the model system are:
 
 ```typescript
 class ModelDefinition {
-    public readonly activities: ActivityListManager;
-    public readonly connectors: ConnectorListManager;
-    public readonly resources: ResourceListManager;
-    public readonly generators: GeneratorListManager;
-    public readonly entities: EntityListManager;
-    public readonly resourceRequirements: ResourceRequirementListManager;
+  public readonly activities: ActivityListManager;
+  public readonly connectors: ConnectorListManager;
+  public readonly resources: ResourceListManager;
+  public readonly generators: GeneratorListManager;
+  public readonly entities: EntityListManager;
+  public readonly resourceRequirements: ResourceRequirementListManager;
 
-    constructor(public readonly model: Model) {
-        // Initialize list managers
-        // Add default entities
-    }
+  constructor(public readonly model: Model) {
+    // Initialize list managers
+    // Add default entities
+  }
 }
 ```
 
@@ -84,6 +85,7 @@ interface SimulationObject {
 `Model` contains global simulation settings:
 
 - **Basic Configuration**:
+
   - `id`: Unique identifier
   - `name`: Model name
   - `reps`: Number of simulation replications
@@ -91,7 +93,7 @@ interface SimulationObject {
   - `seed`: Random seed for reproducibility
 
 - **Time Configuration** (two modes):
-  - **Clock-based**: 
+  - **Clock-based**:
     - `oneClockUnit`: Base time unit (MINUTES, HOURS, etc.)
     - `warmupClockPeriod`: Initial warm-up period
     - `runClockPeriod`: Main simulation run period
@@ -107,8 +109,8 @@ interface SimulationObject {
 - `id`: Unique identifier
 - `name`: Activity name
 - `capacity`: Number of entities processable simultaneously
-- `inputBufferCapacity`: Queue capacity before processing
-- `outputBufferCapacity`: Queue capacity after processing
+- `inboundQueueCapacity`: Queue capacity before processing
+- `outboundQueueCapacity`: Queue capacity after processing
 - `operationSteps`: List of processing steps with durations and resource requirements
 
 Activities are the primary processing nodes in the simulation where entities spend time and consume resources.
@@ -183,17 +185,18 @@ Each element type has a corresponding list manager that extends `ComponentListMa
 
 ```typescript
 abstract class ComponentListManager<T extends SimulationObject> {
-    protected items: Map<string, T>;
-    
-    add(item: T): void
-    remove(id: string): void
-    get(id: string): T | undefined
-    getAll(): T[]
-    // Additional methods...
+  protected items: Map<string, T>;
+
+  add(item: T): void;
+  remove(id: string): void;
+  get(id: string): T | undefined;
+  getAll(): T[];
+  // Additional methods...
 }
 ```
 
 Specialized list managers include:
+
 - `ActivityListManager`
 - `ConnectorListManager`
 - `ResourceListManager`
@@ -218,6 +221,7 @@ The system includes several enumerations to ensure type safety:
 ## Serialization & Deserialization
 
 The TypeScript model elements are designed to be serializable to JSON format for:
+
 1. Storage within LucidChart diagrams
 2. Transmission to the Python simulation engine
 3. Persistence between sessions
@@ -234,11 +238,13 @@ While these elements are platform-agnostic, they integrate with LucidChart throu
 LucidChart diagrams contain Shapes, Blocks, and Lines (generically referred to as Elements), which can store custom data. Quodsi stores its model information inside the element's custom shape data capability.
 
 The conversion process maps LucidChart visual elements to corresponding simulation objects:
+
 - Shapes → Activities, Resources, Generators
 - Lines → Connectors
 - Custom Properties → Element attributes
 
 For more details on LucidChart integration, see:
+
 - `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\types\README.md`
 - `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\platform\README.md`
 
@@ -246,15 +252,15 @@ For more details on LucidChart integration, see:
 
 The TypeScript model elements correspond to Python dataclasses in the Quodsim engine:
 
-| TypeScript Class | Python Dataclass |
-|------------------|------------------|
-| ModelDefinition | ModelDefinition |
-| Model | ModelDef |
-| Activity | ActivityDef |
-| Entity | EntityDef |
-| Resource | ResourceDef |
-| Generator | GeneratorDef |
-| Connector | ConnectorDef |
+| TypeScript Class    | Python Dataclass      |
+| ------------------- | --------------------- |
+| ModelDefinition     | ModelDefinition       |
+| Model               | ModelDef              |
+| Activity            | ActivityDef           |
+| Entity              | EntityDef             |
+| Resource            | ResourceDef           |
+| Generator           | GeneratorDef          |
+| Connector           | ConnectorDef          |
 | ResourceRequirement | ResourceSetRequestDef |
 
 The Python engine uses these dataclasses to execute the simulation, calculate statistics, and generate results.
@@ -271,6 +277,7 @@ Model validation is handled by `ModelValidationService`, which:
 - Provides detailed validation results
 
 Validation occurs at multiple levels:
+
 1. **Type-level validation**: Ensures properties have correct types and values
 2. **Element-level validation**: Verifies individual elements meet their requirements
 3. **Relationship validation**: Checks connections between elements are valid
@@ -284,34 +291,40 @@ The validation rules can be found in:
 ### Creating a Basic Model
 
 ```typescript
-import { Model, ModelDefinition, Activity, Entity, Generator } from 'shared/src/types/elements';
+import {
+  Model,
+  ModelDefinition,
+  Activity,
+  Entity,
+  Generator,
+} from "shared/src/types/elements";
 
 // Create a model
-const model = Model.createDefault('model-1');
-model.name = 'Customer Service Process';
+const model = Model.createDefault("model-1");
+model.name = "Customer Service Process";
 const modelDefinition = new ModelDefinition(model);
 
 // Add a custom entity
-const customer = new Entity('entity-1', 'Customer');
+const customer = new Entity("entity-1", "Customer");
 modelDefinition.entities.add(customer);
 
 // Add an activity
-const serviceActivity = Activity.createDefault('activity-1');
-serviceActivity.name = 'Customer Service';
+const serviceActivity = Activity.createDefault("activity-1");
+serviceActivity.name = "Customer Service";
 serviceActivity.capacity = 3;
-serviceActivity.inputBufferCapacity = 10;
+serviceActivity.inboundQueueCapacity = 10;
 modelDefinition.activities.add(serviceActivity);
 
 // Add a generator
-const customerGenerator = Generator.createDefault('generator-1');
-customerGenerator.name = 'Customer Arrivals';
+const customerGenerator = Generator.createDefault("generator-1");
+customerGenerator.name = "Customer Arrivals";
 customerGenerator.entityId = customer.id;
 customerGenerator.activityKeyId = serviceActivity.id;
 customerGenerator.entitiesPerCreation = 1;
 modelDefinition.generators.add(customerGenerator);
 
 // Add a connector
-const connector = new Connector('connector-1', '');
+const connector = new Connector("connector-1", "");
 connector.sourceId = customerGenerator.id;
 connector.targetId = serviceActivity.id;
 modelDefinition.connectors.add(connector);
@@ -321,14 +334,14 @@ modelDefinition.connectors.add(connector);
 
 ```typescript
 // Create a resource
-const operator = new Resource('resource-1', 'Service Operator', 5);
+const operator = new Resource("resource-1", "Service Operator", 5);
 modelDefinition.resources.add(operator);
 
 // Create a resource requirement
-const requirement = new ResourceRequirement('req-1', 'Service Staff');
+const requirement = new ResourceRequirement("req-1", "Service Staff");
 
 // Create a root clause
-const rootClause = new RequirementClause('clause-1');
+const rootClause = new RequirementClause("clause-1");
 rootClause.mode = RequirementMode.REQUIRE_ALL;
 
 // Add a resource request
@@ -342,9 +355,9 @@ requirement.rootClauses.push(rootClause);
 modelDefinition.resourceRequirements.add(requirement);
 
 // Assign to an activity's operation step
-const activity = modelDefinition.activities.get('activity-1');
+const activity = modelDefinition.activities.get("activity-1");
 if (activity && activity.operationSteps.length > 0) {
-    activity.operationSteps[0].resourceRequirementId = requirement.id;
+  activity.operationSteps[0].resourceRequirementId = requirement.id;
 }
 ```
 

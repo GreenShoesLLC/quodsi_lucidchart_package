@@ -23,10 +23,10 @@ export interface ActivityRepSummaryData {
     current_contents: number;
     utilization_0_to_1: number;
     average_time_per_entry: number;
-    input_buffer_utilization: number;
-    output_buffer_utilization: number;
-    input_buffer_queue_time: number;
-    output_buffer_queue_time: number;
+    inbound_queue_utilization: number;
+    outbound_queue_utilization: number;
+    inbound_queue_queue_time: number;
+    outbound_queue_queue_time: number;
     total_time_blocked_upstream: number;
     total_time_blocked_downstream: number;
     blocking_frequency: number;

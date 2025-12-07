@@ -47,8 +47,8 @@
       "name": "Activity1",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -111,8 +111,8 @@
       "name": "Activity2",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -175,8 +175,8 @@
       "name": "Activity3",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -239,8 +239,8 @@
       "name": "Activity4",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -303,8 +303,8 @@
       "name": "Activity5",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -367,8 +367,8 @@
       "name": "Activity6",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -431,8 +431,8 @@
       "name": "Activity7",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -495,8 +495,8 @@
       "name": "Activity8",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -559,8 +559,8 @@
       "name": "Activity9",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -623,8 +623,8 @@
       "name": "Activity10",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -687,8 +687,8 @@
       "name": "Activity11",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -751,8 +751,8 @@
       "name": "Activity12",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -815,8 +815,8 @@
       "name": "Activity13",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -879,8 +879,8 @@
       "name": "Activity14",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -943,8 +943,8 @@
       "name": "Activity15",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1007,8 +1007,8 @@
       "name": "Activity16",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1071,8 +1071,8 @@
       "name": "Activity17",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1135,8 +1135,8 @@
       "name": "Activity18",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1199,8 +1199,8 @@
       "name": "Activity19",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1263,8 +1263,8 @@
       "name": "Activity20",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1327,8 +1327,8 @@
       "name": "Activity21",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1391,8 +1391,8 @@
       "name": "Activity22",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1455,8 +1455,8 @@
       "name": "Activity23",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1519,8 +1519,8 @@
       "name": "Activity24",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1583,8 +1583,8 @@
       "name": "Activity25",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1647,8 +1647,8 @@
       "name": "Activity26",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1711,8 +1711,8 @@
       "name": "Activity27",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1775,8 +1775,8 @@
       "name": "Activity28",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1839,8 +1839,8 @@
       "name": "Activity29",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -1903,8 +1903,8 @@
       "name": "Activity30",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {

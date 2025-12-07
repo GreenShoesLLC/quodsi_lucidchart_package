@@ -17,6 +17,7 @@ This document provides a concrete, step-by-step walkthrough of the most common e
 Understanding the Activity type hierarchy is crucial for following the data flow:
 
 ### Core Activity Class
+
 **File:** `shared/src/types/elements/Activity.ts`
 
 The shared Activity class is the canonical representation used throughout the system:
@@ -29,12 +30,12 @@ class Activity extends PositionedSimulationObject {
     public id: string,
     public name: string,
     public capacity: number = 1,
-    public inputBufferCapacity: number = 1,
-    public outputBufferCapacity: number = 1,
+    public inboundQueueCapacity: number = 1,
+    public outboundQueueCapacity: number = 1,
     public operationSteps: OperationStep[] = [],
     x: number = 0,
     y: number = 0
-  )
+  );
 
   // Additional properties
   preProcessingStateModifications: StateModification[] = [];
@@ -45,11 +46,13 @@ class Activity extends PositionedSimulationObject {
 ```
 
 **Used by:**
+
 - React UI for editing (ActivityEditor creates Activity instances)
 - Message payloads (SELECTION_CHANGED, ELEMENT_UPDATE)
 - Model validation and serialization
 
 ### Lucid Platform Bridge
+
 **File:** `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts`
 
 ActivityLucid bridges between LucidChart's BlockProxy and the Activity class:
@@ -60,7 +63,9 @@ class ActivityLucid extends SimObjectLucid<Activity> {
   protected createSimObject(): Activity {
     const storedData = storageAdapter.getElementData(element);
     return new Activity(
-      id, storedData.name, storedData.capacity,
+      id,
+      storedData.name,
+      storedData.capacity
       // ... all properties from storage
     );
   }
@@ -68,7 +73,10 @@ class ActivityLucid extends SimObjectLucid<Activity> {
   // Writing to storage
   public updateFromPlatform(): void {
     const dataToStore = {
-      id, name, capacity, operationSteps,
+      id,
+      name,
+      capacity,
+      operationSteps,
       // ... serialize all Activity properties
     };
     storageAdapter.updateElementData(element, dataToStore);
@@ -77,6 +85,7 @@ class ActivityLucid extends SimObjectLucid<Activity> {
 ```
 
 **Used by:**
+
 - Extension reading: Converts BlockProxy → Activity
 - Extension writing: Converts Activity → StoredActivityData → BlockProxy custom data
 
@@ -117,18 +126,21 @@ class ActivityLucid extends SimObjectLucid<Activity> {
 ### Key Transformations
 
 1. **Buffer Infinity Handling** (ActivityEditor:45-49)
+
    - Display: `999999` represents unlimited capacity
    - Storage: Converted to `Infinity` before saving
    - `bufferToDisplay(Infinity) → 999999`
    - `displayToBuffer(999999) → Infinity`
 
 2. **State Modifications** (ActivityLucid:74-85)
+
    - Stored as JSON arrays
    - Deserialized to StateModification instances on read
    - `StateModification.fromJSON(data)` on read
    - `stateModification.toJSON()` on write
 
 3. **Financial Properties** (ActivityLucid:88-90)
+
    - Stored as JSON object
    - Deserialized to ActivityFinancialProperties instance
    - `ActivityFinancialProperties.fromJSON(data)` on read
@@ -146,21 +158,25 @@ class ActivityLucid extends SimObjectLucid<Activity> {
 ### User Clicks Activity Shape
 
 1. **LucidChart SDK triggers selection callback**
+
    - Viewport.hookSelection registered in extension startup
    - Called with selected ItemProxy[]
 
 2. **SelectionHandler processes the selection**
+
    - File: `src/core/messaging/handlers/selection/SelectionHandler.ts:77-149`
    - `handleLucidSelectionEvent()` extracts shape data
    - Determines selection type (Activity vs Resource vs etc.)
    - Gets appropriate processor from ProcessorFactory
 
 3. **Activity data extracted from shape**
+
    - Processor reads shape's custom data (stored as JSON)
    - Reads q_meta field for simulation type
    - Builds element data structure
 
 4. **SELECTION_CHANGED message created**
+
    - File: `src/core/messaging/handlers/selection/SelectionHandler.ts:144`
    - Message includes:
      - `elementId`: Shape ID
@@ -174,6 +190,7 @@ class ActivityLucid extends SimObjectLucid<Activity> {
    - `router.send('model', message)` broadcasts to model panel
 
 ### Console Output
+
 ```
 [SelectionHandler] Handling selection change { itemCount: 1, items: ['abc123'] }
 [SelectionHandler] Selection type determined: Activity
@@ -187,16 +204,19 @@ class ActivityLucid extends SimObjectLucid<Activity> {
 ### React Receives Selection
 
 1. **MessageProvider intercepts postMessage**
+
    - File: `quodsim-react/src/messaging/MessageProvider.tsx`
    - window.addEventListener('message', handler)
    - Validates envelope structure
 
 2. **Mapper converts to Redux action**
+
    - File: `quodsim-react/src/messaging/mappers/selection.mapper.ts`
    - `mapSelection()` processes SELECTION_CHANGED
    - Creates SELECTION_UPDATE action
 
 3. **Redux state updated**
+
    - File: `quodsim-react/src/messaging/state/selectionSlice.ts`
    - Stores selectedElements, referenceData, documentContext
 
@@ -231,12 +251,14 @@ case DiagramElementType.BLOCK:
 ### ActivityEditor Displays Form
 
 6. **ActivityEditor extracts and normalizes data**
+
    - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:51-95`
    - `extractActivityData()` creates Activity instance
    - Handles missing or malformed data
    - Preserves all properties (connectType, financialProperties, etc.)
 
 7. **ActivityEditor manages its own state**
+
    - File: `quodsim-react/src/features/editors/ActivityEditor.tsx:87-130`
    - Initializes `formData` state with extracted Activity
    - Sets up `hasChanges` and `isSaving` flags
@@ -250,6 +272,7 @@ case DiagramElementType.BLOCK:
    - Save/Cancel buttons at bottom of form
 
 ### Console Output
+
 ```
 [MessageProvider] Received SELECTION_CHANGED
 [useModelPanel] ModelItemData details: { id: 'abc123', name: 'Assembly', type: 'Activity' }
@@ -285,13 +308,20 @@ case DiagramElementType.BLOCK:
    - Updates formData via setFormData
 
 ```typescript
-const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+const handleChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+) => {
   const { name, value } = e.target;
-  setFormData(prev => {
+  setFormData((prev) => {
     const updatedActivity = new Activity(
-      prev.id, prev.name, prev.capacity,
-      prev.inputBufferCapacity, prev.outputBufferCapacity,
-      prev.operationSteps, prev.x, prev.y
+      prev.id,
+      prev.name,
+      prev.capacity,
+      prev.inboundQueueCapacity,
+      prev.outboundQueueCapacity,
+      prev.operationSteps,
+      prev.x,
+      prev.y
     );
     // Update the specific field
     (updatedActivity as any)[name] = value;
@@ -311,6 +341,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
    - Save button becomes enabled (hasChanges = true)
 
 ### Console Output
+
 ```
 [ActivityEditor] handleChange: { name: 'name', value: 'Assembly Line' }
 ```
@@ -334,10 +365,10 @@ const handleSave = () => {
 
   const activityToSave = new Activity(
     formData.id,
-    formData.name,  // "Assembly Line"
+    formData.name, // "Assembly Line"
     formData.capacity,
-    displayToBuffer(formData.inputBufferCapacity),
-    displayToBuffer(formData.outputBufferCapacity),
+    displayToBuffer(formData.inboundQueueCapacity),
+    displayToBuffer(formData.outboundQueueCapacity),
     formData.operationSteps,
     formData.x,
     formData.y
@@ -345,14 +376,17 @@ const handleSave = () => {
 
   activityToSave.connectType = formData.connectType;
   activityToSave.financialProperties = formData.financialProperties;
-  activityToSave.preProcessingStateModifications = formData.preProcessingStateModifications;
-  activityToSave.postProcessingStateModifications = formData.postProcessingStateModifications;
+  activityToSave.preProcessingStateModifications =
+    formData.preProcessingStateModifications;
+  activityToSave.postProcessingStateModifications =
+    formData.postProcessingStateModifications;
 
   onSave(activityToSave);
 };
 ```
 
 2. **Callback chain bubbles up**
+
    - ActivityEditor's onSave → ElementEditor's onSave
    - ElementEditor's onSave → ModelPanel's handleElementSave
    - ModelPanel calls useModelPanel.onElementUpdate
@@ -366,7 +400,7 @@ const handleSave = () => {
 const onElementUpdate = (elementId: string, data: JsonObject) => {
   logger.log(`Updating element ${elementId} with data:`, data);
 
-  const type = modelItemData?.metadata?.type as string || '';
+  const type = (modelItemData?.metadata?.type as string) || "";
   modelOpsSender.updateElementData(elementId, type, data);
 };
 ```
@@ -389,8 +423,8 @@ const updateElementData = (
     type,
     data: {
       ...data,
-      id: elementId  // Ensure ID is included
-    }
+      id: elementId, // Ensure ID is included
+    },
   });
 };
 ```
@@ -416,8 +450,8 @@ const updateElementData = (
       id: "abc123",
       name: "Assembly Line",  // Updated value
       capacity: 1,
-      inputBufferCapacity: Infinity,
-      outputBufferCapacity: Infinity,
+      inboundQueueCapacity: Infinity,
+      outboundQueueCapacity: Infinity,
       operationSteps: [...],
       x: 100,
       y: 200,
@@ -429,6 +463,7 @@ const updateElementData = (
 ```
 
 ### Console Output
+
 ```
 [useModelPanel] Updating element abc123 with data: { name: 'Assembly Line', ... }
 [modelOpsSender] updateElementData called with elementId: abc123, type: Activity
@@ -442,11 +477,13 @@ const updateElementData = (
 ### Message Reception
 
 1. **RightDockPanel receives postMessage**
+
    - File: `src/managers/PanelManager.ts` (RightDockPanel class)
    - iframe's `relayToIframe()` receives message event
    - Validates envelope structure
 
 2. **MessageRouter routes message**
+
    - File: `src/core/messaging/MessageRouter.ts`
    - `routeMessage()` checks message type
    - Routes ELEMENT_UPDATE to ElementOpsHandler
@@ -515,6 +552,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ```
 
 5. **findElementById locates shape**
+
    - File: `src/core/messaging/handlers/elementOpsHandler.ts:290-299`
    - Searches page.allBlocks and page.allLines
    - Returns ElementProxy (BlockProxy or LineProxy)
@@ -527,11 +565,13 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ### Data Persistence
 
 7. **ModelManager.saveElementData persists to LucidChart**
+
    - File: `src/core/ModelManager.ts` (not shown in snippet, but similar to registerElement)
    - Creates or updates Activity instance in ModelDefinition
    - Calls StorageAdapter to write to shape
 
 8. **StorageAdapter writes to shape custom data**
+
    - File: `src/core/StorageAdapter.ts`
    - Serializes Activity to JSON
    - Stores in shape's custom data field
@@ -546,6 +586,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ### Success Response
 
 10. **ELEMENT_UPDATE_RESULT message created**
+
     - Message ID matches original request for correlation
     - Success flag set to true
     - elementId included for reference
@@ -555,6 +596,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
     - Broadcasts to model-iframe channel
 
 ### Console Output
+
 ```
 [ElementOpsHandler] Element update requested { elementId: 'abc123', type: 'Activity' }
 [ElementOpsHandler] Element found: BlockProxy
@@ -571,21 +613,25 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 ### React Receives Result
 
 1. **MessageProvider receives ELEMENT_UPDATE_RESULT**
+
    - File: `quodsim-react/src/messaging/MessageProvider.tsx`
    - postMessage listener catches message
    - Validates envelope structure
 
 2. **mapElementOps processes result**
+
    - File: `quodsim-react/src/messaging/mappers/elementOps.mapper.ts`
    - Converts ELEMENT_UPDATE_RESULT to Redux action
    - Extracts success status, elementId, error message
 
 3. **Redux state updated**
+
    - Success/error state stored
    - May trigger notification display
    - isSaving flag can be cleared
 
 4. **UI responds to update**
+
    - ActivityEditor's isSaving flag cleared after 500ms delay
    - hasChanges cleared
    - Save button becomes disabled (no changes)
@@ -598,6 +644,7 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
    - Confirms name change persisted: "Assembly Line"
 
 ### Console Output
+
 ```
 [MessageProvider] Received ELEMENT_UPDATE_RESULT
 [mapElementOps] Element update succeeded: { elementId: 'abc123' }
@@ -680,33 +727,33 @@ private static async handleElementUpdate(msg: EnvelopeBase): Promise<boolean> {
 
 ## Key Code Touchpoints Summary
 
-| Phase | Component | File Path | Lines | Action |
-|-------|-----------|-----------|-------|--------|
-| Types | Activity | `shared/src/types/elements/Activity.ts` | 11-71 | Core Activity class definition |
-| Types | ActivityLucid | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 46-226 | Lucid platform bridge |
-| 1 | SelectionHandler | `src/core/messaging/handlers/selection/SelectionHandler.ts` | 77-149 | Process selection, send SELECTION_CHANGED |
-| 1 | ActivityLucid | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 56-101 | Read Activity from BlockProxy |
-| 2 | MessageProvider | `quodsim-react/src/messaging/MessageProvider.tsx` | - | Receive postMessage |
-| 2 | mapSelection | `quodsim-react/src/messaging/mappers/selection.mapper.ts` | - | Convert to Redux action |
-| 2 | ElementEditor | `quodsim-react/src/features/modelPanel/ElementEditor.tsx` | 116-141 | Route to ActivityEditor |
-| 2 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 51-95 | Extract and display Activity |
-| 2 | Activity | `shared/src/types/elements/Activity.ts` | 57-70 | Activity constructor used |
-| 2 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 87-130 | Initialize state management |
-| 3 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 334-341 | Name input field |
-| 3 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 132-146 | Handle input change |
-| 4 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 148-168 | Handle save click |
-| 4 | ActivityEditor | `quodsim-react/src/features/editors/ActivityEditor.tsx` | 148-168 | Create Activity instance |
-| 4 | Activity | `shared/src/types/elements/Activity.ts` | 57-70 | Activity constructor creates instance |
-| 4 | useModelPanel | `quodsim-react/src/messaging/hooks/useModelPanel.ts` | 149-162 | Trigger update |
-| 4 | modelOpsSender | `quodsim-react/src/messaging/senders/modelOpsSender.ts` | 79-93 | Create ELEMENT_UPDATE |
-| 5 | RightDockPanel | `src/managers/PanelManager.ts` | - | Receive postMessage |
-| 5 | MessageRouter | `src/core/messaging/MessageRouter.ts` | - | Route to handler |
-| 5 | ElementOpsHandler | `src/core/messaging/handlers/elementOpsHandler.ts` | 49-138 | Process update |
-| 5 | ModelManager | `src/core/ModelManager.ts` | - | Save element data |
-| 5 | StorageAdapter | `src/core/StorageAdapter.ts` | - | Write to shape |
-| 5 | ActivityLucid | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 122-157 | Serialize Activity to storage |
-| 6 | MessageProvider | `quodsim-react/src/messaging/MessageProvider.tsx` | - | Receive result |
-| 6 | mapElementOps | `quodsim-react/src/messaging/mappers/elementOps.mapper.ts` | - | Process result |
+| Phase | Component         | File Path                                                             | Lines   | Action                                    |
+| ----- | ----------------- | --------------------------------------------------------------------- | ------- | ----------------------------------------- |
+| Types | Activity          | `shared/src/types/elements/Activity.ts`                               | 11-71   | Core Activity class definition            |
+| Types | ActivityLucid     | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 46-226  | Lucid platform bridge                     |
+| 1     | SelectionHandler  | `src/core/messaging/handlers/selection/SelectionHandler.ts`           | 77-149  | Process selection, send SELECTION_CHANGED |
+| 1     | ActivityLucid     | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 56-101  | Read Activity from BlockProxy             |
+| 2     | MessageProvider   | `quodsim-react/src/messaging/MessageProvider.tsx`                     | -       | Receive postMessage                       |
+| 2     | mapSelection      | `quodsim-react/src/messaging/mappers/selection.mapper.ts`             | -       | Convert to Redux action                   |
+| 2     | ElementEditor     | `quodsim-react/src/features/modelPanel/ElementEditor.tsx`             | 116-141 | Route to ActivityEditor                   |
+| 2     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 51-95   | Extract and display Activity              |
+| 2     | Activity          | `shared/src/types/elements/Activity.ts`                               | 57-70   | Activity constructor used                 |
+| 2     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 87-130  | Initialize state management               |
+| 3     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 334-341 | Name input field                          |
+| 3     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 132-146 | Handle input change                       |
+| 4     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 148-168 | Handle save click                         |
+| 4     | ActivityEditor    | `quodsim-react/src/features/editors/ActivityEditor.tsx`               | 148-168 | Create Activity instance                  |
+| 4     | Activity          | `shared/src/types/elements/Activity.ts`                               | 57-70   | Activity constructor creates instance     |
+| 4     | useModelPanel     | `quodsim-react/src/messaging/hooks/useModelPanel.ts`                  | 149-162 | Trigger update                            |
+| 4     | modelOpsSender    | `quodsim-react/src/messaging/senders/modelOpsSender.ts`               | 79-93   | Create ELEMENT_UPDATE                     |
+| 5     | RightDockPanel    | `src/managers/PanelManager.ts`                                        | -       | Receive postMessage                       |
+| 5     | MessageRouter     | `src/core/messaging/MessageRouter.ts`                                 | -       | Route to handler                          |
+| 5     | ElementOpsHandler | `src/core/messaging/handlers/elementOpsHandler.ts`                    | 49-138  | Process update                            |
+| 5     | ModelManager      | `src/core/ModelManager.ts`                                            | -       | Save element data                         |
+| 5     | StorageAdapter    | `src/core/StorageAdapter.ts`                                          | -       | Write to shape                            |
+| 5     | ActivityLucid     | `editorextensions/quodsi_editor_extension/src/types/ActivityLucid.ts` | 122-157 | Serialize Activity to storage             |
+| 6     | MessageProvider   | `quodsim-react/src/messaging/MessageProvider.tsx`                     | -       | Receive result                            |
+| 6     | mapElementOps     | `quodsim-react/src/messaging/mappers/elementOps.mapper.ts`            | -       | Process result                            |
 
 ---
 

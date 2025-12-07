@@ -32,8 +32,8 @@
       "name": "Process",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {
@@ -64,8 +64,8 @@
       "name": "Process",
       "type": "Activity",
       "capacity": 1,
-      "inputBufferCapacity": 1,
-      "outputBufferCapacity": 1,
+      "inboundQueueCapacity": 1,
+      "outboundQueueCapacity": 1,
       "operationSteps": [
         {
           "duration": {

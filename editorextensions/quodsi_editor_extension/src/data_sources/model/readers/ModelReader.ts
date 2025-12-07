@@ -25,8 +25,8 @@ export interface ActivityData {
   id: string;
   name: string;
   capacity: number;
-  inputBufferCapacity: number;
-  outputBufferCapacity: number;
+  inboundQueueCapacity: number;
+  outboundQueueCapacity: number;
   type: string;
 }
 
@@ -354,8 +354,8 @@ export class ModelReader extends DataSourceReader {
       id: item.fields.get('id') as string,
       name: item.fields.get('name') as string,
       capacity: item.fields.get('capacity') as number,
-      inputBufferCapacity: item.fields.get('inputBufferCapacity') as number,
-      outputBufferCapacity: item.fields.get('outputBufferCapacity') as number,
+      inboundQueueCapacity: item.fields.get('inboundQueueCapacity') as number,
+      outboundQueueCapacity: item.fields.get('outboundQueueCapacity') as number,
       type: item.fields.get('type') as string
     };
   }

@@ -67,8 +67,8 @@ export interface ActivityParsedFields {
     name: string;
     duration?: number;
     capacity?: number;
-    inputBufferCapacity?: number;
-    outputBufferCapacity?: number;
+    inboundQueueCapacity?: number;
+    outboundQueueCapacity?: number;
     resource?: string;  // Resource name to auto-create and link
 }
 
@@ -80,8 +80,8 @@ export function extractActivityFields(parsed: ParsedNameData): ActivityParsedFie
         name: parsed.name || '',
         duration: parsed.duration as number | undefined,
         capacity: parsed.capacity as number | undefined,
-        inputBufferCapacity: (parsed.inputbuffer ?? parsed.input) as number | undefined,
-        outputBufferCapacity: (parsed.outputbuffer ?? parsed.output) as number | undefined,
+        inboundQueueCapacity: (parsed.inboundQueue ?? parsed.inbound) as number | undefined,
+        outboundQueueCapacity: (parsed.outboundQueue ?? parsed.outbound) as number | undefined,
         resource: parsed.resource as string | undefined,
     };
 }
