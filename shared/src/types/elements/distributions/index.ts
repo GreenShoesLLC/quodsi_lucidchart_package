@@ -235,3 +235,57 @@ export {
     getDistributionEffectiveValue,
     validateDistributionParameters
 } from './DistributionFactory';
+
+// Import DistributionType for mapping functions
+import { DistributionType } from '../DistributionType';
+
+// Re-export getDistributionDisplayName and isDistributionTypeSupported from DistributionType
+export { getDistributionDisplayName, isDistributionTypeSupported } from '../DistributionType';
+
+/**
+ * Core numeric distributions supported for NUMBER state SAMPLE operations.
+ * This is the initial set - can be expanded later.
+ */
+export const CORE_NUMERIC_DISTRIBUTIONS: DistributionType[] = [
+    DistributionType.CONSTANT,
+    DistributionType.UNIFORM,
+    DistributionType.TRIANGULAR,
+    DistributionType.NORMAL,
+    DistributionType.EXPONENTIAL
+];
+
+/**
+ * Convert DistributionType enum to backend string format.
+ * Since the enum values are already lowercase strings, this is a direct return.
+ *
+ * @param type The DistributionType enum value
+ * @returns The backend-compatible string representation
+ */
+export function distributionTypeToBackendString(type: DistributionType): string {
+    return type; // Enum values are already the backend string format
+}
+
+/**
+ * Convert backend string to DistributionType enum.
+ *
+ * @param str The backend string representation
+ * @returns The DistributionType enum value, or null if not found
+ */
+export function backendStringToDistributionType(str: string): DistributionType | null {
+    // Check if the string is a valid DistributionType value
+    const values = Object.values(DistributionType);
+    if (values.includes(str as DistributionType)) {
+        return str as DistributionType;
+    }
+    return null;
+}
+
+/**
+ * Check if a distribution type is a core numeric distribution.
+ *
+ * @param type The DistributionType to check
+ * @returns True if it's in the core set
+ */
+export function isCoreNumericDistribution(type: DistributionType): boolean {
+    return CORE_NUMERIC_DISTRIBUTIONS.includes(type);
+}

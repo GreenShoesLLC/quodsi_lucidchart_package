@@ -9,6 +9,7 @@ import {
   ComponentType,
   getSupportedOperationsForType,
 } from "@quodsi/shared";
+import { SampleDistributionEditor } from "./sample";
 
 interface Props {
   isOpen: boolean;
@@ -61,6 +62,14 @@ const StateModificationFormDialog: React.FC<Props> = ({
   );
   const [error, setError] = useState<string>("");
 
+  // SAMPLE operation state
+  const [distributionType, setDistributionType] = useState<string>(
+    modification?.distributionType || ""
+  );
+  const [distributionParameters, setDistributionParameters] = useState<Record<string, any>>(
+    modification?.distributionParameters || {}
+  );
+
   // Get selected state
   const selectedState = useMemo(() => {
     return states.getByUniqueId(selectedStateId);
@@ -93,6 +102,35 @@ const StateModificationFormDialog: React.FC<Props> = ({
       return false;
     }
 
+    // For SAMPLE operations, validate distribution config instead of value
+    if (operation === StateOperation.SAMPLE) {
+      if (!distributionType) {
+        setError("Please configure the distribution");
+        return false;
+      }
+      // Additional validation based on state type
+      if (selectedState.dataType === StateType.CATEGORY) {
+        const probs = distributionParameters?.probabilities;
+        if (!probs || Object.keys(probs).length === 0) {
+          setError("Please set probabilities for all category values");
+          return false;
+        }
+        const sum = Object.values(probs).reduce((acc: number, val) => acc + (val as number), 0);
+        if (Math.abs(sum - 1.0) > 1e-6) {
+          setError("Probabilities must sum to 1.0");
+          return false;
+        }
+      } else if (selectedState.dataType === StateType.BOOLEAN) {
+        const p = distributionParameters?.p;
+        if (p === undefined || p < 0 || p > 1) {
+          setError("Probability must be between 0 and 1");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    // For non-SAMPLE operations, validate value
     if (!value) {
       setError("Please enter a value");
       return false;
@@ -132,12 +170,21 @@ const StateModificationFormDialog: React.FC<Props> = ({
     }
   };
 
+  // Handle distribution change from SampleDistributionEditor
+  const handleDistributionChange = (type: string, params: Record<string, any>) => {
+    setDistributionType(type);
+    setDistributionParameters(params);
+  };
+
   // Handle save
   const handleSave = () => {
     if (!validate() || !selectedState) return;
 
     try {
-      const parsedValue = parseValue(value, selectedState.dataType);
+      // For SAMPLE operations, use a placeholder value (it's ignored at runtime)
+      const parsedValue = operation === StateOperation.SAMPLE
+        ? getDefaultValueForType(selectedState.dataType)
+        : parseValue(value, selectedState.dataType);
 
       const newModification = new StateModification(
         selectedStateId,
@@ -149,12 +196,28 @@ const StateModificationFormDialog: React.FC<Props> = ({
           targetComponentType: targetComponentType
             ? (targetComponentType as ComponentType)
             : undefined,
+          distributionType: operation === StateOperation.SAMPLE ? distributionType : undefined,
+          distributionParameters: operation === StateOperation.SAMPLE ? distributionParameters : undefined,
         }
       );
 
       onSave(newModification);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create modification");
+    }
+  };
+
+  // Get default placeholder value for a state type (used for SAMPLE operations)
+  const getDefaultValueForType = (dataType: StateType): number | string | boolean => {
+    switch (dataType) {
+      case StateType.NUMBER:
+        return 0;
+      case StateType.BOOLEAN:
+        return false;
+      case StateType.STRING:
+      case StateType.CATEGORY:
+      default:
+        return "";
     }
   };
 
@@ -229,15 +292,31 @@ const StateModificationFormDialog: React.FC<Props> = ({
                       ? "Subtract"
                       : op === StateOperation.MULTIPLY
                       ? "Multiply"
-                      : "Divide"} ({op})
+                      : op === StateOperation.DIVIDE
+                      ? "Divide"
+                      : op === StateOperation.SAMPLE
+                      ? "Sample from Distribution"
+                      : op} ({op})
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          {/* Value Input */}
-          {selectedState && (
+          {/* SAMPLE Distribution Configuration */}
+          {selectedState && operation === StateOperation.SAMPLE && (
+            <div className="border-t pt-3">
+              <SampleDistributionEditor
+                state={selectedState}
+                distributionType={distributionType}
+                distributionParameters={distributionParameters}
+                onChange={handleDistributionChange}
+              />
+            </div>
+          )}
+
+          {/* Value Input (for non-SAMPLE operations) */}
+          {selectedState && operation !== StateOperation.SAMPLE && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Value *
@@ -363,7 +442,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!selectedState || !value}
+            disabled={!selectedState || (operation !== StateOperation.SAMPLE && !value)}
             className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isEditMode ? "Save Changes" : "Add Modification"}

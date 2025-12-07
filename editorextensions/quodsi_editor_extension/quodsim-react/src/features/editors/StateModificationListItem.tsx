@@ -1,6 +1,6 @@
 import React from "react";
-import { Edit2, Trash2, ExternalLink } from "lucide-react";
-import { StateModification, State, StateType, ComponentType } from "@quodsi/shared";
+import { Edit2, Trash2, ExternalLink, Shuffle } from "lucide-react";
+import { StateModification, State, StateType, ComponentType, StateOperation } from "@quodsi/shared";
 
 interface Props {
   modification: StateModification;
@@ -42,6 +42,61 @@ const StateModificationListItem: React.FC<Props> = ({
     return String(value);
   };
 
+  // Check if this is a SAMPLE operation
+  const isSampleOperation = modification.operation === StateOperation.SAMPLE;
+
+  // Format distribution info for SAMPLE operations
+  const formatDistributionInfo = (): string => {
+    const { distributionType, distributionParameters } = modification;
+    if (!distributionType) return "Distribution not configured";
+
+    switch (distributionType) {
+      case "sample_multinomial_one":
+        const probs = distributionParameters?.probabilities;
+        if (probs) {
+          const count = Object.keys(probs).length;
+          return `Multinomial (${count} categories)`;
+        }
+        return "Multinomial";
+      case "bernoulli":
+        const p = distributionParameters?.p;
+        if (p !== undefined) {
+          return `Bernoulli (p=${(p * 100).toFixed(0)}%)`;
+        }
+        return "Bernoulli";
+      case "normal":
+        const loc = distributionParameters?.loc;
+        const scale = distributionParameters?.scale;
+        if (loc !== undefined && scale !== undefined) {
+          return `Normal(μ=${loc}, σ=${scale})`;
+        }
+        return "Normal";
+      case "uniform":
+        const low = distributionParameters?.low;
+        const high = distributionParameters?.high;
+        if (low !== undefined && high !== undefined) {
+          return `Uniform(${low}, ${high})`;
+        }
+        return "Uniform";
+      case "exponential":
+        const expScale = distributionParameters?.scale;
+        if (expScale !== undefined) {
+          return `Exponential(λ=${expScale})`;
+        }
+        return "Exponential";
+      case "triangular":
+        return "Triangular";
+      case "constant":
+        const constValue = distributionParameters?.value;
+        if (constValue !== undefined) {
+          return `Constant(${constValue})`;
+        }
+        return "Constant";
+      default:
+        return distributionType;
+    }
+  };
+
   // Check if this is a cross-component modification
   const isCrossComponent =
     modification.componentUniqueId || modification.targetComponentType;
@@ -75,12 +130,23 @@ const StateModificationListItem: React.FC<Props> = ({
 
             {/* Operation and value */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                {modification.operation}
-              </span>
-              <span className="text-xs font-mono text-gray-900">
-                {formatValue(modification.value)}
-              </span>
+              {isSampleOperation ? (
+                <>
+                  <Shuffle className="w-3 h-3 text-purple-500" />
+                  <span className="text-xs text-purple-600 font-medium">
+                    {formatDistributionInfo()}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="text-xs text-gray-500">
+                    {modification.operation}
+                  </span>
+                  <span className="text-xs font-mono text-gray-900">
+                    {formatValue(modification.value)}
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Cross-component info if applicable */}

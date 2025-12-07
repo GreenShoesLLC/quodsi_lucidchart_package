@@ -48,6 +48,21 @@ export class StateModification {
      */
     targetComponentType?: ComponentType;
 
+    /**
+     * Distribution type identifier for SAMPLE operations.
+     * Examples: "sample_multinomial_one" (CATEGORY), "bernoulli" (BOOLEAN), "normal" (NUMBER)
+     */
+    distributionType?: string;
+
+    /**
+     * Distribution parameters for SAMPLE operations.
+     * Structure varies by distribution type:
+     * - sample_multinomial_one: { probabilities: { "L1": 0.1, "L2": 0.2, ... } }
+     * - bernoulli: { p: 0.3 }
+     * - normal: { loc: 5.0, scale: 2.0 }
+     */
+    distributionParameters?: Record<string, any>;
+
     constructor(
         stateUniqueId: string,
         stateName: string,
@@ -56,6 +71,8 @@ export class StateModification {
         options?: {
             componentUniqueId?: string;
             targetComponentType?: ComponentType;
+            distributionType?: string;
+            distributionParameters?: Record<string, any>;
         }
     ) {
         this.stateUniqueId = stateUniqueId;
@@ -64,6 +81,8 @@ export class StateModification {
         this.value = value;
         this.componentUniqueId = options?.componentUniqueId;
         this.targetComponentType = options?.targetComponentType;
+        this.distributionType = options?.distributionType;
+        this.distributionParameters = options?.distributionParameters;
     }
 
     /**
@@ -116,12 +135,85 @@ export class StateModification {
         // Validate operation is supported for state type
         this.validateOperationForType(state);
 
-        // Validate value type matches state type
-        this.validateValueType(state);
+        // Validate SAMPLE operation has distribution configuration
+        if (this.operation === StateOperation.SAMPLE) {
+            this.validateSampleOperation(state);
+        } else {
+            // Validate value type matches state type (only for non-SAMPLE operations)
+            this.validateValueType(state);
+        }
 
         // Validate cross-component access if specified
         if (this.componentUniqueId || this.targetComponentType) {
             this.validateCrossComponentAccess(state);
+        }
+    }
+
+    /**
+     * Validate SAMPLE operation has required distribution configuration.
+     *
+     * @param state The State to validate against
+     * @throws Error if SAMPLE operation is missing required fields
+     */
+    private validateSampleOperation(state: State): void {
+        if (!this.distributionType) {
+            throw new Error("SAMPLE operation requires distribution_type");
+        }
+
+        if (!this.distributionParameters) {
+            throw new Error("SAMPLE operation requires distribution_parameters");
+        }
+
+        // Type-specific distribution validation
+        if (state.dataType === StateType.CATEGORY) {
+            if (this.distributionType !== "sample_multinomial_one") {
+                throw new Error("CATEGORY state SAMPLE requires 'sample_multinomial_one' distribution");
+            }
+            // Validate probabilities object exists
+            const probabilities = this.distributionParameters.probabilities;
+            if (!probabilities || typeof probabilities !== 'object') {
+                throw new Error("SAMPLE for CATEGORY state requires 'probabilities' object");
+            }
+            // Validate all category values have probabilities
+            if (state.categoryValues) {
+                for (const catValue of state.categoryValues) {
+                    if (probabilities[catValue] === undefined) {
+                        throw new Error(`SAMPLE for state '${state.name}' missing probability for category '${catValue}'`);
+                    }
+                }
+                // Check for unknown categories
+                for (const key of Object.keys(probabilities)) {
+                    if (!state.categoryValues.includes(key)) {
+                        throw new Error(`SAMPLE for state '${state.name}' has unknown category '${key}'`);
+                    }
+                }
+            }
+            // Validate probabilities sum to 1.0
+            const sum = Object.values(probabilities).reduce((acc: number, val) => acc + (val as number), 0);
+            if (Math.abs(sum - 1.0) > 1e-6) {
+                throw new Error(`Probabilities must sum to 1.0, got ${sum}`);
+            }
+        } else if (state.dataType === StateType.BOOLEAN) {
+            if (this.distributionType !== "bernoulli") {
+                throw new Error("BOOLEAN state SAMPLE requires 'bernoulli' distribution");
+            }
+            if (this.distributionParameters.p === undefined) {
+                throw new Error("BOOLEAN state SAMPLE requires 'p' parameter");
+            }
+            const p = this.distributionParameters.p;
+            if (typeof p !== 'number' || p < 0 || p > 1) {
+                throw new Error("'p' must be between 0 and 1");
+            }
+        } else if (state.dataType === StateType.NUMBER) {
+            // Validate that a numeric distribution type is specified
+            const validNumericDistributions = [
+                "constant", "uniform", "triangular", "exponential",
+                "normal", "lognormal", "beta", "gamma", "weibull",
+                "poisson", "discrete"
+            ];
+            if (!validNumericDistributions.includes(this.distributionType)) {
+                throw new Error(`NUMBER state SAMPLE requires a numeric distribution, got '${this.distributionType}'`);
+            }
         }
     }
 
@@ -258,6 +350,12 @@ export class StateModification {
         if (this.targetComponentType !== undefined) {
             result.targetComponentType = this.targetComponentType;
         }
+        if (this.distributionType !== undefined) {
+            result.distributionType = this.distributionType;
+        }
+        if (this.distributionParameters !== undefined) {
+            result.distributionParameters = this.distributionParameters;
+        }
 
         return result;
     }
@@ -280,14 +378,17 @@ export class StateModification {
         if (!data.operation) {
             throw new Error("Missing required field 'operation' in StateModification data");
         }
-        if (data.value === undefined || data.value === null) {
-            throw new Error("Missing required field 'value' in StateModification data");
-        }
 
         // Convert operation string to enum
         const operation = data.operation as StateOperation;
         if (!Object.values(StateOperation).includes(operation)) {
             throw new Error(`Invalid operation '${data.operation}' in StateModification data`);
+        }
+
+        // For SAMPLE operations, value can be null/undefined (it's ignored at runtime)
+        // For other operations, value is required
+        if (operation !== StateOperation.SAMPLE && (data.value === undefined || data.value === null)) {
+            throw new Error("Missing required field 'value' in StateModification data");
         }
 
         // Extract optional fields
@@ -301,14 +402,19 @@ export class StateModification {
             }
         }
 
+        // Default value for SAMPLE operations if not provided
+        const value = data.value ?? (operation === StateOperation.SAMPLE ? "" : data.value);
+
         return new StateModification(
             data.stateUniqueId,
             data.stateName,
             operation,
-            data.value,
+            value,
             {
                 componentUniqueId: data.componentUniqueId,
-                targetComponentType
+                targetComponentType,
+                distributionType: data.distributionType,
+                distributionParameters: data.distributionParameters
             }
         );
     }
@@ -382,5 +488,32 @@ export function createModelCounterIncrement(
         StateOperation.ADD,
         value,
         { targetComponentType: ComponentType.MODEL }
+    );
+}
+
+/**
+ * Convenience function to create a SAMPLE state modification.
+ */
+export function createSampleModification(
+    stateUniqueId: string,
+    stateName: string,
+    distributionType: string,
+    distributionParameters: Record<string, any>,
+    options?: {
+        targetComponentType?: ComponentType;
+        componentUniqueId?: string;
+    }
+): StateModification {
+    return new StateModification(
+        stateUniqueId,
+        stateName,
+        StateOperation.SAMPLE,
+        "", // Value is ignored for SAMPLE operations
+        {
+            distributionType,
+            distributionParameters,
+            targetComponentType: options?.targetComponentType,
+            componentUniqueId: options?.componentUniqueId
+        }
     );
 }

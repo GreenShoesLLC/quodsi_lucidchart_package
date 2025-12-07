@@ -59,7 +59,17 @@ export enum StateOperation {
      * Validation: Prevents division by zero
      * Example: workload /= 2.0, average /= count
      */
-    DIVIDE = "/="
+    DIVIDE = "/=",
+
+    /**
+     * Sample from distribution operation.
+     *
+     * Samples a value from a probability distribution and assigns it to the state.
+     * Supported by: All state types (NUMBER, STRING, BOOLEAN, CATEGORY)
+     * Requires: distributionType and distributionParameters in StateModification
+     * Example: ESI = sample(multinomial), RequiresInspection = sample(bernoulli)
+     */
+    SAMPLE = "sample"
 }
 
 /**
@@ -87,6 +97,10 @@ export function validateOperationForType(operation: StateOperation, stateType: S
         return true; // Assignment supported by all types
     }
 
+    if (operation === StateOperation.SAMPLE) {
+        return true; // Sample supported by all types
+    }
+
     // Arithmetic operations only supported by NUMBER states
     if (isArithmeticOperation(operation)) {
         return stateType === StateType.NUMBER;
@@ -99,8 +113,8 @@ export function validateOperationForType(operation: StateOperation, stateType: S
  * Get list of supported operations for a given state type.
  */
 export function getSupportedOperationsForType(stateType: StateType): StateOperation[] {
-    // All types support assignment
-    const operations: StateOperation[] = [StateOperation.ASSIGN];
+    // All types support assignment and sample
+    const operations: StateOperation[] = [StateOperation.ASSIGN, StateOperation.SAMPLE];
 
     // NUMBER types also support arithmetic operations
     if (stateType === StateType.NUMBER) {
@@ -153,7 +167,8 @@ export function getOperationDescription(operation: StateOperation): string {
         [StateOperation.ADD]: "Add the specified value to the current state value",
         [StateOperation.SUBTRACT]: "Subtract the specified value from the current state value",
         [StateOperation.MULTIPLY]: "Multiply the current state value by the specified value",
-        [StateOperation.DIVIDE]: "Divide the current state value by the specified value"
+        [StateOperation.DIVIDE]: "Divide the current state value by the specified value",
+        [StateOperation.SAMPLE]: "Sample a value from a probability distribution"
     };
     return descriptions[operation] || "Unknown operation";
 }
