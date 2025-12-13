@@ -68,7 +68,7 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "total_cost_mean", label: "Total Cost" },
   ],
   entity: [
-    { value: "count_mean", label: "Count" },
+    { value: "created_mean", label: "Created" },
     { value: "completed_count_mean", label: "Completed Count" },
     { value: "in_progress_count_mean", label: "In Progress (WIP)" },
     { value: "throughput_rate_mean", label: "Throughput Rate" },

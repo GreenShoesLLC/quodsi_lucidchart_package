@@ -25,9 +25,14 @@
       "Bash(powershell:*)",
       "Bash(dir:*)",
       "Bash(findstr:*)",
-      "Bash(npx lucid-package:*)"
+      "Bash(npx lucid-package:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "C:\\_source\\Greenshoes\\quodsim"
+    ]
   }
 }

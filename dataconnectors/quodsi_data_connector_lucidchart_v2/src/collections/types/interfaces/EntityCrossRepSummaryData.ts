@@ -12,10 +12,10 @@ export interface EntityCrossRepSummaryData {
     entity_id: string;
     entity_name: string;
 
-    // Count statistics
-    count_mean: number;
-    count_median: number;
-    count_std_dev: number;
+    // Created statistics (entities created)
+    created_mean: number;
+    created_median: number;
+    created_std_dev: number;
 
     // Completed count statistics
     completed_count_mean: number;

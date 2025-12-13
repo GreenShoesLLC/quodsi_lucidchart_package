@@ -36,7 +36,7 @@ export class EntityCrossRepTableGenerator extends BaseTableGenerator {
                 'entity_id',
                 'entity_name',
                 'scenario_name',
-                'count_mean',
+                'created_mean',
                 'completed_count_mean',
                 'in_progress_count_mean',
                 'throughput_rate_mean',

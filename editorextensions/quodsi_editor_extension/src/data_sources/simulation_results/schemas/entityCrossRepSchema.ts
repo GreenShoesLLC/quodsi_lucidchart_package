@@ -10,10 +10,10 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "entity_id", type: ScalarFieldTypeEnum.STRING },
         { name: "entity_name", type: ScalarFieldTypeEnum.STRING },
         
-        // Count statistics
-        { name: "count_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "count_median", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "count_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        // Created statistics (entities created)
+        { name: "created_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "created_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "created_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Completed count statistics
         { name: "completed_count_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -96,10 +96,10 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'entity_id': 'Entity ID',
         'entity_name': 'Entity Name',
         
-        // Count statistics
-        'count_mean': 'Mean Count',
-        'count_median': 'Median Count',
-        'count_std_dev': 'Count Std Dev',
+        // Created statistics
+        'created_mean': 'Mean Created',
+        'created_median': 'Median Created',
+        'created_std_dev': 'Created Std Dev',
         
         // Completed count statistics
         'completed_count_mean': 'Mean Completed Count',

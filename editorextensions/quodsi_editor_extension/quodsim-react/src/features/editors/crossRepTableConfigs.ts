@@ -81,8 +81,8 @@ export const entityColumns: TableColumn[] = [
     label: "Name",
   },
   {
-    key: "count_mean",
-    label: "Count",
+    key: "created_mean",
+    label: "Created",
     format: formatInteger,
   },
   {

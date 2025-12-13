@@ -11,10 +11,10 @@ export interface EntityCrossRep {
   entity_id: string;
   entity_name: string;
   
-  // Count statistics
-  count_mean: number;
-  count_median: number;
-  count_std_dev: number;
+  // Created statistics (entities created)
+  created_mean: number;
+  created_median: number;
+  created_std_dev: number;
   
   // Completed count statistics
   completed_count_mean: number;
@@ -103,10 +103,10 @@ export function mapToEntityCrossRep(itemFields: MapProxy<string, any>): EntityCr
     entity_id: itemFields.get('entity_id') as string,
     entity_name: itemFields.get('entity_name') as string,
     
-    // Count statistics
-    count_mean: itemFields.get('count_mean') as number,
-    count_median: itemFields.get('count_median') as number,
-    count_std_dev: itemFields.get('count_std_dev') as number,
+    // Created statistics
+    created_mean: itemFields.get('created_mean') as number,
+    created_median: itemFields.get('created_median') as number,
+    created_std_dev: itemFields.get('created_std_dev') as number,
     
     // Completed count statistics
     completed_count_mean: itemFields.get('completed_count_mean') as number,

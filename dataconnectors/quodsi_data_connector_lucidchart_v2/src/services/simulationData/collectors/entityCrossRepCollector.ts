@@ -14,8 +14,8 @@ import { SerializedFields } from 'lucid-extension-sdk';
 // NOTE: CSV is missing 15 fields - we'll provide defaults in the mapper
 export const requiredColumns: string[] = [
     'entity_type',  // CSV has entity_type instead of entity_id/entity_name
-    'total_count_mean',
-    'total_count_std',
+    'total_created_mean',
+    'total_created_std',
     'completed_count_mean',
     'completed_count_std',
     'in_progress_count_mean',
@@ -166,10 +166,10 @@ export async function fetchEntityCrossRep(
             entity_id: item.entity_type,
             entity_name: item.entity_type,
 
-            // Count statistics - map _std to _std_dev, add missing median with default
-            count_mean: item.total_count_mean,  // Note: CSV uses total_count_mean
-            count_median: 0,  // Missing in CSV, default to 0
-            count_std_dev: item.total_count_std,
+            // Created statistics - map _std to _std_dev, add missing median with default
+            created_mean: item.total_created_mean,  // Note: CSV uses total_created_mean
+            created_median: 0,  // Missing in CSV, default to 0
+            created_std_dev: item.total_created_std,
 
             // Completed count statistics
             completed_count_mean: item.completed_count_mean,
@@ -262,10 +262,10 @@ export async function fetchEntityCrossRep(
                 entity_id: String(item.entity_id || "Unknown"),
                 entity_name: String(item.entity_name || "Unknown"),
                 
-                // Count statistics
-                count_mean: item.count_mean ?? 0,
-                count_median: item.count_median ?? 0,
-                count_std_dev: item.count_std_dev ?? 0,
+                // Created statistics
+                created_mean: item.created_mean ?? 0,
+                created_median: item.created_median ?? 0,
+                created_std_dev: item.created_std_dev ?? 0,
                 
                 // Completed count statistics
                 completed_count_mean: item.completed_count_mean ?? 0,
@@ -369,49 +369,49 @@ export function prepareEntityCrossRepUpdate(data: EntityCrossRepSummaryData[]) {
             entity_id: String(item.entity_id || "Unknown"),
             entity_name: String(item.entity_name || "Unknown"),
             
-            // Count statistics
-            count_mean: item.count_mean ?? 0,
-            count_median: item.count_median ?? 0,
-            count_std_dev: item.count_std_dev ?? 0,
-            
+            // Created statistics
+            created_mean: item.created_mean ?? 0,
+            created_median: item.created_median ?? 0,
+            created_std_dev: item.created_std_dev ?? 0,
+
             // Completed count statistics
             completed_count_mean: item.completed_count_mean ?? 0,
             completed_count_median: item.completed_count_median ?? 0,
             completed_count_std_dev: item.completed_count_std_dev ?? 0,
-            
+
             // In progress count statistics
             in_progress_count_mean: item.in_progress_count_mean ?? 0,
             in_progress_count_median: item.in_progress_count_median ?? 0,
             in_progress_count_std_dev: item.in_progress_count_std_dev ?? 0,
-            
+
             // Throughput rate statistics
             throughput_rate_mean: item.throughput_rate_mean ?? 0,
             throughput_rate_median: item.throughput_rate_median ?? 0,
             throughput_rate_std_dev: item.throughput_rate_std_dev ?? 0,
             throughput_rate_cv: item.throughput_rate_cv ?? 0,
-            
+
             // Interval statistics
             interval_mean: item.interval_mean ?? 0,
             interval_median: item.interval_median ?? 0,
             interval_std_dev: item.interval_std_dev ?? 0,
             interval_cv: item.interval_cv ?? 0,
-            
+
             // Overall interval statistics
             overall_interval_mean: item.overall_interval_mean ?? 0,
             overall_interval_median: item.overall_interval_median ?? 0,
             overall_interval_std_dev: item.overall_interval_std_dev ?? 0,
             overall_interval_cv: item.overall_interval_cv ?? 0,
-            
+
             // First exit statistics
             first_exit_mean: item.first_exit_mean ?? 0,
             first_exit_median: item.first_exit_median ?? 0,
             first_exit_std_dev: item.first_exit_std_dev ?? 0,
-            
+
             // Last exit statistics
             last_exit_mean: item.last_exit_mean ?? 0,
             last_exit_median: item.last_exit_median ?? 0,
             last_exit_std_dev: item.last_exit_std_dev ?? 0,
-            
+
             // Time metrics
             time_in_system_mean: item.time_in_system_mean ?? 0,
             time_in_system_median: item.time_in_system_median ?? 0,
@@ -428,7 +428,7 @@ export function prepareEntityCrossRepUpdate(data: EntityCrossRepSummaryData[]) {
             time_connecting_mean: item.time_connecting_mean ?? 0,
             time_connecting_median: item.time_connecting_median ?? 0,
             time_connecting_std_dev: item.time_connecting_std_dev ?? 0,
-            
+
             // Percentage metrics
             percent_waiting_mean: item.percent_waiting_mean ?? 0,
             percent_waiting_std_dev: item.percent_waiting_std_dev ?? 0,
