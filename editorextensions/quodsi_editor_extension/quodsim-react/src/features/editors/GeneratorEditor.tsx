@@ -10,6 +10,9 @@ import {
   Distribution,
   StateListManager,
   ComponentType,
+  EntitySourceConfig,
+  createDefaultEntitySourceConfig,
+  ModelDefaults,
 } from "@quodsi/shared";
 import { Timer, Flag, Settings, Hash, Zap, Info, Clock } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
@@ -62,20 +65,6 @@ const TAB_CONFIG = [
   },
 ];
 
-// Tab header component for consistent tab content headers
-const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
-  icon: Icon,
-  title,
-  tooltip,
-}) => (
-  <div className="flex items-center gap-1 mb-1">
-    <Icon className="w-3 h-3 text-blue-500" />
-    <span className="text-xs font-medium text-gray-700">{title}</span>
-    <span title={tooltip}>
-      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-    </span>
-  </div>
-);
 
 // ============================================================================
 // TYPES
@@ -237,32 +226,33 @@ const GeneratorEditor: React.FC<Props> = ({
    */
   const extractGeneratorData = (gen: any): Generator => {
     const data = gen.data || gen;
-    const extractedGenerator = new Generator(
+    const existingConfig = data.generationConfig;
+
+    // Build generationConfig, merging existing values with defaults for any missing fields
+    const generationConfig: EntitySourceConfig = {
+      entityId: existingConfig?.entityId ?? data.entityId ?? ModelDefaults.DEFAULT_ENTITY_ID,
+      generatorType: existingConfig?.generatorType ?? data.generatorType ?? GeneratorType.FREQUENCY,
+      periodicOccurrences: existingConfig?.periodicOccurrences ?? data.periodicOccurrences ?? INFINITY_DISPLAY_VALUE,
+      periodIntervalDuration: existingConfig?.periodIntervalDuration ?? data.periodIntervalDuration ?? new Duration(),
+      entitiesPerCreation: existingConfig?.entitiesPerCreation ?? data.entitiesPerCreation ?? 1,
+      periodicStartDuration: existingConfig?.periodicStartDuration ?? data.periodicStartDuration ?? new Duration(),
+      maxEntities: existingConfig?.maxEntities ?? data.maxEntities ?? INFINITY_DISPLAY_VALUE,
+      timeDistributedConfigIds: existingConfig?.timeDistributedConfigIds
+        ? [...existingConfig.timeDistributedConfigIds]
+        : (data.timeDistributedConfigIds ? [...data.timeDistributedConfigIds] : []),
+      initialStateModifications: existingConfig?.initialStateModifications
+        ? [...existingConfig.initialStateModifications]
+        : (data.initialStateModifications ? [...data.initialStateModifications] : [])
+    };
+
+    return new Generator(
       data.id || "",
       data.name || "New Generator",
-      data.activityKeyId || "",
-      data.entityId || "",
-      data.periodicOccurrences || INFINITY_DISPLAY_VALUE,
-      data.periodIntervalDuration || new Duration(),
-      data.entitiesPerCreation || 1,
-      data.periodicStartDuration || new Duration(),
-      data.maxEntities || INFINITY_DISPLAY_VALUE,
+      generationConfig,
+      data.exitConnector,
       data.x || 0,
       data.y || 0
     );
-
-    // Preserve generator type and time distributed config IDs
-    extractedGenerator.generatorType = data.generatorType || GeneratorType.FREQUENCY;
-    extractedGenerator.timeDistributedConfigIds = data.timeDistributedConfigIds
-      ? [...data.timeDistributedConfigIds]
-      : [];
-
-    // Always create new array to ensure reference changes for proper change detection
-    extractedGenerator.initialStateModifications = data.initialStateModifications
-      ? [...data.initialStateModifications]
-      : [];
-
-    return extractedGenerator;
   };
 
   /**
@@ -282,7 +272,8 @@ const GeneratorEditor: React.FC<Props> = ({
     base: Generator,
     updates: Partial<{
       name: string;
-      activityKeyId: string;
+      exitConnector: string;
+      // generationConfig fields
       entityId: string;
       generatorType: GeneratorType;
       periodicOccurrences: number;
@@ -294,29 +285,27 @@ const GeneratorEditor: React.FC<Props> = ({
       timeDistributedConfigIds: string[];
     }>
   ): Generator => {
-    const updated = new Generator(
+    // Build updated generationConfig
+    const updatedConfig: EntitySourceConfig = {
+      entityId: updates.entityId ?? base.generationConfig.entityId,
+      generatorType: updates.generatorType ?? base.generationConfig.generatorType,
+      periodicOccurrences: updates.periodicOccurrences ?? base.generationConfig.periodicOccurrences,
+      periodIntervalDuration: updates.periodIntervalDuration ?? base.generationConfig.periodIntervalDuration,
+      entitiesPerCreation: updates.entitiesPerCreation ?? base.generationConfig.entitiesPerCreation,
+      periodicStartDuration: updates.periodicStartDuration ?? base.generationConfig.periodicStartDuration,
+      maxEntities: updates.maxEntities ?? base.generationConfig.maxEntities,
+      timeDistributedConfigIds: updates.timeDistributedConfigIds ?? base.generationConfig.timeDistributedConfigIds,
+      initialStateModifications: updates.initialStateModifications ?? base.generationConfig.initialStateModifications
+    };
+
+    return new Generator(
       base.id,
       updates.name ?? base.name,
-      updates.activityKeyId ?? base.activityKeyId,
-      updates.entityId ?? base.entityId,
-      updates.periodicOccurrences ?? base.periodicOccurrences,
-      updates.periodIntervalDuration ?? base.periodIntervalDuration,
-      updates.entitiesPerCreation ?? base.entitiesPerCreation,
-      updates.periodicStartDuration ?? base.periodicStartDuration,
-      updates.maxEntities ?? base.maxEntities,
+      updatedConfig,
+      updates.exitConnector ?? base.exitConnector,
       base.x,
       base.y
     );
-
-    // Preserve/update generator type and time distributed configs
-    updated.generatorType = updates.generatorType ?? base.generatorType;
-    updated.timeDistributedConfigIds = updates.timeDistributedConfigIds ?? base.timeDistributedConfigIds;
-
-    // Preserve/update state modifications
-    updated.initialStateModifications =
-      updates.initialStateModifications ?? base.initialStateModifications;
-
-    return updated;
   };
 
   // ============================================================================
@@ -451,10 +440,7 @@ const GeneratorEditor: React.FC<Props> = ({
    * Sets hasPendingChanges to enable the Save button.
    */
   const handleDurationChange = (
-    name: keyof Pick<
-      Generator,
-      "periodIntervalDuration" | "periodicStartDuration"
-    >,
+    name: "periodIntervalDuration" | "periodicStartDuration",
     periodUnit: PeriodUnit,
     distribution: Distribution
   ) => {
@@ -464,13 +450,13 @@ const GeneratorEditor: React.FC<Props> = ({
 
       if (name === "periodIntervalDuration") {
         updates.periodIntervalDuration = {
-          ...prev.periodIntervalDuration,
+          ...prev.generationConfig.periodIntervalDuration,
           durationPeriodUnit: periodUnit,
           distribution,
         };
       } else if (name === "periodicStartDuration") {
         updates.periodicStartDuration = {
-          ...prev.periodicStartDuration,
+          ...prev.generationConfig.periodicStartDuration,
           durationPeriodUnit: periodUnit,
           distribution,
         };
@@ -632,8 +618,9 @@ const GeneratorEditor: React.FC<Props> = ({
       onTimeDistributedConfigsChange(serializedConfigs);
 
       // Remove from generator's config IDs if present
-      if (localGeneratorDraft.timeDistributedConfigIds.includes(configId)) {
-        const updatedConfigIds = localGeneratorDraft.timeDistributedConfigIds.filter(id => id !== configId);
+      const configIds = localGeneratorDraft.generationConfig.timeDistributedConfigIds || [];
+      if (configIds.includes(configId)) {
+        const updatedConfigIds = configIds.filter(id => id !== configId);
         setLocalGeneratorDraft(prev => updateGeneratorImmutably(prev, {
           timeDistributedConfigIds: updatedConfigIds
         }));
@@ -646,7 +633,7 @@ const GeneratorEditor: React.FC<Props> = ({
    * Toggles a config association with the current generator
    */
   const handleToggleConfigAssociation = (configId: string) => {
-    const currentIds = localGeneratorDraft.timeDistributedConfigIds;
+    const currentIds = localGeneratorDraft.generationConfig.timeDistributedConfigIds || [];
     const isCurrentlySelected = currentIds.includes(configId);
 
     const updatedIds = isCurrentlySelected
@@ -670,11 +657,11 @@ const GeneratorEditor: React.FC<Props> = ({
         <div className="flex">
           {TAB_CONFIG.filter(tab => {
             // Hide Frequency tab for TIME_DISTRIBUTED generators
-            if (tab.id === 'frequency' && localGeneratorDraft.generatorType === GeneratorType.TIME_DISTRIBUTED) {
+            if (tab.id === 'frequency' && localGeneratorDraft.generationConfig.generatorType === GeneratorType.TIME_DISTRIBUTED) {
               return false;
             }
             // Hide Distribution tab for FREQUENCY generators
-            if (tab.id === 'distribution' && localGeneratorDraft.generatorType === GeneratorType.FREQUENCY) {
+            if (tab.id === 'distribution' && localGeneratorDraft.generationConfig.generatorType === GeneratorType.FREQUENCY) {
               return false;
             }
             return true;
@@ -685,7 +672,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.title}
+                title={tab.tooltip}
                 className={`px-3 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
@@ -702,13 +689,7 @@ const GeneratorEditor: React.FC<Props> = ({
       {/* Tab Content */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
         {activeTab === "basic" && (
-          <div>
-            <TabHeader
-              icon={Settings}
-              title="Basic Settings"
-              tooltip="Configure generator name, entity, and how many entities are created per event"
-            />
-            <div className="space-y-2">
+          <div className="space-y-2">
               {/* Name Section */}
               <div>
                 <div className="flex items-center gap-1 mb-1">
@@ -742,7 +723,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 <select
                   name="generatorType"
                   className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.generatorType}
+                  value={localGeneratorDraft.generationConfig.generatorType}
                   onChange={handleInputChange}
                 >
                   <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
@@ -765,7 +746,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 <select
                   name="entityId"
                   className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.entityId}
+                  value={localGeneratorDraft.generationConfig.entityId}
                   onChange={handleInputChange}
                 >
                   {entities.map((entity) => (
@@ -795,7 +776,7 @@ const GeneratorEditor: React.FC<Props> = ({
                       type="number"
                       name="entitiesPerCreation"
                       className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.entitiesPerCreation}
+                      value={localGeneratorDraft.generationConfig.entitiesPerCreation}
                       onChange={handleInputChange}
                       min="1"
                     />
@@ -813,27 +794,20 @@ const GeneratorEditor: React.FC<Props> = ({
                       type="number"
                       name="maxEntities"
                       className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.maxEntities}
+                      value={localGeneratorDraft.generationConfig.maxEntities}
                       onChange={handleInputChange}
                       min="1"
                     />
                   </div>
                 </div>
               </div>
-            </div>
           </div>
         )}
 
         {activeTab === "frequency" && (
-          <div>
-            <TabHeader
-              icon={Timer}
-              title="Frequency Settings"
-              tooltip="Set the time interval between entity creation events, total occurrences, and start delay"
-            />
-            <div className="space-y-2">
-              {/* Interarrival Time */}
-              <div>
+          <div className="space-y-2">
+            {/* Interarrival Time */}
+            <div>
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
                     Interarrival Time
@@ -844,10 +818,10 @@ const GeneratorEditor: React.FC<Props> = ({
                 </div>
                 <EnhancedDurationEditor
                   periodUnit={
-                    localGeneratorDraft.periodIntervalDuration.durationPeriodUnit
+                    localGeneratorDraft.generationConfig.periodIntervalDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
                   }
                   distribution={
-                    localGeneratorDraft.periodIntervalDuration.distribution
+                    localGeneratorDraft.generationConfig.periodIntervalDuration!.distribution
                   }
                   onChange={(periodUnit, distribution) =>
                     handleDurationChange(
@@ -874,7 +848,7 @@ const GeneratorEditor: React.FC<Props> = ({
                   type="number"
                   name="periodicOccurrences"
                   className="w-full px-2 py-1 text-xs border rounded"
-                  value={localGeneratorDraft.periodicOccurrences}
+                  value={localGeneratorDraft.generationConfig.periodicOccurrences}
                   onChange={handleInputChange}
                   min="0"
                 />
@@ -892,9 +866,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 </div>
                 <EnhancedDurationEditor
                   periodUnit={
-                    localGeneratorDraft.periodicStartDuration.durationPeriodUnit
+                    localGeneratorDraft.generationConfig.periodicStartDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
                   }
-                  distribution={localGeneratorDraft.periodicStartDuration.distribution}
+                  distribution={localGeneratorDraft.generationConfig.periodicStartDuration!.distribution}
                   onChange={(periodUnit, distribution) =>
                     handleDurationChange(
                       "periodicStartDuration",
@@ -905,18 +879,11 @@ const GeneratorEditor: React.FC<Props> = ({
                   compact={true}
                 />
               </div>
-            </div>
           </div>
         )}
 
         {activeTab === "distribution" && (
-          <div>
-            <TabHeader
-              icon={Clock}
-              title="Time Distribution"
-              tooltip="Define temporal patterns and time-distributed configurations for entity creation"
-            />
-            <div className="space-y-3">
+          <div className="space-y-3">
               {/* Time Patterns Section */}
               <div className="bg-gray-50 p-2 rounded border">
                 <div className="flex items-center justify-between mb-2">
@@ -1002,7 +969,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 ) : (
                   <div className="space-y-1">
                     {timeDistributedConfigs.map((config) => {
-                      const isSelected = localGeneratorDraft.timeDistributedConfigIds.includes(config.id);
+                      const isSelected = (localGeneratorDraft.generationConfig.timeDistributedConfigIds || []).includes(config.id);
                       const pattern = timePatterns.find(p => p.id === config.timePatternId);
 
                       return (
@@ -1048,42 +1015,27 @@ const GeneratorEditor: React.FC<Props> = ({
                   </div>
                 )}
               </div>
-            </div>
           </div>
         )}
 
         {activeTab === "events" && (
-          <div>
-            <TabHeader
-              icon={Zap}
-              title="Event Modifications"
-              tooltip="Set initial state values for entities when they are created"
-            />
-            <StateModificationsEditor
-              modifications={localGeneratorDraft.initialStateModifications || []}
-              onModificationsChange={handleStateModificationsChange}
-              states={states}
-              title="Initial State Modifications"
-              description="Applied to new entities"
-              filterComponentType={ComponentType.ENTITY}
-              allowCrossComponent={false}
-            />
-          </div>
+          <StateModificationsEditor
+            modifications={localGeneratorDraft.generationConfig.initialStateModifications || []}
+            onModificationsChange={handleStateModificationsChange}
+            states={states}
+            title="Initial State Modifications"
+            description="Applied to new entities"
+            filterComponentType={ComponentType.ENTITY}
+            allowCrossComponent={false}
+          />
         )}
 
         {activeTab === "states" && (
-          <div>
-            <TabHeader
-              icon={Hash}
-              title="State Definitions"
-              tooltip="Define custom state variables for entities created by this generator"
-            />
-            <StatesEditor
-              states={states}
-              onStatesChange={onStatesChange}
-              defaultComponentType={ComponentType.ENTITY}
-            />
-          </div>
+          <StatesEditor
+            states={states}
+            onStatesChange={onStatesChange}
+            defaultComponentType={ComponentType.ENTITY}
+          />
         )}
       </div>
 

@@ -22,6 +22,17 @@ export type { ISerializedResourceRequirement } from './interfaces/ISerializedRes
 export type { ISerializedState } from './interfaces/ISerializedState';
 export type { ISerializedTimePattern } from './interfaces/ISerializedTimePattern';
 export type { ISerializedTimeDistributedConfig } from './interfaces/ISerializedTimeDistributedConfig';
+export type {
+    ISerializedAction,
+    ISerializedActionBase,
+    ISerializedAssignAction,
+    ISerializedSeizeAction,
+    ISerializedReleaseAction,
+    ISerializedDelayAction,
+    ISerializedDelayWithResourceAction,
+    SerializedActionType
+} from './interfaces/ISerializedAction';
+export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

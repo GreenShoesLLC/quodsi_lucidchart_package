@@ -1,5 +1,7 @@
 // Export element-specific types
 export * from './RunState';
+export * from './FlowNode';
+export * from './EntitySourceConfig';
 export * from './Activity';
 export * from './ActivityListManager';
 export * from './ComponentListManager';
@@ -54,3 +56,6 @@ export * from './FinancialProperties';
 
 // Export distributions
 export * from './distributions';
+
+// Export action system
+export * from './actions';

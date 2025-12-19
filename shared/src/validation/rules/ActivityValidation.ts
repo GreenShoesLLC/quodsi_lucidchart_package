@@ -3,8 +3,8 @@ import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue } from "../../quodsi-messaging/validation/types";
 import { Activity } from "../../types/elements/Activity";
-import { OperationStep } from "../../types/elements/OperationStep";
-import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
+import { Action } from "../../types/elements/actions/Action";
+import { ActionType } from "../../types/elements/actions/ActionType";
 
 
 
@@ -73,7 +73,7 @@ export class ActivityValidation extends ValidationRule {
         }
 
         this.validateQueueCapacities(activity, issues);
-        this.validateOperationSteps(activity, issues);
+        this.validateActions(activity, issues);
     }
 
     private validateQueueCapacities(
@@ -103,75 +103,61 @@ export class ActivityValidation extends ValidationRule {
         }
     }
 
-    private validateOperationSteps(
+    private validateActions(
         activity: Activity,
         issues: ValidationIssue[]
     ): void {
         /**
-         * Validates the operation steps defined for an activity.
+         * Validates the actions defined for an activity.
          */
 
-        this.log(`Validating operation steps for Activity ID: ${activity.id}`);
+        this.log(`Validating actions for Activity ID: ${activity.id}`);
 
-        if (!Array.isArray(activity.operationSteps)) {
-            this.log(`Activity ID ${activity.id} has no operation steps defined.`);
+        if (!Array.isArray(activity.actions)) {
+            this.log(`Activity ID ${activity.id} has no actions defined.`);
             issues.push(ValidationMessages.missingOperationSteps(activity.id, activity.name));
             return;
         }
 
-        if (activity.operationSteps.length === 0) {
-            this.log(`Activity ID ${activity.id} has an empty operation step list.`);
+        if (activity.actions.length === 0) {
+            this.log(`Activity ID ${activity.id} has an empty actions list.`);
             issues.push(ValidationMessages.noOperationSteps(activity.id, activity.name));
             return;
         }
 
-        activity.operationSteps.forEach((step, index) => {
-            this.validateOperationStep(activity.id, step, index, issues);
+        activity.actions.forEach((action, index) => {
+            this.validateAction(activity.id, action, index, issues);
         });
     }
 
-    private validateOperationStep(
+    private validateAction(
         activityId: string,
-        step: OperationStep,
+        action: Action,
         index: number,
         issues: ValidationIssue[]
     ): void {
-        this.log(`Validating operation step ${index + 1} for Activity ID: ${activityId}`);
+        this.log(`Validating action ${index + 1} (${action.actionType}) for Activity ID: ${activityId}`);
 
-        // Validate duration
-        // if (!step.duration?.durationLength) {
-        //     this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an invalid duration.`);
-        //     issues.push(ValidationMessages.invalidStepDuration(activityId, index + 1));
-        // } else {
-        //     const duration = step.duration.durationLength;
-        //     if (duration < ActivityValidation.MIN_CYCLE_TIME || duration > ActivityValidation.MAX_CYCLE_TIME) {
-        //         this.log(`Operation step ${index + 1} for Activity ID ${activityId} has an unusual duration: ${duration}`);
-        //         issues.push(ValidationMessages.unusualStepDuration(activityId, index + 1, duration));
-        //     }
-        // }
-
-        // Validate resource requirement
-        if (step.requirementId) {
-            this.validateResourceRequirement(
-                activityId,
-                step.requirementId,
-                step.quantity,
-                index,
-                issues
-            );
+        // Basic validation - ensure action has a valid type
+        if (!action.actionType) {
+            this.log(`Action ${index + 1} for Activity ID ${activityId} has no action type.`);
+            return;
         }
-    }
 
-    private validateResourceRequirement(
-        activityId: string,
-        requirementId: string,
-        quantity: number,
-        stepIndex: number,
-        issues: ValidationIssue[]
-    ): void {
-        // You might want to pass ModelDefinitionState to this method to look up requirements
-        if (quantity < 1) {
-            issues.push(ValidationMessages.invalidResourceQuantity(activityId, stepIndex + 1));
+        // Type-specific validation can be added here in the future
+        // For now, just log that we validated the action
+        switch (action.actionType) {
+            case ActionType.DELAY:
+            case ActionType.DELAY_WITH_RESOURCE:
+                // Could validate duration exists
+                break;
+            case ActionType.SEIZE:
+            case ActionType.RELEASE:
+                // Could validate resourceRequirementId exists
+                break;
+            case ActionType.ASSIGN:
+                // Could validate stateModifications exist
+                break;
         }
     }
 

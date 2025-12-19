@@ -112,29 +112,6 @@ const TAB_CONFIG = [
  */
 const DEFAULT_RANDOM_SEED = 12345;
 
-/**
- * TabHeader - Consistent header for tab content sections
- *
- * Displays an icon, title, and tooltip for each tab's content area.
- * Used across all model editor tabs for visual consistency.
- *
- * @param icon - Lucide icon component to display
- * @param title - Tab section title
- * @param tooltip - Helpful description shown on hover
- */
-const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
-  icon: Icon,
-  title,
-  tooltip,
-}) => (
-  <div className="flex items-center gap-1 mb-1">
-    <Icon className="w-3 h-3 text-blue-500" />
-    <span className="text-xs font-medium text-gray-700">{title}</span>
-    <span title={tooltip}>
-      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-    </span>
-  </div>
-);
 
 /**
  * ModelEditor - Component for editing model-level simulation settings
@@ -369,7 +346,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.title}
+                title={tab.tooltip}
                 className={`px-3 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
@@ -387,12 +364,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
         <>
           <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
             <div className="space-y-2">
-                  <TabHeader
-                    icon={Settings}
-                    title="Basic Settings"
-                    tooltip="Configure model name, simulation time settings, and runtime parameters"
-                  />
-                  {/* Model Name - Always Visible WITH LABEL */}
+              {/* Model Name - Always Visible WITH LABEL */}
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       <label className="text-xs font-medium text-gray-700">
@@ -650,27 +622,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
         </>
       )}
       {activeTab === "states" && (
-        <div>
-          <TabHeader
-            icon={Hash}
-            title="State Definitions"
-            tooltip="Define model-level state variables that can be accessed and modified throughout the simulation"
-          />
-          <StatesEditor
+        <StatesEditor
             states={states}
             onStatesChange={onStatesChange}
             defaultComponentType={ComponentType.MODEL}
           />
-        </div>
       )}
       {activeTab === "requirements" && (
-        <div>
-          <TabHeader
-            icon={Users}
-            title="Resource Requirements"
-            tooltip="Create reusable resource requirement templates that define which resources are needed for activities"
-          />
-          <ResourceRequirementsManager
+        <ResourceRequirementsManager
             requirements={resourceRequirements || []}
             availableResources={referenceData?.resources || []}
             onAdd={() => {
@@ -701,27 +660,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
               return count;
             }}
           />
-        </div>
       )}
       {activeTab === "scenarios" && (
-        <div>
-          <TabHeader
-            icon={PlaySquare}
-            title="Simulation Scenarios"
-            tooltip="Configure and manage simulation scenarios with different parameter sets and run configurations"
-          />
-          <ScenariosPanel
-            documentId={selection.documentContext?.documentId}
-          />
-        </div>
+        <ScenariosPanel
+          documentId={selection.documentContext?.documentId}
+        />
       )}
       {activeTab === "utilities" && (
         <div className="space-y-3">
-          <TabHeader
-            icon={Wrench}
-            title="Model Utilities"
-            tooltip="Model utilities, diagnostics, and maintenance functions"
-          />
 
           {/* Diagnostics Section */}
           <div className="border border-gray-200 rounded-lg p-2">

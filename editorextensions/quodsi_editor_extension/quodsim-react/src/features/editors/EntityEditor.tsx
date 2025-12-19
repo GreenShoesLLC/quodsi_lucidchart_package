@@ -48,20 +48,6 @@ const TAB_CONFIG = [
   },
 ];
 
-// Tab header component for consistent tab content headers
-const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
-  icon: Icon,
-  title,
-  tooltip,
-}) => (
-  <div className="flex items-center gap-1 mb-1">
-    <Icon className="w-3 h-3 text-blue-500" />
-    <span className="text-xs font-medium text-gray-700">{title}</span>
-    <span title={tooltip}>
-      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-    </span>
-  </div>
-);
 
 /**
  * EntityEditor - Component for editing entity template properties
@@ -243,7 +229,7 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.title}
+                title={tab.tooltip}
                 className={`px-3 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
@@ -260,14 +246,8 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
       {/* Tab Content */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
         {activeTab === "basic" && (
-          <div>
-            <TabHeader
-              icon={Settings}
-              title="Basic Settings"
-              tooltip="Configure entity template name and properties. Entity templates define the types of entities that flow through the simulation"
-            />
-            <div className="space-y-4">
-              {/* Name Section */}
+          <div className="space-y-4">
+            {/* Name Section */}
               <div>
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
@@ -286,23 +266,15 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                   placeholder="Enter entity name"
                 />
               </div>
-            </div>
           </div>
         )}
 
         {activeTab === "states" && (
-          <div>
-            <TabHeader
-              icon={Hash}
-              title="State Definitions"
-              tooltip="Define custom state variables that entities of this type can carry and modify during simulation"
-            />
-            <StatesEditor
+          <StatesEditor
               states={states}
               onStatesChange={onStatesChange}
               defaultComponentType={ComponentType.ENTITY}
             />
-          </div>
         )}
       </div>
 

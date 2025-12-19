@@ -1,9 +1,7 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import {
     ConstantDistribution,
-    Distribution,
     Duration,
-    DurationType,
     Generator,
     ModelDefaults,
     PeriodUnit,
@@ -11,7 +9,10 @@ import {
     ComponentLogger,
     StateModification,
     parseStructuredName,
-    extractGeneratorFields
+    extractGeneratorFields,
+    EntitySourceConfig,
+    createDefaultEntitySourceConfig,
+    GeneratorType
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -31,23 +32,11 @@ export const setGeneratorLucidLogging = (enabled: boolean): void => {
 
 interface StoredGeneratorData {
     id: string;
-    x?: number;  // Added x coordinate
-    y?: number;  // Added y coordinate
     name?: string;
-    activityKeyId?: string;
-    entityId?: string;
-    periodicOccurrences?: number;
-    periodIntervalDuration?: {
-        durationPeriodUnit: PeriodUnit;
-        distribution: Distribution;
-    };
-    entitiesPerCreation?: number;
-    periodicStartDuration?: {
-        durationPeriodUnit: PeriodUnit;
-        distribution: Distribution;
-    };
-    maxEntities?: number;
-    initialStateModifications?: any[];
+    x?: number;
+    y?: number;
+    generationConfig?: EntitySourceConfig;
+    exitConnector?: string;
 }
 
 /**
@@ -56,7 +45,7 @@ interface StoredGeneratorData {
  */
 export class GeneratorLucid extends SimObjectLucid<Generator> {
     constructor(
-        block: BlockProxy, 
+        block: BlockProxy,
         storageAdapter: StorageAdapter
     ) {
         ComponentLogger.log(LOG_PREFIX, `Constructing GeneratorLucid for block ID: ${block.id}`);
@@ -69,39 +58,38 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
 
     protected createSimObject(): Generator {
         ComponentLogger.log(LOG_PREFIX, `Creating Generator simulation object for element ID: ${this.platformElementId}`);
-        
+
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredGeneratorData;
 
-        // Create generator using stored data or defaults
+        // Get or create default generationConfig
+        const generationConfig: EntitySourceConfig = storedData?.generationConfig || createDefaultEntitySourceConfig(
+            ModelDefaults.DEFAULT_ENTITY_ID,
+            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1))
+        );
+
+        // Set default values for periodicOccurrences and maxEntities if not set
+        if (generationConfig.periodicOccurrences === undefined || generationConfig.periodicOccurrences === Infinity) {
+            generationConfig.periodicOccurrences = 999999;
+        }
+        if (generationConfig.maxEntities === undefined || generationConfig.maxEntities === Infinity) {
+            generationConfig.maxEntities = 999999;
+        }
+
+        // Create generator with new constructor
         const generator = new Generator(
             this.platformElementId,
             storedData?.name || 'New Generator',
-            storedData?.activityKeyId || '',
-            storedData?.entityId || ModelDefaults.DEFAULT_ENTITY_ID,
-            storedData?.periodicOccurrences ?? Infinity,
-            storedData?.periodIntervalDuration
-                ? new Duration(
-                    storedData.periodIntervalDuration.durationPeriodUnit,
-                    storedData.periodIntervalDuration.distribution
-                )
-                : new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-            storedData?.entitiesPerCreation ?? 1,
-            storedData?.periodicStartDuration
-                ? new Duration(
-                    storedData.periodicStartDuration.durationPeriodUnit,
-                    storedData.periodicStartDuration.distribution
-                )
-                : new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-            storedData?.maxEntities ?? Infinity,
+            generationConfig,
+            storedData?.exitConnector,
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
 
-        // Deserialize initial state modifications
-        if (storedData?.initialStateModifications) {
-            generator.initialStateModifications = storedData.initialStateModifications.map(
-                (data: any) => StateModification.fromJSON(data)
+        // Deserialize initial state modifications if stored as JSON
+        if (generationConfig.initialStateModifications) {
+            generationConfig.initialStateModifications = generationConfig.initialStateModifications.map(
+                (mod: any) => mod instanceof StateModification ? mod : StateModification.fromJSON(mod)
             );
         }
 
@@ -113,7 +101,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
 
     private updatePlatformSpecificFields(generator: Generator): void {
         const block = this.element as BlockProxy;
-        
+
         // Update location from current platform
         const location = block.getLocation();
         generator.setLocation(location.x ?? generator.x, location.y ?? generator.y);
@@ -132,13 +120,13 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
 
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Generator from platform for element ID: ${this.platformElementId}`);
-        
+
         // Extract location from platform
         const location = (this.element as BlockProxy).getLocation();
-        
+
         // Update location
         this.simObject.setLocation(
-            location.x ?? this.simObject.x, 
+            location.x ?? this.simObject.x,
             location.y ?? this.simObject.y
         );
 
@@ -147,26 +135,26 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             this.simObject.name = this.getElementName('Generator');
         }
 
-        // Store updated data
+        // Store updated data with generationConfig
         const dataToStore: StoredGeneratorData = {
             id: this.platformElementId,
-            x: this.simObject.x,     // Store x coordinate
-            y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name,
-            activityKeyId: this.simObject.activityKeyId,
-            entityId: this.simObject.entityId,
-            periodicOccurrences: this.simObject.periodicOccurrences,
-            periodIntervalDuration: {
-                durationPeriodUnit: this.simObject.periodIntervalDuration.durationPeriodUnit,
-                distribution: this.simObject.periodIntervalDuration.distribution
+            x: this.simObject.x,
+            y: this.simObject.y,
+            generationConfig: {
+                entityId: this.simObject.generationConfig.entityId,
+                generatorType: this.simObject.generationConfig.generatorType,
+                periodicOccurrences: this.simObject.generationConfig.periodicOccurrences,
+                periodIntervalDuration: this.simObject.generationConfig.periodIntervalDuration,
+                entitiesPerCreation: this.simObject.generationConfig.entitiesPerCreation,
+                periodicStartDuration: this.simObject.generationConfig.periodicStartDuration,
+                maxEntities: this.simObject.generationConfig.maxEntities,
+                timeDistributedConfigIds: this.simObject.generationConfig.timeDistributedConfigIds,
+                initialStateModifications: this.simObject.generationConfig.initialStateModifications?.map(
+                    m => m instanceof StateModification ? m.toJSON() : m
+                )
             },
-            entitiesPerCreation: this.simObject.entitiesPerCreation,
-            periodicStartDuration: {
-                durationPeriodUnit: this.simObject.periodicStartDuration.durationPeriodUnit,
-                distribution: this.simObject.periodicStartDuration.distribution
-            },
-            maxEntities: this.simObject.maxEntities,
-            initialStateModifications: this.simObject.initialStateModifications.map(m => m.toJSON())
+            exitConnector: this.simObject.exitConnector
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
@@ -219,36 +207,33 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             SimObjectLucid.updateBlockText(block, fields.name);
         }
 
-        // Determine period interval duration - use parsed interval if provided
-        let periodIntervalDuration = {
-            durationPeriodUnit: defaultGenerator.periodIntervalDuration.durationPeriodUnit,
-            distribution: defaultGenerator.periodIntervalDuration.distribution
+        // Build generationConfig from defaults and parsed fields
+        const generationConfig: EntitySourceConfig = {
+            entityId: defaultGenerator.generationConfig.entityId,
+            generatorType: GeneratorType.FREQUENCY,
+            periodicOccurrences: fields.periodicOccurrences ?? defaultGenerator.generationConfig.periodicOccurrences,
+            periodIntervalDuration: fields.interval !== undefined
+                ? new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(fields.interval))
+                : defaultGenerator.generationConfig.periodIntervalDuration,
+            entitiesPerCreation: fields.entitiesPerCreation ?? defaultGenerator.generationConfig.entitiesPerCreation,
+            periodicStartDuration: defaultGenerator.generationConfig.periodicStartDuration,
+            maxEntities: fields.maxEntities ?? defaultGenerator.generationConfig.maxEntities,
+            timeDistributedConfigIds: [],
+            initialStateModifications: []
         };
+
         if (fields.interval !== undefined) {
-            periodIntervalDuration = {
-                durationPeriodUnit: PeriodUnit.MINUTES,
-                distribution: ConstantDistribution.create(fields.interval)
-            };
             ComponentLogger.log(LOG_PREFIX, `Using parsed interval: ${fields.interval} minutes`);
         }
 
-        // Convert to StoredGeneratorData format, using parsed values where available
+        // Convert to StoredGeneratorData format
         const storedData: StoredGeneratorData = {
             id: defaultGenerator.id,
             name: fields.name || rawName,
             x: defaultGenerator.x,
             y: defaultGenerator.y,
-            activityKeyId: defaultGenerator.activityKeyId,
-            entityId: defaultGenerator.entityId,
-            periodicOccurrences: fields.periodicOccurrences ?? defaultGenerator.periodicOccurrences,
-            periodIntervalDuration: periodIntervalDuration,
-            entitiesPerCreation: fields.entitiesPerCreation ?? defaultGenerator.entitiesPerCreation,
-            periodicStartDuration: {
-                durationPeriodUnit: defaultGenerator.periodicStartDuration.durationPeriodUnit,
-                distribution: defaultGenerator.periodicStartDuration.distribution
-            },
-            maxEntities: fields.maxEntities ?? defaultGenerator.maxEntities,
-            initialStateModifications: defaultGenerator.initialStateModifications.map(m => m.toJSON())
+            generationConfig: generationConfig,
+            exitConnector: defaultGenerator.exitConnector
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted generator, block ID: ${block.id}`, storedData);

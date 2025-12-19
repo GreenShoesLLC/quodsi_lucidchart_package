@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { TimePattern, Distribution, PeriodUnit, DistributionType, UniformParameters } from "@quodsi/shared";
-import { X, Info, Upload, Download } from "lucide-react";
+import { X, Info } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
+import {
+  WeeklyWeightsEditor,
+  DayOfWeekWeightsEditor,
+  HourlyWeightsEditor,
+} from "./timepattern";
 
 /**
  * Props for TimePatternEditorModal
@@ -20,17 +25,11 @@ interface Props {
  *
  * Features:
  * - Name and ID fields
- * - Weekly weights (52 values for ISO weeks 1-52)
- * - Day-of-week weights (7 values for Monday-Sunday)
- * - Hourly weights (168 values: 7 days × 24 hours)
+ * - Weekly weights (52 values for ISO weeks 1-52) with bar chart preview
+ * - Day-of-week weights (7 values for Monday-Sunday) with bar chart preview
+ * - Hourly weights (7 days × 24 hours) with line chart preview
  * - Minute distribution (Duration object)
- * - CSV import/export for weight arrays
  * - Pattern templates (uniform, business hours, etc.)
- *
- * Weight Array Editing Strategy:
- * - Simple text input for now (comma-separated values)
- * - Future: Visual heat map editor for hourly weights
- * - Future: Interactive chart editors
  */
 const TimePatternEditorModal: React.FC<Props> = ({
   pattern,
@@ -172,19 +171,6 @@ const TimePatternEditorModal: React.FC<Props> = ({
     }
   };
 
-  /**
-   * Export weights to CSV
-   */
-  const exportToCSV = (weights: string, filename: string) => {
-    const blob = new Blob([weights.replace(/,\s*/g, ",")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -263,109 +249,25 @@ const TimePatternEditorModal: React.FC<Props> = ({
           </div>
 
           {/* Weekly Weights */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Weekly Weights (52 values)
-                </label>
-                <span title="Relative weights for ISO weeks 1-52. Leave empty for uniform distribution across all weeks.">
-                  <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => exportToCSV(weeklyWeightsStr, "weekly_weights.csv")}
-                disabled={!weeklyWeightsStr.trim()}
-                className="text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400 flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
-            </div>
-            <textarea
-              className={`w-full px-3 py-2 text-xs border rounded font-mono ${
-                errors.weeklyWeights ? "border-red-500" : "border-gray-300"
-              }`}
-              rows={3}
-              value={weeklyWeightsStr}
-              onChange={(e) => setWeeklyWeightsStr(e.target.value)}
-              placeholder="Enter 52 comma-separated values (e.g., 1, 1, 1, ...) or leave empty for uniform"
-            />
-            {errors.weeklyWeights && (
-              <p className="text-xs text-red-500 mt-1">{errors.weeklyWeights}</p>
-            )}
-          </div>
+          <WeeklyWeightsEditor
+            value={weeklyWeightsStr}
+            onChange={setWeeklyWeightsStr}
+            error={errors.weeklyWeights}
+          />
 
           {/* Day of Week Weights */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Day-of-Week Weights (7 values)
-                </label>
-                <span title="Relative weights for Monday through Sunday (ISO: 1-7). Leave empty for uniform distribution across all days.">
-                  <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => exportToCSV(dayOfWeekWeightsStr, "day_of_week_weights.csv")}
-                disabled={!dayOfWeekWeightsStr.trim()}
-                className="text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400 flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
-            </div>
-            <input
-              type="text"
-              className={`w-full px-3 py-2 text-xs border rounded font-mono ${
-                errors.dayOfWeekWeights ? "border-red-500" : "border-gray-300"
-              }`}
-              value={dayOfWeekWeightsStr}
-              onChange={(e) => setDayOfWeekWeightsStr(e.target.value)}
-              placeholder="Enter 7 comma-separated values (Mon, Tue, Wed, Thu, Fri, Sat, Sun) or leave empty"
-            />
-            {errors.dayOfWeekWeights && (
-              <p className="text-xs text-red-500 mt-1">{errors.dayOfWeekWeights}</p>
-            )}
-          </div>
+          <DayOfWeekWeightsEditor
+            value={dayOfWeekWeightsStr}
+            onChange={setDayOfWeekWeightsStr}
+            error={errors.dayOfWeekWeights}
+          />
 
           {/* Hourly Weights */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-1">
-                <label className="text-sm font-medium text-gray-700">
-                  Hourly Weights (168 values)
-                </label>
-                <span title="Relative weights for each hour of the week (7 days × 24 hours = 168 values). Order: Mon 0-23, Tue 0-23, ..., Sun 0-23. Leave empty for uniform.">
-                  <Info className="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help" />
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => exportToCSV(hourlyWeightsStr, "hourly_weights.csv")}
-                disabled={!hourlyWeightsStr.trim()}
-                className="text-xs text-blue-600 hover:text-blue-700 disabled:text-gray-400 flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
-            </div>
-            <textarea
-              className={`w-full px-3 py-2 text-xs border rounded font-mono ${
-                errors.hourlyWeights ? "border-red-500" : "border-gray-300"
-              }`}
-              rows={4}
-              value={hourlyWeightsStr}
-              onChange={(e) => setHourlyWeightsStr(e.target.value)}
-              placeholder="Enter 168 comma-separated values or leave empty for uniform"
-            />
-            {errors.hourlyWeights && (
-              <p className="text-xs text-red-500 mt-1">{errors.hourlyWeights}</p>
-            )}
-          </div>
+          <HourlyWeightsEditor
+            value={hourlyWeightsStr}
+            onChange={setHourlyWeightsStr}
+            error={errors.hourlyWeights}
+          />
 
           {/* Minute Distribution */}
           <div>

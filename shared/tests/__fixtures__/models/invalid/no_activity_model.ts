@@ -10,6 +10,8 @@ import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
 import { DurationType } from '../../../../src/types/elements/DurationType';
 import { Model } from '../../../../src/types/elements/Model';
+import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
+import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 
 export function createNoActivityModel(): ModelDefinition {
     // Create base model
@@ -32,14 +34,22 @@ export function createNoActivityModel(): ModelDefinition {
     modelDef.entities.add(entity);
 
     // Create generator (which will be invalid since there's no activity to connect to)
+    const generationConfig: EntitySourceConfig = {
+        entityId: entity.id,
+        generatorType: GeneratorType.FREQUENCY,
+        periodicOccurrences: 10,
+        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
+        entitiesPerCreation: 1,
+        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
+        maxEntities: 999999,
+        timeDistributedConfigIds: [],
+        initialStateModifications: []
+    };
     const generator = new Generator(
         'generator-1',
         'Generator1',
-        'non-existent-activity', // This will cause validation error
-        entity.id,
-        10,
-        new Duration(1, PeriodUnit.HOURS, DurationType.CONSTANT),
-        1
+        generationConfig,
+        'non-existent-activity' // exitConnector - This will cause validation error
     );
     modelDef.generators.add(generator);
 

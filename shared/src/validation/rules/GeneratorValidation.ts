@@ -3,6 +3,9 @@ import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { Generator } from "../../types/elements/Generator";
+import { DistributionType } from "../../types/elements/DistributionType";
+import { ConstantParameters } from "../../types/elements/distributions/ConstantDistribution";
+import { Duration } from "../../types/elements/Duration";
 
 
 export class GeneratorValidation extends ValidationRule {
@@ -13,10 +16,44 @@ export class GeneratorValidation extends ValidationRule {
     private static readonly MIN_MAX_ENTITIES = 1;
     private static readonly MAX_MAX_ENTITIES = 1000000;
 
+    /**
+     * Helper to extract a numeric value from a Duration.
+     * For constant distributions, returns the value.
+     * For other distributions, returns the mean/expected value if determinable.
+     * Returns undefined if duration is invalid or value cannot be determined.
+     */
+    private getDurationValue(duration: Duration | undefined): number | undefined {
+        if (!duration?.distribution) {
+            return undefined;
+        }
+
+        const dist = duration.distribution;
+        if (dist.distributionType === DistributionType.CONSTANT) {
+            const params = dist.parameters as ConstantParameters;
+            return params?.value;
+        }
+
+        // For non-constant distributions, we could add mean calculations here
+        // For now, return undefined (skip validation for stochastic durations)
+        return undefined;
+    }
+
     validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {
         const generators = state.modelDefinition.generators.getAll();
 
         generators.forEach((generator: Generator) => {
+            // Check for missing generationConfig
+            if (!generator.generationConfig) {
+                this.log(`Validation failed: Generator ID ${generator.id} has no generationConfig.`);
+                issues.push(ValidationMessages.generatorValidation(
+                    'configuration',
+                    generator.id,
+                    'Generator is missing generationConfig - please re-edit and save',
+                    generator.name
+                ));
+                return; // Skip further validation for this generator
+            }
+
             this.validateGeneratorData(generator, state, issues);
             this.validateDurationSettings(generator, issues);
             this.validateEntitySettings(generator, state, issues);
@@ -45,10 +82,10 @@ export class GeneratorValidation extends ValidationRule {
         }
 
         // Validate entities per creation
-        if (typeof generator.entitiesPerCreation !== 'number' ||
-            generator.entitiesPerCreation < GeneratorValidation.MIN_ENTITIES_PER_CREATION ||
-            generator.entitiesPerCreation > GeneratorValidation.MAX_ENTITIES_PER_CREATION) {
-            this.log(`Validation failed: Generator ID ${generator.id} has invalid entitiesPerCreation (${generator.entitiesPerCreation}).`);
+        if (typeof generator.generationConfig.entitiesPerCreation !== 'number' ||
+            generator.generationConfig.entitiesPerCreation < GeneratorValidation.MIN_ENTITIES_PER_CREATION ||
+            generator.generationConfig.entitiesPerCreation > GeneratorValidation.MAX_ENTITIES_PER_CREATION) {
+            this.log(`Validation failed: Generator ID ${generator.id} has invalid entitiesPerCreation (${generator.generationConfig.entitiesPerCreation}).`);
             issues.push(ValidationMessages.generatorValidation(
                 'entities per creation',
                 generator.id,
@@ -58,10 +95,10 @@ export class GeneratorValidation extends ValidationRule {
         }
 
         // Validate periodic occurrences
-        if (generator.periodicOccurrences !== Infinity &&
-            (typeof generator.periodicOccurrences !== 'number' ||
-                generator.periodicOccurrences < GeneratorValidation.MIN_PERIODIC_OCCURRENCES)) {
-            this.log(`Validation failed: Generator ID ${generator.id} has invalid periodicOccurrences (${generator.periodicOccurrences}).`);
+        if (generator.generationConfig.periodicOccurrences !== Infinity &&
+            (typeof generator.generationConfig.periodicOccurrences !== 'number' ||
+                generator.generationConfig.periodicOccurrences < GeneratorValidation.MIN_PERIODIC_OCCURRENCES)) {
+            this.log(`Validation failed: Generator ID ${generator.id} has invalid periodicOccurrences (${generator.generationConfig.periodicOccurrences}).`);
             issues.push(ValidationMessages.generatorValidation(
                 'periodic occurrences',
                 generator.id,
@@ -71,11 +108,11 @@ export class GeneratorValidation extends ValidationRule {
         }
 
         // Validate maxEntities
-        if (generator.maxEntities !== Infinity &&
-            (typeof generator.maxEntities !== 'number' ||
-                generator.maxEntities < GeneratorValidation.MIN_MAX_ENTITIES ||
-                generator.maxEntities > GeneratorValidation.MAX_MAX_ENTITIES)) {
-            this.log(`Validation failed: Generator ID ${generator.id} has invalid maxEntities (${generator.maxEntities}).`);
+        if (generator.generationConfig.maxEntities !== Infinity &&
+            (typeof generator.generationConfig.maxEntities !== 'number' ||
+                generator.generationConfig.maxEntities < GeneratorValidation.MIN_MAX_ENTITIES ||
+                generator.generationConfig.maxEntities > GeneratorValidation.MAX_MAX_ENTITIES)) {
+            this.log(`Validation failed: Generator ID ${generator.id} has invalid maxEntities (${generator.generationConfig.maxEntities}).`);
             issues.push(ValidationMessages.generatorValidation(
                 'maximum entities limit',
                 generator.id,
@@ -98,34 +135,58 @@ export class GeneratorValidation extends ValidationRule {
 
         this.log(`Starting duration settings validation for Generator ID: ${generator.id}`);
 
-        // if (!generator.periodIntervalDuration || generator.periodIntervalDuration.durationLength < 0) {
-        //     this.log(`Validation failed: Generator ID ${generator.id} has invalid period interval duration.`);
-        //     issues.push(ValidationMessages.generatorValidation(
-        //         'period interval duration',
-        //         generator.id,
-        //         'Must have a valid duration length'
-        //     ));
-        // }
+        const config = generator.generationConfig;
 
-        // if (!generator.periodicStartDuration || generator.periodicStartDuration.durationLength < 0) {
-        //     this.log(`Validation failed: Generator ID ${generator.id} has invalid periodic start duration.`);
-        //     issues.push(ValidationMessages.generatorValidation(
-        //         'periodic start duration',
-        //         generator.id,
-        //         'Must have a valid duration length'
-        //     ));
-        // }
+        // Validate period interval duration exists and has valid distribution
+        if (!config.periodIntervalDuration?.distribution) {
+            this.log(`Validation failed: Generator ID ${generator.id} has invalid period interval duration.`);
+            issues.push(ValidationMessages.generatorValidation(
+                'period interval duration',
+                generator.id,
+                'Must have a valid duration with distribution',
+                generator.name
+            ));
+        } else {
+            // For constant distributions, validate the value is non-negative
+            const intervalValue = this.getDurationValue(config.periodIntervalDuration);
+            if (intervalValue !== undefined && intervalValue < 0) {
+                this.log(`Validation failed: Generator ID ${generator.id} has negative period interval duration.`);
+                issues.push(ValidationMessages.generatorValidation(
+                    'period interval duration',
+                    generator.id,
+                    'Duration value must be non-negative',
+                    generator.name
+                ));
+            }
+        }
 
-        // if (generator.periodIntervalDuration?.durationLength && generator.periodicStartDuration?.durationLength) {
-        //     if (generator.periodicStartDuration.durationLength > generator.periodIntervalDuration.durationLength) {
-        //         this.log(`Warning: Generator ID ${generator.id} has start duration longer than interval duration.`);
-        //         issues.push({
-        //             type: 'warning',
-        //             message: `Generator ${generator.id} has start duration longer than interval duration`,
-        //             elementId: generator.id
-        //         });
-        //     }
-        // }
+        // Validate periodic start duration if present
+        if (config.periodicStartDuration?.distribution) {
+            const startValue = this.getDurationValue(config.periodicStartDuration);
+            if (startValue !== undefined && startValue < 0) {
+                this.log(`Validation failed: Generator ID ${generator.id} has negative periodic start duration.`);
+                issues.push(ValidationMessages.generatorValidation(
+                    'periodic start duration',
+                    generator.id,
+                    'Duration value must be non-negative',
+                    generator.name
+                ));
+            }
+
+            // Warn if start duration is longer than interval (only for constant durations)
+            const intervalValue = this.getDurationValue(config.periodIntervalDuration);
+            if (intervalValue !== undefined && startValue !== undefined) {
+                if (startValue > intervalValue && intervalValue > 0) {
+                    this.log(`Warning: Generator ID ${generator.id} has start duration longer than interval duration.`);
+                    issues.push(ValidationMessages.createIssue(
+                        ValidationSeverity.WARNING,
+                        'generator_start_exceeds_interval',
+                        `Generator '${generator.name}' has start delay (${startValue}) longer than interval (${intervalValue})`,
+                        generator.id
+                    ));
+                }
+            }
+        }
 
         this.log(`Completed duration settings validation for Generator ID: ${generator.id}`);
     }
@@ -142,7 +203,7 @@ export class GeneratorValidation extends ValidationRule {
 
         this.log(`Starting entity settings validation for Generator ID: ${generator.id}`);
 
-        if (!generator.entityId) {
+        if (!generator.generationConfig.entityId) {
             this.log(`Validation failed: Generator ID ${generator.id} does not specify an entity ID.`);
             issues.push(ValidationMessages.generatorValidation(
                 'entity reference',
@@ -151,21 +212,25 @@ export class GeneratorValidation extends ValidationRule {
                 generator.name
             ));
         } else {
-            const entityExists = state.modelDefinition.entities.get(generator.entityId);
+            const entityExists = state.modelDefinition.entities.get(generator.generationConfig.entityId);
             if (!entityExists) {
-                this.log(`Validation failed: Generator ID ${generator.id} references a non-existent entity (${generator.entityId}).`);
+                this.log(`Validation failed: Generator ID ${generator.id} references a non-existent entity (${generator.generationConfig.entityId}).`);
                 issues.push(ValidationMessages.generatorValidation(
                     'entity reference',
                     generator.id,
-                    `References non-existent entity ${generator.entityId}`,
+                    `References non-existent entity ${generator.generationConfig.entityId}`,
                     generator.name
                 ));
             }
         }
 
-        if (generator.periodicOccurrences !== Infinity && generator.maxEntities !== Infinity) {
-            const totalEntities = generator.periodicOccurrences * generator.entitiesPerCreation;
-            if (totalEntities > generator.maxEntities) {
+        const periodicOccurrences = generator.generationConfig.periodicOccurrences ?? Infinity;
+        const maxEntities = generator.generationConfig.maxEntities ?? Infinity;
+        const entitiesPerCreation = generator.generationConfig.entitiesPerCreation ?? 1;
+
+        if (periodicOccurrences !== Infinity && maxEntities !== Infinity) {
+            const totalEntities = periodicOccurrences * entitiesPerCreation;
+            if (totalEntities > maxEntities) {
                 this.log(`Warning: Generator ID ${generator.id} may exceed maximum entities limit.`);
                 issues.push(ValidationMessages.createIssue(
                     ValidationSeverity.WARNING,
@@ -190,33 +255,43 @@ export class GeneratorValidation extends ValidationRule {
 
         this.log(`Starting generator interactions validation.`);
 
+        // Check for overlapping start times (only for constant durations)
         const startTimes = new Map<number, Generator[]>();
 
-        // generators.forEach(generator => {
-        //     const startTime = generator.periodicStartDuration?.durationLength || 0;
-        //     const existingGenerators = startTimes.get(startTime) || [];
-        //     existingGenerators.push(generator);
-        //     startTimes.set(startTime, existingGenerators);
-        // });
+        generators.forEach(generator => {
+            if (!generator.generationConfig) return;
 
-        // startTimes.forEach((overlappingGenerators, startTime) => {
-        //     if (overlappingGenerators.length > 1) {
-        //         this.log(`Warning: Overlapping start times detected for Generators: ${overlappingGenerators.map(g => g.id).join(', ')} at time ${startTime}.`);
-        //         issues.push({
-        //             type: 'warning',
-        //             message: `Multiple generators (${overlappingGenerators.map(g => g.id).join(', ')}) start at the same time (${startTime})`,
-        //             elementId: overlappingGenerators[0].id
-        //         });
-        //     }
-        // });
+            const startTime = this.getDurationValue(generator.generationConfig.periodicStartDuration) ?? 0;
+            const existingGenerators = startTimes.get(startTime) || [];
+            existingGenerators.push(generator);
+            startTimes.set(startTime, existingGenerators);
+        });
 
+        startTimes.forEach((overlappingGenerators, startTime) => {
+            if (overlappingGenerators.length > 1) {
+                const names = overlappingGenerators.map(g => g.name || g.id).join(', ');
+                this.log(`Warning: Overlapping start times detected for Generators: ${names} at time ${startTime}.`);
+                issues.push(ValidationMessages.createIssue(
+                    ValidationSeverity.WARNING,
+                    'generator_overlapping_start',
+                    `Multiple generators (${names}) start at the same time (${startTime})`,
+                    overlappingGenerators[0].id
+                ));
+            }
+        });
+
+        // Calculate total entity generation rate (only for constant interval durations)
         let totalEntitiesPerSecond = 0;
-        // generators.forEach(generator => {
-        //     if (generator.periodIntervalDuration?.durationLength) {
-        //         const generatorRate = generator.entitiesPerCreation / generator.periodIntervalDuration.durationLength;
-        //         totalEntitiesPerSecond += generatorRate;
-        //     }
-        // });
+        generators.forEach(generator => {
+            if (!generator.generationConfig) return;
+
+            const intervalValue = this.getDurationValue(generator.generationConfig.periodIntervalDuration);
+            if (intervalValue && intervalValue > 0) {
+                const entitiesPerCreation = generator.generationConfig.entitiesPerCreation ?? 1;
+                const generatorRate = entitiesPerCreation / intervalValue;
+                totalEntitiesPerSecond += generatorRate;
+            }
+        });
 
         if (totalEntitiesPerSecond > 1000) {
             this.log(`Warning: High entity generation rate detected (${totalEntitiesPerSecond.toFixed(2)} entities/second).`);

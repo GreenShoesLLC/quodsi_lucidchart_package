@@ -86,7 +86,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       data.capacity || 1,
       data.inboundQueueCapacity || Infinity,
       data.outboundQueueCapacity || Infinity,
-      data.operationSteps || [],
+      data.actions || [],
       data.x || 0,
       data.y || 0
     );
@@ -148,7 +148,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
         prev.capacity,
         prev.inboundQueueCapacity,
         prev.outboundQueueCapacity,
-        prev.operationSteps,
+        prev.actions,
         prev.x,
         prev.y
       );
@@ -179,7 +179,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       localActivityDraft.capacity,
       localActivityDraft.inboundQueueCapacity,
       localActivityDraft.outboundQueueCapacity,
-      localActivityDraft.operationSteps,
+      localActivityDraft.actions,
       localActivityDraft.x,
       localActivityDraft.y
     );

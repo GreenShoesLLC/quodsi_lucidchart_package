@@ -75,6 +75,15 @@ export * from './types/elements/StateComparison';
 export * from './types/elements/StateCondition';
 export * from './types/elements/StateModification';
 
+// Action system types (replaces OperationStep)
+export * from './types/elements/actions';
+
+// Entity source configuration
+export * from './types/elements/EntitySourceConfig';
+
+// FlowNode base class
+export * from './types/elements/FlowNode';
+
 // Financial properties
 export * from './types/elements/FinancialProperties';
 

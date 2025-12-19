@@ -81,7 +81,7 @@ export class EntityValidation extends ValidationRule {
         }
 
         const isUsedByGenerator = state.modelDefinition.generators.getAll()
-            .some((generator: Generator) => generator.entityId === entity.id);
+            .some((generator: Generator) => generator.generationConfig?.entityId === entity.id);
 
         if (!isUsedByGenerator) {
             this.log(`Entity ID ${entity.id} is not used by any generator.`);

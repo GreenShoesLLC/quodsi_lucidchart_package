@@ -1,7 +1,7 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import {
     Activity,
-    OperationStep,
+    Action,
     SimulationObjectType,
     ComponentLogger,
     StateModification,
@@ -12,7 +12,7 @@ import {
     Duration,
     PeriodUnit,
     ConstantDistribution,
-    createOperationStep
+    createDelayAction
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -38,7 +38,7 @@ interface StoredActivityData {
     capacity?: number;
     inboundQueueCapacity?: number;
     outboundQueueCapacity?: number;
-    operationSteps?: OperationStep[];
+    actions?: Action[];
     preProcessingStateModifications?: any[];
     postProcessingStateModifications?: any[];
     financialProperties?: any;
@@ -73,7 +73,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData?.capacity ?? 1,
             storedData?.inboundQueueCapacity ?? 1,
             storedData?.outboundQueueCapacity ?? 1,
-            storedData?.operationSteps || [],
+            storedData?.actions || [],
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
@@ -152,7 +152,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             capacity: this.simObject.capacity,
             inboundQueueCapacity: this.simObject.inboundQueueCapacity,
             outboundQueueCapacity: this.simObject.outboundQueueCapacity,
-            operationSteps: this.simObject.operationSteps,
+            actions: this.simObject.actions,
             preProcessingStateModifications: this.simObject.preProcessingStateModifications.map(m => m.toJSON()),
             postProcessingStateModifications: this.simObject.postProcessingStateModifications.map(m => m.toJSON()),
             financialProperties: this.simObject.financialProperties?.toJSON(),
@@ -209,14 +209,14 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             SimObjectLucid.updateBlockText(block, fields.name);
         }
 
-        // Determine operation steps - use parsed duration if provided
-        let operationSteps = defaultActivity.operationSteps;
+        // Determine actions - use parsed duration if provided
+        let actions = defaultActivity.actions;
         if (fields.duration !== undefined) {
             const duration = new Duration(
                 PeriodUnit.MINUTES,
                 ConstantDistribution.create(fields.duration)
             );
-            operationSteps = [createOperationStep(duration)];
+            actions = [createDelayAction(duration)];
             ComponentLogger.log(LOG_PREFIX, `Using parsed duration: ${fields.duration} minutes`);
         }
 
@@ -229,7 +229,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             capacity: fields.capacity ?? defaultActivity.capacity,
             inboundQueueCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundQueueCapacity,
             outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,
-            operationSteps: operationSteps,
+            actions: actions,
             preProcessingStateModifications: defaultActivity.preProcessingStateModifications.map(m => m.toJSON()),
             postProcessingStateModifications: defaultActivity.postProcessingStateModifications.map(m => m.toJSON()),
             financialProperties: defaultActivity.financialProperties?.toJSON(),

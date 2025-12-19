@@ -65,20 +65,6 @@ const TAB_CONFIG = [
   },
 ];
 
-// Tab header component for consistent tab content headers
-const TabHeader: React.FC<{ icon: React.ElementType; title: string; tooltip: string }> = ({
-  icon: Icon,
-  title,
-  tooltip,
-}) => (
-  <div className="flex items-center gap-1 mb-1">
-    <Icon className="w-3 h-3 text-blue-500" />
-    <span className="text-xs font-medium text-gray-700">{title}</span>
-    <span title={tooltip}>
-      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-    </span>
-  </div>
-);
 
 /**
  * ResourceEditor - Component for editing resource properties
@@ -330,7 +316,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                title={tab.title}
+                title={tab.tooltip}
                 className={`px-3 py-2 border-b-2 ${
                   activeTab === tab.id
                     ? "border-blue-600 text-blue-600"
@@ -347,14 +333,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
       {/* Tab Content */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
         {activeTab === "basic" && (
-          <div>
-            <TabHeader
-              icon={Settings}
-              title="Basic Settings"
-              tooltip="Configure resource name and capacity (maximum number of concurrent uses)"
-            />
-            <div className="space-y-4">
-              {/* Name Section */}
+          <div className="space-y-4">
+            {/* Name Section */}
               <div>
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
@@ -404,19 +384,12 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                   />
                 </div>
               </div>
-            </div>
           </div>
         )}
 
         {activeTab === "finance" && (
-          <div>
-            <TabHeader
-              icon={DollarSign}
-              title="Financial Settings"
-              tooltip="Track resource costs including per-seize costs and time-based utilization costs"
-            />
-            <div className="space-y-1">
-              {/* Enable Financial Tracking */}
+          <div className="space-y-1">
+            {/* Enable Financial Tracking */}
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -497,22 +470,14 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 </div>
               )}
             </div>
-          </div>
         )}
 
         {activeTab === "states" && (
-          <div>
-            <TabHeader
-              icon={Hash}
-              title="State Definitions"
-              tooltip="Define custom state variables that this resource can track and modify"
-            />
-            <StatesEditor
+          <StatesEditor
               states={states}
               onStatesChange={onStatesChange}
               defaultComponentType={ComponentType.RESOURCE}
             />
-          </div>
         )}
       </div>
 

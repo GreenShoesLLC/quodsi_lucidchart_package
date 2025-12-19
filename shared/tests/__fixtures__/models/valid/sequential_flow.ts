@@ -12,6 +12,7 @@ import { Distribution } from '../../../../src/types/elements/Distribution';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { createOperationStep } from '../../../../src/types/elements/OperationStep';
 import { ConnectType } from '../../../../src/types/elements/ConnectType';
+import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
 
 export function createSequentialFlowModel(): ModelDefinition {
     // Create base model
@@ -52,14 +53,22 @@ export function createSequentialFlowModel(): ModelDefinition {
     modelDef.activities.add(activity3);
 
     // Create generator
+    const generationConfig: EntitySourceConfig = {
+        entityId: entity.id,
+        generatorType: GeneratorType.FREQUENCY,
+        periodicOccurrences: 10,
+        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
+        entitiesPerCreation: 1,
+        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
+        maxEntities: 999999,
+        timeDistributedConfigIds: [],
+        initialStateModifications: []
+    };
     const generator = new Generator(
         'generator-1',
         'Generator1',
-        activity1.id,
-        entity.id,
-        10,
-        new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-        1
+        generationConfig,
+        activity1.id // exitConnector
     );
     modelDef.generators.add(generator);
 

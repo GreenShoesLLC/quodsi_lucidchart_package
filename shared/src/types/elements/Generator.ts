@@ -1,71 +1,53 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { Duration } from "./Duration";
-import { PositionedSimulationObject } from "./PositionedSimulationObject";
+import { FlowNode } from "./FlowNode";
 import { ModelDefaults } from "./ModelDefaults";
 import { PeriodUnit } from "./PeriodUnit";
-import { ConstantDistribution } from "./distributions";
-import { StateModification } from "./StateModification";
-import { GeneratorType } from "./GeneratorType";
 import { ExponentialDistribution } from "./distributions";
+import { EntitySourceConfig, createDefaultEntitySourceConfig } from "./EntitySourceConfig";
 
-export class Generator extends PositionedSimulationObject {
+export class Generator extends FlowNode {
     type: SimulationObjectType = SimulationObjectType.Generator;
 
     /**
-     * Generator type discriminator
-     * - FREQUENCY: Traditional periodic interval-based generation (default)
-     * - TIME_DISTRIBUTED: Time-pattern-based distribution
+     * Required configuration for entity generation.
+     * Contains entityId, generatorType, timing parameters, and state modifications.
      */
-    generatorType: GeneratorType = GeneratorType.FREQUENCY;
+    generationConfig: EntitySourceConfig;
 
     /**
-     * Initial state modifications for created entities
+     * Optional exit connector destination (activity ID).
+     * Generators route all created entities to this single destination.
      */
-    initialStateModifications: StateModification[] = [];
+    exitConnector?: string;
 
     static createDefault(
-        id: string, 
-        x: number = 0, 
+        id: string,
+        x: number = 0,
         y: number = 0
     ): Generator {
-        const generator = new Generator(
-            id,
-            'New Generator',
-            '{SomeActivityName}',
+        const defaultDuration = new Duration(PeriodUnit.HOURS, ExponentialDistribution.create(1));
+        const generationConfig = createDefaultEntitySourceConfig(
             ModelDefaults.DEFAULT_ENTITY_ID,
-            999999, // periodicOccurrences
-            new Duration(PeriodUnit.HOURS, ExponentialDistribution.create(1)), // periodIntervalDuration
-            1, // entitiesPerCreation
-            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)), // periodicStartDuration
-            999999 // maxEntities
+            defaultDuration
         );
+        generationConfig.periodicOccurrences = 999999;
+        generationConfig.maxEntities = 999999;
 
-        // Set location using inherited method
-        generator.setLocation(x, y);
-
-        return generator;
+        return new Generator(id, 'New Generator', generationConfig, undefined, x, y);
     }
-
-    /**
-     * List of TimeDistributedConfig IDs (used for TIME_DISTRIBUTED generators)
-     */
-    timeDistributedConfigIds: string[] = [];
 
     constructor(
         public id: string,
         public name: string,
-        public activityKeyId: string = "",
-        public entityId: string = ModelDefaults.DEFAULT_ENTITY_ID,
-        public periodicOccurrences: number = Infinity,
-        public periodIntervalDuration: Duration = new Duration(),
-        public entitiesPerCreation: number = 1,
-        public periodicStartDuration: Duration = new Duration(),
-        public maxEntities: number = Infinity,
+        generationConfig: EntitySourceConfig,
+        exitConnector?: string,
         x: number = 0,
         y: number = 0
     ) {
         super();
-        // Set location using inherited method
+        this.generationConfig = generationConfig;
+        this.exitConnector = exitConnector;
         this.setLocation(x, y);
     }
 }

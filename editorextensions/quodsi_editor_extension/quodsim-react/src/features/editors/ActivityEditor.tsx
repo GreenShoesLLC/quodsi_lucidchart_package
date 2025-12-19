@@ -10,11 +10,28 @@ import {
   Info,
 } from "lucide-react";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Activity,
-  OperationStep,
+  Action,
   PeriodUnit,
   SimulationObjectType,
-  createOperationStep,
+  createDelayWithResourceAction,
   ConstantDistribution,
   EditorReferenceData,
   Duration,
@@ -23,8 +40,9 @@ import {
   StateListManager,
   ComponentType,
   Connector,
+  ResourceRequirement,
 } from "@quodsi/shared";
-import { OperationStepEditor } from "./OperationStepEditor";
+import { ActionEditor } from "./ActionEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
@@ -37,6 +55,80 @@ import {
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+
+// ============================================================================
+// SORTABLE ACTION ITEM WRAPPER
+// ============================================================================
+
+interface SortableActionItemProps {
+  id: string;
+  action: Action;
+  index: number;
+  activityId: string;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onChange: (action: Action) => void;
+  onDelete: () => void;
+  resourceRequirements?: ResourceRequirement[];
+  availableResources?: Array<{ id: string; name: string }>;
+  availableEntities?: Array<{ id: string; name: string }>;
+  onOpenRequirementModal?: (requirementId: string) => void;
+  onCreateRequirement?: () => void;
+  states?: StateListManager;
+}
+
+const SortableActionItem: React.FC<SortableActionItemProps> = ({
+  id,
+  action,
+  index,
+  activityId,
+  expanded,
+  onToggleExpand,
+  onChange,
+  onDelete,
+  resourceRequirements,
+  availableResources,
+  availableEntities,
+  onOpenRequirementModal,
+  onCreateRequirement,
+  states,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ActionEditor
+        activityId={activityId}
+        action={action}
+        index={index}
+        expanded={expanded}
+        onToggleExpand={onToggleExpand}
+        onChange={onChange}
+        onDelete={() => onDelete()}
+        resourceRequirements={resourceRequirements}
+        availableResources={availableResources}
+        availableEntities={availableEntities}
+        onOpenRequirementModal={onOpenRequirementModal}
+        onCreateRequirement={onCreateRequirement}
+        dragHandleProps={{ ...attributes, ...listeners }}
+        states={states}
+      />
+    </div>
+  );
+};
 
 // ============================================================================
 // CONSTANTS
@@ -59,11 +151,11 @@ const TAB_CONFIG = [
       "Configure activity name, processing capacity (parallel entities), and queue capacity limits",
   },
   {
-    id: "opsteps" as const,
-    title: "Operation Steps",
+    id: "actions" as const,
+    title: "Actions",
     icon: Layers,
     tooltip:
-      "Define sequential processing steps with durations and resource requirements for this activity",
+      "Define processing actions with durations and resource requirements",
   },
   {
     id: "financial" as const,
@@ -95,29 +187,6 @@ const TAB_CONFIG = [
   },
 ];
 
-/**
- * TabHeader - Consistent header for tab content sections
- *
- * Displays an icon, title, and tooltip for each tab's content area.
- * Used across all activity editor tabs for visual consistency.
- *
- * @param icon - Lucide icon component to display
- * @param title - Tab section title
- * @param tooltip - Helpful description shown on hover
- */
-const TabHeader: React.FC<{
-  icon: React.ElementType;
-  title: string;
-  tooltip: string;
-}> = ({ icon: Icon, title, tooltip }) => (
-  <div className="flex items-center gap-1 mb-1">
-    <Icon className="w-3 h-3 text-blue-500" />
-    <span className="text-xs font-medium text-gray-700">{title}</span>
-    <span title={tooltip}>
-      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-    </span>
-  </div>
-);
 
 // ============================================================================
 // TYPES
@@ -162,7 +231,7 @@ interface ActivityEditorProps {
  */
 type ActivityTab =
   | "basic"
-  | "opsteps"
+  | "actions"
   | "financial"
   | "connectors"
   | "states"
@@ -203,9 +272,22 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] =
     useState<EditingRequirement | null>(null);
+  const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
 
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
+
+  // Drag-and-drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
@@ -283,7 +365,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       data.capacity || 1,
       queueToDisplay(data.inboundQueueCapacity),
       queueToDisplay(data.outboundQueueCapacity),
-      data.operationSteps || [],
+      data.actions || [],
       data.x || 0,
       data.y || 0
     );
@@ -329,7 +411,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       capacity: number;
       inboundQueueCapacity: number;
       outboundQueueCapacity: number;
-      operationSteps: OperationStep[];
+      actions: Action[];
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
       preProcessingStateModifications: any[];
@@ -342,7 +424,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       updates.capacity ?? base.capacity,
       updates.inboundQueueCapacity ?? base.inboundQueueCapacity,
       updates.outboundQueueCapacity ?? base.outboundQueueCapacity,
-      updates.operationSteps ?? base.operationSteps,
+      updates.actions ?? base.actions,
       base.x,
       base.y
     );
@@ -477,7 +559,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       localActivityDraft.capacity,
       displayToBuffer(localActivityDraft.inboundQueueCapacity),
       displayToBuffer(localActivityDraft.outboundQueueCapacity),
-      localActivityDraft.operationSteps,
+      localActivityDraft.actions,
       localActivityDraft.x,
       localActivityDraft.y
     );
@@ -525,82 +607,159 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    *
    * Sets hasPendingChanges to enable the Save button.
    *
-   * @param index - Array index of the operation step being updated
-   * @param updatedStep - New operation step data
+   * @param index - Array index of the action being updated
+   * @param updatedAction - New action data
    */
-  const handleOperationStepChange = (
+  const handleActionChange = (
     index: number,
-    updatedStep: OperationStep
+    updatedAction: Action
   ) => {
     setLocalActivityDraft((prev) => {
-      const newOperationSteps = [...prev.operationSteps];
-      newOperationSteps[index] = updatedStep;
+      const newActions = [...prev.actions];
+      newActions[index] = updatedAction;
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps,
+        actions: newActions,
       });
     });
     setHasPendingChanges(true);
   };
 
   /**
-   * Adds a new operation step to the activity.
+   * Adds a new action to the activity.
    *
-   * Creates a new operation step with default settings:
+   * Creates a new DelayWithResource action with default settings:
    * - Duration: 1 minute (constant distribution)
    * - No resource requirements initially
    *
-   * The new step is appended to the end of the operation steps array.
-   * User can then configure duration and resources via OperationStepEditor.
+   * The new action is appended to the end of the actions array.
+   * User can then configure duration and resources via ActionEditor.
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
    * but NOT persisted until user clicks Save button.
    *
    * Sets hasPendingChanges to enable the Save button.
    */
-  const handleAddOperationStep = () => {
-    // Create a new operation step with a default constant distribution
-    const newStep = createOperationStep(
+  const handleAddAction = () => {
+    // Create a new DelayWithResource action with a default constant distribution
+    const newAction = createDelayWithResourceAction(
       new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
     setLocalActivityDraft((prev) => {
-      const newOperationSteps = [...prev.operationSteps, newStep];
+      const newActions = [...prev.actions, newAction];
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps,
+        actions: newActions,
       });
     });
     setHasPendingChanges(true);
   };
 
   /**
-   * Deletes an operation step at the specified index.
+   * Deletes an action at the specified index.
    *
-   * Removes the operation step from the operationSteps array.
-   * This is a destructive operation - the step's configuration is lost.
+   * Removes the action from the actions array.
+   * This is a destructive operation - the action's configuration is lost.
    *
    * Uses React.useCallback for performance optimization since this
-   * handler is passed to child components (OperationStepEditor).
+   * handler is passed to child components (ActionEditor).
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
    * but NOT persisted until user clicks Save button.
    *
    * Sets hasPendingChanges to enable the Save button.
    *
-   * @param index - Array index of the operation step to delete
+   * @param index - Array index of the action to delete
    */
-  const handleOperationStepDelete = React.useCallback((index: number) => {
+  const handleActionDelete = React.useCallback((index: number) => {
     setLocalActivityDraft((prev) => {
-      const newOperationSteps = prev.operationSteps.filter(
+      const newActions = prev.actions.filter(
         (_, i) => i !== index
       );
 
       return updateActivityImmutably(prev, {
-        operationSteps: newOperationSteps,
+        actions: newActions,
       });
     });
+    // Also remove from expanded set if it was expanded
+    setExpandedActions((prev) => {
+      const next = new Set(prev);
+      next.delete(index);
+      // Adjust indices for items after the deleted one
+      const adjusted = new Set<number>();
+      next.forEach((i) => {
+        if (i < index) {
+          adjusted.add(i);
+        } else if (i > index) {
+          adjusted.add(i - 1);
+        }
+      });
+      return adjusted;
+    });
     setHasPendingChanges(true);
+  }, []);
+
+  /**
+   * Toggles the expanded state of an action at the specified index.
+   * Multiple actions can be expanded simultaneously.
+   */
+  const toggleActionExpanded = React.useCallback((index: number) => {
+    setExpandedActions((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }, []);
+
+  /**
+   * Handles drag end event for reordering actions.
+   * Updates both the actions array and adjusts expanded indices accordingly.
+   */
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = parseInt(String(active.id).replace("action-", ""), 10);
+      const newIndex = parseInt(String(over.id).replace("action-", ""), 10);
+
+      setLocalActivityDraft((prev) => {
+        const newActions = arrayMove([...prev.actions], oldIndex, newIndex);
+        return updateActivityImmutably(prev, { actions: newActions });
+      });
+
+      // Adjust expanded indices for the moved items
+      setExpandedActions((prev) => {
+        const next = new Set<number>();
+        prev.forEach((expandedIndex) => {
+          if (expandedIndex === oldIndex) {
+            // The moved item keeps its expanded state at new position
+            next.add(newIndex);
+          } else if (oldIndex < newIndex) {
+            // Moving down: items between old and new shift up
+            if (expandedIndex > oldIndex && expandedIndex <= newIndex) {
+              next.add(expandedIndex - 1);
+            } else {
+              next.add(expandedIndex);
+            }
+          } else {
+            // Moving up: items between new and old shift down
+            if (expandedIndex >= newIndex && expandedIndex < oldIndex) {
+              next.add(expandedIndex + 1);
+            } else {
+              next.add(expandedIndex);
+            }
+          }
+        });
+        return next;
+      });
+
+      setHasPendingChanges(true);
+    }
   }, []);
 
   /**
@@ -832,7 +991,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  title={tab.title}
+                  title={tab.tooltip}
                   className={`px-3 py-2 border-b-2 ${
                     activeTab === tab.id
                       ? "border-blue-600 text-blue-600"
@@ -849,14 +1008,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         {/* Tab Content */}
         <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
           {activeTab === "basic" && (
-            <div>
-              <TabHeader
-                icon={Settings}
-                title="Basic Settings"
-                tooltip="Configure activity name, processing capacity (parallel entities), and queue capacity limits"
-              />
-              <div className="space-y-2">
-                {/* Name Section */}
+            <div className="space-y-2">
+              {/* Name Section */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     Activity Name
@@ -952,56 +1105,61 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           )}
 
-          {activeTab === "opsteps" && (
+          {activeTab === "actions" && (
             <div>
               <div className="flex items-center justify-between mb-1">
-                <TabHeader
-                  icon={Layers}
-                  title="Operation Steps"
-                  tooltip="Define sequential processing steps with durations and resource requirements for this activity"
-                />
+                <span className="text-xs font-medium text-gray-700">Actions</span>
                 <button
                   type="button"
-                  onClick={handleAddOperationStep}
+                  onClick={handleAddAction}
                   className="flex items-center gap-1 px-1 py-0.5 text-xs text-white bg-blue-500 rounded hover:bg-blue-600"
                 >
                   <Plus className="w-3 h-3" />
                   Add
                 </button>
               </div>
-              <div className="space-y-1">
-                {localActivityDraft.operationSteps.map((step, index) => (
-                  <OperationStepEditor
-                    key={index}
-                    activityId={localActivityDraft.id}
-                    step={step}
-                    index={index}
-                    onChange={(updatedStep) =>
-                      handleOperationStepChange(index, updatedStep)
-                    }
-                    onDelete={() => handleOperationStepDelete(index)}
-                    resourceRequirements={referenceData?.resourceRequirements}
-                    availableResources={referenceData?.resources}
-                    onOpenRequirementModal={handleOpenRequirementModal}
-                    onCreateRequirement={handleCreateRequirement}
-                  />
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={localActivityDraft.actions.map((_, i) => `action-${i}`)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-1">
+                    {localActivityDraft.actions.map((action, index) => (
+                      <SortableActionItem
+                        key={`action-${index}`}
+                        id={`action-${index}`}
+                        activityId={localActivityDraft.id}
+                        action={action}
+                        index={index}
+                        expanded={expandedActions.has(index)}
+                        onToggleExpand={() => toggleActionExpanded(index)}
+                        onChange={(updatedAction) =>
+                          handleActionChange(index, updatedAction)
+                        }
+                        onDelete={() => handleActionDelete(index)}
+                        resourceRequirements={referenceData?.resourceRequirements}
+                        availableResources={referenceData?.resources}
+                        availableEntities={referenceData?.entities}
+                        onOpenRequirementModal={handleOpenRequirementModal}
+                        onCreateRequirement={handleCreateRequirement}
+                        states={states}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           )}
 
           {activeTab === "financial" && (
-            <div>
-              <TabHeader
-                icon={DollarSign}
-                title="Financial Settings"
-                tooltip="Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers"
-              />
-              <div className="space-y-1">
+            <div className="space-y-1">
                 {/* Enable Financial Tracking */}
                 <div className="flex items-center gap-2">
                   <input
@@ -1186,17 +1344,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </>
                 )}
               </div>
-            </div>
           )}
 
           {activeTab === "connectors" && (
-            <div>
-              <TabHeader
-                icon={ArrowRightLeft}
-                title="Routing Configuration"
-                tooltip="Configure how entities are routed to downstream activities using probability, state conditions, or entity templates"
-              />
-              <RoutingConfigurationContent
+            <RoutingConfigurationContent
                 localData={localActivityDraft}
                 handleChange={handleConnectTypeChange}
                 outgoingConnectors={outgoingConnectors}
@@ -1211,17 +1362,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 states={states}
                 showHeader={false}
               />
-            </div>
           )}
 
           {activeTab === "events" && (
             <div className="space-y-2">
-              <TabHeader
-                icon={Zap}
-                title="Event Modifications"
-                tooltip="Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity"
-              />
-
               {/* Pre-Processing State Modifications */}
               <div className="border-b pb-2">
                 <StateModificationsEditor
@@ -1253,18 +1397,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           )}
 
           {activeTab === "states" && (
-            <div>
-              <TabHeader
-                icon={Hash}
-                title="State Definitions"
-                tooltip="Define custom state variables that this activity can track and modify"
-              />
-              <StatesEditor
+            <StatesEditor
                 states={states}
                 onStatesChange={onStatesChange}
                 defaultComponentType={ComponentType.ACTIVITY}
               />
-            </div>
           )}
         </div>
 

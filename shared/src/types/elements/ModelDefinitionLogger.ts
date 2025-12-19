@@ -146,19 +146,19 @@ export class ModelDefinitionLogger extends QuodsiLogger {
     private logGenerator(generator: Generator): void {
         this.log(`  Generator ID: ${generator.id}`);
         this.log(`    Name: ${generator.name || "Unnamed"}`);
-        this.log(`    Activity Key ID: ${generator.activityKeyId || "Not defined"}`);
-        this.log(`    Entity ID: ${generator.entityId || "Not defined"}`);
-        this.log(`    Periodic Occurrences: ${generator.periodicOccurrences || "Not defined"}`);
+        this.log(`    Exit Connector: ${generator.exitConnector || "Not defined"}`);
+        this.log(`    Entity ID: ${generator.generationConfig?.entityId || "Not defined"}`);
+        this.log(`    Periodic Occurrences: ${generator.generationConfig?.periodicOccurrences || "Not defined"}`);
 
-        // const periodIntervalDuration = generator.periodIntervalDuration?.durationLength;
+        // const periodIntervalDuration = generator.generationConfig?.periodIntervalDuration?.durationLength;
         // this.log(`    Period Interval Duration: ${periodIntervalDuration !== undefined ? periodIntervalDuration : "Not defined"}`);
 
-        this.log(`    Entities Per Creation: ${generator.entitiesPerCreation || "Not defined"}`);
+        this.log(`    Entities Per Creation: ${generator.generationConfig?.entitiesPerCreation || "Not defined"}`);
 
-        // const periodicStartDuration = generator.periodicStartDuration?.durationLength;
+        // const periodicStartDuration = generator.generationConfig?.periodicStartDuration?.durationLength;
         // this.log(`    Periodic Start Duration: ${periodicStartDuration !== undefined ? periodicStartDuration : "Not defined"}`);
 
-        this.log(`    Max Entities: ${generator.maxEntities || "Not defined"}`);
+        this.log(`    Max Entities: ${generator.generationConfig?.maxEntities || "Not defined"}`);
     }
 
     private logEntity(entity: Entity): void {

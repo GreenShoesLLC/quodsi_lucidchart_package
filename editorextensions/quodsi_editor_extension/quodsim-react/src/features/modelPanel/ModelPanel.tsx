@@ -242,13 +242,6 @@ export const ModelPanel: React.FC = () => {
         referenceData={referenceData}
       />
 
-      {/* Validation Banner - sticky at top */}
-      <ValidationBanner
-        validationState={validationState}
-        isExpanded={validationBannerExpanded}
-        onToggle={() => setValidationBannerExpanded(!validationBannerExpanded)}
-      />
-
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* If current element exists and is either not unconverted or is a Model type */}
         {currentElement && ((!currentElement.isUnconverted) || isModelElement) && (
@@ -279,6 +272,13 @@ export const ModelPanel: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Validation Banner - at bottom below editor */}
+      <ValidationBanner
+        validationState={validationState}
+        isExpanded={validationBannerExpanded}
+        onToggle={() => setValidationBannerExpanded(!validationBannerExpanded)}
+      />
     </div>
   );
 };

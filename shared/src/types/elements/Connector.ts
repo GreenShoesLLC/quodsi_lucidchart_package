@@ -1,17 +1,44 @@
 import { SimulationObjectType } from "./SimulationObjectType";
 import { OperationStep } from "./OperationStep";
-import { PositionedSimulationObject } from "./PositionedSimulationObject";
+import { FlowNode } from "./FlowNode";
 import { StateCondition } from "./StateCondition";
 import { StateModification } from "./StateModification";
+import { Action } from "./actions";
+import { ActionType } from "./actions/ActionType";
+import { DelayWithResourceAction } from "./actions/DelayWithResourceAction";
 
-export class Connector extends PositionedSimulationObject {
+export class Connector extends FlowNode {
     type: SimulationObjectType = SimulationObjectType.Connector;
 
-    // Add source and target location properties
+    // ========== LOCATION PROPERTIES ==========
+
+    // Source and target location properties
     sourceX: number = 0;
     sourceY: number = 0;
     targetX: number = 0;
     targetY: number = 0;
+
+    // ========== NEW FIELDS ==========
+
+    /**
+     * Actions to perform when an entity traverses this connector.
+     * When populated, takes precedence over legacy operationSteps and stateModifications.
+     */
+    actions: Action[] = [];
+
+    /**
+     * Destination unique ID (new field name, replaces targetId)
+     * When set, takes precedence over targetId.
+     */
+    destinationUniqueId?: string;
+
+    /**
+     * Priority when multiple connectors lead to the same destination.
+     * Lower numbers = higher priority.
+     */
+    destinationPriority?: number;
+
+    // ========== ROUTING CONDITION FIELDS ==========
 
     /**
      * Entity template routing - optional field for ENTITY_TEMPLATE ConnectType
@@ -23,10 +50,25 @@ export class Connector extends PositionedSimulationObject {
      */
     stateCondition?: StateCondition;
 
+    // ========== LEGACY FIELDS ==========
+
     /**
-     * State modifications during routing
+     * @deprecated Use actions[] with AssignAction instead.
+     * State modifications during routing.
      */
     stateModifications: StateModification[] = [];
+
+    /**
+     * @deprecated Use actions[] instead.
+     * Operation steps during transit.
+     */
+    public operationSteps: OperationStep[] = [];
+
+    /**
+     * @deprecated Use destinationUniqueId instead.
+     * ID of the target node.
+     */
+    public targetId: string = "";
 
     static createDefault(
         id: string,
@@ -39,9 +81,9 @@ export class Connector extends PositionedSimulationObject {
             id,
             'New Connector',
             '', // sourceId
-            '', // targetId
+            '', // targetId (legacy)
             1, // weight
-            [] // operationSteps
+            [] // operationSteps (legacy)
         );
 
         // Set source and target coordinates
@@ -63,9 +105,9 @@ export class Connector extends PositionedSimulationObject {
         public id: string,
         public name: string,
         public sourceId: string,
-        public targetId: string,
+        targetId: string,
         public weight: number = 1,
-        public operationSteps: OperationStep[] = [],
+        operationSteps: OperationStep[] = [],
         sourceX: number = 0,
         sourceY: number = 0,
         targetX: number = 0,
@@ -74,6 +116,10 @@ export class Connector extends PositionedSimulationObject {
         y: number = 0
     ) {
         super();
+
+        // Set legacy fields
+        this.targetId = targetId;
+        this.operationSteps = operationSteps;
 
         // Set source and target coordinates
         this.sourceX = sourceX;
@@ -86,6 +132,43 @@ export class Connector extends PositionedSimulationObject {
             x || (sourceX + targetX) / 2,
             y || (sourceY + targetY) / 2
         );
+    }
+
+    /**
+     * Gets the effective destination unique ID.
+     * If destinationUniqueId is set, returns that.
+     * Otherwise, returns targetId for backward compatibility.
+     */
+    getEffectiveDestinationUniqueId(): string {
+        return this.destinationUniqueId ?? this.targetId;
+    }
+
+    /**
+     * Gets the effective actions for this connector.
+     * If actions[] is populated, returns that.
+     * Otherwise, converts legacy operationSteps to actions.
+     */
+    getEffectiveActions(): Action[] {
+        if (this.actions.length > 0) {
+            return this.actions;
+        }
+        // Convert legacy operationSteps to DelayWithResourceAction
+        return this.operationSteps.map(step =>
+            Connector.convertOperationStepToAction(step)
+        );
+    }
+
+    /**
+     * Converts a legacy OperationStep to a DelayWithResourceAction
+     */
+    static convertOperationStepToAction(step: OperationStep): DelayWithResourceAction {
+        return {
+            actionType: ActionType.DELAY_WITH_RESOURCE,
+            duration: step.duration,
+            resourceRequirementId: step.requirementId,
+            keepResource: step.keepResource ?? false,
+            stateModifications: step.stateModifications ?? []
+        };
     }
 
     /**

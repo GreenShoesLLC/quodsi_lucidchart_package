@@ -15,6 +15,7 @@ import { UniformParameters, TriangularParameters, NormalParameters } from '../..
 import { createOperationStep } from '../../../../src/types/elements/OperationStep';
 import { ConnectType } from '../../../../src/types/elements/ConnectType';
 import { ModelDefaults } from '../../../../src/types/elements/ModelDefaults';
+import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
 
 interface ModelConfig {
     entityCount: number;
@@ -149,14 +150,22 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
 
     // Create generators
     for (let i = 0; i < config.generatorCount; i++) {
+        const generationConfig: EntitySourceConfig = {
+            entityId: entityForGenerator.id,
+            generatorType: GeneratorType.FREQUENCY,
+            periodicOccurrences: 10,
+            periodIntervalDuration: new Duration(PeriodUnit.HOURS, getDistributionForIndex(i, 'generator')),
+            entitiesPerCreation: 1,
+            periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
+            maxEntities: 999999,
+            timeDistributedConfigIds: [],
+            initialStateModifications: []
+        };
         const generator = new Generator(
             `generator-${i + 1}`,
             `Generator${i + 1}`,
-            activities[0].id, // Always connect to first activity
-            entityForGenerator.id,
-            10,
-            new Duration(PeriodUnit.HOURS, getDistributionForIndex(i, 'generator')),
-            1
+            generationConfig,
+            activities[0].id // exitConnector
         );
         modelDef.generators.add(generator);
 

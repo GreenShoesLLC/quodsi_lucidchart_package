@@ -160,9 +160,10 @@ export class ModelDefinition {
 
         // Validate generator initial state modifications
         for (const generator of this.generators.getAll()) {
-            if (generator.initialStateModifications && generator.initialStateModifications.length > 0) {
+            const mods = generator.generationConfig?.initialStateModifications;
+            if (mods && mods.length > 0) {
                 this.validateComponentStateModifications(
-                    generator.initialStateModifications,
+                    mods,
                     stateLookup,
                     `Generator '${generator.name}'`
                 );
