@@ -51,7 +51,6 @@ export * from './types/elements/Model';
 export * from './types/elements/ModelDefaults';
 export * from './types/elements/ModelDefinition';
 export * from './types/elements/ModelUtils';
-export * from './types/elements/OperationStep';
 export * from './types/elements/PeriodUnit';
 export * from './types/elements/RequirementMode';
 export * from './types/elements/Resource';

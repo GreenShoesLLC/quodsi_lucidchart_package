@@ -5,7 +5,6 @@ export { EntitySchema } from './EntitySchema';
 export { GeneratorSchema } from './GeneratorSchema';
 export { ModelSchema } from './ModelSchema';
 export { ModelDefinitionSchema } from './ModelDefinitionSchema';
-export { OperationStepSchema } from './OperationStepSchema';
 export { RequirementClauseSchema } from './RequirementClauseSchema';
 export { ResourceRequestSchema } from './ResourceRequestSchema';
 export { ResourceRequirementSchema } from './ResourceRequirementSchema';
@@ -16,10 +15,9 @@ export const MODEL_COLLECTIONS = {
     MODEL: "model",
     ACTIVITIES: "activities",
     RESOURCES: "resources",
-    ENTITIES: "entities", 
+    ENTITIES: "entities",
     GENERATORS: "generators",
     CONNECTORS: "connectors",
-    OPERATION_STEPS: "operationSteps",
     RESOURCE_REQUIREMENTS: "resourceRequirements",
     REQUIREMENT_CLAUSES: "requirementClauses",
     RESOURCE_REQUESTS: "resourceRequests"

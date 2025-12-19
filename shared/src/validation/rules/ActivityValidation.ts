@@ -115,13 +115,13 @@ export class ActivityValidation extends ValidationRule {
 
         if (!Array.isArray(activity.actions)) {
             this.log(`Activity ID ${activity.id} has no actions defined.`);
-            issues.push(ValidationMessages.missingOperationSteps(activity.id, activity.name));
+            issues.push(ValidationMessages.missingActions(activity.id, activity.name));
             return;
         }
 
         if (activity.actions.length === 0) {
             this.log(`Activity ID ${activity.id} has an empty actions list.`);
-            issues.push(ValidationMessages.noOperationSteps(activity.id, activity.name));
+            issues.push(ValidationMessages.noActions(activity.id, activity.name));
             return;
         }
 

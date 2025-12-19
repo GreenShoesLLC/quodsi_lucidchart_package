@@ -12,7 +12,6 @@ export const MODEL_COLLECTIONS = {
     ENTITIES: "entities",
     GENERATORS: "generators",
     CONNECTORS: "connectors",
-    OPERATION_STEPS: "operationSteps",
     RESOURCE_REQUIREMENTS: "resourceRequirements",
     REQUIREMENT_CLAUSES: "requirementClauses",
     RESOURCE_REQUESTS: "resourceRequests"

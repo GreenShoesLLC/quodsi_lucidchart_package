@@ -22,10 +22,6 @@ interface StoredActivityData {
     id: string;
     name?: string;
     resourceName?: string;
-    operationSteps?: Array<{
-        requirementId: string | null;
-        [key: string]: any;
-    }>;
     [key: string]: any;
 }
 
@@ -519,21 +515,7 @@ export class LucidPageConversionService extends QuodsiLogger {
             createdResources.set(resourceName, newBlock);
 
             this.log(`Created Resource block ${newBlock.id} for: ${resourceName}`);
-
-            // Update all Activities that reference this resource
-            for (const activityBlockId of activityBlockIds) {
-                const activityBlock = page.allBlocks.get(activityBlockId);
-                if (!activityBlock) continue;
-
-                const storedData = this.storageAdapter.getElementData<StoredActivityData>(activityBlock);
-
-                if (storedData && storedData.operationSteps && storedData.operationSteps.length > 0) {
-                    // ResourceRequirement ID equals Resource ID (from block.id)
-                    storedData.operationSteps[0].requirementId = newBlock.id;
-                    this.storageAdapter.updateElementData(activityBlock, storedData);
-                    this.log(`Linked Activity ${activityBlockId} to Resource ${newBlock.id}`);
-                }
-            }
+            // Note: Resource linking to Activities is now managed through the actions system
         }
 
         this.log(`Created ${createdResources.size} auto-resources`);

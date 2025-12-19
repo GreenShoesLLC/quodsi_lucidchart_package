@@ -9,7 +9,6 @@ import { Connector } from '../types/elements/Connector';
 import { Duration } from '../types/elements/Duration';
 import { RequirementClause } from '../types/elements/RequirementClause';
 import { ResourceRequest } from '../types/elements/ResourceRequest';
-import { OperationStep } from '../types/elements/OperationStep';
 import { State } from '../types/elements/State';
 import { ComponentType } from '../types/elements/ComponentType';
 import { StateType } from '../types/elements/StateType';
@@ -36,7 +35,6 @@ import { ISerializedResource } from './interfaces/ISerializedResource';
 import { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
 import { ISerializedConnector } from './interfaces/ISerializedConnector';
 import { ISerializedDuration } from './interfaces/ISerializedDuration';
-import { ISerializedOperationStep } from './interfaces/ISerializedOperationStep';
 import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 import { ISerializedState } from './interfaces/ISerializedState';
@@ -131,18 +129,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 capacity: activity.capacity,
                 inboundQueueCapacity: activity.inboundQueueCapacity,
                 outboundQueueCapacity: activity.outboundQueueCapacity,
-                operationSteps: activity.operationSteps.map(step =>
-                    this.serializeOperationStep(step)
+                actions: activity.actions.map(action =>
+                    this.serializeAction(action)
                 ),
                 connectors: relevantConnectors
             };
-
-            // NEW: Serialize actions array if populated
-            if (activity.actions && activity.actions.length > 0) {
-                serialized.actions = activity.actions.map(action =>
-                    this.serializeAction(action)
-                );
-            }
 
             // NEW: Serialize sourceConfig if present (self-generating activity)
             if (activity.sourceConfig) {
@@ -152,12 +143,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             // Add optional properties if they exist
             if (activity.financialProperties) {
                 serialized.financialProperties = activity.financialProperties.toJSON();
-            }
-            if (activity.preProcessingStateModifications && activity.preProcessingStateModifications.length > 0) {
-                serialized.preProcessingStateModifications = activity.preProcessingStateModifications.map(m => m.toJSON());
-            }
-            if (activity.postProcessingStateModifications && activity.postProcessingStateModifications.length > 0) {
-                serialized.postProcessingStateModifications = activity.postProcessingStateModifications.map(m => m.toJSON());
             }
             if (activity.connectType) {
                 serialized.connectType = activity.connectType;
@@ -170,22 +155,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 `Failed to serialize activity ${activity.id}`,
                 error instanceof Error ? error : undefined
             );
-        }
-    }
-
-    protected serializeOperationStep(step: OperationStep): ISerializedOperationStep {
-        try {
-            if (!step || !step.duration) {
-                throw new InvalidModelError('OperationStep must have a duration');
-            }
-
-            return {
-                duration: this.serializeDuration(step.duration),
-                requirementId: step.requirementId,
-                quantity: step.quantity
-            };
-        } catch (error) {
-            throw new SerializationError('OperationStep', 'Failed to serialize operation step', error instanceof Error ? error : undefined);
         }
     }
 
@@ -337,20 +306,13 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 x: connector.x,  // Midpoint x
                 y: connector.y,  // Midpoint y
                 weight: connector.weight,
-                operationSteps: connector.operationSteps.map(step =>
-                    this.serializeOperationStep(step)
+                actions: connector.actions.map(action =>
+                    this.serializeAction(action)
                 ),
                 entityTemplateUniqueId: connector.entityTemplateUniqueId,
                 stateCondition: connector.stateCondition?.toJSON(),
                 stateModifications: connector.stateModifications.map(m => m.toJSON())
             };
-
-            // NEW: Serialize actions array if populated
-            if (connector.actions && connector.actions.length > 0) {
-                serialized.actions = connector.actions.map(action =>
-                    this.serializeAction(action)
-                );
-            }
 
             // NEW: Serialize destinationUniqueId if present
             if (connector.destinationUniqueId) {

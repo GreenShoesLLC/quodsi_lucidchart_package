@@ -96,10 +96,6 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
     // Preserve other properties
     safeActivity.financialProperties = data.financialProperties;
-    safeActivity.preProcessingStateModifications =
-      data.preProcessingStateModifications || [];
-    safeActivity.postProcessingStateModifications =
-      data.postProcessingStateModifications || [];
 
     return safeActivity;
   };
@@ -158,10 +154,6 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
       // Preserve other properties
       updatedActivity.financialProperties = prev.financialProperties;
-      updatedActivity.preProcessingStateModifications =
-        prev.preProcessingStateModifications;
-      updatedActivity.postProcessingStateModifications =
-        prev.postProcessingStateModifications;
 
       return updatedActivity;
     });
@@ -189,10 +181,6 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
     // Preserve other properties
     activityToSave.financialProperties = localActivityDraft.financialProperties;
-    activityToSave.preProcessingStateModifications =
-      localActivityDraft.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications =
-      localActivityDraft.postProcessingStateModifications;
 
     onSave(activityToSave);
   };

@@ -6,8 +6,8 @@ import { ResourceRequirement } from '../../../../src/types/elements/ResourceRequ
 import { Entity } from '../../../../src/types/elements/Entity';
 import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
-import { DurationType } from '../../../../src/types/elements/DurationType';
-import { createOperationStep } from '../../../../src/types/elements/OperationStep';
+import { ConstantDistribution } from '../../../../src/types/elements/distributions';
+import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
 import { Model } from '../../../../src/types/elements/Model';
 
 export function createNoGeneratorModel(): ModelDefinition {
@@ -31,16 +31,15 @@ export function createNoGeneratorModel(): ModelDefinition {
     modelDef.entities.add(entity);
 
     // Create common duration for activities
-    const duration = new Duration(1, PeriodUnit.MINUTES, DurationType.CONSTANT);
+    const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
-    // Create operation step template
-    const operationStep = createOperationStep(duration, {
-        requirementId: resourceReq.id,
-        quantity: 1
+    // Create action template with resource requirement
+    const action = createDelayWithResourceAction(duration, {
+        resourceRequirementId: resourceReq.id
     });
 
     // Create activity (which will be disconnected since there's no generator)
-    const activity = new Activity('activity-1', 'Activity1', 1, 1, 1, [operationStep]);
+    const activity = new Activity('activity-1', 'Activity1', 1, 1, 1, [action]);
     modelDef.activities.add(activity);
 
     return modelDef;

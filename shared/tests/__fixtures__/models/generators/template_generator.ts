@@ -12,10 +12,10 @@ import { Distribution } from '../../../../src/types/elements/Distribution';
 import { DistributionType } from '../../../../src/types/elements/DistributionType';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { UniformParameters, TriangularParameters, NormalParameters } from '../../../../src/types/elements/distributions';
-import { createOperationStep } from '../../../../src/types/elements/OperationStep';
-import { ConnectType } from '../../../../src/types/elements/ConnectType';
-import { ModelDefaults } from '../../../../src/types/elements/ModelDefaults';
-import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
+import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
+import { createDelayAction } from '../../../../src/types/elements/actions/DelayAction';
+import { EntitySourceConfig } from '../../../../src/types/elements/EntitySourceConfig';
+import { GeneratorType } from '../../../../src/types/elements/GeneratorType';
 
 interface ModelConfig {
     entityCount: number;
@@ -114,26 +114,25 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
     // Create common duration for activities - default for when no specific one is needed
     const defaultDuration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
-    // Create activities with dedicated operation steps
+    // Create activities with dedicated actions
     const activities: Activity[] = [];
     for (let i = 0; i < config.activityCount; i++) {
         // Get distribution for this activity
         const activityDistribution = getDistributionForIndex(i, 'activity');
         const activityDuration = new Duration(PeriodUnit.MINUTES, activityDistribution);
-        
-        // Create dedicated operation steps for this activity
-        const operationSteps = requirements.length > 0
-            ? requirements.map(req => createOperationStep(activityDuration, {
-                requirementId: req.id,
-                quantity: 1
+
+        // Create actions for this activity
+        const actions = requirements.length > 0
+            ? requirements.map(req => createDelayWithResourceAction(activityDuration, {
+                resourceRequirementId: req.id
               }))
-            : [createOperationStep(activityDuration)]; // If no resources, create single step with no requirement
+            : [createDelayAction(activityDuration)]; // If no resources, create delay action without resource
 
         const activity = new Activity(
             `activity-${i + 1}`,
             `Activity${i + 1}`,
             1, 1, 1,
-            operationSteps
+            actions
         );
         modelDef.activities.add(activity);
         activities.push(activity);
@@ -175,8 +174,7 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
             `Generator${i + 1}ToActivity1`,
             generator.id,
             activities[0].id,
-            1.0 / config.generatorCount, // Split probability among generators
-            ConnectType.Probability
+            1.0 / config.generatorCount // Split probability among generators
         );
         modelDef.connectors.add(connectorGen);
     }
@@ -188,8 +186,7 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
             `Activity${i + 1}ToActivity${i + 2}`,
             activities[i].id,
             activities[i + 1].id,
-            1.0,
-            ConnectType.Probability
+            1.0
         );
         modelDef.connectors.add(connector);
     }

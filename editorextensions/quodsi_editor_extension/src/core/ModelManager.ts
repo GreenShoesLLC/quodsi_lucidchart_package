@@ -678,56 +678,11 @@ export class ModelManager {
      * Clean up all references to a deleted state
      */
     private async cleanupStateReferences(stateId: string, page: PageProxy): Promise<void> {
-        // Process all blocks (Activities and Generators)
+        // Process all blocks (Generators)
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
 
-            if (elementData?.type === SimulationObjectType.Activity) {
-                let modified = false;
-
-                // Clean preProcessingStateModifications
-                if (elementData.preProcessingStateModifications) {
-                    const filtered = elementData.preProcessingStateModifications
-                        .filter((mod: any) => mod.stateUniqueId !== stateId);
-
-                    if (filtered.length !== elementData.preProcessingStateModifications.length) {
-                        elementData.preProcessingStateModifications = filtered;
-                        modified = true;
-                    }
-                }
-
-                // Clean postProcessingStateModifications
-                if (elementData.postProcessingStateModifications) {
-                    const filtered = elementData.postProcessingStateModifications
-                        .filter((mod: any) => mod.stateUniqueId !== stateId);
-
-                    if (filtered.length !== elementData.postProcessingStateModifications.length) {
-                        elementData.postProcessingStateModifications = filtered;
-                        modified = true;
-                    }
-                }
-
-                // Clean operationSteps[].stateModifications
-                if (elementData.operationSteps) {
-                    for (const step of elementData.operationSteps) {
-                        if (step.stateModifications) {
-                            const filtered = step.stateModifications
-                                .filter((mod: any) => mod.stateUniqueId !== stateId);
-
-                            if (filtered.length !== step.stateModifications.length) {
-                                step.stateModifications = filtered;
-                                modified = true;
-                            }
-                        }
-                    }
-                }
-
-                if (modified) {
-                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
-                }
-            }
-
-            // Process generators
+            // Process generators with initial state modifications
             if (elementData?.type === SimulationObjectType.Generator) {
                 let modified = false;
 
@@ -754,16 +709,16 @@ export class ModelManager {
     private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<void> {
         this.debug.log('Cleaning up references to requirement:', requirementId);
 
-        // Process all activities
+        // Process all activities - update actions that reference the deleted requirement
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
 
-            if (elementData?.type === SimulationObjectType.Activity && elementData.operationSteps) {
+            if (elementData?.type === SimulationObjectType.Activity && elementData.actions) {
                 let modified = false;
 
-                for (const step of elementData.operationSteps) {
-                    if (step.requirementId === requirementId) {
-                        step.requirementId = null;
+                for (const action of elementData.actions) {
+                    if (action.resourceRequirementId === requirementId) {
+                        action.resourceRequirementId = null;
                         modified = true;
                     }
                 }

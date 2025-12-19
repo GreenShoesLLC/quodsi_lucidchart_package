@@ -1,5 +1,4 @@
 import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
-import { ISerializedOperationStep } from './ISerializedOperationStep';
 import { ISerializedAction } from './ISerializedAction';
 
 export interface ISerializedConnector {
@@ -15,14 +14,13 @@ export interface ISerializedConnector {
     y: number;  // Midpoint y
     weight: number;
 
-    // New fields
-    actions?: ISerializedAction[];
+    // Action-based system
+    actions: ISerializedAction[];
     destinationUniqueId?: string;
     destinationPriority?: number;
 
-    // Legacy fields (deprecated, for backward compatibility)
+    // Legacy field
     targetId: string;
-    operationSteps: ISerializedOperationStep[];
 
     // Routing condition fields
     entityTemplateUniqueId?: string;

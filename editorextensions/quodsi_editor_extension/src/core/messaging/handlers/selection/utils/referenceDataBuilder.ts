@@ -37,10 +37,15 @@ export const referenceDataBuilder = {
           id: a.id,
           name: a.name,
           connectType: a.connectType,
-          // Extract requirement IDs from operation steps for usage counting
-          operationStepRequirementIds: a.operationSteps
-            .map(step => step.requirementId)
-            .filter(id => id !== null) as string[]
+          // Extract requirement IDs from actions for usage counting
+          actionRequirementIds: (a.actions || [])
+            .map(action => {
+              if ('resourceRequirementId' in action) {
+                return (action as any).resourceRequirementId;
+              }
+              return null;
+            })
+            .filter((id): id is string => id !== null)
         }));
 
         referenceData.generators = modelDef.generators.getAll().map(g => ({

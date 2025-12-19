@@ -101,20 +101,6 @@ export class ConnectorValidation extends ValidationRule {
                 connector.id
             ));
         }
-
-        if (connector.operationSteps && connector.operationSteps.length > 0) {
-            connector.operationSteps.forEach((step, index) => {
-                if (!step.duration) {
-                    this.log(`Connector ID ${connector.id} operation step ${index + 1} has no duration.`);
-                    issues.push(ValidationMessages.createIssue(
-                        ValidationSeverity.ERROR,
-                        'connector_step_no_duration',
-                        `Connector ${connector.id} operation step ${index + 1} has no duration specified`,
-                        connector.id
-                    ));
-                }
-            });
-        }
     }
 
     // Note: validateConnectorType removed - connectType is now on Activity, not Connector

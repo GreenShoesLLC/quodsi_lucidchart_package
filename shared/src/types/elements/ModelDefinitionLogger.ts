@@ -85,31 +85,11 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Capacity: ${activity.capacity}`);
         this.log(`    Inbound Queue Capacity: ${activity.inboundQueueCapacity}`);
         this.log(`    Outbound Queue Capacity: ${activity.outboundQueueCapacity}`);
-        this.log(`    Number of Operation Steps: ${activity.operationSteps?.length || 0}`);
+        this.log(`    Number of Actions: ${activity.actions?.length || 0}`);
 
-        activity.operationSteps?.forEach((step, index) => {
-            this.log(`      Operation Step ${index + 1}:`);
-            if (step.requirementId) {
-                this.log(`        Resource Requirement ID: ${step.requirementId}`);
-                this.log(`        Quantity: ${step.quantity}`);
-
-                // If you need to log the actual resource requests, you'll need to pass
-                // the ResourceRequirement data to this method or have a way to look it up
-
-                /* Example if you had access to requirements:
-                const requirement = this.getRequirement(step.requirementId);
-                if (requirement) {
-                    this.log(`        Requirement Mode: ${requirement.mode}`);
-                    this.log("        Resource Requests:");
-                    requirement.requests.forEach(request => {
-                        this.log(`          Resource ID: ${request.resourceId}, ` + 
-                                `Quantity: ${request.quantity}, ` +
-                                `Priority: ${request.priority}, ` +
-                                `Keep Resource: ${request.keepResource}`);
-                    });
-                }
-                */
-            }
+        activity.actions?.forEach((action, index) => {
+            this.log(`      Action ${index + 1}:`);
+            this.log(`        Type: ${action.actionType}`);
         });
     }
 
@@ -120,14 +100,10 @@ export class ModelDefinitionLogger extends QuodsiLogger {
         this.log(`    Target ID: ${connector.targetId || "Not defined"}`);
         this.log(`    Weight: ${connector.weight !== undefined ? connector.weight : "Not defined"}`);
 
-        const operationSteps = connector.operationSteps;
-        this.log(`    Number of Operation Steps: ${operationSteps?.length || 0}`);
-        operationSteps?.forEach((step, index) => {
-            this.log(`      Operation Step ${index + 1}:`);
-            if (step.requirementId) {
-                this.log(`        Resource Requirement ID: ${step.requirementId}`);
-                this.log(`        Quantity: ${step.quantity}`);
-            }
+        this.log(`    Number of Actions: ${connector.actions?.length || 0}`);
+        connector.actions?.forEach((action, index) => {
+            this.log(`      Action ${index + 1}:`);
+            this.log(`        Type: ${action.actionType}`);
         });
     }
 

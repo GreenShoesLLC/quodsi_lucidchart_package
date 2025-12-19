@@ -14,6 +14,8 @@ import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
 import { ValidationRuleName } from "../types/ValidationRuleName";
+import { ActionType } from "../../types/elements/actions/ActionType";
+import { SeizeAction, ReleaseAction, DelayWithResourceAction } from "../../types/elements/actions";
 
 /**
  * Service for validating ModelDefinition objects against business rules.
@@ -258,10 +260,25 @@ export class ModelValidationService extends QuodsiLogger {
         activities.forEach(activity => {
             const assignedResources = new Set<string>();
 
-            // Process resource assignments immediately during initialization
-            activity.operationSteps?.forEach(step => {
-                if (step.requirementId) {
-                    const requirement = requirementMap.get(step.requirementId);
+            // Process resource assignments from actions
+            activity.actions?.forEach(action => {
+                let requirementId: string | null = null;
+
+                // Extract requirementId based on action type
+                switch (action.actionType) {
+                    case ActionType.SEIZE:
+                        requirementId = (action as SeizeAction).resourceRequirementId || null;
+                        break;
+                    case ActionType.RELEASE:
+                        requirementId = (action as ReleaseAction).resourceRequirementId || null;
+                        break;
+                    case ActionType.DELAY_WITH_RESOURCE:
+                        requirementId = (action as DelayWithResourceAction).resourceRequirementId;
+                        break;
+                }
+
+                if (requirementId) {
+                    const requirement = requirementMap.get(requirementId);
                     if (requirement) {
                         requirement.rootClauses.forEach(clause => {
                             clause.requests.forEach(request => {

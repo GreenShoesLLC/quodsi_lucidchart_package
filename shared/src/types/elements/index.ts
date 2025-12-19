@@ -27,7 +27,6 @@ export * from './Model';
 export * from './ModelDefaults';
 export * from './ModelDefinition';
 export * from './ModelUtils';
-export * from './OperationStep';
 export * from './PeriodUnit';
 export * from './RequirementMode';
 export * from './Resource';

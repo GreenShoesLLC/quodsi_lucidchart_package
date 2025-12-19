@@ -18,7 +18,7 @@ export interface EditorReferenceData {
         id: string,
         name: string,
         connectType?: ConnectType,
-        operationStepRequirementIds?: string[]  // Requirement IDs used by operation steps
+        actionRequirementIds?: string[]  // Requirement IDs used by actions
     }>;
     generators?: Array<{ id: string, name: string }>;
     resourceRequirements?: ResourceRequirement[];

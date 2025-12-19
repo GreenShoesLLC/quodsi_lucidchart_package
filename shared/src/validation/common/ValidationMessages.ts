@@ -127,25 +127,25 @@ export class ValidationMessages {
         };
     }
 
-    static missingOperationSteps(elementId: string, activityName?: string): ValidationIssue {
-        const code = 'missing_operation_steps';
+    static missingActions(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'missing_actions';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.ERROR,
-            message: `Activity ${displayName} is missing operation steps property`,
+            message: `Activity ${displayName} is missing actions property`,
             elementId,
             code
         };
     }
 
-    static noOperationSteps(elementId: string, activityName?: string): ValidationIssue {
-        const code = 'no_operation_steps';
+    static noActions(elementId: string, activityName?: string): ValidationIssue {
+        const code = 'no_actions';
         const displayName = this.getDisplayName(activityName, elementId);
         return {
             id: this.generateId(code, elementId),
             severity: ValidationSeverity.WARNING,
-            message: `Activity ${displayName} has no operation steps defined`,
+            message: `Activity ${displayName} has no actions defined`,
             elementId,
             code
         };

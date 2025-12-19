@@ -20,7 +20,7 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nActivities:', modelDefinition.activities.getAll().map(a => ({
         id: a.id,
         name: a.name,
-        operationSteps: a.operationSteps
+        actions: a.actions
     })));
 
     console.log('\nGenerators:', modelDefinition.generators.getAll().map(g => ({

@@ -4,7 +4,6 @@ import {
     Action,
     SimulationObjectType,
     ComponentLogger,
-    StateModification,
     ActivityFinancialProperties,
     ConnectType,
     parseStructuredName,
@@ -39,8 +38,6 @@ interface StoredActivityData {
     inboundQueueCapacity?: number;
     outboundQueueCapacity?: number;
     actions?: Action[];
-    preProcessingStateModifications?: any[];
-    postProcessingStateModifications?: any[];
     financialProperties?: any;
     connectType?: string;
     resourceName?: string;  // Resource name to auto-create during conversion
@@ -77,19 +74,6 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
-
-        // Deserialize state modifications
-        if (storedData?.preProcessingStateModifications) {
-            activity.preProcessingStateModifications = storedData.preProcessingStateModifications.map(
-                (data: any) => StateModification.fromJSON(data)
-            );
-        }
-
-        if (storedData?.postProcessingStateModifications) {
-            activity.postProcessingStateModifications = storedData.postProcessingStateModifications.map(
-                (data: any) => StateModification.fromJSON(data)
-            );
-        }
 
         // Deserialize financial properties
         if (storedData?.financialProperties) {
@@ -153,8 +137,6 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             inboundQueueCapacity: this.simObject.inboundQueueCapacity,
             outboundQueueCapacity: this.simObject.outboundQueueCapacity,
             actions: this.simObject.actions,
-            preProcessingStateModifications: this.simObject.preProcessingStateModifications.map(m => m.toJSON()),
-            postProcessingStateModifications: this.simObject.postProcessingStateModifications.map(m => m.toJSON()),
             financialProperties: this.simObject.financialProperties?.toJSON(),
             connectType: this.simObject.connectType
         };
@@ -230,8 +212,6 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             inboundQueueCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundQueueCapacity,
             outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,
             actions: actions,
-            preProcessingStateModifications: defaultActivity.preProcessingStateModifications.map(m => m.toJSON()),
-            postProcessingStateModifications: defaultActivity.postProcessingStateModifications.map(m => m.toJSON()),
             financialProperties: defaultActivity.financialProperties?.toJSON(),
             connectType: defaultActivity.connectType,
             resourceName: fields.resource  // Store for auto-creation during conversion

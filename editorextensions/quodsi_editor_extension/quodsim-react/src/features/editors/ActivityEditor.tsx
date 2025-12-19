@@ -6,7 +6,6 @@ import {
   DollarSign,
   Hash,
   ArrowRightLeft,
-  Zap,
   Info,
 } from "lucide-react";
 import {
@@ -44,7 +43,6 @@ import {
 } from "@quodsi/shared";
 import { ActionEditor } from "./ActionEditor";
 import StatesEditor from "./StatesEditor";
-import StateModificationsEditor from "./StateModificationsEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import {
@@ -172,13 +170,6 @@ const TAB_CONFIG = [
       "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates",
   },
   {
-    id: "events" as const,
-    title: "Event Modifications",
-    icon: Zap,
-    tooltip:
-      "Configure state modifications that occur when entities enter (pre-processing) and exit (post-processing) this activity",
-  },
-  {
     id: "states" as const,
     title: "State Definitions",
     icon: Hash,
@@ -234,18 +225,17 @@ type ActivityTab =
   | "actions"
   | "financial"
   | "connectors"
-  | "states"
-  | "events";
+  | "states";
 
 /**
  * ActivityEditor - Comprehensive editor for Activity simulation objects
  *
  * This component provides a tabbed interface for editing all aspects of an Activity:
  * - Basic: Name, capacity, queue sizes
- * - Operation Steps: Processing durations and resource requirements
+ * - Actions: Processing durations and resource requirements
  * - Financial: Cost tracking properties
  * - Connectors: Routing rules for outgoing connectors
- * - States: State modifications (pre/post processing)
+ * - States: State definitions for the activity
  *
  * State Management:
  * - Maintains local draft state (localActivityDraft) for immediate UI updates
@@ -257,7 +247,6 @@ type ActivityTab =
  * - Dirty state tracking (hasPendingChanges) enables/disables Save button
  * - Guard conditions prevent data loss when switching activities
  * - Immutable updates via updateActivityImmutably helper
- * - Auto-save for state modifications (pre/post processing events)
  */
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
@@ -378,16 +367,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? ActivityFinancialProperties.fromJSON(data.financialProperties)
       : new ActivityFinancialProperties();
 
-    // Always create new arrays to ensure reference changes for proper change detection
-    activity.preProcessingStateModifications =
-      data.preProcessingStateModifications
-        ? [...data.preProcessingStateModifications]
-        : [];
-    activity.postProcessingStateModifications =
-      data.postProcessingStateModifications
-        ? [...data.postProcessingStateModifications]
-        : [];
-
     return activity;
   };
 
@@ -414,8 +393,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       actions: Action[];
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
-      preProcessingStateModifications: any[];
-      postProcessingStateModifications: any[];
     }>
   ): Activity => {
     const updated = new Activity(
@@ -433,12 +410,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     updated.connectType = updates.connectType ?? base.connectType;
     updated.financialProperties =
       updates.financialProperties ?? base.financialProperties;
-    updated.preProcessingStateModifications =
-      updates.preProcessingStateModifications ??
-      base.preProcessingStateModifications;
-    updated.postProcessingStateModifications =
-      updates.postProcessingStateModifications ??
-      base.postProcessingStateModifications;
 
     return updated;
   };
@@ -569,12 +540,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Preserve financialProperties
     activityToSave.financialProperties = localActivityDraft.financialProperties;
-
-    // Preserve state modifications
-    activityToSave.preProcessingStateModifications =
-      localActivityDraft.preProcessingStateModifications;
-    activityToSave.postProcessingStateModifications =
-      localActivityDraft.postProcessingStateModifications;
 
     // Save is handled through Redux - modelOpsSender will dispatch ELEMENT_SAVE_START
     onSave(activityToSave);
@@ -830,54 +795,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       });
     });
     setHasPendingChanges(true);
-  };
-
-  /**
-   * Handles changes to pre-processing state modifications.
-   *
-   * IMPORTANT: This handler auto-saves immediately (different from other handlers).
-   * State modifications are considered "committed" as soon as they're changed.
-   *
-   * Flow:
-   * 1. Create updated activity with new modifications
-   * 2. Trigger immediate save via onSave (Redux manages save state)
-   * 3. Update local state to match
-   *
-   * This prevents the Save button workflow - changes are persisted immediately.
-   */
-  const handlePreProcessingChange = (mods: any[]) => {
-    const updatedActivity = updateActivityImmutably(localActivityDraft, {
-      preProcessingStateModifications: mods,
-    });
-
-    // Auto-save immediately (Redux manages save state)
-    onSave(updatedActivity);
-    // Update local state to match
-    setLocalActivityDraft(updatedActivity);
-  };
-
-  /**
-   * Handles changes to post-processing state modifications.
-   *
-   * IMPORTANT: This handler auto-saves immediately (different from other handlers).
-   * State modifications are considered "committed" as soon as they're changed.
-   *
-   * Flow:
-   * 1. Create updated activity with new modifications
-   * 2. Trigger immediate save via onSave (Redux manages save state)
-   * 3. Update local state to match
-   *
-   * This prevents the Save button workflow - changes are persisted immediately.
-   */
-  const handlePostProcessingChange = (mods: any[]) => {
-    const updatedActivity = updateActivityImmutably(localActivityDraft, {
-      postProcessingStateModifications: mods,
-    });
-
-    // Auto-save immediately (Redux manages save state)
-    onSave(updatedActivity);
-    // Update local state to match
-    setLocalActivityDraft(updatedActivity);
   };
 
   /**
@@ -1364,38 +1281,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               />
           )}
 
-          {activeTab === "events" && (
-            <div className="space-y-2">
-              {/* Pre-Processing State Modifications */}
-              <div className="border-b pb-2">
-                <StateModificationsEditor
-                  modifications={
-                    localActivityDraft.preProcessingStateModifications || []
-                  }
-                  onModificationsChange={handlePreProcessingChange}
-                  states={states}
-                  title="Pre-Processing State Modifications"
-                  description="Applied before entry"
-                  allowCrossComponent={true}
-                />
-              </div>
-
-              {/* Post-Processing State Modifications */}
-              <div>
-                <StateModificationsEditor
-                  modifications={
-                    localActivityDraft.postProcessingStateModifications || []
-                  }
-                  onModificationsChange={handlePostProcessingChange}
-                  states={states}
-                  title="Post-Processing State Modifications"
-                  description="Applied after completion"
-                  allowCrossComponent={true}
-                />
-              </div>
-            </div>
-          )}
-
           {activeTab === "states" && (
             <StatesEditor
                 states={states}
@@ -1410,12 +1295,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
         Hidden for tabs with auto-save behavior:
         - states: State definitions auto-save immediately
-        - events: State modifications auto-save immediately
 
         Shown for manual-save tabs:
-        - basic, opsteps, financial, connectors
+        - basic, actions, financial, connectors
       */}
-        {activeTab !== "states" && activeTab !== "events" && (
+        {activeTab !== "states" && (
           <div className="flex justify-end gap-2 pt-2 border-t">
             <button
               type="button"

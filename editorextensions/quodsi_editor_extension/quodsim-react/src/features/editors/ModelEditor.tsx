@@ -650,11 +650,11 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
               updateResourceRequirements(requirementsPayload);
             }}
             getUsageCount={(id) => {
-              // Calculate how many operation steps use this requirement
+              // Calculate how many actions use this requirement
               const activities = referenceData?.activities || [];
               let count = 0;
               for (const activity of activities) {
-                const reqIds = activity.operationStepRequirementIds || [];
+                const reqIds = activity.actionRequirementIds || [];
                 count += reqIds.filter(reqId => reqId === id).length;
               }
               return count;

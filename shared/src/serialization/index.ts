@@ -14,7 +14,6 @@ export type { ISerializedConnector } from './interfaces/ISerializedConnector';
 export type { ISerializedDuration } from './interfaces/ISerializedDuration';
 export type { ISerializedEntity } from './interfaces/ISerializedEntity';
 export type { ISerializedGenerator } from './interfaces/ISerializedGenerator';
-export type { ISerializedOperationStep } from './interfaces/ISerializedOperationStep';
 export type { ISerializedResource } from './interfaces/ISerializedResource';
 export type { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 export type { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';

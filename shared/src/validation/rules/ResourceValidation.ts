@@ -6,6 +6,8 @@ import { Resource } from "../../types/elements/Resource";
 import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
 import { Activity } from "../../types/elements/Activity";
 import { RequirementMode } from "../../types/elements/RequirementMode";
+import { ActionType } from "../../types/elements/actions/ActionType";
+import { SeizeAction, ReleaseAction, DelayWithResourceAction } from "../../types/elements/actions";
 
 
 export class ResourceValidation extends ValidationRule {
@@ -81,12 +83,27 @@ export class ResourceValidation extends ValidationRule {
             resourceUsage.set(resource.id, new Set<string>());
         });
 
-        // Process activities and their resource requirements
+        // Process activities and their resource requirements from actions
         activities.forEach(activity => {
-            if (activity.operationSteps) {
-                activity.operationSteps.forEach(step => {
-                    if (step.requirementId) {
-                        const requirement = requirementMap.get(step.requirementId);
+            if (activity.actions) {
+                activity.actions.forEach(action => {
+                    let requirementId: string | null = null;
+
+                    // Extract requirementId based on action type
+                    switch (action.actionType) {
+                        case ActionType.SEIZE:
+                            requirementId = (action as SeizeAction).resourceRequirementId || null;
+                            break;
+                        case ActionType.RELEASE:
+                            requirementId = (action as ReleaseAction).resourceRequirementId || null;
+                            break;
+                        case ActionType.DELAY_WITH_RESOURCE:
+                            requirementId = (action as DelayWithResourceAction).resourceRequirementId;
+                            break;
+                    }
+
+                    if (requirementId) {
+                        const requirement = requirementMap.get(requirementId);
                         if (requirement) {
                             this.processResourceRequirement(
                                 requirement,
@@ -98,7 +115,7 @@ export class ResourceValidation extends ValidationRule {
                             issues.push(ValidationMessages.createIssue(
                                 ValidationSeverity.ERROR,
                                 'invalid_requirement_reference',
-                                `Invalid resource requirement reference: ${step.requirementId}`,
+                                `Invalid resource requirement reference: ${requirementId}`,
                                 activity.id
                             ));
                         }
@@ -277,23 +294,14 @@ export class ResourceValidation extends ValidationRule {
         }
     }
 
-    private calculateMaxResourceDemand(activity: any, resourceId: string): number {
+    private calculateMaxResourceDemand(activity: Activity, resourceId: string): number {
         /**
          * Calculates the maximum possible demand for a resource by a single activity.
+         * Note: This is a simplified calculation - actual demand depends on requirement structure.
          */
 
-        let maxDemand = 0;
-
-        activity.operationSteps?.forEach((step: any) => {
-            if (step.resourceSetRequest?.requests) {
-                step.resourceSetRequest.requests.forEach((request: any) => {
-                    if (request.resource?.id === resourceId) {
-                        maxDemand = Math.max(maxDemand, request.quantity || 0);
-                    }
-                });
-            }
-        });
-
-        return maxDemand;
+        // For now, return 1 as a basic default since the detailed resource demand
+        // calculation would require resolving requirement clauses to actual resources
+        return 1;
     }
 }

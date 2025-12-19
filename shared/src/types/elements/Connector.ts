@@ -1,11 +1,8 @@
 import { SimulationObjectType } from "./SimulationObjectType";
-import { OperationStep } from "./OperationStep";
 import { FlowNode } from "./FlowNode";
 import { StateCondition } from "./StateCondition";
 import { StateModification } from "./StateModification";
 import { Action } from "./actions";
-import { ActionType } from "./actions/ActionType";
-import { DelayWithResourceAction } from "./actions/DelayWithResourceAction";
 
 export class Connector extends FlowNode {
     type: SimulationObjectType = SimulationObjectType.Connector;
@@ -59,12 +56,6 @@ export class Connector extends FlowNode {
     stateModifications: StateModification[] = [];
 
     /**
-     * @deprecated Use actions[] instead.
-     * Operation steps during transit.
-     */
-    public operationSteps: OperationStep[] = [];
-
-    /**
      * @deprecated Use destinationUniqueId instead.
      * ID of the target node.
      */
@@ -82,8 +73,7 @@ export class Connector extends FlowNode {
             'New Connector',
             '', // sourceId
             '', // targetId (legacy)
-            1, // weight
-            [] // operationSteps (legacy)
+            1  // weight
         );
 
         // Set source and target coordinates
@@ -107,7 +97,6 @@ export class Connector extends FlowNode {
         public sourceId: string,
         targetId: string,
         public weight: number = 1,
-        operationSteps: OperationStep[] = [],
         sourceX: number = 0,
         sourceY: number = 0,
         targetX: number = 0,
@@ -117,9 +106,8 @@ export class Connector extends FlowNode {
     ) {
         super();
 
-        // Set legacy fields
+        // Set legacy field
         this.targetId = targetId;
-        this.operationSteps = operationSteps;
 
         // Set source and target coordinates
         this.sourceX = sourceX;
@@ -141,34 +129,6 @@ export class Connector extends FlowNode {
      */
     getEffectiveDestinationUniqueId(): string {
         return this.destinationUniqueId ?? this.targetId;
-    }
-
-    /**
-     * Gets the effective actions for this connector.
-     * If actions[] is populated, returns that.
-     * Otherwise, converts legacy operationSteps to actions.
-     */
-    getEffectiveActions(): Action[] {
-        if (this.actions.length > 0) {
-            return this.actions;
-        }
-        // Convert legacy operationSteps to DelayWithResourceAction
-        return this.operationSteps.map(step =>
-            Connector.convertOperationStepToAction(step)
-        );
-    }
-
-    /**
-     * Converts a legacy OperationStep to a DelayWithResourceAction
-     */
-    static convertOperationStepToAction(step: OperationStep): DelayWithResourceAction {
-        return {
-            actionType: ActionType.DELAY_WITH_RESOURCE,
-            duration: step.duration,
-            resourceRequirementId: step.requirementId,
-            keepResource: step.keepResource ?? false,
-            stateModifications: step.stateModifications ?? []
-        };
     }
 
     /**

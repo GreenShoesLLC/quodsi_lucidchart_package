@@ -14,7 +14,6 @@ export type {
   EntityData,
   GeneratorData,
   ConnectorData,
-  OperationStepData,
   ResourceRequirementData,
   RequirementClauseData,
   ResourceRequestData

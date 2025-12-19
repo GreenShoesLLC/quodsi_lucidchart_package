@@ -1,7 +1,6 @@
 import { LineProxy, BlockProxy } from 'lucid-extension-sdk';
 import {
     Connector,
-    OperationStep,
     SimulationObjectType,
     ComponentLogger,
     StateCondition,
@@ -35,7 +34,6 @@ interface StoredConnectorData {
     sourceId?: string;
     targetId?: string;
     weight?: number;
-    operationSteps?: OperationStep[];
     entityTemplateUniqueId?: string;
     stateCondition?: any;
     stateModifications?: any[];
@@ -73,7 +71,6 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             storedData?.sourceId || endpoint1.connection?.id || '',
             storedData?.targetId || endpoint2.connection?.id || '',
             storedData?.weight ?? 1,
-            storedData?.operationSteps || [],
             storedData?.sourceX ?? endpoint1.x ?? 0,
             storedData?.sourceY ?? endpoint1.y ?? 0,
             storedData?.targetX ?? endpoint2.x ?? 0,
@@ -158,7 +155,6 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: this.simObject.sourceId,
             targetId: this.simObject.targetId,
             weight: this.simObject.weight,
-            operationSteps: this.simObject.operationSteps,
             entityTemplateUniqueId: this.simObject.entityTemplateUniqueId,
             stateCondition: this.simObject.stateCondition?.toJSON(),
             stateModifications: this.simObject.stateModifications.map(m => m.toJSON())
@@ -274,7 +270,6 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: defaultConnector.sourceId,
             targetId: defaultConnector.targetId,
             weight: defaultConnector.weight,
-            operationSteps: defaultConnector.operationSteps,
             entityTemplateUniqueId: defaultConnector.entityTemplateUniqueId,
             stateCondition: defaultConnector.stateCondition?.toJSON(),
             stateModifications: defaultConnector.stateModifications.map(m => m.toJSON())

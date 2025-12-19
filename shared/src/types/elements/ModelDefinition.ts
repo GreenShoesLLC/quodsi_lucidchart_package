@@ -170,30 +170,15 @@ export class ModelDefinition {
             }
         }
 
-        // Validate activity state modifications
+        // Validate activity action state modifications
         for (const activity of this.activities.getAll()) {
-            if (activity.preProcessingStateModifications && activity.preProcessingStateModifications.length > 0) {
-                this.validateComponentStateModifications(
-                    activity.preProcessingStateModifications,
-                    stateLookup,
-                    `Activity '${activity.name}' pre-processing`
-                );
-            }
-            if (activity.postProcessingStateModifications && activity.postProcessingStateModifications.length > 0) {
-                this.validateComponentStateModifications(
-                    activity.postProcessingStateModifications,
-                    stateLookup,
-                    `Activity '${activity.name}' post-processing`
-                );
-            }
-
-            // Validate operation step state modifications
-            for (const operationStep of activity.operationSteps) {
-                if (operationStep.stateModifications && operationStep.stateModifications.length > 0) {
+            // Validate action state modifications (for actions that support them)
+            for (const action of activity.actions) {
+                if ('stateModifications' in action && action.stateModifications && action.stateModifications.length > 0) {
                     this.validateComponentStateModifications(
-                        operationStep.stateModifications,
+                        action.stateModifications,
                         stateLookup,
-                        `OperationStep '${operationStep.name || 'unnamed'}' in Activity '${activity.name}'`
+                        `Action in Activity '${activity.name}'`
                     );
                 }
             }
@@ -241,15 +226,25 @@ export class ModelDefinition {
      */
     validateCrossComponentAccess(): void {
         // This validates that referenced components exist when using cross-component state modifications
+        // Currently validates action state modifications and connector state modifications
         for (const activity of this.activities.getAll()) {
-            const modifications = [
-                ...(activity.preProcessingStateModifications || []),
-                ...(activity.postProcessingStateModifications || [])
-            ];
+            for (const action of activity.actions) {
+                if ('stateModifications' in action && action.stateModifications) {
+                    for (const modification of action.stateModifications) {
+                        if (modification.componentUniqueId) {
+                            this.validateComponentReference(modification);
+                        }
+                    }
+                }
+            }
+        }
 
-            for (const modification of modifications) {
-                if (modification.componentUniqueId) {
-                    this.validateComponentReference(modification);
+        for (const connector of this.connectors.getAll()) {
+            if (connector.stateModifications) {
+                for (const modification of connector.stateModifications) {
+                    if (modification.componentUniqueId) {
+                        this.validateComponentReference(modification);
+                    }
                 }
             }
         }

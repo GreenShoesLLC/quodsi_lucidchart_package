@@ -62,14 +62,6 @@ export interface ConnectorData {
   type: string;
 }
 
-export interface OperationStepData {
-  id: string;
-  activityId: string;
-  requirementId?: string;
-  duration: string;
-  quantity: number;
-}
-
 export interface ResourceRequirementData {
   id: string;
   name: string;
@@ -261,25 +253,6 @@ export class ModelReader extends DataSourceReader {
   }
 
   /**
-   * Gets all operation steps in the model
-   * @returns Array of operation step data or empty array if not found
-   */
-  async getOperationSteps(): Promise<OperationStepData[]> {
-    const collection = await this.getCollectionByName(MODEL_COLLECTIONS.OPERATION_STEPS);
-    if (!collection) return [];
-
-    const result: OperationStepData[] = [];
-
-    for (const [_, item] of collection.items) {
-      if (item) {
-        result.push(this.mapToOperationStepData(item));
-      }
-    }
-
-    return result;
-  }
-
-  /**
    * Gets all resource requirements in the model
    * @returns Array of resource requirement data or empty array if not found
    */
@@ -316,16 +289,6 @@ export class ModelReader extends DataSourceReader {
   async getIncomingConnectors(activityId: string): Promise<ConnectorData[]> {
     const allConnectors = await this.getConnectors();
     return allConnectors.filter(connector => connector.targetId === activityId);
-  }
-
-  /**
-   * Gets all operation steps for a specific activity
-   * @param activityId The activity ID
-   * @returns Array of operation steps or empty array if none found
-   */
-  async getActivityOperationSteps(activityId: string): Promise<OperationStepData[]> {
-    const allSteps = await this.getOperationSteps();
-    return allSteps.filter(step => step.activityId === activityId);
   }
 
   // Helper methods to map from DataItemProxy to strongly-typed objects
@@ -397,16 +360,6 @@ export class ModelReader extends DataSourceReader {
       sourceId: item.fields.get('sourceId') as string,
       targetId: item.fields.get('targetId') as string,
       type: item.fields.get('type') as string
-    };
-  }
-
-  private mapToOperationStepData(item: DataItemProxy): OperationStepData {
-    return {
-      id: item.fields.get('id') as string,
-      activityId: item.fields.get('activityId') as string,
-      requirementId: item.fields.get('requirementId') as string | undefined,
-      duration: item.fields.get('duration') as string,
-      quantity: item.fields.get('quantity') as number
     };
   }
 

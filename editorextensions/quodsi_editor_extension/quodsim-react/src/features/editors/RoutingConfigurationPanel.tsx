@@ -99,7 +99,6 @@ export const RoutingConfigurationPanel: React.FC<
       updates.sourceId ?? base.sourceId,
       updates.targetId ?? base.targetId,
       updates.weight ?? base.weight,
-      updates.operationSteps ?? base.operationSteps,
       updates.sourceX ?? base.sourceX,
       updates.sourceY ?? base.sourceY,
       updates.targetX ?? base.targetX,

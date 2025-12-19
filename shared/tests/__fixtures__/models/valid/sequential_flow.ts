@@ -8,11 +8,10 @@ import { Connector } from '../../../../src/types/elements/Connector';
 import { Entity } from '../../../../src/types/elements/Entity';
 import { Duration } from '../../../../src/types/elements/Duration';
 import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
-import { Distribution } from '../../../../src/types/elements/Distribution';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
-import { createOperationStep } from '../../../../src/types/elements/OperationStep';
-import { ConnectType } from '../../../../src/types/elements/ConnectType';
-import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
+import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
+import { EntitySourceConfig } from '../../../../src/types/elements/EntitySourceConfig';
+import { GeneratorType } from '../../../../src/types/elements/GeneratorType';
 
 export function createSequentialFlowModel(): ModelDefinition {
     // Create base model
@@ -36,17 +35,16 @@ export function createSequentialFlowModel(): ModelDefinition {
 
     // Create common duration for activities
     const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
-    
-    // Create operation step template
-    const operationStep = createOperationStep(duration, {
-        requirementId: resourceReq.id,
-        quantity: 1
+
+    // Create action template with resource requirement
+    const action = createDelayWithResourceAction(duration, {
+        resourceRequirementId: resourceReq.id
     });
 
     // Create activities
-    const activity1 = new Activity('activity-1', 'Activity1', 1, 1, 1, [operationStep]);
-    const activity2 = new Activity('activity-2', 'Activity2', 1, 1, 1, [operationStep]);
-    const activity3 = new Activity('activity-3', 'Activity3', 1, 1, 1, [operationStep]);
+    const activity1 = new Activity('activity-1', 'Activity1', 1, 1, 1, [action]);
+    const activity2 = new Activity('activity-2', 'Activity2', 1, 1, 1, [action]);
+    const activity3 = new Activity('activity-3', 'Activity3', 1, 1, 1, [action]);
     
     modelDef.activities.add(activity1);
     modelDef.activities.add(activity2);
@@ -78,8 +76,7 @@ export function createSequentialFlowModel(): ModelDefinition {
         'GeneratorToActivity1',
         generator.id,
         activity1.id,
-        1.0,
-        ConnectType.Probability
+        1.0
     );
 
     const connector12 = new Connector(
@@ -87,8 +84,7 @@ export function createSequentialFlowModel(): ModelDefinition {
         'Activity1ToActivity2',
         activity1.id,
         activity2.id,
-        1.0,
-        ConnectType.Probability
+        1.0
     );
 
     const connector23 = new Connector(
@@ -96,8 +92,7 @@ export function createSequentialFlowModel(): ModelDefinition {
         'Activity2ToActivity3',
         activity2.id,
         activity3.id,
-        1.0,
-        ConnectType.Probability
+        1.0
     );
 
     modelDef.connectors.add(connectorGen);
