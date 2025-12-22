@@ -354,35 +354,25 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 />
               </div>
 
-              {/* Capacity Section */}
+              {/* Resource Capacity */}
               <div className="pt-3 border-t">
-                <div className="mb-2">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <div className="text-xs font-medium text-gray-700">
-                      Capacity Configuration
-                    </div>
-                    <span title="Maximum number of concurrent uses for this resource. Determines how many entities can simultaneously seize this resource.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-xs font-medium text-gray-700">
+                    Resource Capacity
+                  </label>
+                  <span title="Maximum number of entities that can use this resource simultaneously. For example, capacity of 3 means up to 3 entities can seize the resource at the same time.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs text-gray-600">Capacity</label>
-                    <span title="The number of entities that can use this resource at the same time. For example, capacity of 3 means up to 3 entities can seize the resource simultaneously.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    name="capacity"
-                    className="w-full px-2 py-1.5 text-xs border rounded"
-                    value={localResourceDraft.capacity}
-                    onChange={handleInputChange}
-                    min="1"
-                    placeholder="1"
-                  />
-                </div>
+                <input
+                  type="number"
+                  name="capacity"
+                  className="w-full px-2 py-1.5 text-xs border rounded"
+                  value={localResourceDraft.capacity}
+                  onChange={handleInputChange}
+                  min="1"
+                  placeholder="1"
+                />
               </div>
           </div>
         )}
@@ -403,10 +393,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 </label>
               </div>
 
-              {/* Cost Components - Only shown when financial tracking is enabled */}
+              {/* Cost fields - Only shown when financial tracking is enabled */}
               {localResourceDraft.financialProperties?.enabled && (
                 <div className="space-y-0.5 pt-1">
-                  <div className="text-xs font-medium text-gray-600 mb-1">Cost Components</div>
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       <label className="text-xs text-gray-600">Cost Per Seize</label>
