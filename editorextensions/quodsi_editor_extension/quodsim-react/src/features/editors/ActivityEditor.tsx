@@ -941,86 +941,74 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   />
                 </div>
 
-                {/* Capacity Section */}
+                {/* Inbound Queue */}
                 <div className="pt-2 border-t">
-                  <div className="mb-1">
-                    <div className="flex items-center gap-1">
-                      <div className="text-xs font-medium text-gray-700">
-                        Capacity Configuration
-                      </div>
-                      <span title="Maximum number of entities that can be processed simultaneously in this activity">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">
-                      Capacity
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Inbound Queue
                     </label>
-                    <input
-                      type="number"
-                      name="capacity"
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      value={localActivityDraft.capacity}
-                      onChange={handleInputChange}
-                      min="1"
-                      placeholder="1"
-                    />
+                    <span title="Maximum entities waiting to enter this activity. Enter 999999 for unlimited (∞).">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
+                  <input
+                    type="number"
+                    name="inboundQueueCapacity"
+                    className="w-full px-2 py-1 text-xs border rounded"
+                    value={
+                      localActivityDraft.inboundQueueCapacity === Infinity
+                        ? INFINITY_DISPLAY_VALUE
+                        : localActivityDraft.inboundQueueCapacity
+                    }
+                    onChange={handleInputChange}
+                    min="0"
+                    max={INFINITY_DISPLAY_VALUE}
+                  />
                 </div>
 
-                {/* Queue Section */}
+                {/* Activity Capacity */}
                 <div className="pt-2 border-t">
-                  <div className="mb-1">
-                    <div className="flex items-center gap-1">
-                      <div className="text-xs font-medium text-gray-700">
-                        Queue Configuration
-                      </div>
-                      <span title="Queue capacity limits for entities waiting to enter (inbound queue) or exit (outbound queue) this activity. Enter 999999 to represent unlimited capacity (∞)">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Activity Capacity
+                    </label>
+                    <span title="Maximum entities processed simultaneously in this activity.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Inbound Queue
-                      </label>
-                      <input
-                        type="number"
-                        name="inboundQueueCapacity"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={
-                          localActivityDraft.inboundQueueCapacity === Infinity
-                            ? INFINITY_DISPLAY_VALUE
-                            : localActivityDraft.inboundQueueCapacity
-                        }
-                        onChange={handleInputChange}
-                        min="0"
-                        max={INFINITY_DISPLAY_VALUE}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Outbound Queue
-                      </label>
-                      <input
-                        type="number"
-                        name="outboundQueueCapacity"
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        value={
-                          localActivityDraft.outboundQueueCapacity === Infinity
-                            ? INFINITY_DISPLAY_VALUE
-                            : localActivityDraft.outboundQueueCapacity
-                        }
-                        onChange={handleInputChange}
-                        min="0"
-                        max={INFINITY_DISPLAY_VALUE}
-                        placeholder="0"
-                      />
-                    </div>
+                  <input
+                    type="number"
+                    name="capacity"
+                    className="w-full px-2 py-1 text-xs border rounded"
+                    value={localActivityDraft.capacity}
+                    onChange={handleInputChange}
+                    min="1"
+                  />
+                </div>
+
+                {/* Outbound Queue */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Outbound Queue
+                    </label>
+                    <span title="Maximum entities waiting to exit this activity. Enter 999999 for unlimited (∞).">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
                   </div>
+                  <input
+                    type="number"
+                    name="outboundQueueCapacity"
+                    className="w-full px-2 py-1 text-xs border rounded"
+                    value={
+                      localActivityDraft.outboundQueueCapacity === Infinity
+                        ? INFINITY_DISPLAY_VALUE
+                        : localActivityDraft.outboundQueueCapacity
+                    }
+                    onChange={handleInputChange}
+                    min="0"
+                    max={INFINITY_DISPLAY_VALUE}
+                  />
                 </div>
             </div>
           )}
@@ -1098,18 +1086,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </label>
                 </div>
 
-                {/* Cost Components - Only shown when financial tracking is enabled */}
+                {/* Cost fields - Only shown when financial tracking is enabled */}
                 {localActivityDraft.financialProperties?.enabled && (
                   <>
                     <div className="space-y-0.5">
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-xs font-medium text-gray-600">
-                          Cost Components
-                        </span>
-                        <span title="Define various cost types for this activity: fixed costs (one-time per activation), per-entity costs (charged for each item processed), and time-based costs (charged hourly while active or idle)">
-                          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                        </span>
-                      </div>
                       <div>
                         <div className="flex items-center gap-1 mb-0.5">
                           <label className="text-xs text-gray-600">
@@ -1220,43 +1200,33 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                       </div>
                     </div>
 
-                    {/* Resource Cost Settings */}
-                    <div className="space-y-0.5 pt-0.5 border-t">
+                    {/* Resource Cost Multiplier */}
+                    <div className="pt-0.5 border-t">
                       <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-xs font-medium text-gray-600">
-                          Resource Cost
-                        </span>
-                        <span title="Configure how resource costs are applied when resources are used by this activity. The multiplier adjusts resource costs for this specific activity context.">
+                        <label className="text-xs text-gray-600">
+                          Resource Cost Multiplier
+                        </label>
+                        <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
                           <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                         </span>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <label className="text-xs text-gray-600">
-                            Cost Multiplier
-                          </label>
-                          <span title="Multiplier applied to resource costs when resources are used by this activity. For example, 1.5 means resource costs are increased by 50%, 0.5 means costs are halved. Default is 1.0 (no adjustment).">
-                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                          </span>
-                        </div>
-                        <input
-                          type="number"
-                          className="w-full px-2 py-1 text-xs border rounded"
-                          value={
-                            localActivityDraft.financialProperties
-                              ?.resourceCostMultiplier || 1
-                          }
-                          onChange={(e) =>
-                            handleFinancialChange(
-                              "resourceCostMultiplier",
-                              parseFloat(e.target.value) || 1
-                            )
-                          }
-                          min="0"
-                          step="0.1"
-                          placeholder="1.0"
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border rounded"
+                        value={
+                          localActivityDraft.financialProperties
+                            ?.resourceCostMultiplier || 1
+                        }
+                        onChange={(e) =>
+                          handleFinancialChange(
+                            "resourceCostMultiplier",
+                            parseFloat(e.target.value) || 1
+                          )
+                        }
+                        min="0"
+                        step="0.1"
+                        placeholder="1.0"
+                      />
                     </div>
                   </>
                 )}

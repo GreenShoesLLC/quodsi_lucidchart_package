@@ -115,16 +115,6 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
 
   return (
     <div className="space-y-2">
-      {/* Distribution Overview */}
-      <div className="mb-2 pb-2 border-b">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
-          <span title="The uniform distribution generates values with equal probability across a range. All values between minimum and maximum are equally likely. Useful for modeling completely random selection within known bounds.">
-            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
-          </span>
-        </div>
-      </div>
-
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
           <span className="inline-flex items-center gap-1">

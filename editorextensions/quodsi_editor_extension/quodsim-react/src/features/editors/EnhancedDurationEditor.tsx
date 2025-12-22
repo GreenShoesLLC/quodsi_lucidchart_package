@@ -39,6 +39,15 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     [PeriodUnit.SECONDS]: "Seconds",
   };
 
+  // Distribution-specific help text
+  const distributionHelpText: Partial<Record<DistributionType, string>> = {
+    [DistributionType.CONSTANT]: "A fixed value with no variation. Use when duration is always exactly the same.",
+    [DistributionType.EXPONENTIAL]: "Models time between independent events at a constant average rate. Characterized by many short intervals and fewer long intervals. Use for arrival times or service durations in queuing systems.",
+    [DistributionType.NORMAL]: "Bell curve distribution where values cluster around the mean. Use for naturally occurring variation, measurement variations, or human-driven processes.",
+    [DistributionType.TRIANGULAR]: "Models situations with known minimum, maximum, and most likely values. Use for task durations when you have a best estimate and min/max bounds.",
+    [DistributionType.UNIFORM]: "All values between minimum and maximum are equally likely. Use for completely random selection within known bounds.",
+  };
+
   // Handle distribution type change
   const handleDistributionTypeChange = (type: DistributionType) => {
     // Create new distribution
@@ -82,6 +91,9 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
             hideLabel
           />
         </div>
+        <span title={distributionHelpText[distribution.distributionType] || "Statistical distribution for random value generation."}>
+          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+        </span>
       </div>
 
       {/* Distribution Parameters Editor */}

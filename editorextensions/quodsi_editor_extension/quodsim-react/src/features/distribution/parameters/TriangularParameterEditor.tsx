@@ -123,16 +123,6 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
 
   return (
     <div className="space-y-2">
-      {/* Distribution Overview */}
-      <div className="mb-2 pb-2 border-b">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
-          <span title="The triangular distribution models situations where you know the minimum, maximum, and most likely (mode) value. It's shaped like a triangle with values most frequently occurring near the mode. Useful for modeling task durations or quantities when you have a best estimate and min/max bounds.">
-            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
-          </span>
-        </div>
-      </div>
-
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
           <span className="inline-flex items-center gap-1">

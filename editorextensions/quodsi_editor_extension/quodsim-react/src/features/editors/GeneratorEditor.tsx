@@ -765,7 +765,7 @@ const GeneratorEditor: React.FC<Props> = ({
             <div>
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
-                    Interarrival Time
+                    Time Between Arrivals
                   </label>
                   <span title="The time interval between consecutive entity creation events. This defines how frequently the generator produces entities (e.g., every 5 minutes, every 2 hours).">
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />

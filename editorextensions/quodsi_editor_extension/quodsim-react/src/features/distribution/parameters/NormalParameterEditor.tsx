@@ -78,16 +78,6 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
 
   return (
     <div className="space-y-2">
-      {/* Distribution Overview */}
-      <div className="mb-2 pb-2 border-b">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-semibold text-gray-700">Distribution Overview</span>
-          <span title="The normal (Gaussian) distribution models naturally occurring variation with a bell curve shape. Values cluster around the mean with decreasing probability further away. The standard deviation controls how spread out values are. Useful for modeling measurement variations, human-driven processes, and many natural phenomena.">
-            <Info className="w-3.5 h-3.5 text-blue-500 hover:text-blue-700 cursor-help" />
-          </span>
-        </div>
-      </div>
-
       <div>
         <label className="block text-xs text-gray-600 font-medium mb-0.5">
           <span className="inline-flex items-center gap-1">
