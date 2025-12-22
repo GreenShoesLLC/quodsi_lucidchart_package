@@ -10,6 +10,7 @@ interface DistributionTypeSelectorProps {
   onChange: (type: DistributionType) => void;
   disabled?: boolean;
   allowedTypes?: DistributionType[];
+  hideLabel?: boolean;
 }
 
 export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> = ({
@@ -17,6 +18,7 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   onChange,
   disabled = false,
   allowedTypes,
+  hideLabel = false,
 }) => {
   // Filter distribution types to only show supported ones and if allowedTypes is provided, filter further
   const supportedTypes = Object.values(DistributionType)
@@ -43,14 +45,16 @@ export const DistributionTypeSelector: React.FC<DistributionTypeSelectorProps> =
   
   return (
     <div>
-      <label className="block text-xs text-gray-600 font-medium mb-0.5">
-        <span className="inline-flex items-center gap-1">
-          Distribution Type
-          <span title="The statistical distribution used to generate random values. Different distributions model different real-world variability patterns.">
-            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+      {!hideLabel && (
+        <label className="block text-xs text-gray-600 font-medium mb-0.5">
+          <span className="inline-flex items-center gap-1">
+            Distribution Type
+            <span title="The statistical distribution used to generate random values. Different distributions model different real-world variability patterns.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      )}
       <select
         value={distributionType}
         onChange={handleChange}

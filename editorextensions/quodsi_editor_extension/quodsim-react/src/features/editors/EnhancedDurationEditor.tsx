@@ -67,28 +67,21 @@ export const EnhancedDurationEditor: React.FC<EnhancedDurationEditorProps> = ({
     onChange(event.target.value as PeriodUnit, distribution);
   };
 
-  // Check if we have only one allowed distribution type that matches the current type
-  const isFixedDistribution =
-    allowedDistributionTypes &&
-    allowedDistributionTypes.length === 1 &&
-    allowedDistributionTypes[0] === distribution.distributionType;
-
   return (
     <div className={`duration-editor ${compact ? "compact" : ""} space-y-0.5`}>
-      {/* Label - enhanced to include distribution type info when fixed */}
-      <div className="text-xs font-medium text-gray-700 mb-0.5">
-        {isFixedDistribution && distribution.distributionType === DistributionType.CONSTANT
-          ? `${label}`
-          : label}
-      </div>
-
-      {/* Distribution Type Selector - only shown if not fixed */}
-      <div>
-        <DistributionTypeSelector
-          distributionType={distribution.distributionType}
-          onChange={handleDistributionTypeChange}
-          allowedTypes={allowedDistributionTypes}
-        />
+      {/* Distribution Type - label and selector inline */}
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-medium text-gray-700 whitespace-nowrap">
+          {label} Type
+        </label>
+        <div className="flex-1">
+          <DistributionTypeSelector
+            distributionType={distribution.distributionType}
+            onChange={handleDistributionTypeChange}
+            allowedTypes={allowedDistributionTypes}
+            hideLabel
+          />
+        </div>
       </div>
 
       {/* Distribution Parameters Editor */}

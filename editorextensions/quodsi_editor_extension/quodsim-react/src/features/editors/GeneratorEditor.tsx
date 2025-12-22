@@ -756,51 +756,6 @@ const GeneratorEditor: React.FC<Props> = ({
                   ))}
                 </select>
               </div>
-
-              {/* Generation Configuration */}
-              <div className="pt-2 border-t">
-                <div className="text-xs font-medium text-gray-700 mb-1">
-                  Generation Configuration
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <label className="text-xs text-gray-600">
-                        Entities Per
-                      </label>
-                      <span title="How many entities are created each time the generator fires. For example, a value of 5 means 5 entities arrive simultaneously at each creation event.">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      name="entitiesPerCreation"
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.generationConfig.entitiesPerCreation}
-                      onChange={handleInputChange}
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <label className="text-xs text-gray-600">
-                        Max Entities
-                      </label>
-                      <span title={`Maximum total number of entities this generator will create across all occurrences. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      name="maxEntities"
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.generationConfig.maxEntities}
-                      onChange={handleInputChange}
-                      min="1"
-                    />
-                  </div>
-                </div>
-              </div>
           </div>
         )}
 
@@ -878,6 +833,51 @@ const GeneratorEditor: React.FC<Props> = ({
                   }
                   compact={true}
                 />
+              </div>
+
+              {/* Generation Limits */}
+              <div className="pt-2 border-t">
+                <div className="text-xs font-medium text-gray-700 mb-1">
+                  Generation Limits
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">
+                        Entities Per
+                      </label>
+                      <span title="How many entities are created each time the generator fires. For example, a value of 5 means 5 entities arrive simultaneously at each creation event.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      name="entitiesPerCreation"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localGeneratorDraft.generationConfig.entitiesPerCreation}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1 mb-1">
+                      <label className="text-xs text-gray-600">
+                        Max Entities
+                      </label>
+                      <span title={`Maximum total number of entities this generator will create across all occurrences. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      name="maxEntities"
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      value={localGeneratorDraft.generationConfig.maxEntities}
+                      onChange={handleInputChange}
+                      min="1"
+                    />
+                  </div>
+                </div>
               </div>
           </div>
         )}
