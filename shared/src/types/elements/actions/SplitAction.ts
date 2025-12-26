@@ -10,6 +10,10 @@ import { StateModification } from '../StateModification';
  *
  * This is the TypeScript equivalent of the Python SplitAction.
  *
+ * IMPORTANT: destinationId is REQUIRED for execution. The engine validates that:
+ * - destinationId is set (non-empty)
+ * - destinationId is different from the current activity (to prevent infinite loops)
+ *
  * Use cases:
  * - Batch splitting: A batch of 10 items splits into 10 individual items
  * - Order splitting: An order splits into multiple shipments
@@ -32,7 +36,7 @@ export interface SplitAction {
     entityTemplateId: string | null;
 
     /**
-     * Where to route new entities (null = continue to next activity)
+     * Where to route new entities (REQUIRED - must be different from current activity)
      */
     destinationId: string | null;
 
@@ -56,11 +60,11 @@ export interface SplitAction {
 /**
  * Creates a SplitAction with default values.
  *
- * @param count Number of entities to create (default: 2)
+ * @param count Number of entities to create (default: 1)
  * @param options Optional configuration for the split action
  */
 export function createSplitAction(
-    count: number = 2,
+    count: number = 1,
     options?: Partial<Omit<SplitAction, 'actionType' | 'count'>>
 ): SplitAction {
     return {

@@ -4,6 +4,11 @@ import { ReleaseAction } from './ReleaseAction';
 import { DelayAction } from './DelayAction';
 import { DelayWithResourceAction } from './DelayWithResourceAction';
 import { SplitAction } from './SplitAction';
+import { CreateAction } from './CreateAction';
+import { DisposeAction } from './DisposeAction';
+import { JoinAction } from './JoinAction';
+import { LoopAction } from './LoopAction';
+import { BranchAction } from './BranchAction';
 
 /**
  * Union type representing all possible actions in the simulation.
@@ -24,6 +29,18 @@ import { SplitAction } from './SplitAction';
  *         case ActionType.DELAY_WITH_RESOURCE:
  *             // action is DelayWithResourceAction
  *             break;
+ *         case ActionType.DISPOSE:
+ *             // action is DisposeAction
+ *             break;
+ *         case ActionType.JOIN:
+ *             // action is JoinAction
+ *             break;
+ *         case ActionType.LOOP:
+ *             // action is LoopAction
+ *             break;
+ *         case ActionType.BRANCH:
+ *             // action is BranchAction
+ *             break;
  *         // ... etc
  *     }
  * }
@@ -37,4 +54,9 @@ export type Action =
     | ReleaseAction
     | DelayAction
     | DelayWithResourceAction
-    | SplitAction;
+    | SplitAction
+    | CreateAction
+    | DisposeAction
+    | JoinAction
+    | LoopAction
+    | BranchAction;

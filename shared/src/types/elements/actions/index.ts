@@ -9,6 +9,11 @@ export * from './ReleaseAction';
 export * from './DelayAction';
 export * from './DelayWithResourceAction';
 export * from './SplitAction';
+export * from './CreateAction';
+export * from './DisposeAction';
+export * from './JoinAction';
+export * from './LoopAction';
+export * from './BranchAction';
 
 // Re-export factory functions for convenience
 import { ActionType } from './ActionType';
@@ -19,6 +24,11 @@ import { createReleaseAction } from './ReleaseAction';
 import { createDelayAction } from './DelayAction';
 import { createDelayWithResourceAction } from './DelayWithResourceAction';
 import { createSplitAction } from './SplitAction';
+import { createCreateAction } from './CreateAction';
+import { createDisposeAction } from './DisposeAction';
+import { createJoinAction } from './JoinAction';
+import { createLoopAction } from './LoopAction';
+import { createBranchAction } from './BranchAction';
 import { Duration } from '../Duration';
 
 /**
@@ -37,7 +47,17 @@ export function createDefaultAction(actionType: ActionType): Action {
         case ActionType.DELAY_WITH_RESOURCE:
             return createDelayWithResourceAction(new Duration());
         case ActionType.SPLIT:
-            return createSplitAction(2);
+            return createSplitAction(1);
+        case ActionType.CREATE:
+            return createCreateAction();
+        case ActionType.DISPOSE:
+            return createDisposeAction();
+        case ActionType.JOIN:
+            return createJoinAction();
+        case ActionType.LOOP:
+            return createLoopAction();
+        case ActionType.BRANCH:
+            return createBranchAction();
         default:
             throw new Error(`Unknown action type: ${actionType}`);
     }

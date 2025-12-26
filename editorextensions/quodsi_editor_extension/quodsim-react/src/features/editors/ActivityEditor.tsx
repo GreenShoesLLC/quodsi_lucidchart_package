@@ -28,6 +28,11 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   Activity,
   Action,
+  ActionType,
+  SplitAction,
+  CreateAction,
+  JoinAction,
+  BranchAction,
   PeriodUnit,
   SimulationObjectType,
   createDelayWithResourceAction,
@@ -70,6 +75,7 @@ interface SortableActionItemProps {
   resourceRequirements?: ResourceRequirement[];
   availableResources?: Array<{ id: string; name: string }>;
   availableEntities?: Array<{ id: string; name: string }>;
+  availableActivities?: Array<{ id: string; name: string }>;
   onOpenRequirementModal?: (requirementId: string) => void;
   onCreateRequirement?: () => void;
   states?: StateListManager;
@@ -87,6 +93,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
   resourceRequirements,
   availableResources,
   availableEntities,
+  availableActivities,
   onOpenRequirementModal,
   onCreateRequirement,
   states,
@@ -119,6 +126,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
         resourceRequirements={resourceRequirements}
         availableResources={availableResources}
         availableEntities={availableEntities}
+        availableActivities={availableActivities}
         onOpenRequirementModal={onOpenRequirementModal}
         onCreateRequirement={onCreateRequirement}
         dragHandleProps={{ ...attributes, ...listeners }}
@@ -471,6 +479,55 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
   // ============================================================================
+  // VALIDATION
+  // ============================================================================
+
+  /**
+   * Check if any SplitAction is missing a required destination.
+   * SplitActions require a destination activity to prevent infinite loops.
+   */
+  const splitActionsWithoutDestination = localActivityDraft.actions.filter(
+    (action): action is SplitAction =>
+      action.actionType === ActionType.SPLIT && !(action as SplitAction).destinationId
+  );
+  const hasSplitValidationError = splitActionsWithoutDestination.length > 0;
+
+  /**
+   * Check if any CreateAction is missing required fields.
+   * CreateActions require both entityTemplateId and destinationId.
+   */
+  const createActionsWithMissingFields = localActivityDraft.actions.filter(
+    (action): action is CreateAction =>
+      action.actionType === ActionType.CREATE &&
+      (!(action as CreateAction).entityTemplateId || !(action as CreateAction).destinationId)
+  );
+  const hasCreateValidationError = createActionsWithMissingFields.length > 0;
+
+  /**
+   * Check if any JoinAction is missing required fields.
+   * JoinActions require both matchState and destinationId.
+   */
+  const joinActionsWithMissingFields = localActivityDraft.actions.filter(
+    (action): action is JoinAction =>
+      action.actionType === ActionType.JOIN &&
+      (!(action as JoinAction).matchState || !(action as JoinAction).destinationId)
+  );
+  const hasJoinValidationError = joinActionsWithMissingFields.length > 0;
+
+  /**
+   * Check if any BranchAction is missing a condition.
+   * BranchActions require a condition to evaluate.
+   */
+  const branchActionsWithMissingCondition = localActivityDraft.actions.filter(
+    (action): action is BranchAction =>
+      action.actionType === ActionType.BRANCH && !(action as BranchAction).condition
+  );
+  const hasBranchValidationError = branchActionsWithMissingCondition.length > 0;
+
+  // Combined validation error flag
+  const hasActionValidationError = hasSplitValidationError || hasCreateValidationError || hasJoinValidationError || hasBranchValidationError;
+
+  // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
 
@@ -613,6 +670,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     setLocalActivityDraft((prev) => {
       const newActions = [...prev.actions, newAction];
+
+      // Auto-expand the newly added action (it will be at the last index)
+      const newActionIndex = newActions.length - 1;
+      setExpandedActions((prevExpanded) => {
+        const newSet = new Set(prevExpanded);
+        newSet.add(newActionIndex);
+        return newSet;
+      });
 
       return updateActivityImmutably(prev, {
         actions: newActions,
@@ -1052,6 +1117,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         resourceRequirements={referenceData?.resourceRequirements}
                         availableResources={referenceData?.resources}
                         availableEntities={referenceData?.entities}
+                        availableActivities={referenceData?.activities?.filter(
+                          (a) => a.id !== localActivityDraft.id
+                        )}
                         onOpenRequirementModal={handleOpenRequirementModal}
                         onCreateRequirement={handleCreateRequirement}
                         states={states}
@@ -1270,29 +1338,64 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         - basic, actions, financial, connectors
       */}
         {activeTab !== "states" && (
-          <div className="flex justify-end gap-2 pt-2 border-t">
-            <button
-              type="button"
-              onClick={handleCancel}
-              disabled={isSaving}
-              className={`px-3 py-1.5 text-xs border rounded ${
-                isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-              }`}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!hasPendingChanges || isSaving}
-              className={`px-3 py-1.5 text-xs rounded ${
-                hasPendingChanges && !isSaving
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-            >
-              {isSaving ? "Saving..." : "Save"}
-            </button>
+          <div className="pt-2 border-t">
+            {/* Validation Error Messages */}
+            {hasSplitValidationError && (
+              <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                <strong>Cannot save:</strong> Split action requires a destination activity.
+                {splitActionsWithoutDestination.length > 1 && (
+                  <span> ({splitActionsWithoutDestination.length} actions need destinations)</span>
+                )}
+              </div>
+            )}
+            {hasCreateValidationError && (
+              <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                <strong>Cannot save:</strong> Create action requires entity template and destination.
+                {createActionsWithMissingFields.length > 1 && (
+                  <span> ({createActionsWithMissingFields.length} actions need configuration)</span>
+                )}
+              </div>
+            )}
+            {hasJoinValidationError && (
+              <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                <strong>Cannot save:</strong> Join action requires match state and destination.
+                {joinActionsWithMissingFields.length > 1 && (
+                  <span> ({joinActionsWithMissingFields.length} actions need configuration)</span>
+                )}
+              </div>
+            )}
+            {hasBranchValidationError && (
+              <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                <strong>Cannot save:</strong> Branch action requires a condition to be set.
+                {branchActionsWithMissingCondition.length > 1 && (
+                  <span> ({branchActionsWithMissingCondition.length} actions need configuration)</span>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={isSaving}
+                className={`px-3 py-1.5 text-xs border rounded ${
+                  isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={!hasPendingChanges || isSaving || hasActionValidationError}
+                className={`px-3 py-1.5 text-xs rounded ${
+                  hasPendingChanges && !isSaving && !hasActionValidationError
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
           </div>
         )}
       </div>

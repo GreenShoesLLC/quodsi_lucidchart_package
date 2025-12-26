@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Action,
   ActionType,
@@ -8,13 +8,28 @@ import {
   DelayAction,
   DelayWithResourceAction,
   SplitAction,
+  CreateAction,
+  DisposeAction,
+  JoinAction,
+  LoopAction,
+  BranchAction,
   createSplitAction,
+  createCreateAction,
+  createDisposeAction,
+  createJoinAction,
+  createLoopAction,
+  createBranchAction,
+  createDefaultAction,
   Duration,
   PeriodUnit,
   Distribution,
   ResourceRequirement,
   DistributionType,
   StateListManager,
+  StateType,
+  State,
+  StateCondition,
+  StateComparison,
 } from "@quodsi/shared";
 import { X, Edit2, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
@@ -32,6 +47,7 @@ interface ActionEditorProps {
   resourceRequirements?: ResourceRequirement[];
   availableResources?: Array<{ id: string; name: string }>;
   availableEntities?: Array<{ id: string; name: string }>;
+  availableActivities?: Array<{ id: string; name: string }>;
   onOpenRequirementModal?: (requirementId: string) => void;
   onCreateRequirement?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
@@ -49,6 +65,11 @@ const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   [ActionType.DELAY]: "Delay",
   [ActionType.DELAY_WITH_RESOURCE]: "Delay with Resource",
   [ActionType.SPLIT]: "Split Entity",
+  [ActionType.CREATE]: "Create Entity",
+  [ActionType.DISPOSE]: "Dispose Entity",
+  [ActionType.JOIN]: "Join Entities",
+  [ActionType.LOOP]: "Loop",
+  [ActionType.BRANCH]: "Branch",
 };
 
 const ACTION_TYPE_SHORT_LABELS: Record<ActionType, string> = {
@@ -56,8 +77,13 @@ const ACTION_TYPE_SHORT_LABELS: Record<ActionType, string> = {
   [ActionType.SEIZE]: "Seize Res",
   [ActionType.RELEASE]: "Release Res",
   [ActionType.DELAY]: "Delay",
-  [ActionType.DELAY_WITH_RESOURCE]: "Delay w/Res",
+  [ActionType.DELAY_WITH_RESOURCE]: "Process",
   [ActionType.SPLIT]: "Split",
+  [ActionType.CREATE]: "Create",
+  [ActionType.DISPOSE]: "Dispose",
+  [ActionType.JOIN]: "Join",
+  [ActionType.LOOP]: "Loop",
+  [ActionType.BRANCH]: "Branch",
 };
 
 const ACTION_TYPE_DESCRIPTIONS: Record<ActionType, string> = {
@@ -67,6 +93,11 @@ const ACTION_TYPE_DESCRIPTIONS: Record<ActionType, string> = {
   [ActionType.DELAY]: "Wait for a duration (no resources)",
   [ActionType.DELAY_WITH_RESOURCE]: "Classic operation: seize, delay, release",
   [ActionType.SPLIT]: "Replace entity with multiple new entities",
+  [ActionType.CREATE]: "Spawn a new entity (original continues)",
+  [ActionType.DISPOSE]: "Terminates the entity immediately. The entity will be removed from the simulation and will not continue to subsequent activities. Use for quality control, conditional termination, or canceling work items.",
+  [ActionType.JOIN]: "Wait for entities with matching state to combine",
+  [ActionType.LOOP]: "Repeat a set of actions multiple times",
+  [ActionType.BRANCH]: "Conditionally execute actions based on state",
 };
 
 const PERIOD_UNIT_SHORT: Record<PeriodUnit, string> = {
@@ -96,7 +127,8 @@ interface ActionSummary {
 
 function getActionSummary(
   action: Action,
-  resourceRequirements: ResourceRequirement[]
+  resourceRequirements: ResourceRequirement[],
+  availableActivities: Array<{ id: string; name: string }> = []
 ): ActionSummary {
   const typeLabel = ACTION_TYPE_SHORT_LABELS[action.actionType];
   let durationText = "-";
@@ -162,7 +194,50 @@ function getActionSummary(
     }
     case ActionType.SPLIT: {
       const splitAction = action as SplitAction;
-      resourceText = `${splitAction.count} entities`;
+      const destActivity = splitAction.destinationId
+        ? availableActivities.find((a) => a.id === splitAction.destinationId)
+        : null;
+      const destName = destActivity?.name || (splitAction.destinationId ? "Unknown" : "Not set");
+      resourceText = `${splitAction.count} → ${destName}`;
+      break;
+    }
+    case ActionType.CREATE: {
+      const createAction = action as CreateAction;
+      const destActivity = createAction.destinationId
+        ? availableActivities.find((a) => a.id === createAction.destinationId)
+        : null;
+      const destName = destActivity?.name || (createAction.destinationId ? "Unknown" : "Not set");
+      resourceText = `→ ${destName}`;
+      break;
+    }
+    case ActionType.DISPOSE: {
+      resourceText = "Terminates entity";
+      break;
+    }
+    case ActionType.JOIN: {
+      const joinAction = action as JoinAction;
+      const destActivity = joinAction.destinationId
+        ? availableActivities.find((a) => a.id === joinAction.destinationId)
+        : null;
+      const destName = destActivity?.name || (joinAction.destinationId ? "Unknown" : "Not set");
+      const matchState = joinAction.matchState || "Not set";
+      resourceText = `${joinAction.joinCount}× ${matchState} → ${destName}`;
+      break;
+    }
+    case ActionType.LOOP: {
+      const loopAction = action as LoopAction;
+      const actionCount = loopAction.actions?.length || 0;
+      resourceText = `${loopAction.count}× (${actionCount} action${actionCount !== 1 ? "s" : ""})`;
+      break;
+    }
+    case ActionType.BRANCH: {
+      const branchAction = action as BranchAction;
+      const trueCount = branchAction.ifTrue?.length || 0;
+      const falseCount = branchAction.ifFalse?.length || 0;
+      const conditionText = branchAction.condition
+        ? `${branchAction.condition.stateName} ${branchAction.condition.comparison} ${branchAction.condition.value}`
+        : "No condition";
+      resourceText = `${conditionText} (${trueCount}/${falseCount})`;
       break;
     }
   }
@@ -185,6 +260,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   resourceRequirements = [],
   availableResources = [],
   availableEntities = [],
+  availableActivities = [],
   onOpenRequirementModal,
   onCreateRequirement,
   dragHandleProps,
@@ -237,7 +313,22 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         } as DelayWithResourceAction;
         break;
       case ActionType.SPLIT:
-        newAction = createSplitAction(2);
+        newAction = createSplitAction(1);
+        break;
+      case ActionType.CREATE:
+        newAction = createCreateAction();
+        break;
+      case ActionType.DISPOSE:
+        newAction = createDisposeAction();
+        break;
+      case ActionType.JOIN:
+        newAction = createJoinAction();
+        break;
+      case ActionType.LOOP:
+        newAction = createLoopAction();
+        break;
+      case ActionType.BRANCH:
+        newAction = createBranchAction();
         break;
       default:
         return;
@@ -250,7 +341,8 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   const renderResourceRequirementSelector = (
     currentRequirementId: string | null,
     onRequirementChange: (newId: string | null) => void,
-    label: string = "Resource Requirement"
+    label: string = "Resource Requirement",
+    emptyOptionLabel: string = "None"
   ) => {
     const selectedRequirement = currentRequirementId
       ? resourceRequirements.find((r) => r.id === currentRequirementId)
@@ -289,7 +381,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             onChange={handleChange}
             className="flex-1 px-1 py-0.5 text-xs border rounded bg-white"
           >
-            <option value="">None</option>
+            <option value="">{emptyOptionLabel}</option>
             {onCreateRequirement && (
               <option value="__new__" className="font-semibold text-blue-600">
                 + Create New...
@@ -397,7 +489,8 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               ...releaseAction,
               resourceRequirementId: newId || "",
             }),
-          "Resource to Release"
+          "Resource to Release",
+          "All (release all held resources)"
         );
       }
 
@@ -467,6 +560,13 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
       case ActionType.SPLIT: {
         const splitAction = action as SplitAction;
+        const isDestinationMissing = !splitAction.destinationId;
+
+        // Get numeric states for split index dropdown
+        const numericStates: State[] = states?.getAll().filter(
+          (s: State) => s.dataType === StateType.NUMBER
+        ) || [];
+
         return (
           <div className="space-y-2">
             {/* Split Count */}
@@ -474,7 +574,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               <label className="block text-xs text-gray-600 mb-0.5">
                 <span className="inline-flex items-center gap-1">
                   Split Count
-                  <span title="Number of new entities to create (original entity is disposed)">
+                  <span title="Number of new entities to create. The original entity is disposed and replaced with this many new entities.">
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                   </span>
                 </span>
@@ -496,12 +596,49 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               </div>
             </div>
 
+            {/* Destination Activity (Required) */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Destination Activity
+                  <span className="text-red-500">*</span>
+                  <span title="Activity where split entities will be routed. Must be different from current activity to prevent infinite loops.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={splitAction.destinationId || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...splitAction,
+                    destinationId: e.target.value || null,
+                  })
+                }
+                className={`w-full px-1 py-0.5 text-xs border rounded bg-white ${
+                  isDestinationMissing ? "border-red-300 bg-red-50" : ""
+                }`}
+              >
+                <option value="">Select activity...</option>
+                {availableActivities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name}
+                  </option>
+                ))}
+              </select>
+              {isDestinationMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - split entities must route to a different activity
+                </div>
+              )}
+            </div>
+
             {/* Entity Template */}
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">
                 <span className="inline-flex items-center gap-1">
                   Entity Template
-                  <span title="Template for new entities. Use 'Same as original' to keep the same type.">
+                  <span title="Template for new entities. Use 'Same as original' to keep the same entity type, or select a different template.">
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                   </span>
                 </span>
@@ -525,18 +662,17 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               </select>
             </div>
 
-            {/* Split Index State - commented out for MVP
+            {/* Split Index State */}
             <div>
               <label className="block text-xs text-gray-600 mb-0.5">
                 <span className="inline-flex items-center gap-1">
                   Split Index State
-                  <span title="Optional state name to store the split index (0, 1, 2...) on each new entity">
+                  <span title="Optional state to store each entity's position in the split (0, 1, 2...). Useful for tracking which piece of a batch each entity represents.">
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                   </span>
                 </span>
               </label>
-              <input
-                type="text"
+              <select
                 value={splitAction.splitIndexState || ""}
                 onChange={(e) =>
                   onChange({
@@ -544,11 +680,21 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                     splitIndexState: e.target.value || null,
                   })
                 }
-                placeholder="e.g., item_number"
-                className="w-full px-1 py-0.5 text-xs border rounded"
-              />
+                className="w-full px-1 py-0.5 text-xs border rounded bg-white"
+              >
+                <option value="">None</option>
+                {numericStates.map((state: State) => (
+                  <option key={state.id} value={state.name}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+              {numericStates.length === 0 && (
+                <div className="mt-0.5 text-[10px] text-gray-500">
+                  No numeric states defined. Create a numeric state to track split index.
+                </div>
+              )}
             </div>
-            */}
 
             {/* State Modifications */}
             {states && (
@@ -570,13 +716,540 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         );
       }
 
+      case ActionType.CREATE: {
+        const createAction = action as CreateAction;
+        const isEntityTemplateMissing = !createAction.entityTemplateId;
+        const isDestinationMissing = !createAction.destinationId;
+
+        return (
+          <div className="space-y-2">
+            {/* Entity Template (Required) */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Entity Template
+                  <span className="text-red-500">*</span>
+                  <span title="Template to use for the new entity. The new entity will be created with this type.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={createAction.entityTemplateId || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...createAction,
+                    entityTemplateId: e.target.value || null,
+                  })
+                }
+                className={`w-full px-1 py-0.5 text-xs border rounded bg-white ${
+                  isEntityTemplateMissing ? "border-red-300 bg-red-50" : ""
+                }`}
+              >
+                <option value="">Select entity template...</option>
+                {availableEntities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name}
+                  </option>
+                ))}
+              </select>
+              {isEntityTemplateMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - select the type of entity to create
+                </div>
+              )}
+            </div>
+
+            {/* Destination Activity (Required) */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Destination Activity
+                  <span className="text-red-500">*</span>
+                  <span title="Activity where the new entity will be routed to begin its processing.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={createAction.destinationId || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...createAction,
+                    destinationId: e.target.value || null,
+                  })
+                }
+                className={`w-full px-1 py-0.5 text-xs border rounded bg-white ${
+                  isDestinationMissing ? "border-red-300 bg-red-50" : ""
+                }`}
+              >
+                <option value="">Select activity...</option>
+                {availableActivities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name}
+                  </option>
+                ))}
+              </select>
+              {isDestinationMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - select where the new entity will be routed
+                </div>
+              )}
+            </div>
+
+            {/* State Modifications */}
+            {states && (
+              <StateModificationsEditor
+                modifications={createAction.modifications || []}
+                onModificationsChange={(mods) =>
+                  onChange({
+                    ...createAction,
+                    modifications: mods,
+                  })
+                }
+                states={states}
+                title="State Modifications"
+                description="Applied to the new entity"
+                allowCrossComponent={true}
+              />
+            )}
+          </div>
+        );
+      }
+
+      case ActionType.DISPOSE: {
+        return (
+          <div className="text-xs text-gray-500 italic">
+            No configuration required.
+          </div>
+        );
+      }
+
+      case ActionType.JOIN: {
+        const joinAction = action as JoinAction;
+        const isMatchStateMissing = !joinAction.matchState;
+        const isDestinationMissing = !joinAction.destinationId;
+
+        // Get all states for match state dropdown
+        const allStates: State[] = states?.getAll() || [];
+
+        // Get numeric states for join count state dropdown
+        const numericStates: State[] = states?.getAll().filter(
+          (s: State) => s.dataType === StateType.NUMBER
+        ) || [];
+
+        return (
+          <div className="space-y-2">
+            {/* Match State (Required) */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Match State
+                  <span className="text-red-500">*</span>
+                  <span title="State name to group entities by (e.g., 'order_id'). Entities with the same value will be joined.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={joinAction.matchState || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...joinAction,
+                    matchState: e.target.value || null,
+                  })
+                }
+                className={`w-full px-1 py-0.5 text-xs border rounded bg-white ${
+                  isMatchStateMissing ? "border-red-300 bg-red-50" : ""
+                }`}
+              >
+                <option value="">Select state...</option>
+                {allStates.map((state: State) => (
+                  <option key={state.id} value={state.name}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+              {isMatchStateMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - select which state to match entities by
+                </div>
+              )}
+            </div>
+
+            {/* Join Count */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Join Count
+                  <span title="Number of entities to wait for before combining.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={2}
+                  value={joinAction.joinCount}
+                  onChange={(e) =>
+                    onChange({
+                      ...joinAction,
+                      joinCount: Math.max(2, parseInt(e.target.value) || 2),
+                    })
+                  }
+                  className="w-20 px-1 py-0.5 text-xs border rounded"
+                />
+                <span className="text-xs text-gray-500">entities</span>
+              </div>
+            </div>
+
+            {/* Destination Activity (Required) */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Destination Activity
+                  <span className="text-red-500">*</span>
+                  <span title="Activity where the combined entity will be routed.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={joinAction.destinationId || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...joinAction,
+                    destinationId: e.target.value || null,
+                  })
+                }
+                className={`w-full px-1 py-0.5 text-xs border rounded bg-white ${
+                  isDestinationMissing ? "border-red-300 bg-red-50" : ""
+                }`}
+              >
+                <option value="">Select activity...</option>
+                {availableActivities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.name}
+                  </option>
+                ))}
+              </select>
+              {isDestinationMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - combined entity must route to an activity
+                </div>
+              )}
+            </div>
+
+            {/* Combined Entity Template */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Combined Entity Template
+                  <span title="Template for the combined entity. If not set, uses the first entity's template.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={joinAction.combinedTemplateId || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...joinAction,
+                    combinedTemplateId: e.target.value || null,
+                  })
+                }
+                className="w-full px-1 py-0.5 text-xs border rounded bg-white"
+              >
+                <option value="">Use first entity's template</option>
+                {availableEntities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Join Count State */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Join Count State
+                  <span title="Optional state to store the actual number of entities that were joined.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <select
+                value={joinAction.joinCountState || ""}
+                onChange={(e) =>
+                  onChange({
+                    ...joinAction,
+                    joinCountState: e.target.value || null,
+                  })
+                }
+                className="w-full px-1 py-0.5 text-xs border rounded bg-white"
+              >
+                <option value="">None</option>
+                {numericStates.map((state: State) => (
+                  <option key={state.id} value={state.name}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* State Modifications */}
+            {states && (
+              <StateModificationsEditor
+                modifications={joinAction.modifications || []}
+                onModificationsChange={(mods) =>
+                  onChange({
+                    ...joinAction,
+                    modifications: mods,
+                  })
+                }
+                states={states}
+                title="State Modifications"
+                description="Applied to the combined entity"
+                allowCrossComponent={true}
+              />
+            )}
+          </div>
+        );
+      }
+
+      case ActionType.LOOP: {
+        const loopAction = action as LoopAction;
+
+        return (
+          <div className="space-y-2">
+            {/* Iterations */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Iterations
+                  <span title="Number of times to repeat the nested actions.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  value={loopAction.count}
+                  onChange={(e) =>
+                    onChange({
+                      ...loopAction,
+                      count: Math.max(1, parseInt(e.target.value) || 1),
+                    })
+                  }
+                  className="w-20 px-1 py-0.5 text-xs border rounded"
+                />
+                <span className="text-xs text-gray-500">times</span>
+              </div>
+            </div>
+
+            {/* Loop Actions (Simplified view for MVP) */}
+            <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="text-xs text-blue-800">
+                  <p className="font-medium">
+                    Loop contains {loopAction.actions?.length || 0} action(s)
+                  </p>
+                  <p className="mt-1 text-blue-700">
+                    Nested action editing is not yet available in the UI.
+                    You can configure nested actions via the model JSON.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case ActionType.BRANCH: {
+        const branchAction = action as BranchAction;
+        const isConditionMissing = !branchAction.condition;
+
+        // Get all states for condition dropdown
+        const allStates: State[] = states?.getAll() || [];
+
+        // Available comparison operators
+        const comparisonOperators: { value: StateComparison; label: string }[] = [
+          { value: StateComparison.EQUAL, label: "==" },
+          { value: StateComparison.NOT_EQUAL, label: "!=" },
+          { value: StateComparison.GREATER_THAN, label: ">" },
+          { value: StateComparison.GREATER_EQUAL, label: ">=" },
+          { value: StateComparison.LESS_THAN, label: "<" },
+          { value: StateComparison.LESS_EQUAL, label: "<=" },
+        ];
+
+        const handleConditionChange = (
+          field: "stateName" | "comparison" | "value",
+          newValue: string | number | boolean
+        ) => {
+          const currentCondition = branchAction.condition;
+          let updatedCondition: StateCondition;
+
+          if (currentCondition) {
+            // Update existing condition
+            if (field === "stateName") {
+              updatedCondition = new StateCondition(
+                newValue as string,
+                currentCondition.comparison,
+                currentCondition.value
+              );
+            } else if (field === "comparison") {
+              updatedCondition = new StateCondition(
+                currentCondition.stateName,
+                newValue as StateComparison,
+                currentCondition.value
+              );
+            } else {
+              updatedCondition = new StateCondition(
+                currentCondition.stateName,
+                currentCondition.comparison,
+                newValue
+              );
+            }
+          } else {
+            // Create new condition with defaults
+            updatedCondition = new StateCondition(
+              field === "stateName" ? (newValue as string) : "",
+              field === "comparison" ? (newValue as StateComparison) : StateComparison.EQUAL,
+              field === "value" ? newValue : 0
+            );
+          }
+
+          onChange({
+            ...branchAction,
+            condition: updatedCondition,
+          });
+        };
+
+        return (
+          <div className="space-y-2">
+            {/* Condition Editor */}
+            <div>
+              <label className="block text-xs text-gray-600 mb-0.5">
+                <span className="inline-flex items-center gap-1">
+                  Condition
+                  <span className="text-red-500">*</span>
+                  <span title="The state condition to evaluate. Actions in 'If True' execute when condition passes, otherwise 'If False' actions run.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
+                </span>
+              </label>
+              <div className="flex gap-1">
+                {/* State Name */}
+                <select
+                  value={branchAction.condition?.stateName || ""}
+                  onChange={(e) => handleConditionChange("stateName", e.target.value)}
+                  className={`flex-1 px-1 py-0.5 text-xs border rounded bg-white ${
+                    isConditionMissing ? "border-red-300 bg-red-50" : ""
+                  }`}
+                >
+                  <option value="">Select state...</option>
+                  {allStates.map((state: State) => (
+                    <option key={state.id} value={state.name}>
+                      {state.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Comparison Operator */}
+                <select
+                  value={branchAction.condition?.comparison || StateComparison.EQUAL}
+                  onChange={(e) => handleConditionChange("comparison", e.target.value as StateComparison)}
+                  className="w-16 px-1 py-0.5 text-xs border rounded bg-white"
+                  disabled={!branchAction.condition?.stateName}
+                >
+                  {comparisonOperators.map((op) => (
+                    <option key={op.value} value={op.value}>
+                      {op.label}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Value */}
+                <input
+                  type="text"
+                  value={branchAction.condition?.value !== undefined ? String(branchAction.condition.value) : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    // Try to parse as number, boolean, otherwise keep as string
+                    if (val === "true") {
+                      handleConditionChange("value", true);
+                    } else if (val === "false") {
+                      handleConditionChange("value", false);
+                    } else {
+                      const parsed = Number(val);
+                      handleConditionChange("value", isNaN(parsed) ? val : parsed);
+                    }
+                  }}
+                  placeholder="Value"
+                  className="w-20 px-1 py-0.5 text-xs border rounded"
+                  disabled={!branchAction.condition?.stateName}
+                />
+              </div>
+              {isConditionMissing && (
+                <div className="mt-0.5 text-[10px] text-red-600">
+                  Required - set the condition to evaluate
+                </div>
+              )}
+            </div>
+
+            {/* Branch Actions (Simplified view for MVP) */}
+            <div className="space-y-1">
+              <div className="p-2 bg-green-50 border border-green-200 rounded">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-green-800">
+                    <p className="font-medium">
+                      If True: {branchAction.ifTrue?.length || 0} action(s)
+                    </p>
+                    <p className="mt-0.5 text-green-700">
+                      Executes when condition is satisfied.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2 bg-red-50 border border-red-200 rounded">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-red-800">
+                    <p className="font-medium">
+                      If False: {branchAction.ifFalse?.length || 0} action(s)
+                    </p>
+                    <p className="mt-0.5 text-red-700">
+                      Executes when condition is not satisfied.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-2 bg-gray-50 border border-gray-200 rounded">
+                <div className="text-[10px] text-gray-600">
+                  Nested action editing is not yet available in the UI.
+                  You can configure nested actions via the model JSON.
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       default:
         return <div className="text-xs text-red-500">Unknown action type</div>;
     }
   };
 
   // Get summary for collapsed view
-  const summary = getActionSummary(action, resourceRequirements);
+  const summary = getActionSummary(action, resourceRequirements, availableActivities);
 
   return (
     <div className="bg-gray-50 rounded border border-gray-200">
