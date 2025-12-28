@@ -2,7 +2,7 @@
  * Current version of Quodsi
  * Should be updated to match package.json version when making releases
  */
-export const QUODSI_VERSION = "1.1.0";
+export const QUODSI_VERSION = "2025.12.28";
 
 /**
  * Version information broken down into components
