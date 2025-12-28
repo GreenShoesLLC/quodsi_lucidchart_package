@@ -536,4 +536,5 @@ export class LucidPageConversionService extends QuodsiLogger {
         }
         return maxX;
     }
+
 }

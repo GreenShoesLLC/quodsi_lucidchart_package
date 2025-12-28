@@ -179,6 +179,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('Generator must have generationConfig');
             }
 
+            // Compute exitConnector dynamically from connectors
+            // This ensures it always reflects the current diagram state
+            const outgoingConnector = modelDefinition.connectors.getAll()
+                .find(c => c.sourceId === generator.id);
+
             const serialized: ISerializedGenerator = {
                 id: generator.id,
                 name: generator.name,
@@ -188,9 +193,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 generationConfig: this.serializeEntitySourceConfig(generator.generationConfig)
             };
 
-            // Add exitConnector if present
-            if (generator.exitConnector) {
-                serialized.exitConnector = generator.exitConnector;
+            // Set exitConnector from actual connector (not stored value)
+            if (outgoingConnector) {
+                serialized.exitConnector = outgoingConnector.targetId;
             }
 
             return serialized;

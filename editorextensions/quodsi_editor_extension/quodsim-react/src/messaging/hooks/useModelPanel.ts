@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useMessaging } from '../MessageProvider';
 import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
@@ -206,10 +206,10 @@ export function useModelPanel() {
     modelOpsSender.convertElement(elementId, newType, typedDiagramElementType);
   };
   
-  const onValidate = () => {
+  const onValidate = useCallback(() => {
     logger.log('Validating model');
     modelOpsSender.validateModel(documentContext.documentId);
-  };
+  }, [documentContext.documentId, modelOpsSender]);
   
   const onSimulate = (scenarioName?: string) => {
     logger.log(`Simulating model with scenario name: ${scenarioName}`);

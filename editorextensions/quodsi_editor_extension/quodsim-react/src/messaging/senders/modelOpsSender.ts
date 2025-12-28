@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
@@ -13,23 +14,23 @@ export function useModelOpsSender() {
   
   /**
    * Send a MODEL_VALIDATE message
-   * 
+   *
    * @param documentId Document ID to validate
    */
-  const validateModel = (documentId: string) => {
+  const validateModel = useCallback((documentId: string) => {
     send(EnvelopeMessageType.MODEL_VALIDATE, {
       documentId
     });
-  };
+  }, [send]);
   
   /**
    * Send a MODEL_CONVERT message
-   * 
+   *
    * @param documentId Document ID to convert
    * @param elementId Optional element ID to convert
    * @param targetType Optional target type to convert to
    */
-  const convertModel = (
+  const convertModel = useCallback((
     documentId: string,
     elementId?: string,
     targetType?: string
@@ -39,18 +40,18 @@ export function useModelOpsSender() {
       elementId,
       targetType
     });
-  };
+  }, [send]);
   
   /**
    * Send a MODEL_REMOVE message
-   * 
+   *
    * @param documentId Document ID to remove model from
    */
-  const removeModel = (documentId: string) => {
+  const removeModel = useCallback((documentId: string) => {
     send(EnvelopeMessageType.MODEL_REMOVE, {
       documentId
     });
-  };
+  }, [send]);
   
   /**
    * Send a RESULTS_PAGE_CREATE message
@@ -59,7 +60,7 @@ export function useModelOpsSender() {
    * @param documentId Document ID to create results page in
    * @param pageTitle Optional page title
    */
-  const createResultsPage = (
+  const createResultsPage = useCallback((
     scenarioId: string,
     documentId: string,
     pageTitle?: string
@@ -69,7 +70,7 @@ export function useModelOpsSender() {
       documentId,
       pageTitle
     });
-  };
+  }, [send]);
   
   /**
    * Send an element data update
@@ -79,7 +80,7 @@ export function useModelOpsSender() {
    * @param data Updated element data
    * @param diagramElementType Optional diagram element type ('block' or 'line')
    */
-  const updateElementData = (
+  const updateElementData = useCallback((
     elementId: string,
     type: string,
     data: Record<string, any>,
@@ -102,7 +103,7 @@ export function useModelOpsSender() {
       },
       diagramElementType
     });
-  };
+  }, [send, dispatch]);
   
   /**
    * Send a request to convert an element to a new type
@@ -111,7 +112,7 @@ export function useModelOpsSender() {
    * @param type Target element type
    * @param diagramElementType Optional diagram element type ('block' or 'line')
    */
-  const convertElement = (
+  const convertElement = useCallback((
     elementId: string,
     type: string,
     diagramElementType?: string
@@ -122,78 +123,79 @@ export function useModelOpsSender() {
       newType: type,
       diagramElementType
     });
-  };
+  }, [send]);
   
   /**
    * Send a request to convert the current page to a model
    */
-  const convertPage = () => {
+  const convertPage = useCallback(() => {
     // Use MODEL_CONVERT for converting pages
     // No elementId means convert the whole page
     send(EnvelopeMessageType.MODEL_CONVERT, {});
-  };
+  }, [send]);
 
   /**
    * Send a request to update the states array
    *
    * @param states Array of serialized state definitions
    */
-  const updateStates = (states: ISerializedState[]) => {
+  const updateStates = useCallback((states: ISerializedState[]) => {
     // Use STATES_UPDATE for updating states
     send(EnvelopeMessageType.STATES_UPDATE, {
       states
     });
-  };
+  }, [send]);
 
   /**
    * Send a request to update the resource requirements array
    *
    * @param resourceRequirements Array of serialized resource requirement definitions
    */
-  const updateResourceRequirements = (resourceRequirements: ISerializedResourceRequirement[]) => {
+  const updateResourceRequirements = useCallback((resourceRequirements: ISerializedResourceRequirement[]) => {
     // Use RESOURCE_REQUIREMENTS_UPDATE for updating resource requirements
     send(EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE, {
       resourceRequirements
     });
-  };
+  }, [send]);
 
   /**
    * Send a request to update the time patterns array
    *
    * @param timePatterns Array of serialized time pattern definitions
    */
-  const updateTimePatterns = (timePatterns: ISerializedTimePattern[]) => {
+  const updateTimePatterns = useCallback((timePatterns: ISerializedTimePattern[]) => {
     // Use TIME_PATTERNS_UPDATE for updating time patterns
     send(EnvelopeMessageType.TIME_PATTERNS_UPDATE, {
       timePatterns
     });
-  };
+  }, [send]);
 
   /**
    * Send a request to update the time distributed configs array
    *
    * @param timeDistributedConfigs Array of serialized time distributed config definitions
    */
-  const updateTimeDistributedConfigs = (timeDistributedConfigs: ISerializedTimeDistributedConfig[]) => {
+  const updateTimeDistributedConfigs = useCallback((timeDistributedConfigs: ISerializedTimeDistributedConfig[]) => {
     // Use TIME_DISTRIBUTED_CONFIGS_UPDATE for updating time distributed configs
     send(EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE, {
       timeDistributedConfigs
     });
-  };
+  }, [send]);
 
   /**
    * Send a request for the serialized model JSON
    *
    * @param documentId Document ID to get model JSON from
    */
-  const requestModelJson = (documentId: string) => {
+  const requestModelJson = useCallback((documentId: string) => {
     // Use MODEL_JSON_REQUEST to get serialized model
     send(EnvelopeMessageType.MODEL_JSON_REQUEST, {
       documentId
     });
-  };
+  }, [send]);
 
-  return {
+  // Memoize the return object to prevent unnecessary re-renders
+  return useMemo(() => ({
     validateModel,
     convertModel,
     removeModel,
@@ -206,5 +208,18 @@ export function useModelOpsSender() {
     updateTimePatterns,
     updateTimeDistributedConfigs,
     requestModelJson
-  };
+  }), [
+    validateModel,
+    convertModel,
+    removeModel,
+    createResultsPage,
+    updateElementData,
+    convertElement,
+    convertPage,
+    updateStates,
+    updateResourceRequirements,
+    updateTimePatterns,
+    updateTimeDistributedConfigs,
+    requestModelJson
+  ]);
 }

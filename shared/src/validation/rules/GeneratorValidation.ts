@@ -57,6 +57,7 @@ export class GeneratorValidation extends ValidationRule {
             this.validateGeneratorData(generator, state, issues);
             this.validateDurationSettings(generator, issues);
             this.validateEntitySettings(generator, state, issues);
+            this.validateExitConnector(generator, state, issues);
         });
 
         this.validateGeneratorInteractions(generators, issues);
@@ -242,6 +243,44 @@ export class GeneratorValidation extends ValidationRule {
         }
 
         this.log(`Completed entity settings validation for Generator ID: ${generator.id}`);
+    }
+
+    private validateExitConnector(
+        generator: Generator,
+        state: ModelDefinitionState,
+        issues: ValidationIssue[]
+    ): void {
+        /**
+         * Validates that a Generator has exactly one outgoing connector.
+         * - 0 connectors = ERROR (entities have nowhere to go)
+         * - 1 connector = OK
+         * - >1 connectors = WARNING (generators route to single destination)
+         */
+
+        this.log(`Starting exit connector validation for Generator ID: ${generator.id}`);
+
+        const outgoingConnectors = state.modelDefinition.connectors.getAll()
+            .filter(c => c.sourceId === generator.id);
+
+        if (outgoingConnectors.length === 0) {
+            this.log(`Validation failed: Generator ID ${generator.id} has no exit connector.`);
+            issues.push(ValidationMessages.generatorValidation(
+                'exit connector',
+                generator.id,
+                'Generator must have an exit connector to route generated entities',
+                generator.name
+            ));
+        } else if (outgoingConnectors.length > 1) {
+            this.log(`Warning: Generator ID ${generator.id} has ${outgoingConnectors.length} exit connectors.`);
+            issues.push(ValidationMessages.createIssue(
+                ValidationSeverity.WARNING,
+                'generator_multiple_exit_connectors',
+                `Generator '${generator.name || generator.id}' has ${outgoingConnectors.length} exit connectors; only the first will be used for routing`,
+                generator.id
+            ));
+        }
+
+        this.log(`Completed exit connector validation for Generator ID: ${generator.id}`);
     }
 
     private validateGeneratorInteractions(
