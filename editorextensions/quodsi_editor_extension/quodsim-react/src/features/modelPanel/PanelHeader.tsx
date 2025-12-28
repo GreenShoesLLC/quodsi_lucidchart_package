@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map, Info } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
@@ -14,6 +14,7 @@ import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
 import { useScenarios } from "../../messaging/MessageProvider";
 import { selectScenarios } from "../../messaging/state/scenarioSlice";
+import { AboutModal } from "../shared/AboutModal";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -49,12 +50,32 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   referenceData,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [aboutModalOpen, setAboutModalOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const hasActiveJobs = useHasActiveJobs();
 
   // Get scenarios to check limit
   const scenarioState = useScenarios();
   const scenarios = selectScenarios({ scenarios: scenarioState });
   const atScenarioLimit = scenarios.length >= MAX_SCENARIOS;
+
+  // Click-outside handler to close menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [menuOpen]);
 
   // Helper to get display name for the element
   const getDisplayName = (
@@ -139,6 +160,36 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     return { activities, resources, entities };
   };
 
+  // Reusable menu button with dropdown
+  const MenuButton = () => (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setMenuOpen(!menuOpen);
+        }}
+        className="p-1 hover:bg-gray-200 rounded transition-colors"
+        title="More options"
+      >
+        <MoreVertical className="w-4 h-4 text-gray-600" />
+      </button>
+
+      {menuOpen && (
+        <div className="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg z-50 min-w-[140px]">
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              setAboutModalOpen(true);
+            }}
+            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+          >
+            <Info className="w-3 h-3 text-gray-500" />
+            About Quodsi
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   // Render Model header
   const renderModelHeader = () => {
@@ -155,9 +206,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {modelName}
             </span>
           </div>
-          <button className="p-1 hover:bg-gray-200 rounded transition-colors" title="More options">
-            <MoreVertical className="w-4 h-4 text-gray-600" />
-          </button>
+          <MenuButton />
         </div>
 
         {/* Row 2: Statistics */}
@@ -239,9 +288,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {elementName}
             </span>
           </div>
-          <button className="p-1 hover:bg-gray-200 rounded transition-colors" title="More options">
-            <MoreVertical className="w-4 h-4 text-gray-600" />
-          </button>
+          <MenuButton />
         </div>
 
         {/* Row 2: Context */}
@@ -278,9 +325,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Unconverted Element
             </span>
           </div>
-          <button className="p-1 hover:bg-gray-200 rounded transition-colors" title="More options">
-            <MoreVertical className="w-4 h-4 text-gray-600" />
-          </button>
+          <MenuButton />
         </div>
 
         {/* Row 2: Instruction */}
@@ -324,8 +369,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   };
 
   return (
-    <div className="p-2 border-b bg-gray-50 shadow-sm space-y-2">
-      {renderAdaptiveHeader()}
-    </div>
+    <>
+      <div className="p-2 border-b bg-gray-50 shadow-sm space-y-2">
+        {renderAdaptiveHeader()}
+      </div>
+      <AboutModal
+        isOpen={aboutModalOpen}
+        onClose={() => setAboutModalOpen(false)}
+      />
+    </>
   );
 };
