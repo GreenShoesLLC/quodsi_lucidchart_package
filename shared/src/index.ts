@@ -6,6 +6,7 @@ export * from './core/logging/ComponentLogger';
 // Constants
 export * from './constants/limits';
 export * from './constants/version';
+export * from './constants/branding';
 
 // Type exports
 export * from './types/ActivityRelationships';

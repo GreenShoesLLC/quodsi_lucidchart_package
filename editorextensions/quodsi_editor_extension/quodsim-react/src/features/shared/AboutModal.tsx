@@ -1,6 +1,7 @@
 import React from "react";
-import { X, Info } from "lucide-react";
-import { QUODSI_VERSION } from "@quodsi/shared";
+import { X } from "lucide-react";
+import { QUODSI_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/shared";
+import { detectEnvironment } from "../../utils/environmentDetection";
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -8,13 +9,16 @@ interface AboutModalProps {
 }
 
 /**
- * AboutModal - Displays Quodsi version information
+ * AboutModal - Displays Quodsi version and environment information
  *
- * A simple modal dialog that shows the application name and current version.
+ * A simple modal dialog that shows the application name, current version,
+ * and detected environment (Local/Dev/Test/Prod).
  * Triggered from the 3-dots menu in PanelHeader.
  */
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
+
+  const environment = detectEnvironment();
 
   // Handle backdrop click to close
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -43,13 +47,16 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
 
         {/* Content */}
         <div className="text-center py-4">
-          <Info className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+          <img src={QUODSI_ICON_BASE64} alt="Quodsi" className="w-12 h-12 mx-auto mb-3" />
           <div className="text-lg font-bold text-gray-900">Quodsi</div>
           <div className="text-sm text-gray-600 mt-1">
             Discrete Event Simulation
           </div>
           <div className="text-xs text-gray-500 mt-3">
             Version {QUODSI_VERSION}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Environment: {environment}
           </div>
         </div>
 
