@@ -3,7 +3,7 @@
  * Manages simulation status, progress, and results
  */
 
-import { SimulationStatus } from './types';
+import { SimulationStatus } from '@quodsi/shared';
 
 // State shape
 export interface SimulationState {

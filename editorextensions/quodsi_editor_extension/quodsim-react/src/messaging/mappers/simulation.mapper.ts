@@ -1,6 +1,5 @@
-import { EnvelopeBase, EnvelopeMessageType, SimulationStatus as SharedSimulationStatus } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, SimulationStatus } from '@quodsi/shared';
 import { MessagingAction } from '../state/types';
-import { SimulationStatus } from '../state/types';
 import { debugService } from '../utils/debugService';
 
 /**
@@ -25,7 +24,7 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
         documentId: string;
         scenarioId: string;
         scenarioName: string;
-        status: SharedSimulationStatus;
+        status: SimulationStatus;
         progress: number;
         currentStep?: string;
         lastChecked: string;
@@ -35,13 +34,13 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
       };
 
       // Map to different simulation actions based on status
-      if (statusData.status === SharedSimulationStatus.FAILED || statusData.error) {
+      if (statusData.status === SimulationStatus.FAILED || statusData.error) {
         return {
           type: 'SIMULATION_ERROR',
           jobId: statusData.jobId,
           error: statusData.error || 'Unknown simulation error'
         };
-      } else if (statusData.status === SharedSimulationStatus.COMPLETED) {
+      } else if (statusData.status === SimulationStatus.COMPLETED) {
         // Simulation completed successfully
         return {
           type: 'SIMULATION_COMPLETE',
@@ -57,28 +56,7 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
         };
       } else {
         // All other statuses (QUEUED, PROCESSING, VALIDATING, RUNNING, CANCELLED) use PROGRESS
-        // Map SharedSimulationStatus to local SimulationStatus enum
-        let mappedStatus: SimulationStatus;
-        switch (statusData.status) {
-          case SharedSimulationStatus.QUEUED:
-            mappedStatus = SimulationStatus.QUEUED;
-            break;
-          case SharedSimulationStatus.PROCESSING:
-            mappedStatus = SimulationStatus.PROCESSING;
-            break;
-          case SharedSimulationStatus.VALIDATING:
-            mappedStatus = SimulationStatus.VALIDATING;
-            break;
-          case SharedSimulationStatus.RUNNING:
-            mappedStatus = SimulationStatus.RUNNING;
-            break;
-          case SharedSimulationStatus.CANCELLED:
-            mappedStatus = SimulationStatus.CANCELLED;
-            break;
-          default:
-            // Fallback for any unknown status
-            mappedStatus = SimulationStatus.PROCESSING;
-        }
+        // Status is already the correct type from @quodsi/shared
 
         return {
           type: 'SIMULATION_PROGRESS',
@@ -86,7 +64,7 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
           documentId: statusData.documentId,
           scenarioId: statusData.scenarioId,
           scenarioName: statusData.scenarioName,
-          status: mappedStatus,
+          status: statusData.status,
           progress: statusData.progress,
           currentStep: statusData.currentStep,
           lastChecked: statusData.lastChecked,

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSimulation } from '../MessageProvider';
 import { useSimulationSender } from '../senders/simulationSender';
-// Import from our local types file instead of @quodsi/shared
-import { SimulationStatus } from '../state/types';
+import { SimulationStatus } from '@quodsi/shared';
 
 /**
  * Enhanced hook for simulation state that combines state, computed properties,
