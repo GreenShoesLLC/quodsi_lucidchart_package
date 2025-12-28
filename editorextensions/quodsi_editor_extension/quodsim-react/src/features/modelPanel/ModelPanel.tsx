@@ -6,10 +6,12 @@ import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
 import { ValidationBanner } from './ValidationBanner';
 import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';
+import { ModelDefinitionViewer } from './ModelDefinitionViewer';
+import { useMessaging } from '../../messaging/MessageProvider';
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -43,8 +45,12 @@ export const ModelPanel: React.FC = () => {
   const {
     updateStates: sendStatesUpdate,
     updateTimePatterns: sendTimePatternsUpdate,
-    updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate
+    updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate,
+    requestModelJson
   } = useModelOpsSender();
+
+  // Get selection context for documentId
+  const { selection } = useMessaging();
 
   // Get conversion preview state and actions
   const {
@@ -60,11 +66,45 @@ export const ModelPanel: React.FC = () => {
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
 
+  // State for Model JSON viewer modal
+  const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
+  const [modelJson, setModelJson] = useState<object | null>(null);
+
   // Wrap onSimulate to auto-switch to scenarios tab after simulation starts
   const handleSimulate = (scenarioName?: string) => {
     onSimulate(scenarioName);
     setActiveTab("scenarios");
   };
+
+  // Handler for viewing model JSON
+  const handleViewModelJson = () => {
+    requestModelJson(selection.documentContext?.documentId || '');
+  };
+
+  // Listen for MODEL_JSON_RESPONSE
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const msg = event.data as EnvelopeBase;
+
+      if (msg?.type === EnvelopeMessageType.MODEL_JSON_RESPONSE) {
+        const data = msg.data as {
+          success: boolean;
+          modelJson?: any;
+          error?: string;
+        };
+
+        if (data.success && data.modelJson) {
+          setModelJson(data.modelJson);
+          setIsModelViewerOpen(true);
+        } else {
+          console.error('[ModelPanel] Failed to get model JSON:', data.error);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   // Convert serialized states to StateListManager using useMemo to avoid recreating on every render
   const states = useMemo(() => {
@@ -240,6 +280,7 @@ export const ModelPanel: React.FC = () => {
         simulationStatus={simulationStatus}
         onViewResults={onViewResults}
         referenceData={referenceData}
+        onViewModelJson={handleViewModelJson}
       />
 
       <div className="flex-1 bg-gray-50 overflow-auto">
@@ -279,6 +320,14 @@ export const ModelPanel: React.FC = () => {
         isExpanded={validationBannerExpanded}
         onToggle={() => setValidationBannerExpanded(!validationBannerExpanded)}
       />
+
+      {/* Model Definition Viewer Modal */}
+      {isModelViewerOpen && modelJson && (
+        <ModelDefinitionViewer
+          modelJson={modelJson}
+          onClose={() => setIsModelViewerOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -6,11 +6,9 @@ import {
   SimulationObjectType,
   StateListManager,
   ComponentType,
-  EnvelopeMessageType,
-  EnvelopeBase,
   ValidationResult,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, FileJson, Info, Users, Wrench, AlertTriangle } from "lucide-react";
+import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import ScenariosPanel from "./ScenariosPanel";
@@ -18,7 +16,6 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging } from "../../messaging/MessageProvider";
-import { ModelDefinitionViewer } from "../modelPanel/ModelDefinitionViewer";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -52,7 +49,7 @@ interface Props {
   onTabChange?: (tab: EditorTab) => void;
 }
 
-export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "utilities" | "validation";
+export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "validation";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -98,12 +95,6 @@ const TAB_CONFIG = [
     icon: AlertTriangle,
     tooltip: "View comprehensive model validation results and resolve any issues"
   },
-  {
-    id: "utilities" as const,
-    title: "Utilities",
-    icon: Wrench,
-    tooltip: "Model utilities, diagnostics, and maintenance functions"
-  },
 ];
 
 /**
@@ -118,26 +109,25 @@ const DEFAULT_RANDOM_SEED = 12345;
  *
  * The ModelEditor orchestrates the configuration of simulation model settings across
  * multiple tabs, including basic properties, state variables, resource requirements,
- * and simulation scenarios. It acts as a container for specialized sub-editors.
+ * simulation scenarios, and validation. It acts as a container for specialized sub-editors.
  *
  * Features:
- * - Four-tab interface: Basic Settings, State Definitions, Resource Requirements, and Scenarios
+ * - Five-tab interface: Basic Settings, State Definitions, Resource Requirements, Scenarios, and Validation
  * - Controlled component with immediate UI updates
  * - Manual save for basic fields (name, reps, seed, time settings)
  * - Auto-save for states, requirements, and scenarios (handled by sub-editors)
- * - Model JSON viewer for debugging and inspection
  *
  * Tabs:
  * - Basic: Model name, simulation parameters (reps, seed), and time configuration
  * - States: Model-level state variables accessible throughout the simulation
  * - Requirements: Reusable resource requirement templates for activities
  * - Scenarios: Simulation scenario configuration and management
+ * - Validation: View and resolve model validation issues
  *
  * State Management:
  * - Maintains local draft state (localModelDraft) for immediate UI updates
  * - Syncs with Redux for save state tracking (isSaving)
  * - Uses custom hooks for model switching and save completion detection
- * - Listens for MODEL_JSON_RESPONSE messages for the model viewer
  *
  * Save Behavior:
  * - Basic tab: Requires Save button click to persist changes
@@ -161,38 +151,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
   const setActiveTab = onTabChangeProp ?? setLocalActiveTab;
   const [requirementModalOpen, setRequirementModalOpen] = useState(false);
   const [editingRequirement, setEditingRequirement] = useState<EditingRequirement | null>(null);
-  const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);
-  const [modelJson, setModelJson] = useState<object | null>(null);
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const { selection } = useMessaging();
-  const { requestModelJson, updateResourceRequirements } = useModelOpsSender();
-
-  // Listen for MODEL_JSON_RESPONSE
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const msg = event.data as EnvelopeBase;
-
-      // Check if this is a MODEL_JSON_RESPONSE message
-      if (msg?.type === EnvelopeMessageType.MODEL_JSON_RESPONSE) {
-        const data = msg.data as {
-          success: boolean;
-          modelJson?: any;
-          error?: string;
-        };
-
-        if (data.success && data.modelJson) {
-          setModelJson(data.modelJson);
-          setIsModelViewerOpen(true);
-        } else {
-          console.error('[ModelEditor] Failed to get model JSON:', data.error);
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  const { updateResourceRequirements } = useModelOpsSender();
 
   // Direct form state management
   const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
@@ -318,17 +280,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
     setLocalModelDraft(extractModelData(model));
     setHasPendingChanges(false);
     onCancel();
-  };
-
-  /**
-   * Requests the model JSON for debugging/inspection.
-   *
-   * Sends a request to the extension to generate a complete JSON representation
-   * of the model. When received, opens the ModelDefinitionViewer modal.
-   */
-  const handleViewModelClick = () => {
-    // Request model JSON from extension
-    requestModelJson(selection.documentContext?.documentId || '');
   };
 
   // ============================================================================
@@ -666,24 +617,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
           documentId={selection.documentContext?.documentId}
         />
       )}
-      {activeTab === "utilities" && (
-        <div className="space-y-3">
-
-          {/* Diagnostics Section */}
-          <div className="border border-gray-200 rounded-lg p-2">
-            <h3 className="text-xs font-semibold text-gray-700 mb-2">Diagnostics</h3>
-            <button
-              type="button"
-              className="w-full text-xs px-2 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded transition-colors flex items-center justify-center gap-1"
-              onClick={handleViewModelClick}
-              title="View Model Definition as JSON"
-            >
-              <FileJson className="w-3 h-3" />
-              View Model JSON
-            </button>
-          </div>
-        </div>
-      )}
       {activeTab === "validation" && (
         <ValidationDashboard
           validationState={validationState || null}
@@ -743,14 +676,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
         editingRequirement={editingRequirement}
         availableResources={referenceData?.resources || []}
       />
-
-      {/* Model Definition Viewer Modal */}
-      {isModelViewerOpen && modelJson && (
-        <ModelDefinitionViewer
-          modelJson={modelJson}
-          onClose={() => setIsModelViewerOpen(false)}
-        />
-      )}
     </div>
   );
 };

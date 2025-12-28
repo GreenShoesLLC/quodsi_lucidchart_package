@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map, Info } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map, Info, FileJson } from "lucide-react";
 import {
   ValidationState,
   ModelItemData,
@@ -31,6 +31,7 @@ interface PanelHeaderProps {
   simulationStatus?: SimulationPollState;
   onViewResults?: () => void;
   referenceData?: EditorReferenceData;
+  onViewModelJson?: () => void;
 }
 
 /**
@@ -48,6 +49,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   simulationStatus,
   onViewResults,
   referenceData,
+  onViewModelJson,
 }) => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -176,6 +178,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
       {menuOpen && (
         <div className="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg z-50 min-w-[140px]">
+          {onViewModelJson && (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                onViewModelJson();
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            >
+              <FileJson className="w-3 h-3 text-gray-500" />
+              View Model JSON
+            </button>
+          )}
           <button
             onClick={() => {
               setMenuOpen(false);
