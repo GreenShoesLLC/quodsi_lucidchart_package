@@ -177,6 +177,20 @@ function Deploy-ToEnvironment {
         }
 
         Write-Host "Deployment completed successfully!" -ForegroundColor Green
+
+        # Set deployment version info in app settings
+        Write-Host "Setting deployment version info..." -ForegroundColor Cyan
+        $commitHash = git rev-parse --short HEAD
+        $deployedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+
+        az functionapp config appsettings set `
+            --name $functionAppName `
+            --resource-group $resourceGroup `
+            --settings "DEPLOYED_COMMIT=$commitHash" "DEPLOYED_AT=$deployedAt" `
+            --output none
+
+        Write-Host "Version info set: DEPLOYED_COMMIT=$commitHash, DEPLOYED_AT=$deployedAt" -ForegroundColor Green
+
         Write-Host "Verifying deployed functions..." -ForegroundColor Cyan
         az functionapp function list --name $functionAppName --resource-group $resourceGroup -o table
 

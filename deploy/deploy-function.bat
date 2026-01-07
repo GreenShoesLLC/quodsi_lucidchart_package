@@ -5,8 +5,8 @@ REM   environment: dev (default), tst, prd
 
 set ENV=%1
 
-REM Call the actual deployment script
-call "%~dp0azure-functions\deploy-function-code.bat" %ENV%
+REM Call the actual deployment script (PowerShell)
+powershell -ExecutionPolicy Bypass -File "%~dp0azure-functions\deploy-function-code.ps1" -Environment %ENV%
 
 REM Preserve exit code
 exit /b %ERRORLEVEL%

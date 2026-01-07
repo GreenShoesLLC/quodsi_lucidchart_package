@@ -203,23 +203,28 @@ export const ModelPanel: React.FC = () => {
   // Handle initialization state
   if (needsInitialization) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
-        <div className="text-center p-8 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">Initialize Model</h2>
-          <p className="text-gray-600 mb-6">Create a new Quodsi simulation model from this document.</p>
-          <div className="flex gap-3 justify-center">
+      <div className="h-full w-full flex items-center justify-center p-4 bg-gray-50 overflow-auto">
+        <div className="text-center p-5 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
+          <h3 className="text-xl font-semibold text-gray-800 mb-5">
+            Transform diagram into Simulation Model
+          </h3>
+          <button
+            className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+            onClick={applyDefaults}
+            disabled={isApplying}
+          >
+            {isApplying ? 'Converting...' : 'Convert Automatically'}
+          </button>
+          <p className="text-gray-500 text-sm mt-3">
+            Uses Quodsi's best-practice assumptions.<br />
+            You can edit everything later.
+          </p>
+          <div className="mt-5 pt-3 border-t border-gray-200">
             <button
-              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
-              onClick={applyDefaults}
-              disabled={isApplying}
-            >
-              {isApplying ? 'Converting...' : 'Quick Convert'}
-            </button>
-            <button
-              className="px-5 py-2.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm font-medium"
+              className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
               onClick={openPreview}
             >
-              Preview First
+              Review & Convert: Preview, edit and convert
             </button>
           </div>
         </div>
