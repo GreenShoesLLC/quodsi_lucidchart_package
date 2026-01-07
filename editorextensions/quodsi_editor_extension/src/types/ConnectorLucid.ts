@@ -4,7 +4,8 @@ import {
     SimulationObjectType,
     ComponentLogger,
     StateCondition,
-    StateModification
+    StateModification,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -214,8 +215,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         return this.getBlockName(block);
     }
 
-    static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter): ConnectorLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid from conversion for line ID: ${line.id}`);
+    static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ConnectorLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid from conversion for line ID: ${line.id}, mappingSource: ${mappingSource}`);
 
         // Get line endpoints
         const endpoint1 = line.getEndpoint1();
@@ -283,7 +284,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             storedData,
             SimulationObjectType.Connector,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 

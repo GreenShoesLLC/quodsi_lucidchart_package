@@ -2,7 +2,8 @@ import { ElementProxy, LineProxy, BlockProxy, PageProxy } from 'lucid-extension-
 import {
     SimulationObjectType,
     Resource,
-    ComponentLogger
+    ComponentLogger,
+    MappingSource
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import {
@@ -41,13 +42,15 @@ export class LucidElementFactory {
     public createPlatformObject(
         element: ElementProxy,
         type: SimulationObjectType,
-        isConversion: boolean = false
+        isConversion: boolean = false,
+        mappingSource?: MappingSource
     ): SimObjectLucid<any> {
         ComponentLogger.log(LOG_PREFIX, `Creating platform object`, {
             elementId: element.id,
             type: type,
             elementType: element.constructor.name,
-            isConversion: isConversion
+            isConversion: isConversion,
+            mappingSource: mappingSource
         });
 
         try {
@@ -66,7 +69,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid`);
                         return isConversion
-                            ? ActivityLucid.createFromConversion(element, this.storageAdapter)
+                            ? ActivityLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ActivityLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Activity`);
@@ -77,7 +80,7 @@ export class LucidElementFactory {
                     if (this.isLineProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid`);
                         return isConversion
-                            ? ConnectorLucid.createFromConversion(element, this.storageAdapter)
+                            ? ConnectorLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ConnectorLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a LineProxy for Connector`);
@@ -88,7 +91,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid`);
                         return isConversion
-                            ? EntityLucid.createFromConversion(element, this.storageAdapter)
+                            ? EntityLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new EntityLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Entity`);
@@ -99,7 +102,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid`);
                         return isConversion
-                            ? GeneratorLucid.createFromConversion(element, this.storageAdapter)
+                            ? GeneratorLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new GeneratorLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Generator`);
@@ -110,7 +113,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid`);
                         return isConversion
-                            ? ResourceLucid.createFromConversion(element, this.storageAdapter)
+                            ? ResourceLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ResourceLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Resource`);
@@ -121,7 +124,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ResourceRequirementLucid`);
                         return isConversion
-                            ? ResourceRequirementLucid.createFromConversion(element, this.storageAdapter)
+                            ? ResourceRequirementLucid.createFromConversion(element, this.storageAdapter, mappingSource)
                             : new ResourceRequirementLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for ResourceRequirement`);

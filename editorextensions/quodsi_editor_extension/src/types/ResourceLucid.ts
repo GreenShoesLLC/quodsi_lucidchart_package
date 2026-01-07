@@ -5,7 +5,8 @@ import {
     ComponentLogger,
     ResourceFinancialProperties,
     parseStructuredName,
-    extractResourceFields
+    extractResourceFields,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -146,8 +147,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}`);
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ResourceLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location
         const location = block.getLocation();
@@ -189,7 +190,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             storedData,
             SimulationObjectType.Resource,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 

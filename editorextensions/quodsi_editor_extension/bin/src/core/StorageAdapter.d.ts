@@ -1,6 +1,10 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, MappingSource } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
+/**
+ * Record of skipped elements with their mapping source
+ */
+export type SkippedElementsRecord = Record<string, MappingSource>;
 /**
  * Shape data storage format
  */
@@ -17,6 +21,7 @@ export declare class StorageAdapter {
     private static readonly RESOURCE_REQUIREMENTS_KEY;
     private static readonly TIME_PATTERNS_KEY;
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY;
+    private static readonly SKIPPED_ELEMENTS_KEY;
     private static readonly CURRENT_VERSION;
     private static readonly LOG_PREFIX;
     private loggingEnabled;
@@ -89,6 +94,20 @@ export declare class StorageAdapter {
      * Clears the time distributed configs array for a page
      */
     clearTimeDistributedConfigs(page: ElementProxy): void;
+    /**
+     * Sets the skipped elements record for a page
+     * @param page The page element
+     * @param skipped Record of element IDs to their mapping source ('auto' or 'user')
+     */
+    setSkippedElements(page: ElementProxy, skipped: SkippedElementsRecord): void;
+    /**
+     * Gets the skipped elements record for a page
+     */
+    getSkippedElements(page: ElementProxy): SkippedElementsRecord;
+    /**
+     * Clears the skipped elements record for a page
+     */
+    clearSkippedElements(page: ElementProxy): void;
     /**
      * Sets both data and metadata for an element, keeping them properly separated
      */

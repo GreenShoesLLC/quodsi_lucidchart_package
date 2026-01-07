@@ -12,7 +12,8 @@ import {
     extractGeneratorFields,
     EntitySourceConfig,
     createDefaultEntitySourceConfig,
-    GeneratorType
+    GeneratorType,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -182,8 +183,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): GeneratorLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}`);
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): GeneratorLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location
         const location = block.getLocation();
@@ -244,7 +245,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             storedData,
             SimulationObjectType.Generator,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 

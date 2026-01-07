@@ -9,10 +9,11 @@ import {
     ProcessAnalysisResult,
     DiagramElementKind,
     Resource,
-    ResourceRequirement
+    ResourceRequirement,
+    MappingSource
 } from '@quodsi/shared';
 
-import { StorageAdapter } from '../../core/StorageAdapter';
+import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
 import { LucidElementFactory } from '../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from './LucidPageAnalyzer';
@@ -123,10 +124,12 @@ export class LucidPageConversionService extends QuodsiLogger {
      *
      * @param page The page to convert
      * @param mappings Map of element ID to target simulation type (null means skip)
+     * @param userOverrideIds Set of element IDs that were explicitly set by the user
      */
     public async convertPageWithMappings(
         page: PageProxy,
-        mappings: Map<string, SimulationObjectType | null>
+        mappings: Map<string, SimulationObjectType | null>,
+        userOverrideIds: Set<string> = new Set()
     ): Promise<ConversionResult> {
         this.log('Starting page conversion with explicit mappings');
 
@@ -165,7 +168,7 @@ export class LucidPageConversionService extends QuodsiLogger {
             }
 
             // Convert elements using explicit mappings
-            const counts = await this.convertElementsWithMappings(page, mappings);
+            const counts = await this.convertElementsWithMappings(page, mappings, userOverrideIds);
 
             // Validate the converted model
             const validationResult = await this.modelManager.validateModel();
@@ -192,12 +195,17 @@ export class LucidPageConversionService extends QuodsiLogger {
      */
     private async convertElementsWithMappings(
         page: PageProxy,
-        mappings: Map<string, SimulationObjectType | null>
+        mappings: Map<string, SimulationObjectType | null>,
+        userOverrideIds: Set<string> = new Set()
     ): Promise<{ activities: number; generators: number; resources: number; connectors: number }> {
         let activities = 0;
         let generators = 0;
         let resources = 0;
         let connectors = 0;
+
+        // Load existing skipped elements (for re-conversions) and merge with new skips
+        const existingSkipped = this.storageAdapter.getSkippedElements(page);
+        const skippedElements: SkippedElementsRecord = { ...existingSkipped };
 
         // Calculate outgoing connections for probability calculation
         const outgoingConnectionCounts = new Map<string, number>();
@@ -215,20 +223,33 @@ export class LucidPageConversionService extends QuodsiLogger {
         // Process blocks
         for (const [blockId, block] of page.allBlocks) {
             const targetType = mappings.get(blockId);
+            const isUserOverride = userOverrideIds.has(blockId);
+            const mappingSource: MappingSource = isUserOverride ? 'user' : 'auto';
 
-            // Skip if null or not in mappings
-            if (targetType === null || targetType === undefined) {
-                this.log(`Skipping block ${blockId} (no mapping or explicitly skipped)`);
+            // Skip if null (explicitly skipped) - track at page level
+            if (targetType === null) {
+                this.log(`Skipping block ${blockId} (explicitly skipped, source: ${mappingSource})`);
+                skippedElements[blockId] = mappingSource;
+                continue;
+            }
+
+            // Skip if not in mappings at all (not part of conversion)
+            if (targetType === undefined) {
+                this.log(`Skipping block ${blockId} (not in mappings)`);
                 continue;
             }
 
             try {
-                this.log(`Converting block ${blockId} to ${targetType}`);
+                this.log(`Converting block ${blockId} to ${targetType} (source: ${mappingSource})`);
+
+                // Remove from skipped if it was previously skipped (being converted now)
+                delete skippedElements[blockId];
 
                 const platformObject = this.elementFactory.createPlatformObject(
                     block,
                     targetType,
-                    true // isConversion
+                    true, // isConversion
+                    mappingSource
                 );
 
                 const element = platformObject.getSimulationObject();
@@ -254,8 +275,17 @@ export class LucidPageConversionService extends QuodsiLogger {
         // Process lines
         for (const [lineId, line] of page.allLines) {
             const targetType = mappings.get(lineId);
+            const isUserOverride = userOverrideIds.has(lineId);
+            const mappingSource: MappingSource = isUserOverride ? 'user' : 'auto';
 
-            // Skip if null or not a Connector
+            // Skip if null (explicitly skipped) - track at page level
+            if (targetType === null) {
+                this.log(`Skipping line ${lineId} (explicitly skipped, source: ${mappingSource})`);
+                skippedElements[lineId] = mappingSource;
+                continue;
+            }
+
+            // Skip if not a Connector
             if (targetType !== SimulationObjectType.Connector) {
                 this.log(`Skipping line ${lineId} (not mapped to Connector)`);
                 continue;
@@ -270,7 +300,10 @@ export class LucidPageConversionService extends QuodsiLogger {
             }
 
             try {
-                this.log(`Converting line ${lineId} to Connector`);
+                this.log(`Converting line ${lineId} to Connector (source: ${mappingSource})`);
+
+                // Remove from skipped if it was previously skipped (being converted now)
+                delete skippedElements[lineId];
 
                 const sourceId = endpoint1.connection.id;
                 const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
@@ -279,7 +312,8 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const platformObject = this.elementFactory.createPlatformObject(
                     line,
                     SimulationObjectType.Connector,
-                    true // isConversion
+                    true, // isConversion
+                    mappingSource
                 );
 
                 const connector = platformObject.getSimulationObject() as Connector;
@@ -295,6 +329,10 @@ export class LucidPageConversionService extends QuodsiLogger {
                 throw error;
             }
         }
+
+        // Save skipped elements to page
+        this.storageAdapter.setSkippedElements(page, skippedElements);
+        this.log(`Saved ${Object.keys(skippedElements).length} skipped elements to page`);
 
         // Process auto-created resources from Activity resourceName fields
         const autoResourceCount = await this.processAutoCreatedResources(page);

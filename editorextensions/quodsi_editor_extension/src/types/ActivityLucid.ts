@@ -11,7 +11,8 @@ import {
     Duration,
     PeriodUnit,
     ConstantDistribution,
-    createDelayAction
+    createDelayAction,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -166,8 +167,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ActivityLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}`);
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ActivityLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location
         const location = block.getLocation();
@@ -225,7 +226,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData,
             SimulationObjectType.Activity,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 

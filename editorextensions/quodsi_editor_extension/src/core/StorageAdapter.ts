@@ -1,6 +1,11 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, MappingSource } from '@quodsi/shared';
 import { MetaData } from '@quodsi/shared';
+
+/**
+ * Record of skipped elements with their mapping source
+ */
+export type SkippedElementsRecord = Record<string, MappingSource>;
 
 /**
  * Shape data storage format
@@ -24,6 +29,7 @@ export class StorageAdapter {
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly TIME_PATTERNS_KEY = 'q_time_patterns';
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
+    private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
@@ -321,6 +327,59 @@ export class StorageAdapter {
     }
 
     /**
+     * Sets the skipped elements record for a page
+     * @param page The page element
+     * @param skipped Record of element IDs to their mapping source ('auto' or 'user')
+     */
+    public setSkippedElements(page: ElementProxy, skipped: SkippedElementsRecord): void {
+        try {
+            this.log('Setting skipped elements for page:', {
+                pageId: page.id,
+                count: Object.keys(skipped).length
+            });
+            const serialized = JSON.stringify(skipped);
+            page.shapeData.set(StorageAdapter.SKIPPED_ELEMENTS_KEY, serialized);
+            this.log('Successfully set skipped elements');
+        } catch (error) {
+            this.logError('Error setting skipped elements:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the skipped elements record for a page
+     */
+    public getSkippedElements(page: ElementProxy): SkippedElementsRecord {
+        try {
+            this.log('Getting skipped elements for page:', page.id);
+            const str = page.shapeData.get(StorageAdapter.SKIPPED_ELEMENTS_KEY);
+            if (!str || typeof str !== 'string') {
+                this.log('No skipped elements found, returning empty record');
+                return {};
+            }
+            const skipped = JSON.parse(str) as SkippedElementsRecord;
+            this.log('Retrieved skipped elements:', { count: Object.keys(skipped).length });
+            return skipped;
+        } catch (error) {
+            this.logError('Error getting skipped elements:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Clears the skipped elements record for a page
+     */
+    public clearSkippedElements(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.SKIPPED_ELEMENTS_KEY);
+            this.log('Successfully cleared skipped elements');
+        } catch (error) {
+            this.logError('Error clearing skipped elements:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Sets both data and metadata for an element, keeping them properly separated
      */
     public setElementData<T extends { id: string }>(
@@ -335,7 +394,8 @@ export class StorageAdapter {
                 type,
                 version: options.version || this.CURRENT_VERSION,
                 lastModified: new Date().toISOString(),
-                id: data.id  // Use the ID from the data object
+                id: data.id,  // Use the ID from the data object
+                mappingSource: options.mappingSource  // Track how this element was mapped
             };
 
             // Create a clean data object without metadata fields
@@ -564,6 +624,7 @@ export class StorageAdapter {
             this.clearResourceRequirements(page);
             this.clearTimePatterns(page);
             this.clearTimeDistributedConfigs(page);
+            this.clearSkippedElements(page);
 
             // Clear data from all blocks
             for (const [, block] of page.allBlocks) {

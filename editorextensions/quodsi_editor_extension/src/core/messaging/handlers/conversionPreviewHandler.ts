@@ -138,8 +138,9 @@ export class ConversionPreviewHandler {
             // Get the preview data to start with proposed mappings
             const previewData = pageAnalyzer.analyzePageForPreview(currentPage, storageAdapter);
 
-            // Build the final mappings
+            // Build the final mappings and track user overrides
             const finalMappings = new Map<string, SimulationObjectType | null>();
+            const userOverrideIds = new Set<string>();
 
             if (previewData.isAlreadyConverted) {
                 // For already-converted pages, only apply override mappings
@@ -147,10 +148,12 @@ export class ConversionPreviewHandler {
                 if (data.overrides && data.overrides.length > 0) {
                     for (const override of data.overrides) {
                         finalMappings.set(override.elementId, override.targetType);
+                        userOverrideIds.add(override.elementId);
                     }
                 }
                 ConversionPreviewHandler.logger.log('Already converted page - applying overrides only:', {
-                    overrideCount: finalMappings.size
+                    overrideCount: finalMappings.size,
+                    userOverrideCount: userOverrideIds.size
                 });
             } else {
                 // For new conversions, start with all proposed mappings
@@ -162,18 +165,21 @@ export class ConversionPreviewHandler {
                 if (data.overrides && data.overrides.length > 0) {
                     for (const override of data.overrides) {
                         finalMappings.set(override.elementId, override.targetType);
+                        userOverrideIds.add(override.elementId);
                     }
                 }
 
                 ConversionPreviewHandler.logger.log('New conversion - full mappings prepared:', {
-                    totalMappings: finalMappings.size
+                    totalMappings: finalMappings.size,
+                    userOverrideCount: userOverrideIds.size
                 });
             }
 
-            // Perform conversion with the final mappings
+            // Perform conversion with the final mappings and user override tracking
             const result = await pageConversionService.convertPageWithMappings(
                 currentPage,
-                finalMappings
+                finalMappings,
+                userOverrideIds
             );
 
             ConversionPreviewHandler.logger.log('Conversion complete:', result);

@@ -1,9 +1,10 @@
 import { BlockProxy } from 'lucid-extension-sdk';
-import { 
+import {
     ResourceRequirement,
     RequirementClause,
     SimulationObjectType,
-    Resource
+    Resource,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -95,7 +96,7 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
         this.storageAdapter.updateElementData(this.block, this.simObject);
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): ResourceRequirementLucid {
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ResourceRequirementLucid {
         // Create default resource requirement
         // Note: ResourceRequirement doesn't have a createDefault method
         const defaultRequirement = new ResourceRequirement(
@@ -117,7 +118,8 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
             storedData,
             SimulationObjectType.ResourceRequirement,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 

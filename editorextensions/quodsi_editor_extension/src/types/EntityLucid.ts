@@ -4,7 +4,8 @@ import {
     SimulationObjectType,
     ComponentLogger,
     parseStructuredName,
-    extractEntityFields
+    extractEntityFields,
+    MappingSource
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -128,8 +129,8 @@ export class EntityLucid extends SimObjectLucid<Entity> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter): EntityLucid {
-        ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid from conversion for block ID: ${block.id}`);
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): EntityLucid {
+        ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location
         const location = block.getLocation();
@@ -169,7 +170,8 @@ export class EntityLucid extends SimObjectLucid<Entity> {
             storedData,
             SimulationObjectType.Entity,
             {
-                version: "1.0.0"
+                version: "1.0.0",
+                mappingSource: mappingSource
             }
         );
 
