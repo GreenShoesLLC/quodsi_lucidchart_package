@@ -178,6 +178,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
       {menuOpen && (
         <div className="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg z-50 min-w-[140px]">
+          {onOpenDiagramMapping && (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenDiagramMapping();
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            >
+              <Map className="w-3 h-3 text-gray-500" />
+              Diagram Mapping
+            </button>
+          )}
           {onViewModelJson && (
             <button
               onClick={() => {
@@ -270,16 +282,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
                   Run Simulation
                 </>
               )}
-            </button>
-          )}
-          {onOpenDiagramMapping && (
-            <button
-              className="flex-1 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors flex items-center justify-center gap-1"
-              onClick={onOpenDiagramMapping}
-              title="View and modify element type mappings"
-            >
-              <Map className="w-3 h-3" />
-              Diagram Mapping
             </button>
           )}
         </div>

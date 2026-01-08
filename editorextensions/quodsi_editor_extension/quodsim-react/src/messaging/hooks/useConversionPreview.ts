@@ -46,9 +46,10 @@ export function useConversionPreview() {
 
         return state.previewData.mappings.map(mapping => {
             const hasOverride = mapping.elementId in state.userOverrides;
+            // Prioritize currentType (what's stored) over proposedType (analysis suggestion)
             const finalType = hasOverride
                 ? state.userOverrides[mapping.elementId]
-                : mapping.proposedType;
+                : (mapping.currentType ?? mapping.proposedType);
 
             return {
                 ...mapping,
