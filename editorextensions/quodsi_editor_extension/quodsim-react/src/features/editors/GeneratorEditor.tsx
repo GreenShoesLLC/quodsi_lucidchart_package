@@ -14,7 +14,7 @@ import {
   createDefaultEntitySourceConfig,
   ModelDefaults,
 } from "@quodsi/shared";
-import { Timer, Flag, Settings, Hash, Zap, Info, Clock } from "lucide-react";
+import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
@@ -34,22 +34,10 @@ const INFINITY_DISPLAY_VALUE = 999999;
 // Tab navigation configuration
 const TAB_CONFIG = [
   {
-    id: "basic" as const,
-    title: "Basic Settings",
+    id: "settings" as const,
+    title: "Settings",
     icon: Settings,
-    tooltip: "Configure generator name, entity, and how many entities are created per event"
-  },
-  {
-    id: "frequency" as const,
-    title: "Frequency Settings",
-    icon: Timer,
-    tooltip: "Set the time interval between entity creation events, total occurrences, and start delay"
-  },
-  {
-    id: "distribution" as const,
-    title: "Time Distribution",
-    icon: Clock,
-    tooltip: "Define temporal patterns and time-distributed configurations for entity creation"
+    tooltip: "Configure generator name, entity, type, and creation settings"
   },
   {
     id: "events" as const,
@@ -95,7 +83,7 @@ interface Props {
 /**
  * Available tabs in the generator editor
  */
-type GeneratorTab = "basic" | "frequency" | "distribution" | "states" | "events";
+type GeneratorTab = "settings" | "events" | "states";
 
 /**
  * GeneratorEditor - Comprehensive editor for Generator simulation objects
@@ -340,7 +328,12 @@ const GeneratorEditor: React.FC<Props> = ({
   /**
    * Currently active tab in the editor.
    */
-  const [activeTab, setActiveTab] = useState<GeneratorTab>("basic");
+  const [activeTab, setActiveTab] = useState<GeneratorTab>("settings");
+
+  /**
+   * Whether advanced settings section is expanded (Frequency mode only).
+   */
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   /**
    * Modal state for TimePattern editor
@@ -410,12 +403,6 @@ const GeneratorEditor: React.FC<Props> = ({
         updates.name = value;
       } else if (name === 'generatorType') {
         updates.generatorType = value as GeneratorType;
-        // Switch to appropriate tab when generator type changes
-        if (value === GeneratorType.FREQUENCY && activeTab === 'distribution') {
-          setActiveTab('frequency');
-        } else if (value === GeneratorType.TIME_DISTRIBUTED && activeTab === 'frequency') {
-          setActiveTab('distribution');
-        }
       } else if (name === 'entityId') {
         updates.entityId = value;
       } else if (name === 'periodicOccurrences') {
@@ -655,17 +642,7 @@ const GeneratorEditor: React.FC<Props> = ({
       {/* Tab Navigation */}
       <div className="border-b bg-gray-50">
         <div className="flex">
-          {TAB_CONFIG.filter(tab => {
-            // Hide Frequency tab for TIME_DISTRIBUTED generators
-            if (tab.id === 'frequency' && localGeneratorDraft.generationConfig.generatorType === GeneratorType.TIME_DISTRIBUTED) {
-              return false;
-            }
-            // Hide Distribution tab for FREQUENCY generators
-            if (tab.id === 'distribution' && localGeneratorDraft.generationConfig.generatorType === GeneratorType.FREQUENCY) {
-              return false;
-            }
-            return true;
-          }).map((tab) => {
+          {TAB_CONFIG.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -688,333 +665,350 @@ const GeneratorEditor: React.FC<Props> = ({
 
       {/* Tab Content */}
       <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-        {activeTab === "basic" && (
+        {activeTab === "settings" && (
           <div className="space-y-2">
-              {/* Name Section */}
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700">
-                    Generator Name
-                  </label>
-                  <span title="A descriptive name for this generator. Generators create entities at specified intervals and inject them into the simulation through activities.">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  name="name"
-                  className="w-full px-2 py-1.5 text-xs border rounded"
-                  value={localGeneratorDraft.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter generator name"
-                />
-              </div>
-
-              {/* Generator Type Selection */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700">
-                    Generator Type
-                  </label>
-                  <span title="FREQUENCY: Creates entities at regular intervals using interarrival time. TIME_DISTRIBUTED: Creates entities based on temporal patterns (weekly, daily, hourly weights) and date ranges.">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <select
-                  name="generatorType"
-                  className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.generationConfig.generatorType}
-                  onChange={handleInputChange}
-                >
-                  <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
-                  <option value={GeneratorType.TIME_DISTRIBUTED}>Time-Distributed</option>
-                </select>
-              </div>
-
-              {/* Entity Selection */}
-              <div className="pt-2 border-t">
-                <div className="mb-1">
-                  <div className="flex items-center gap-1 mb-0.5">
-                    <div className="text-xs font-medium text-gray-700">
-                      Entity
-                    </div>
-                    <span title="The type of entity this generator creates. Each time the generator fires, it will create instances of this entity type (e.g., Customer, Order, Patient).">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                </div>
-                <select
-                  name="entityId"
-                  className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.generationConfig.entityId}
-                  onChange={handleInputChange}
-                >
-                  {entities.map((entity) => (
-                    <option key={entity.id} value={entity.id}>
-                      {entity.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-          </div>
-        )}
-
-        {activeTab === "frequency" && (
-          <div className="space-y-2">
-            {/* Interarrival Time */}
+            {/* Name Section */}
             <div>
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700">
-                    Time Between Arrivals
-                  </label>
-                  <span title="The time interval between consecutive entity creation events. This defines how frequently the generator produces entities (e.g., every 5 minutes, every 2 hours).">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <EnhancedDurationEditor
-                  periodUnit={
-                    localGeneratorDraft.generationConfig.periodIntervalDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
-                  }
-                  distribution={
-                    localGeneratorDraft.generationConfig.periodIntervalDuration!.distribution
-                  }
-                  onChange={(periodUnit, distribution) =>
-                    handleDurationChange(
-                      "periodIntervalDuration",
-                      periodUnit,
-                      distribution
-                    )
-                  }
-                  compact={true}
-                />
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Generator Name
+                </label>
+                <span title="A descriptive name for this generator. Generators create entities at specified intervals and inject them into the simulation through activities.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
+              <input
+                type="text"
+                name="name"
+                className="w-full px-2 py-1.5 text-xs border rounded"
+                value={localGeneratorDraft.name}
+                onChange={handleInputChange}
+                placeholder="Enter generator name"
+              />
+            </div>
 
-              {/* Periodic Occurrences */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700">
-                    Periodic Occurrences
-                  </label>
-                  <span title={`How many times the generator will fire (create entities). For example, 10 occurrences means the generator creates entities 10 times total. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <input
-                  type="number"
-                  name="periodicOccurrences"
-                  className="w-full px-2 py-1 text-xs border rounded"
-                  value={localGeneratorDraft.generationConfig.periodicOccurrences}
-                  onChange={handleInputChange}
-                  min="0"
-                />
+            {/* Entity Selection */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Entity
+                </label>
+                <span title="The type of entity this generator creates. Each time the generator fires, it will create instances of this entity type (e.g., Customer, Order, Patient).">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
+              <select
+                name="entityId"
+                className="w-full px-2 py-1.5 text-xs border rounded bg-white"
+                value={localGeneratorDraft.generationConfig.entityId}
+                onChange={handleInputChange}
+              >
+                {entities.map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              {/* Start Delay */}
-              <div className="pt-2 border-t">
-                <div className="flex items-center gap-1 mb-1">
-                  <label className="text-xs font-medium text-gray-700">
-                    Start Delay
-                  </label>
-                  <span title="Time to wait before the generator creates its first entity. For example, a 10-minute delay means the first creation occurs at simulation time 10 minutes. Use 0 for immediate start.">
-                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                  </span>
-                </div>
-                <EnhancedDurationEditor
-                  periodUnit={
-                    localGeneratorDraft.generationConfig.periodicStartDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
-                  }
-                  distribution={localGeneratorDraft.generationConfig.periodicStartDuration!.distribution}
-                  onChange={(periodUnit, distribution) =>
-                    handleDurationChange(
-                      "periodicStartDuration",
-                      periodUnit,
-                      distribution
-                    )
-                  }
-                  compact={true}
-                />
+            {/* Generator Type Selection */}
+            <div className="pt-2 border-t">
+              <div className="flex items-center gap-1 mb-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Generator Type
+                </label>
+                <span title="FREQUENCY: Creates entities at regular intervals using interarrival time. TIME_DISTRIBUTED: Creates entities based on temporal patterns (weekly, daily, hourly weights) and date ranges.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
+              <select
+                name="generatorType"
+                className="w-full px-2 py-1.5 text-xs border rounded bg-white"
+                value={localGeneratorDraft.generationConfig.generatorType}
+                onChange={handleInputChange}
+              >
+                <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
+                <option value={GeneratorType.TIME_DISTRIBUTED}>Time-Distributed</option>
+              </select>
+            </div>
 
-              {/* Generation Limits */}
-              <div className="pt-2 border-t">
-                <div className="text-xs font-medium text-gray-700 mb-1">
-                  Generation Limits
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <label className="text-xs text-gray-600">
-                        Entities Per
-                      </label>
-                      <span title="How many entities are created each time the generator fires. For example, a value of 5 means 5 entities arrive simultaneously at each creation event.">
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      name="entitiesPerCreation"
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.generationConfig.entitiesPerCreation}
-                      onChange={handleInputChange}
-                      min="1"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1 mb-1">
-                      <label className="text-xs text-gray-600">
-                        Max Entities
-                      </label>
-                      <span title={`Maximum total number of entities this generator will create across all occurrences. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
-                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                      </span>
-                    </div>
-                    <input
-                      type="number"
-                      name="maxEntities"
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      value={localGeneratorDraft.generationConfig.maxEntities}
-                      onChange={handleInputChange}
-                      min="1"
-                    />
-                  </div>
-                </div>
-              </div>
-          </div>
-        )}
-
-        {activeTab === "distribution" && (
-          <div className="space-y-3">
-              {/* Time Patterns Section */}
-              <div className="bg-gray-50 p-2 rounded border">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-medium text-gray-700">Time Patterns</span>
-                    <span title="Reusable temporal distribution patterns defining weekly, daily, and hourly weights">
+            {/* Dynamic content based on generator type */}
+            {localGeneratorDraft.generationConfig.generatorType === GeneratorType.FREQUENCY ? (
+              <>
+                {/* Interarrival Time */}
+                <div className="pt-2 border-t">
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Time Between Arrivals
+                    </label>
+                    <span title="The time interval between consecutive entity creation events. This defines how frequently the generator produces entities (e.g., every 5 minutes, every 2 hours).">
                       <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                     </span>
                   </div>
+                  <EnhancedDurationEditor
+                    periodUnit={
+                      localGeneratorDraft.generationConfig.periodIntervalDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
+                    }
+                    distribution={
+                      localGeneratorDraft.generationConfig.periodIntervalDuration!.distribution
+                    }
+                    onChange={(periodUnit, distribution) =>
+                      handleDurationChange(
+                        "periodIntervalDuration",
+                        periodUnit,
+                        distribution
+                      )
+                    }
+                    compact={true}
+                  />
+                </div>
+
+                {/* Advanced Settings - Expandable */}
+                <div className="pt-2 border-t">
                   <button
                     type="button"
-                    onClick={handleAddPattern}
-                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                    className="flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900"
                   >
-                    Add Pattern
+                    {showAdvancedSettings ? (
+                      <ChevronDown className="w-3 h-3" />
+                    ) : (
+                      <ChevronRight className="w-3 h-3" />
+                    )}
+                    Advanced Settings
                   </button>
-                </div>
-                {timePatterns.length === 0 ? (
-                  <div className="text-xs text-gray-500 italic">
-                    No patterns defined yet. Click "Add Pattern" to create one.
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    {timePatterns.map((pattern) => (
-                      <div
-                        key={pattern.id}
-                        className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 hover:border-blue-300"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-gray-700 truncate">
-                            {pattern.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {pattern.weeklyWeights.length > 0 && `Weekly: ${pattern.weeklyWeights.length} weights`}
-                            {pattern.dayOfWeekWeights.length > 0 && ` • Daily: ${pattern.dayOfWeekWeights.length} weights`}
-                            {pattern.dayOfWeekHourWeights.length > 0 && ` • Hourly: ${pattern.dayOfWeekHourWeights.length} weights`}
-                            {pattern.weeklyWeights.length === 0 && pattern.dayOfWeekWeights.length === 0 && pattern.dayOfWeekHourWeights.length === 0 && "Uniform distribution"}
-                          </div>
+
+                  {showAdvancedSettings && (
+                    <div className="mt-2 space-y-2">
+                      {/* Periodic Occurrences */}
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <label className="text-xs font-medium text-gray-700">
+                            Periodic Occurrences
+                          </label>
+                          <span title={`How many times the generator will fire (create entities). For example, 10 occurrences means the generator creates entities 10 times total. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
                         </div>
-                        <div className="flex gap-1 ml-2">
-                          <button
-                            type="button"
-                            onClick={() => handleEditPattern(pattern)}
-                            className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePattern(pattern.id)}
-                            className="px-2 py-1 text-xs border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                          >
-                            Delete
-                          </button>
+                        <input
+                          type="number"
+                          name="periodicOccurrences"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={localGeneratorDraft.generationConfig.periodicOccurrences}
+                          onChange={handleInputChange}
+                          min="0"
+                        />
+                      </div>
+
+                      {/* Start Delay */}
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center gap-1 mb-1">
+                          <label className="text-xs font-medium text-gray-700">
+                            Start Delay
+                          </label>
+                          <span title="Time to wait before the generator creates its first entity. For example, a 10-minute delay means the first creation occurs at simulation time 10 minutes. Use 0 for immediate start.">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <EnhancedDurationEditor
+                          periodUnit={
+                            localGeneratorDraft.generationConfig.periodicStartDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
+                          }
+                          distribution={localGeneratorDraft.generationConfig.periodicStartDuration!.distribution}
+                          onChange={(periodUnit, distribution) =>
+                            handleDurationChange(
+                              "periodicStartDuration",
+                              periodUnit,
+                              distribution
+                            )
+                          }
+                          compact={true}
+                        />
+                      </div>
+
+                      {/* Generation Limits */}
+                      <div className="pt-2 border-t">
+                        <div className="text-xs font-medium text-gray-700 mb-1">
+                          Generation Limits
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <label className="text-xs text-gray-600">
+                                Entities Per
+                              </label>
+                              <span title="How many entities are created each time the generator fires. For example, a value of 5 means 5 entities arrive simultaneously at each creation event.">
+                                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              name="entitiesPerCreation"
+                              className="w-full px-2 py-1 text-xs border rounded"
+                              value={localGeneratorDraft.generationConfig.entitiesPerCreation}
+                              onChange={handleInputChange}
+                              min="1"
+                            />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1 mb-1">
+                              <label className="text-xs text-gray-600">
+                                Max Entities
+                              </label>
+                              <span title={`Maximum total number of entities this generator will create across all occurrences. Enter ${INFINITY_DISPLAY_VALUE} for unlimited (∞).`}>
+                                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              name="maxEntities"
+                              className="w-full px-2 py-1 text-xs border rounded"
+                              value={localGeneratorDraft.generationConfig.maxEntities}
+                              onChange={handleInputChange}
+                              min="1"
+                            />
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Time Distributed Configs Section */}
-              <div className="bg-gray-50 p-2 rounded border">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs font-medium text-gray-700">Distribution Configurations</span>
-                    <span title="Configurations combining a time pattern with volume and date range. Select which configs this generator uses.">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddConfig}
-                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Add Config
-                  </button>
+                    </div>
+                  )}
                 </div>
-                {timeDistributedConfigs.length === 0 ? (
-                  <div className="text-xs text-gray-500 italic">
-                    No configurations defined yet. Click "Add Config" to create one.
+              </>
+            ) : (
+              <div className="pt-2 border-t space-y-3">
+                {/* Time Patterns Section */}
+                <div className="bg-gray-50 p-2 rounded border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-medium text-gray-700">Time Patterns</span>
+                      <span title="Reusable temporal distribution patterns defining weekly, daily, and hourly weights">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddPattern}
+                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Add Pattern
+                    </button>
                   </div>
-                ) : (
-                  <div className="space-y-1">
-                    {timeDistributedConfigs.map((config) => {
-                      const isSelected = (localGeneratorDraft.generationConfig.timeDistributedConfigIds || []).includes(config.id);
-                      const pattern = timePatterns.find(p => p.id === config.timePatternId);
-
-                      return (
+                  {timePatterns.length === 0 ? (
+                    <div className="text-xs text-gray-500 italic">
+                      No patterns defined yet. Click "Add Pattern" to create one.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {timePatterns.map((pattern) => (
                         <div
-                          key={config.id}
-                          className={`flex items-center gap-2 bg-white p-2 rounded border ${
-                            isSelected ? "border-blue-400 bg-blue-50" : "border-gray-200"
-                          }`}
+                          key={pattern.id}
+                          className="flex items-center justify-between bg-white p-2 rounded border border-gray-200 hover:border-blue-300"
                         >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleConfigAssociation(config.id)}
-                            className="flex-shrink-0"
-                          />
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-medium text-gray-700 truncate">
-                              {config.name}
+                              {pattern.name}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {pattern?.name || "Unknown pattern"} • {config.totalVolume} {config.volumePeriodBasis.toLowerCase()} • {config.startDate} to {config.endDate}
+                              {pattern.weeklyWeights.length > 0 && `Weekly: ${pattern.weeklyWeights.length} weights`}
+                              {pattern.dayOfWeekWeights.length > 0 && ` • Daily: ${pattern.dayOfWeekWeights.length} weights`}
+                              {pattern.dayOfWeekHourWeights.length > 0 && ` • Hourly: ${pattern.dayOfWeekHourWeights.length} weights`}
+                              {pattern.weeklyWeights.length === 0 && pattern.dayOfWeekWeights.length === 0 && pattern.dayOfWeekHourWeights.length === 0 && "Uniform distribution"}
                             </div>
                           </div>
-                          <div className="flex gap-1 ml-2 flex-shrink-0">
+                          <div className="flex gap-1 ml-2">
                             <button
                               type="button"
-                              onClick={() => handleEditConfig(config)}
+                              onClick={() => handleEditPattern(pattern)}
                               className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
                             >
                               Edit
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteConfig(config.id)}
+                              onClick={() => handleDeletePattern(pattern.id)}
                               className="px-2 py-1 text-xs border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600"
                             >
                               Delete
                             </button>
                           </div>
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Time Distributed Configs Section */}
+                <div className="bg-gray-50 p-2 rounded border">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-medium text-gray-700">Distribution Configurations</span>
+                      <span title="Configurations combining a time pattern with volume and date range. Select which configs this generator uses.">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddConfig}
+                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                    >
+                      Add Config
+                    </button>
                   </div>
-                )}
+                  {timeDistributedConfigs.length === 0 ? (
+                    <div className="text-xs text-gray-500 italic">
+                      No configurations defined yet. Click "Add Config" to create one.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {timeDistributedConfigs.map((config) => {
+                        const isSelected = (localGeneratorDraft.generationConfig.timeDistributedConfigIds || []).includes(config.id);
+                        const pattern = timePatterns.find(p => p.id === config.timePatternId);
+
+                        return (
+                          <div
+                            key={config.id}
+                            className={`flex items-center gap-2 bg-white p-2 rounded border ${
+                              isSelected ? "border-blue-400 bg-blue-50" : "border-gray-200"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleConfigAssociation(config.id)}
+                              className="flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium text-gray-700 truncate">
+                                {config.name}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {pattern?.name || "Unknown pattern"} • {config.totalVolume} {config.volumePeriodBasis.toLowerCase()} • {config.startDate} to {config.endDate}
+                              </div>
+                            </div>
+                            <div className="flex gap-1 ml-2 flex-shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleEditConfig(config)}
+                                className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteConfig(config.id)}
+                                className="px-2 py-1 text-xs border rounded hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
           </div>
         )}
 
