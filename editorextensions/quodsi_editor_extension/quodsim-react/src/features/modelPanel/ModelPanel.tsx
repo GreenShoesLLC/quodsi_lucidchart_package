@@ -4,7 +4,6 @@ import { useConversionPreview } from '../../messaging/hooks/useConversionPreview
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
 import { ElementEditor } from './ElementEditor';
-import { ValidationBanner } from './ValidationBanner';
 import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -59,9 +58,6 @@ export const ModelPanel: React.FC = () => {
     openPreview,
     applyDefaults
   } = useConversionPreview();
-
-  // Local UI state for validation banner
-  const [validationBannerExpanded, setValidationBannerExpanded] = useState(false);
 
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
@@ -157,13 +153,6 @@ export const ModelPanel: React.FC = () => {
     // Time distributed configs are already in serialized format, send directly to extension
     sendTimeDistributedConfigsUpdate(updatedConfigs);
   };
-
-  // Auto-expand validation banner when errors are detected
-  useEffect(() => {
-    if (validationState?.summary?.errorCount && validationState.summary.errorCount > 0) {
-      setValidationBannerExpanded(true);
-    }
-  }, [validationState?.summary?.errorCount]);
 
   useEffect(() => {
     // Handle element type issues
@@ -318,13 +307,6 @@ export const ModelPanel: React.FC = () => {
           />
         )}
       </div>
-
-      {/* Validation Banner - at bottom below editor */}
-      <ValidationBanner
-        validationState={validationState}
-        isExpanded={validationBannerExpanded}
-        onToggle={() => setValidationBannerExpanded(!validationBannerExpanded)}
-      />
 
       {/* Model Definition Viewer Modal */}
       {isModelViewerOpen && modelJson && (
