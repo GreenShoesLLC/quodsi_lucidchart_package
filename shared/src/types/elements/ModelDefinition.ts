@@ -299,6 +299,15 @@ export class ModelDefinition {
     }
 
     /**
+     * Gets all names currently in use for a given type.
+     * @param type - The simulation object type
+     * @returns Array of names in use
+     */
+    public getUsedNamesForType(type: SimulationObjectType): string[] {
+        return this.getObjectsByType(type).map(obj => obj.name);
+    }
+
+    /**
      * Gets all objects of a given type.
      * @param type - The simulation object type
      * @returns Array of simulation objects

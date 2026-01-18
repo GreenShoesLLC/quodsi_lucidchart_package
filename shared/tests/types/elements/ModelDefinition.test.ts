@@ -78,4 +78,34 @@ describe('ModelDefinition', () => {
             expect(result).toBe(false);
         });
     });
+
+    describe('getUsedNamesForType', () => {
+        it('returns empty array when no objects exist', () => {
+            const result = modelDef.getUsedNamesForType(SimulationObjectType.Activity);
+            expect(result).toEqual([]);
+        });
+
+        it('returns all names for the given type', () => {
+            const act1 = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            const act2 = new Activity('act-2', 'Treatment', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(act1);
+            modelDef.activities.add(act2);
+
+            const result = modelDef.getUsedNamesForType(SimulationObjectType.Activity);
+            expect(result).toContain('Triage');
+            expect(result).toContain('Treatment');
+            expect(result).toHaveLength(2);
+        });
+
+        it('does not include names from other types', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            const resource = new Resource('res-1', 'Nurse', 1);
+            modelDef.activities.add(activity);
+            modelDef.resources.add(resource);
+
+            const activityNames = modelDef.getUsedNamesForType(SimulationObjectType.Activity);
+            expect(activityNames).toContain('Triage');
+            expect(activityNames).not.toContain('Nurse');
+        });
+    });
 });
