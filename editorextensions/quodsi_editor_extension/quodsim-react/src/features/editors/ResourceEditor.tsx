@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, DollarSign, Hash, Info } from "lucide-react";
 import {
   Resource,
@@ -227,6 +227,11 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Reset nameError when resource changes
+  useEffect(() => {
+    setNameError(null);
+  }, [localResourceDraft.id]);
 
   // Guard against invalid resource data
   if (!localResourceDraft?.id) {

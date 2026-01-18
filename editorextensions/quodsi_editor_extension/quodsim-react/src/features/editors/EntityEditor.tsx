@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, Hash, Info } from "lucide-react";
 import {
   Entity,
@@ -190,6 +190,11 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Reset nameError when entity changes
+  useEffect(() => {
+    setNameError(null);
+  }, [localEntityDraft.id]);
 
   // Guard against invalid entity data
   if (!entity?.id) {

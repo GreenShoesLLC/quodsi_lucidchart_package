@@ -11,7 +11,7 @@ import {
     Resource,
     ResourceRequirement,
     MappingSource,
-    ensureUniqueName
+    generateUniqueName
 } from '@quodsi/shared';
 
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
@@ -208,6 +208,11 @@ export class LucidPageConversionService extends QuodsiLogger {
         const existingSkipped = this.storageAdapter.getSkippedElements(page);
         const skippedElements: SkippedElementsRecord = { ...existingSkipped };
 
+        // Track used names locally during conversion to avoid duplicates
+        // This is necessary because getModelDefinition() may rebuild from storage,
+        // which doesn't include elements we've added in-memory during this conversion
+        const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
+
         // Calculate outgoing connections for probability calculation
         const outgoingConnectionCounts = new Map<string, number>();
         for (const [lineId, line] of page.allLines) {
@@ -255,11 +260,22 @@ export class LucidPageConversionService extends QuodsiLogger {
 
                 const element = platformObject.getSimulationObject();
 
-                // Ensure unique name before registration
-                const model = await this.modelManager.getModelDefinition();
-                if (model) {
-                    element.name = ensureUniqueName(model, targetType, element.name, blockId);
+                // Ensure unique name before registration using local tracking
+                let typeNames = usedNamesByType.get(targetType);
+                if (!typeNames) {
+                    typeNames = new Set<string>();
+                    usedNamesByType.set(targetType, typeNames);
                 }
+
+                // Check if name is already used in this conversion session
+                if (typeNames.has(element.name)) {
+                    element.name = generateUniqueName(element.name, blockId);
+                    // Update storage with the unique name (createFromConversion already wrote the original)
+                    this.storageAdapter.updateElementData(block, element);
+                }
+
+                // Track the name we're using
+                typeNames.add(element.name);
 
                 await this.modelManager.registerElement(element, block);
 
@@ -343,7 +359,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         this.log(`Saved ${Object.keys(skippedElements).length} skipped elements to page`);
 
         // Process auto-created resources from Activity resourceName fields
-        const autoResourceCount = await this.processAutoCreatedResources(page);
+        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
         resources += autoResourceCount;
 
         this.log('Conversion counts:', { activities, generators, resources, connectors });
@@ -362,6 +378,11 @@ export class LucidPageConversionService extends QuodsiLogger {
         let activities = 0;
         let generators = 0;
         let resources = 0;
+
+        // Track used names locally during conversion to avoid duplicates
+        // This is necessary because getModelDefinition() may rebuild from storage,
+        // which doesn't include elements we've added in-memory during this conversion
+        const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
 
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
@@ -386,11 +407,22 @@ export class LucidPageConversionService extends QuodsiLogger {
                 // Get the simulation object
                 const element = platformObject.getSimulationObject();
 
-                // Ensure unique name before registration
-                const model = await this.modelManager.getModelDefinition();
-                if (model) {
-                    element.name = ensureUniqueName(model, blockAnalysis.elementType, element.name, blockId);
+                // Ensure unique name before registration using local tracking
+                let typeNames = usedNamesByType.get(blockAnalysis.elementType);
+                if (!typeNames) {
+                    typeNames = new Set<string>();
+                    usedNamesByType.set(blockAnalysis.elementType, typeNames);
                 }
+
+                // Check if name is already used in this conversion session
+                if (typeNames.has(element.name)) {
+                    element.name = generateUniqueName(element.name, blockId);
+                    // Update storage with the unique name (createFromConversion already wrote the original)
+                    this.storageAdapter.updateElementData(block, element);
+                }
+
+                // Track the name we're using
+                typeNames.add(element.name);
 
                 // Register with model manager
                 await this.modelManager.registerElement(element, block);
@@ -420,7 +452,7 @@ export class LucidPageConversionService extends QuodsiLogger {
         }
 
         // Process auto-created resources from Activity resourceName fields
-        const autoResourceCount = await this.processAutoCreatedResources(page);
+        const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
         resources += autoResourceCount;
 
         return { activities, generators, resources };
@@ -505,7 +537,10 @@ export class LucidPageConversionService extends QuodsiLogger {
      * 3. Converts those blocks to Resources
      * 4. Links the Activities' OperationSteps to the ResourceRequirements
      */
-    private async processAutoCreatedResources(page: PageProxy): Promise<number> {
+    private async processAutoCreatedResources(
+        page: PageProxy,
+        usedNamesByType: Map<SimulationObjectType, Set<string>>
+    ): Promise<number> {
         this.log('Processing auto-created resources from Activity resourceName fields');
 
         // Collect unique resource names from Activities
@@ -538,6 +573,13 @@ export class LucidPageConversionService extends QuodsiLogger {
 
         const createdResources = new Map<string, BlockProxy>();
 
+        // Ensure we have a Set for Resource names
+        let resourceNames = usedNamesByType.get(SimulationObjectType.Resource);
+        if (!resourceNames) {
+            resourceNames = new Set<string>();
+            usedNamesByType.set(SimulationObjectType.Resource, resourceNames);
+        }
+
         // Create visual blocks for each unique resource name
         for (const [resourceName, activityBlockIds] of resourceNamesFromActivities) {
             this.log(`Creating Resource block for: ${resourceName}`);
@@ -563,11 +605,15 @@ export class LucidPageConversionService extends QuodsiLogger {
             );
             const resource = platformObject.getSimulationObject();
 
-            // Ensure unique name before registration
-            const model = await this.modelManager.getModelDefinition();
-            if (model) {
-                resource.name = ensureUniqueName(model, SimulationObjectType.Resource, resource.name, newBlock.id);
+            // Ensure unique name before registration using local tracking
+            if (resourceNames.has(resource.name)) {
+                resource.name = generateUniqueName(resource.name, newBlock.id);
+                // Update storage with the unique name (createFromConversion already wrote the original)
+                this.storageAdapter.updateElementData(newBlock, resource);
             }
+
+            // Track the name we're using
+            resourceNames.add(resource.name);
 
             await this.modelManager.registerElement(resource, newBlock);
 

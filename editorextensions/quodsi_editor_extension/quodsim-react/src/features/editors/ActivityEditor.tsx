@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Settings,
   Plus,
@@ -501,6 +501,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Reset nameError when activity changes
+  useEffect(() => {
+    setNameError(null);
+  }, [localActivityDraft.id]);
 
   // ============================================================================
   // VALIDATION

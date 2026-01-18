@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Duration,
   Generator,
@@ -381,6 +381,11 @@ const GeneratorEditor: React.FC<Props> = ({
   );
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Reset nameError when generator changes
+  useEffect(() => {
+    setNameError(null);
+  }, [localGeneratorDraft.id]);
 
   const entities = referenceData.entities || [];
 
