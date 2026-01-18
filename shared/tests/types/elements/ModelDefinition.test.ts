@@ -1,0 +1,81 @@
+import { ModelDefinition } from '../../../src/types/elements/ModelDefinition';
+import { Model } from '../../../src/types/elements/Model';
+import { Activity } from '../../../src/types/elements/Activity';
+import { Resource } from '../../../src/types/elements/Resource';
+import { SimulationObjectType } from '../../../src/types/elements/SimulationObjectType';
+
+describe('ModelDefinition', () => {
+    let modelDef: ModelDefinition;
+
+    beforeEach(() => {
+        const model = Model.createDefault('test-model');
+        modelDef = new ModelDefinition(model);
+    });
+
+    describe('isNameUniqueForType', () => {
+        it('returns true when no objects exist for the type', () => {
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Activity,
+                'Triage'
+            );
+            expect(result).toBe(true);
+        });
+
+        it('returns true when name does not conflict', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(activity);
+
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Activity,
+                'Registration'
+            );
+            expect(result).toBe(true);
+        });
+
+        it('returns false when name conflicts with existing object', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(activity);
+
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Activity,
+                'Triage'
+            );
+            expect(result).toBe(false);
+        });
+
+        it('returns true when name exists for different type', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(activity);
+
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Resource,
+                'Triage'
+            );
+            expect(result).toBe(true);
+        });
+
+        it('excludes specified ID from conflict check', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(activity);
+
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Activity,
+                'Triage',
+                'act-1'
+            );
+            expect(result).toBe(true);
+        });
+
+        it('still detects conflict when excludeId does not match', () => {
+            const activity = new Activity('act-1', 'Triage', 1, Infinity, Infinity, [], 0, 0);
+            modelDef.activities.add(activity);
+
+            const result = modelDef.isNameUniqueForType(
+                SimulationObjectType.Activity,
+                'Triage',
+                'act-99'
+            );
+            expect(result).toBe(false);
+        });
+    });
+});

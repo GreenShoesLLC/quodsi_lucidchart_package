@@ -15,6 +15,7 @@ import { TimePatternListManager } from "./TimePatternListManager";
 import { TimeDistributedConfigListManager } from "./TimeDistributedConfigListManager";
 import { TimePattern } from "./TimePattern";
 import { TimeDistributedConfig } from "./TimeDistributedConfig";
+import { SimulationObjectType } from "./SimulationObjectType";
 
 export class ModelDefinition {
     public readonly activities: ActivityListManager;
@@ -278,6 +279,44 @@ export class ModelDefinition {
                     `State modification references non-existent activity '${componentUniqueId}'`
                 );
             }
+        }
+    }
+
+    /**
+     * Checks if a name is unique among objects of the given type.
+     * @param type - The simulation object type to check within
+     * @param name - The name to check
+     * @param excludeId - Optional ID to exclude (for editing existing objects)
+     * @returns true if the name is unique, false if it conflicts
+     */
+    public isNameUniqueForType(
+        type: SimulationObjectType,
+        name: string,
+        excludeId?: string
+    ): boolean {
+        const objects = this.getObjectsByType(type);
+        return !objects.some(obj => obj.name === name && obj.id !== excludeId);
+    }
+
+    /**
+     * Gets all objects of a given type.
+     * @param type - The simulation object type
+     * @returns Array of simulation objects
+     */
+    private getObjectsByType(type: SimulationObjectType): Array<{ id: string; name: string }> {
+        switch (type) {
+            case SimulationObjectType.Activity:
+                return this.activities.getAll();
+            case SimulationObjectType.Resource:
+                return this.resources.getAll();
+            case SimulationObjectType.Generator:
+                return this.generators.getAll();
+            case SimulationObjectType.Entity:
+                return this.entities.getAll();
+            case SimulationObjectType.Connector:
+                return this.connectors.getAll();
+            default:
+                return [];
         }
     }
 }
