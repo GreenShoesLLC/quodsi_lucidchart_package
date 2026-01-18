@@ -52,13 +52,6 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
   const modeMetadata = TRIANGULAR_PARAMETER_METADATA.mode;
   const rightMetadata = TRIANGULAR_PARAMETER_METADATA.right;
 
-  // Helper to update all inputs from params
-  const syncInputsFromParams = (params: TriangularParameters) => {
-    setLeftInput(String(params.left));
-    setModeInput(String(params.mode));
-    setRightInput(String(params.right));
-  };
-
   const handleLeftFocus = () => {
     leftFocusedRef.current = true;
   };
@@ -94,7 +87,9 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
     }
 
     setLocalParams(updatedParams);
-    syncInputsFromParams(updatedParams);
+    setLeftInput(String(updatedParams.left));
+    setModeInput(String(updatedParams.mode));
+    setRightInput(String(updatedParams.right));
     setIsDirty(false);
 
     if (TriangularDistribution.validateParameters(updatedParams)) {
@@ -138,7 +133,9 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
     }
 
     setLocalParams(updatedParams);
-    syncInputsFromParams(updatedParams);
+    setLeftInput(String(updatedParams.left));
+    setModeInput(String(updatedParams.mode));
+    setRightInput(String(updatedParams.right));
     setIsDirty(false);
 
     if (TriangularDistribution.validateParameters(updatedParams)) {
@@ -181,7 +178,9 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
     }
 
     setLocalParams(updatedParams);
-    syncInputsFromParams(updatedParams);
+    setLeftInput(String(updatedParams.left));
+    setModeInput(String(updatedParams.mode));
+    setRightInput(String(updatedParams.right));
     setIsDirty(false);
 
     if (TriangularDistribution.validateParameters(updatedParams)) {
