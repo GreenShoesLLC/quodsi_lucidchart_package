@@ -289,35 +289,10 @@ export class GeneratorValidation extends ValidationRule {
     ): void {
         /**
          * Validates interactions among multiple Generators.
-         * Checks for overlapping start times and potential system overload due to high entity generation rates.
+         * Checks for potential system overload due to high entity generation rates.
          */
 
         this.log(`Starting generator interactions validation.`);
-
-        // Check for overlapping start times (only for constant durations)
-        const startTimes = new Map<number, Generator[]>();
-
-        generators.forEach(generator => {
-            if (!generator.generationConfig) return;
-
-            const startTime = this.getDurationValue(generator.generationConfig.periodicStartDuration) ?? 0;
-            const existingGenerators = startTimes.get(startTime) || [];
-            existingGenerators.push(generator);
-            startTimes.set(startTime, existingGenerators);
-        });
-
-        startTimes.forEach((overlappingGenerators, startTime) => {
-            if (overlappingGenerators.length > 1) {
-                const names = overlappingGenerators.map(g => g.name || g.id).join(', ');
-                this.log(`Warning: Overlapping start times detected for Generators: ${names} at time ${startTime}.`);
-                issues.push(ValidationMessages.createIssue(
-                    ValidationSeverity.WARNING,
-                    'generator_overlapping_start',
-                    `Multiple generators (${names}) start at the same time (${startTime})`,
-                    overlappingGenerators[0].id
-                ));
-            }
-        });
 
         // Calculate total entity generation rate (only for constant interval durations)
         let totalEntitiesPerSecond = 0;
