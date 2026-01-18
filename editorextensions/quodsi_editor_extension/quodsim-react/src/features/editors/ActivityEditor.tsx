@@ -7,6 +7,7 @@ import {
   Hash,
   ArrowRightLeft,
   Info,
+  ChevronDown,
 } from "lucide-react";
 import {
   DndContext,
@@ -272,6 +273,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const [editingRequirement, setEditingRequirement] =
     useState<EditingRequirement | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
+  const [advancedSettingsOpen, setAdvancedSettingsOpen] = useState(false);
 
   // Name validation state
   const [nameError, setNameError] = useState<string | null>(null);
@@ -1042,31 +1044,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   )}
                 </div>
 
-                {/* Inbound Queue */}
-                <div className="pt-2 border-t">
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs font-medium text-gray-700">
-                      Inbound Queue
-                    </label>
-                    <span title="Maximum entities waiting to enter this activity. Enter 999999 for unlimited (∞).">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    name="inboundQueueCapacity"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={
-                      localActivityDraft.inboundQueueCapacity === Infinity
-                        ? INFINITY_DISPLAY_VALUE
-                        : localActivityDraft.inboundQueueCapacity
-                    }
-                    onChange={handleInputChange}
-                    min="0"
-                    max={INFINITY_DISPLAY_VALUE}
-                  />
-                </div>
-
                 {/* Activity Capacity */}
                 <div className="pt-2 border-t">
                   <div className="flex items-center gap-1 mb-1">
@@ -1087,29 +1064,74 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   />
                 </div>
 
-                {/* Outbound Queue */}
+                {/* Advanced Settings Collapsible Section */}
                 <div className="pt-2 border-t">
-                  <div className="flex items-center gap-1 mb-1">
-                    <label className="text-xs font-medium text-gray-700">
-                      Outbound Queue
-                    </label>
-                    <span title="Maximum entities waiting to exit this activity. Enter 999999 for unlimited (∞).">
-                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    name="outboundQueueCapacity"
-                    className="w-full px-2 py-1 text-xs border rounded"
-                    value={
-                      localActivityDraft.outboundQueueCapacity === Infinity
-                        ? INFINITY_DISPLAY_VALUE
-                        : localActivityDraft.outboundQueueCapacity
-                    }
-                    onChange={handleInputChange}
-                    min="0"
-                    max={INFINITY_DISPLAY_VALUE}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedSettingsOpen(!advancedSettingsOpen)}
+                    className="flex items-center gap-1 w-full text-left text-xs font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${
+                        advancedSettingsOpen ? "" : "-rotate-90"
+                      }`}
+                    />
+                    Advanced Settings
+                  </button>
+
+                  {advancedSettingsOpen && (
+                    <div className="mt-2 ml-5 space-y-2">
+                      {/* Inbound Queue */}
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <label className="text-xs font-medium text-gray-700">
+                            Inbound Queue Capacity
+                          </label>
+                          <span title="Maximum entities waiting to enter this activity. Enter 999999 for unlimited (∞).">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          name="inboundQueueCapacity"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.inboundQueueCapacity === Infinity
+                              ? INFINITY_DISPLAY_VALUE
+                              : localActivityDraft.inboundQueueCapacity
+                          }
+                          onChange={handleInputChange}
+                          min="0"
+                          max={INFINITY_DISPLAY_VALUE}
+                        />
+                      </div>
+
+                      {/* Outbound Queue */}
+                      <div>
+                        <div className="flex items-center gap-1 mb-1">
+                          <label className="text-xs font-medium text-gray-700">
+                            Outbound Queue Capacity
+                          </label>
+                          <span title="Maximum entities waiting to exit this activity. Enter 999999 for unlimited (∞).">
+                            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                          </span>
+                        </div>
+                        <input
+                          type="number"
+                          name="outboundQueueCapacity"
+                          className="w-full px-2 py-1 text-xs border rounded"
+                          value={
+                            localActivityDraft.outboundQueueCapacity === Infinity
+                              ? INFINITY_DISPLAY_VALUE
+                              : localActivityDraft.outboundQueueCapacity
+                          }
+                          onChange={handleInputChange}
+                          min="0"
+                          max={INFINITY_DISPLAY_VALUE}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
             </div>
           )}
