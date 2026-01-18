@@ -45,6 +45,7 @@ import {
   ComponentType,
   Connector,
   ResourceRequirement,
+  isNameUniqueInReferenceData,
 } from "@quodsi/shared";
 import { ActionEditor } from "./ActionEditor";
 import StatesEditor from "./StatesEditor";
@@ -271,6 +272,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     useState<EditingRequirement | null>(null);
   const [expandedActions, setExpandedActions] = useState<Set<number>>(new Set());
 
+  // Name validation state
+  const [nameError, setNameError] = useState<string | null>(null);
+
   // Get message sender for updating resource requirements
   const { updateResourceRequirements } = useModelOpsSender();
 
@@ -422,6 +426,26 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     return updated;
   };
 
+  /**
+   * Validates that the activity name is unique among all activities.
+   * @param name - The name to validate
+   * @returns Error message if invalid, null if valid
+   */
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (referenceData && !isNameUniqueInReferenceData(
+      referenceData,
+      SimulationObjectType.Activity,
+      name,
+      localActivityDraft.id
+    )) {
+      return `An Activity named "${name}" already exists`;
+    }
+    return null;
+  };
+
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -554,6 +578,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
       if (name === "name") {
         updates.name = value;
+        // Validate name uniqueness
+        const error = validateName(value);
+        setNameError(error);
       } else if (name === "capacity") {
         updates.capacity = parseInt(value) || 1;
       } else if (name === "inboundQueueCapacity") {
@@ -1004,6 +1031,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     onChange={handleInputChange}
                     placeholder="Enter activity name"
                   />
+                  {nameError && (
+                    <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                  )}
                 </div>
 
                 {/* Inbound Queue */}
@@ -1386,9 +1416,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!hasPendingChanges || isSaving || hasActionValidationError}
+                disabled={!hasPendingChanges || isSaving || hasActionValidationError || nameError !== null}
                 className={`px-3 py-1.5 text-xs rounded ${
-                  hasPendingChanges && !isSaving && !hasActionValidationError
+                  hasPendingChanges && !isSaving && !hasActionValidationError && nameError === null
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
