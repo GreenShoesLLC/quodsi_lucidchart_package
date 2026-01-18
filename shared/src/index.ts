@@ -101,6 +101,7 @@ export * from './services/lucidApi';
 export * from './utils/csvUtils';
 export * from './utils/uuidUtils';
 export * from './utils/NameParser';
+export * from './utils/nameUtils';
 
 // Serialization exports
 export * from './serialization';
