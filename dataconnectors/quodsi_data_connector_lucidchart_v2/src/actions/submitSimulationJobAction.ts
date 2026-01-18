@@ -5,7 +5,8 @@ import { getConfig } from "../config";
 
 interface SubmitJobRequest {
     documentId: string;
-    scenarioId: string; 
+    scenarioId: string;
+    scenarioName: string;
     applicationId?: string;
     appVersion?: string;
 }
@@ -22,7 +23,7 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
     try {
         // Extract and validate request data
         const data = action.data as SubmitJobRequest;
-        const { documentId, scenarioId, applicationId, appVersion } = data;
+        const { documentId, scenarioId, scenarioName, applicationId, appVersion } = data;
         
         if (!documentId || !scenarioId) {
             console.error('[submitSimulationJobAction] Missing required fields', {
@@ -58,6 +59,7 @@ export const submitSimulationJobAction: (action: DataConnectorAsynchronousAction
         const result = await batchService.submitJob(
             documentId,
             scenarioId,
+            scenarioName,
             applicationId,
             appVersion
         );

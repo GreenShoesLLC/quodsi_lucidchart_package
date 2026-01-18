@@ -368,45 +368,51 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
         </div>
       )}
 
-      {/* Resimulate Section - Show for completed scenarios */}
-      {(scenario.runState === RunState.RanSuccessfully ||
-        scenario.runState === RunState.RanWithErrors) && (
-        <div className="border-t border-gray-200 pt-1.5 mt-1.5">
-          {!showResimulateConfirm ? (
-            <button
-              onClick={() => setShowResimulateConfirm(true)}
-              className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded hover:bg-blue-100 transition-colors"
-              title="Re-run this simulation (overwrites existing results)"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Re-run Simulation
-            </button>
-          ) : (
-            <div className="p-2 bg-yellow-50 border border-yellow-300 rounded">
-              <div className="text-xs font-medium text-yellow-900 mb-1.5">
-                Re-run "{scenario.name}"?
+      {/*
+        TODO: Re-run Simulation feature temporarily disabled
+        The backend submitSimulationJobAction was fixed to pass scenarioName correctly,
+        but the feature is still not working. Hidden until root cause is identified.
+
+        Original code:
+        {(scenario.runState === RunState.RanSuccessfully ||
+          scenario.runState === RunState.RanWithErrors) && (
+          <div className="border-t border-gray-200 pt-1.5 mt-1.5">
+            {!showResimulateConfirm ? (
+              <button
+                onClick={() => setShowResimulateConfirm(true)}
+                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded hover:bg-blue-100 transition-colors"
+                title="Re-run this simulation (overwrites existing results)"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Re-run Simulation
+              </button>
+            ) : (
+              <div className="p-2 bg-yellow-50 border border-yellow-300 rounded">
+                <div className="text-xs font-medium text-yellow-900 mb-1.5">
+                  Re-run "{scenario.name}"?
+                </div>
+                <div className="text-xs text-yellow-800 mb-2">
+                  This will overwrite existing results with a new simulation run.
+                </div>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={handleResimulate}
+                    className="flex-1 px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Yes, Re-run
+                  </button>
+                  <button
+                    onClick={cancelResimulate}
+                    className="flex-1 px-2 py-1 text-xs font-medium bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="text-xs text-yellow-800 mb-2">
-                This will overwrite existing results with a new simulation run.
-              </div>
-              <div className="flex gap-1.5">
-                <button
-                  onClick={handleResimulate}
-                  className="flex-1 px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Yes, Re-run
-                </button>
-                <button
-                  onClick={cancelResimulate}
-                  className="flex-1 px-2 py-1 text-xs font-medium bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      */}
 
       {/* Action Buttons */}
       {scenario.hasResults && scenario.downloadInfo && (
