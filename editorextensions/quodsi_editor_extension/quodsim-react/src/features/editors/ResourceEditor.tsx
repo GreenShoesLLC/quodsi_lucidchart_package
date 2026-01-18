@@ -5,6 +5,9 @@ import {
   ResourceFinancialProperties,
   StateListManager,
   ComponentType,
+  SimulationObjectType,
+  EditorReferenceData,
+  isNameUniqueInReferenceData,
 } from "@quodsi/shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -33,6 +36,8 @@ interface Props {
   states: StateListManager;
   /** Callback invoked when state definitions change */
   onStatesChange: (states: StateListManager) => void;
+  /** Reference data for validation (resources, activities, etc.) */
+  referenceData?: EditorReferenceData;
 }
 
 /**
@@ -97,7 +102,7 @@ const TAB_CONFIG = [
  * @param props - Component props
  * @returns Rendered resource editor component
  */
-const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, onStatesChange }) => {
+const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, onStatesChange, referenceData }) => {
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
@@ -176,6 +181,29 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [activeTab, setActiveTab] = useState<ResourceTab>("basic");
 
+  // Name validation state
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  /**
+   * Validates that the resource name is unique among all resources.
+   * @param name - The name to validate
+   * @returns Error message if invalid, null if valid
+   */
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (referenceData && !isNameUniqueInReferenceData(
+      referenceData,
+      SimulationObjectType.Resource,
+      name,
+      localResourceDraft.id
+    )) {
+      return `A Resource named "${name}" already exists`;
+    }
+    return null;
+  };
+
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
 
@@ -230,6 +258,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
 
     if (name === 'name') {
       setLocalResourceDraft(prev => updateResourceImmutably(prev, { name: value }));
+      // Validate name uniqueness
+      const error = validateName(value);
+      setNameError(error);
     } else if (name === 'capacity') {
       setLocalResourceDraft(prev => updateResourceImmutably(prev, { capacity: parseInt(value) || 1 }));
     }
@@ -352,6 +383,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                   onChange={handleInputChange}
                   placeholder="Enter resource name"
                 />
+                {nameError && (
+                  <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                )}
               </div>
 
               {/* Resource Capacity */}
@@ -486,9 +520,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
           <button
             type="button"
             onClick={handleSave}
-            disabled={!hasPendingChanges || isSaving}
+            disabled={!hasPendingChanges || isSaving || nameError !== null}
             className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && !isSaving
+              hasPendingChanges && !isSaving && nameError === null
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
