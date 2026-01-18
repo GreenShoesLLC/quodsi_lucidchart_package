@@ -10,7 +10,8 @@ import {
     DiagramElementKind,
     Resource,
     ResourceRequirement,
-    MappingSource
+    MappingSource,
+    ensureUniqueName
 } from '@quodsi/shared';
 
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
@@ -253,6 +254,13 @@ export class LucidPageConversionService extends QuodsiLogger {
                 );
 
                 const element = platformObject.getSimulationObject();
+
+                // Ensure unique name before registration
+                const model = await this.modelManager.getModelDefinition();
+                if (model) {
+                    element.name = ensureUniqueName(model, targetType, element.name, blockId);
+                }
+
                 await this.modelManager.registerElement(element, block);
 
                 switch (targetType) {
@@ -377,6 +385,12 @@ export class LucidPageConversionService extends QuodsiLogger {
 
                 // Get the simulation object
                 const element = platformObject.getSimulationObject();
+
+                // Ensure unique name before registration
+                const model = await this.modelManager.getModelDefinition();
+                if (model) {
+                    element.name = ensureUniqueName(model, blockAnalysis.elementType, element.name, blockId);
+                }
 
                 // Register with model manager
                 await this.modelManager.registerElement(element, block);
@@ -548,6 +562,13 @@ export class LucidPageConversionService extends QuodsiLogger {
                 true // isConversion
             );
             const resource = platformObject.getSimulationObject();
+
+            // Ensure unique name before registration
+            const model = await this.modelManager.getModelDefinition();
+            if (model) {
+                resource.name = ensureUniqueName(model, SimulationObjectType.Resource, resource.name, newBlock.id);
+            }
+
             await this.modelManager.registerElement(resource, newBlock);
 
             createdResources.set(resourceName, newBlock);
