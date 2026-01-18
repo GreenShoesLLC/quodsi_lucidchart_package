@@ -13,6 +13,8 @@ import {
   EntitySourceConfig,
   createDefaultEntitySourceConfig,
   ModelDefaults,
+  SimulationObjectType,
+  isNameUniqueInReferenceData,
 } from "@quodsi/shared";
 import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
@@ -336,6 +338,11 @@ const GeneratorEditor: React.FC<Props> = ({
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
 
   /**
+   * Name validation error message, null if name is valid.
+   */
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  /**
    * Modal state for TimePattern editor
    */
   const [patternModalState, setPatternModalState] = useState<{
@@ -377,6 +384,26 @@ const GeneratorEditor: React.FC<Props> = ({
 
   const entities = referenceData.entities || [];
 
+  /**
+   * Validates that the generator name is unique among all generators.
+   * @param name - The name to validate
+   * @returns Error message if invalid, null if valid
+   */
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (referenceData && !isNameUniqueInReferenceData(
+      referenceData,
+      SimulationObjectType.Generator,
+      name,
+      localGeneratorDraft.id
+    )) {
+      return `A Generator named "${name}" already exists`;
+    }
+    return null;
+  };
+
   if (!generator?.id) {
     return <div className="text-red-500 text-sm">Invalid generator data</div>;
   }
@@ -415,6 +442,13 @@ const GeneratorEditor: React.FC<Props> = ({
 
       return updateGeneratorImmutably(prev, updates);
     });
+
+    // Validate name uniqueness when name changes
+    if (name === 'name') {
+      const error = validateName(value);
+      setNameError(error);
+    }
+
     setHasPendingChanges(true);
   };
 
@@ -685,6 +719,9 @@ const GeneratorEditor: React.FC<Props> = ({
                 onChange={handleInputChange}
                 placeholder="Enter generator name"
               />
+              {nameError && (
+                <p className="text-xs text-red-500 mt-1">{nameError}</p>
+              )}
             </div>
 
             {/* Entity Selection */}
@@ -1046,9 +1083,9 @@ const GeneratorEditor: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!hasPendingChanges}
+            disabled={!hasPendingChanges || nameError !== null}
             className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges
+              hasPendingChanges && nameError === null
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
