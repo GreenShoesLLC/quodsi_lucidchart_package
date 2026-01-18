@@ -47,12 +47,13 @@ const TAB_CONFIG = [
     icon: Zap,
     tooltip: "Set initial state values for entities when they are created"
   },
-  {
-    id: "states" as const,
-    title: "State Definitions",
-    icon: Hash,
-    tooltip: "Define custom state variables for entities created by this generator"
-  },
+  // Temporarily hidden - states managed at Model level
+  // {
+  //   id: "states" as const,
+  //   title: "State Definitions",
+  //   icon: Hash,
+  //   tooltip: "Define custom state variables for entities created by this generator"
+  // },
 ];
 
 
@@ -1066,6 +1067,7 @@ const GeneratorEditor: React.FC<Props> = ({
           />
         )}
 
+        {/* Temporarily hidden - states managed at Model level
         {activeTab === "states" && (
           <StatesEditor
             states={states}
@@ -1073,11 +1075,11 @@ const GeneratorEditor: React.FC<Props> = ({
             defaultComponentType={ComponentType.ENTITY}
           />
         )}
+        */}
       </div>
 
-      {/* Save/Cancel Buttons - Only show for Generator tabs (States tab auto-saves) */}
-      {activeTab !== "states" && (
-        <div className="flex justify-end gap-2 pt-2 border-t">
+      {/* Save/Cancel Buttons */}
+      <div className="flex justify-end gap-2 pt-2 border-t">
           <button
             type="button"
             onClick={handleCancel}
@@ -1097,8 +1099,7 @@ const GeneratorEditor: React.FC<Props> = ({
           >
             Save
           </button>
-        </div>
-      )}
+      </div>
 
       {/* Modals */}
       {patternModalState.isOpen && (

@@ -49,12 +49,13 @@ const TAB_CONFIG = [
     icon: Settings,
     tooltip: "Configure entity template name and properties. Entity templates define the types of entities that flow through the simulation"
   },
-  {
-    id: "states" as const,
-    title: "State Definitions",
-    icon: Hash,
-    tooltip: "Define custom state variables that entities of this type can carry and modify during simulation"
-  },
+  // Temporarily hidden - states managed at Model level
+  // {
+  //   id: "states" as const,
+  //   title: "State Definitions",
+  //   icon: Hash,
+  //   tooltip: "Define custom state variables that entities of this type can carry and modify during simulation"
+  // },
 ];
 
 
@@ -312,6 +313,7 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
           </div>
         )}
 
+        {/* Temporarily hidden - states managed at Model level
         {activeTab === "states" && (
           <StatesEditor
               states={states}
@@ -319,11 +321,11 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
               defaultComponentType={ComponentType.ENTITY}
             />
         )}
+        */}
       </div>
 
-      {/* Save/Cancel Buttons - Only show for Basic tab (States auto-save) */}
-      {activeTab !== "states" && (
-        <div className="flex justify-end gap-2 pt-2 border-t">
+      {/* Save/Cancel Buttons */}
+      <div className="flex justify-end gap-2 pt-2 border-t">
           <button
             type="button"
             onClick={handleCancel}
@@ -346,8 +348,7 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
           >
             {isSaving ? "Saving..." : "Save"}
           </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

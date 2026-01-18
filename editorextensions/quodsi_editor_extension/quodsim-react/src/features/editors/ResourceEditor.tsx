@@ -62,12 +62,13 @@ const TAB_CONFIG = [
     icon: DollarSign,
     tooltip: "Track resource costs including per-seize costs and time-based utilization costs"
   },
-  {
-    id: "states" as const,
-    title: "State Definitions",
-    icon: Hash,
-    tooltip: "Define custom state variables that this resource can track and modify"
-  },
+  // Temporarily hidden - states managed at Model level
+  // {
+  //   id: "states" as const,
+  //   title: "State Definitions",
+  //   icon: Hash,
+  //   tooltip: "Define custom state variables that this resource can track and modify"
+  // },
 ];
 
 
@@ -500,6 +501,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
             </div>
         )}
 
+        {/* Temporarily hidden - states managed at Model level
         {activeTab === "states" && (
           <StatesEditor
               states={states}
@@ -507,11 +509,11 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
               defaultComponentType={ComponentType.RESOURCE}
             />
         )}
+        */}
       </div>
 
-      {/* Save/Cancel Buttons - Only show for Basic and Finance tabs (States auto-save) */}
-      {activeTab !== "states" && (
-        <div className="flex justify-end gap-2 pt-2 border-t">
+      {/* Save/Cancel Buttons */}
+      <div className="flex justify-end gap-2 pt-2 border-t">
           <button
             type="button"
             onClick={handleCancel}
@@ -534,8 +536,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
           >
             {isSaving ? "Saving..." : "Save"}
           </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 };

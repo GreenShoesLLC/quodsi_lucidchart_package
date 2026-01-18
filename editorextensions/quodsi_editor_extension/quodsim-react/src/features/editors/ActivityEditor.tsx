@@ -178,13 +178,14 @@ const TAB_CONFIG = [
     tooltip:
       "Configure how entities are routed to downstream activities using probability, state conditions, or entity templates",
   },
-  {
-    id: "states" as const,
-    title: "State Definitions",
-    icon: Hash,
-    tooltip:
-      "Define custom state variables that this activity can track and modify",
-  },
+  // Temporarily hidden - states managed at Model level
+  // {
+  //   id: "states" as const,
+  //   title: "State Definitions",
+  //   icon: Hash,
+  //   tooltip:
+  //     "Define custom state variables that this activity can track and modify",
+  // },
 ];
 
 
@@ -1354,6 +1355,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               />
           )}
 
+          {/* Temporarily hidden - states managed at Model level
           {activeTab === "states" && (
             <StatesEditor
                 states={states}
@@ -1361,19 +1363,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 defaultComponentType={ComponentType.ACTIVITY}
               />
           )}
+          */}
         </div>
 
-        {/*
-        Save/Cancel Buttons - Conditional display based on tab type
-
-        Hidden for tabs with auto-save behavior:
-        - states: State definitions auto-save immediately
-
-        Shown for manual-save tabs:
-        - basic, actions, financial, connectors
-      */}
-        {activeTab !== "states" && (
-          <div className="pt-2 border-t">
+        {/* Save/Cancel Buttons */}
+        <div className="pt-2 border-t">
             {/* Validation Error Messages */}
             {hasSplitValidationError && (
               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
@@ -1432,7 +1426,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
               </button>
             </div>
           </div>
-        )}
       </div>
 
       {/* Resource Requirement Modal */}
