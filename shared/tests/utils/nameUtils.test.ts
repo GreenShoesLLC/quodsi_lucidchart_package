@@ -1,4 +1,8 @@
-import { generateUniqueName } from '../../src/utils/nameUtils';
+import { generateUniqueName, ensureUniqueName } from '../../src/utils/nameUtils';
+import { ModelDefinition } from '../../src/types/elements/ModelDefinition';
+import { Model } from '../../src/types/elements/Model';
+import { Activity } from '../../src/types/elements/Activity';
+import { SimulationObjectType } from '../../src/types/elements/SimulationObjectType';
 
 describe('generateUniqueName', () => {
     it('appends truncated element ID as suffix', () => {
@@ -24,5 +28,52 @@ describe('generateUniqueName', () => {
     it('handles empty base name', () => {
         const result = generateUniqueName('', 'element123');
         expect(result).toBe('_ent123');
+    });
+});
+
+describe('ensureUniqueName', () => {
+    let modelDef: ModelDefinition;
+
+    beforeEach(() => {
+        const model = Model.createDefault('test-model');
+        modelDef = new ModelDefinition(model);
+    });
+
+    it('returns original name when unique', () => {
+        const result = ensureUniqueName(
+            modelDef,
+            SimulationObjectType.Activity,
+            'Triage',
+            'element-123'
+        );
+        expect(result).toBe('Triage');
+    });
+
+    it('returns suffixed name when duplicate exists', () => {
+        const activity = Activity.createDefault('act-1');
+        activity.name = 'Triage';
+        modelDef.activities.add(activity);
+
+        const result = ensureUniqueName(
+            modelDef,
+            SimulationObjectType.Activity,
+            'Triage',
+            'element-abc123'
+        );
+        expect(result).toBe('Triage_abc123');
+    });
+
+    it('allows same name for different types', () => {
+        const activity = Activity.createDefault('act-1');
+        activity.name = 'Triage';
+        modelDef.activities.add(activity);
+
+        const result = ensureUniqueName(
+            modelDef,
+            SimulationObjectType.Resource,
+            'Triage',
+            'element-xyz789'
+        );
+        expect(result).toBe('Triage');
     });
 });

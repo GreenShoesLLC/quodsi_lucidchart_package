@@ -2,6 +2,9 @@
  * Name utilities for ensuring unique simulation object names.
  */
 
+import { ModelDefinition } from '../types/elements/ModelDefinition';
+import { SimulationObjectType } from '../types/elements/SimulationObjectType';
+
 /**
  * Generates a unique name by appending a truncated element ID suffix.
  * @param baseName - The original name (e.g., "Triage")
@@ -16,4 +19,25 @@ export function generateUniqueName(
 ): string {
     const suffix = elementId.slice(-suffixLength);
     return `${baseName}_${suffix}`;
+}
+
+/**
+ * Ensures a name is unique for the given type, generating a suffixed
+ * version if necessary.
+ * @param model - The ModelDefinition to check against
+ * @param type - The simulation object type
+ * @param name - The desired name
+ * @param elementId - The element ID for suffix generation
+ * @returns The original name if unique, or a suffixed version
+ */
+export function ensureUniqueName(
+    model: ModelDefinition,
+    type: SimulationObjectType,
+    name: string,
+    elementId: string
+): string {
+    if (model.isNameUniqueForType(type, name)) {
+        return name;
+    }
+    return generateUniqueName(name, elementId);
 }
