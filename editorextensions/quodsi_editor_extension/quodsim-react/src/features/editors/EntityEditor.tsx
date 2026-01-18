@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 import { Settings, Hash, Info } from "lucide-react";
-import { Entity, StateListManager, ComponentType } from "@quodsi/shared";
+import {
+  Entity,
+  StateListManager,
+  ComponentType,
+  SimulationObjectType,
+  EditorReferenceData,
+  isNameUniqueInReferenceData,
+} from "@quodsi/shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -23,6 +30,8 @@ interface Props {
   states: StateListManager;
   /** Callback invoked when state definitions change */
   onStatesChange: (states: StateListManager) => void;
+  /** Reference data for validation (entities, activities, etc.) */
+  referenceData?: EditorReferenceData;
 }
 
 /**
@@ -73,7 +82,7 @@ const TAB_CONFIG = [
  * @param props - Component props
  * @returns Rendered entity editor component
  */
-const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onStatesChange }) => {
+const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onStatesChange, referenceData }) => {
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
@@ -135,6 +144,29 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [activeTab, setActiveTab] = useState<EntityTab>("basic");
 
+  // Name validation state
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  /**
+   * Validates that the entity name is unique among all entities.
+   * @param name - The name to validate
+   * @returns Error message if invalid, null if valid
+   */
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (referenceData && !isNameUniqueInReferenceData(
+      referenceData,
+      SimulationObjectType.Entity,
+      name,
+      localEntityDraft.id
+    )) {
+      return `An Entity named "${name}" already exists`;
+    }
+    return null;
+  };
+
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
 
@@ -179,6 +211,9 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target;
     setLocalEntityDraft(prev => updateEntityImmutably(prev, { name: value }));
+    // Validate name uniqueness
+    const error = validateName(value);
+    setNameError(error);
     setHasPendingChanges(true);
   };
 
@@ -265,6 +300,9 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                   onChange={handleInputChange}
                   placeholder="Enter entity name"
                 />
+                {nameError && (
+                  <p className="text-xs text-red-500 mt-1">{nameError}</p>
+                )}
               </div>
           </div>
         )}
@@ -294,9 +332,9 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
           <button
             type="button"
             onClick={handleSave}
-            disabled={!hasPendingChanges || isSaving}
+            disabled={!hasPendingChanges || isSaving || nameError !== null}
             className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && !isSaving
+              hasPendingChanges && !isSaving && nameError === null
                 ? "bg-blue-600 text-white hover:bg-blue-700"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
