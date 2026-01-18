@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Info } from "lucide-react";
 import {
   UniformParameters,
@@ -24,90 +24,128 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
   const [errors, setErrors] = useState<{low?: string; high?: string}>({});
 
   // Use stateful parameter editor with Redux integration (for both low and high)
-  const { localParams, updateField, isDirty, setIsDirty, isSaving } =
+  const { localParams, setLocalParams, isDirty, setIsDirty, isSaving } =
     useMultiParameterEditorState(parameters, elementId);
+
+  // String state for input display (allows intermediate values like ".", "0.", ".5")
+  const [lowInput, setLowInput] = useState(String(localParams.low));
+  const [highInput, setHighInput] = useState(String(localParams.high));
+
+  // Track focus state to prevent syncing while user is typing
+  const lowFocusedRef = useRef(false);
+  const highFocusedRef = useRef(false);
+
+  // Sync inputs with localParams only when not focused
+  useEffect(() => {
+    if (!lowFocusedRef.current && !isSaving) {
+      setLowInput(String(localParams.low));
+    }
+    if (!highFocusedRef.current && !isSaving) {
+      setHighInput(String(localParams.high));
+    }
+  }, [localParams.low, localParams.high, isSaving]);
 
   // Get metadata
   const lowMetadata = UNIFORM_PARAMETER_METADATA.low;
   const highMetadata = UNIFORM_PARAMETER_METADATA.high;
 
-  const handleLowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
+  const handleLowFocus = () => {
+    lowFocusedRef.current = true;
+  };
 
-    // Validate input is a number
-    if (isNaN(newValue)) {
-      setErrors(prev => ({...prev, low: 'Minimum must be a valid number.'}));
+  const handleLowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Just store the raw value - don't validate or propagate yet
+    setLowInput(e.target.value);
+    setIsDirty(true);
+    setErrors(prev => ({...prev, low: undefined}));
+  };
+
+  const handleLowBlur = () => {
+    lowFocusedRef.current = false;
+
+    const parsed = parseFloat(lowInput);
+
+    if (isNaN(parsed) || lowInput.trim() === '') {
+      // Reset to current valid value
+      setLowInput(String(localParams.low));
+      setErrors(prev => ({...prev, low: undefined}));
       return;
     }
 
-    // Clear previous errors
-    setErrors(prev => ({...prev, low: undefined}));
-
-    const lowValue = isNaN(newValue) ? 0 : newValue;
-
-    // Update local state immediately
-    updateField('low', lowValue);
-    setIsDirty(true);
-
-    // Create a copy of the updated parameters
     let updatedParams: UniformParameters = {
       ...localParams,
-      low: lowValue
+      low: parsed
     };
 
     // If the new low value is greater than or equal to the high value,
     // automatically increase the high value to be low + 1
-    if (lowValue >= localParams.high) {
-      updatedParams.high = lowValue + 1;
-      updateField('high', lowValue + 1);
+    if (parsed >= localParams.high) {
+      updatedParams.high = parsed + 1;
+      setLocalParams(updatedParams);
+      setLowInput(String(parsed));
+      setHighInput(String(parsed + 1));
       setErrors(prev => ({
         ...prev,
         high: `Maximum automatically adjusted to ${updatedParams.high} to maintain proper range.`
       }));
+    } else {
+      setLowInput(String(parsed));
+      setLocalParams({ ...localParams, low: parsed });
     }
 
-    // Only update if the parameters are valid
+    setIsDirty(false);
+
     if (UniformDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
     }
   };
 
-  const handleHighChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
+  const handleHighFocus = () => {
+    highFocusedRef.current = true;
+  };
 
-    // Validate input is a number
-    if (isNaN(newValue)) {
-      setErrors(prev => ({...prev, high: 'Maximum must be a valid number.'}));
+  const handleHighChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Just store the raw value - don't validate or propagate yet
+    setHighInput(e.target.value);
+    setIsDirty(true);
+    setErrors(prev => ({...prev, high: undefined}));
+  };
+
+  const handleHighBlur = () => {
+    highFocusedRef.current = false;
+
+    const parsed = parseFloat(highInput);
+
+    if (isNaN(parsed) || highInput.trim() === '') {
+      // Reset to current valid value
+      setHighInput(String(localParams.high));
+      setErrors(prev => ({...prev, high: undefined}));
       return;
     }
 
-    // Clear previous errors
-    setErrors(prev => ({...prev, high: undefined}));
-
-    const highValue = isNaN(newValue) ? 0 : newValue;
-
-    // Update local state immediately
-    updateField('high', highValue);
-    setIsDirty(true);
-
-    // Create a copy of the updated parameters
     let updatedParams: UniformParameters = {
       ...localParams,
-      high: highValue
+      high: parsed
     };
 
     // If the new high value is less than or equal to the low value,
     // automatically decrease the low value to be high - 1
-    if (highValue <= localParams.low) {
-      updatedParams.low = Math.max(0, highValue - 1);
-      updateField('low', updatedParams.low);
+    if (parsed <= localParams.low) {
+      updatedParams.low = Math.max(0, parsed - 1);
+      setLocalParams(updatedParams);
+      setHighInput(String(parsed));
+      setLowInput(String(updatedParams.low));
       setErrors(prev => ({
         ...prev,
         low: `Minimum automatically adjusted to ${updatedParams.low} to maintain proper range.`
       }));
+    } else {
+      setHighInput(String(parsed));
+      setLocalParams({ ...localParams, high: parsed });
     }
 
-    // Only update if the parameters are valid
+    setIsDirty(false);
+
     if (UniformDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
     }
@@ -128,8 +166,10 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
         </label>
         <input
           type="number"
-          value={localParams.low}
+          value={lowInput}
           onChange={handleLowChange}
+          onFocus={handleLowFocus}
+          onBlur={handleLowBlur}
           disabled={disabled || isSaving}
           min={lowMetadata.min}
           step={lowMetadata.step}
@@ -154,8 +194,10 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
         </label>
         <input
           type="number"
-          value={localParams.high}
+          value={highInput}
           onChange={handleHighChange}
+          onFocus={handleHighFocus}
+          onBlur={handleHighBlur}
           disabled={disabled || isSaving}
           min={highMetadata.min}
           step={highMetadata.step}

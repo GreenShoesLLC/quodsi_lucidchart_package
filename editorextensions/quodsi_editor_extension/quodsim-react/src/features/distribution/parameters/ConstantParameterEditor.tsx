@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ConstantParameters,
   CONSTANT_PARAMETER_METADATA,
@@ -26,21 +26,50 @@ export const ConstantParameterEditor: React.FC<ConstantParameterEditorProps> = (
   const { localValue, setLocalValue, isDirty, setIsDirty, isSaving } =
     useParameterEditorState(parameters.value, elementId);
 
+  // String state for input display (allows intermediate values like ".", "0.", ".5")
+  const [inputValue, setInputValue] = useState(String(localValue));
+
+  // Track focus state to prevent syncing while user is typing
+  const isFocusedRef = useRef(false);
+
+  // Sync input with localValue only when not focused
+  useEffect(() => {
+    if (!isFocusedRef.current && !isSaving) {
+      setInputValue(String(localValue));
+    }
+  }, [localValue, isSaving]);
+
+  const handleFocus = () => {
+    isFocusedRef.current = true;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    const sanitizedValue = isNaN(newValue) ? 0 : newValue;
-
-    // Update local state immediately for responsive UI
-    setLocalValue(sanitizedValue);
+    // Just store the raw value - don't validate or propagate yet
+    setInputValue(e.target.value);
     setIsDirty(true);
+  };
 
-    // Create updated parameters
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+
+    const parsed = parseFloat(inputValue);
+
+    if (isNaN(parsed) || inputValue.trim() === '') {
+      // Reset to current valid value
+      setInputValue(String(localValue));
+      setIsDirty(false);
+      return;
+    }
+
+    setInputValue(String(parsed));
+    setLocalValue(parsed);
+    setIsDirty(false);
+
     const updatedParams: ConstantParameters = {
       ...parameters,
-      value: sanitizedValue
+      value: parsed
     };
 
-    // Only propagate change if parameters are valid
     if (ConstantDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
     }
@@ -55,8 +84,10 @@ export const ConstantParameterEditor: React.FC<ConstantParameterEditorProps> = (
       </label>
       <input
         type="number"
-        value={localValue}
+        value={inputValue}
         onChange={handleChange}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         disabled={disabled || isSaving}
         min={metadata.min}
         step={metadata.step}

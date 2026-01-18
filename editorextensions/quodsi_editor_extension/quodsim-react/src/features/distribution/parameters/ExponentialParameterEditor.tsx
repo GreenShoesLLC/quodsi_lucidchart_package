@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Info } from "lucide-react";
 import {
   ExponentialParameters,
@@ -27,22 +27,52 @@ export const ExponentialParameterEditor: React.FC<ExponentialParameterEditorProp
   const { localValue, setLocalValue, isDirty, setIsDirty, isSaving } =
     useParameterEditorState(parameters.scale, elementId);
 
+  // String state for input display (allows intermediate values like ".", "0.", ".5")
+  const [inputValue, setInputValue] = useState(String(localValue));
+
+  // Track focus state to prevent syncing while user is typing
+  const isFocusedRef = useRef(false);
+
+  // Sync input with localValue only when not focused
+  useEffect(() => {
+    if (!isFocusedRef.current && !isSaving) {
+      setInputValue(String(localValue));
+    }
+  }, [localValue, isSaving]);
+
+  const handleFocus = () => {
+    isFocusedRef.current = true;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    const minValue = metadata.min ?? 0.01;
-    const sanitizedValue = isNaN(newValue) ? minValue : Math.max(minValue, newValue);
-
-    // Update local state immediately for responsive UI
-    setLocalValue(sanitizedValue);
+    // Just store the raw value - don't validate or propagate yet
+    setInputValue(e.target.value);
     setIsDirty(true);
+  };
 
-    // Create updated parameters
+  const handleBlur = () => {
+    isFocusedRef.current = false;
+
+    const parsed = parseFloat(inputValue);
+    const minValue = metadata.min ?? 0.01;
+
+    if (isNaN(parsed) || inputValue.trim() === '') {
+      // Reset to current valid value
+      setInputValue(String(localValue));
+      setIsDirty(false);
+      return;
+    }
+
+    const sanitizedValue = Math.max(minValue, parsed);
+    setInputValue(String(sanitizedValue));
+    setLocalValue(sanitizedValue);
+    setIsDirty(false);
+
     const updatedParams: ExponentialParameters = {
       ...parameters,
       scale: sanitizedValue
     };
 
-    // Only propagate change if parameters are valid
     if (ExponentialDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
     }
@@ -63,8 +93,10 @@ export const ExponentialParameterEditor: React.FC<ExponentialParameterEditorProp
         </label>
         <input
           type="number"
-          value={localValue}
+          value={inputValue}
           onChange={handleChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           disabled={disabled || isSaving}
           min={metadata.min}
           step={metadata.step}

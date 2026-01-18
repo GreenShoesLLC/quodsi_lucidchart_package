@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Info } from "lucide-react";
 import {
   TriangularParameters,
@@ -21,104 +21,172 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
   elementId,
 }) => {
   // Use stateful parameter editor with Redux integration (for left, mode, right)
-  const { localParams, updateField, setLocalParams, isDirty, setIsDirty, isSaving } =
+  const { localParams, setLocalParams, isDirty, setIsDirty, isSaving } =
     useMultiParameterEditorState(parameters, elementId);
+
+  // String state for input display (allows intermediate values like ".", "0.", ".5")
+  const [leftInput, setLeftInput] = useState(String(localParams.left));
+  const [modeInput, setModeInput] = useState(String(localParams.mode));
+  const [rightInput, setRightInput] = useState(String(localParams.right));
+
+  // Track focus state to prevent syncing while user is typing
+  const leftFocusedRef = useRef(false);
+  const modeFocusedRef = useRef(false);
+  const rightFocusedRef = useRef(false);
+
+  // Sync inputs with localParams only when not focused
+  useEffect(() => {
+    if (!leftFocusedRef.current && !isSaving) {
+      setLeftInput(String(localParams.left));
+    }
+    if (!modeFocusedRef.current && !isSaving) {
+      setModeInput(String(localParams.mode));
+    }
+    if (!rightFocusedRef.current && !isSaving) {
+      setRightInput(String(localParams.right));
+    }
+  }, [localParams.left, localParams.mode, localParams.right, isSaving]);
 
   // Get metadata
   const leftMetadata = TRIANGULAR_PARAMETER_METADATA.left;
   const modeMetadata = TRIANGULAR_PARAMETER_METADATA.mode;
   const rightMetadata = TRIANGULAR_PARAMETER_METADATA.right;
 
-  const handleParameterChange = (paramName: keyof TriangularParameters, value: number, preAdjustedParams?: TriangularParameters) => {
-    // Update local state immediately
-    if (preAdjustedParams) {
-      setLocalParams(preAdjustedParams);
-    } else {
-      updateField(paramName, value);
-    }
-    setIsDirty(true);
+  // Helper to update all inputs from params
+  const syncInputsFromParams = (params: TriangularParameters) => {
+    setLeftInput(String(params.left));
+    setModeInput(String(params.mode));
+    setRightInput(String(params.right));
+  };
 
-    // Use pre-adjusted parameters if provided, otherwise create new updated params
-    const updatedParams: TriangularParameters = preAdjustedParams || {
-      ...localParams,
-      [paramName]: value
-    };
-
-    // Only update if the parameters are valid
-    if (TriangularDistribution.validateParameters(updatedParams)) {
-      onChange(updatedParams);
-    }
+  const handleLeftFocus = () => {
+    leftFocusedRef.current = true;
   };
 
   const handleLeftChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    const leftValue = isNaN(newValue) ? 0 : newValue;
+    // Just store the raw value - don't validate or propagate yet
+    setLeftInput(e.target.value);
+    setIsDirty(true);
+  };
 
-    // Create a copy of parameters with the new left value
+  const handleLeftBlur = () => {
+    leftFocusedRef.current = false;
+
+    const parsed = parseFloat(leftInput);
+
+    if (isNaN(parsed) || leftInput.trim() === '') {
+      setLeftInput(String(localParams.left));
+      return;
+    }
+
     const updatedParams: TriangularParameters = {
       ...localParams,
-      left: leftValue
+      left: parsed
     };
 
     // If left becomes greater than mode, cascade adjustments with 1-unit spacing
-    if (leftValue > localParams.mode) {
-      // Set mode to 1 more than left
-      updatedParams.mode = leftValue + 1;
+    if (parsed > localParams.mode) {
+      updatedParams.mode = parsed + 1;
 
-      // Set right to 1 more than mode
       if (updatedParams.mode > localParams.right) {
         updatedParams.right = updatedParams.mode + 1;
       }
     }
 
-    handleParameterChange('left', leftValue, updatedParams);
+    setLocalParams(updatedParams);
+    syncInputsFromParams(updatedParams);
+    setIsDirty(false);
+
+    if (TriangularDistribution.validateParameters(updatedParams)) {
+      onChange(updatedParams);
+    }
+  };
+
+  const handleModeFocus = () => {
+    modeFocusedRef.current = true;
   };
 
   const handleModeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    const modeValue = isNaN(newValue) ? 0 : newValue;
+    // Just store the raw value - don't validate or propagate yet
+    setModeInput(e.target.value);
+    setIsDirty(true);
+  };
 
-    // Create a copy of parameters with the new mode value
+  const handleModeBlur = () => {
+    modeFocusedRef.current = false;
+
+    const parsed = parseFloat(modeInput);
+
+    if (isNaN(parsed) || modeInput.trim() === '') {
+      setModeInput(String(localParams.mode));
+      return;
+    }
+
     const updatedParams: TriangularParameters = {
       ...localParams,
-      mode: modeValue
+      mode: parsed
     };
 
     // If mode becomes greater than right, set right to mode + 1
-    if (modeValue > localParams.right) {
-      updatedParams.right = modeValue + 1;
+    if (parsed > localParams.right) {
+      updatedParams.right = parsed + 1;
     }
 
     // If mode becomes less than left, set left to mode - 1 (but not below 0)
-    if (modeValue < localParams.left) {
-      updatedParams.left = Math.max(0, modeValue - 1);
+    if (parsed < localParams.left) {
+      updatedParams.left = Math.max(0, parsed - 1);
     }
 
-    handleParameterChange('mode', modeValue, updatedParams);
+    setLocalParams(updatedParams);
+    syncInputsFromParams(updatedParams);
+    setIsDirty(false);
+
+    if (TriangularDistribution.validateParameters(updatedParams)) {
+      onChange(updatedParams);
+    }
+  };
+
+  const handleRightFocus = () => {
+    rightFocusedRef.current = true;
   };
 
   const handleRightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    const rightValue = isNaN(newValue) ? 0 : newValue;
+    // Just store the raw value - don't validate or propagate yet
+    setRightInput(e.target.value);
+    setIsDirty(true);
+  };
 
-    // Create a copy of parameters with the new right value
+  const handleRightBlur = () => {
+    rightFocusedRef.current = false;
+
+    const parsed = parseFloat(rightInput);
+
+    if (isNaN(parsed) || rightInput.trim() === '') {
+      setRightInput(String(localParams.right));
+      return;
+    }
+
     const updatedParams: TriangularParameters = {
       ...localParams,
-      right: rightValue
+      right: parsed
     };
 
     // If right becomes less than mode, cascade adjustments with 1-unit spacing
-    if (rightValue < localParams.mode) {
-      // Set mode to 1 less than right (but not less than 0)
-      updatedParams.mode = Math.max(0, rightValue - 1);
+    if (parsed < localParams.mode) {
+      updatedParams.mode = Math.max(0, parsed - 1);
 
-      // Set left to 1 less than mode (but not less than 0)
       if (updatedParams.mode < localParams.left) {
         updatedParams.left = Math.max(0, updatedParams.mode - 1);
       }
     }
 
-    handleParameterChange('right', rightValue, updatedParams);
+    setLocalParams(updatedParams);
+    syncInputsFromParams(updatedParams);
+    setIsDirty(false);
+
+    if (TriangularDistribution.validateParameters(updatedParams)) {
+      onChange(updatedParams);
+    }
   };
 
   return (
@@ -136,8 +204,10 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
         </label>
         <input
           type="number"
-          value={localParams.left}
+          value={leftInput}
           onChange={handleLeftChange}
+          onFocus={handleLeftFocus}
+          onBlur={handleLeftBlur}
           disabled={disabled || isSaving}
           min={leftMetadata.min}
           step={leftMetadata.step}
@@ -161,8 +231,10 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
         </label>
         <input
           type="number"
-          value={localParams.mode}
+          value={modeInput}
           onChange={handleModeChange}
+          onFocus={handleModeFocus}
+          onBlur={handleModeBlur}
           disabled={disabled || isSaving}
           min={modeMetadata.min}
           step={modeMetadata.step}
@@ -186,8 +258,10 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
         </label>
         <input
           type="number"
-          value={localParams.right}
+          value={rightInput}
           onChange={handleRightChange}
+          onFocus={handleRightFocus}
+          onBlur={handleRightBlur}
           disabled={disabled || isSaving}
           min={rightMetadata.min}
           step={rightMetadata.step}

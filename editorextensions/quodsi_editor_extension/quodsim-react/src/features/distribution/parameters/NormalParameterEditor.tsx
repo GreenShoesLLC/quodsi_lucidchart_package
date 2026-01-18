@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Info } from "lucide-react";
 import {
   NormalParameters,
@@ -27,53 +27,107 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
   const { localParams, updateField, isDirty, setIsDirty, isSaving } =
     useMultiParameterEditorState(parameters, elementId);
 
+  // String state for input display (allows intermediate values like ".", "0.", ".5")
+  const [meanInput, setMeanInput] = useState(String(localParams.mean));
+  const [stdInput, setStdInput] = useState(String(localParams.std));
+
+  // Track focus state to prevent syncing while user is typing
+  const meanFocusedRef = useRef(false);
+  const stdFocusedRef = useRef(false);
+
+  // Sync inputs with localParams only when not focused
+  useEffect(() => {
+    if (!meanFocusedRef.current && !isSaving) {
+      setMeanInput(String(localParams.mean));
+    }
+    if (!stdFocusedRef.current && !isSaving) {
+      setStdInput(String(localParams.std));
+    }
+  }, [localParams.mean, localParams.std, isSaving]);
+
   // Get metadata
   const meanMetadata = NORMAL_PARAMETER_METADATA.mean;
   const stdMetadata = NORMAL_PARAMETER_METADATA.std;
 
-  const handleParameterChange = (paramName: keyof NormalParameters, value: number) => {
-    // Clear any previous errors for this parameter
-    setErrors(prev => ({...prev, [paramName]: undefined}));
+  const handleMeanFocus = () => {
+    meanFocusedRef.current = true;
+  };
 
-    // Update local state immediately
-    updateField(paramName, value);
+  const handleMeanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Just store the raw value - don't validate or propagate yet
+    setMeanInput(e.target.value);
     setIsDirty(true);
+    setErrors(prev => ({...prev, mean: undefined}));
+  };
 
-    // Create an updated copy of parameters
-    let updatedParams: NormalParameters = {
-      ...localParams,
-      [paramName]: value
-    };
+  const handleMeanBlur = () => {
+    meanFocusedRef.current = false;
 
-    // Special handling for std to ensure it's always positive
-    if (paramName === 'std' && value <= 0) {
-      updatedParams.std = 0.1; // Minimum allowed value for std
-      updateField('std', 0.1);
-      setErrors(prev => ({...prev, std: 'Standard deviation must be greater than 0. Set to minimum value (0.1).'}));
+    const parsed = parseFloat(meanInput);
+
+    if (isNaN(parsed) || meanInput.trim() === '') {
+      // Reset to current valid value
+      setMeanInput(String(localParams.mean));
+      setErrors(prev => ({...prev, mean: undefined}));
+      return;
     }
 
-    // Only update if the parameters are valid
+    setMeanInput(String(parsed));
+    updateField('mean', parsed);
+    setIsDirty(false);
+
+    const updatedParams: NormalParameters = {
+      ...localParams,
+      mean: parsed
+    };
+
     if (NormalDistribution.validateParameters(updatedParams)) {
       onChange(updatedParams);
     }
   };
 
-  const handleMeanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    if (isNaN(newValue)) {
-      setErrors(prev => ({...prev, mean: 'Mean must be a valid number.'}));
-      return;
-    }
-    handleParameterChange('mean', newValue);
+  const handleStdFocus = () => {
+    stdFocusedRef.current = true;
   };
 
   const handleStdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = parseFloat(e.target.value);
-    if (isNaN(newValue)) {
-      setErrors(prev => ({...prev, std: 'Standard deviation must be a valid number.'}));
+    // Just store the raw value - don't validate or propagate yet
+    setStdInput(e.target.value);
+    setIsDirty(true);
+    setErrors(prev => ({...prev, std: undefined}));
+  };
+
+  const handleStdBlur = () => {
+    stdFocusedRef.current = false;
+
+    const parsed = parseFloat(stdInput);
+
+    if (isNaN(parsed) || stdInput.trim() === '') {
+      // Reset to current valid value
+      setStdInput(String(localParams.std));
+      setErrors(prev => ({...prev, std: undefined}));
       return;
     }
-    handleParameterChange('std', newValue);
+
+    // Special handling for std to ensure it's always positive
+    let finalValue = parsed;
+    if (parsed <= 0) {
+      finalValue = 0.1;
+      setErrors(prev => ({...prev, std: 'Standard deviation must be greater than 0. Set to minimum value (0.1).'}));
+    }
+
+    setStdInput(String(finalValue));
+    updateField('std', finalValue);
+    setIsDirty(false);
+
+    const updatedParams: NormalParameters = {
+      ...localParams,
+      std: finalValue
+    };
+
+    if (NormalDistribution.validateParameters(updatedParams)) {
+      onChange(updatedParams);
+    }
   };
 
   return (
@@ -91,8 +145,10 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
         </label>
         <input
           type="number"
-          value={localParams.mean}
+          value={meanInput}
           onChange={handleMeanChange}
+          onFocus={handleMeanFocus}
+          onBlur={handleMeanBlur}
           disabled={disabled || isSaving}
           min={meanMetadata.min}
           step={meanMetadata.step}
@@ -117,8 +173,10 @@ export const NormalParameterEditor: React.FC<NormalParameterEditorProps> = ({
         </label>
         <input
           type="number"
-          value={localParams.std}
+          value={stdInput}
           onChange={handleStdChange}
+          onFocus={handleStdFocus}
+          onBlur={handleStdBlur}
           disabled={disabled || isSaving}
           min={stdMetadata.min}
           step={stdMetadata.step}
