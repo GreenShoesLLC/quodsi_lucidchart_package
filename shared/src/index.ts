@@ -102,6 +102,7 @@ export * from './utils/csvUtils';
 export * from './utils/uuidUtils';
 export * from './utils/NameParser';
 export * from './utils/nameUtils';
+export * from './utils/nameValidation';
 
 // Serialization exports
 export * from './serialization';
