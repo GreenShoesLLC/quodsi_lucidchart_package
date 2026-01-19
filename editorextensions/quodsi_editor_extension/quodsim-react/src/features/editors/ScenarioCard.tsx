@@ -420,7 +420,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
           <div className="flex items-center gap-1 mb-1">
             <span className="text-xs font-medium text-gray-700">Results</span>
           </div>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
             {/* Primary action - most encouraged */}
             <button
               onClick={handleCopyExcelLink}
@@ -448,7 +448,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
             >
               <TrendingUp className="w-4 h-4" />
             </button>
-            {/* Preview feature button - de-emphasized */}
+            {/* Preview feature button - temporarily hidden
             <button
               onClick={handleCreateResultsPage}
               title="Create results page in LucidChart (Preview Feature)"
@@ -459,6 +459,7 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
                 PREVIEW
               </span>
             </button>
+            */}
           </div>
         </div>
       )}
