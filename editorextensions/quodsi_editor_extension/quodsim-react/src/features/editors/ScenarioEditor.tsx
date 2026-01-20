@@ -47,6 +47,8 @@ interface ScenarioEditorProps {
   onAnalyze?: (scenarioId: string) => void;
 }
 
+type AutoRefreshMode = 'off' | 'smart' | 'on';
+
 const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }) => {
   // Redux state
   const scenarioState = useScenarios();
@@ -58,6 +60,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
   // Local state (not in Redux)
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [deletingScenarios, setDeletingScenarios] = useState<Set<string>>(new Set());
+  const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   const { listScenarios, deleteScenario } = useScenarioSender();
 
   // Helper function to check if scenario name is in datetime format (YY-MM-DD HH:mm:ss)
@@ -86,10 +89,20 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
   }, [isDatetimeFormat]);
 
   // Load scenarios function
-  const loadScenarios = useCallback(() => {
+  // forceRefresh: when true, always fetches from server; when false, uses smart skip logic
+  const loadScenarios = useCallback((forceRefresh: boolean = true) => {
     if (!documentId) {
       dispatch({ type: 'SCENARIOS_ERROR', error: "No document ID available" });
       return;
+    }
+
+    // Smart skip logic: if not forcing refresh, we have cached scenarios, and none are running
+    if (!forceRefresh && scenarios.length > 0) {
+      const hasRunning = scenarios.some(s => s.runState === RunState.Running);
+      if (!hasRunning) {
+        console.log('[ScenarioEditor] Using cached scenarios (none running), skipping fetch');
+        return;
+      }
     }
 
     dispatch({ type: 'SCENARIOS_LOADING' });
@@ -104,7 +117,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
         error: err instanceof Error ? err.message : "Failed to load scenarios"
       });
     }
-  }, [documentId, listScenarios, dispatch]);
+  }, [documentId, listScenarios, dispatch, scenarios]);
 
   // Handle messages from extension
   useEffect(() => {
@@ -202,6 +215,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
                 type: 'SCENARIOS_SUCCESS',
                 scenarios: sortScenarios([newScenario, ...scenarios])
               });
+              // Auto-enable refresh when simulation starts
+              setAutoRefreshMode('on');
+              console.log('[ScenarioEditor] Auto-refresh switched to ON mode');
             } else {
               // Status came for unknown scenario that's not in initial state - ignore
               console.warn('[ScenarioEditor] Received status for unknown scenario (not QUEUED/PROCESSING):', statusData.scenarioId);
@@ -216,10 +232,11 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
   }, [documentId, loadScenarios, sortScenarios, dispatch, scenarios]);
   // Note: scenarios now needed since we check existingScenario directly
 
-  // Load scenarios on mount
+  // Load scenarios on mount (or when tab switching causes remount)
+  // Uses smart skip: won't refetch if we have cached scenarios and none are running
   useEffect(() => {
     if (documentId) {
-      loadScenarios();
+      loadScenarios(false); // Don't force refresh - use cache if appropriate
     }
   }, [documentId, loadScenarios]);
 
@@ -240,30 +257,40 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [documentId, loadScenarios]);
 
-  // Auto-refresh when tab is visible AND scenarios are running
+  // Auto-refresh based on mode: off, smart, or on
   useEffect(() => {
+    // Off mode: never auto-refresh
+    if (autoRefreshMode === 'off') {
+      console.log('[ScenarioEditor] Auto-refresh OFF');
+      return;
+    }
+
     if (!isTabVisible) {
       console.log('[ScenarioEditor] Tab not visible, skipping auto-refresh');
       return;
     }
 
-    const hasRunning = scenarios.some(s => s.runState === RunState.Running);
-    if (!hasRunning) {
-      console.log('[ScenarioEditor] No running scenarios, skipping auto-refresh');
-      return;
+    // Smart mode: only refresh when scenarios are running
+    if (autoRefreshMode === 'smart') {
+      const hasRunning = scenarios.some(s => s.runState === RunState.Running);
+      if (!hasRunning) {
+        console.log('[ScenarioEditor] Smart mode: No running scenarios, skipping auto-refresh');
+        return;
+      }
     }
 
-    console.log('[ScenarioEditor] Setting up auto-refresh for running scenarios');
+    // On mode OR (Smart mode + hasRunning): set up interval
+    console.log(`[ScenarioEditor] Auto-refresh active (${autoRefreshMode} mode)`);
     const interval = setInterval(() => {
-      console.log('[ScenarioEditor] Auto-refreshing running scenarios');
+      console.log('[ScenarioEditor] Auto-refreshing scenarios');
       loadScenarios();
-    }, 10000); // 10 seconds for running scenarios
+    }, 10000); // 10 seconds
 
     return () => {
       console.log('[ScenarioEditor] Clearing auto-refresh interval');
       clearInterval(interval);
     };
-  }, [scenarios, isTabVisible, documentId, loadScenarios]);
+  }, [autoRefreshMode, scenarios, isTabVisible, documentId, loadScenarios]);
 
   const handleDeleteScenario = useCallback((scenarioId: string) => {
     if (!documentId) {
@@ -299,14 +326,28 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
         <div className={`px-2 py-1 text-xs font-medium border rounded ${getBadgeColor()}`}>
           Scenarios: {scenarios.length}/{MAX_SCENARIOS}
         </div>
-        <button
-          onClick={loadScenarios}
-          disabled={loading}
-          className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Refresh scenarios"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Auto-refresh dropdown */}
+          <select
+            value={autoRefreshMode}
+            onChange={(e) => setAutoRefreshMode(e.target.value as AutoRefreshMode)}
+            className="text-xs border border-gray-300 rounded px-1 py-1 bg-white"
+            title="Auto-refresh mode"
+          >
+            <option value="off">Auto: Off</option>
+            <option value="smart">Auto: Smart</option>
+            <option value="on">Auto: On</option>
+          </select>
+          {/* Manual refresh button */}
+          <button
+            onClick={() => loadScenarios()}
+            disabled={loading}
+            className="p-1 border border-gray-300 rounded hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh scenarios"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-gray-600 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -326,7 +367,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
               <h3 className="text-sm font-medium text-red-800">Error Loading Scenarios</h3>
               <p className="text-xs text-red-700 mt-1">{error}</p>
               <button
-                onClick={loadScenarios}
+                onClick={() => loadScenarios()}
                 className="mt-2 text-xs text-red-600 hover:text-red-700 underline"
               >
                 Try Again
@@ -375,9 +416,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           )}
           <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-xs text-blue-800">
-              <strong>Tip:</strong> Running scenarios auto-refresh every 10 seconds.
-              Download links are refreshed automatically when they expire.
-              Click Refresh to manually reload.
+              <strong>Tip:</strong> Use the Auto dropdown to control refresh behavior.
+              Off = manual only, Smart = auto when running, On = always auto-refresh.
+              Running a simulation automatically enables auto-refresh.
             </p>
           </div>
         </>
