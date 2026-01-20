@@ -50,6 +50,13 @@ This PowerShell script orchestrates the process of preparing environment variabl
 
 ## Troubleshooting
 
+**Use PowerShell 7 (pwsh), not Windows PowerShell:**
+The script requires PowerShell 7. Windows PowerShell (5.x) may fail with parsing errors due to character encoding differences.
+```powershell
+# Use pwsh (PowerShell 7), not powershell
+pwsh -ExecutionPolicy Bypass -File "C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1" -TargetEnvironment Dev
+```
+
 **Execution Policy errors:**
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
