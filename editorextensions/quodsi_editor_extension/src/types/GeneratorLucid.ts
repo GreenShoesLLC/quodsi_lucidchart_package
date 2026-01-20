@@ -70,10 +70,11 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         );
 
         // Set default values for periodicOccurrences and maxEntities if not set
-        if (generationConfig.periodicOccurrences === undefined || generationConfig.periodicOccurrences === Infinity) {
+        // Using == null catches both null and undefined for robustness with legacy data
+        if (generationConfig.periodicOccurrences == null || generationConfig.periodicOccurrences === Infinity) {
             generationConfig.periodicOccurrences = 999999;
         }
-        if (generationConfig.maxEntities === undefined || generationConfig.maxEntities === Infinity) {
+        if (generationConfig.maxEntities == null || generationConfig.maxEntities === Infinity) {
             generationConfig.maxEntities = 999999;
         }
 

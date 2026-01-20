@@ -65,12 +65,13 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         const storedData = this.storageAdapter.getElementData(this.element) as StoredActivityData;
 
         // Create activity using stored data or defaults
+        // Note: null queue capacities mean "unlimited" - use 999999 (not 1) for backwards compatibility
         const activity = new Activity(
             this.platformElementId,
             storedData?.name || 'New Activity',
             storedData?.capacity ?? 1,
-            storedData?.inboundQueueCapacity ?? 1,
-            storedData?.outboundQueueCapacity ?? 1,
+            storedData?.inboundQueueCapacity ?? 999999,
+            storedData?.outboundQueueCapacity ?? 999999,
             storedData?.actions || [],
             storedData?.x ?? 0,
             storedData?.y ?? 0

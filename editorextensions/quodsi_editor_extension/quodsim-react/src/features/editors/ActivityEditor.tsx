@@ -316,14 +316,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   /**
    * Converts display values from the UI back to internal queue capacity values.
    *
-   * Users enter 999999 to represent unlimited capacity. This converts that
-   * back to JavaScript's Infinity for internal storage.
+   * Values are passed through as-is. The value 999999 represents unlimited
+   * capacity and is stored directly (not converted to Infinity) to ensure
+   * proper serialization to JSON.
    *
    * @param value - Display value from UI
-   * @returns Internal value (Infinity for unlimited, otherwise the number)
+   * @returns The same value (999999 represents unlimited)
    */
-  const displayToBuffer = (value: number): number =>
-    value >= INFINITY_DISPLAY_VALUE ? Infinity : value;
+  const displayToBuffer = (value: number): number => value;
 
   /**
    * Extracts and normalizes activity data from props into a clean Activity instance.
@@ -1095,11 +1095,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           type="number"
                           name="inboundQueueCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
-                          value={
-                            localActivityDraft.inboundQueueCapacity === Infinity
-                              ? INFINITY_DISPLAY_VALUE
-                              : localActivityDraft.inboundQueueCapacity
-                          }
+                          value={localActivityDraft.inboundQueueCapacity}
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
@@ -1120,11 +1116,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           type="number"
                           name="outboundQueueCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
-                          value={
-                            localActivityDraft.outboundQueueCapacity === Infinity
-                              ? INFINITY_DISPLAY_VALUE
-                              : localActivityDraft.outboundQueueCapacity
-                          }
+                          value={localActivityDraft.outboundQueueCapacity}
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
