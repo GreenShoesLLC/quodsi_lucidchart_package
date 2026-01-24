@@ -675,32 +675,231 @@ export class ModelManager {
     }
 
     /**
-     * Clean up all references to a deleted state
+     * Helper method to clean state references from an actions array.
+     * Handles all action types that can contain state references.
+     *
+     * @param actions Array of actions to clean
+     * @param deletedStateId ID of the deleted state (for StateModification.stateUniqueId)
+     * @param deletedStateName Name of the deleted state (for string references like inheritStates)
+     * @returns Object with cleaned actions array and whether any modifications were made
      */
-    private async cleanupStateReferences(stateId: string, page: PageProxy): Promise<void> {
-        // Process all blocks (Generators)
+    private cleanActionsStateReferences(
+        actions: any[],
+        deletedStateId: string,
+        deletedStateName: string
+    ): { actions: any[]; modified: boolean } {
+        let modified = false;
+
+        for (const action of actions) {
+            if (!action || !action.actionType) continue;
+
+            // Handle modifications array (ASSIGN, SPLIT, CREATE, JOIN actions)
+            if (action.modifications && Array.isArray(action.modifications)) {
+                const originalLength = action.modifications.length;
+                action.modifications = action.modifications.filter(
+                    (mod: any) => mod.stateUniqueId !== deletedStateId
+                );
+                if (action.modifications.length !== originalLength) {
+                    modified = true;
+                }
+            }
+
+            // Handle stateModifications in DELAY_WITH_RESOURCE action
+            if (action.actionType === 'DELAY_WITH_RESOURCE' && action.stateModifications) {
+                const originalLength = action.stateModifications.length;
+                action.stateModifications = action.stateModifications.filter(
+                    (mod: any) => mod.stateUniqueId !== deletedStateId
+                );
+                if (action.stateModifications.length !== originalLength) {
+                    modified = true;
+                }
+            }
+
+            // Handle inheritStates array (SPLIT, CREATE, JOIN actions)
+            if (action.inheritStates && Array.isArray(action.inheritStates)) {
+                const originalLength = action.inheritStates.length;
+                action.inheritStates = action.inheritStates.filter(
+                    (name: string) => name !== deletedStateName
+                );
+                if (action.inheritStates.length !== originalLength) {
+                    modified = true;
+                }
+            }
+
+            // Handle SPLIT action specific fields
+            if (action.actionType === 'SPLIT') {
+                if (action.splitIndexState === deletedStateName) {
+                    action.splitIndexState = null;
+                    modified = true;
+                }
+            }
+
+            // Handle JOIN action specific fields
+            if (action.actionType === 'JOIN') {
+                if (action.matchState === deletedStateName) {
+                    action.matchState = null;
+                    modified = true;
+                }
+                if (action.joinCountState === deletedStateName) {
+                    action.joinCountState = null;
+                    modified = true;
+                }
+            }
+
+            // Handle BRANCH action - recursively clean nested actions
+            if (action.actionType === 'BRANCH') {
+                // Clean condition.stateName
+                if (action.condition && action.condition.stateName === deletedStateName) {
+                    action.condition = null;
+                    modified = true;
+                }
+
+                // Recursively clean ifTrue actions
+                if (action.ifTrue && Array.isArray(action.ifTrue)) {
+                    const result = this.cleanActionsStateReferences(action.ifTrue, deletedStateId, deletedStateName);
+                    action.ifTrue = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                // Recursively clean ifFalse actions
+                if (action.ifFalse && Array.isArray(action.ifFalse)) {
+                    const result = this.cleanActionsStateReferences(action.ifFalse, deletedStateId, deletedStateName);
+                    action.ifFalse = result.actions;
+                    if (result.modified) modified = true;
+                }
+            }
+
+            // Handle LOOP action - recursively clean nested actions
+            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+                const result = this.cleanActionsStateReferences(action.actions, deletedStateId, deletedStateName);
+                action.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+        }
+
+        return { actions, modified };
+    }
+
+    /**
+     * Clean up all references to a deleted state.
+     * Scans all Generators, Activities, and Connectors for state references.
+     *
+     * @param stateId Unique ID of the deleted state
+     * @param stateName Name of the deleted state (needed for name-based references)
+     * @param page The page to scan for elements
+     * @returns Number of elements that were modified
+     */
+    private async cleanupStateReferences(
+        stateId: string,
+        stateName: string,
+        page: PageProxy
+    ): Promise<number> {
+        let affectedCount = 0;
+
+        // Process all blocks (Generators and Activities)
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
+            if (!elementData) continue;
 
-            // Process generators with initial state modifications
-            if (elementData?.type === SimulationObjectType.Generator) {
-                let modified = false;
+            let modified = false;
 
-                if (elementData.initialStateModifications) {
-                    const filtered = elementData.initialStateModifications
-                        .filter((mod: any) => mod.stateUniqueId !== stateId);
-
-                    if (filtered.length !== elementData.initialStateModifications.length) {
-                        elementData.initialStateModifications = filtered;
+            // Process Generators
+            if (elementData.type === SimulationObjectType.Generator) {
+                // Clean generationConfig.initialStateModifications
+                if (elementData.generationConfig?.initialStateModifications) {
+                    const originalLength = elementData.generationConfig.initialStateModifications.length;
+                    elementData.generationConfig.initialStateModifications =
+                        elementData.generationConfig.initialStateModifications.filter(
+                            (mod: any) => mod.stateUniqueId !== stateId
+                        );
+                    if (elementData.generationConfig.initialStateModifications.length !== originalLength) {
                         modified = true;
                     }
                 }
 
                 if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
+                    affectedCount++;
+                    this.debug.log('Cleaned state references from Generator:', block.id);
+                }
+            }
+
+            // Process Activities
+            if (elementData.type === SimulationObjectType.Activity) {
+                // Clean sourceConfig.initialStateModifications
+                if (elementData.sourceConfig?.initialStateModifications) {
+                    const originalLength = elementData.sourceConfig.initialStateModifications.length;
+                    elementData.sourceConfig.initialStateModifications =
+                        elementData.sourceConfig.initialStateModifications.filter(
+                            (mod: any) => mod.stateUniqueId !== stateId
+                        );
+                    if (elementData.sourceConfig.initialStateModifications.length !== originalLength) {
+                        modified = true;
+                    }
+                }
+
+                // Clean actions array
+                if (elementData.actions && Array.isArray(elementData.actions)) {
+                    const result = this.cleanActionsStateReferences(
+                        elementData.actions,
+                        stateId,
+                        stateName
+                    );
+                    elementData.actions = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                    affectedCount++;
+                    this.debug.log('Cleaned state references from Activity:', block.id);
                 }
             }
         }
+
+        // Process all lines (Connectors)
+        for (const [, line] of page.allLines) {
+            const elementData = this.storageAdapter.getElementData<any>(line);
+            if (!elementData || elementData.type !== SimulationObjectType.Connector) continue;
+
+            let modified = false;
+
+            // Clean legacy stateModifications array
+            if (elementData.stateModifications && Array.isArray(elementData.stateModifications)) {
+                const originalLength = elementData.stateModifications.length;
+                elementData.stateModifications = elementData.stateModifications.filter(
+                    (mod: any) => mod.stateUniqueId !== stateId
+                );
+                if (elementData.stateModifications.length !== originalLength) {
+                    modified = true;
+                }
+            }
+
+            // Clean stateCondition.stateName
+            if (elementData.stateCondition && elementData.stateCondition.stateName === stateName) {
+                elementData.stateCondition = null;
+                modified = true;
+            }
+
+            // Clean actions array
+            if (elementData.actions && Array.isArray(elementData.actions)) {
+                const result = this.cleanActionsStateReferences(
+                    elementData.actions,
+                    stateId,
+                    stateName
+                );
+                elementData.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+
+            if (modified) {
+                this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
+                affectedCount++;
+                this.debug.log('Cleaned state references from Connector:', line.id);
+            }
+        }
+
+        return affectedCount;
     }
 
     /**
@@ -750,9 +949,18 @@ export class ModelManager {
             const deletedStates = currentStates.filter(s => !newStateIds.has(s.id));
 
             // Clean up references for each deleted state
+            let totalAffected = 0;
             for (const deletedState of deletedStates) {
-                this.debug.log('Detected deleted state, cleaning up references:', deletedState.id);
-                await this.cleanupStateReferences(deletedState.id, page);
+                this.debug.log('Detected deleted state, cleaning up references:', {
+                    stateId: deletedState.id,
+                    stateName: deletedState.name
+                });
+                const affectedCount = await this.cleanupStateReferences(
+                    deletedState.id,
+                    deletedState.name,
+                    page
+                );
+                totalAffected += affectedCount;
             }
 
             // Save states to page storage
@@ -762,7 +970,8 @@ export class ModelManager {
             this.markModelDirty();
 
             this.debug.log('updateStates - Complete with cascading cleanup', {
-                deletedCount: deletedStates.length
+                deletedCount: deletedStates.length,
+                affectedElements: totalAffected
             });
         } catch (error) {
             this.debug.error('Error in updateStates:', error);
