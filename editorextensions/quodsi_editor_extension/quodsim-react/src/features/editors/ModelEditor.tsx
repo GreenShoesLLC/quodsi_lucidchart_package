@@ -5,7 +5,6 @@ import {
   SimulationTimeType,
   SimulationObjectType,
   StateListManager,
-  ComponentType,
   ValidationResult,
 } from "@quodsi/shared";
 import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle } from "lucide-react";
@@ -576,7 +575,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
         <StatesEditor
             states={states}
             onStatesChange={onStatesChange}
-            defaultComponentType={ComponentType.MODEL}
+            defaultComponentType="ALL"
           />
       )}
       {activeTab === "requirements" && (

@@ -666,8 +666,13 @@ export class ModelManager {
         if (deletedConfigIds.length > 0) {
             for (const [, block] of page.allBlocks) {
                 const elementData = this.storageAdapter.getElementData<any>(block);
+                if (!elementData) continue;
 
-                if (elementData?.type === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
+                // Get element type from metadata (type is stored in metadata, not data)
+                const metadata = this.storageAdapter.getMetadata(block);
+                const elementType = metadata?.type;
+
+                if (elementType === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
                     const originalLength = elementData.timeDistributedConfigIds.length;
                     elementData.timeDistributedConfigIds = elementData.timeDistributedConfigIds.filter(
                         (id: string) => !deletedConfigIds.includes(id)
@@ -691,8 +696,13 @@ export class ModelManager {
         // Process all generators
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
+            if (!elementData) continue;
 
-            if (elementData?.type === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
+            // Get element type from metadata (type is stored in metadata, not data)
+            const metadata = this.storageAdapter.getMetadata(block);
+            const elementType = metadata?.type;
+
+            if (elementType === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
                 const originalLength = elementData.timeDistributedConfigIds.length;
                 elementData.timeDistributedConfigIds = elementData.timeDistributedConfigIds.filter(
                     (id: string) => id !== configId
@@ -833,15 +843,20 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
+            // Get element type from metadata (type is stored in metadata, not data)
+            const metadata = this.storageAdapter.getMetadata(block);
+            const elementType = metadata?.type;
+
             let modified = false;
 
             // Process Generators
-            if (elementData.type === SimulationObjectType.Generator) {
+            if (elementType === SimulationObjectType.Generator) {
                 // Clean generationConfig.initialStateModifications
-                if (elementData.generationConfig?.initialStateModifications) {
-                    const originalLength = elementData.generationConfig.initialStateModifications.length;
+                const modifications = elementData.generationConfig?.initialStateModifications;
+                if (modifications && modifications.length > 0) {
+                    const originalLength = modifications.length;
                     elementData.generationConfig.initialStateModifications =
-                        elementData.generationConfig.initialStateModifications.filter(
+                        modifications.filter(
                             (mod: any) => mod.stateUniqueId !== stateId
                         );
                     if (elementData.generationConfig.initialStateModifications.length !== originalLength) {
@@ -857,7 +872,7 @@ export class ModelManager {
             }
 
             // Process Activities
-            if (elementData.type === SimulationObjectType.Activity) {
+            if (elementType === SimulationObjectType.Activity) {
                 // Clean sourceConfig.initialStateModifications
                 if (elementData.sourceConfig?.initialStateModifications) {
                     const originalLength = elementData.sourceConfig.initialStateModifications.length;
@@ -892,7 +907,11 @@ export class ModelManager {
         // Process all lines (Connectors)
         for (const [, line] of page.allLines) {
             const elementData = this.storageAdapter.getElementData<any>(line);
-            if (!elementData || elementData.type !== SimulationObjectType.Connector) continue;
+            if (!elementData) continue;
+
+            // Get element type from metadata
+            const lineMetadata = this.storageAdapter.getMetadata(line);
+            if (lineMetadata?.type !== SimulationObjectType.Connector) continue;
 
             let modified = false;
 
@@ -1081,8 +1100,13 @@ export class ModelManager {
         // Process all activities - update actions that reference the deleted requirement
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
+            if (!elementData) continue;
 
-            if (elementData?.type === SimulationObjectType.Activity && elementData.actions) {
+            // Get element type from metadata (type is stored in metadata, not data)
+            const metadata = this.storageAdapter.getMetadata(block);
+            const elementType = metadata?.type;
+
+            if (elementType === SimulationObjectType.Activity && elementData.actions) {
                 const result = this.cleanActionsRequirementReferences(
                     elementData.actions,
                     requirementId
@@ -1125,10 +1149,14 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
+            // Get element type from metadata (type is stored in metadata, not data)
+            const metadata = this.storageAdapter.getMetadata(block);
+            const elementType = metadata?.type;
+
             let modified = false;
 
             // Process Generators - clean generationConfig.entityId
-            if (elementData.type === SimulationObjectType.Generator) {
+            if (elementType === SimulationObjectType.Generator) {
                 if (elementData.generationConfig?.entityId === entityId) {
                     this.debug.debug('Clearing Generator generationConfig.entityId:', entityId);
                     elementData.generationConfig.entityId = "";
@@ -1143,7 +1171,7 @@ export class ModelManager {
             }
 
             // Process Activities - clean sourceConfig.entityId and actions
-            if (elementData.type === SimulationObjectType.Activity) {
+            if (elementType === SimulationObjectType.Activity) {
                 // Clean sourceConfig.entityId
                 if (elementData.sourceConfig?.entityId === entityId) {
                     this.debug.debug('Clearing Activity sourceConfig.entityId:', entityId);
@@ -1172,7 +1200,11 @@ export class ModelManager {
         // Process all lines (Connectors) - clean actions array
         for (const [, line] of page.allLines) {
             const elementData = this.storageAdapter.getElementData<any>(line);
-            if (!elementData || elementData.type !== SimulationObjectType.Connector) continue;
+            if (!elementData) continue;
+
+            // Get element type from metadata
+            const lineMetadata = this.storageAdapter.getMetadata(line);
+            if (lineMetadata?.type !== SimulationObjectType.Connector) continue;
 
             let modified = false;
 
@@ -1439,6 +1471,51 @@ export class ModelManager {
     }
 
     /**
+     * Defensive cleanup: Filters out orphaned state modifications from Generator data.
+     * This handles edge cases where state modifications reference deleted states that
+     * weren't properly cleaned up by cascading deletion (timing issues, different code paths,
+     * or imported/loaded data with orphaned references).
+     *
+     * @param elementData The element data being saved
+     * @param type The simulation object type
+     * @param page The page to get valid states from
+     * @returns Object with cleaned data and whether any modifications were removed
+     */
+    private cleanOrphanedStateModifications(
+        elementData: any,
+        type: SimulationObjectType,
+        page: PageProxy
+    ): { data: any; cleaned: boolean } {
+        let cleaned = false;
+
+        if (type === SimulationObjectType.Generator) {
+            const modifications = elementData.generationConfig?.initialStateModifications;
+            if (modifications && Array.isArray(modifications) && modifications.length > 0) {
+                // Get valid state IDs from storage
+                const states = this.storageAdapter.getStates(page) || [];
+                const validStateIds = new Set(states.map(s => s.id));
+
+                const originalLength = modifications.length;
+                elementData.generationConfig.initialStateModifications = modifications.filter(
+                    (mod: any) => validStateIds.has(mod.stateUniqueId)
+                );
+
+                if (elementData.generationConfig.initialStateModifications.length !== originalLength) {
+                    cleaned = true;
+                    this.debug.log('Cleaned orphaned state modifications from Generator', {
+                        elementId: elementData.id,
+                        originalCount: originalLength,
+                        cleanedCount: elementData.generationConfig.initialStateModifications.length,
+                        removedCount: originalLength - elementData.generationConfig.initialStateModifications.length
+                    });
+                }
+            }
+        }
+
+        return { data: elementData, cleaned };
+    }
+
+    /**
      * Handles converting an element to a new simulation type
      * Uses LucidElementFactory for proper element creation with all required fields
      */
@@ -1610,7 +1687,7 @@ export class ModelManager {
             });
 
             // Prepare element data
-            const elementData = {
+            let elementData = {
                 id: element.id,
                 type: type,
                 ...updateData,
@@ -1625,6 +1702,13 @@ export class ModelManager {
                 name: elementData.name,
                 additionalKeys: Object.keys(elementData).filter(k => !['id', 'type', 'name'].includes(k))
             });
+
+            // Defensive cleanup: Filter orphaned state modifications for Generators
+            const { data: cleanedData, cleaned } = this.cleanOrphanedStateModifications(elementData, type, page);
+            if (cleaned) {
+                elementData = cleanedData;
+                this.debug.debug('Element data cleaned of orphaned state modifications');
+            }
 
             // Register and save
             this.debug.debug('Registering element');

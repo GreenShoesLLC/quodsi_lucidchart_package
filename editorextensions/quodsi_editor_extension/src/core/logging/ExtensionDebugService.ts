@@ -40,7 +40,7 @@ export class ExtensionDebugService {
     'ChannelManager',
     
     // Model management (can be verbose during operations)
-    'ModelManager',
+    // 'ModelManager',
     
     // Panel management
     'RightDockPanel',

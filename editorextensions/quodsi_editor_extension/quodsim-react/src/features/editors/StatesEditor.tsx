@@ -7,7 +7,7 @@ import StateListItem from "./StateListItem";
 interface Props {
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
-  defaultComponentType: ComponentType;
+  defaultComponentType: ComponentType | "ALL";
   allowFilterChange?: boolean;
 }
 
@@ -102,17 +102,12 @@ const StatesEditor: React.FC<Props> = ({
                   )
                 }
               >
-                <option value={defaultComponentType}>
-                  {getComponentTypeLabel(defaultComponentType)} Only
-                </option>
                 <option value="ALL">All Components</option>
-                {Object.values(ComponentType)
-                  .filter((type) => type !== defaultComponentType)
-                  .map((type) => (
-                    <option key={type} value={type}>
-                      {getComponentTypeLabel(type)}
-                    </option>
-                  ))}
+                {Object.values(ComponentType).map((type) => (
+                  <option key={type} value={type}>
+                    {getComponentTypeLabel(type)} Only
+                  </option>
+                ))}
               </select>
             ) : (
               <span className="text-xs font-medium text-gray-700">
@@ -202,7 +197,11 @@ const StatesEditor: React.FC<Props> = ({
       <StateFormDialog
         isOpen={isAddDialogOpen}
         defaultComponentType={
-          filterComponentType === "ALL" ? defaultComponentType : filterComponentType
+          filterComponentType !== "ALL"
+            ? filterComponentType
+            : defaultComponentType !== "ALL"
+              ? defaultComponentType
+              : ComponentType.MODEL // Fallback when both are "ALL"
         }
         stateListManager={states}
         onSave={handleAddState}

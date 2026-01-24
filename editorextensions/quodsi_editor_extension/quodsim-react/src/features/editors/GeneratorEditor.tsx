@@ -505,15 +505,21 @@ const GeneratorEditor: React.FC<Props> = ({
    * State modifications are considered "committed" as soon as they're changed.
    *
    * Flow:
-   * 1. Create updated generator with new state modifications
-   * 2. Trigger immediate save via onSave (Redux manages save state)
-   * 3. Update local state to match
+   * 1. Filter out state modifications that reference deleted states (defensive cleanup)
+   * 2. Create updated generator with valid state modifications
+   * 3. Trigger immediate save via onSave (Redux manages save state)
+   * 4. Update local state to match
    *
    * This bypasses the Save button workflow - changes are persisted immediately.
    */
   const handleStateModificationsChange = (mods: any[]) => {
+    // Defensive: Filter out state modifications that reference deleted states
+    const validModifications = mods.filter(
+      mod => states.getByUniqueId(mod.stateUniqueId) !== undefined
+    );
+
     const updatedGenerator = updateGeneratorImmutably(localGeneratorDraft, {
-      initialStateModifications: mods
+      initialStateModifications: validModifications
     });
 
     // Auto-save immediately (Redux manages isSaving state)
@@ -526,6 +532,7 @@ const GeneratorEditor: React.FC<Props> = ({
    * Saves the current generator draft to the model (manual save for basic fields).
    *
    * Key responsibilities:
+   * - Filters out orphaned state modifications referencing deleted states (defensive cleanup)
    * - Triggers Redux save action via onSave callback
    * - Redux manages isSaving state and optimistic updates
    * - useSaveCompletionDetector hook clears hasPendingChanges when save completes
@@ -534,8 +541,18 @@ const GeneratorEditor: React.FC<Props> = ({
    * save completion detector to avoid race conditions.
    */
   const handleSave = () => {
-    // Save the current draft state directly
-    onSave(localGeneratorDraft);
+    // Defensive: Filter out state modifications that reference deleted states
+    const currentModifications = localGeneratorDraft.generationConfig.initialStateModifications || [];
+    const validModifications = currentModifications.filter(
+      mod => states.getByUniqueId(mod.stateUniqueId) !== undefined
+    );
+
+    // Only create updated generator if modifications were filtered out
+    const generatorToSave = validModifications.length !== currentModifications.length
+      ? updateGeneratorImmutably(localGeneratorDraft, { initialStateModifications: validModifications })
+      : localGeneratorDraft;
+
+    onSave(generatorToSave);
     // Note: isSaving state is now managed by Redux through elementOpsState
   };
 
