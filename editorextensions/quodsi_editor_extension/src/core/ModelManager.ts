@@ -309,7 +309,13 @@ export class ModelManager {
     }
 
     /**
-     * Removes an element
+     * Removes an element.
+     *
+     * For Resources: Cascading cleanup removes associated ResourceRequirements,
+     * which then cascades to clean up actions (SEIZE/RELEASE deleted, DELAY_WITH_RESOURCE nullified).
+     *
+     * For Entities: Cascading cleanup clears entity references in Generators,
+     * Activities (sourceConfig), and CreateActions (entityTemplateId).
      */
     public async removeElement(elementId: string): Promise<void> {
         const modelDef = await this.ensureModelDefinition();
@@ -319,6 +325,32 @@ export class ModelManager {
         if (!elementProxy) {
             this.debug.warn('No element found for ID:', elementId);
             return;
+        }
+
+        // Check if this is a Resource - if so, perform cascading cleanup
+        const existingResource = modelDef.resources.get(elementId);
+        if (existingResource) {
+            this.debug.log('Resource deletion detected, performing cascading cleanup:', elementId);
+
+            // Step 1: Clean up ResourceRequirements that reference this resource
+            const deletedReqIds = await this.cleanupResourceReferences(elementId, this.currentPage);
+
+            // Step 2: For each deleted requirement, clean up action references
+            for (const reqId of deletedReqIds) {
+                const affectedCount = await this.cleanupRequirementReferences(reqId, this.currentPage);
+                this.debug.log('Cleaned up actions for requirement:', { reqId, affectedCount });
+            }
+
+            // Also remove the auto-generated requirement from the model definition
+            modelDef.resourceRequirements.remove(elementId);
+        }
+
+        // Check if this is an Entity - if so, perform cascading cleanup
+        const existingEntity = modelDef.entities.get(elementId);
+        if (existingEntity) {
+            this.debug.log('Entity deletion detected, performing cascading cleanup:', elementId);
+            const affectedCount = await this.cleanupEntityReferences(elementId, this.currentPage);
+            this.debug.log('Cleaned up entity references:', { affectedCount });
         }
 
         // Remove from all list managers
@@ -903,31 +935,341 @@ export class ModelManager {
     }
 
     /**
-     * Clean up all references to a deleted resource requirement
+     * Helper method to clean entity references from an actions array.
+     * Handles CREATE actions that can contain entityTemplateId references.
+     *
+     * Strategy:
+     * - CREATE actions have entityTemplateId NULLIFIED (field is nullable)
+     *
+     * @param actions Array of actions to clean
+     * @param deletedEntityId ID of the deleted entity
+     * @returns Object with cleaned actions array and whether any modifications were made
      */
-    private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<void> {
+    private cleanActionsEntityReferences(
+        actions: any[],
+        deletedEntityId: string
+    ): { actions: any[]; modified: boolean } {
+        let modified = false;
+
+        for (const action of actions) {
+            if (!action || !action.actionType) continue;
+
+            // Nullify CREATE action entityTemplateId if it references the deleted entity
+            if (action.actionType === 'CREATE' && action.entityTemplateId === deletedEntityId) {
+                this.debug.debug('Nullifying CREATE action entityTemplateId:', deletedEntityId);
+                action.entityTemplateId = null;
+                modified = true;
+            }
+
+            // Handle BRANCH action - recursively clean nested actions
+            if (action.actionType === 'BRANCH') {
+                // Recursively clean ifTrue actions
+                if (action.ifTrue && Array.isArray(action.ifTrue)) {
+                    const result = this.cleanActionsEntityReferences(action.ifTrue, deletedEntityId);
+                    action.ifTrue = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                // Recursively clean ifFalse actions
+                if (action.ifFalse && Array.isArray(action.ifFalse)) {
+                    const result = this.cleanActionsEntityReferences(action.ifFalse, deletedEntityId);
+                    action.ifFalse = result.actions;
+                    if (result.modified) modified = true;
+                }
+            }
+
+            // Handle LOOP action - recursively clean nested actions
+            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+                const result = this.cleanActionsEntityReferences(action.actions, deletedEntityId);
+                action.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+        }
+
+        return { actions, modified };
+    }
+
+    /**
+     * Helper method to clean requirement references from an actions array.
+     * Handles all action types that can contain resource requirement references.
+     *
+     * Strategy:
+     * - SEIZE and RELEASE actions are DELETED (they're useless without a requirement)
+     * - DELAY_WITH_RESOURCE actions have resourceRequirementId NULLIFIED (still valid as pure delay)
+     *
+     * @param actions Array of actions to clean
+     * @param deletedRequirementId ID of the deleted requirement
+     * @returns Object with cleaned actions array and whether any modifications were made
+     */
+    private cleanActionsRequirementReferences(
+        actions: any[],
+        deletedRequirementId: string
+    ): { actions: any[]; modified: boolean } {
+        let modified = false;
+
+        // Filter out SEIZE and RELEASE actions that reference the deleted requirement
+        const filteredActions = actions.filter(action => {
+            if (!action || !action.actionType) return true;
+
+            // Delete SEIZE actions referencing this requirement
+            if (action.actionType === 'SEIZE' && action.resourceRequirementId === deletedRequirementId) {
+                this.debug.debug('Removing SEIZE action referencing deleted requirement:', deletedRequirementId);
+                modified = true;
+                return false; // Remove this action
+            }
+
+            // Delete RELEASE actions referencing this requirement
+            if (action.actionType === 'RELEASE' && action.resourceRequirementId === deletedRequirementId) {
+                this.debug.debug('Removing RELEASE action referencing deleted requirement:', deletedRequirementId);
+                modified = true;
+                return false; // Remove this action
+            }
+
+            return true; // Keep this action
+        });
+
+        // Process remaining actions for DELAY_WITH_RESOURCE nullification and nested actions
+        for (const action of filteredActions) {
+            if (!action || !action.actionType) continue;
+
+            // Nullify DELAY_WITH_RESOURCE resourceRequirementId (still valid as pure delay)
+            if (action.actionType === 'DELAY_WITH_RESOURCE' && action.resourceRequirementId === deletedRequirementId) {
+                this.debug.debug('Nullifying DELAY_WITH_RESOURCE resourceRequirementId:', deletedRequirementId);
+                action.resourceRequirementId = null;
+                modified = true;
+            }
+
+            // Handle BRANCH action - recursively clean nested actions
+            if (action.actionType === 'BRANCH') {
+                // Recursively clean ifTrue actions
+                if (action.ifTrue && Array.isArray(action.ifTrue)) {
+                    const result = this.cleanActionsRequirementReferences(action.ifTrue, deletedRequirementId);
+                    action.ifTrue = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                // Recursively clean ifFalse actions
+                if (action.ifFalse && Array.isArray(action.ifFalse)) {
+                    const result = this.cleanActionsRequirementReferences(action.ifFalse, deletedRequirementId);
+                    action.ifFalse = result.actions;
+                    if (result.modified) modified = true;
+                }
+            }
+
+            // Handle LOOP action - recursively clean nested actions
+            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+                const result = this.cleanActionsRequirementReferences(action.actions, deletedRequirementId);
+                action.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+        }
+
+        return { actions: filteredActions, modified };
+    }
+
+    /**
+     * Clean up all references to a deleted resource requirement.
+     *
+     * Action cleanup strategy:
+     * - SEIZE and RELEASE actions: DELETED (cannot function without requirement)
+     * - DELAY_WITH_RESOURCE actions: resourceRequirementId NULLIFIED (still valid as pure delay)
+     */
+    private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<number> {
         this.debug.log('Cleaning up references to requirement:', requirementId);
+        let affectedCount = 0;
 
         // Process all activities - update actions that reference the deleted requirement
         for (const [, block] of page.allBlocks) {
             const elementData = this.storageAdapter.getElementData<any>(block);
 
             if (elementData?.type === SimulationObjectType.Activity && elementData.actions) {
-                let modified = false;
+                const result = this.cleanActionsRequirementReferences(
+                    elementData.actions,
+                    requirementId
+                );
 
-                for (const action of elementData.actions) {
-                    if (action.resourceRequirementId === requirementId) {
-                        action.resourceRequirementId = null;
-                        modified = true;
-                    }
-                }
-
-                if (modified) {
+                if (result.modified) {
+                    elementData.actions = result.actions;
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                    affectedCount++;
                     this.debug.log('Updated activity after requirement cleanup:', block.id);
                 }
             }
         }
+
+        return affectedCount;
+    }
+
+    /**
+     * Clean up all references to a deleted Entity.
+     * Scans all Generators, Activities, and Connectors for entity references.
+     *
+     * Reference cleanup strategy:
+     * - Generator.generationConfig.entityId: SET TO "" (required field, empty = unset)
+     * - Activity.sourceConfig.entityId: SET TO "" (required field, empty = unset)
+     * - CreateAction.entityTemplateId: SET TO null (already nullable)
+     *
+     * @param entityId ID of the deleted entity
+     * @param page The page to scan
+     * @returns Number of elements that were modified
+     */
+    private async cleanupEntityReferences(
+        entityId: string,
+        page: PageProxy
+    ): Promise<number> {
+        this.debug.log('Cleaning up references to entity:', entityId);
+        let affectedCount = 0;
+
+        // Process all blocks (Generators and Activities)
+        for (const [, block] of page.allBlocks) {
+            const elementData = this.storageAdapter.getElementData<any>(block);
+            if (!elementData) continue;
+
+            let modified = false;
+
+            // Process Generators - clean generationConfig.entityId
+            if (elementData.type === SimulationObjectType.Generator) {
+                if (elementData.generationConfig?.entityId === entityId) {
+                    this.debug.debug('Clearing Generator generationConfig.entityId:', entityId);
+                    elementData.generationConfig.entityId = "";
+                    modified = true;
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
+                    affectedCount++;
+                    this.debug.log('Cleaned entity references from Generator:', block.id);
+                }
+            }
+
+            // Process Activities - clean sourceConfig.entityId and actions
+            if (elementData.type === SimulationObjectType.Activity) {
+                // Clean sourceConfig.entityId
+                if (elementData.sourceConfig?.entityId === entityId) {
+                    this.debug.debug('Clearing Activity sourceConfig.entityId:', entityId);
+                    elementData.sourceConfig.entityId = "";
+                    modified = true;
+                }
+
+                // Clean actions array (for CREATE actions)
+                if (elementData.actions && Array.isArray(elementData.actions)) {
+                    const result = this.cleanActionsEntityReferences(
+                        elementData.actions,
+                        entityId
+                    );
+                    elementData.actions = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                if (modified) {
+                    this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                    affectedCount++;
+                    this.debug.log('Cleaned entity references from Activity:', block.id);
+                }
+            }
+        }
+
+        // Process all lines (Connectors) - clean actions array
+        for (const [, line] of page.allLines) {
+            const elementData = this.storageAdapter.getElementData<any>(line);
+            if (!elementData || elementData.type !== SimulationObjectType.Connector) continue;
+
+            let modified = false;
+
+            // Clean actions array (for CREATE actions)
+            if (elementData.actions && Array.isArray(elementData.actions)) {
+                const result = this.cleanActionsEntityReferences(
+                    elementData.actions,
+                    entityId
+                );
+                elementData.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+
+            if (modified) {
+                this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
+                affectedCount++;
+                this.debug.log('Cleaned entity references from Connector:', line.id);
+            }
+        }
+
+        return affectedCount;
+    }
+
+    /**
+     * Helper to check if a clause or its sub-clauses reference a specific resource.
+     */
+    private clauseReferencesResource(clause: any, resourceId: string): boolean {
+        // Check requests in this clause
+        if (clause.requests && Array.isArray(clause.requests)) {
+            if (clause.requests.some((request: any) => request.resourceId === resourceId)) {
+                return true;
+            }
+        }
+
+        // Recursively check sub-clauses
+        if (clause.subClauses && Array.isArray(clause.subClauses)) {
+            for (const subClause of clause.subClauses) {
+                if (this.clauseReferencesResource(subClause, resourceId)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Clean up all ResourceRequirements that reference a deleted Resource,
+     * then cascade to clean up actions that reference those requirements.
+     *
+     * Auto-generated ResourceRequirements (where req.id === resourceId) are deleted.
+     * Also removes any ResourceRequirement that has a ResourceRequest referencing the deleted resource.
+     *
+     * @param resourceId ID of the deleted resource
+     * @param page The page to scan
+     * @returns Array of requirement IDs that were deleted (for cascade cleanup)
+     */
+    private async cleanupResourceReferences(
+        resourceId: string,
+        page: PageProxy
+    ): Promise<string[]> {
+        this.debug.log('Cleaning up references to resource:', resourceId);
+        const deletedRequirementIds: string[] = [];
+
+        // Get current resource requirements
+        const requirements = this.storageAdapter.getResourceRequirements(page) || [];
+
+        // Find requirements to delete
+        const updatedRequirements = requirements.filter(req => {
+            // Delete auto-generated requirement (same ID as resource)
+            if (req.id === resourceId) {
+                this.debug.log('Removing auto-generated requirement for resource:', resourceId);
+                deletedRequirementIds.push(req.id);
+                return false;
+            }
+
+            // Check if any rootClauses reference this resource
+            if (req.rootClauses && Array.isArray(req.rootClauses)) {
+                for (const clause of req.rootClauses) {
+                    if (this.clauseReferencesResource(clause, resourceId)) {
+                        this.debug.log('Removing requirement that references deleted resource:', req.id);
+                        deletedRequirementIds.push(req.id);
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        });
+
+        // Save updated requirements if any were deleted
+        if (deletedRequirementIds.length > 0) {
+            this.storageAdapter.setResourceRequirements(page, updatedRequirements);
+            this.debug.log('Deleted requirements count:', deletedRequirementIds.length);
+        }
+
+        return deletedRequirementIds;
     }
 
     /**
