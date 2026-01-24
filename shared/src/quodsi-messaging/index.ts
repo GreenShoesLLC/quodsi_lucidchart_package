@@ -3,7 +3,7 @@ import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage, ResultsPageCreateMessage, ResultsPageCreateResultMessage } from './modelOps/messages';
-import { ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage, TimePatternsUpdateMessage, TimePatternsUpdateResultMessage, TimeDistributedConfigsUpdateMessage, TimeDistributedConfigsUpdateResultMessage } from './elementOps/messages';
+import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage, TimePatternsUpdateMessage, TimePatternsUpdateResultMessage, TimeDistributedConfigsUpdateMessage, TimeDistributedConfigsUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
@@ -98,6 +98,7 @@ export {
 
 // Export element operations messages
 export {
+  ElementSelectMessage,
   ElementUpdateMessage,
   ElementUpdateResultMessage,
   ElementConvertMessage,
@@ -196,6 +197,7 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.RESULTS_PAGE_CREATE]: ResultsPageCreateMessage['data'];
   [EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT]: ResultsPageCreateResultMessage['data'];
 
+  [EnvelopeMessageType.ELEMENT_SELECT]: ElementSelectMessage['data'];
   [EnvelopeMessageType.ELEMENT_UPDATE]: ElementUpdateMessage['data'];
   [EnvelopeMessageType.ELEMENT_UPDATE_RESULT]: ElementUpdateResultMessage['data'];
   [EnvelopeMessageType.ELEMENT_CONVERT]: ElementConvertMessage['data'];

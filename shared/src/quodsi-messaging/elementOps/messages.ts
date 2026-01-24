@@ -7,6 +7,17 @@ import { ISerializedTimePattern } from '../../serialization/interfaces/ISerializ
 import { ISerializedTimeDistributedConfig } from '../../serialization/interfaces/ISerializedTimeDistributedConfig';
 
 /**
+ * Sent to request element selection (or clear selection to show Model Editor)
+ */
+export interface ElementSelectMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.ELEMENT_SELECT;
+  data: {
+    /** Element ID to select. If 'model' or undefined, clears selection to show Model Editor. */
+    elementId?: string;
+  };
+}
+
+/**
  * Sent to request element update
  */
 export interface ElementUpdateMessage extends EnvelopeBase {
@@ -176,6 +187,7 @@ export interface TimeDistributedConfigsUpdateResultMessage extends EnvelopeBase 
 
 /** Union type of all element operations messages */
 export type ElementOpsMessage =
+  | ElementSelectMessage
   | ElementUpdateMessage
   | ElementUpdateResultMessage
   | ElementConvertMessage

@@ -52,6 +52,8 @@ interface ActionEditorProps {
   onCreateRequirement?: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
   states?: StateListManager;
+  /** Callback to navigate to Model Editor (for creating states) */
+  onNavigateToModelEditor?: () => void;
 }
 
 // ============================================================================
@@ -265,6 +267,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   onCreateRequirement,
   dragHandleProps,
   states,
+  onNavigateToModelEditor,
 }) => {
   const getResourceName = (id: string): string => {
     return availableResources.find((r) => r.id === id)?.name || "Unknown";
@@ -463,6 +466,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             title="State Modifications"
             description="Changes applied when this action executes"
             allowCrossComponent={true}
+            onNavigateToModelEditor={onNavigateToModelEditor}
           />
         );
       }
@@ -710,6 +714,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 title="State Modifications"
                 description="Applied to each new entity"
                 allowCrossComponent={true}
+                onNavigateToModelEditor={onNavigateToModelEditor}
               />
             )}
           </div>
@@ -811,6 +816,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 title="State Modifications"
                 description="Applied to the new entity"
                 allowCrossComponent={true}
+                onNavigateToModelEditor={onNavigateToModelEditor}
               />
             )}
           </div>
@@ -1013,6 +1019,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 title="State Modifications"
                 description="Applied to the combined entity"
                 allowCrossComponent={true}
+                onNavigateToModelEditor={onNavigateToModelEditor}
               />
             )}
           </div>

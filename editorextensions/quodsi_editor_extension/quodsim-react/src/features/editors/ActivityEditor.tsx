@@ -81,6 +81,7 @@ interface SortableActionItemProps {
   onOpenRequirementModal?: (requirementId: string) => void;
   onCreateRequirement?: () => void;
   states?: StateListManager;
+  onNavigateToModelEditor?: () => void;
 }
 
 const SortableActionItem: React.FC<SortableActionItemProps> = ({
@@ -99,6 +100,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
   onOpenRequirementModal,
   onCreateRequirement,
   states,
+  onNavigateToModelEditor,
 }) => {
   const {
     attributes,
@@ -133,6 +135,7 @@ const SortableActionItem: React.FC<SortableActionItemProps> = ({
         onCreateRequirement={onCreateRequirement}
         dragHandleProps={{ ...attributes, ...listeners }}
         states={states}
+        onNavigateToModelEditor={onNavigateToModelEditor}
       />
     </div>
   );
@@ -278,8 +281,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // Name validation state
   const [nameError, setNameError] = useState<string | null>(null);
 
-  // Get message sender for updating resource requirements
-  const { updateResourceRequirements } = useModelOpsSender();
+  // Get message sender for updating resource requirements and navigating to Model Editor
+  const { updateResourceRequirements, selectElement } = useModelOpsSender();
 
   // Drag-and-drop sensors
   const sensors = useSensors(
@@ -1173,6 +1176,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         onOpenRequirementModal={handleOpenRequirementModal}
                         onCreateRequirement={handleCreateRequirement}
                         states={states}
+                        onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
                       />
                     ))}
                   </div>

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Plus, Info } from "lucide-react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { Plus, Info, AlertTriangle } from "lucide-react";
 import { StateModification, StateListManager, ComponentType } from "@quodsi/shared";
 import StateModificationFormDialog from "./StateModificationFormDialog";
 import StateModificationListItem from "./StateModificationListItem";
@@ -12,6 +12,8 @@ interface Props {
   description?: string;
   allowCrossComponent?: boolean;
   filterComponentType?: ComponentType;
+  /** Callback to navigate to Model Editor (for creating states). If provided, "Model Editor" becomes a clickable link. */
+  onNavigateToModelEditor?: () => void;
 }
 
 const StateModificationsEditor: React.FC<Props> = ({
@@ -22,6 +24,7 @@ const StateModificationsEditor: React.FC<Props> = ({
   description,
   allowCrossComponent = false,
   filterComponentType,
+  onNavigateToModelEditor,
 }) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingModification, setEditingModification] = useState<
@@ -36,6 +39,15 @@ const StateModificationsEditor: React.FC<Props> = ({
 
   // Use pending modifications during save, otherwise use props
   const displayModifications = isSaving && pendingModifications ? pendingModifications : modifications;
+
+  // Compute available states (with optional filtering)
+  const availableStates = useMemo(() => {
+    const allStates = states.getAll();
+    if (filterComponentType) {
+      return allStates.filter((s) => s.componentType === filterComponentType);
+    }
+    return allStates;
+  }, [states, filterComponentType]);
 
   // Track modifications array reference to close dialogs after updates complete
   const prevModsRef = useRef(modifications);
@@ -141,7 +153,8 @@ const StateModificationsEditor: React.FC<Props> = ({
         <button
           type="button"
           onClick={() => setIsAddDialogOpen(true)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+          disabled={availableStates.length === 0}
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           <Plus className="w-3.5 h-3.5" />
           Add
@@ -176,7 +189,29 @@ const StateModificationsEditor: React.FC<Props> = ({
 
       {/* Modifications List */}
       <div className="space-y-1.5">
-        {displayModifications.length === 0 ? (
+        {availableStates.length === 0 ? (
+          <div className="text-center py-6 bg-amber-50 rounded border border-amber-200">
+            <AlertTriangle className="w-5 h-5 text-amber-500 mx-auto mb-2" />
+            <p className="text-xs font-medium text-amber-800 mb-1">
+              No States Available
+            </p>
+            <p className="text-xs text-amber-700">
+              Go to{" "}
+              {onNavigateToModelEditor ? (
+                <button
+                  type="button"
+                  onClick={onNavigateToModelEditor}
+                  className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  Model Editor
+                </button>
+              ) : (
+                <span className="font-medium">Model Editor</span>
+              )}{" "}
+              → States tab to create states first.
+            </p>
+          </div>
+        ) : displayModifications.length === 0 ? (
           <div className="text-center py-6 bg-gray-50 rounded border border-dashed">
             <p className="text-xs text-gray-500 mb-1">
               No state modifications defined

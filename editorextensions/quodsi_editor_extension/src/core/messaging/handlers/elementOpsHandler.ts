@@ -17,30 +17,71 @@ export class ElementOpsHandler {
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
+      case EnvelopeMessageType.ELEMENT_SELECT:
+        // Start the async process but return true synchronously
+        ElementOpsHandler.handleElementSelect(msg)
+          .catch(err => console.error('[ElementOpsHandler] Error in handleElementSelect:', err));
+        return true;
+
       case EnvelopeMessageType.ELEMENT_UPDATE:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementUpdate(msg)
           .catch(err => console.error('[ElementOpsHandler] Error in handleElementUpdate:', err));
         return true;
-        
+
       case EnvelopeMessageType.ELEMENT_UPDATE_RESULT:
         return ElementOpsHandler.handleElementUpdateResult(msg);
-        
+
       case EnvelopeMessageType.ELEMENT_CONVERT:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementConvert(msg)
           .catch(err => console.error('[ElementOpsHandler] Error in handleElementConvert:', err));
         return true;
-        
+
       case EnvelopeMessageType.ELEMENT_CONVERT_RESULT:
         return ElementOpsHandler.handleElementConvertResult(msg);
-        
+
       // Not an element operations message
       default:
         return false;
     }
   }
-  
+
+  /**
+   * Handle element select request - clears selection to show Model Editor
+   *
+   * @param msg ELEMENT_SELECT message
+   * @returns True indicating message was handled
+   */
+  private static async handleElementSelect(msg: EnvelopeBase): Promise<boolean> {
+    const data = msg.data as { elementId?: string };
+
+    console.log('[ElementOpsHandler] Element select requested', { elementId: data.elementId });
+
+    try {
+      const client = ModelManager.getClient();
+      const modelManager = ModelManager.getInstance();
+      const viewport = new Viewport(client);
+
+      // Clear selection to show the Model/Page editor
+      // When selection is empty on a Quodsi model page, React shows ModelEditor
+      // Use Viewport.setSelectedItems([]) to clear the selection
+      viewport.setSelectedItems([]);
+
+      // The viewport.hookSelection callback will automatically trigger
+      // SelectionHandler.handleLucidSelectionEvent which sends SELECTION_CHANGED
+      // However, since we're programmatically clearing selection, we should
+      // explicitly trigger the selection handler to ensure React gets updated
+      const selectedItems = viewport.getSelectedItems();
+      await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
+
+      return true;
+    } catch (error) {
+      console.error('[ElementOpsHandler] Error selecting element', error);
+      return false;
+    }
+  }
+
   /**
    * Handle element update request
    *

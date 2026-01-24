@@ -24,6 +24,7 @@ import TimePatternEditorModal from "./TimePatternEditorModal";
 import TimeDistributedConfigEditorModal from "./TimeDistributedConfigEditorModal";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 // ============================================================================
 // CONSTANTS
@@ -361,6 +362,9 @@ const GeneratorEditor: React.FC<Props> = ({
 
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
+
+  // Get the selectElement function for navigating to Model Editor
+  const { selectElement } = useModelOpsSender();
 
   /**
    * Redux-managed state for save operation tracking.
@@ -1062,8 +1066,7 @@ const GeneratorEditor: React.FC<Props> = ({
             states={states}
             title="Initial State Modifications"
             description="Applied to new entities"
-            filterComponentType={ComponentType.ENTITY}
-            allowCrossComponent={false}
+            onNavigateToModelEditor={() => selectElement('model', { targetTab: 'states' })}
           />
         )}
 

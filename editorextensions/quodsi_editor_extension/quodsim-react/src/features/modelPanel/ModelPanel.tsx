@@ -11,6 +11,7 @@ import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
+import { consumePendingModelEditorTab } from '../../utils/pendingNavigation';
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -61,6 +62,25 @@ export const ModelPanel: React.FC = () => {
 
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
+
+  // Check for pending navigation tab when showing a Model element
+  useEffect(() => {
+    if (currentElement) {
+      const elementType = getSimulationObjectType(
+        currentElement.metadata?.type || currentElement.q_meta?.type || currentElement.type,
+        currentElement,
+        currentElement.data
+      );
+
+      // Only consume pending tab when showing Model editor
+      if (elementType === SimulationObjectType.Model) {
+        const pendingTab = consumePendingModelEditorTab();
+        if (pendingTab) {
+          setActiveTab(pendingTab);
+        }
+      }
+    }
+  }, [currentElement]);
 
   // State for Model JSON viewer modal
   const [isModelViewerOpen, setIsModelViewerOpen] = useState(false);

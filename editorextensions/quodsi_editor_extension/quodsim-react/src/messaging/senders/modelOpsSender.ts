@@ -194,6 +194,24 @@ export function useModelOpsSender() {
     });
   }, [send]);
 
+  /**
+   * Send a request to select an element (or clear selection to show Model Editor)
+   *
+   * @param elementId Optional element ID to select. If 'model' or undefined, clears selection to show Model Editor.
+   * @param options Optional configuration including targetTab for Model Editor navigation
+   */
+  const selectElement = useCallback((elementId?: string, options?: { targetTab?: 'basic' | 'states' | 'requirements' | 'scenarios' | 'validation' }) => {
+    // If a target tab is specified, store it for the Model Editor to consume
+    if (options?.targetTab) {
+      const { setPendingModelEditorTab } = require('../../utils/pendingNavigation');
+      setPendingModelEditorTab(options.targetTab);
+    }
+
+    send(EnvelopeMessageType.ELEMENT_SELECT, {
+      elementId: elementId || 'model'
+    });
+  }, [send]);
+
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
     validateModel,
@@ -207,7 +225,8 @@ export function useModelOpsSender() {
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,
-    requestModelJson
+    requestModelJson,
+    selectElement
   }), [
     validateModel,
     convertModel,
@@ -220,6 +239,7 @@ export function useModelOpsSender() {
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,
-    requestModelJson
+    requestModelJson,
+    selectElement
   ]);
 }
