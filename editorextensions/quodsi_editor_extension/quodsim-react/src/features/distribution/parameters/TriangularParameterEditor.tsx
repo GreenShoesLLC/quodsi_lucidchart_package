@@ -77,12 +77,12 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
       left: parsed
     };
 
-    // If left becomes greater than mode, cascade adjustments with 1-unit spacing
+    // If left becomes greater than mode, cascade adjustments with 0.01-unit spacing
     if (parsed > localParams.mode) {
-      updatedParams.mode = parsed + 1;
+      updatedParams.mode = parsed + 0.01;
 
       if (updatedParams.mode > localParams.right) {
-        updatedParams.right = updatedParams.mode + 1;
+        updatedParams.right = updatedParams.mode + 0.01;
       }
     }
 
@@ -122,14 +122,14 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
       mode: parsed
     };
 
-    // If mode becomes greater than right, set right to mode + 1
+    // If mode becomes greater than right, set right to mode + 0.01
     if (parsed > localParams.right) {
-      updatedParams.right = parsed + 1;
+      updatedParams.right = parsed + 0.01;
     }
 
-    // If mode becomes less than left, set left to mode - 1 (but not below 0)
+    // If mode becomes less than left, set left to mode - 0.01 (but not below 0)
     if (parsed < localParams.left) {
-      updatedParams.left = Math.max(0, parsed - 1);
+      updatedParams.left = Math.max(0, parsed - 0.01);
     }
 
     setLocalParams(updatedParams);
@@ -168,12 +168,12 @@ export const TriangularParameterEditor: React.FC<TriangularParameterEditorProps>
       right: parsed
     };
 
-    // If right becomes less than mode, cascade adjustments with 1-unit spacing
+    // If right becomes less than mode, cascade adjustments with 0.01-unit spacing
     if (parsed < localParams.mode) {
-      updatedParams.mode = Math.max(0, parsed - 1);
+      updatedParams.mode = Math.max(0, parsed - 0.01);
 
       if (updatedParams.mode < localParams.left) {
-        updatedParams.left = Math.max(0, updatedParams.mode - 1);
+        updatedParams.left = Math.max(0, updatedParams.mode - 0.01);
       }
     }
 

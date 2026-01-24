@@ -78,12 +78,12 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
     };
 
     // If the new low value is greater than or equal to the high value,
-    // automatically increase the high value to be low + 1
+    // automatically increase the high value to be low + 0.01
     if (parsed >= localParams.high) {
-      updatedParams.high = parsed + 1;
+      updatedParams.high = parsed + 0.01;
       setLocalParams(updatedParams);
       setLowInput(String(parsed));
-      setHighInput(String(parsed + 1));
+      setHighInput(String(parsed + 0.01));
       setErrors(prev => ({
         ...prev,
         high: `Maximum automatically adjusted to ${updatedParams.high} to maintain proper range.`
@@ -129,9 +129,9 @@ export const UniformParameterEditor: React.FC<UniformParameterEditorProps> = ({
     };
 
     // If the new high value is less than or equal to the low value,
-    // automatically decrease the low value to be high - 1
+    // automatically decrease the low value to be high - 0.01
     if (parsed <= localParams.low) {
-      updatedParams.low = Math.max(0, parsed - 1);
+      updatedParams.low = Math.max(0, parsed - 0.01);
       setLocalParams(updatedParams);
       setHighInput(String(parsed));
       setLowInput(String(updatedParams.low));
