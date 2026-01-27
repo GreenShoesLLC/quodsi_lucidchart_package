@@ -116,6 +116,24 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             return { success: false };
         }
 
+        // Upload initial status.json with scenario name so ListScenarios returns
+        // the correct name before the Python runner starts
+        const initialStatus = JSON.stringify({
+            id: scenarioId,
+            name: scenarioName,
+            runState: 'NOT_RUN'
+        }, null, 2);
+        const statusBlobName = `${scenarioId}/status.json`;
+        logger.info(`Uploading initial status.json for scenario: ${scenarioId}`);
+        const statusUploadSuccess = await storageService.uploadBlobContent(
+            documentId,
+            statusBlobName,
+            initialStatus
+        );
+        if (!statusUploadSuccess) {
+            logger.warn('Failed to upload initial status.json, but continuing with simulation');
+        }
+
         // New Phase: Upload diagram SVG if provided
         if (diagramSvg) {
             const svgUploadStart = Date.now();

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { PlaySquare, RefreshCw, Loader, FileQuestion, XCircle, CloudUpload } from "lucide-react";
+import { consumePendingSubmission, clearPendingSubmission } from "../../utils/pendingSubmission";
 import ScenarioCard from "./ScenarioCard";
 import { RunState, EnvelopeMessageType, MAX_SCENARIOS, ScenarioDownloadInfo } from "@quodsi/shared";
 import { useScenarioSender } from "../../messaging/senders/scenarioSender";
@@ -61,7 +62,20 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
   const [isTabVisible, setIsTabVisible] = useState(true);
   const [deletingScenarios, setDeletingScenarios] = useState<Set<string>>(new Set());
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
+  const [submittingScenarioName, setSubmittingScenarioName] = useState<string | null>(null);
   const { listScenarios, deleteScenario } = useScenarioSender();
+
+  // Ref to track current scenarios without causing dependency cycles
+  const scenariosRef = useRef(scenarios);
+  scenariosRef.current = scenarios;
+
+  // On mount, check if there's a pending submission (set by ModelPanel before tab switch)
+  useEffect(() => {
+    const pending = consumePendingSubmission();
+    if (pending) {
+      setSubmittingScenarioName(pending);
+    }
+  }, []);
 
   // Helper function to check if scenario name is in datetime format (YY-MM-DD HH:mm:ss)
   const isDatetimeFormat = useCallback((name: string): boolean => {
@@ -97,8 +111,9 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
     }
 
     // Smart skip logic: if not forcing refresh, we have cached scenarios, and none are running
-    if (!forceRefresh && scenarios.length > 0) {
-      const hasRunning = scenarios.some(s => s.runState === RunState.Running);
+    const currentScenarios = scenariosRef.current;
+    if (!forceRefresh && currentScenarios.length > 0) {
+      const hasRunning = currentScenarios.some(s => s.runState === RunState.Running);
       if (!hasRunning) {
         console.log('[ScenarioEditor] Using cached scenarios (none running), skipping fetch');
         return;
@@ -117,7 +132,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
         error: err instanceof Error ? err.message : "Failed to load scenarios"
       });
     }
-  }, [documentId, listScenarios, dispatch, scenarios]);
+  }, [documentId, listScenarios, dispatch]);
 
   // Handle messages from extension
   useEffect(() => {
@@ -126,10 +141,23 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
 
       // Check for envelope-formatted messages
       if (message.type === EnvelopeMessageType.SCENARIOS_LIST_RESULT) {
-        const unsortedScenarios = message.data?.scenarios || [];
+        const unsortedScenarios: Scenario[] = message.data?.scenarios || [];
+
+        // Preserve optimistic names: if Azure returns a UUID-like name but we
+        // already have a human-readable name from the optimistic card, keep ours.
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const currentScenarios = scenariosRef.current;
+        const merged = unsortedScenarios.map((incoming: Scenario) => {
+          const existing = currentScenarios.find(s => s.id === incoming.id);
+          if (existing && uuidPattern.test(incoming.name) && !uuidPattern.test(existing.name)) {
+            return { ...incoming, name: existing.name };
+          }
+          return incoming;
+        });
+
         dispatch({
           type: 'SCENARIOS_SUCCESS',
-          scenarios: sortScenarios(unsortedScenarios)
+          scenarios: sortScenarios(merged)
         });
       } else if (message.type === "ERROR" && message.data?.relatedTo === EnvelopeMessageType.SCENARIOS_LIST_REQUEST) {
         dispatch({
@@ -176,6 +204,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           // Special handling for error scenarios
           if (statusData.scenarioId === 'error' && statusData.status === 'failed') {
             console.error('[ScenarioEditor] Simulation failed:', statusData.error);
+            setSubmittingScenarioName(null);
             dispatch({
               type: 'SCENARIOS_ERROR',
               error: statusData.error || 'Simulation failed to start'
@@ -184,7 +213,8 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           }
 
           // Check if scenario exists in current state
-          const existingScenario = scenarios.find(s => s.id === statusData.scenarioId);
+          const currentScenarios = scenariosRef.current;
+          const existingScenario = currentScenarios.find(s => s.id === statusData.scenarioId);
 
           if (existingScenario) {
             // UPDATE existing scenario via Redux
@@ -213,11 +243,19 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
               // Add to existing scenarios
               dispatch({
                 type: 'SCENARIOS_SUCCESS',
-                scenarios: sortScenarios([newScenario, ...scenarios])
+                scenarios: sortScenarios([newScenario, ...currentScenarios])
               });
-              // Auto-enable refresh when simulation starts
-              setAutoRefreshMode('on');
-              console.log('[ScenarioEditor] Auto-refresh switched to ON mode');
+              // Clear the submitting placeholder now that we have a real card
+              setSubmittingScenarioName(null);
+              // Auto-enable refresh when simulation starts (only upgrade from 'off')
+              setAutoRefreshMode(prev => {
+                if (prev === 'off') {
+                  console.log('[ScenarioEditor] Auto-refresh upgraded from OFF to SMART');
+                  return 'smart';
+                }
+                console.log('[ScenarioEditor] Auto-refresh kept at', prev);
+                return prev;
+              });
             } else {
               // Status came for unknown scenario that's not in initial state - ignore
               console.warn('[ScenarioEditor] Received status for unknown scenario (not QUEUED/PROCESSING):', statusData.scenarioId);
@@ -229,8 +267,7 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [documentId, loadScenarios, sortScenarios, dispatch, scenarios]);
-  // Note: scenarios now needed since we check existingScenario directly
+  }, [documentId, loadScenarios, sortScenarios, dispatch]);
 
   // Load scenarios on mount (or when tab switching causes remount)
   // Uses smart skip: won't refetch if we have cached scenarios and none are running
@@ -304,13 +341,13 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
     setDeletingScenarios(prev => new Set(prev).add(scenarioId));
     dispatch({
       type: 'SCENARIOS_SUCCESS',
-      scenarios: scenarios.filter(s => s.id !== scenarioId)
+      scenarios: scenariosRef.current.filter(s => s.id !== scenarioId)
     });
 
     // Send delete request
     deleteScenario(documentId, scenarioId);
     // Result will be handled in the message listener
-  }, [documentId, deleteScenario, dispatch, scenarios]);
+  }, [documentId, deleteScenario, dispatch]);
 
   // Helper to get badge color based on scenario count
   const getBadgeColor = () => {
@@ -385,6 +422,17 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           <p className="text-xs text-gray-500 mt-1">
             Run a simulation to get started
           </p>
+        </div>
+      )}
+
+      {/* Submitting Placeholder */}
+      {submittingScenarioName && (
+        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg animate-pulse">
+          <div className="flex items-center gap-2">
+            <CloudUpload className="w-4 h-4 text-blue-500" />
+            <span className="text-sm font-medium text-blue-800">{submittingScenarioName}</span>
+          </div>
+          <p className="text-xs text-blue-600 mt-1">Submitting to Azure...</p>
         </div>
       )}
 

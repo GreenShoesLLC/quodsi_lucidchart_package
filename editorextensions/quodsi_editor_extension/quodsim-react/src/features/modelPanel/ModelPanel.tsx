@@ -12,6 +12,7 @@ import { EditorTab } from '../editors/ModelEditor';
 import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { consumePendingModelEditorTab } from '../../utils/pendingNavigation';
+import { setPendingSubmission } from '../../utils/pendingSubmission';
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -88,6 +89,8 @@ export const ModelPanel: React.FC = () => {
 
   // Wrap onSimulate to auto-switch to scenarios tab after simulation starts
   const handleSimulate = (scenarioName?: string) => {
+    // Set pending submission so ScenarioEditor can show a placeholder immediately
+    setPendingSubmission(scenarioName || 'New Simulation');
     onSimulate(scenarioName);
     setActiveTab("scenarios");
   };
