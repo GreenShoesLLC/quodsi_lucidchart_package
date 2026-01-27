@@ -330,7 +330,7 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: '2.0'
+            appVersion: '2026.01.26'
           },
           asynchronous: true
         });

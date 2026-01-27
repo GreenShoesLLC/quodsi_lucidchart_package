@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 Orchestrates the build process for the Quodsi Lucidchart package bundle.
 
@@ -214,7 +214,7 @@ if ($ManifestSource) {
     if (Test-Path "manifest.json") {
         try {
             Copy-Item -Path "manifest.json" -Destination "manifest.json.backup" -Force -ErrorAction Stop
-            Write-Host "Backed up manifest.json → manifest.json.backup" -ForegroundColor Gray
+            Write-Host "Backed up manifest.json -> manifest.json.backup" -ForegroundColor Gray
         } catch {
             Write-Warning "Could not backup manifest.json: $($_.Exception.Message)"
         }
@@ -228,7 +228,7 @@ if ($ManifestSource) {
         }
 
         Copy-Item -Path $ManifestSource -Destination "manifest.json" -Force -ErrorAction Stop
-        Write-Host "✓ Copied $ManifestSource → manifest.json" -ForegroundColor Green
+        Write-Host "[OK] Copied $ManifestSource -> manifest.json" -ForegroundColor Green
     } catch {
         Write-Error "Failed to copy manifest file: $($_.Exception.Message)"
         exit 1
@@ -246,7 +246,7 @@ if ($ManifestSource) {
         }
 
         if ($callbackUrl -like "$expectedUrlPattern*") {
-            Write-Host "✓ Manifest URL validated: $callbackUrl" -ForegroundColor Green
+            Write-Host "[OK] Manifest URL validated: $callbackUrl" -ForegroundColor Green
         } else {
             Write-Error "Manifest URL mismatch! Expected $expectedUrlPattern* but got $callbackUrl"
             exit 1
@@ -313,7 +313,7 @@ Write-Host "--------------------------------------------------"
 if (Test-Path "manifest.json.backup") {
     try {
         Move-Item -Path "manifest.json.backup" -Destination "manifest.json" -Force -ErrorAction Stop
-        Write-Host "✓ Original manifest.json restored from backup" -ForegroundColor Green
+        Write-Host "[OK] Original manifest.json restored from backup" -ForegroundColor Green
     } catch {
         Write-Warning "Could not restore manifest.json from backup: $($_.Exception.Message)"
         Write-Warning "You may need to manually restore manifest.json"

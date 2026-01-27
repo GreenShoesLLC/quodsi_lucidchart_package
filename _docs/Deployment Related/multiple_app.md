@@ -11,7 +11,7 @@ QuodsiDev
 
 I am working toward having 1 per environment;  Dev, Tst and Prd.
 
-Lets treat the 'Quodsi' as the production environment.  My intent is to create 1 more application for TST.
+Lets treat 'Quodsi' as the production environment.  My intent is to create 1 more application for TST once I confirm I can get these 2 working.
 
 Each application has an 'id' found after the URL base/packages/{id}
 
@@ -57,20 +57,8 @@ The id is the lookup to the application id.
 - "dataConnectors": 
     "callbackBaseUrl": "http://localhost:7071/api/dataConnector/"
 
-# lucid.credentials.local
+# Task REquest
 
-Similar to the working manifest.json file, there is another root folder file lucid.credentials.local
+Notice that manifest_dev.json has an updated id already.  
 
-@quodsi_lucidchart_package\lucid.credentials.local
-
-{
-    "clientId": "12345",
-    "clientSecret": "12345"
-}
-
-Within the Lucid Developer portal, in the homepage for a specific Application, there is an OAuth 2.0 section.
-
-By default, in a new Application, the OAuth 2.0 section is empty.  Do I need one?
-
-
- which also includes 'QuodsiApiClient'
+I want to modify the deployment scripts to make sure, as part of making the zip, when the target environment is dev, that it temporarily copies the manifest_dev.json to manifest.json which results in the id changing.  it is possible this is already occurring.

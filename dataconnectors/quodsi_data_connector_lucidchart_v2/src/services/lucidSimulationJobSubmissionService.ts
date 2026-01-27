@@ -146,7 +146,7 @@ export class LucidSimulationJobSubmissionService {
             const config = getConfig();
             // Create and submit task with retry
             await retry(async () => {
-                const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replace(".", "_")}`;
+                const appPackageEnvVar = `AZ_BATCH_APP_PACKAGE_${applicationId.toLowerCase()}_${appVersion.replaceAll(".", "_")}`;
                 // Add scenarioId parameter to the command line if provided
 
                 const taskCommandLine = `/bin/bash -c "source $AZ_BATCH_NODE_STARTUP_DIR/wd/batch_env/bin/activate && python3 -m pip list && cd $${appPackageEnvVar} && python3 -m quodsim_runner.lucidchart.cli --document-id \\"${documentId}\\" --scenario-id \\"${scenarioId}\\" --scenario-name \\"${scenarioName}\\""`;

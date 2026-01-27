@@ -28,6 +28,12 @@
     },
     "appPackageVersion": {
       "value": "1.0"
+    },
+    "baseAppPackageName": {
+      "value": "quodsim_base"
+    },
+    "baseAppPackageVersion": {
+      "value": "1.0"
     }
   }
 }
