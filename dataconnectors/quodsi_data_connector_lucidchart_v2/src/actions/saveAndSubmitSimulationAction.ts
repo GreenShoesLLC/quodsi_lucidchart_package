@@ -1,7 +1,7 @@
 import { DataConnectorAsynchronousAction } from 'lucid-extension-sdk';
 import { AzureStorageService } from "../services/azureStorageService";
 import { LucidSimulationJobSubmissionService } from "../services/lucidSimulationJobSubmissionService";
-import { BatchConfigurationError, BatchJobCreationError } from "../services/errors/batchErrors";
+import { BatchConfigurationError, BatchJobCreationError, BatchInfrastructureError } from "../services/errors/batchErrors";
 import { getConfig, MAX_SCENARIOS } from "../config";
 import { ActionLogger } from '../utils/logging';
 import { LoggingLevel } from '../utils/loggingLevels';
@@ -33,7 +33,14 @@ interface SaveAndSubmitRequest {
     appVersion?: string;
 }
 
-export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAction) => Promise<{ success: boolean }> = async (
+interface SaveAndSubmitResult {
+    success: boolean;
+    error?: string;
+    jobId?: string;
+    taskId?: string;
+}
+
+export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAction) => Promise<SaveAndSubmitResult> = async (
     action,
 ) => {
     const metrics = {
@@ -116,12 +123,14 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             return { success: false };
         }
 
-        // Upload initial status.json with scenario name so ListScenarios returns
-        // the correct name before the Python runner starts
+        // Upload initial status.json with scenario name and RUNNING state so:
+        // 1. ListScenarios returns the correct name before the Python runner starts
+        // 2. Smart refresh in ScenarioEditor keeps polling (it checks for runState === 'RUNNING')
         const initialStatus = JSON.stringify({
             id: scenarioId,
             name: scenarioName,
-            runState: 'NOT_RUN'
+            runState: 'RUNNING',
+            submittedAt: new Date().toISOString()
         }, null, 2);
         const statusBlobName = `${scenarioId}/status.json`;
         logger.info(`Uploading initial status.json for scenario: ${scenarioId}`);
@@ -184,6 +193,10 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const jobIdMatch = batchResult.match(/Job '([^']+)'/);
         const taskIdMatch = batchResult.match(/task '([^']+)'/);
 
+        // Extract jobId and taskId for return value
+        const jobId = jobIdMatch?.[1];
+        const taskId = taskIdMatch?.[1];
+
         // Log performance metrics
         const totalDuration = Date.now() - metrics.startTime;
         logger.important('Operation completed', {
@@ -194,17 +207,53 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             documentId,
             scenarioId,
             diagramSaved: !!diagramSvg,
-            jobId: jobIdMatch?.[1],
-            taskId: taskIdMatch?.[1],
+            jobId,
+            taskId,
             blobUrl: `${documentId}/${blobName}`
         });
 
-        return { success: true };
+        return {
+            success: true,
+            jobId,
+            taskId
+        };
 
     } catch (error) {
         const errorDuration = Date.now() - metrics.startTime;
-        
-        if (error instanceof BatchConfigurationError) {
+        const data = action.data as SaveAndSubmitRequest;
+        const { documentId, scenarioId, scenarioName } = data;
+
+        if (error instanceof BatchInfrastructureError) {
+            logger.error(`Batch infrastructure error after ${errorDuration}ms:`, {
+                poolId: error.poolId,
+                errorType: error.errorType,
+                details: error.details,
+                message: error.message
+            });
+
+            // Write infrastructure error to status.json so UI can display it
+            try {
+                const config = getConfig();
+                const storageService = new AzureStorageService(config.azureStorageConnectionString);
+                const errorStatus = JSON.stringify({
+                    id: scenarioId,
+                    name: scenarioName,
+                    runState: 'RAN_WITH_ERRORS',
+                    error: error.message,
+                    errorType: error.errorType,
+                    errorDetails: `Compute: ${error.details.poolState || 'unknown'}, Available: ${error.details.totalNodes || 0}`,
+                    errorSuggestions: error.suggestions,
+                    lastUpdated: new Date().toISOString()
+                }, null, 2);
+
+                await storageService.uploadBlobContent(documentId, `${scenarioId}/status.json`, errorStatus);
+                logger.error('Infrastructure error - status.json updated with error details');
+            } catch (statusError) {
+                logger.error('Failed to write infrastructure error to status.json:', {
+                    message: statusError instanceof Error ? statusError.message : 'Unknown error'
+                });
+            }
+        } else if (error instanceof BatchConfigurationError) {
             logger.error(`Batch configuration error after ${errorDuration}ms:`, {
                 configurationKey: error.configurationKey,
                 message: error.message

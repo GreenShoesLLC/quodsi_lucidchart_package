@@ -13,6 +13,7 @@ import { markResultsViewedAction } from '../actions/markResultsViewedAction';
 import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
 import { listScenariosAction } from '../actions/listScenariosAction';
 import { deleteScenarioAction } from '../actions/deleteScenarioAction';
+import { getTaskStatusAction } from '../actions/getTaskStatusAction';
 import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
@@ -39,6 +40,7 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction)
         .defineAsynchronousAction("ListScenarios", listScenariosAction)
         .defineAsynchronousAction("DeleteScenario", deleteScenarioAction)
+        .defineAsynchronousAction("GetTaskStatus", getTaskStatusAction)
         .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
         .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)

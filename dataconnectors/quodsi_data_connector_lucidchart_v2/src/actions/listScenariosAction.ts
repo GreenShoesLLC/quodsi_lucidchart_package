@@ -2,6 +2,7 @@
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { getConfig } from "../config";
 import { AzureStorageService } from "../services/azureStorageService";
+import { StorageError } from "../services/errors/storageErrors";
 import { RunState } from "../types/documentStatus";
 import { ScenarioInfo, ScenarioDownloadInfo } from "../types/scenarios";
 import { ActionLogger } from "../utils/logging";
@@ -190,7 +191,8 @@ export const listScenariosAction = async (
 
                 logger.debug(`Scenario ${scenarioId}: hasResults=${hasResults}, zipFile=${resultsZipPath}, excelFile=${resultsExcelPath}, runState=${statusData.runState}`);
 
-                // Timeout detection: Check if scenario has been RUNNING for too long
+                // Enhanced timeout detection: Check if scenario has been RUNNING for too long
+                // and distinguish between different failure modes
                 if (statusData.runState === RunState.Running) {
                     const lastUpdate = new Date(statusData.completedAt || statusData.lastUpdated || Date.now());
                     const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
@@ -198,9 +200,43 @@ export const listScenariosAction = async (
                     if (hoursSinceUpdate > 1) {
                         logger.warn(`Scenario ${scenarioId} timed out: running for ${hoursSinceUpdate.toFixed(1)} hours`);
                         statusData.runState = RunState.RanWithErrors;
-                        statusData.error = "Simulation timed out or task crashed";
-                        statusData.errorType = "TIMEOUT_ERROR";
-                        statusData.errorDetails = `No status update for ${hoursSinceUpdate.toFixed(1)} hours. Task may have crashed or exceeded max runtime.`;
+
+                        // Distinguish failure modes based on available status data
+                        const hasStartTime = !!statusData.startTime;
+                        const hasProgress = (statusData.currentReplication || 0) > 0;
+                        const reps = statusData.reps || modelData.model?.reps || 0;
+
+                        if (!hasStartTime) {
+                            // Never started - task was submitted but never began executing
+                            statusData.error = 'Simulation failed to start';
+                            statusData.errorType = 'STARTUP_ERROR';
+                            statusData.errorSuggestions = [
+                                'The simulation was submitted but never began executing',
+                                'Compute resources may have been unavailable',
+                                'Try running the simulation again'
+                            ];
+                            statusData.errorDetails = `No status update for ${hoursSinceUpdate.toFixed(1)} hours. Task never started.`;
+                        } else if (!hasProgress) {
+                            // Started but crashed before first replication
+                            statusData.error = 'Simulation crashed during initialization';
+                            statusData.errorType = 'INITIALIZATION_ERROR';
+                            statusData.errorSuggestions = [
+                                'The simulation started but crashed before completing any replications',
+                                'There may be an issue with the model configuration',
+                                'Contact support if this persists'
+                            ];
+                            statusData.errorDetails = `Task started but no replications completed in ${hoursSinceUpdate.toFixed(1)} hours.`;
+                        } else {
+                            // Had progress then stopped
+                            statusData.error = `Simulation stopped responding after ${statusData.currentReplication} replications`;
+                            statusData.errorType = 'TIMEOUT_ERROR';
+                            statusData.errorSuggestions = [
+                                `Completed ${statusData.currentReplication} of ${reps} replications before stopping`,
+                                'The simulation may have encountered an unexpected condition',
+                                'Try running with fewer replications to identify the issue'
+                            ];
+                            statusData.errorDetails = `Task stopped after ${statusData.currentReplication} of ${reps} replications. No update for ${hoursSinceUpdate.toFixed(1)} hours.`;
+                        }
                     }
                 }
 
@@ -284,7 +320,31 @@ export const listScenariosAction = async (
                 scenarios.push(scenarioInfo);
                 logger.debug(`Added scenario ${scenarioId} to results`);
 
-            } catch (scenarioError) {
+            } catch (scenarioError: any) {
+                // Handle storage errors with user-friendly messages
+                if (scenarioError instanceof StorageError) {
+                    logger.error(`Storage error processing scenario ${scenarioId}: ${scenarioError.message}`, {
+                        errorType: scenarioError.errorType,
+                        details: scenarioError.details
+                    });
+
+                    // Return scenario with storage error info so UI can display it
+                    scenarios.push({
+                        id: scenarioId,
+                        name: scenarioId,
+                        runState: RunState.RanWithErrors,
+                        reps: 0,
+                        runClockPeriod: 0,
+                        runClockPeriodUnit: 'Minutes',
+                        simulationTimeType: 'Clock',
+                        hasResults: false,
+                        error: scenarioError.message,
+                        errorType: scenarioError.errorType,
+                        errorSuggestions: scenarioError.suggestions
+                    });
+                    continue;
+                }
+
                 logger.error(`Error processing scenario ${scenarioId}: ${scenarioError.message}`);
                 // Continue with next scenario
             }

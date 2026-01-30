@@ -1,6 +1,6 @@
 {
-  "id": "8dc6bc70-c635-4263-a104-179c1412d979",
-  "version": "2026.1.25",
+  "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
+  "version": "2026.1.27",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -47,6 +47,7 @@
         "GetDocumentStatus": "getDocumentStatusAction",
         "ListScenarios": "listScenarios",
         "DeleteScenario": "deleteScenario",
+        "GetTaskStatus": "getTaskStatus",
         "GetActivityCrossRepData": "getActivityCrossRepData",
         "GetEntityCrossRepData": "getEntityCrossRepData",
         "GetResourceCrossRepData": "getResourceCrossRepData",

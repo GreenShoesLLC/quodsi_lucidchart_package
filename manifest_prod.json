@@ -47,6 +47,7 @@
         "GetDocumentStatus": "getDocumentStatusAction",
         "ListScenarios": "listScenarios",
         "DeleteScenario": "deleteScenario",
+        "GetTaskStatus": "getTaskStatus",
         "GetActivityCrossRepData": "getActivityCrossRepData",
         "GetEntityCrossRepData": "getEntityCrossRepData",
         "GetResourceCrossRepData": "getResourceCrossRepData",

@@ -21,3 +21,39 @@ export class BatchJobCreationError extends Error {
         this.name = 'BatchJobCreationError';
     }
 }
+
+export class BatchInfrastructureError extends Error {
+    constructor(
+        message: string,
+        public errorType: string,
+        public poolId: string,
+        public details: {
+            poolState?: string;
+            totalNodes?: number;
+            idleNodes?: number;
+        },
+        public suggestions: string[]
+    ) {
+        super(message);
+        this.name = 'BatchInfrastructureError';
+    }
+}
+
+export class BatchTaskFailureError extends Error {
+    constructor(
+        message: string,
+        public readonly errorType: string,
+        public readonly jobId: string,
+        public readonly taskId: string,
+        public readonly details: {
+            failureCategory?: string;
+            failureCode?: string;
+            exitCode?: number;
+            taskState?: string;
+        },
+        public readonly suggestions: string[]
+    ) {
+        super(message);
+        this.name = 'BatchTaskFailureError';
+    }
+}

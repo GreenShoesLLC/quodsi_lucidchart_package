@@ -10,6 +10,11 @@ import {
 } from '@azure/storage-blob';
 import { retry, AttemptContext, PartialAttemptOptions } from '@lifeomic/attempt';
 import { LoggingLevel } from '../utils/loggingLevels';
+import {
+    StorageContainerNotFoundError,
+    StoragePermissionError,
+    StorageNetworkError
+} from './errors/storageErrors';
 
 // Static logging level control for all instances of AzureStorageService
 let storageLoggingLevel: LoggingLevel = LoggingLevel.NORMAL;
@@ -173,7 +178,7 @@ export class AzureStorageService {
         }
     }
 
-    // Enhanced getBlobContent method with better logging and path checking
+    // Enhanced getBlobContent method with better logging and typed errors
     async getBlobContent(containerName: string, blobName: string): Promise<string | null> {
         const startTime = Date.now();
 
@@ -222,12 +227,39 @@ export class AzureStorageService {
             });
 
             return content;
-        } catch (error) {
+        } catch (error: any) {
             storageError('[AzureStorageService] Blob retrieval failed:', {
                 containerName,
                 blobName,
                 error: error.message,
+                statusCode: error.statusCode,
+                code: error.code,
                 durationMs: Date.now() - startTime
+            });
+
+            // Distinguish error types based on Azure error codes
+            if (error.statusCode === 404) {
+                if (error.code === 'ContainerNotFound') {
+                    throw new StorageContainerNotFoundError(containerName);
+                }
+                // Blob not found - return null (this is expected for missing results)
+                return null;
+            }
+
+            if (error.statusCode === 403) {
+                throw new StoragePermissionError(containerName, 'read');
+            }
+
+            if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+                throw new StorageNetworkError('read');
+            }
+
+            // Log unexpected errors but return null for backwards compatibility
+            storageError('[AzureStorageService] Unexpected storage error - returning null for compatibility:', {
+                containerName,
+                blobName,
+                error: error.message,
+                code: error.code
             });
             return null;
         }

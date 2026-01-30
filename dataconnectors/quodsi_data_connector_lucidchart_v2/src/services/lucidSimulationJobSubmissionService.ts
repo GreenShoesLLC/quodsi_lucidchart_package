@@ -8,7 +8,7 @@ import {
     TaskAddParameter
 } from '@azure/batch';
 import { retry, AttemptContext, PartialAttemptOptions } from '@lifeomic/attempt';
-import { BatchConfigurationError, BatchJobCreationError } from './errors/batchErrors';
+import { BatchConfigurationError, BatchJobCreationError, BatchInfrastructureError, BatchTaskFailureError } from './errors/batchErrors';
 import { getConfig } from '../config';
 
 interface BatchConfiguration {
@@ -108,6 +108,93 @@ export class LucidSimulationJobSubmissionService {
         return storageUrl;
     }
 
+    /**
+     * Checks pool health before job submission to provide fast feedback on infrastructure issues.
+     * Throws BatchInfrastructureError if the pool is not ready to accept jobs.
+     */
+    private async checkPoolHealth(): Promise<void> {
+        // 1. Check pool exists
+        const poolExists = await this.batchClient.pool.exists(this.poolId);
+        if (!poolExists) {
+            throw new BatchInfrastructureError(
+                'Quodsi compute resources are not configured',
+                'INFRASTRUCTURE_ERROR',
+                this.poolId,
+                { poolState: 'not_found' },
+                [
+                    'Contact your administrator to verify the compute configuration',
+                    'The compute environment may have been removed or renamed'
+                ]
+            );
+        }
+
+        // 2. Check pool state
+        const pool = await this.batchClient.pool.get(this.poolId);
+        if (pool.state !== 'active') {
+            throw new BatchInfrastructureError(
+                'Quodsi compute resources are currently unavailable',
+                'INFRASTRUCTURE_ERROR',
+                this.poolId,
+                { poolState: pool.state },
+                [
+                    'Please wait a few minutes and try again',
+                    'Contact your administrator if the issue persists'
+                ]
+            );
+        }
+
+        // 3. Check node availability using listPoolNodeCounts
+        const nodeCounts = await this.getPoolNodeCounts();
+        if (nodeCounts.idle + nodeCounts.running === 0) {
+            throw new BatchInfrastructureError(
+                'No compute resources are currently available',
+                'INFRASTRUCTURE_ERROR',
+                this.poolId,
+                {
+                    poolState: 'active',
+                    totalNodes: nodeCounts.total,
+                    idleNodes: nodeCounts.idle
+                },
+                [
+                    'No compute resources are available to run simulations',
+                    'Contact your administrator to enable compute resources',
+                    'Compute resources may be temporarily unavailable'
+                ]
+            );
+        }
+
+        console.log('[BatchService] Pool health check passed:', {
+            poolId: this.poolId,
+            totalNodes: nodeCounts.total,
+            idleNodes: nodeCounts.idle,
+            runningNodes: nodeCounts.running
+        });
+    }
+
+    /**
+     * Gets node counts for the configured pool.
+     */
+    private async getPoolNodeCounts(): Promise<{ total: number; idle: number; running: number }> {
+        const response = await this.batchClient.account.listPoolNodeCounts({
+            filter: `poolId eq '${this.poolId}'`
+        });
+
+        // Response extends Array<PoolNodeCounts>, find our pool
+        for (const poolNodeCounts of response) {
+            if (poolNodeCounts.poolId === this.poolId) {
+                const dedicated = poolNodeCounts.dedicated;
+                const lowPriority = poolNodeCounts.lowPriority;
+                return {
+                    total: (dedicated?.total || 0) + (lowPriority?.total || 0),
+                    idle: (dedicated?.idle || 0) + (lowPriority?.idle || 0),
+                    running: (dedicated?.running || 0) + (lowPriority?.running || 0)
+                };
+            }
+        }
+
+        return { total: 0, idle: 0, running: 0 };
+    }
+
     public async submitJob(
         documentId: string,
         scenarioId: string,
@@ -117,8 +204,11 @@ export class LucidSimulationJobSubmissionService {
     ): Promise<string> {
         applicationId = applicationId || this.defaultApplicationId;
         appVersion = appVersion || this.defaultAppVersion;
-        
+
         console.log('[BatchService] Starting job submission for document:', documentId, 'scenario:', scenarioId || 'default');
+
+        // Pre-submission pool health check - provides fast feedback on infrastructure issues
+        await this.checkPoolHealth();
 
         try {
             const jobId = `Job-${randomUUID()}`;
@@ -188,6 +278,75 @@ export class LucidSimulationJobSubmissionService {
             }
             // Now throw the generic error
             throw new BatchConfigurationError("An unexpected error occurred while submitting the Batch job.", "Unknown", error);
+        }
+    }
+
+    /**
+     * Queries Azure Batch API for current task state.
+     * Used for post-submission verification to detect infrastructure failures.
+     */
+    public async getTaskState(jobId: string, taskId: string): Promise<{
+        state: string;
+        failureInfo?: {
+            category: string;
+            code: string;
+            message: string;
+        };
+        executionInfo?: {
+            startTime?: Date;
+            endTime?: Date;
+            exitCode?: number;
+        };
+    }> {
+        try {
+            console.log('[BatchService] Getting task state:', { jobId, taskId });
+
+            const task = await this.batchClient.task.get(jobId, taskId);
+
+            const result = {
+                state: task.state || 'unknown',
+                failureInfo: task.executionInfo?.failureInfo ? {
+                    category: task.executionInfo.failureInfo.category || 'unknown',
+                    code: task.executionInfo.failureInfo.code || 'unknown',
+                    message: task.executionInfo.failureInfo.message || 'Unknown error'
+                } : undefined,
+                executionInfo: {
+                    startTime: task.executionInfo?.startTime,
+                    endTime: task.executionInfo?.endTime,
+                    exitCode: task.executionInfo?.exitCode
+                }
+            };
+
+            console.log('[BatchService] Task state retrieved:', {
+                jobId,
+                taskId,
+                state: result.state,
+                hasFailureInfo: !!result.failureInfo,
+                exitCode: result.executionInfo?.exitCode
+            });
+
+            return result;
+        } catch (error: any) {
+            console.error('[BatchService] Failed to get task state:', {
+                jobId,
+                taskId,
+                error: error.message,
+                code: error.code
+            });
+
+            // If job/task not found, return a special state
+            if (error.code === 'JobNotFound' || error.code === 'TaskNotFound') {
+                return {
+                    state: 'not_found',
+                    failureInfo: {
+                        category: 'ResourceNotFound',
+                        code: error.code,
+                        message: `${error.code === 'JobNotFound' ? 'Job' : 'Task'} no longer exists`
+                    }
+                };
+            }
+
+            throw error;
         }
     }
 }
