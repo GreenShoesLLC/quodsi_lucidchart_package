@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
@@ -331,7 +331,7 @@ export class ScenarioHandler {
           documentId: data.documentId,
           scenarioId: data.scenarioId,
           scenarioName: data.scenarioName,
-          appVersion: '2.0'
+          appVersion: QUODSIM_VERSION
         },
         asynchronous: true
       });
