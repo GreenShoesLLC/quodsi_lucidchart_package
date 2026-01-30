@@ -197,6 +197,31 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const jobId = jobIdMatch?.[1];
         const taskId = taskIdMatch?.[1];
 
+        // Update status.json with jobId/taskId so listScenariosAction can query Batch API
+        // for task state when Python couldn't write status (e.g., storage failures)
+        if (jobId && taskId) {
+            try {
+                const updatedStatus = JSON.stringify({
+                    id: scenarioId,
+                    name: scenarioName,
+                    runState: 'RUNNING',
+                    submittedAt: new Date().toISOString(),
+                    jobId: jobId,
+                    taskId: taskId
+                }, null, 2);
+                await storageService.uploadBlobContent(
+                    documentId,
+                    statusBlobName,
+                    updatedStatus
+                );
+                logger.info(`Updated status.json with jobId=${jobId}, taskId=${taskId}`);
+            } catch (statusUpdateError) {
+                logger.warn('Failed to update status.json with job IDs, but continuing:', {
+                    message: statusUpdateError instanceof Error ? statusUpdateError.message : 'Unknown error'
+                });
+            }
+        }
+
         // Log performance metrics
         const totalDuration = Date.now() - metrics.startTime;
         logger.important('Operation completed', {

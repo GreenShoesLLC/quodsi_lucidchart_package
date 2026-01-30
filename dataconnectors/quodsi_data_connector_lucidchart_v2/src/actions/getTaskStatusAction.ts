@@ -63,13 +63,63 @@ function getTaskFailureDetails(failureCategory?: string, failureCode?: string, e
         };
     }
 
-    // Task ended with non-zero exit code
+    // Handle specific Python exit codes
     if (exitCode !== undefined && exitCode !== 0) {
+        // Exit code 6: Python storage failure (couldn't save results/status)
+        if (exitCode === 6) {
+            return {
+                message: 'Failed to save simulation results',
+                errorType: 'STORAGE_ERROR',
+                suggestions: [
+                    'Storage service may be temporarily unavailable',
+                    'Your simulation completed but results could not be saved',
+                    'Try running the simulation again'
+                ]
+            };
+        }
+
+        // Exit code 1: Validation error
+        if (exitCode === 1) {
+            return {
+                message: 'Model validation failed',
+                errorType: 'VALIDATION_ERROR',
+                suggestions: [
+                    'Check your model configuration for errors',
+                    'Review the validation messages in the editor'
+                ]
+            };
+        }
+
+        // Exit code 4: Simulation error
+        if (exitCode === 4) {
+            return {
+                message: 'Simulation execution failed',
+                errorType: 'SIMULATION_ERROR',
+                suggestions: [
+                    'The simulation encountered an error during execution',
+                    'Check model parameters for potential issues'
+                ]
+            };
+        }
+
+        // Exit code 5: Configuration error
+        if (exitCode === 5) {
+            return {
+                message: 'Simulation configuration error',
+                errorType: 'CONFIGURATION_ERROR',
+                suggestions: [
+                    'There is an issue with the simulation configuration',
+                    'Contact support if this persists'
+                ]
+            };
+        }
+
+        // Generic non-zero exit code (includes exit code 2: missing args, 3: runtime error)
         return {
-            message: 'Simulation failed to start',
+            message: 'Simulation failed to complete',
             errorType: 'TASK_CRASH_ERROR',
             suggestions: [
-                'The simulation crashed during startup',
+                `Task exited with code ${exitCode}`,
                 'Contact support if this persists'
             ]
         };

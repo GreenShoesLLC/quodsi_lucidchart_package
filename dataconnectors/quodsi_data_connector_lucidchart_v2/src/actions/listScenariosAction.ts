@@ -2,11 +2,71 @@
 import { DataConnectorAsynchronousAction } from "lucid-extension-sdk";
 import { getConfig } from "../config";
 import { AzureStorageService } from "../services/azureStorageService";
+import { LucidSimulationJobSubmissionService } from "../services/lucidSimulationJobSubmissionService";
 import { StorageError } from "../services/errors/storageErrors";
 import { RunState } from "../types/documentStatus";
 import { ScenarioInfo, ScenarioDownloadInfo } from "../types/scenarios";
 import { ActionLogger } from "../utils/logging";
 import { LoggingLevel } from "../utils/loggingLevels";
+
+/**
+ * Maps Python exit codes to user-friendly error information.
+ * Used when backfilling status.json from Batch task state.
+ */
+function getExitCodeErrorInfo(exitCode: number): {
+    error: string;
+    errorType: string;
+    errorSuggestions: string[];
+} {
+    switch (exitCode) {
+        case 1:
+            return {
+                error: 'Model validation failed',
+                errorType: 'VALIDATION_ERROR',
+                errorSuggestions: [
+                    'Check your model configuration for errors',
+                    'Review the validation messages in the editor'
+                ]
+            };
+        case 4:
+            return {
+                error: 'Simulation execution failed',
+                errorType: 'SIMULATION_ERROR',
+                errorSuggestions: [
+                    'The simulation encountered an error during execution',
+                    'Check model parameters for potential issues'
+                ]
+            };
+        case 5:
+            return {
+                error: 'Simulation configuration error',
+                errorType: 'CONFIGURATION_ERROR',
+                errorSuggestions: [
+                    'There is an issue with the simulation configuration',
+                    'Contact support if this persists'
+                ]
+            };
+        case 6:
+            return {
+                error: 'Failed to save simulation results',
+                errorType: 'STORAGE_ERROR',
+                errorSuggestions: [
+                    'Storage service may be temporarily unavailable',
+                    'Your simulation completed but results could not be saved',
+                    'Try running the simulation again'
+                ]
+            };
+        default:
+            return {
+                error: `Simulation failed (exit code ${exitCode})`,
+                errorType: 'TASK_FAILURE',
+                errorSuggestions: [
+                    'An unexpected error occurred',
+                    'Try running the simulation again'
+                ]
+            };
+    }
+}
 
 /**
  * Helper function to format bytes to MB
@@ -166,7 +226,15 @@ export const listScenariosAction = async (
                             statusData.metrics = runtimeData.metrics;
                         }
 
-                        logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}, hasError=${!!statusData.error}`);
+                        // Extract Batch job identifiers (used to query task state for stale scenarios)
+                        if (runtimeData.jobId) {
+                            statusData.jobId = runtimeData.jobId;
+                        }
+                        if (runtimeData.taskId) {
+                            statusData.taskId = runtimeData.taskId;
+                        }
+
+                        logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}, hasError=${!!statusData.error}, hasJobId=${!!statusData.jobId}`);
                     } catch (parseError) {
                         logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
                         // Continue with model.json data only
@@ -198,44 +266,127 @@ export const listScenariosAction = async (
                     const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
 
                     if (hoursSinceUpdate > 1) {
-                        logger.warn(`Scenario ${scenarioId} timed out: running for ${hoursSinceUpdate.toFixed(1)} hours`);
-                        statusData.runState = RunState.RanWithErrors;
+                        logger.warn(`Scenario ${scenarioId} stale: running for ${hoursSinceUpdate.toFixed(1)} hours`);
 
-                        // Distinguish failure modes based on available status data
-                        const hasStartTime = !!statusData.startTime;
-                        const hasProgress = (statusData.currentReplication || 0) > 0;
-                        const reps = statusData.reps || modelData.model?.reps || 0;
+                        // First, try to get actual task state from Batch API if we have jobId/taskId
+                        // This handles cases where Python couldn't write to status.json (e.g., storage failures)
+                        let batchTaskChecked = false;
+                        if (statusData.jobId && statusData.taskId) {
+                            try {
+                                logger.info(`Checking Batch task state for scenario ${scenarioId}: jobId=${statusData.jobId}, taskId=${statusData.taskId}`);
 
-                        if (!hasStartTime) {
-                            // Never started - task was submitted but never began executing
-                            statusData.error = 'Simulation failed to start';
-                            statusData.errorType = 'STARTUP_ERROR';
-                            statusData.errorSuggestions = [
-                                'The simulation was submitted but never began executing',
-                                'Compute resources may have been unavailable',
-                                'Try running the simulation again'
-                            ];
-                            statusData.errorDetails = `No status update for ${hoursSinceUpdate.toFixed(1)} hours. Task never started.`;
-                        } else if (!hasProgress) {
-                            // Started but crashed before first replication
-                            statusData.error = 'Simulation crashed during initialization';
-                            statusData.errorType = 'INITIALIZATION_ERROR';
-                            statusData.errorSuggestions = [
-                                'The simulation started but crashed before completing any replications',
-                                'There may be an issue with the model configuration',
-                                'Contact support if this persists'
-                            ];
-                            statusData.errorDetails = `Task started but no replications completed in ${hoursSinceUpdate.toFixed(1)} hours.`;
-                        } else {
-                            // Had progress then stopped
-                            statusData.error = `Simulation stopped responding after ${statusData.currentReplication} replications`;
-                            statusData.errorType = 'TIMEOUT_ERROR';
-                            statusData.errorSuggestions = [
-                                `Completed ${statusData.currentReplication} of ${reps} replications before stopping`,
-                                'The simulation may have encountered an unexpected condition',
-                                'Try running with fewer replications to identify the issue'
-                            ];
-                            statusData.errorDetails = `Task stopped after ${statusData.currentReplication} of ${reps} replications. No update for ${hoursSinceUpdate.toFixed(1)} hours.`;
+                                const batchService = new LucidSimulationJobSubmissionService({
+                                    batchAccountUrl: config.batchAccountUrl,
+                                    batchAccountName: config.batchAccountName,
+                                    batchAccountKey: config.batchAccountKey,
+                                    poolId: config.batchPoolId,
+                                    defaultApplicationId: config.defaultApplicationId,
+                                    defaultAppVersion: config.defaultAppVersion
+                                });
+
+                                const taskState = await batchService.getTaskState(statusData.jobId, statusData.taskId);
+                                logger.info(`Batch task state for scenario ${scenarioId}: state=${taskState.state}, exitCode=${taskState.executionInfo?.exitCode}`);
+
+                                if (taskState.state === 'completed') {
+                                    batchTaskChecked = true;
+                                    const exitCode = taskState.executionInfo?.exitCode;
+
+                                    if (exitCode !== undefined && exitCode !== 0) {
+                                        // Task failed with non-zero exit code - use exit code mapping
+                                        const errorInfo = getExitCodeErrorInfo(exitCode);
+                                        statusData.runState = RunState.RanWithErrors;
+                                        statusData.error = errorInfo.error;
+                                        statusData.errorType = errorInfo.errorType;
+                                        statusData.errorSuggestions = errorInfo.errorSuggestions;
+                                        statusData.errorDetails = taskState.failureInfo?.message ||
+                                            `Task exited with code ${exitCode}`;
+
+                                        logger.warn(`Scenario ${scenarioId} failed with exit code ${exitCode}: ${errorInfo.error}`);
+
+                                        // Backfill status.json so future polls see the error without Batch API call
+                                        try {
+                                            const backfilledStatus = JSON.stringify({
+                                                id: scenarioId,
+                                                name: statusData.name,
+                                                runState: 'RAN_WITH_ERRORS',
+                                                error: statusData.error,
+                                                errorType: statusData.errorType,
+                                                errorDetails: statusData.errorDetails,
+                                                errorSuggestions: statusData.errorSuggestions,
+                                                jobId: statusData.jobId,
+                                                taskId: statusData.taskId,
+                                                lastUpdated: new Date().toISOString(),
+                                                backfilledFromBatch: true
+                                            }, null, 2);
+
+                                            await storageService.uploadBlobContent(
+                                                data.documentId,
+                                                `${scenarioId}/status.json`,
+                                                backfilledStatus
+                                            );
+                                            logger.info(`Backfilled status.json for scenario ${scenarioId} with Batch task failure info`);
+                                        } catch (backfillError: any) {
+                                            logger.warn(`Failed to backfill status.json for scenario ${scenarioId}: ${backfillError.message}`);
+                                            // Continue - we still have the error info in memory
+                                        }
+                                    } else if (exitCode === 0) {
+                                        // Task completed successfully but status.json wasn't updated
+                                        // This is unusual - Python should have written RAN_SUCCESSFULLY
+                                        logger.warn(`Scenario ${scenarioId} task completed (exit 0) but status.json shows RUNNING`);
+                                        // Keep as RUNNING - let user re-run if needed
+                                    }
+                                } else if (taskState.state === 'not_found') {
+                                    // Job/task was cleaned up - fall through to heuristic detection
+                                    logger.info(`Batch task not found for scenario ${scenarioId}, using timeout heuristics`);
+                                }
+                                // If task is still active/preparing/running, don't change status
+                            } catch (batchError: any) {
+                                logger.warn(`Could not check Batch task state for scenario ${scenarioId}: ${batchError.message}`);
+                                // Fall through to heuristic-based timeout detection
+                            }
+                        }
+
+                        // Fall back to heuristic-based timeout detection if Batch check didn't resolve it
+                        if (!batchTaskChecked && statusData.runState === RunState.Running) {
+                            logger.warn(`Scenario ${scenarioId} timed out (no Batch info): running for ${hoursSinceUpdate.toFixed(1)} hours`);
+                            statusData.runState = RunState.RanWithErrors;
+
+                            // Distinguish failure modes based on available status data
+                            const hasStartTime = !!statusData.startTime;
+                            const hasProgress = (statusData.currentReplication || 0) > 0;
+                            const reps = statusData.reps || modelData.model?.reps || 0;
+
+                            if (!hasStartTime) {
+                                // Never started - task was submitted but never began executing
+                                statusData.error = 'Simulation failed to start';
+                                statusData.errorType = 'STARTUP_ERROR';
+                                statusData.errorSuggestions = [
+                                    'The simulation was submitted but never began executing',
+                                    'Compute resources may have been unavailable',
+                                    'Try running the simulation again'
+                                ];
+                                statusData.errorDetails = `No status update for ${hoursSinceUpdate.toFixed(1)} hours. Task never started.`;
+                            } else if (!hasProgress) {
+                                // Started but crashed before first replication
+                                statusData.error = 'Simulation crashed during initialization';
+                                statusData.errorType = 'INITIALIZATION_ERROR';
+                                statusData.errorSuggestions = [
+                                    'The simulation started but crashed before completing any replications',
+                                    'There may be an issue with the model configuration',
+                                    'Contact support if this persists'
+                                ];
+                                statusData.errorDetails = `Task started but no replications completed in ${hoursSinceUpdate.toFixed(1)} hours.`;
+                            } else {
+                                // Had progress then stopped
+                                statusData.error = `Simulation stopped responding after ${statusData.currentReplication} replications`;
+                                statusData.errorType = 'TIMEOUT_ERROR';
+                                statusData.errorSuggestions = [
+                                    `Completed ${statusData.currentReplication} of ${reps} replications before stopping`,
+                                    'The simulation may have encountered an unexpected condition',
+                                    'Try running with fewer replications to identify the issue'
+                                ];
+                                statusData.errorDetails = `Task stopped after ${statusData.currentReplication} of ${reps} replications. No update for ${hoursSinceUpdate.toFixed(1)} hours.`;
+                            }
                         }
                     }
                 }
