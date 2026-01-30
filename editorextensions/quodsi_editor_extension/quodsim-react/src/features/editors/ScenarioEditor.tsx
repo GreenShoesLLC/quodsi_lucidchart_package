@@ -158,9 +158,17 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
           return incoming;
         });
 
+        // Preserve optimistic scenarios that haven't appeared in Azure yet
+        // (QUEUED/RUNNING scenarios that exist locally but not in the incoming list)
+        const incomingIds = new Set(unsortedScenarios.map(s => s.id));
+        const optimisticScenarios = currentScenarios.filter(s =>
+          !incomingIds.has(s.id) &&
+          (s.runState === RunState.Queued || s.runState === RunState.Running)
+        );
+
         dispatch({
           type: 'SCENARIOS_SUCCESS',
-          scenarios: sortScenarios(merged)
+          scenarios: sortScenarios([...optimisticScenarios, ...merged])
         });
       } else if (message.type === "ERROR" && message.data?.relatedTo === EnvelopeMessageType.SCENARIOS_LIST_REQUEST) {
         dispatch({
