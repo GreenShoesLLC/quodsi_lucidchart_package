@@ -109,27 +109,42 @@ export class LucidSimulationJobSubmissionService {
     }
 
     /**
-     * Checks pool health before job submission to provide fast feedback on infrastructure issues.
-     * Throws BatchInfrastructureError if the pool is not ready to accept jobs.
+     * Performs all pre-flight checks before job submission.
+     * Consolidates API calls to minimize latency:
+     * - pool.get() → pool state + application package references
+     * - listPoolNodeCounts() → node availability
+     * - application.get() → application exists with version
+     *
+     * Total: 3 API calls (down from 5)
      */
-    private async checkPoolHealth(): Promise<void> {
-        // 1. Check pool exists
-        const poolExists = await this.batchClient.pool.exists(this.poolId);
-        if (!poolExists) {
-            throw new BatchInfrastructureError(
-                'Quodsi compute resources are not configured',
-                'INFRASTRUCTURE_ERROR',
-                this.poolId,
-                { poolState: 'not_found' },
-                [
-                    'Contact your administrator to verify the compute configuration',
-                    'The compute environment may have been removed or renamed'
-                ]
-            );
+    private async performPreflightChecks(applicationId: string, appVersion: string): Promise<void> {
+        console.log('[BatchService] Performing pre-flight checks:', {
+            poolId: this.poolId,
+            applicationId,
+            appVersion
+        });
+
+        // 1. Get pool info (state + application package references) - single call
+        let pool;
+        try {
+            pool = await this.batchClient.pool.get(this.poolId);
+        } catch (error: any) {
+            if (error.code === 'PoolNotFound') {
+                throw new BatchInfrastructureError(
+                    'Quodsi compute resources are not configured',
+                    'INFRASTRUCTURE_ERROR',
+                    this.poolId,
+                    { poolState: 'not_found' },
+                    [
+                        'Contact your administrator to verify the compute configuration',
+                        'The compute environment may have been removed or renamed'
+                    ]
+                );
+            }
+            throw error;
         }
 
-        // 2. Check pool state
-        const pool = await this.batchClient.pool.get(this.poolId);
+        // Check pool state
         if (pool.state !== 'active') {
             throw new BatchInfrastructureError(
                 'Quodsi compute resources are currently unavailable',
@@ -143,7 +158,32 @@ export class LucidSimulationJobSubmissionService {
             );
         }
 
-        // 3. Check node availability using listPoolNodeCounts
+        // Check application package reference on pool (from same pool.get() response)
+        const packageRefs = pool.applicationPackageReferences || [];
+        const hasPackageRef = packageRefs.some(ref =>
+            ref.applicationId?.toLowerCase() === applicationId.toLowerCase() &&
+            (ref.version === appVersion || ref.version === '*')
+        );
+
+        if (!hasPackageRef) {
+            throw new BatchInfrastructureError(
+                'Simulation software is not configured on the compute pool',
+                'APPLICATION_PACKAGE_ERROR',
+                this.poolId,
+                {
+                    applicationId,
+                    appVersion,
+                    poolPackages: packageRefs.map(r => `${r.applicationId}@${r.version}`),
+                    reason: 'not_referenced_by_pool'
+                },
+                [
+                    `The pool "${this.poolId}" does not have "${applicationId}@${appVersion}" configured`,
+                    'Contact your administrator to add the application package to the pool'
+                ]
+            );
+        }
+
+        // 2. Check node availability - second call
         const nodeCounts = await this.getPoolNodeCounts();
         if (nodeCounts.idle + nodeCounts.running === 0) {
             throw new BatchInfrastructureError(
@@ -163,11 +203,56 @@ export class LucidSimulationJobSubmissionService {
             );
         }
 
-        console.log('[BatchService] Pool health check passed:', {
+        // 3. Check application exists with version in Batch account - third call
+        try {
+            const app = await this.batchClient.application.get(applicationId);
+
+            const versions = app.versions || [];
+            if (!versions.includes(appVersion)) {
+                throw new BatchInfrastructureError(
+                    `Simulation software version ${appVersion} is not available`,
+                    'APPLICATION_PACKAGE_ERROR',
+                    this.poolId,
+                    {
+                        applicationId,
+                        appVersion,
+                        availableVersions: versions,
+                        reason: 'version_not_found'
+                    },
+                    [
+                        `Version "${appVersion}" of "${applicationId}" is not installed`,
+                        `Available versions: ${versions.length > 0 ? versions.join(', ') : 'none'}`,
+                        'Contact your administrator to install the correct version'
+                    ]
+                );
+            }
+        } catch (error: any) {
+            if (error instanceof BatchInfrastructureError) {
+                throw error;
+            }
+
+            if (error.code === 'ApplicationNotFound') {
+                throw new BatchInfrastructureError(
+                    'Simulation software is not installed',
+                    'APPLICATION_PACKAGE_ERROR',
+                    this.poolId,
+                    { applicationId, appVersion, reason: 'application_not_found' },
+                    [
+                        `Application "${applicationId}" is not registered with the Batch account`,
+                        'Contact your administrator to install the simulation software'
+                    ]
+                );
+            }
+            throw error;
+        }
+
+        console.log('[BatchService] Pre-flight checks passed:', {
             poolId: this.poolId,
+            poolState: pool.state,
             totalNodes: nodeCounts.total,
             idleNodes: nodeCounts.idle,
-            runningNodes: nodeCounts.running
+            applicationId,
+            appVersion
         });
     }
 
@@ -207,8 +292,9 @@ export class LucidSimulationJobSubmissionService {
 
         console.log('[BatchService] Starting job submission for document:', documentId, 'scenario:', scenarioId || 'default');
 
-        // Pre-submission pool health check - provides fast feedback on infrastructure issues
-        await this.checkPoolHealth();
+        // Pre-submission checks - provide fast feedback on infrastructure issues
+        // Consolidated into single method with 3 API calls (pool.get, listPoolNodeCounts, application.get)
+        await this.performPreflightChecks(applicationId, appVersion);
 
         try {
             const jobId = `Job-${randomUUID()}`;

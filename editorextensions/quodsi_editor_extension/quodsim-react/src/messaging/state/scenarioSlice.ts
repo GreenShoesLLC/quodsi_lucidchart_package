@@ -91,7 +91,10 @@ export const selectScenariosError = (state: { scenarios: ScenarioState }): strin
 
 /**
  * Select whether there are any active simulation jobs
- * Returns true if any scenario has runState === RunState.Running
+ * Returns true if any scenario has runState === RunState.Running or RunState.Queued
+ * (Both states indicate a job is in progress and should disable "Run Simulation" button)
  */
 export const selectHasActiveJobs = (state: { scenarios: ScenarioState }): boolean =>
-  state.scenarios.scenarios.some((scenario) => scenario.runState === RunState.Running);
+  state.scenarios.scenarios.some((scenario) =>
+    scenario.runState === RunState.Running || scenario.runState === RunState.Queued
+  );

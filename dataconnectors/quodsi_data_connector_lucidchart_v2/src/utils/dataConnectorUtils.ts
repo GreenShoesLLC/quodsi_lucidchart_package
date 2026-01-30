@@ -14,6 +14,7 @@ import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
 import { listScenariosAction } from '../actions/listScenariosAction';
 import { deleteScenarioAction } from '../actions/deleteScenarioAction';
 import { getTaskStatusAction } from '../actions/getTaskStatusAction';
+import { checkScenarioTaskStatusAction } from '../actions/checkScenarioTaskStatusAction';
 import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
@@ -41,6 +42,7 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("ListScenarios", listScenariosAction)
         .defineAsynchronousAction("DeleteScenario", deleteScenarioAction)
         .defineAsynchronousAction("GetTaskStatus", getTaskStatusAction)
+        .defineAsynchronousAction("CheckScenarioTaskStatus", checkScenarioTaskStatusAction)
         .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
         .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)

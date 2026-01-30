@@ -207,6 +207,15 @@ const ScenarioCard: React.FC<ScenarioCardProps> = ({ scenario, documentId, onDel
           leftBorderColor: "border-l-green-500",
           label: "Done"
         };
+      case RunState.Queued:
+        return {
+          icon: <Clock className="w-4 h-4 animate-pulse" />,
+          color: "text-yellow-600",
+          bgColor: "bg-white",
+          borderColor: "border-gray-200",
+          leftBorderColor: "border-l-yellow-500",
+          label: "Queued"
+        };
       case RunState.Running:
         return {
           icon: <Clock className="w-4 h-4 animate-pulse" />,

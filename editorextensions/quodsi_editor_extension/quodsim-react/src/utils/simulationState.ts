@@ -7,6 +7,8 @@ export interface SimulationStateOutput {
 
 export const getStatusClass = (statusText: string): string => {
     switch (statusText) {
+        case 'Queued':
+            return 'text-yellow-500';
         case 'Running':
             return 'text-blue-500';
         case 'Ran with Errors':
@@ -35,6 +37,8 @@ export const getSimulationState = (
     }
 
     switch (emptyGuidScenario.runState) {
+        case RunState.Queued:
+            return { buttonLabel: "Queued...", statusText: "Queued" };
         case RunState.Running:
             return { buttonLabel: "Simulating...", statusText: "Running" };
         case RunState.RanWithErrors:

@@ -10,12 +10,13 @@ import { selectScenarios, selectScenariosLoading, selectScenariosError } from ".
 /**
  * Maps SimulationStatus string values to RunState enum values
  * Note: SimulationStatus enum values are lowercase
- * Active statuses (queued, processing, validating, running) are all treated as Running
- * to ensure the UI shows the pulsing icon and auto-refresh polling activates
+ * QUEUED is now a distinct state (job submitted, Python not yet started)
+ * RUNNING indicates Python is actively executing
  */
 function mapStatusToRunState(status: string): RunState {
   switch (status.toLowerCase()) {
     case 'queued':
+      return RunState.Queued;
     case 'processing':
     case 'validating':
     case 'running':
@@ -110,12 +111,14 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
       return;
     }
 
-    // Smart skip logic: if not forcing refresh, we have cached scenarios, and none are running
+    // Smart skip logic: if not forcing refresh, we have cached scenarios, and none are active (queued/running)
     const currentScenarios = scenariosRef.current;
     if (!forceRefresh && currentScenarios.length > 0) {
-      const hasRunning = currentScenarios.some(s => s.runState === RunState.Running);
-      if (!hasRunning) {
-        console.log('[ScenarioEditor] Using cached scenarios (none running), skipping fetch');
+      const hasActive = currentScenarios.some(s =>
+        s.runState === RunState.Running || s.runState === RunState.Queued
+      );
+      if (!hasActive) {
+        console.log('[ScenarioEditor] Using cached scenarios (none active), skipping fetch');
         return;
       }
     }
@@ -307,11 +310,13 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
       return;
     }
 
-    // Smart mode: only refresh when scenarios are running
+    // Smart mode: only refresh when scenarios are active (queued or running)
     if (autoRefreshMode === 'smart') {
-      const hasRunning = scenarios.some(s => s.runState === RunState.Running);
-      if (!hasRunning) {
-        console.log('[ScenarioEditor] Smart mode: No running scenarios, skipping auto-refresh');
+      const hasActive = scenarios.some(s =>
+        s.runState === RunState.Running || s.runState === RunState.Queued
+      );
+      if (!hasActive) {
+        console.log('[ScenarioEditor] Smart mode: No active scenarios, skipping auto-refresh');
         return;
       }
     }

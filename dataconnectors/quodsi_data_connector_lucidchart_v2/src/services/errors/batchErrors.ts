@@ -31,6 +31,12 @@ export class BatchInfrastructureError extends Error {
             poolState?: string;
             totalNodes?: number;
             idleNodes?: number;
+            // Application package fields
+            applicationId?: string;
+            appVersion?: string;
+            availableVersions?: string[];
+            poolPackages?: string[];
+            reason?: string;
         },
         public suggestions: string[]
     ) {

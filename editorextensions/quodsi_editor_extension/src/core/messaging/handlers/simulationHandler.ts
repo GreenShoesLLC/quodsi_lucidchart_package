@@ -5,7 +5,8 @@ import {
   SimulationJob,
   ModelSerializerFactory,
   Model,
-  generateUUID
+  generateUUID,
+  QUODSIM_VERSION
 } from '@quodsi/shared';
 import {
   DocumentProxy,
@@ -327,8 +328,9 @@ export class SimulationHandler {
       
       // Submit to data connector
       console.log('[SimulationHandler] Submitting simulation to data connector...');
-      
+
       try {
+        // Must use asynchronous: true because SaveAndSubmitSimulation is defined as async action
         await LucidDataActionUtility.performDataAction(client, {
           dataConnectorName: 'quodsi_data_connector',
           actionName: 'SaveAndSubmitSimulation',
@@ -338,21 +340,21 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: '2026.01.26'
+            appVersion: QUODSIM_VERSION
           },
           asynchronous: true
         });
-        
+
         console.log('[SimulationHandler] Simulation submitted successfully');
-        
-        // Update job status
+
+        // Update job status - keep as QUEUED (not PROCESSING) since status.json says QUEUED
         const job = SimulationHandler.activeJobs.get(jobId);
         if (job) {
-          job.status = SimulationStatus.PROCESSING;
+          job.status = SimulationStatus.QUEUED;
           job.lastUpdate = new Date();
         }
-        
-        // Send processing status
+
+        // Send queued status (matches status.json which has QUEUED)
         router.send('model', {
           id: '',
           type: EnvelopeMessageType.MODEL_RUN_STATUS,
@@ -364,9 +366,9 @@ export class SimulationHandler {
             documentId: data.documentId,
             scenarioId,
             scenarioName,
-            status: SimulationStatus.PROCESSING,
-            progress: 10,
-            currentStep: 'Simulation submitted to backend',
+            status: SimulationStatus.QUEUED,
+            progress: 5,
+            currentStep: 'Simulation queued - waiting for compute',
             lastChecked: new Date().toISOString(),
             queuedAt: queuedAt,
             reps,
@@ -375,9 +377,10 @@ export class SimulationHandler {
           }
         });
 
-        // NOTE: Status updates will come from ListScenarios reconciliation (called by ScenarioEditor every 10s)
-        // This eliminates redundant polling - ListScenarios already returns status for ALL scenarios
-        // See reconcileWithScenarioList() method for how this works
+        // NOTE: Pre-flight checks in SaveAndSubmitSimulation catch infrastructure errors immediately
+        // (missing app package, pool not configured, etc.)
+        // Status updates will come from ListScenarios reconciliation (called by ScenarioEditor every 10s)
+        // ListScenarios has 3-minute stale detection as a fallback for runtime failures
 
       } catch (submitError) {
         console.error('[SimulationHandler] Error submitting simulation:', submitError);
@@ -522,7 +525,12 @@ export class SimulationHandler {
           case 'NOT_RUN':
             status = SimulationStatus.QUEUED;
             progress = 0;
-            currentStep = 'Queued';
+            currentStep = 'Not started';
+            break;
+          case 'QUEUED':
+            status = SimulationStatus.QUEUED;
+            progress = 5;
+            currentStep = 'Queued - waiting for compute';
             break;
           case 'RUNNING':
             status = SimulationStatus.RUNNING;
@@ -742,6 +750,8 @@ export class SimulationHandler {
           return SimulationStatus.FAILED;
         case 'RUNNING':
           return SimulationStatus.RUNNING;
+        case 'QUEUED':
+          return SimulationStatus.QUEUED;
         case 'NOT_RUN':
         default:
           return SimulationStatus.QUEUED;

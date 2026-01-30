@@ -48,6 +48,7 @@
         "ListScenarios": "listScenarios",
         "DeleteScenario": "deleteScenario",
         "GetTaskStatus": "getTaskStatus",
+        "CheckScenarioTaskStatus": "checkScenarioTaskStatus",
         "GetActivityCrossRepData": "getActivityCrossRepData",
         "GetEntityCrossRepData": "getEntityCrossRepData",
         "GetResourceCrossRepData": "getResourceCrossRepData",

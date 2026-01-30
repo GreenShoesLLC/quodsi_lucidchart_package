@@ -259,13 +259,16 @@ export const listScenariosAction = async (
 
                 logger.debug(`Scenario ${scenarioId}: hasResults=${hasResults}, zipFile=${resultsZipPath}, excelFile=${resultsExcelPath}, runState=${statusData.runState}`);
 
-                // Enhanced timeout detection: Check if scenario has been RUNNING for too long
+                // Enhanced timeout detection: Check if scenario has been QUEUED or RUNNING for too long
                 // and distinguish between different failure modes
-                if (statusData.runState === RunState.Running) {
+                // Note: QUEUED means job submitted but Python hasn't started; RUNNING means Python is executing
+                if (statusData.runState === RunState.Running || statusData.runState === RunState.Queued) {
                     const lastUpdate = new Date(statusData.completedAt || statusData.lastUpdated || Date.now());
                     const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
 
-                    if (hoursSinceUpdate > 1) {
+                    // 3-minute timeout (0.05 hours) for faster failure detection
+                    // This catches infrastructure failures where Python never starts
+                    if (hoursSinceUpdate > 0.05) {
                         logger.warn(`Scenario ${scenarioId} stale: running for ${hoursSinceUpdate.toFixed(1)} hours`);
 
                         // First, try to get actual task state from Batch API if we have jobId/taskId
@@ -347,7 +350,7 @@ export const listScenariosAction = async (
                         }
 
                         // Fall back to heuristic-based timeout detection if Batch check didn't resolve it
-                        if (!batchTaskChecked && statusData.runState === RunState.Running) {
+                        if (!batchTaskChecked && (statusData.runState === RunState.Running || statusData.runState === RunState.Queued)) {
                             logger.warn(`Scenario ${scenarioId} timed out (no Batch info): running for ${hoursSinceUpdate.toFixed(1)} hours`);
                             statusData.runState = RunState.RanWithErrors;
 

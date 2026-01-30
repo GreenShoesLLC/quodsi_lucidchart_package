@@ -123,13 +123,15 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             return { success: false };
         }
 
-        // Upload initial status.json with scenario name and RUNNING state so:
+        // Upload initial status.json with scenario name and QUEUED state so:
         // 1. ListScenarios returns the correct name before the Python runner starts
-        // 2. Smart refresh in ScenarioEditor keeps polling (it checks for runState === 'RUNNING')
+        // 2. Smart refresh in ScenarioEditor keeps polling (it checks for runState === 'QUEUED' or 'RUNNING')
+        // Note: QUEUED indicates job submitted but Python hasn't started yet.
+        // Python runner will update to RUNNING when it begins execution.
         const initialStatus = JSON.stringify({
             id: scenarioId,
             name: scenarioName,
-            runState: 'RUNNING',
+            runState: 'QUEUED',
             submittedAt: new Date().toISOString()
         }, null, 2);
         const statusBlobName = `${scenarioId}/status.json`;
@@ -204,7 +206,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
                 const updatedStatus = JSON.stringify({
                     id: scenarioId,
                     name: scenarioName,
-                    runState: 'RUNNING',
+                    runState: 'QUEUED',
                     submittedAt: new Date().toISOString(),
                     jobId: jobId,
                     taskId: taskId
