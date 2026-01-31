@@ -2,6 +2,7 @@ import { BlockProxy } from 'lucid-extension-sdk';
 import {
     Activity,
     Action,
+    ActionType,
     SimulationObjectType,
     ComponentLogger,
     ActivityFinancialProperties,
@@ -12,7 +13,8 @@ import {
     PeriodUnit,
     ConstantDistribution,
     createDelayAction,
-    MappingSource
+    MappingSource,
+    StateModification
 } from '@quodsi/shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -45,6 +47,52 @@ interface StoredActivityData {
 }
 
 /**
+ * Hydrate a single modification object to a StateModification instance.
+ * This handles cases where modifications are loaded from storage as plain objects.
+ */
+function hydrateModification(m: any): StateModification {
+    if (m instanceof StateModification) {
+        return m;
+    }
+    return StateModification.fromJSON(m);
+}
+
+/**
+ * Hydrate actions loaded from storage.
+ * Converts plain modification objects back to StateModification instances.
+ */
+function hydrateActions(actions: Action[] | undefined): Action[] {
+    if (!actions) {
+        return [];
+    }
+
+    return actions.map(action => {
+        if (action.actionType === ActionType.ASSIGN) {
+            const assignAction = action as any;
+            return {
+                ...action,
+                modifications: assignAction.modifications?.map(hydrateModification) || []
+            };
+        }
+        if (action.actionType === ActionType.DELAY_WITH_RESOURCE) {
+            const delayAction = action as any;
+            return {
+                ...action,
+                stateModifications: delayAction.stateModifications?.map(hydrateModification) || []
+            };
+        }
+        if (action.actionType === ActionType.SPLIT) {
+            const splitAction = action as any;
+            return {
+                ...action,
+                modifications: splitAction.modifications?.map(hydrateModification) || []
+            };
+        }
+        return action;
+    });
+}
+
+/**
  * Lucid-specific implementation of an Activity.
  * Maps a Lucid Block element to a simulation Activity.
  */
@@ -64,6 +112,9 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredActivityData;
 
+        // Hydrate actions to ensure StateModification instances are properly reconstructed
+        const hydratedActions = hydrateActions(storedData?.actions);
+
         // Create activity using stored data or defaults
         // Note: null queue capacities mean "unlimited" - use 999999 (not 1) for backwards compatibility
         const activity = new Activity(
@@ -72,7 +123,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData?.capacity ?? 1,
             storedData?.inboundQueueCapacity ?? 999999,
             storedData?.outboundQueueCapacity ?? 999999,
-            storedData?.actions || [],
+            hydratedActions,
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );

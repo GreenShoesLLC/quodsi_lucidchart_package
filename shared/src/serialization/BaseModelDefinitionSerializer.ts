@@ -15,6 +15,7 @@ import { StateType } from '../types/elements/StateType';
 import { TimePattern } from '../types/elements/TimePattern';
 import { TimeDistributedConfig } from '../types/elements/TimeDistributedConfig';
 import { EntitySourceConfig } from '../types/elements/EntitySourceConfig';
+import { StateModification } from '../types/elements/StateModification';
 import {
     Action,
     ActionType,
@@ -105,7 +106,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 y: entity.y
             };
         } catch (error) {
-            throw new SerializationError('Entity', `Failed to serialize entity ${entity.id}`, error instanceof Error ? error : undefined);
+            throw new SerializationError('Entity', `Failed to serialize entity "${entity.name}" (ID: ${entity.id})`, error instanceof Error ? error : undefined);
         }
     }
 
@@ -152,7 +153,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         } catch (error) {
             throw new SerializationError(
                 'Activity',
-                `Failed to serialize activity ${activity.id}`,
+                `Failed to serialize activity "${activity.name}" (ID: ${activity.id})`,
                 error instanceof Error ? error : undefined
             );
         }
@@ -202,7 +203,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         } catch (error) {
             throw new SerializationError(
                 'Generator',
-                `Failed to serialize generator ${generator.id}`,
+                `Failed to serialize generator "${generator.name}" (ID: ${generator.id})`,
                 error instanceof Error ? error : undefined
             );
         }
@@ -230,7 +231,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             return serialized;
         } catch (error) {
-            throw new SerializationError('Resource', `Failed to serialize resource ${resource.id}`, error instanceof Error ? error : undefined);
+            throw new SerializationError('Resource', `Failed to serialize resource "${resource.name}" (ID: ${resource.id})`, error instanceof Error ? error : undefined);
         }
     }
 
@@ -316,7 +317,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 ),
                 entityTemplateUniqueId: connector.entityTemplateUniqueId,
                 stateCondition: connector.stateCondition?.toJSON(),
-                stateModifications: connector.stateModifications.map(m => m.toJSON())
+                stateModifications: connector.stateModifications.map(m => this.serializeModification(m))
             };
 
             // NEW: Serialize destinationUniqueId if present
@@ -333,7 +334,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         } catch (error) {
             throw new SerializationError(
                 'Connector',
-                `Failed to serialize connector ${connector.id}`,
+                `Failed to serialize connector "${connector.name}" (ID: ${connector.id})`,
                 error instanceof Error ? error : undefined
             );
         }
@@ -422,13 +423,26 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
+    /**
+     * Safely serialize a StateModification, handling both class instances and plain objects.
+     * This provides a safety net for cases where modifications were loaded from storage
+     * as plain objects without being hydrated back to StateModification instances.
+     */
+    private serializeModification(m: StateModification | object): object {
+        if (typeof (m as any).toJSON === 'function') {
+            return (m as StateModification).toJSON();
+        }
+        // Already a plain object, return as-is
+        return m;
+    }
+
     protected serializeAction(action: Action): ISerializedAction {
         try {
             switch (action.actionType) {
                 case ActionType.ASSIGN:
                     return {
                         actionType: ActionType.ASSIGN,
-                        modifications: (action as AssignAction).modifications.map(m => m.toJSON())
+                        modifications: (action as AssignAction).modifications.map(m => this.serializeModification(m))
                     };
 
                 case ActionType.SEIZE:
@@ -462,7 +476,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                     }
 
                     if (delayWithResource.stateModifications && delayWithResource.stateModifications.length > 0) {
-                        serialized.stateModifications = delayWithResource.stateModifications.map(m => m.toJSON());
+                        serialized.stateModifications = delayWithResource.stateModifications.map(m => this.serializeModification(m));
                     }
 
                     return serialized;
@@ -476,7 +490,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                         entityTemplateId: splitAction.entityTemplateId,
                         destinationId: splitAction.destinationId,
                         inheritStates: splitAction.inheritStates,
-                        modifications: splitAction.modifications.map(m => m.toJSON()),
+                        modifications: splitAction.modifications.map(m => this.serializeModification(m)),
                         splitIndexState: splitAction.splitIndexState
                     };
                 }
@@ -524,7 +538,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             // State initialization
             if (config.initialStateModifications && config.initialStateModifications.length > 0) {
-                serialized.initialStateModifications = config.initialStateModifications.map(m => m.toJSON());
+                serialized.initialStateModifications = config.initialStateModifications.map(m => this.serializeModification(m));
             }
 
             return serialized;
