@@ -58,7 +58,8 @@
         "GetActivityOutboundQueueTimeseries": "getActivityOutboundQueueTimeseries",
         "GetStateSummary": "getStateSummary",
         "GetStateValuesTimeseries": "getStateValuesTimeseries",
-        "GetEntityThroughputTimeseries": "getEntityThroughputTimeseries"
+        "GetEntityThroughputTimeseries": "getEntityThroughputTimeseries",
+        "GetActivityEntitySummary": "getActivityEntitySummary"
       }
     }
   ]
