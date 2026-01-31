@@ -63,7 +63,7 @@ export function useScenarioSender() {
   const getCrossRepData = useCallback((
     documentId: string,
     scenarioId: string,
-    dataType: 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries'
+    dataType: 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries'
   ) => {
     send(EnvelopeMessageType.CROSS_REP_DATA_REQUEST, {
       documentId,

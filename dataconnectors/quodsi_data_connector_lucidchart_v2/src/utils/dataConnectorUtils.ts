@@ -24,6 +24,7 @@ import { getActivityInboundQueueTimeseriesAction } from '../actions/getActivityI
 import { getActivityOutboundQueueTimeseriesAction } from '../actions/getActivityOutboundQueueTimeseriesAction';
 import { getStateSummaryAction } from '../actions/getStateSummaryAction';
 import { getStateValuesTimeseriesAction } from '../actions/getStateValuesTimeseriesAction';
+import { getEntityThroughputTimeseriesAction } from '../actions/getEntityThroughputTimeseriesAction';
 
 
 export const createDataConnector = () => {
@@ -51,7 +52,8 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("GetActivityInboundQueueTimeseries", getActivityInboundQueueTimeseriesAction)
         .defineAsynchronousAction("GetActivityOutboundQueueTimeseries", getActivityOutboundQueueTimeseriesAction)
         .defineAsynchronousAction("GetStateSummary", getStateSummaryAction)
-        .defineAsynchronousAction("GetStateValuesTimeseries", getStateValuesTimeseriesAction);
+        .defineAsynchronousAction("GetStateValuesTimeseries", getStateValuesTimeseriesAction)
+        .defineAsynchronousAction("GetEntityThroughputTimeseries", getEntityThroughputTimeseriesAction);
 
     return connector;
 };

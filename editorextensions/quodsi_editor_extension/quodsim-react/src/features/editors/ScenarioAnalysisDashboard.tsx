@@ -327,7 +327,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     dataType === "activity-contents-timeseries" ||
     dataType === "activity-inbound-queue-timeseries" ||
     dataType === "activity-outbound-queue-timeseries" ||
-    dataType === "state-values-timeseries";
+    dataType === "state-values-timeseries" ||
+    dataType === "entity-throughput-timeseries";
 
   // Get unique items for filtering based on data type
   const uniqueFilterItems = React.useMemo(() => {
@@ -337,7 +338,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       dataType === "activity-contents-timeseries" ||
       dataType === "activity-inbound-queue-timeseries" ||
       dataType === "activity-outbound-queue-timeseries" ||
-      dataType === "state-values-timeseries";
+      dataType === "state-values-timeseries" ||
+      dataType === "entity-throughput-timeseries";
 
     let key = "object_id"; // Default for timeseries
     if (dataType === "activity") key = "activity_name";
@@ -360,7 +362,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       dataType === "activity-contents-timeseries" ||
       dataType === "activity-inbound-queue-timeseries" ||
       dataType === "activity-outbound-queue-timeseries" ||
-      dataType === "state-values-timeseries";
+      dataType === "state-values-timeseries" ||
+      dataType === "entity-throughput-timeseries";
 
     let key = "object_id"; // Default for timeseries
     if (dataType === "activity") key = "activity_name";
@@ -387,7 +390,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       dataType === "activity-contents-timeseries" ||
       dataType === "activity-inbound-queue-timeseries" ||
       dataType === "activity-outbound-queue-timeseries" ||
-      dataType === "state-values-timeseries";
+      dataType === "state-values-timeseries" ||
+      dataType === "entity-throughput-timeseries";
 
     // Timeseries chart - use small multiples grid approach
     if (isTimeseriesType) {
@@ -705,6 +709,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
                 Outbound Queue
               </option>
               <option value="state-values-timeseries">State Values</option>
+              <option value="entity-throughput-timeseries">Entity Throughput</option>
             </optgroup>
           </select>
 
