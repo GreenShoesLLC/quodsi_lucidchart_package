@@ -8,43 +8,84 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 // Note: CSV uses _std suffix, not _std_dev. We'll map them after parsing.
-// Also, id, scenario_id, and scenario_name are already in CSV (no need to inject)
-// Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
-// since CSV column names don't match interface property names (_std vs _std_dev)
-// NOTE: CSV is missing median and CV fields - we'll provide defaults in the mapper
+// CSV now includes scenario_id and scenario_name directly
 export const requiredColumns: string[] = [
+    'scenario_id',
+    'scenario_name',
     'activity_id',
     'activity_name',
+    // Capacity fields
+    'capacity',
+    'inbound_queue_capacity',
+    'outbound_queue_capacity',
+    // Inbound queue avg contents
+    'inbound_queue_avg_contents_mean',
+    'inbound_queue_avg_contents_std',
+    'inbound_queue_avg_contents_min',
+    'inbound_queue_avg_contents_max',
+    // Outbound queue avg contents
+    'outbound_queue_avg_contents_mean',
+    'outbound_queue_avg_contents_std',
+    'outbound_queue_avg_contents_min',
+    'outbound_queue_avg_contents_max',
+    // Total avg contents
+    'total_avg_contents_mean',
+    'total_avg_contents_std',
+    'total_avg_contents_min',
+    'total_avg_contents_max',
+    // Utilization
     'utilization_mean',
+    'utilization_std',
+    'utilization_min',
     'utilization_max',
-    'utilization_std',  // CSV uses _std, not _std_dev
-    'capacity_mean',
-    'capacity_max',
-    'capacity_std',
-    'avg_number_allocated_mean',  // was contents_mean
-    'avg_number_allocated_max',   // was contents_max
-    'avg_number_allocated_std',   // was contents_std
+    // Avg number allocated
+    'avg_number_allocated_mean',
+    'avg_number_allocated_std',
+    'avg_number_allocated_min',
+    'avg_number_allocated_max',
+    // Max number allocated
+    'max_number_allocated_mean',
+    'max_number_allocated_std',
+    'max_number_allocated_min',
+    'max_number_allocated_max',
+    // Cycle time
     'cycle_time_mean',
-    // 'cycle_time_median',  // NOT in CSV - will default to 0
     'cycle_time_std',
-    // 'cycle_time_cv',      // NOT in CSV - will default to 0
-    'total_time_waiting_for_resource_mean',  // was waiting_time_mean
-    // 'total_time_waiting_for_resource_median', // NOT in CSV - will default to 0
-    'total_time_waiting_for_resource_std',   // was waiting_time_std
-    // 'total_time_waiting_for_resource_cv',     // NOT in CSV - will default to 0
-    'total_time_blocked_mean',  // was blocked_time_mean
-    // 'total_time_blocked_median', // NOT in CSV - will default to 0
-    'total_time_blocked_std',   // was blocked_time_std
-    // 'total_time_blocked_cv',     // NOT in CSV - will default to 0
-    'total_arrivals_mean',      // was arrivals_mean
-    'total_arrivals_max',       // was arrivals_max
-    'total_arrivals_std',       // was arrivals_std
-    'total_allocations_mean',   // was captures_mean
-    'total_allocations_max',    // was captures_max
-    'total_allocations_std',    // was captures_std
-    'throughput_mean',          // was releases_mean
-    'throughput_max',           // was releases_max
-    'throughput_std',           // was releases_std
+    'cycle_time_min',
+    'cycle_time_max',
+    // Total time waiting for resource
+    'total_time_waiting_for_resource_mean',
+    'total_time_waiting_for_resource_std',
+    'total_time_waiting_for_resource_min',
+    'total_time_waiting_for_resource_max',
+    // Total time blocked
+    'total_time_blocked_mean',
+    'total_time_blocked_std',
+    'total_time_blocked_min',
+    'total_time_blocked_max',
+    // Flow statistics
+    'total_arrivals_mean',
+    'total_arrivals_std',
+    'total_arrivals_min',
+    'total_arrivals_max',
+    'total_allocations_mean',
+    'total_allocations_std',
+    'total_allocations_min',
+    'total_allocations_max',
+    'throughput_mean',
+    'throughput_std',
+    'throughput_min',
+    'throughput_max',
+    // Available time
+    'available_time_mean',
+    'available_time_std',
+    'available_time_min',
+    'available_time_max',
+    // Total time used
+    'total_time_used_mean',
+    'total_time_used_std',
+    'total_time_used_min',
+    'total_time_used_max',
     // Cost metrics
     'fixed_cost_mean',
     'fixed_cost_std',
@@ -61,7 +102,19 @@ export const requiredColumns: string[] = [
     'total_cost_mean',
     'total_cost_std',
     'total_cost_min',
-    'total_cost_max'
+    'total_cost_max',
+    // Inbound queue stats
+    'inbound_queue_stats_mean',
+    'inbound_queue_stats_std',
+    'inbound_queue_stats_min',
+    'inbound_queue_stats_max',
+    // Outbound queue stats
+    'outbound_queue_stats_mean',
+    'outbound_queue_stats_std',
+    'outbound_queue_stats_min',
+    'outbound_queue_stats_max',
+    // Replication count
+    'num_replications'
 ];
 
 /**
@@ -156,56 +209,103 @@ export async function fetchActivityCrossRep(
 
         // Map CSV column names to schema field names
         // CSV uses _std suffix, schema expects _std_dev
-        // Also inject scenario_id, scenario_name, and generate composite ID
+        // CSV now includes scenario_id and scenario_name directly
         const mappedResult: ActivityCrossRepSummaryData[] = result.map((item: any) => ({
             // Generate composite ID from scenario and activity
-            id: `${scenarioId}_${item.activity_id}`,
-            scenario_id: scenarioId,
-            scenario_name: documentId,  // Use documentId as scenario name for now
+            id: `${item.scenario_id}_${item.activity_id}`,
+            scenario_id: item.scenario_id,
+            scenario_name: item.scenario_name,
 
             // Copy identifier fields
             activity_id: item.activity_id,
             activity_name: item.activity_name,
 
-            // Map all _std fields to _std_dev
+            // Capacity fields
+            capacity: item.capacity,
+            inbound_queue_capacity: item.inbound_queue_capacity,
+            outbound_queue_capacity: item.outbound_queue_capacity,
+
+            // Inbound queue avg contents
+            inbound_queue_avg_contents_mean: item.inbound_queue_avg_contents_mean,
+            inbound_queue_avg_contents_std_dev: item.inbound_queue_avg_contents_std,
+            inbound_queue_avg_contents_min: item.inbound_queue_avg_contents_min,
+            inbound_queue_avg_contents_max: item.inbound_queue_avg_contents_max,
+
+            // Outbound queue avg contents
+            outbound_queue_avg_contents_mean: item.outbound_queue_avg_contents_mean,
+            outbound_queue_avg_contents_std_dev: item.outbound_queue_avg_contents_std,
+            outbound_queue_avg_contents_min: item.outbound_queue_avg_contents_min,
+            outbound_queue_avg_contents_max: item.outbound_queue_avg_contents_max,
+
+            // Total avg contents
+            total_avg_contents_mean: item.total_avg_contents_mean,
+            total_avg_contents_std_dev: item.total_avg_contents_std,
+            total_avg_contents_min: item.total_avg_contents_min,
+            total_avg_contents_max: item.total_avg_contents_max,
+
+            // Utilization - Map _std to _std_dev
             utilization_mean: item.utilization_mean,
+            utilization_min: item.utilization_min,
             utilization_max: item.utilization_max,
-            utilization_std_dev: item.utilization_std,  // Map _std to _std_dev
+            utilization_std_dev: item.utilization_std,
 
-            capacity_mean: item.capacity_mean,
-            capacity_max: item.capacity_max,
-            capacity_std_dev: item.capacity_std,
-
+            // Avg number allocated
             avg_number_allocated_mean: item.avg_number_allocated_mean,
+            avg_number_allocated_min: item.avg_number_allocated_min,
             avg_number_allocated_max: item.avg_number_allocated_max,
             avg_number_allocated_std_dev: item.avg_number_allocated_std,
 
+            // Max number allocated
+            max_number_allocated_mean: item.max_number_allocated_mean,
+            max_number_allocated_min: item.max_number_allocated_min,
+            max_number_allocated_max: item.max_number_allocated_max,
+            max_number_allocated_std_dev: item.max_number_allocated_std,
+
+            // Cycle time
             cycle_time_mean: item.cycle_time_mean,
-            cycle_time_median: 0,  // NOT in CSV, default to 0
+            cycle_time_min: item.cycle_time_min,
+            cycle_time_max: item.cycle_time_max,
             cycle_time_std_dev: item.cycle_time_std,
-            cycle_time_cv: 0,  // NOT in CSV, default to 0
 
+            // Total time waiting for resource
             total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean,
-            total_time_waiting_for_resource_median: 0,  // NOT in CSV, default to 0
+            total_time_waiting_for_resource_min: item.total_time_waiting_for_resource_min,
+            total_time_waiting_for_resource_max: item.total_time_waiting_for_resource_max,
             total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std,
-            total_time_waiting_for_resource_cv: 0,  // NOT in CSV, default to 0
 
+            // Total time blocked
             total_time_blocked_mean: item.total_time_blocked_mean,
-            total_time_blocked_median: 0,  // NOT in CSV, default to 0
+            total_time_blocked_min: item.total_time_blocked_min,
+            total_time_blocked_max: item.total_time_blocked_max,
             total_time_blocked_std_dev: item.total_time_blocked_std,
-            total_time_blocked_cv: 0,  // NOT in CSV, default to 0
 
+            // Flow statistics
             total_arrivals_mean: item.total_arrivals_mean,
+            total_arrivals_min: item.total_arrivals_min,
             total_arrivals_max: item.total_arrivals_max,
             total_arrivals_std_dev: item.total_arrivals_std,
 
             total_allocations_mean: item.total_allocations_mean,
+            total_allocations_min: item.total_allocations_min,
             total_allocations_max: item.total_allocations_max,
             total_allocations_std_dev: item.total_allocations_std,
 
             throughput_mean: item.throughput_mean,
+            throughput_min: item.throughput_min,
             throughput_max: item.throughput_max,
             throughput_std_dev: item.throughput_std,
+
+            // Available time metrics
+            available_time_mean: item.available_time_mean,
+            available_time_std_dev: item.available_time_std,
+            available_time_min: item.available_time_min,
+            available_time_max: item.available_time_max,
+
+            // Total time used metrics
+            total_time_used_mean: item.total_time_used_mean,
+            total_time_used_std_dev: item.total_time_used_std,
+            total_time_used_min: item.total_time_used_min,
+            total_time_used_max: item.total_time_used_max,
 
             // Cost metrics
             fixed_cost_mean: item.fixed_cost_mean,
@@ -223,7 +323,22 @@ export async function fetchActivityCrossRep(
             total_cost_mean: item.total_cost_mean,
             total_cost_std_dev: item.total_cost_std,
             total_cost_min: item.total_cost_min,
-            total_cost_max: item.total_cost_max
+            total_cost_max: item.total_cost_max,
+
+            // Inbound queue stats
+            inbound_queue_stats_mean: item.inbound_queue_stats_mean,
+            inbound_queue_stats_std_dev: item.inbound_queue_stats_std,
+            inbound_queue_stats_min: item.inbound_queue_stats_min,
+            inbound_queue_stats_max: item.inbound_queue_stats_max,
+
+            // Outbound queue stats
+            outbound_queue_stats_mean: item.outbound_queue_stats_mean,
+            outbound_queue_stats_std_dev: item.outbound_queue_stats_std,
+            outbound_queue_stats_min: item.outbound_queue_stats_min,
+            outbound_queue_stats_max: item.outbound_queue_stats_max,
+
+            // Replication count
+            num_replications: item.num_replications
         }));
 
         conditionalLog(`[activityCrossRep] Mapped ${mappedResult.length} records with schema-compliant field names`);
@@ -244,49 +359,90 @@ export async function fetchActivityCrossRep(
                 activity_id: String(item.activity_id || "Unknown"),
                 activity_name: String(item.activity_name || "Unknown"),
 
+                // Capacity fields
+                capacity: item.capacity ?? 0,
+                inbound_queue_capacity: item.inbound_queue_capacity ?? 0,
+                outbound_queue_capacity: item.outbound_queue_capacity ?? 0,
+
+                // Inbound queue avg contents
+                inbound_queue_avg_contents_mean: item.inbound_queue_avg_contents_mean ?? 0,
+                inbound_queue_avg_contents_std_dev: item.inbound_queue_avg_contents_std_dev ?? 0,
+                inbound_queue_avg_contents_min: item.inbound_queue_avg_contents_min ?? 0,
+                inbound_queue_avg_contents_max: item.inbound_queue_avg_contents_max ?? 0,
+
+                // Outbound queue avg contents
+                outbound_queue_avg_contents_mean: item.outbound_queue_avg_contents_mean ?? 0,
+                outbound_queue_avg_contents_std_dev: item.outbound_queue_avg_contents_std_dev ?? 0,
+                outbound_queue_avg_contents_min: item.outbound_queue_avg_contents_min ?? 0,
+                outbound_queue_avg_contents_max: item.outbound_queue_avg_contents_max ?? 0,
+
+                // Total avg contents
+                total_avg_contents_mean: item.total_avg_contents_mean ?? 0,
+                total_avg_contents_std_dev: item.total_avg_contents_std_dev ?? 0,
+                total_avg_contents_min: item.total_avg_contents_min ?? 0,
+                total_avg_contents_max: item.total_avg_contents_max ?? 0,
+
                 // Utilization metrics
                 utilization_mean: item.utilization_mean ?? 0,
+                utilization_min: item.utilization_min ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
 
-                // Capacity metrics
-                capacity_mean: item.capacity_mean ?? 0,
-                capacity_max: item.capacity_max ?? 0,
-                capacity_std_dev: item.capacity_std_dev ?? 0,
-
                 // Avg Number Allocated metrics
                 avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
+                avg_number_allocated_min: item.avg_number_allocated_min ?? 0,
                 avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
                 avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
 
+                // Max number allocated metrics
+                max_number_allocated_mean: item.max_number_allocated_mean ?? 0,
+                max_number_allocated_min: item.max_number_allocated_min ?? 0,
+                max_number_allocated_max: item.max_number_allocated_max ?? 0,
+                max_number_allocated_std_dev: item.max_number_allocated_std_dev ?? 0,
+
                 // Cycle time metrics
                 cycle_time_mean: item.cycle_time_mean ?? 0,
-                cycle_time_median: item.cycle_time_median ?? 0,
+                cycle_time_min: item.cycle_time_min ?? 0,
+                cycle_time_max: item.cycle_time_max ?? 0,
                 cycle_time_std_dev: item.cycle_time_std_dev ?? 0,
-                cycle_time_cv: item.cycle_time_cv ?? 0,
 
                 // Total Time Waiting for Resource metrics
                 total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean ?? 0,
-                total_time_waiting_for_resource_median: item.total_time_waiting_for_resource_median ?? 0,
+                total_time_waiting_for_resource_min: item.total_time_waiting_for_resource_min ?? 0,
+                total_time_waiting_for_resource_max: item.total_time_waiting_for_resource_max ?? 0,
                 total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std_dev ?? 0,
-                total_time_waiting_for_resource_cv: item.total_time_waiting_for_resource_cv ?? 0,
 
                 // Total Time Blocked metrics
                 total_time_blocked_mean: item.total_time_blocked_mean ?? 0,
-                total_time_blocked_median: item.total_time_blocked_median ?? 0,
+                total_time_blocked_min: item.total_time_blocked_min ?? 0,
+                total_time_blocked_max: item.total_time_blocked_max ?? 0,
                 total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
-                total_time_blocked_cv: item.total_time_blocked_cv ?? 0,
 
                 // Flow statistics
                 total_arrivals_mean: item.total_arrivals_mean ?? 0,
+                total_arrivals_min: item.total_arrivals_min ?? 0,
                 total_arrivals_max: item.total_arrivals_max ?? 0,
                 total_arrivals_std_dev: item.total_arrivals_std_dev ?? 0,
                 total_allocations_mean: item.total_allocations_mean ?? 0,
+                total_allocations_min: item.total_allocations_min ?? 0,
                 total_allocations_max: item.total_allocations_max ?? 0,
                 total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
                 throughput_mean: item.throughput_mean ?? 0,
+                throughput_min: item.throughput_min ?? 0,
                 throughput_max: item.throughput_max ?? 0,
                 throughput_std_dev: item.throughput_std_dev ?? 0,
+
+                // Available time metrics
+                available_time_mean: item.available_time_mean ?? 0,
+                available_time_std_dev: item.available_time_std_dev ?? 0,
+                available_time_min: item.available_time_min ?? 0,
+                available_time_max: item.available_time_max ?? 0,
+
+                // Total time used metrics
+                total_time_used_mean: item.total_time_used_mean ?? 0,
+                total_time_used_std_dev: item.total_time_used_std_dev ?? 0,
+                total_time_used_min: item.total_time_used_min ?? 0,
+                total_time_used_max: item.total_time_used_max ?? 0,
 
                 // Cost metrics
                 fixed_cost_mean: item.fixed_cost_mean ?? 0,
@@ -304,7 +460,22 @@ export async function fetchActivityCrossRep(
                 total_cost_mean: item.total_cost_mean ?? 0,
                 total_cost_std_dev: item.total_cost_std_dev ?? 0,
                 total_cost_min: item.total_cost_min ?? 0,
-                total_cost_max: item.total_cost_max ?? 0
+                total_cost_max: item.total_cost_max ?? 0,
+
+                // Inbound queue stats
+                inbound_queue_stats_mean: item.inbound_queue_stats_mean ?? 0,
+                inbound_queue_stats_std_dev: item.inbound_queue_stats_std_dev ?? 0,
+                inbound_queue_stats_min: item.inbound_queue_stats_min ?? 0,
+                inbound_queue_stats_max: item.inbound_queue_stats_max ?? 0,
+
+                // Outbound queue stats
+                outbound_queue_stats_mean: item.outbound_queue_stats_mean ?? 0,
+                outbound_queue_stats_std_dev: item.outbound_queue_stats_std_dev ?? 0,
+                outbound_queue_stats_min: item.outbound_queue_stats_min ?? 0,
+                outbound_queue_stats_max: item.outbound_queue_stats_max ?? 0,
+
+                // Replication count
+                num_replications: item.num_replications ?? 0
             };
 
             return validItem;
@@ -343,49 +514,90 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             activity_id: String(item.activity_id || "Unknown"),
             activity_name: String(item.activity_name || "Unknown"),
 
+            // Capacity fields
+            capacity: item.capacity ?? 0,
+            inbound_queue_capacity: item.inbound_queue_capacity ?? 0,
+            outbound_queue_capacity: item.outbound_queue_capacity ?? 0,
+
+            // Inbound queue avg contents
+            inbound_queue_avg_contents_mean: item.inbound_queue_avg_contents_mean ?? 0,
+            inbound_queue_avg_contents_std_dev: item.inbound_queue_avg_contents_std_dev ?? 0,
+            inbound_queue_avg_contents_min: item.inbound_queue_avg_contents_min ?? 0,
+            inbound_queue_avg_contents_max: item.inbound_queue_avg_contents_max ?? 0,
+
+            // Outbound queue avg contents
+            outbound_queue_avg_contents_mean: item.outbound_queue_avg_contents_mean ?? 0,
+            outbound_queue_avg_contents_std_dev: item.outbound_queue_avg_contents_std_dev ?? 0,
+            outbound_queue_avg_contents_min: item.outbound_queue_avg_contents_min ?? 0,
+            outbound_queue_avg_contents_max: item.outbound_queue_avg_contents_max ?? 0,
+
+            // Total avg contents
+            total_avg_contents_mean: item.total_avg_contents_mean ?? 0,
+            total_avg_contents_std_dev: item.total_avg_contents_std_dev ?? 0,
+            total_avg_contents_min: item.total_avg_contents_min ?? 0,
+            total_avg_contents_max: item.total_avg_contents_max ?? 0,
+
             // Utilization metrics
             utilization_mean: item.utilization_mean ?? 0,
+            utilization_min: item.utilization_min ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
 
-            // Capacity metrics
-            capacity_mean: item.capacity_mean ?? 0,
-            capacity_max: item.capacity_max ?? 0,
-            capacity_std_dev: item.capacity_std_dev ?? 0,
-
             // Avg Number Allocated metrics
             avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
+            avg_number_allocated_min: item.avg_number_allocated_min ?? 0,
             avg_number_allocated_max: item.avg_number_allocated_max ?? 0,
             avg_number_allocated_std_dev: item.avg_number_allocated_std_dev ?? 0,
 
+            // Max number allocated metrics
+            max_number_allocated_mean: item.max_number_allocated_mean ?? 0,
+            max_number_allocated_min: item.max_number_allocated_min ?? 0,
+            max_number_allocated_max: item.max_number_allocated_max ?? 0,
+            max_number_allocated_std_dev: item.max_number_allocated_std_dev ?? 0,
+
             // Cycle time metrics
             cycle_time_mean: item.cycle_time_mean ?? 0,
-            cycle_time_median: item.cycle_time_median ?? 0,
+            cycle_time_min: item.cycle_time_min ?? 0,
+            cycle_time_max: item.cycle_time_max ?? 0,
             cycle_time_std_dev: item.cycle_time_std_dev ?? 0,
-            cycle_time_cv: item.cycle_time_cv ?? 0,
 
             // Total Time Waiting for Resource metrics
             total_time_waiting_for_resource_mean: item.total_time_waiting_for_resource_mean ?? 0,
-            total_time_waiting_for_resource_median: item.total_time_waiting_for_resource_median ?? 0,
+            total_time_waiting_for_resource_min: item.total_time_waiting_for_resource_min ?? 0,
+            total_time_waiting_for_resource_max: item.total_time_waiting_for_resource_max ?? 0,
             total_time_waiting_for_resource_std_dev: item.total_time_waiting_for_resource_std_dev ?? 0,
-            total_time_waiting_for_resource_cv: item.total_time_waiting_for_resource_cv ?? 0,
 
             // Total Time Blocked metrics
             total_time_blocked_mean: item.total_time_blocked_mean ?? 0,
-            total_time_blocked_median: item.total_time_blocked_median ?? 0,
+            total_time_blocked_min: item.total_time_blocked_min ?? 0,
+            total_time_blocked_max: item.total_time_blocked_max ?? 0,
             total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
-            total_time_blocked_cv: item.total_time_blocked_cv ?? 0,
 
             // Flow statistics
             total_arrivals_mean: item.total_arrivals_mean ?? 0,
+            total_arrivals_min: item.total_arrivals_min ?? 0,
             total_arrivals_max: item.total_arrivals_max ?? 0,
             total_arrivals_std_dev: item.total_arrivals_std_dev ?? 0,
             total_allocations_mean: item.total_allocations_mean ?? 0,
+            total_allocations_min: item.total_allocations_min ?? 0,
             total_allocations_max: item.total_allocations_max ?? 0,
             total_allocations_std_dev: item.total_allocations_std_dev ?? 0,
             throughput_mean: item.throughput_mean ?? 0,
+            throughput_min: item.throughput_min ?? 0,
             throughput_max: item.throughput_max ?? 0,
             throughput_std_dev: item.throughput_std_dev ?? 0,
+
+            // Available time metrics
+            available_time_mean: item.available_time_mean ?? 0,
+            available_time_std_dev: item.available_time_std_dev ?? 0,
+            available_time_min: item.available_time_min ?? 0,
+            available_time_max: item.available_time_max ?? 0,
+
+            // Total time used metrics
+            total_time_used_mean: item.total_time_used_mean ?? 0,
+            total_time_used_std_dev: item.total_time_used_std_dev ?? 0,
+            total_time_used_min: item.total_time_used_min ?? 0,
+            total_time_used_max: item.total_time_used_max ?? 0,
 
             // Cost metrics
             fixed_cost_mean: item.fixed_cost_mean ?? 0,
@@ -403,7 +615,22 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             total_cost_mean: item.total_cost_mean ?? 0,
             total_cost_std_dev: item.total_cost_std_dev ?? 0,
             total_cost_min: item.total_cost_min ?? 0,
-            total_cost_max: item.total_cost_max ?? 0
+            total_cost_max: item.total_cost_max ?? 0,
+
+            // Inbound queue stats
+            inbound_queue_stats_mean: item.inbound_queue_stats_mean ?? 0,
+            inbound_queue_stats_std_dev: item.inbound_queue_stats_std_dev ?? 0,
+            inbound_queue_stats_min: item.inbound_queue_stats_min ?? 0,
+            inbound_queue_stats_max: item.inbound_queue_stats_max ?? 0,
+
+            // Outbound queue stats
+            outbound_queue_stats_mean: item.outbound_queue_stats_mean ?? 0,
+            outbound_queue_stats_std_dev: item.outbound_queue_stats_std_dev ?? 0,
+            outbound_queue_stats_min: item.outbound_queue_stats_min ?? 0,
+            outbound_queue_stats_max: item.outbound_queue_stats_max ?? 0,
+
+            // Replication count
+            num_replications: item.num_replications ?? 0
         };
 
         // Add to our collection using the ID as the key

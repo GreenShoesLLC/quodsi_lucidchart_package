@@ -68,6 +68,11 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "total_allocations_mean", label: "Total Allocations" },
     { value: "throughput_mean", label: "Throughput" },
     { value: "total_cost_mean", label: "Total Cost" },
+    { value: "inbound_queue_stats_mean", label: "Inbound Queue (Mean)" },
+    { value: "outbound_queue_stats_mean", label: "Outbound Queue (Mean)" },
+    { value: "inbound_queue_avg_contents_mean", label: "Inbound Queue Avg Contents" },
+    { value: "outbound_queue_avg_contents_mean", label: "Outbound Queue Avg Contents" },
+    { value: "total_avg_contents_mean", label: "Total Avg Contents" },
   ],
   entity: [
     { value: "created_mean", label: "Created" },
@@ -75,12 +80,13 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "in_progress_count_mean", label: "In Progress (WIP)" },
     { value: "throughput_rate_mean", label: "Throughput Rate" },
     { value: "time_in_system_mean", label: "Time in System" },
-    { value: "time_in_system_median", label: "Time in System (Median)" },
     { value: "time_waiting_mean", label: "Time Waiting" },
     { value: "time_in_operation_mean", label: "Time in Operation" },
     { value: "percent_waiting_mean", label: "% Waiting" },
     { value: "percent_operation_mean", label: "% In Operation" },
     { value: "percent_blocked_mean", label: "% Blocked" },
+    { value: "min_wip_mean", label: "Min WIP" },
+    { value: "max_wip_mean", label: "Max WIP" },
   ],
   resource: [
     { value: "utilization_mean", label: "Utilization (Mean)" },
@@ -91,6 +97,17 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "seize_cost_mean", label: "Seize Cost" },
     { value: "utilization_cost_mean", label: "Utilization Cost" },
     { value: "idle_cost_mean", label: "Idle Cost" },
+    { value: "total_cost_mean", label: "Total Cost" },
+  ],
+  "activity-entity": [
+    { value: "entity_count_mean", label: "Entity Count" },
+    { value: "completed_count_mean", label: "Completed Count" },
+    { value: "avg_cycle_time_mean", label: "Avg Cycle Time" },
+    { value: "avg_captured_time_mean", label: "Avg Captured Time" },
+    { value: "avg_blocked_time_mean", label: "Avg Blocked Time" },
+    { value: "activity_avg_contents_mean", label: "Activity Contents" },
+    { value: "inbound_q_avg_contents_mean", label: "Inbound Queue" },
+    { value: "outbound_q_avg_contents_mean", label: "Outbound Queue" },
     { value: "total_cost_mean", label: "Total Cost" },
   ],
   "state-summary": [
@@ -324,6 +341,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     dataType === "activity" ||
     dataType === "entity" ||
     dataType === "resource" ||
+    dataType === "activity-entity" ||
     dataType === "activity-contents-timeseries" ||
     dataType === "activity-inbound-queue-timeseries" ||
     dataType === "activity-outbound-queue-timeseries" ||
@@ -345,6 +363,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     if (dataType === "activity") key = "activity_name";
     else if (dataType === "entity") key = "entity_name";
     else if (dataType === "resource") key = "resource_name";
+    else if (dataType === "activity-entity") key = "activity_name";
 
     const items = Array.from(new Set(data.map((item: any) => item[key])))
       .filter(Boolean)
@@ -369,6 +388,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     if (dataType === "activity") key = "activity_name";
     else if (dataType === "entity") key = "entity_name";
     else if (dataType === "resource") key = "resource_name";
+    else if (dataType === "activity-entity") key = "activity_name";
 
     return data.filter((item: any) => item[key] === selectedActivity);
   }, [data, dataType, selectedActivity, isFilterableType]);
@@ -448,6 +468,8 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
           ? "entity_name"
           : dataType === "resource"
           ? "resource_name"
+          : dataType === "activity-entity"
+          ? "activity_name"
           : dataType === "state-summary"
           ? "state_name"
           : "scenario_name";
@@ -676,6 +698,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     if (dataType === "activity") return "Activity";
     if (dataType === "entity") return "Entity";
     if (dataType === "resource") return "Resource";
+    if (dataType === "activity-entity") return "Activity";
     return "Item";
   };
 
@@ -696,6 +719,7 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
               <option value="activity">Activity</option>
               <option value="entity">Entity</option>
               <option value="resource">Resource</option>
+              <option value="activity-entity">Activity Entity</option>
               <option value="state-summary">State</option>
             </optgroup>
             <optgroup label="Timeseries">

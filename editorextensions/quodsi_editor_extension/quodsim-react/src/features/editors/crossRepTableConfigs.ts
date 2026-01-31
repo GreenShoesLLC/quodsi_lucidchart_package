@@ -1,9 +1,16 @@
 import { TableColumn } from "../../components/DataTable";
 
 // Formatting helper functions
+// For values in 0-1 range (like utilization 0.85 -> 85%)
 const formatPercent = (value: number | null | undefined): string => {
   if (value === null || value === undefined || isNaN(value)) return "-";
   return `${(value * 100).toFixed(2)}%`;
+};
+
+// For values already in 0-100 range (like entity percents 81.58 -> 81.58%)
+const formatPercentRaw = (value: number | null | undefined): string => {
+  if (value === null || value === undefined || isNaN(value)) return "-";
+  return `${value.toFixed(2)}%`;
 };
 
 const formatDecimal = (value: number | null | undefined, decimals: number = 2): string => {
@@ -72,6 +79,31 @@ export const activityColumns: TableColumn[] = [
     label: "Total Cost",
     format: (v) => formatDecimal(v, 2),
   },
+  {
+    key: "inbound_queue_stats_mean",
+    label: "Inbound Q",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "outbound_queue_stats_mean",
+    label: "Outbound Q",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "inbound_queue_avg_contents_mean",
+    label: "Inbound Avg",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "outbound_queue_avg_contents_mean",
+    label: "Outbound Avg",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "total_avg_contents_mean",
+    label: "Total Avg",
+    format: (v) => formatDecimal(v, 2),
+  },
 ];
 
 // Entity Cross-Rep Summary Columns
@@ -87,7 +119,7 @@ export const entityColumns: TableColumn[] = [
   },
   {
     key: "completed_count_mean",
-    label: "Done",
+    label: "Exits",
     format: formatInteger,
   },
   {
@@ -106,11 +138,6 @@ export const entityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "time_in_system_median",
-    label: "Med Sys",
-    format: (v) => formatDecimal(v, 2),
-  },
-  {
     key: "time_waiting_mean",
     label: "Wait",
     format: (v) => formatDecimal(v, 2),
@@ -123,17 +150,27 @@ export const entityColumns: TableColumn[] = [
   {
     key: "percent_waiting_mean",
     label: "% Wait",
-    format: formatPercent,
+    format: formatPercentRaw,
   },
   {
     key: "percent_operation_mean",
     label: "% Op",
-    format: formatPercent,
+    format: formatPercentRaw,
   },
   {
     key: "percent_blocked_mean",
     label: "% Block",
-    format: formatPercent,
+    format: formatPercentRaw,
+  },
+  {
+    key: "min_wip_mean",
+    label: "Min WIP",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "max_wip_mean",
+    label: "Max WIP",
+    format: (v) => formatDecimal(v, 2),
   },
 ];
 
@@ -261,6 +298,43 @@ export const activityContentsTimeseriesColumns: TableColumn[] = [
   },
 ];
 
+// Activity Entity Summary Columns
+export const activityEntityColumns: TableColumn[] = [
+  {
+    key: "activity_name",
+    label: "Activity",
+  },
+  {
+    key: "entity_type",
+    label: "Entity Type",
+  },
+  {
+    key: "entity_count_mean",
+    label: "Count",
+    format: formatInteger,
+  },
+  {
+    key: "completed_count_mean",
+    label: "Done",
+    format: formatInteger,
+  },
+  {
+    key: "avg_cycle_time_mean",
+    label: "Cycle",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "activity_avg_contents_mean",
+    label: "Contents",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "total_cost_mean",
+    label: "Cost",
+    format: (v) => formatDecimal(v, 2),
+  },
+];
+
 // State Summary Columns
 export const stateSummaryColumns: TableColumn[] = [
   {
@@ -320,7 +394,7 @@ export const stateSummaryColumns: TableColumn[] = [
   },
 ];
 
-export type CrossRepDataType = "scenario" | "activity" | "entity" | "resource" | "activity-contents-timeseries" | "state-summary" | "activity-inbound-queue-timeseries" | "activity-outbound-queue-timeseries" | "state-values-timeseries" | "entity-throughput-timeseries";
+export type CrossRepDataType = "scenario" | "activity" | "entity" | "resource" | "activity-entity" | "activity-contents-timeseries" | "state-summary" | "activity-inbound-queue-timeseries" | "activity-outbound-queue-timeseries" | "state-values-timeseries" | "entity-throughput-timeseries";
 
 export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[] => {
   switch (dataType) {
@@ -332,6 +406,8 @@ export const getColumnsForDataType = (dataType: CrossRepDataType): TableColumn[]
       return entityColumns;
     case "resource":
       return resourceColumns;
+    case "activity-entity":
+      return activityEntityColumns;
     case "activity-contents-timeseries":
       return activityContentsTimeseriesColumns;
     case "activity-inbound-queue-timeseries":
