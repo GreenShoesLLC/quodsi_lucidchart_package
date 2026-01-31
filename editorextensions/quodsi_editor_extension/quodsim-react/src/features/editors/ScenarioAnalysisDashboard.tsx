@@ -16,6 +16,8 @@ import {
   ChartContainer,
   TimeseriesChart,
   ComparisonBarChart,
+  SparklineGrid,
+  ExpandedTimeseriesChart,
 } from "../../components/charts";
 import {
   CrossRepDataType,
@@ -141,6 +143,9 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
   const [zipCopied, setZipCopied] = useState<boolean>(false);
   const [selectedMetric, setSelectedMetric] =
     useState<string>("utilization_mean");
+
+  // Expanded activity for timeseries small multiples view
+  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
 
   // Hooks
   const { getCrossRepData } = useScenarioSender();
@@ -365,9 +370,10 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
     return data.filter((item: any) => item[key] === selectedActivity);
   }, [data, dataType, selectedActivity, isFilterableType]);
 
-  // Reset selected activity and metric when data type changes
+  // Reset selected activity, metric, and expanded activity when data type changes
   useEffect(() => {
     setSelectedActivity("all");
+    setExpandedActivity(null);
     // Set default metric for the new data type
     const options = metricOptions[dataType];
     if (options && options.length > 0) {
@@ -383,8 +389,33 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
       dataType === "activity-outbound-queue-timeseries" ||
       dataType === "state-values-timeseries";
 
-    // Timeseries chart (line chart)
+    // Timeseries chart - use small multiples grid approach
     if (isTimeseriesType) {
+      // If an activity is selected for expansion, show full chart
+      if (expandedActivity) {
+        const activityData = filteredData.filter(
+          (d: any) => d.object_id === expandedActivity
+        );
+        return (
+          <ChartContainer
+            data={activityData}
+            loading={loading}
+            error={error}
+            emptyMessage={`No data available for ${expandedActivity}`}
+          >
+            <ExpandedTimeseriesChart
+              data={activityData}
+              objectId={expandedActivity}
+              xKey="period_start_clock"
+              yKeys={["mean", "min", "max"]}
+              onClose={() => setExpandedActivity(null)}
+              height={400}
+            />
+          </ChartContainer>
+        );
+      }
+
+      // Default: show sparkline grid for all activities
       return (
         <ChartContainer
           data={filteredData}
@@ -392,13 +423,13 @@ const ScenarioAnalysisDashboard: React.FC<ScenarioAnalysisDashboardProps> = ({
           error={error}
           emptyMessage={`No ${dataType} data available for this scenario`}
         >
-          <TimeseriesChart
+          <SparklineGrid
             data={filteredData}
+            groupByKey="object_id"
             xKey="period_start_clock"
-            yKeys={["mean", "min", "max"]}
-            xLabel="Time"
-            yLabel="Value"
-            height={300}
+            yKey="mean"
+            onItemClick={(id) => setExpandedActivity(id)}
+            sparklineHeight={50}
           />
         </ChartContainer>
       );
