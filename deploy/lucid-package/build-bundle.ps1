@@ -99,6 +99,32 @@ switch ($TargetEnvironment) {
 # Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY is set (Length: $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY.Length))"
 
 
+# --- Step 1.5: Build Shared Library ---
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.5: Building Shared Library (@quodsi/shared)..."
+Write-Host "--------------------------------------------------"
+
+Write-Host "Executing 'npm run build -w @quodsi/shared' in $LucidPackageDir..."
+try {
+    Push-Location -Path $LucidPackageDir
+    npm run build -w @quodsi/shared *>&1 | Write-Host
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "'npm run build -w @quodsi/shared' command failed with exit code $LASTEXITCODE."
+        Pop-Location
+        exit $LASTEXITCODE
+    } else {
+        Write-Host "Shared library build completed successfully." -ForegroundColor Green
+    }
+    Pop-Location
+}
+catch {
+    Pop-Location
+    Write-Error "An error occurred while building the shared library. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+
 # --- Step 2: [Optional] Execute the Separate React Build Script ---
 Write-Host "--------------------------------------------------"
 Write-Host "Step 2: Separate React Build Execution..."
