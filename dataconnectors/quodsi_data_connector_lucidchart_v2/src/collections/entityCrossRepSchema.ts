@@ -98,15 +98,15 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "percent_connecting_max", type: ScalarFieldTypeEnum.NUMBER },
 
         // WIP statistics
-        { name: "min_wip_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "min_wip_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "min_wip_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "min_wip_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "trough_wip_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "trough_wip_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "trough_wip_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "trough_wip_max", type: ScalarFieldTypeEnum.NUMBER },
 
-        { name: "max_wip_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "max_wip_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "max_wip_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "max_wip_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "peak_wip_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "peak_wip_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "peak_wip_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "peak_wip_max", type: ScalarFieldTypeEnum.NUMBER },
 
         { name: "avg_wip_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "avg_wip_std_dev", type: ScalarFieldTypeEnum.NUMBER },
@@ -212,15 +212,15 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'percent_connecting_max': 'Max % Connecting',
 
         // WIP statistics
-        'min_wip_mean': 'Mean Min WIP',
-        'min_wip_std_dev': 'Min WIP Std Dev',
-        'min_wip_min': 'Min Min WIP',
-        'min_wip_max': 'Max Min WIP',
+        'trough_wip_mean': 'Mean Trough WIP',
+        'trough_wip_std_dev': 'Trough WIP Std Dev',
+        'trough_wip_min': 'Min Trough WIP',
+        'trough_wip_max': 'Max Trough WIP',
 
-        'max_wip_mean': 'Mean Max WIP',
-        'max_wip_std_dev': 'Max WIP Std Dev',
-        'max_wip_min': 'Min Max WIP',
-        'max_wip_max': 'Max Max WIP',
+        'peak_wip_mean': 'Mean Peak WIP',
+        'peak_wip_std_dev': 'Peak WIP Std Dev',
+        'peak_wip_min': 'Min Peak WIP',
+        'peak_wip_max': 'Max Peak WIP',
 
         'avg_wip_mean': 'Mean Avg WIP',
         'avg_wip_std_dev': 'Avg WIP Std Dev',

@@ -85,8 +85,8 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "percent_waiting_mean", label: "% Waiting" },
     { value: "percent_operation_mean", label: "% In Operation" },
     { value: "percent_blocked_mean", label: "% Blocked" },
-    { value: "min_wip_mean", label: "Min WIP" },
-    { value: "max_wip_mean", label: "Max WIP" },
+    { value: "trough_wip_mean", label: "Trough WIP" },
+    { value: "peak_wip_mean", label: "Peak WIP" },
   ],
   resource: [
     { value: "utilization_mean", label: "Utilization (Mean)" },

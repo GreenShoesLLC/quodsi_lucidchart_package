@@ -99,15 +99,15 @@ export interface EntityCrossRepSummaryData {
     percent_connecting_max: number;
 
     // WIP (Work In Progress) statistics
-    min_wip_mean: number;
-    min_wip_std_dev: number;
-    min_wip_min: number;
-    min_wip_max: number;
+    trough_wip_mean: number;
+    trough_wip_std_dev: number;
+    trough_wip_min: number;
+    trough_wip_max: number;
 
-    max_wip_mean: number;
-    max_wip_std_dev: number;
-    max_wip_min: number;
-    max_wip_max: number;
+    peak_wip_mean: number;
+    peak_wip_std_dev: number;
+    peak_wip_min: number;
+    peak_wip_max: number;
 
     avg_wip_mean: number;
     avg_wip_std_dev: number;

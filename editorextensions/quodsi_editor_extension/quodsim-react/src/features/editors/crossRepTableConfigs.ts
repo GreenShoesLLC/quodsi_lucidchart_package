@@ -163,13 +163,13 @@ export const entityColumns: TableColumn[] = [
     format: formatPercentRaw,
   },
   {
-    key: "min_wip_mean",
-    label: "Min WIP",
+    key: "trough_wip_mean",
+    label: "Trough WIP",
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "max_wip_mean",
-    label: "Max WIP",
+    key: "peak_wip_mean",
+    label: "Peak WIP",
     format: (v) => formatDecimal(v, 2),
   },
 ];
