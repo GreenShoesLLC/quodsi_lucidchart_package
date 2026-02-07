@@ -1,4 +1,4 @@
-import { TransformationSet, VersionTransformation } from './TransformationTypes';
+import { TransformationSet } from './TransformationTypes';
 
 /**
  * Transformations for Connector objects
@@ -7,13 +7,12 @@ export const ConnectorTransforms: TransformationSet = {
     objectType: 'Connector',
     transformations: [
         {
-            sourceVersion: '1.0.0',
-            targetVersion: '1.1.0',
+            sourceVersion: '2026.02.03',
+            targetVersion: '2026.02.07',
             transform: (data: any) => ({
                 ...data,
-                logic: null // Add new property for Python script, initially null
+                description: data.description ?? ''
             })
         }
-        // Additional transformations can be added here as versions evolve
     ]
 };

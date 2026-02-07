@@ -6,6 +6,7 @@ import { ModelDefaults } from './ModelDefaults';
 
 export class Model implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Model;
+    description: string = '';
 
     static createDefault(id: string): Model {
         return new Model(

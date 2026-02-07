@@ -62,6 +62,8 @@ export class Activity extends FlowNode {
         return activity;
     }
 
+    description: string = '';
+
     constructor(
         public id: string,
         public name: string,

@@ -48,6 +48,7 @@ export class ModelUtils {
         const defaults: Model = {
             id: partialModel.id!, // ID must be provided
             name: partialModel.name || 'New Model',
+            description: partialModel.description || '',
             type: SimulationObjectType.Model,
             reps: ModelDefaults.DEFAULT_REPS,
             seed: ModelDefaults.DEFAULT_SEED,

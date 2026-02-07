@@ -4,6 +4,7 @@ import { ISerializedAction } from './ISerializedAction';
 export interface ISerializedConnector {
     id: string;
     name: string;
+    description?: string;
     type: SimulationObjectType;
     sourceId: string;
     sourceX: number;

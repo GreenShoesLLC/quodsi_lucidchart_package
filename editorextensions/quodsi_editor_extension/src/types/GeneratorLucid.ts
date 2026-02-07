@@ -34,6 +34,7 @@ export const setGeneratorLucidLogging = (enabled: boolean): void => {
 interface StoredGeneratorData {
     id: string;
     name?: string;
+    description?: string;
     x?: number;
     y?: number;
     generationConfig?: EntitySourceConfig;
@@ -88,6 +89,11 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             storedData?.y ?? 0
         );
 
+        // Restore description
+        if (storedData?.description !== undefined) {
+            generator.description = storedData.description;
+        }
+
         // Deserialize initial state modifications if stored as JSON
         if (generationConfig.initialStateModifications) {
             generationConfig.initialStateModifications = generationConfig.initialStateModifications.map(
@@ -141,6 +147,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         const dataToStore: StoredGeneratorData = {
             id: this.platformElementId,
             name: this.simObject.name,
+            description: this.simObject.description,
             x: this.simObject.x,
             y: this.simObject.y,
             generationConfig: {

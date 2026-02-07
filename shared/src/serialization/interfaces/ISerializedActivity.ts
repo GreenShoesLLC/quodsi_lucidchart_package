@@ -7,6 +7,7 @@ import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
 export interface ISerializedActivity {
     id: string;
     name: string;
+    description?: string;
     type: SimulationObjectType;
     x: number;
     y: number;

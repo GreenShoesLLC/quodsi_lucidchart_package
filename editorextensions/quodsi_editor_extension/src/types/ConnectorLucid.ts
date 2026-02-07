@@ -25,13 +25,14 @@ export const setConnectorLucidLogging = (enabled: boolean): void => {
 
 interface StoredConnectorData {
     id: string;
-    sourceX?: number;  // Source x coordinate
-    sourceY?: number;  // Source y coordinate
-    targetX?: number;  // Target x coordinate
-    targetY?: number;  // Target y coordinate
-    x?: number;        // Midpoint x coordinate (for backwards compatibility)
-    y?: number;        // Midpoint y coordinate (for backwards compatibility)
+    sourceX?: number;
+    sourceY?: number;
+    targetX?: number;
+    targetY?: number;
+    x?: number;
+    y?: number;
     name?: string;
+    description?: string;
     sourceId?: string;
     targetId?: string;
     weight?: number;
@@ -79,6 +80,11 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             storedData?.x ?? (endpoint1.x + endpoint2.x) / 2,
             storedData?.y ?? (endpoint1.y + endpoint2.y) / 2
         );
+
+        // Restore description
+        if (storedData?.description !== undefined) {
+            connector.description = storedData.description;
+        }
 
         // Deserialize state condition
         if (storedData?.stateCondition) {
@@ -146,13 +152,14 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         // Store updated data
         const dataToStore: StoredConnectorData = {
             id: this.platformElementId,
-            sourceX: this.simObject.sourceX,   // Store source x coordinate
-            sourceY: this.simObject.sourceY,   // Store source y coordinate
-            targetX: this.simObject.targetX,   // Store target x coordinate
-            targetY: this.simObject.targetY,   // Store target y coordinate
-            x: this.simObject.x,               // Store midpoint x (for backwards compatibility)
-            y: this.simObject.y,               // Store midpoint y (for backwards compatibility)
+            sourceX: this.simObject.sourceX,
+            sourceY: this.simObject.sourceY,
+            targetX: this.simObject.targetX,
+            targetY: this.simObject.targetY,
+            x: this.simObject.x,
+            y: this.simObject.y,
             name: this.simObject.name,
+            description: this.simObject.description,
             sourceId: this.simObject.sourceId,
             targetId: this.simObject.targetId,
             weight: this.simObject.weight,

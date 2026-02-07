@@ -4,6 +4,7 @@ import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
 export interface ISerializedGenerator {
     id: string;
     name: string;
+    description?: string;
     type: SimulationObjectType;
     x: number;
     y: number;

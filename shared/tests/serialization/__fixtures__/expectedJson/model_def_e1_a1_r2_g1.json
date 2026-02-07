@@ -2,11 +2,12 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-04-01T19:22:52.710Z"
+    "timestamp": "2026-02-07T12:50:55.145Z"
   },
   "model": {
     "id": "model-6",
     "name": "Model E1A1R2G1",
+    "description": "",
     "reps": 1,
     "seed": 12345,
     "oneClockUnit": "MINUTES",
@@ -23,24 +24,35 @@
     {
       "id": "00000000-0000-0000-0000-000000000000",
       "name": "Default Entity",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     },
     {
       "id": "entity-1",
       "name": "Entity1",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     }
   ],
   "activities": [
     {
       "id": "activity-1",
       "name": "Activity1",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -51,10 +63,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -65,24 +78,30 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         }
       ],
-      "connectors": []
+      "connectors": [],
+      "connectType": "Probability"
     }
   ],
   "resources": [
     {
       "id": "resource-1",
       "name": "Resource1",
+      "description": "",
       "type": "Resource",
+      "x": 0,
+      "y": 0,
       "capacity": 1
     },
     {
       "id": "resource-2",
       "name": "Resource2",
+      "description": "",
       "type": "Resource",
+      "x": 0,
+      "y": 0,
       "capacity": 1
     }
   ],
@@ -90,44 +109,38 @@
     {
       "id": "generator-1",
       "name": "Generator1",
+      "description": "",
       "type": "Generator",
-      "activityKeyId": "activity-1",
-      "entityId": "entity-1",
-      "periodicOccurrences": 10,
-      "periodIntervalDuration": {
-        "durationPeriodUnit": "HOURS",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 1
-          },
-          "description": ""
-        }
+      "x": 0,
+      "y": 0,
+      "generationConfig": {
+        "entityId": "entity-1",
+        "generatorType": "FREQUENCY",
+        "periodicOccurrences": 10,
+        "periodIntervalDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 1
+            },
+            "description": ""
+          }
+        },
+        "entitiesPerCreation": 1,
+        "periodicStartDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 0
+            },
+            "description": ""
+          }
+        },
+        "maxEntities": 999999
       },
-      "entitiesPerCreation": 1,
-      "periodicStartDuration": {
-        "durationPeriodUnit": "MINUTES",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 0
-          },
-          "description": ""
-        }
-      },
-      "maxEntities": null,
-      "connectors": [
-        {
-          "id": "connector-gen-1",
-          "name": "Generator1ToActivity1",
-          "sourceId": "generator-1",
-          "targetId": "activity-1",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
+      "exitConnector": "activity-1"
     }
   ],
   "resourceRequirements": [
@@ -171,5 +184,8 @@
         }
       ]
     }
-  ]
+  ],
+  "states": [],
+  "timePatterns": [],
+  "timeDistributedConfigs": []
 }

@@ -3,6 +3,7 @@ import { SimulationObjectType } from '../../types/elements/SimulationObjectType'
 export interface ISerializedResource {
     id: string;
     name: string;
+    description?: string;
     type: SimulationObjectType;
     x: number;
     y: number;

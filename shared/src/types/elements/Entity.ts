@@ -19,12 +19,14 @@ export class Entity extends PositionedSimulationObject {
         return entity;
     }
 
+    description: string = '';
+
     constructor(
         public id: string,
         public name: string,
         x: number = 0,
         y: number = 0
-    ) { 
+    ) {
         super();
         // Set location using inherited method
         this.setLocation(x, y);

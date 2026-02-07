@@ -26,9 +26,10 @@ export const setResourceLucidLogging = (enabled: boolean): void => {
 
 interface StoredResourceData {
     id: string;
-    x?: number;  // Added x coordinate
-    y?: number;  // Added y coordinate
+    x?: number;
+    y?: number;
     name?: string;
+    description?: string;
     capacity?: number;
     financialProperties?: any;
 }
@@ -64,6 +65,11 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        // Restore description
+        if (storedData?.description !== undefined) {
+            resource.description = storedData.description;
+        }
 
         // Deserialize financial properties
         if (storedData?.financialProperties) {
@@ -115,9 +121,10 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         // Store updated data
         const dataToStore: StoredResourceData = {
             id: this.platformElementId,
-            x: this.simObject.x,     // Store x coordinate
-            y: this.simObject.y,     // Store y coordinate
+            x: this.simObject.x,
+            y: this.simObject.y,
             name: this.simObject.name,
+            description: this.simObject.description,
             capacity: this.simObject.capacity,
             financialProperties: this.simObject.financialProperties?.toJSON()
         };

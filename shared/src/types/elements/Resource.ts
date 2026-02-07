@@ -19,12 +19,14 @@ export class Resource extends PositionedSimulationObject {
             id,
             'New Resource',
             1, // capacity
-            x, 
+            x,
             y
         );
 
         return resource;
     }
+
+    description: string = '';
 
     constructor(
         public id: string,
@@ -32,7 +34,7 @@ export class Resource extends PositionedSimulationObject {
         public capacity: number = 1,
         x: number = 0,
         y: number = 0
-    ) { 
+    ) {
         super();
         // Set location using inherited method
         this.setLocation(x, y);

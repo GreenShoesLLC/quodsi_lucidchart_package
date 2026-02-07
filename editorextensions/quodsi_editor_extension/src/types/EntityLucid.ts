@@ -25,9 +25,10 @@ export const setEntityLucidLogging = (enabled: boolean): void => {
 
 interface StoredEntityData {
     id: string;
-    x?: number;  // Added x coordinate
-    y?: number;  // Added y coordinate
+    x?: number;
+    y?: number;
     name?: string;
+    description?: string;
 }
 
 export class EntityLucid extends SimObjectLucid<Entity> {
@@ -53,6 +54,11 @@ export class EntityLucid extends SimObjectLucid<Entity> {
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        // Restore description
+        if (storedData?.description !== undefined) {
+            entity.description = storedData.description;
+        }
 
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(entity);
@@ -99,9 +105,10 @@ export class EntityLucid extends SimObjectLucid<Entity> {
         // Store updated data
         const dataToStore: StoredEntityData = {
             id: this.platformElementId,
-            x: this.simObject.x,     // Store x coordinate
-            y: this.simObject.y,     // Store y coordinate
-            name: this.simObject.name
+            x: this.simObject.x,
+            y: this.simObject.y,
+            name: this.simObject.name,
+            description: this.simObject.description
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);

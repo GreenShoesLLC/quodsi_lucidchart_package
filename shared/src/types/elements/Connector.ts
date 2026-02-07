@@ -91,6 +91,8 @@ export class Connector extends FlowNode {
         return connector;
     }
 
+    description: string = '';
+
     constructor(
         public id: string,
         public name: string,

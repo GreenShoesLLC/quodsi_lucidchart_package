@@ -31,6 +31,7 @@ import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuild
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { ExtensionDebugService } from "./logging/ExtensionDebugService";
 import { router } from "./messaging";
+import { LucidVersionManager } from "../versioning/LucidVersionManager";
 
 
 interface ChangeTracker {
@@ -48,6 +49,8 @@ export class ModelManager {
     private currentPage: PageProxy | null = null;
     private validationService: ModelValidationService;
     private currentValidationResult: ValidationResult | null = null;
+    private versionManager: LucidVersionManager;
+    private versionCheckedPageId: string | null = null;
 
     // Singleton instance and client reference
     private static instance: ModelManager | null = null;
@@ -106,6 +109,7 @@ export class ModelManager {
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
         this.validationService = new ModelValidationService();
+        this.versionManager = new LucidVersionManager();
         this.debug.log('ModelManager instance created');
     }
     /**
@@ -143,6 +147,18 @@ export class ModelManager {
         this.checkCacheTimeouts();
 
         if ((this.changeTracker.modelDefinitionDirty || !this.modelDefinition) && this.currentPage) {
+            // Check version once per page — upgrade storage data before rebuilding
+            if (this.versionCheckedPageId !== this.currentPage.id) {
+                if (this.storageAdapter.isQuodsiModel(this.currentPage)) {
+                    try {
+                        await this.versionManager.handlePageLoad(this.currentPage);
+                    } catch (error) {
+                        this.debug.error('Version check failed:', error);
+                    }
+                }
+                this.versionCheckedPageId = this.currentPage.id;
+            }
+
             const lucidElementFactory = new LucidElementFactory(this.storageAdapter)
             lucidElementFactory.setLogging(false);
             const builder = new ModelDefinitionPageBuilder(this.storageAdapter, lucidElementFactory);

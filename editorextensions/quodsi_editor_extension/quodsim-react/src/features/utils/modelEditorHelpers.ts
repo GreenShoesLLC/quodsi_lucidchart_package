@@ -41,6 +41,7 @@ export const extractModelData = (mod: ModelInput): Model => {
     warmupDateTime: data.warmupDateTime || null,
     startDateTime: data.startDateTime || null,
     finishDateTime: data.finishDateTime || null,
+    description: data.description || "",
   };
 
   return result;

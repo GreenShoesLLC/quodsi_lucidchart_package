@@ -37,6 +37,8 @@ export class Generator extends FlowNode {
         return new Generator(id, 'New Generator', generationConfig, undefined, x, y);
     }
 
+    description: string = '';
+
     constructor(
         public id: string,
         public name: string,

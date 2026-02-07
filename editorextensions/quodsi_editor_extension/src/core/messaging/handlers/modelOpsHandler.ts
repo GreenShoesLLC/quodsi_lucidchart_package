@@ -291,22 +291,7 @@ export class ModelOpsHandler {
             const documentId = document.id;
             const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
             const title = document.getTitle() || 'Untitled Document';
-            
-            // Debug: Check what data is actually stored on the page
-            const pageData = currentPage.shapeData.get('q_data');
-            const pageMeta = currentPage.shapeData.get('q_meta');
-            
-            ModelOpsHandler.logger.log('Storage debug after conversion:', {
-              documentId,
-              pageId: currentPage.id,
-              title,
-              isQuodsiModel,
-              hasPageData: !!pageData,
-              hasPageMeta: !!pageMeta,
-              pageData: pageData && typeof pageData === 'string' ? JSON.parse(pageData) : pageData,
-              pageMeta: pageMeta && typeof pageMeta === 'string' ? JSON.parse(pageMeta) : pageMeta
-            });
-            
+
             ModelOpsHandler.logger.log('Sending context refresh messages after conversion:', {
               documentId,
               pageId: currentPage.id,

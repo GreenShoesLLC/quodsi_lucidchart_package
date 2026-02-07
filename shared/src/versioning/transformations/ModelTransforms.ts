@@ -1,17 +1,17 @@
 import { TransformationSet } from './TransformationTypes';
 
 /**
- * Transformations for Model (ModelDefinition) objects
+ * Transformations for Model objects
  */
 export const ModelTransforms: TransformationSet = {
     objectType: 'Model',
     transformations: [
         {
-            sourceVersion: '1.0.0',
-            targetVersion: '1.1.0',
+            sourceVersion: '2026.02.03',
+            targetVersion: '2026.02.07',
             transform: (data: any) => ({
-                ...data
-                // No changes in this version, but structure is ready for future updates
+                ...data,
+                description: data.description ?? ''
             })
         }
     ]

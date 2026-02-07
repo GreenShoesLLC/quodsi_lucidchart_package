@@ -7,11 +7,11 @@ export const ResourceTransforms: TransformationSet = {
     objectType: 'Resource',
     transformations: [
         {
-            sourceVersion: '1.0.0',
-            targetVersion: '1.1.0',
+            sourceVersion: '2026.02.03',
+            targetVersion: '2026.02.07',
             transform: (data: any) => ({
-                ...data
-                // No changes in this version, but structure is ready for future updates
+                ...data,
+                description: data.description ?? ''
             })
         }
     ]

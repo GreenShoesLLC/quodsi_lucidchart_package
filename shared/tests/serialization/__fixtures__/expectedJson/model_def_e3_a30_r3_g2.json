@@ -2,11 +2,12 @@
   "formatVersion": "1.0",
   "metadata": {
     "version": "1.0",
-    "timestamp": "2025-04-01T19:22:52.719Z"
+    "timestamp": "2026-02-07T12:50:55.149Z"
   },
   "model": {
     "id": "model-9",
     "name": "Model E3A30R3G2",
+    "description": "",
     "reps": 1,
     "seed": 12345,
     "oneClockUnit": "MINUTES",
@@ -23,34 +24,51 @@
     {
       "id": "00000000-0000-0000-0000-000000000000",
       "name": "Default Entity",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     },
     {
       "id": "entity-1",
       "name": "Entity1",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     },
     {
       "id": "entity-2",
       "name": "Entity2",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     },
     {
       "id": "entity-3",
       "name": "Entity3",
-      "type": "Entity"
+      "description": "",
+      "type": "Entity",
+      "x": 0,
+      "y": 0
     }
   ],
   "activities": [
     {
       "id": "activity-1",
       "name": "Activity1",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -61,10 +79,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -75,10 +94,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -89,32 +109,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-1",
           "name": "Activity1ToActivity2",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-1",
           "targetId": "activity-2",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-2",
       "name": "Activity2",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -125,10 +157,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -139,10 +172,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -153,32 +187,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-2",
           "name": "Activity2ToActivity3",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-2",
           "targetId": "activity-3",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-3",
       "name": "Activity3",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -189,10 +235,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -203,10 +250,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -217,32 +265,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-3",
           "name": "Activity3ToActivity4",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-3",
           "targetId": "activity-4",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-4",
       "name": "Activity4",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -253,10 +313,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -267,10 +328,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -281,32 +343,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-4",
           "name": "Activity4ToActivity5",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-4",
           "targetId": "activity-5",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-5",
       "name": "Activity5",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -317,10 +391,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -331,10 +406,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -345,32 +421,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-5",
           "name": "Activity5ToActivity6",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-5",
           "targetId": "activity-6",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-6",
       "name": "Activity6",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -381,10 +469,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -395,10 +484,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -409,32 +499,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-6",
           "name": "Activity6ToActivity7",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-6",
           "targetId": "activity-7",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-7",
       "name": "Activity7",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -445,10 +547,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -459,10 +562,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -473,32 +577,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-7",
           "name": "Activity7ToActivity8",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-7",
           "targetId": "activity-8",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-8",
       "name": "Activity8",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -509,10 +625,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -523,10 +640,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -537,32 +655,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-8",
           "name": "Activity8ToActivity9",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-8",
           "targetId": "activity-9",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-9",
       "name": "Activity9",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -573,10 +703,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -587,10 +718,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -601,32 +733,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-9",
           "name": "Activity9ToActivity10",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-9",
           "targetId": "activity-10",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-10",
       "name": "Activity10",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -637,10 +781,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -651,10 +796,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -665,32 +811,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-10",
           "name": "Activity10ToActivity11",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-10",
           "targetId": "activity-11",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-11",
       "name": "Activity11",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -701,10 +859,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -715,10 +874,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -729,32 +889,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-11",
           "name": "Activity11ToActivity12",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-11",
           "targetId": "activity-12",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-12",
       "name": "Activity12",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -765,10 +937,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -779,10 +952,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -793,32 +967,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-12",
           "name": "Activity12ToActivity13",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-12",
           "targetId": "activity-13",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-13",
       "name": "Activity13",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -829,10 +1015,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -843,10 +1030,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -857,32 +1045,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-13",
           "name": "Activity13ToActivity14",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-13",
           "targetId": "activity-14",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-14",
       "name": "Activity14",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -893,10 +1093,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -907,10 +1108,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -921,32 +1123,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-14",
           "name": "Activity14ToActivity15",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-14",
           "targetId": "activity-15",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-15",
       "name": "Activity15",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -957,10 +1171,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -971,10 +1186,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -985,32 +1201,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-15",
           "name": "Activity15ToActivity16",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-15",
           "targetId": "activity-16",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-16",
       "name": "Activity16",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1021,10 +1249,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1035,10 +1264,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1049,32 +1279,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-16",
           "name": "Activity16ToActivity17",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-16",
           "targetId": "activity-17",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-17",
       "name": "Activity17",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1085,10 +1327,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1099,10 +1342,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1113,32 +1357,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-17",
           "name": "Activity17ToActivity18",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-17",
           "targetId": "activity-18",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-18",
       "name": "Activity18",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1149,10 +1405,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1163,10 +1420,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1177,32 +1435,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-18",
           "name": "Activity18ToActivity19",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-18",
           "targetId": "activity-19",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-19",
       "name": "Activity19",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1213,10 +1483,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1227,10 +1498,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1241,32 +1513,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-19",
           "name": "Activity19ToActivity20",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-19",
           "targetId": "activity-20",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-20",
       "name": "Activity20",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1277,10 +1561,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1291,10 +1576,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1305,32 +1591,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-20",
           "name": "Activity20ToActivity21",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-20",
           "targetId": "activity-21",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-21",
       "name": "Activity21",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1341,10 +1639,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1355,10 +1654,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1369,32 +1669,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-21",
           "name": "Activity21ToActivity22",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-21",
           "targetId": "activity-22",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-22",
       "name": "Activity22",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1405,10 +1717,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1419,10 +1732,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1433,32 +1747,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-22",
           "name": "Activity22ToActivity23",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-22",
           "targetId": "activity-23",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-23",
       "name": "Activity23",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1469,10 +1795,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1483,10 +1810,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1497,32 +1825,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-23",
           "name": "Activity23ToActivity24",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-23",
           "targetId": "activity-24",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-24",
       "name": "Activity24",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1533,10 +1873,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1547,10 +1888,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1561,32 +1903,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-24",
           "name": "Activity24ToActivity25",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-24",
           "targetId": "activity-25",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-25",
       "name": "Activity25",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1597,10 +1951,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1611,10 +1966,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1625,32 +1981,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-25",
           "name": "Activity25ToActivity26",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-25",
           "targetId": "activity-26",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-26",
       "name": "Activity26",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1661,10 +2029,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1675,10 +2044,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1689,32 +2059,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-26",
           "name": "Activity26ToActivity27",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-26",
           "targetId": "activity-27",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-27",
       "name": "Activity27",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1725,10 +2107,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1739,10 +2122,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1753,32 +2137,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-27",
           "name": "Activity27ToActivity28",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-27",
           "targetId": "activity-28",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-28",
       "name": "Activity28",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1789,10 +2185,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1803,10 +2200,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1817,32 +2215,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-28",
           "name": "Activity28ToActivity29",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-28",
           "targetId": "activity-29",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-29",
       "name": "Activity29",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1853,10 +2263,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1867,10 +2278,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1881,32 +2293,44 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
       "connectors": [
         {
           "id": "connector-29",
           "name": "Activity29ToActivity30",
+          "description": "",
+          "type": "Connector",
           "sourceId": "activity-29",
           "targetId": "activity-30",
-          "type": "Connector",
-          "probability": 1,
-          "connectType": "Probability",
-          "operationSteps": []
+          "sourceX": 0,
+          "sourceY": 0,
+          "targetX": 0,
+          "targetY": 0,
+          "x": 0,
+          "y": 0,
+          "weight": 1,
+          "actions": [],
+          "stateModifications": []
         }
-      ]
+      ],
+      "connectType": "Probability"
     },
     {
       "id": "activity-30",
       "name": "Activity30",
+      "description": "",
       "type": "Activity",
+      "x": 0,
+      "y": 0,
       "capacity": 1,
       "inboundQueueCapacity": 1,
       "outboundQueueCapacity": 1,
-      "operationSteps": [
+      "actions": [
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-1",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1917,10 +2341,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-1",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-2",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1931,10 +2356,11 @@
               "description": ""
             }
           },
-          "requirementId": "resource-2",
-          "quantity": 1
+          "keepResource": false
         },
         {
+          "actionType": "DELAY_WITH_RESOURCE",
+          "resourceRequirementId": "resource-3",
           "duration": {
             "durationPeriodUnit": "MINUTES",
             "distribution": {
@@ -1945,30 +2371,39 @@
               "description": ""
             }
           },
-          "requirementId": "resource-3",
-          "quantity": 1
+          "keepResource": false
         }
       ],
-      "connectors": []
+      "connectors": [],
+      "connectType": "Probability"
     }
   ],
   "resources": [
     {
       "id": "resource-1",
       "name": "Resource1",
+      "description": "",
       "type": "Resource",
+      "x": 0,
+      "y": 0,
       "capacity": 1
     },
     {
       "id": "resource-2",
       "name": "Resource2",
+      "description": "",
       "type": "Resource",
+      "x": 0,
+      "y": 0,
       "capacity": 1
     },
     {
       "id": "resource-3",
       "name": "Resource3",
+      "description": "",
       "type": "Resource",
+      "x": 0,
+      "y": 0,
       "capacity": 1
     }
   ],
@@ -1976,86 +2411,74 @@
     {
       "id": "generator-1",
       "name": "Generator1",
+      "description": "",
       "type": "Generator",
-      "activityKeyId": "activity-1",
-      "entityId": "entity-1",
-      "periodicOccurrences": 10,
-      "periodIntervalDuration": {
-        "durationPeriodUnit": "HOURS",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 1
-          },
-          "description": ""
-        }
+      "x": 0,
+      "y": 0,
+      "generationConfig": {
+        "entityId": "entity-1",
+        "generatorType": "FREQUENCY",
+        "periodicOccurrences": 10,
+        "periodIntervalDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 1
+            },
+            "description": ""
+          }
+        },
+        "entitiesPerCreation": 1,
+        "periodicStartDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 0
+            },
+            "description": ""
+          }
+        },
+        "maxEntities": 999999
       },
-      "entitiesPerCreation": 1,
-      "periodicStartDuration": {
-        "durationPeriodUnit": "MINUTES",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 0
-          },
-          "description": ""
-        }
-      },
-      "maxEntities": null,
-      "connectors": [
-        {
-          "id": "connector-gen-1",
-          "name": "Generator1ToActivity1",
-          "sourceId": "generator-1",
-          "targetId": "activity-1",
-          "type": "Connector",
-          "probability": 0.5,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
+      "exitConnector": "activity-1"
     },
     {
       "id": "generator-2",
       "name": "Generator2",
+      "description": "",
       "type": "Generator",
-      "activityKeyId": "activity-1",
-      "entityId": "entity-1",
-      "periodicOccurrences": 10,
-      "periodIntervalDuration": {
-        "durationPeriodUnit": "HOURS",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 1
-          },
-          "description": ""
-        }
+      "x": 0,
+      "y": 0,
+      "generationConfig": {
+        "entityId": "entity-1",
+        "generatorType": "FREQUENCY",
+        "periodicOccurrences": 10,
+        "periodIntervalDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 1
+            },
+            "description": ""
+          }
+        },
+        "entitiesPerCreation": 1,
+        "periodicStartDuration": {
+          "durationPeriodUnit": "HOURS",
+          "distribution": {
+            "distributionType": "constant",
+            "parameters": {
+              "value": 0
+            },
+            "description": ""
+          }
+        },
+        "maxEntities": 999999
       },
-      "entitiesPerCreation": 1,
-      "periodicStartDuration": {
-        "durationPeriodUnit": "MINUTES",
-        "distribution": {
-          "distributionType": "constant",
-          "parameters": {
-            "value": 0
-          },
-          "description": ""
-        }
-      },
-      "maxEntities": null,
-      "connectors": [
-        {
-          "id": "connector-gen-2",
-          "name": "Generator2ToActivity1",
-          "sourceId": "generator-2",
-          "targetId": "activity-1",
-          "type": "Connector",
-          "probability": 0.5,
-          "connectType": "Probability",
-          "operationSteps": []
-        }
-      ]
+      "exitConnector": "activity-1"
     }
   ],
   "resourceRequirements": [
@@ -2119,5 +2542,8 @@
         }
       ]
     }
-  ]
+  ],
+  "states": [],
+  "timePatterns": [],
+  "timeDistributedConfigs": []
 }

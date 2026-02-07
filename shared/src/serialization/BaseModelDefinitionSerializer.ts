@@ -75,6 +75,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 id: model.id,
                 name: model.name,
+                description: model.description,
                 reps: model.reps,
                 seed: model.seed,
                 oneClockUnit: model.oneClockUnit,
@@ -101,6 +102,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             return {
                 id: entity.id,
                 name: entity.name,
+                description: entity.description,
                 type: entity.type,
                 x: entity.x,
                 y: entity.y
@@ -124,6 +126,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             const serialized: ISerializedActivity = {
                 id: activity.id,
                 name: activity.name,
+                description: activity.description,
                 type: activity.type,
                 x: activity.x,
                 y: activity.y,
@@ -188,6 +191,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             const serialized: ISerializedGenerator = {
                 id: generator.id,
                 name: generator.name,
+                description: generator.description,
                 type: generator.type,
                 x: generator.x,
                 y: generator.y,
@@ -218,6 +222,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             const serialized: ISerializedResource = {
                 id: resource.id,
                 name: resource.name,
+                description: resource.description,
                 type: resource.type,
                 x: resource.x,
                 y: resource.y,
@@ -302,6 +307,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             const serialized: ISerializedConnector = {
                 id: connector.id,
                 name: connector.name,
+                description: connector.description,
                 type: connector.type,
                 sourceId: connector.sourceId,
                 targetId: connector.targetId, // Legacy field

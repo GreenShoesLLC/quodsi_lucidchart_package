@@ -19,6 +19,7 @@ export interface ISerializedModel {
     model: {
         id: string;
         name: string;
+        description?: string;
         reps: number;
         seed?: number;
         oneClockUnit?: PeriodUnit;

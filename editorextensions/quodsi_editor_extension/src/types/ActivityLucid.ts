@@ -37,6 +37,7 @@ interface StoredActivityData {
     x?: number;
     y?: number;
     name?: string;
+    description?: string;
     capacity?: number;
     inboundQueueCapacity?: number;
     outboundQueueCapacity?: number;
@@ -128,6 +129,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             storedData?.y ?? 0
         );
 
+        // Restore description
+        if (storedData?.description !== undefined) {
+            activity.description = storedData.description;
+        }
+
         // Deserialize financial properties
         if (storedData?.financialProperties) {
             activity.financialProperties = ActivityFinancialProperties.fromJSON(storedData.financialProperties);
@@ -186,6 +192,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             x: this.simObject.x,     // Store x coordinate
             y: this.simObject.y,     // Store y coordinate
             name: this.simObject.name,
+            description: this.simObject.description,
             capacity: this.simObject.capacity,
             inboundQueueCapacity: this.simObject.inboundQueueCapacity,
             outboundQueueCapacity: this.simObject.outboundQueueCapacity,

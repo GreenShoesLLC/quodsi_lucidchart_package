@@ -14,6 +14,7 @@ import { SimObjectLucid } from './SimObjectLucid';
 interface StoredModelData {
     id: string;
     name?: string;
+    description?: string;
     reps?: number;
     seed?: number;
     oneClockUnit?: PeriodUnit;
@@ -61,6 +62,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
         if (storedData) {
             // Copy properties from stored data
             model.name = storedData.name || this.getElementName();
+            model.description = storedData.description ?? '';
             model.reps = storedData.reps ?? ModelDefaults.DEFAULT_REPS;
             model.seed = storedData.seed ?? ModelDefaults.DEFAULT_SEED;
             model.oneClockUnit = storedData.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
@@ -90,6 +92,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
         const dataToStore = {
             id: this.platformElementId,
             name: this.simObject.name,
+            description: this.simObject.description,
             reps: this.simObject.reps,
             seed: this.simObject.seed,
             oneClockUnit: this.simObject.oneClockUnit,
