@@ -69,9 +69,9 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
     messageData.validationResult = validationResult;
     
     const item = items[0];
-    const metadata = modelManager.getMetadata(item);
-    
-    if (metadata) {
+    const typeInfo = modelManager.getElementType(item);
+
+    if (typeInfo) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
@@ -118,8 +118,8 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
         messageData.error = 'Error processing connector data';
       }
     } else {
-      console.error('[ConnectorProcessor] No metadata found for connector');
-      messageData.error = 'No metadata found for connector';
+      console.error('[ConnectorProcessor] No type info found for connector');
+      messageData.error = 'No type info found for connector';
     }
     
     return messageData;

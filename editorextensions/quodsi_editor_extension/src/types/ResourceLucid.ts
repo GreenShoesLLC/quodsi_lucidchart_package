@@ -184,13 +184,12 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted resource, block ID: ${block.id}`, storedData);
 
-        // Set up both data and metadata using setElementData
+        // Set up element data (type + component data merged into single q_data)
         storageAdapter.setElementData(
             block,
             storedData,
             SimulationObjectType.Resource,
             {
-                version: "1.0.0",
                 mappingSource: mappingSource
             }
         );

@@ -56,9 +56,9 @@ export class EntityProcessor extends BaseSelectionProcessor {
     messageData.validationResult = validationResult;
     
     const item = items[0];
-    const metadata = modelManager.getMetadata(item);
-    
-    if (metadata) {
+    const typeInfo = modelManager.getElementType(item);
+
+    if (typeInfo) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
@@ -86,8 +86,8 @@ export class EntityProcessor extends BaseSelectionProcessor {
         messageData.error = 'Error processing entity data';
       }
     } else {
-      console.error('[EntityProcessor] No metadata found for entity');
-      messageData.error = 'No metadata found for entity';
+      console.error('[EntityProcessor] No type info found for entity');
+      messageData.error = 'No type info found for entity';
     }
     
     return messageData;

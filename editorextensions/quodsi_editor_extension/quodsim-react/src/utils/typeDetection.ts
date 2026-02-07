@@ -7,7 +7,7 @@ import { ExtendedModelItemData } from '../types/ModelItemData';
  * This utility centralizes the logic for detecting element types by checking
  * multiple possible sources in priority order:
  * 1. Resource-specific checks (highest priority due to common type confusion)
- * 2. metadata.type or q_meta.type (authoritative sources)
+ * 2. metadata.type (authoritative source)
  * 3. DiagramElementType.LINE → Connector mapping
  * 4. Provided elementType parameter
  *
@@ -29,15 +29,14 @@ export function getSimulationObjectType(
     currentElement?.type === "Resource" ||
     currentElement?.metadata?.type === SimulationObjectType.Resource ||
     currentElement?.metadata?.type === "Resource" ||
-    currentElement?.q_meta?.type === "Resource" ||
     elementData?.type === "Resource";
 
   if (isResource) {
     return SimulationObjectType.Resource;
   }
 
-  // Use metadata/q_meta type if available (most authoritative)
-  const metadataType = currentElement?.metadata?.type || currentElement?.q_meta?.type;
+  // Use metadata type if available (most authoritative)
+  const metadataType = currentElement?.metadata?.type;
   if (metadataType && metadataType !== SimulationObjectType.None) {
     // Ensure it's a valid SimulationObjectType
     if (typeof metadataType === 'number') {

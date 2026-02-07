@@ -66,8 +66,8 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         // Process all blocks
         for (const [blockId, block] of page.allBlocks) {
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
-            const currentMeta = storageAdapter.getMetadata(block);
-            const currentType = currentMeta?.type ?? null;
+            const typeInfo = storageAdapter.getElementType(block);
+            const currentType = typeInfo?.type ?? null;
 
             // Get proposed type from analysis (null if isolated/skipped)
             const proposedType = blockAnalysis?.elementType ?? null;
@@ -99,8 +99,8 @@ export class LucidPageAnalyzer extends QuodsiLogger {
 
         // Process all lines
         for (const [lineId, line] of page.allLines) {
-            const currentMeta = storageAdapter.getMetadata(line);
-            const currentType = currentMeta?.type ?? null;
+            const lineTypeInfo = storageAdapter.getElementType(line);
+            const currentType = lineTypeInfo?.type ?? null;
 
             // Check if line has valid connections
             const endpoint1 = line.getEndpoint1();

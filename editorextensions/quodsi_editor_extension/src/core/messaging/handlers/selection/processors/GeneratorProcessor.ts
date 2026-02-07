@@ -59,9 +59,9 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
     messageData.validationResult = validationResult;
 
     const item = items[0];
-    const metadata = modelManager.getMetadata(item);
+    const typeInfo = modelManager.getElementType(item);
 
-    if (metadata) {
+    if (typeInfo) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
@@ -89,8 +89,8 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
         messageData.error = 'Error processing generator data';
       }
     } else {
-      console.error('[GeneratorProcessor] No metadata found for generator');
-      messageData.error = 'No metadata found for generator';
+      console.error('[GeneratorProcessor] No type info found for generator');
+      messageData.error = 'No type info found for generator';
     }
     
     return messageData;

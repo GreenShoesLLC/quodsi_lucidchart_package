@@ -21,63 +21,14 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
       data: element.data,
       metadata: {
         type: element.metadata.type,
-        version: element.metadata.version || '1.0',
-        lastModified: element.metadata.lastModified || new Date().toISOString(),
         id: element.id,
-        isUnconverted: element.metadata.isUnconverted
+        mappingSource: element.metadata.mappingSource
       },
       name: element.name || `Item ${element.id}`,
-      isUnconverted: element.isUnconverted,
-      q_meta: element.q_meta || element.userData?.q_meta || null
+      isUnconverted: element.isUnconverted
     };
   }
-  
-  // Check for LucidChart specific q_meta and q_data properties
-  if (element.q_meta || element.userData?.q_meta) {
-    let q_meta = element.q_meta ? element.q_meta : element.userData?.q_meta;
-    let q_data = element.q_data ? element.q_data : element.userData?.q_data;
-    
-    // Parse q_meta if it's a string
-    if (typeof q_meta === 'string') {
-      try {
-        q_meta = JSON.parse(q_meta);
-        debugService.debug('[transformToModelItemData] Parsed q_meta from string:', q_meta);
-      } catch (error) {
-        debugService.debug('[transformToModelItemData] Failed to parse q_meta string:', error);
-      }
-    }
-    
-    // Parse q_data if it's a string
-    if (typeof q_data === 'string') {
-      try {
-        q_data = JSON.parse(q_data);
-        debugService.debug('[transformToModelItemData] Parsed q_data from string:', q_data);
-      } catch (error) {
-        debugService.debug('[transformToModelItemData] Failed to parse q_data string:', error);
-      }
-    }
-    
-    // If we have valid q_meta, use it
-    if (q_meta && typeof q_meta === 'object' && q_meta.type) {
-      debugService.debug('[transformToModelItemData] Using q_meta data for element type:', q_meta.type);
-      return {
-        id: element.id,
-        data: q_data || { id: element.id },
-        metadata: {
-          type: q_meta.type as SimulationObjectType,
-          version: q_meta.version || '1.0',
-          lastModified: q_meta.lastModified || new Date().toISOString(),
-          id: element.id,
-          isUnconverted: false
-        },
-        name: q_data?.name || element.text || `Item ${element.id}`,
-        isUnconverted: false,
-        q_meta,
-        q_data
-      };
-    }
-  }
-  
+
   // Determine diagram element type
   let diagramElementType = DiagramElementType.BLOCK; // Default to BLOCK
   if ('type' in element) {
@@ -126,21 +77,17 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
         name: element.text || `Item ${element.id}`
       },
       metadata: {
-        type: simulationType, 
-        version: '1.0',
-        lastModified: new Date().toISOString(),
-        id: element.id,
-        isUnconverted: false // Default to false
+        type: simulationType,
+        id: element.id
       },
       name: element.text || `Item ${element.id}`,
       isUnconverted: false,
-      q_meta: element.q_meta || element.userData?.q_meta || null,
       q_data: element.q_data || element.userData?.q_data || null,
       type: element.type,
       text: element.text
     };
   }
-  
+
   // Fallback for unknown format
   debugService.debug('[transformToModelItemData] Using fallback for unknown format');
   return {
@@ -148,14 +95,10 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
     data: {},
     metadata: {
       type: SimulationObjectType.None,
-      version: '1.0',
-      lastModified: new Date().toISOString(),
-      id: element.id || 'unknown',
-      isUnconverted: false
+      id: element.id || 'unknown'
     },
     name: element.text || `Unknown Element`,
     isUnconverted: false,
-    q_meta: element.q_meta || element.userData?.q_meta || null,
     q_data: element.q_data || element.userData?.q_data || null,
     type: element.type,
     text: element.text

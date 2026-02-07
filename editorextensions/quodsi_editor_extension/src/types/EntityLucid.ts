@@ -164,13 +164,12 @@ export class EntityLucid extends SimObjectLucid<Entity> {
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted entity, block ID: ${block.id}`, storedData);
 
-        // Set up both data and metadata using setElementData
+        // Set up element data (type + component data merged into single q_data)
         storageAdapter.setElementData(
             block,
             storedData,
             SimulationObjectType.Entity,
             {
-                version: "1.0.0",
                 mappingSource: mappingSource
             }
         );

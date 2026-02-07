@@ -51,23 +51,23 @@ export const selectionTypeUtils = {
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
-    const metadata = await modelManager.getMetadata(item);
-    console.log('[selectionTypeUtils] Retrieved metadata', { 
-      itemId: item.id, 
-      metadata 
+    const typeInfo = modelManager.getElementType(item);
+    console.log('[selectionTypeUtils] Retrieved type info', {
+      itemId: item.id,
+      typeInfo
     });
 
-    if (!metadata?.type || metadata.type === SimulationObjectType.None) {
-      console.log('[selectionTypeUtils] Invalid or None type metadata, treating as unconverted', { 
-        itemId: item.id 
+    if (!typeInfo?.type || typeInfo.type === SimulationObjectType.None) {
+      console.log('[selectionTypeUtils] Invalid or None type, treating as unconverted', {
+        itemId: item.id
       });
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
-    const selectionType = this.mapElementTypeToSelectionType(metadata.type);
+    const selectionType = this.mapElementTypeToSelectionType(typeInfo.type);
     console.log('[selectionTypeUtils] Mapped element type to selection type', {
       itemId: item.id,
-      elementType: metadata.type,
+      elementType: typeInfo.type,
       selectionType
     });
     

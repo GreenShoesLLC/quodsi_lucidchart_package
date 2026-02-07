@@ -59,9 +59,9 @@ export class ActivityProcessor extends BaseSelectionProcessor {
     messageData.validationResult = validationResult;
 
     const item = items[0];
-    const metadata = modelManager.getMetadata(item);
+    const typeInfo = modelManager.getElementType(item);
 
-    if (metadata) {
+    if (typeInfo) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
@@ -93,8 +93,8 @@ export class ActivityProcessor extends BaseSelectionProcessor {
         messageData.error = 'Error processing activity data';
       }
     } else {
-      console.error('[ActivityProcessor] No metadata found for activity');
-      messageData.error = 'No metadata found for activity';
+      console.error('[ActivityProcessor] No type info found for activity');
+      messageData.error = 'No type info found for activity';
     }
     
     return messageData;

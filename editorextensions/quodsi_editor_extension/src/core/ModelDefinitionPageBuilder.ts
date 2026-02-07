@@ -136,12 +136,12 @@ export class ModelDefinitionPageBuilder {
 
             // First pass: Organize blocks by type
             for (const [blockId, block] of page.allBlocks) {
-                const metadata = this.storageAdapter.getMetadata(block);
-                if (!metadata) {
-                    this.log(`No metadata found for block ${blockId}`, 'warn');
+                const typeInfo = this.storageAdapter.getElementType(block);
+                if (!typeInfo) {
+                    this.log(`No type info found for block ${blockId}`, 'warn');
                     continue;
                 }
-                blocksByType.get(metadata.type)?.push(block);
+                blocksByType.get(typeInfo.type)?.push(block);
             }
             // Process types in dependency order
 
@@ -199,11 +199,11 @@ export class ModelDefinitionPageBuilder {
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
             for (const [lineId, line] of page.allLines) {
-                const metadata = this.storageAdapter.getMetadata(line);
-                if (!metadata || metadata.type !== SimulationObjectType.Connector) continue;
+                const typeInfo = this.storageAdapter.getElementType(line);
+                if (!typeInfo || typeInfo.type !== SimulationObjectType.Connector) continue;
 
                 try {
-                    const platformObject = this.elementFactory.createPlatformObject(line, metadata.type);
+                    const platformObject = this.elementFactory.createPlatformObject(line, typeInfo.type);
                     const connector = platformObject.getSimulationObject();
 
                     // Skip adding self-referencing connectors

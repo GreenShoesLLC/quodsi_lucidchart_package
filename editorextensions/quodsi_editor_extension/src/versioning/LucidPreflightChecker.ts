@@ -2,10 +2,10 @@ import { UpgradeIssue, UpgradeIssueSeverity } from '@quodsi/shared';
 import { PageProxy } from 'lucid-extension-sdk';
 
 /**
- * Performs Lucid-specific preflight checks
+ * Performs Lucid-specific preflight checks.
+ * In the new format, version is stored only on the page (in q_data), not per-element.
  */
 export class LucidPreflightChecker {
-    private static readonly META_KEY = 'q_meta';
     private static readonly DATA_KEY = 'q_data';
 
     /**
@@ -14,27 +14,35 @@ export class LucidPreflightChecker {
     async validatePage(page: PageProxy): Promise<UpgradeIssue[]> {
         const issues: UpgradeIssue[] = [];
 
-        // Check if page has model metadata
-        const metaStr = page.shapeData.get(LucidPreflightChecker.META_KEY);
-        if (!metaStr || typeof metaStr !== 'string') {
+        // Check if page has model data with type and version
+        const dataStr = page.shapeData.get(LucidPreflightChecker.DATA_KEY);
+        if (!dataStr || typeof dataStr !== 'string') {
             issues.push({
-                message: 'Page is missing q_meta data',
+                message: 'Page is missing q_data',
                 severity: UpgradeIssueSeverity.Error
             });
-            return issues; // Early return as other checks depend on q_meta
+            return issues;
         }
 
         try {
-            const metadata = JSON.parse(metaStr);
-            const pageVersion = metadata.version;
+            const data = JSON.parse(dataStr);
 
-            // Validate all elements have consistent versions
-            const elementIssues = await this.validateElementVersions(page, pageVersion);
-            issues.push(...elementIssues);
+            if (!data.type) {
+                issues.push({
+                    message: 'Page q_data is missing type field',
+                    severity: UpgradeIssueSeverity.Error
+                });
+            }
 
+            if (!data.version) {
+                issues.push({
+                    message: 'Page q_data is missing version field',
+                    severity: UpgradeIssueSeverity.Error
+                });
+            }
         } catch (error) {
             issues.push({
-                message: `Error parsing page metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                message: `Error parsing page data: ${error instanceof Error ? error.message : 'Unknown error'}`,
                 severity: UpgradeIssueSeverity.Error
             });
         }
@@ -43,72 +51,15 @@ export class LucidPreflightChecker {
     }
 
     /**
-     * Validates that all elements have matching versions
-     */
-    private async validateElementVersions(page: PageProxy, pageVersion: string): Promise<UpgradeIssue[]> {
-        const issues: UpgradeIssue[] = [];
-
-        // Check blocks
-        for (const block of page.blocks.values()) {
-            const metaStr = block.shapeData.get(LucidPreflightChecker.META_KEY);
-            if (!metaStr || typeof metaStr !== 'string') continue; // Skip non-Quodsi elements
-
-            try {
-                const metadata = JSON.parse(metaStr);
-                if (metadata.version !== pageVersion) {
-                    issues.push({
-                        elementId: block.id,
-                        elementType: metadata.type,
-                        message: `Block version (${metadata.version}) does not match page version (${pageVersion})`,
-                        severity: UpgradeIssueSeverity.Error
-                    });
-                }
-            } catch (error) {
-                issues.push({
-                    elementId: block.id,
-                    message: `Error parsing block metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    severity: UpgradeIssueSeverity.Error
-                });
-            }
-        }
-
-        // Check lines
-        for (const line of page.lines.values()) {
-            const metaStr = line.shapeData.get(LucidPreflightChecker.META_KEY);
-            if (!metaStr || typeof metaStr !== 'string') continue; // Skip non-Quodsi elements
-
-            try {
-                const metadata = JSON.parse(metaStr);
-                if (metadata.version !== pageVersion) {
-                    issues.push({
-                        elementId: line.id,
-                        elementType: metadata.type,
-                        message: `Line version (${metadata.version}) does not match page version (${pageVersion})`,
-                        severity: UpgradeIssueSeverity.Error
-                    });
-                }
-            } catch (error) {
-                issues.push({
-                    elementId: line.id,
-                    message: `Error parsing line metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                    severity: UpgradeIssueSeverity.Error
-                });
-            }
-        }
-
-        return issues;
-    }
-
-    /**
-     * Gets the version from page metadata
+     * Gets the version from page's q_data
      */
     getPageVersion(page: PageProxy): string | null {
-        const metaStr = page.shapeData.get(LucidPreflightChecker.META_KEY);
-        if (!metaStr || typeof metaStr !== 'string') return null;
+        const dataStr = page.shapeData.get(LucidPreflightChecker.DATA_KEY);
+        if (!dataStr || typeof dataStr !== 'string') return null;
 
         try {
-            const metadata = JSON.parse(metaStr);
-            return metadata.version;
+            const data = JSON.parse(dataStr);
+            return data.version || null;
         } catch {
             return null;
         }

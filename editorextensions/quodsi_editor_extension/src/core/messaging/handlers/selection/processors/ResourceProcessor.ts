@@ -56,9 +56,9 @@ export class ResourceProcessor extends BaseSelectionProcessor {
     messageData.validationResult = validationResult;
     
     const item = items[0];
-    const metadata = modelManager.getMetadata(item);
-    
-    if (metadata) {
+    const typeInfo = modelManager.getElementType(item);
+
+    if (typeInfo) {
       try {
         // Get model item data
         messageData.modelItemData = await itemDataBuilder.buildModelItemData(
@@ -86,8 +86,8 @@ export class ResourceProcessor extends BaseSelectionProcessor {
         messageData.error = 'Error processing resource data';
       }
     } else {
-      console.error('[ResourceProcessor] No metadata found for resource');
-      messageData.error = 'No metadata found for resource';
+      console.error('[ResourceProcessor] No type info found for resource');
+      messageData.error = 'No type info found for resource';
     }
     
     return messageData;

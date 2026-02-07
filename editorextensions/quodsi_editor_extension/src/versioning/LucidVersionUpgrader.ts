@@ -1,20 +1,19 @@
-import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue } from '@quodsi/shared';
+import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION } from '@quodsi/shared';
 import { getTransformationsBetweenVersions } from '@quodsi/shared';
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { LucidPreflightChecker } from './LucidPreflightChecker';
 
 interface ShapeDataBackup {
-    meta: string;
     data: string;
 }
 
 /**
- * Lucid-specific implementation of version upgrader
+ * Lucid-specific implementation of version upgrader.
+ * Works with the single q_data key format (type, id, mappingSource, version all in q_data).
  */
 export class LucidVersionUpgrader extends BaseVersionUpgrader {
-    private static readonly META_KEY = 'q_meta';
     private static readonly DATA_KEY = 'q_data';
-    
+
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
 
@@ -25,7 +24,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     }
 
     /**
-     * Gets the source version from the page metadata
+     * Gets the source version from the page's q_data (version field)
      */
     protected async getSourceVersion(page: PageProxy): Promise<string> {
         const version = this.preflightChecker.getPageVersion(page);
@@ -60,14 +59,13 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     }
 
     /**
-     * Backs up an element's shape data
+     * Backs up an element's shape data (only q_data now)
      */
     private backupElementData(id: string, element: ElementProxy): void {
-        const meta = element.shapeData.get(LucidVersionUpgrader.META_KEY);
         const data = element.shapeData.get(LucidVersionUpgrader.DATA_KEY);
 
-        if (meta && data && typeof meta === 'string' && typeof data === 'string') {
-            this.backupData.set(id, { meta, data });
+        if (data && typeof data === 'string') {
+            this.backupData.set(id, { data });
         }
     }
 
@@ -79,50 +77,61 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const transformations = getTransformationsBetweenVersions(sourceVersion, this.currentVersion);
 
         // Upgrade page/model first
-        await this.upgradeElement(page, transformations, 'Model');
+        await this.upgradeElement(page, transformations, true);
 
         // Upgrade blocks
         for (const block of page.blocks.values()) {
-            await this.upgradeElement(block, transformations);
+            await this.upgradeElement(block, transformations, false);
         }
 
         // Upgrade lines
         for (const line of page.lines.values()) {
-            await this.upgradeElement(line, transformations);
+            await this.upgradeElement(line, transformations, false);
         }
     }
 
     /**
-     * Upgrades a single element
+     * Upgrades a single element's q_data
      */
     private async upgradeElement(
-        element: ElementProxy, 
-        transformations: any[], 
-        forceType?: string
+        element: ElementProxy,
+        transformations: any[],
+        isPage: boolean
     ): Promise<void> {
-        const metaStr = element.shapeData.get(LucidVersionUpgrader.META_KEY);
         const dataStr = element.shapeData.get(LucidVersionUpgrader.DATA_KEY);
 
-        if (!metaStr || !dataStr || typeof metaStr !== 'string' || typeof dataStr !== 'string') return;
+        if (!dataStr || typeof dataStr !== 'string') return;
 
         try {
-            const meta = JSON.parse(metaStr);
             const data = JSON.parse(dataStr);
+            const elementType = data.type;
 
-            const elementType = forceType || meta.type;
+            if (!elementType) return;
+
             const transform = transformations.find(t => t.objectType === elementType);
 
             if (transform && transform.transformations.length > 0) {
-                // Transform the data
-                const newData = transform.transformations[0].transform(data);
+                // Transform the component data
+                const transformedData = transform.transformations[0].transform(data);
 
-                // Update metadata
-                meta.version = this.currentVersion;
-                meta.lastModified = new Date().toISOString();
+                // Preserve type info fields
+                transformedData.type = data.type;
+                transformedData.id = data.id;
+                if (data.mappingSource) {
+                    transformedData.mappingSource = data.mappingSource;
+                }
+
+                // Update version on page only
+                if (isPage) {
+                    transformedData.version = this.currentVersion;
+                }
 
                 // Save back to element
-                element.shapeData.set(LucidVersionUpgrader.META_KEY, JSON.stringify(meta));
-                element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(newData));
+                element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(transformedData));
+            } else if (isPage) {
+                // Even if no transform needed, update page version
+                data.version = this.currentVersion;
+                element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(data));
             }
         } catch (error) {
             throw new Error(`Failed to upgrade element ${element.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -130,36 +139,22 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     }
 
     /**
-     * Verifies upgrade and cleans up backup if successful
+     * Verifies upgrade was successful
      */
     protected async finalizeUpgrade(page: PageProxy): Promise<void> {
-        // Verify blocks
-        for (const block of page.blocks.values()) {
-            const metaStr = block.shapeData.get(LucidVersionUpgrader.META_KEY);
-            if (!metaStr || typeof metaStr !== 'string') continue;
-
+        // Verify the page version was updated
+        const pageDataStr = page.shapeData.get(LucidVersionUpgrader.DATA_KEY);
+        if (pageDataStr && typeof pageDataStr === 'string') {
             try {
-                const meta = JSON.parse(metaStr);
-                if (meta.version !== this.currentVersion) {
-                    throw new Error(`Block ${block.id} was not upgraded correctly`);
+                const pageData = JSON.parse(pageDataStr);
+                if (pageData.version !== this.currentVersion) {
+                    throw new Error(`Page version was not upgraded correctly`);
                 }
             } catch (error) {
-                throw new Error(`Failed to verify block ${block.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-            }
-        }
-
-        // Verify lines
-        for (const line of page.lines.values()) {
-            const metaStr = line.shapeData.get(LucidVersionUpgrader.META_KEY);
-            if (!metaStr || typeof metaStr !== 'string') continue;
-
-            try {
-                const meta = JSON.parse(metaStr);
-                if (meta.version !== this.currentVersion) {
-                    throw new Error(`Line ${line.id} was not upgraded correctly`);
+                if (error instanceof Error && error.message.includes('not upgraded')) {
+                    throw error;
                 }
-            } catch (error) {
-                throw new Error(`Failed to verify line ${line.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                throw new Error(`Failed to verify page upgrade: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
         }
 
@@ -202,7 +197,6 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
      * Restores an element's shape data from backup
      */
     private restoreElementData(element: ElementProxy, backup: ShapeDataBackup): void {
-        element.shapeData.set(LucidVersionUpgrader.META_KEY, backup.meta);
         element.shapeData.set(LucidVersionUpgrader.DATA_KEY, backup.data);
     }
 }

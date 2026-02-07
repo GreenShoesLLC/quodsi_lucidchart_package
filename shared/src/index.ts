@@ -22,7 +22,7 @@ export * from './types/ProcessAnalysisResult';
 export * from './types/SelectionState';
 export * from './types/SelectionType';
 export * from './types/simComponentType';
-export * from './types/MetaData';
+export * from './types/ElementTypeInfo';
 
 // Element types
 export * from "./types/elements/RunState";

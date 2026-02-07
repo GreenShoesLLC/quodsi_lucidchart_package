@@ -278,13 +278,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
 
         ComponentLogger.log(LOG_PREFIX, `Setting element data for connector ID: ${line.id}`, storedData);
 
-        // Set up both data and metadata
+        // Set up element data (type + component data merged into single q_data)
         storageAdapter.setElementData(
             line,
             storedData,
             SimulationObjectType.Connector,
             {
-                version: "1.0.0",
                 mappingSource: mappingSource
             }
         );

@@ -157,8 +157,6 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           type: selectionData.modelItemData.type,
           hasMetadata: !!selectionData.modelItemData.metadata,
           metadataType: selectionData.modelItemData.metadata?.type,
-          hasQMeta: !!selectionData.modelItemData.q_meta,
-          qMetaType: selectionData.modelItemData.q_meta?.type,
         });
       }
 
@@ -169,33 +167,14 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         // Handle type information to ensure proper mapping
         const modelItemData = selectionData.modelItemData;
         
-        // Check if modelItemData has q_meta data or type data
-        if (modelItemData.q_meta && modelItemData.q_meta.type) {
-          logger.debug('Using q_meta type:', modelItemData.q_meta.type);
-          logger.debug('Found q_meta type:', {
-            qMetaType: modelItemData.q_meta.type,
-            elementId: modelItemData.id,
-            creatingMetadata: !modelItemData.metadata
-          });
-          modelItemData.metadata = modelItemData.metadata || {
-            type: SimulationObjectType.None,
-            version: '1.0',
-            lastModified: new Date().toISOString(),
-            id: modelItemData.id || ''
-          };
-          modelItemData.metadata.type = modelItemData.q_meta.type as SimulationObjectType;
-          logger.debug('Set type from q_meta:', modelItemData.q_meta.type);
-        }
         // Check if the modelItemData itself has a type property
-        else if (modelItemData.type === 'Resource') {
+        if (modelItemData.type === 'Resource') {
           logger.debug('Found direct type property: Resource', {
             elementId: modelItemData.id,
             creatingMetadata: !modelItemData.metadata
           });
           modelItemData.metadata = modelItemData.metadata || {
             type: SimulationObjectType.None,
-            version: '1.0',
-            lastModified: new Date().toISOString(),
             id: modelItemData.id || ''
           };
           modelItemData.metadata.type = SimulationObjectType.Resource;
@@ -225,8 +204,6 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
             // it's Connector at this point - just update the metadata
             modelItemData.metadata = modelItemData.metadata || {
               type: SimulationObjectType.None,
-              version: '1.0',
-              lastModified: new Date().toISOString(),
               id: modelItemData.id || ''
             };
             modelItemData.metadata.type = simulationType;
@@ -239,7 +216,6 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
           id: modelItemData.id,
           type: modelItemData.type,
           finalMetadataType: modelItemData.metadata?.type,
-          finalQMetaType: modelItemData.q_meta?.type,
           isUnconverted: modelItemData.isUnconverted
         });
       } else {

@@ -1,36 +1,19 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, MappingSource } from '@quodsi/shared';
-import { MetaData } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/shared';
 
 /**
  * Record of skipped elements with their mapping source
  */
 export type SkippedElementsRecord = Record<string, MappingSource>;
 
-/**
- * Shape data storage format
- */
-export interface StorageFormat<T = any> {
-    data: T;
-    meta: MetaData;
-}
-
 export class StorageAdapter {
-    private static readonly LEGACY_KEYS = [
-        'q_objecttype',
-        'q_data',
-        'q_status_current',
-        'q_status_prior'
-    ];
     private static readonly DATA_KEY = 'q_data';
-    private static readonly META_KEY = 'q_meta';
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly STATES_KEY = 'q_states';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly TIME_PATTERNS_KEY = 'q_time_patterns';
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
-    private static readonly CURRENT_VERSION = '1.0.0';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
 
@@ -64,11 +47,33 @@ export class StorageAdapter {
      */
     public isQuodsiModel(element: ElementProxy): boolean {
         try {
-            const meta = this.getMetadata(element);
-            return meta !== null && meta.type === SimulationObjectType.Model;
+            const typeInfo = this.getElementType(element);
+            return typeInfo !== null && typeInfo.type === SimulationObjectType.Model;
         } catch (error) {
             this.logError('Error checking model status:', error);
             return false;
+        }
+    }
+
+    /**
+     * Checks if a page is a Quodsi page (has Model type in q_data)
+     */
+    public isQuodsiPage(page: ElementProxy): boolean {
+        return this.isQuodsiModel(page);
+    }
+
+    /**
+     * Gets the model version from the page's q_data
+     */
+    public getModelVersion(page: ElementProxy): string | null {
+        try {
+            const dataStr = page.shapeData.get(StorageAdapter.DATA_KEY);
+            if (!dataStr || typeof dataStr !== 'string') return null;
+            const data = JSON.parse(dataStr);
+            return data.version || null;
+        } catch (error) {
+            this.logError('Error getting model version:', error);
+            return null;
         }
     }
 
@@ -380,39 +385,39 @@ export class StorageAdapter {
     }
 
     /**
-     * Sets both data and metadata for an element, keeping them properly separated
+     * Sets element data as a single q_data key containing type, id, mappingSource, and all component data.
+     * For Model (page) elements, also includes version.
      */
     public setElementData<T extends { id: string }>(
         element: ElementProxy,
         data: T,
         type: SimulationObjectType,
-        options: Partial<Omit<MetaData, 'type' | 'lastModified'>> = {}
+        options: { mappingSource?: MappingSource; version?: string } = {}
     ): void {
         try {
-            // Create clean metadata without any data fields
-            const meta: MetaData = {
+            // Build the merged data object: type info + component data
+            const mergedData: any = {
                 type,
-                version: options.version || this.CURRENT_VERSION,
-                lastModified: new Date().toISOString(),
-                id: data.id,  // Use the ID from the data object
-                mappingSource: options.mappingSource  // Track how this element was mapped
+                ...data
             };
 
-            // Create a clean data object without metadata fields
-            const cleanData = this.stripMetadataFields(data);
+            // Include mappingSource if provided
+            if (options.mappingSource) {
+                mergedData.mappingSource = options.mappingSource;
+            }
 
-            // Serialize both separately
-            const serializedData = JSON.stringify(cleanData);
-            const serializedMeta = JSON.stringify(meta);
+            // For Model type, include version
+            if (type === SimulationObjectType.Model) {
+                mergedData.version = options.version || QUODSI_VERSION;
+            }
 
-            // Store separately
+            const serializedData = JSON.stringify(mergedData);
             element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
-            element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
             this.log('Successfully set element data:', {
                 elementId: data.id,
                 type: type,
-                dataKeys: Object.keys(cleanData)
+                dataKeys: Object.keys(mergedData)
             });
         } catch (error) {
             this.logError('Error setting element data:', error);
@@ -421,31 +426,41 @@ export class StorageAdapter {
     }
 
     /**
-     * Updates only the data portion of an element's storage
+     * Updates the data portion of an element's storage.
+     * Reads existing q_data, merges updates, writes back.
      */
     public updateElementData<T extends { id: string }>(element: ElementProxy, data: T): void {
         try {
-            const existingMeta = this.getMetadata(element);
-            if (!existingMeta) {
-                throw new Error('No metadata found for element');
+            const existing = this.getElementData<any>(element);
+            if (!existing) {
+                throw new Error('No existing data found for element');
             }
 
-            // Clean the data object before storing
-            const cleanData = this.stripMetadataFields(data);
-            const serializedData = JSON.stringify(cleanData);
+            // Merge: preserve type/id/mappingSource/version from existing, overlay new data
+            const merged = {
+                ...existing,
+                ...data,
+                // Always preserve the type info fields from existing
+                type: existing.type,
+                id: existing.id,
+            };
 
-            // Update data
+            // Preserve mappingSource if it exists in existing and not in new data
+            if (existing.mappingSource && !(data as any).mappingSource) {
+                merged.mappingSource = existing.mappingSource;
+            }
+
+            // Preserve version if it exists (only on Model/page)
+            if (existing.version) {
+                merged.version = existing.version;
+            }
+
+            const serializedData = JSON.stringify(merged);
             element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
-
-            // Update lastModified in metadata
-            existingMeta.lastModified = new Date().toISOString();
-            const serializedMeta = JSON.stringify(existingMeta);
-
-            element.shapeData.set(StorageAdapter.META_KEY, serializedMeta);
 
             this.log('Successfully updated element data:', {
                 elementId: data.id,
-                type: existingMeta.type
+                type: existing.type
             });
         } catch (error) {
             this.logError('Error updating element data:', error);
@@ -454,31 +469,25 @@ export class StorageAdapter {
     }
 
     /**
-     * Strips metadata fields from a data object
+     * Gets the element type info from q_data.
+     * Returns { type, id, mappingSource } extracted from the stored data.
+     * Replaces the old getMetadata() method.
      */
-    private stripMetadataFields<T extends { id: string }>(data: T): Omit<T, 'version' | 'type' | 'lastModified'> {
-        const cleanData = { ...data };
-
-        // Remove metadata fields if they exist, except 'id' which is needed in both
-        const metadataFields = ['version', 'type', 'lastModified'];
-        metadataFields.forEach(field => {
-            delete cleanData[field as keyof typeof cleanData];
-        });
-
-        return cleanData;
-    }
-
-    /**
-     * Retrieves metadata for an element
-     */
-    public getMetadata(element: ElementProxy): MetaData | null {
+    public getElementType(element: ElementProxy): ElementTypeInfo | null {
         try {
-            const metaStr = element.shapeData.get(StorageAdapter.META_KEY);
-            if (!metaStr || typeof metaStr !== 'string') return null;
+            const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
+            if (!dataStr || typeof dataStr !== 'string') return null;
 
-            return JSON.parse(metaStr) as MetaData;
+            const data = JSON.parse(dataStr);
+            if (!data.type) return null;
+
+            return {
+                type: data.type as SimulationObjectType,
+                id: data.id || element.id,
+                mappingSource: data.mappingSource
+            };
         } catch (error) {
-            this.logError('Error getting metadata:', error);
+            this.logError('Error getting element type:', error);
             return null;
         }
     }
@@ -531,43 +540,22 @@ export class StorageAdapter {
     }
 
     /**
-     * Gets both data and metadata as a complete storage format
-     */
-    public getCompleteStorage<T>(element: ElementProxy): StorageFormat<T> | null {
-        try {
-            const meta = this.getMetadata(element);
-            const data = this.getElementData<T>(element);
-
-            if (!meta || !data) return null;
-
-            return { data, meta };
-        } catch (error) {
-            this.logError('Error getting complete storage:', error);
-            return null;
-        }
-    }
-
-    /**
      * Removes all Quodsi-related data from an element
      */
     public clearElementData(element: ElementProxy): void {
         try {
-            const keys = [StorageAdapter.DATA_KEY, StorageAdapter.META_KEY];
-
-            for (const key of keys) {
-                // Check if the data exists first
-                const value = element.shapeData.get(key);
-                if (value !== undefined) {
-                    try {
-                        element.shapeData.delete(key);
-                    } catch {
-                        // If delete fails, try setting to empty string as fallback
-                        element.shapeData.set(key, '');
-                    }
-                    this.log(`Cleared ${key} from element:`, element.id);
-                } else {
-                    this.log(`No ${key} found on element:`, element.id);
+            const key = StorageAdapter.DATA_KEY;
+            const value = element.shapeData.get(key);
+            if (value !== undefined) {
+                try {
+                    element.shapeData.delete(key);
+                } catch {
+                    // If delete fails, try setting to empty string as fallback
+                    element.shapeData.set(key, '');
                 }
+                this.log(`Cleared ${key} from element:`, element.id);
+            } else {
+                this.log(`No ${key} found on element:`, element.id);
             }
         } catch (error) {
             this.logError('Error clearing element data:', error);
@@ -576,48 +564,21 @@ export class StorageAdapter {
     }
 
     /**
-     * Validates that an element has both required storage components
+     * Validates that an element has the required q_data storage key
      */
     public validateStorage(element: ElementProxy): boolean {
         try {
             const dataStr = element.shapeData.get(StorageAdapter.DATA_KEY);
-            const metaStr = element.shapeData.get(StorageAdapter.META_KEY);
-
-            return typeof dataStr === 'string' && typeof metaStr === 'string';
+            return typeof dataStr === 'string' && dataStr.length > 0;
         } catch (error) {
             this.logError('Error validating storage:', error);
             return false;
         }
     }
 
-    /**
-     * Gets the current version number used by the storage adapter
-     */
-    public get CURRENT_VERSION(): string {
-        return StorageAdapter.CURRENT_VERSION;
-    }
-    private clearLegacyData(element: ElementProxy): void {
-        for (const key of StorageAdapter.LEGACY_KEYS) {
-            try {
-                const value = element.shapeData.get(key);
-                if (value !== undefined) {
-                    try {
-                        element.shapeData.delete(key);
-                        this.log(`Successfully deleted legacy key '${key}' from element ${element.id}`);
-                    } catch {
-                        element.shapeData.set(key, '');
-                        this.log(`Set legacy key '${key}' to empty on element ${element.id} (delete failed)`);
-                    }
-                }
-            } catch (error) {
-                this.logError(`Error handling legacy key '${key}' for element ${element.id}:`, error);
-            }
-        }
-    }
     public clearAllModelData(page: PageProxy): void {
         try {
             // Clear model data from page
-
             this.clearElementData(page);
             this.clearSimulationStatus(page);
             this.clearStates(page);
@@ -629,13 +590,11 @@ export class StorageAdapter {
             // Clear data from all blocks
             for (const [, block] of page.allBlocks) {
                 this.clearElementData(block);
-                this.clearLegacyData(block);
             }
 
             // Clear data from all lines
             for (const [, line] of page.allLines) {
                 this.clearElementData(line);
-                this.clearLegacyData(line);
             }
         } catch (error) {
             this.logError('Error clearing model data:', error);

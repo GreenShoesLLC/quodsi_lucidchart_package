@@ -1,11 +1,12 @@
 import { BlockProxy, ElementProxy } from 'lucid-extension-sdk';
-import { 
-    PlatformSimObject, 
+import {
+    PlatformSimObject,
     PlatformType,
     PlatformMetadata,
     SimulationObject,
     SimulationObjectType,
-    ComponentLogger
+    ComponentLogger,
+    QUODSI_VERSION
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 
@@ -98,7 +99,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     public getMetadata(): PlatformMetadata {
         const metadata = {
             platform: PlatformType.Lucid,
-            version: '1.0.0',
+            version: QUODSI_VERSION,
             lastModified: new Date().toISOString(),
             elementId: this.element.id,
             elementType: this.type

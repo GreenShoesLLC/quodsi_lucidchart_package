@@ -140,8 +140,6 @@ export function useModelPanel() {
       runClockPeriod: modelItemData.data?.runClockPeriod,
       hasMetadata: !!modelItemData.metadata,
       metadataType: modelItemData.metadata?.type,
-      hasQMeta: !!modelItemData.q_meta,
-      qMetaType: modelItemData.q_meta?.type,
       isUnconverted: modelItemData.isUnconverted,
       fullData: modelItemData.data
     });
@@ -287,24 +285,11 @@ export function useModelPanel() {
   // Ensure the modelItemData has a proper type value if needed
   // Don't auto-convert unconverted elements - let user choose
   if (modelItemData && (!modelItemData.metadata?.type || modelItemData.metadata.type === SimulationObjectType.None) && !modelItemData.isUnconverted) {
-    // First check if q_meta contains type information
-    if (modelItemData.q_meta && modelItemData.q_meta.type) {
-      logger.debug('Using q_meta type:', modelItemData.q_meta.type);
-      modelItemData.metadata = modelItemData.metadata || {
-        type: SimulationObjectType.None,
-        version: '1.0',
-        lastModified: new Date().toISOString(),
-        id: modelItemData.id
-      };
-      modelItemData.metadata.type = modelItemData.q_meta.type as SimulationObjectType;
-    }
-    // Only if no q_meta, then use diagram type to determine Connector (but not Activity)
-    else if (typedDiagramElementType === DiagramElementType.LINE) {
+    // Use diagram type to determine Connector (but not Activity)
+    if (typedDiagramElementType === DiagramElementType.LINE) {
       logger.debug('Setting missing type to Connector for line element');
       modelItemData.metadata = modelItemData.metadata || {
         type: SimulationObjectType.None,
-        version: '1.0',
-        lastModified: new Date().toISOString(),
         id: modelItemData.id
       };
       modelItemData.metadata.type = SimulationObjectType.Connector;

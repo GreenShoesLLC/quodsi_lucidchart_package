@@ -11,7 +11,7 @@ import {
     SimulationObject,
     SimulationObjectType,
     ValidationResult,
-    MetaData,
+    ElementTypeInfo,
     ModelStructure,
     ModelElement,
     ModelDefinitionLogger,
@@ -547,25 +547,19 @@ export class ModelManager {
         return this.storageAdapter.getElementData<T>(element);
     }
 
-    public getMetadata(element: ElementProxy): MetaData | null {
-        return this.storageAdapter.getMetadata(element);
+    public getElementType(element: ElementProxy): ElementTypeInfo | null {
+        return this.storageAdapter.getElementType(element);
     }
 
     public setElementData(
         element: ElementProxy,
         data: any,
         type: SimulationObjectType,
-        metadata?: { id: string; version: string }
+        options?: { mappingSource?: import('@quodsi/shared').MappingSource }
     ): void {
         try {
-            // Determine metadata
-            const actualMetadata = metadata || {
-                id: element.id,
-                version: this.storageAdapter.CURRENT_VERSION
-            };
-
             // Call storage adapter
-            this.storageAdapter.setElementData(element, data, type, actualMetadata);
+            this.storageAdapter.setElementData(element, data, type, options);
 
             // Mark model as dirty
             this.markModelDirty(element.id);
@@ -581,9 +575,6 @@ export class ModelManager {
     public clearElementData(element: ElementProxy): void {
         this.storageAdapter.clearElementData(element);
         this.markModelDirty(element.id);
-    }
-    public get CURRENT_VERSION(): string {
-        return this.storageAdapter.CURRENT_VERSION;
     }
     /**
      * Removes the model from the specified page and clears manager state
@@ -668,9 +659,9 @@ export class ModelManager {
                 const elementData = this.storageAdapter.getElementData<any>(block);
                 if (!elementData) continue;
 
-                // Get element type from metadata (type is stored in metadata, not data)
-                const metadata = this.storageAdapter.getMetadata(block);
-                const elementType = metadata?.type;
+                // Get element type from q_data
+                const typeInfo = this.storageAdapter.getElementType(block);
+                const elementType = typeInfo?.type;
 
                 if (elementType === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
                     const originalLength = elementData.timeDistributedConfigIds.length;
@@ -698,9 +689,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
-            // Get element type from metadata (type is stored in metadata, not data)
-            const metadata = this.storageAdapter.getMetadata(block);
-            const elementType = metadata?.type;
+            // Get element type from q_data
+            const typeInfo = this.storageAdapter.getElementType(block);
+            const elementType = typeInfo?.type;
 
             if (elementType === SimulationObjectType.Generator && elementData.timeDistributedConfigIds) {
                 const originalLength = elementData.timeDistributedConfigIds.length;
@@ -843,9 +834,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
-            // Get element type from metadata (type is stored in metadata, not data)
-            const metadata = this.storageAdapter.getMetadata(block);
-            const elementType = metadata?.type;
+            // Get element type from q_data
+            const typeInfo = this.storageAdapter.getElementType(block);
+            const elementType = typeInfo?.type;
 
             let modified = false;
 
@@ -909,9 +900,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(line);
             if (!elementData) continue;
 
-            // Get element type from metadata
-            const lineMetadata = this.storageAdapter.getMetadata(line);
-            if (lineMetadata?.type !== SimulationObjectType.Connector) continue;
+            // Get element type from q_data
+            const lineTypeInfo = this.storageAdapter.getElementType(line);
+            if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
 
             let modified = false;
 
@@ -1102,9 +1093,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
-            // Get element type from metadata (type is stored in metadata, not data)
-            const metadata = this.storageAdapter.getMetadata(block);
-            const elementType = metadata?.type;
+            // Get element type from q_data
+            const typeInfo = this.storageAdapter.getElementType(block);
+            const elementType = typeInfo?.type;
 
             if (elementType === SimulationObjectType.Activity && elementData.actions) {
                 const result = this.cleanActionsRequirementReferences(
@@ -1149,9 +1140,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(block);
             if (!elementData) continue;
 
-            // Get element type from metadata (type is stored in metadata, not data)
-            const metadata = this.storageAdapter.getMetadata(block);
-            const elementType = metadata?.type;
+            // Get element type from q_data
+            const typeInfo = this.storageAdapter.getElementType(block);
+            const elementType = typeInfo?.type;
 
             let modified = false;
 
@@ -1202,9 +1193,9 @@ export class ModelManager {
             const elementData = this.storageAdapter.getElementData<any>(line);
             if (!elementData) continue;
 
-            // Get element type from metadata
-            const lineMetadata = this.storageAdapter.getMetadata(line);
-            if (lineMetadata?.type !== SimulationObjectType.Connector) continue;
+            // Get element type from q_data
+            const lineTypeInfo = this.storageAdapter.getElementType(line);
+            if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
 
             let modified = false;
 
@@ -1715,19 +1706,13 @@ export class ModelManager {
             this.registerElement(elementData, element);
 
             this.debug.debug('Setting element data', {
-                metadata: {
-                    id: element.id,
-                    version: this.CURRENT_VERSION
-                }
+                elementId: element.id,
+                type
             });
             this.setElementData(
                 element,
                 elementData,
-                type,
-                {
-                    id: element.id,
-                    version: this.CURRENT_VERSION
-                }
+                type
             );
 
             this.debug.log('handleDataUpdate - Completed Successfully');

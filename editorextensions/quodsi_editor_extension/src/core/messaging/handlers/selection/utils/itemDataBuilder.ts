@@ -3,9 +3,9 @@ import {
   PageProxy,
   BlockProxy
 } from 'lucid-extension-sdk';
-import { 
+import {
   ModelItemData,
-  MetaData,
+  ElementTypeInfo,
   SimulationObjectType
 } from '@quodsi/shared';
 import { ModelManager } from '../../../../../core/ModelManager';
@@ -53,7 +53,7 @@ export const itemDataBuilder = {
     });
     
     const rawData = modelManager.getElementData(item);
-    const metadata = modelManager.getMetadata(item);
+    const typeInfo = modelManager.getElementType(item);
 
     // Determine name based on item type
     let name: string;
@@ -66,30 +66,26 @@ export const itemDataBuilder = {
       name = 'Unnamed Connector';
     }
 
-    // Ensure metadata has all required fields
-    const defaultMetadata: MetaData = {
-      type: item instanceof PageProxy ? SimulationObjectType.Model : SimulationObjectType.None,
-      version: modelManager.CURRENT_VERSION,
-      lastModified: new Date().toISOString(),
-      id: item.id,
-      ...(metadata || {})
+    // Build metadata for ModelItemData
+    const defaultMetadata: ElementTypeInfo = {
+      type: typeInfo?.type ?? (item instanceof PageProxy ? SimulationObjectType.Model : SimulationObjectType.None),
+      id: typeInfo?.id ?? item.id,
+      mappingSource: typeInfo?.mappingSource
     };
-
-    // Handle unconverted elements
-    if (item instanceof ItemProxy && modelManager.isUnconvertedElement(item)) {
-      defaultMetadata.isUnconverted = true;
-    }
 
     // Convert Lucid JsonObject to shared JsonObject type
     const convertedData = rawData ? JSON.parse(JSON.stringify(rawData)) : {};
+
+    const isUnconverted = item instanceof ItemProxy && modelManager.isUnconvertedElement(item);
 
     const result: ModelItemData = {
       id: item.id,
       data: convertedData,
       metadata: defaultMetadata,
-      name
+      name,
+      ...(isUnconverted ? { isUnconverted: true } : {})
     };
-    
+
     this.debug.log('Built model item data', {
       id: result.id,
       name: result.name,

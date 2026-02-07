@@ -1,10 +1,10 @@
-import { MetaData } from "./MetaData";
+import { ElementTypeInfo } from "./ElementTypeInfo";
 import { JsonObject } from "./common";
 
 export interface ModelItemData {
     id: string;
     data: JsonObject;
-    metadata: MetaData;
+    metadata: ElementTypeInfo;
     name: string | null;
     isUnconverted?: boolean;
 }

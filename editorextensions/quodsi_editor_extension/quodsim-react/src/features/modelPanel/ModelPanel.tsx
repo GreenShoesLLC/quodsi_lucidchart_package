@@ -68,7 +68,7 @@ export const ModelPanel: React.FC = () => {
   useEffect(() => {
     if (currentElement) {
       const elementType = getSimulationObjectType(
-        currentElement.metadata?.type || currentElement.q_meta?.type || currentElement.type,
+        currentElement.metadata?.type || currentElement.type,
         currentElement,
         currentElement.data
       );
@@ -180,20 +180,8 @@ export const ModelPanel: React.FC = () => {
   useEffect(() => {
     // Handle element type issues
     if (currentElement && (!currentElement.metadata?.type || currentElement.metadata.type === SimulationObjectType.None)) {
-      // Try to check for q_meta type if metadata type is missing
-      if (currentElement.q_meta?.type) {
-        if (!currentElement.metadata) {
-          currentElement.metadata = {
-            type: SimulationObjectType.None,
-            version: '1.0',
-            lastModified: new Date().toISOString(),
-            id: currentElement.id
-          };
-        }
-        currentElement.metadata.type = currentElement.q_meta.type as SimulationObjectType;
-      }
-      // Only if we don't have metadata or q_meta, then auto-map line to connector
-      else if (diagramElementType === DiagramElementType.LINE) {
+      // Auto-map line to connector if metadata type is missing
+      if (diagramElementType === DiagramElementType.LINE) {
         currentElement.metadata = currentElement.metadata || {
           type: SimulationObjectType.None,
           version: '1.0',
@@ -309,7 +297,7 @@ export const ModelPanel: React.FC = () => {
               id: currentElement.id // Ensure ID is included in elementData
             }}
             elementType={getSimulationObjectType(
-              currentElement.metadata?.type || currentElement.q_meta?.type || currentElement.type,
+              currentElement.metadata?.type || currentElement.type,
               currentElement,
               currentElement.data
             )}

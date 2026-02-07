@@ -6,14 +6,11 @@ import { SimulationObjectType } from "./elements/SimulationObjectType";
 export type MappingSource = 'auto' | 'user';
 
 /**
- * Metadata structure for elements
+ * Lightweight type info extracted from element's q_data.
+ * Used for type identification in ModelItemData and StorageAdapter.
  */
-export interface MetaData {
+export interface ElementTypeInfo {
     type: SimulationObjectType;
-    version: string;
-    lastModified: string;
     id: string;
-    isUnconverted?: boolean;
-    /** How this element was mapped - 'auto' (Quodsi detected) or 'user' (user chose) */
     mappingSource?: MappingSource;
 }
