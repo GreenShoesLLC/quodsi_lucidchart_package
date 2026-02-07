@@ -39,6 +39,9 @@ infrastructure/extracted-config/*.json
 !infrastructure/extracted-config/tst.parameters.json
 !infrastructure/extracted-config/prd.parameters.json
 
+# Lucid credentials
+lucid.credentials.local
+
 # Azure credentials and publish profiles
 *.publishsettings
 **/PublishProfiles/

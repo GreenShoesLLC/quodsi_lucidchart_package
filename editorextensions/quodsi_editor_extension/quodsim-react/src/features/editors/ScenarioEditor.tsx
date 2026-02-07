@@ -75,8 +75,29 @@ const ScenarioEditor: React.FC<ScenarioEditorProps> = ({ documentId, onAnalyze }
     const pending = consumePendingSubmission();
     if (pending) {
       setSubmittingScenarioName(pending);
+
+      // Safety timeout: clear placeholder after 15 seconds.
+      // By then, a MODEL_RUN_STATUS should have arrived and created
+      // an optimistic ScenarioCard, or the submission failed.
+      const timeout = setTimeout(() => {
+        setSubmittingScenarioName(null);
+      }, 15000);
+
+      return () => clearTimeout(timeout);
     }
   }, []);
+
+  // Clear placeholder when a real scenario card appears for the submission
+  useEffect(() => {
+    if (submittingScenarioName && scenarios.length > 0) {
+      const hasActiveScenario = scenarios.some(
+        s => s.runState === RunState.Queued || s.runState === RunState.Running
+      );
+      if (hasActiveScenario) {
+        setSubmittingScenarioName(null);
+      }
+    }
+  }, [scenarios, submittingScenarioName]);
 
   // Helper function to check if scenario name is in datetime format (YY-MM-DD HH:mm:ss)
   const isDatetimeFormat = useCallback((name: string): boolean => {

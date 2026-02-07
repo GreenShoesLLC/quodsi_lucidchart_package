@@ -5,6 +5,9 @@
  */
 
 let pendingScenarioName: string | null = null;
+let pendingSetAt: number = 0;
+
+const PENDING_EXPIRY_MS = 10_000; // 10 seconds
 
 /**
  * Set the pending scenario name.
@@ -12,15 +15,22 @@ let pendingScenarioName: string | null = null;
  */
 export function setPendingSubmission(scenarioName: string): void {
   pendingScenarioName = scenarioName;
+  pendingSetAt = Date.now();
 }
 
 /**
  * Get and clear the pending scenario name.
  * Returns the name (if any) and clears it so it's only used once.
+ * Returns null if the pending value is older than PENDING_EXPIRY_MS
+ * to prevent stale values from being consumed on late remounts.
  */
 export function consumePendingSubmission(): string | null {
   const name = pendingScenarioName;
   pendingScenarioName = null;
+  // Return null if the pending value is stale
+  if (name && (Date.now() - pendingSetAt > PENDING_EXPIRY_MS)) {
+    return null;
+  }
   return name;
 }
 
