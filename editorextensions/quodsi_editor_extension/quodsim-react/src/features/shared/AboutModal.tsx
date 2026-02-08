@@ -1,6 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
-import { QUODSI_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/shared";
+import { QUODSI_VERSION, QUODSIM_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
 
 interface AboutModalProps {
@@ -53,7 +53,10 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             Discrete Event Simulation
           </div>
           <div className="text-xs text-gray-500 mt-3">
-            Version {QUODSI_VERSION}
+            App: {QUODSI_VERSION}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Simulation Engine: {QUODSIM_VERSION}
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Environment: {environment}
@@ -62,7 +65,15 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="text-center pt-3 border-t">
-          <div className="text-xs text-gray-400">
+          <a
+            href="https://www.quodsi.com/earlyusers"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline"
+          >
+            Send us feedback
+          </a>
+          <div className="text-xs text-gray-400 mt-1">
             &copy; {new Date().getFullYear()} Quodsi
           </div>
         </div>
