@@ -17,7 +17,7 @@ $ErrorActionPreference = "Continue"
 
 # Get the root directory of the project
 $scriptPath = $PSScriptRoot
-$rootDir = (Get-Item $scriptPath).Parent.Parent.Parent.Parent.FullName
+$rootDir = (Get-Item $scriptPath).Parent.Parent.FullName
 $projectPath = Join-Path $rootDir "dataconnectors\quodsi_data_connector_lucidchart_v2"
 
 Write-Host "=========================================" -ForegroundColor Cyan

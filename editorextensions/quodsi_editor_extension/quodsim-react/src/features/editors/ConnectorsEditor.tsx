@@ -2,14 +2,12 @@ import React, { useState, useEffect } from "react";
 import {
   Activity,
   ConnectType,
-  SimulationObjectType,
   EditorReferenceData,
   StateListManager,
   Connector,
 } from "@quodsi/shared";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
-import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useModelOpsSender } from "../../messaging/senders";
 
 // ============================================================================
 // TYPES
@@ -24,8 +22,6 @@ interface ConnectorsEditorProps {
   activity: Activity;
   outgoingConnectors: Connector[];
   selectedConnectorId?: string;
-  onSave: (activity: Activity) => void;
-  onCancel: () => void;
   referenceData: EditorReferenceData;
   states: StateListManager;
 }
@@ -43,12 +39,11 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   activity,
   outgoingConnectors,
   selectedConnectorId,
-  onSave,
-  onCancel,
   referenceData,
   states,
 }) => {
   const isDevelopment = process.env.NODE_ENV === "development";
+  const { updateElementData } = useModelOpsSender();
 
   if (isDevelopment) {
     console.log("[ConnectorsEditor] Rendered with:", {
@@ -74,10 +69,6 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   // HELPER FUNCTIONS
   // ============================================================================
 
-  /**
-   * Extracts and normalizes activity data from props into a clean Activity object.
-   * Handles multiple data formats and initializes all required properties with safe defaults.
-   */
   const extractActivityData = (act: ActivityInput): Activity => {
     const data = (act as any).data || act;
     const safeActivity = new Activity(
@@ -91,10 +82,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       data.y || 0
     );
 
-    // Preserve connectType (the main property we're editing)
     safeActivity.connectType = data.connectType || ConnectType.Probability;
-
-    // Preserve other properties
     safeActivity.financialProperties = data.financialProperties;
 
     return safeActivity;
@@ -107,23 +95,11 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() =>
     extractActivityData(activity)
   );
-  const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
-  // Redux-based save state tracking
-  const elementOpsState = useElementOpsState();
-  const isSaving = activity?.id ? elementOpsState.isSaving(activity.id) : false;
-
-  // Sync form data with activity prop changes
-  useFormSync(
-    activity?.id || "",
-    hasPendingChanges,
-    () => extractActivityData(activity),
-    setLocalActivityDraft,
-    setHasPendingChanges
-  );
-
-  // Clear hasPendingChanges flag when save completes
-  useSaveCompletionDetector(isSaving, setHasPendingChanges);
+  // Sync local draft when activity prop changes (e.g., user selects a different connector)
+  useEffect(() => {
+    setLocalActivityDraft(extractActivityData(activity));
+  }, [activity?.id]);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -131,41 +107,13 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
   /**
    * Handles changes to the activity's routing type (ConnectType).
-   * Updates the local draft and marks the form as having pending changes.
+   * Auto-saves immediately by sending the updated Activity to the extension.
    */
   const handleConnectTypeChange = (
     e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
   ) => {
     const newConnectType = e.target.value as ConnectType;
-    setLocalActivityDraft((prev) => {
-      const updatedActivity = new Activity(
-        prev.id,
-        prev.name,
-        prev.capacity,
-        prev.inboundQueueCapacity,
-        prev.outboundQueueCapacity,
-        prev.actions,
-        prev.x,
-        prev.y
-      );
-
-      // Update connectType
-      updatedActivity.connectType = newConnectType;
-
-      // Preserve other properties
-      updatedActivity.financialProperties = prev.financialProperties;
-
-      return updatedActivity;
-    });
-    setHasPendingChanges(true);
-  };
-
-  /**
-   * Saves the activity's routing configuration changes.
-   * Creates a new Activity instance with updated connectType and triggers the onSave callback.
-   */
-  const handleSave = () => {
-    const activityToSave = new Activity(
+    const updatedActivity = new Activity(
       localActivityDraft.id,
       localActivityDraft.name,
       localActivityDraft.capacity,
@@ -175,23 +123,11 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       localActivityDraft.x,
       localActivityDraft.y
     );
+    updatedActivity.connectType = newConnectType;
+    updatedActivity.financialProperties = localActivityDraft.financialProperties;
 
-    // Preserve connectType (the main thing we're editing here)
-    activityToSave.connectType = localActivityDraft.connectType;
-
-    // Preserve other properties
-    activityToSave.financialProperties = localActivityDraft.financialProperties;
-
-    onSave(activityToSave);
-  };
-
-  /**
-   * Cancels any pending changes and resets the form to the original activity state.
-   * Does not close the editor - only discards unsaved changes.
-   */
-  const handleCancel = () => {
-    setLocalActivityDraft(extractActivityData(activity));
-    setHasPendingChanges(false);
+    setLocalActivityDraft(updatedActivity);
+    updateElementData(updatedActivity.id, "Activity", updatedActivity);
   };
 
   // ============================================================================
@@ -208,29 +144,6 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
         referenceData={referenceData}
         states={states}
       />
-
-      {/* Save/Cancel Buttons */}
-      <div className="flex justify-end gap-2 pt-2 border-t">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!hasPendingChanges}
-          className={`px-3 py-1.5 text-xs rounded ${
-            hasPendingChanges
-              ? "bg-blue-600 text-white hover:bg-blue-700"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          Save
-        </button>
-      </div>
     </div>
   );
 };

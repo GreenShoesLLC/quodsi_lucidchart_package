@@ -225,7 +225,6 @@ export const DEFAULT_TABLE_CONFIGS: Record<string, TableConfig> = {
                 'utilization_min',
                 'utilization_max',
                 'utilization_std_dev',
-                'bottleneck_frequency',
                 'total_cost_mean'
             ],
             exclude: [

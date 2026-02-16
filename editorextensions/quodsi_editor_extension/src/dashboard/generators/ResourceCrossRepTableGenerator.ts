@@ -35,7 +35,6 @@ export class ResourceCrossRepTableGenerator extends BaseTableGenerator {
                 'utilization_min',
                 'utilization_max',
                 'utilization_std_dev',
-                'bottleneck_frequency',
                 'total_cost_mean'
             ]
         };

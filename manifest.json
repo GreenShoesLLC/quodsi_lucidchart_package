@@ -1,6 +1,6 @@
 {
   "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
-  "version": "2026.02.11",
+  "version": "2026.02.14",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -28,7 +28,7 @@
       "authorizationUrl": "https://lucid.app/oauth2/authorize",
       "tokenUrl": "https://api.lucid.co/oauth2/token",
       "scopes": [
-        "lucidchart.document.content:readonly"
+        "offline_access"
       ],
       "domainWhitelist": [
         "https://api.lucid.co"

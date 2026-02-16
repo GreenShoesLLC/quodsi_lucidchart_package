@@ -51,10 +51,10 @@ param(
 )
 
 # --- Configuration ---
-$ReactBuildScriptPath = "C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\react\build-react.ps1"
-$LucidPackageDir = "C:\_source\Greenshoes\quodsi_lucidchart_package"
-$ReactBuildOutputDir = "C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\build"
-$PublicReactDir = "C:\_source\Greenshoes\quodsi_lucidchart_package\public\quodsim-react"
+$LucidPackageDir = (Get-Item $PSScriptRoot).Parent.Parent.FullName
+$ReactBuildScriptPath = Join-Path $PSScriptRoot "..\react\build-react.ps1"
+$ReactBuildOutputDir = Join-Path $LucidPackageDir "editorextensions\quodsi_editor_extension\quodsim-react\build"
+$PublicReactDir = Join-Path $LucidPackageDir "public\quodsim-react"
 $ScriptName = $MyInvocation.MyCommand.Name
 
 # --- Script Start ---

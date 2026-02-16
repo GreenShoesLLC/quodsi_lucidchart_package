@@ -249,11 +249,6 @@ export const resourceColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 3),
   },
   {
-    key: "bottleneck_frequency",
-    label: "Bottleneck",
-    format: formatInteger,
-  },
-  {
     key: "total_cost_mean",
     label: "Total Cost",
     format: (v) => formatDecimal(v, 2),

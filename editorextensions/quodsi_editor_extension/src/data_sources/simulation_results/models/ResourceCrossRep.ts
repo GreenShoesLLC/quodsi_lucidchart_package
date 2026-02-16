@@ -14,7 +14,6 @@ export interface ResourceCrossRep {
   utilization_min: number;
   utilization_max: number;
   utilization_std_dev: number;
-  bottleneck_frequency: number;
 
   // Cost metrics
   seize_cost_mean: number;
@@ -51,7 +50,6 @@ export function mapToResourceCrossRep(itemFields: MapProxy<string, any>): Resour
     utilization_min: itemFields.get('utilization_min') as number,
     utilization_max: itemFields.get('utilization_max') as number,
     utilization_std_dev: itemFields.get('utilization_std_dev') as number,
-    bottleneck_frequency: itemFields.get('bottleneck_frequency') as number,
 
     // Cost metrics
     seize_cost_mean: itemFields.get('seize_cost_mean') as number,

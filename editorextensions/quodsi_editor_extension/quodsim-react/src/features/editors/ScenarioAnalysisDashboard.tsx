@@ -93,7 +93,6 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "utilization_min", label: "Utilization (Min)" },
     { value: "utilization_max", label: "Utilization (Max)" },
     { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
-    { value: "bottleneck_frequency", label: "Bottleneck Frequency" },
     { value: "seize_cost_mean", label: "Seize Cost" },
     { value: "utilization_cost_mean", label: "Utilization Cost" },
     { value: "idle_cost_mean", label: "Idle Cost" },

@@ -176,8 +176,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
               activity={sourceActivityRef as any}
               outgoingConnectors={activityOutgoingConnectors}
               selectedConnectorId={safeElementData.id}
-              onSave={onSave}
-              onCancel={handleCancel}
               referenceData={referenceData}
               states={states}
             />

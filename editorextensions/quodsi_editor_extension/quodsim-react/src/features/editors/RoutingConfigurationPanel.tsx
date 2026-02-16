@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   ConnectType,
   StateComparison,
@@ -55,6 +55,25 @@ export const RoutingConfigurationPanel: React.FC<
 
   // Track if there are unsaved changes (prevents prop overwrites during editing)
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
+  // Local string state for weight inputs (commit-on-blur pattern)
+  const [weightInputValues, setWeightInputValues] = useState<Record<string, string>>({});
+  const focusedWeightRef = useRef<string | null>(null);
+
+  // Sync weight input values from localConnectors, preserving focused input
+  useEffect(() => {
+    setWeightInputValues(prev => {
+      const next: Record<string, string> = {};
+      for (const conn of localConnectors) {
+        if (conn.id === focusedWeightRef.current && prev[conn.id] !== undefined) {
+          next[conn.id] = prev[conn.id];
+        } else {
+          next[conn.id] = String(conn.weight ?? 1);
+        }
+      }
+      return next;
+    });
+  }, [localConnectors]);
 
   // Ref for selected connector (for auto-scroll)
   const selectedConnectorRef = React.useRef<HTMLDivElement>(null);
@@ -190,11 +209,27 @@ export const RoutingConfigurationPanel: React.FC<
     onConnectorUpdate(connectorId, updates);
   };
 
-  // Handle weight change
-  const handleWeightChange = (connectorId: string, value: string) => {
-    const weight = parseInt(value, 10);
-    if (isNaN(weight) || weight < 1) return;
+  // Weight input handlers (commit-on-blur pattern to allow typing decimals like "0.75")
+  const handleWeightInputChange = (connectorId: string, value: string) => {
+    setWeightInputValues(prev => ({ ...prev, [connectorId]: value }));
+  };
 
+  const handleWeightFocus = (connectorId: string) => {
+    focusedWeightRef.current = connectorId;
+  };
+
+  const handleWeightBlur = (connectorId: string) => {
+    focusedWeightRef.current = null;
+    const raw = weightInputValues[connectorId] ?? "";
+    const weight = parseFloat(raw);
+    if (isNaN(weight) || weight <= 0) {
+      // Revert to current valid value
+      const conn = localConnectors.find(c => c.id === connectorId);
+      setWeightInputValues(prev => ({ ...prev, [connectorId]: String(conn?.weight ?? 1) }));
+      return;
+    }
+    // Normalize display (remove trailing dots, leading zeros, etc.)
+    setWeightInputValues(prev => ({ ...prev, [connectorId]: String(weight) }));
     handleConnectorChange(connectorId, { weight });
   };
 
@@ -322,19 +357,19 @@ export const RoutingConfigurationPanel: React.FC<
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <label className="text-xs text-gray-600">Weight</label>
-                        <span title="Enter a positive integer weight. Higher weight increases the routing chance for this connector. For example, if two connectors have weights of 3 and 1, the first gets 75% (3/4) of entities and the second gets 25% (1/4).">
+                        <span title="Enter a positive weight. Higher weight increases the routing chance for this connector. For example, if two connectors have weights of 3 and 1, the first gets 75% (3/4) of entities and the second gets 25% (1/4).">
                           <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                         </span>
                       </div>
                       <input
                         type="number"
                         className="w-24 px-2 py-1 text-xs border rounded"
-                        value={connector.weight ?? 1}
-                        onChange={(e) =>
-                          handleWeightChange(connector.id, e.target.value)
-                        }
-                        min="1"
-                        step="1"
+                        value={weightInputValues[connector.id] ?? String(connector.weight ?? 1)}
+                        onChange={(e) => handleWeightInputChange(connector.id, e.target.value)}
+                        onFocus={() => handleWeightFocus(connector.id)}
+                        onBlur={() => handleWeightBlur(connector.id)}
+                        min="0.1"
+                        step="0.1"
                       />
                     </div>
                   </div>

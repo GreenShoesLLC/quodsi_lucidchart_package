@@ -17,9 +17,6 @@ export interface ResourceCrossRepData {
     utilization_max: number;
     utilization_std_dev: number;
 
-    // Summary metrics
-    bottleneck_frequency: number;
-
     // Cost metrics
     seize_cost_mean: number;
     seize_cost_std_dev: number;

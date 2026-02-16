@@ -12,7 +12,6 @@ export const ResourceCrossRepSchema: SchemaDefinition = {
         { name: "utilization_min", type: ScalarFieldTypeEnum.NUMBER },
         { name: "utilization_max", type: ScalarFieldTypeEnum.NUMBER },
         { name: "utilization_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "bottleneck_frequency", type: ScalarFieldTypeEnum.NUMBER },
 
         // Cost metrics
         { name: "seize_cost_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -43,7 +42,6 @@ export const ResourceCrossRepSchema: SchemaDefinition = {
         'utilization_min': 'Min Utilization',
         'utilization_max': 'Max Utilization',
         'utilization_std_dev': 'Utilization Std Dev',
-        'bottleneck_frequency': 'Bottleneck Frequency',
 
         // Cost metrics
         'seize_cost_mean': 'Mean Seize Cost',

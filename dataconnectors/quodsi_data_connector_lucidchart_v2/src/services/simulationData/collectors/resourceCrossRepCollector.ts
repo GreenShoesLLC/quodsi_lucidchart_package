@@ -8,7 +8,7 @@ import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
 // Note: CSV uses utilization_rate_* (not utilization_*), and utilization_rate_std (not _std_dev)
-// CSV is missing id/scenario_id/scenario_name and bottleneck_frequency - these will be injected during mapping
+// CSV is missing id/scenario_id/scenario_name - these will be injected during mapping
 // Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
 // since CSV column names don't match interface property names
 export const requiredColumns: string[] = [
@@ -18,7 +18,6 @@ export const requiredColumns: string[] = [
     'utilization_rate_min',
     'utilization_rate_max',
     'utilization_rate_std',  // CSV uses _std, not _std_dev
-    // 'bottleneck_frequency'  // NOT in CSV - will default to 0
     // Cost metrics (CSV uses _std suffix)
     'seize_cost_mean',
     'seize_cost_std',
@@ -131,7 +130,6 @@ export async function fetchResourceCrossRep(
         // Map CSV column names to schema field names
         // CSV uses utilization_rate_* prefix, schema expects utilization_*
         // CSV uses utilization_rate_std suffix, schema expects utilization_std_dev
-        // CSV is missing bottleneck_frequency - will default to 0
         // Also inject scenario_id, scenario_name, and generate composite ID
         const mappedResult: ResourceCrossRepData[] = result.map((item: any) => ({
             // Generate composite ID from scenario and resource
@@ -148,9 +146,6 @@ export async function fetchResourceCrossRep(
             utilization_min: item.utilization_rate_min,    // Map utilization_rate_min to utilization_min
             utilization_max: item.utilization_rate_max,    // Map utilization_rate_max to utilization_max
             utilization_std_dev: item.utilization_rate_std,  // Map utilization_rate_std to utilization_std_dev
-
-            // Bottleneck frequency not in CSV - default to 0
-            bottleneck_frequency: 0,  // NOT in CSV, default to 0
 
             // Cost metrics (map _std to _std_dev)
             seize_cost_mean: item.seize_cost_mean,
@@ -192,7 +187,6 @@ export async function fetchResourceCrossRep(
                 utilization_min: item.utilization_min ?? 0,
                 utilization_max: item.utilization_max ?? 0,
                 utilization_std_dev: item.utilization_std_dev ?? 0,
-                bottleneck_frequency: item.bottleneck_frequency ?? 0,
                 // Cost metrics
                 seize_cost_mean: item.seize_cost_mean ?? 0,
                 seize_cost_std_dev: item.seize_cost_std_dev ?? 0,
@@ -251,7 +245,6 @@ export function prepareResourceCrossRepUpdate(data: ResourceCrossRepData[]) {
             utilization_min: item.utilization_min ?? 0,
             utilization_max: item.utilization_max ?? 0,
             utilization_std_dev: item.utilization_std_dev ?? 0,
-            bottleneck_frequency: item.bottleneck_frequency ?? 0,
             // Cost metrics
             seize_cost_mean: item.seize_cost_mean ?? 0,
             seize_cost_std_dev: item.seize_cost_std_dev ?? 0,
