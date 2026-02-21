@@ -282,9 +282,9 @@ You will need to expose the URL you are using to accept requests publicly so tha
 For a more thorough example, you can look at the source code for 2 different Lucid extensions that part of the SDK.
 
 ### Basic Data Connector example
-C:\_source\Greenshoes\sample-lucid-extensions\data-connector-example\dataconnectors\data-connector-1
+C:\_source\quodsi\sample-lucid-extensions\data-connector-example\dataconnectors\data-connector-1
 ### Asana example
-C:\_source\Greenshoes\sample-lucid-extensions\asana
+C:\_source\quodsi\sample-lucid-extensions\asana
 
 # Data actions
 Data actions are the backbone of a data connector. Data actions are invoked either explicitly by your editor extension, or in some cases automatically by Lucid’s server to help sync data changes. Data connectors declare which data actions they support, including things like importing data, refreshing data on open Lucid documents, and patching data changes made in Lucid back to an external data source.

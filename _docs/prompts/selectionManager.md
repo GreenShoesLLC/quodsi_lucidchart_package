@@ -1,9 +1,9 @@
 # Overview
 The entry point into quodsi_editor_extension is extension.ts which is found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\extension.ts
 
 extension instantiates ModelPanel
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
 
 ModelPanel derives from LucidChart's sdk Panel type and serves as an Iframe for quodsim-react to surfaces React pages into. 
 
@@ -39,10 +39,10 @@ Here is ModelPanel's handleSelectionChange:
 quodsi_editor_extension and quodsim-react are exchanging messages whenever the user changes selection in LucidChart or interacts with the React user interface.
 
 When ModelPanel is instantiated, it triggers quodsim-react to fire up index.tsx found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\index.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\index.tsx
 
 index.tsx loads up QuodsiApp component found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\QuodsiApp.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\QuodsiApp.tsx
 
 QuodsiApp has this code:
 sendMessage(MessageTypes.REACT_APP_READY)
@@ -50,10 +50,10 @@ sendMessage(MessageTypes.REACT_APP_READY)
 which uses ExtensionMessaging to send REACT_APP_READY to the parent quodsi_editor_extension app.
 
 ExtensionMessaging found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\utils\ExtensionMessaging.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\messaging\utils\ExtensionMessaging.ts
 
 ModelPanel handles the REACT_APP_READY message as well as other types. All the different types are found in MessageType found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\MessageTypes.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\messaging\MessageTypes.ts
 
 Every type of Message has a certain payload associated with it defined by MessagePayloads:
 
@@ -66,19 +66,19 @@ export interface MessagePayloads extends
     ModelTreePayloads { }
 
 Please check out all the files in this folder to see what each payload per message type consists of.
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\messaging\payloads
 
 ModelPanel receives the REACT_APP_READY message and executes handleReactReady
 
 The primary result of quodsi_editor_extension and quodsim-react exchanging messages is changing how React components are rendered in the ModelPanel iframe.
 
 ModelPanel leverages SelectionManager which can be found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\managers\SelectionManager.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\managers\SelectionManager.ts
 
 SelectionManager depends on these types:
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\SelectionType.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\SelectionState.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\messaging\payloads\SelectionPayloads.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\SelectionType.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\SelectionState.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\messaging\payloads\SelectionPayloads.ts
 
 quodsi_editor_extension is sending the following messages to QuodsiApp whenever the user changes selection in LucidChart.
 
@@ -89,7 +89,7 @@ quodsi_editor_extension is sending the following messages to QuodsiApp whenever 
     SELECTION_CHANGED_UNCONVERTED = 'selectionUnconverted',      // Unconverted element selected
 
 QuodsiApp's messageHandlers have been setup to handle the specific messages. The React based messageHandlers.ts found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
 
 
 
@@ -139,10 +139,10 @@ QuodsiApp receives the message and handles it through messageHandlers.
     },
 
 QuodsiApp.tsx uses the ModelPanelAccordion component found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
 ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the React components can be found as files in this folder:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\
 
 The ModelPanelAccordion contains 4 different sections where each section is controlled by an accordian widget.  The 4 sections are:
 Header
@@ -151,7 +151,7 @@ Editor
 Model Tree
 
 In the current design, SELECTION_CHANGED_PAGE_NO_MODEL shows the "Initialize Quodsi Model" button.  This is located in Headers.tsx file located here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
 Headers.tsx can be configured to show different buttons, etc based upon the received event by QuodsiApp
 
 # SELECTION_CHANGED_PAGE_NO_MODEL = 'selectionPageNoModel',     // no model exists
@@ -176,7 +176,7 @@ QuodsiApp shows the SimulationComponentSelector.  The user chooses "Generator" r
 Within handleConvertElement, an instance of the type selected is created from SimulationObjectTypeFactory
 const defaultData = SimulationObjectTypeFactory.createElement(data.type, data.elementId);
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\factories\SimulationObjectTypeFactory.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\factories\SimulationObjectTypeFactory.ts
 
 handleConvertElement will then send MessageTypes.SELECTION_CHANGED_SIMULATION_OBJECT back to QuodsiApp.tsx.
 
@@ -265,10 +265,10 @@ QuodsiApp receives the SELECTION_CHANGED_PAGE_WITH_MODEL and handles it through 
         },
 
 QuodsiApp.tsx uses the ModelPanelAccordion component found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
 ModelPanelAccordion renders multiple components and those components rely on the payload to know what to render.  All the components can be found as files in this folder:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion
 
 
 Within Header.tsx, since nothing was selected in LucidChart the event sent was SELECTION_CHANGED_PAGE_WITH_MODEL, the element is a Model so the Headers.tsx properly shows the "Remove Model" button.

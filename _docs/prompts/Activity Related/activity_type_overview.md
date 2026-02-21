@@ -82,14 +82,14 @@ type: SimulationObjectType = SimulationObjectType.ResourceRequirement;
 rootClauses: RequirementClause[];
 
 Here are 3 different instances of an Activity of various complexity.
-C:\_source\Greenshoes\quodsi_lucidchart_package\docs\prompts\Activity Related\activity_instances_example.md
+C:\_source\quodsi\quodsi_lucidchart_package\docs\prompts\Activity Related\activity_instances_example.md
 
 Here are some paths of the current definition of Activity related types:
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\OperationStep.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Duration.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\PeriodUnit.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\RequirementClause.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\Resource.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequest.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequirement.ts
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\types\elements\RequirementMode.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\OperationStep.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\Duration.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\PeriodUnit.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\RequirementClause.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\Resource.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequest.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\ResourceRequirement.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\types\elements\RequirementMode.ts

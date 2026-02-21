@@ -2,7 +2,7 @@
 
 
 # No npm start script found
-"No npm start script found in C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react."
+"No npm start script found in C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react."
 
 
 # Identity Management

@@ -92,7 +92,7 @@ combinations.push({
 
 2. Generate the model files:
 ```bash
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 npx ts-node tests/__fixtures__/models/generators/generate_models.ts
 ```
 

@@ -2,7 +2,7 @@
 # saveAndSubmitSimulationAction
 when the user hits the simulate button, the quodsi_editor_extension calls client.performDataAction within the ModelPanel.handleSimulateModel method
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
 
                await this.client.performDataAction({
                     dataConnectorName: 'quodsi_data_connector',
@@ -13,13 +13,13 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_e
 
 Lucid will call the quodsi_data_connector_lucidchart_v2 Azure Function App's dataConnectorHttpTrigger which then, based upon actionName, call the saveAndSubmitSimulationAction action. Here are the file paths for these types:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\functions\dataConnectorHttpTrigger.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\functions\dataConnectorHttpTrigger.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\saveAndSubmitSimulationAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\saveAndSubmitSimulationAction.ts
 
 For more information about the actions, read this doc:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\README.md
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\README.md
 
 Effectively, the user is "running a scenario" of the model from the active LucidChart page.
 
@@ -31,7 +31,7 @@ Because a LucidChart document can have more than 1 model and more than 1 scenari
 
 LucidChart extension apps have a concept of "DataSources" and "Collections" which allow third party apps like Quodsi to programmatically inject data.  Quodsi already has define a DataSource called "simulation_results".  For more information, please read the following doc:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\README.md
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\README.md
 
 
 # ScenarioResults Schema
@@ -42,11 +42,11 @@ here is what I am currently thinking:
 
 Create a new ScenarioResultsSchema in the src\collections directory:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections
 
 Follow the pattern as seen in other schema files such as entityThroughputRepSummarySchema found here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\entityThroughputRepSummarySchema.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\entityThroughputRepSummarySchema.ts
 
 ScenarioResultsSchema will have at least 1 field:
 
@@ -55,14 +55,14 @@ ScenarioResultsSchema will have at least 1 field:
 another field would be "state" which is a string.
 
 One possible definition is exactly the same fields as ModelDefinitionSchema found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\data_sources\model\schemas\ModelDefinitionSchema.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\data_sources\model\schemas\ModelDefinitionSchema.ts
 
 # pollAction
 
 A feature of Lucid extension apps is that you can define a pollAction which Lucid will call every 30 seconds.  
 
 I have created a working version of Quodsi's pollAction here.
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\pollAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\pollAction.ts
 
 The current version of the pollAction is just a work in progress and can be 100% rewritten to support our needs.
 
@@ -72,15 +72,15 @@ A limitation within the pollAction is that it can only programmatically get the 
 
 here are some file paths to the typescipt definitions for Lucid's
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\node_modules\lucid-extension-sdk\dataconnector\actions\action.d.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\node_modules\lucid-extension-sdk\dataconnector\actions\action.d.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\node_modules\lucid-extension-sdk\dataconnector\datasourceclient.d.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\node_modules\lucid-extension-sdk\dataconnector\datasourceclient.d.ts
 
 So, since we can only fetch the ids, I feel ScenarioResultsSchema id needs to be constructed from a combination of documentId and scenarioId.
 
 I have existing code that utilizes DataConnectorAsynchronousAction to update data here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\simulationResultsService.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\simulationResultsService.ts
 
 
 

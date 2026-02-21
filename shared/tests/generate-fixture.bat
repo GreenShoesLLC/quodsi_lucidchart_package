@@ -1,5 +1,5 @@
 @echo off
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 echo Running fixture generation for mixed distribution model...
 call npm run test:update-single-snapshot -- model_def_mixed_distributions
 echo.

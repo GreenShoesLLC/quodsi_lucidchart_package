@@ -18,7 +18,7 @@ Before running the script, ensure you have the following:
 2.  **PowerShell:** Typically included with modern Windows versions.
 3.  **Node.js and npm/npx:** Required for running React scripts. Ensure `node`, `npm`, and `npx` are accessible from your PowerShell terminal (i.e., configured in your system's PATH). You can download Node.js (which includes npm and npx) from [https://nodejs.org/](https://nodejs.org/).
 4.  **Project Source Code:** The `quodsim-react` project source code must be present on your machine. The script currently assumes the project is located at:
-    `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react`
+    `C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react`
     * **Note:** If your project path is different, you must update the `$ProjectDirectory` variable inside the `Build-QuodsimReact.ps1` script file.
 
 ## How to Use

@@ -41,7 +41,7 @@ manifest.json
 Technically, only manifest.json is used during execution of Quodsi, either running locally or deployed.  The other manifest files are leveraged during the creation of the publish zip file based upon target deployment environment.
 
 The following folder contains deployment script for publishing the Lucid zip file
-C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\README.md
+C:\_source\quodsi\quodsi_lucidchart_package\deploy\README.md
 
 Please notice during the deployment script, the script has a target environment and will move content from one of the manifest_*.json files to temporarily set in manifest.json.
 

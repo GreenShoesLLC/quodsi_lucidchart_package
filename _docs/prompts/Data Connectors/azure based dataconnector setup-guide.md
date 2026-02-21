@@ -15,7 +15,7 @@ This guide outlines the steps to create an Azure Functions-based version of the 
 
 ```powershell
 # Create project directory
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors
+cd C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors
 mkdir quodsi_azure_data_connector
 cd quodsi_azure_data_connector
 

@@ -6,6 +6,7 @@ import {
     SimulationObjectType,
     ComponentLogger,
     ActivityFinancialProperties,
+    FailureProperties,
     ConnectType,
     parseStructuredName,
     extractActivityFields,
@@ -43,6 +44,7 @@ interface StoredActivityData {
     outboundQueueCapacity?: number;
     actions?: Action[];
     financialProperties?: any;
+    failureProperties?: any;
     connectType?: string;
     resourceName?: string;  // Resource name to auto-create during conversion
 }
@@ -139,6 +141,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             activity.financialProperties = ActivityFinancialProperties.fromJSON(storedData.financialProperties);
         }
 
+        // Deserialize failure properties
+        if (storedData?.failureProperties) {
+            activity.failureProperties = FailureProperties.fromJSON(storedData.failureProperties);
+        }
+
         // Restore connectType
         if (storedData?.connectType) {
             activity.connectType = storedData.connectType as ConnectType;
@@ -198,6 +205,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             outboundQueueCapacity: this.simObject.outboundQueueCapacity,
             actions: this.simObject.actions,
             financialProperties: this.simObject.financialProperties?.toJSON(),
+            failureProperties: this.simObject.failureProperties?.toJSON(),
             connectType: this.simObject.connectType
         };
 
@@ -273,6 +281,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,
             actions: actions,
             financialProperties: defaultActivity.financialProperties?.toJSON(),
+            failureProperties: defaultActivity.failureProperties?.toJSON(),
             connectType: defaultActivity.connectType,
             resourceName: fields.resource  // Store for auto-creation during conversion
         };

@@ -35,7 +35,7 @@ param(
 
 # --- Configuration ---
 # Set the path to your React project directory
-$ProjectDirectory = "C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react"
+$ProjectDirectory = "C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react"
 $BuildOutputDirectory = Join-Path -Path $ProjectDirectory -ChildPath "build"
 
 # --- Script Start ---

@@ -92,12 +92,12 @@ The application uses `@quodsi/shared` for core types and utilities:
 
 ```bash
 # First build the shared library
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 npm install
 npm run build
 
 # Then install this project
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
+cd C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 npm install
 ```
 

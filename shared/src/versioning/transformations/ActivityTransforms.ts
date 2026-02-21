@@ -13,6 +13,15 @@ export const ActivityTransforms: TransformationSet = {
                 ...data,
                 description: data.description ?? ''
             })
+        },
+        {
+            sourceVersion: '2026.02.15',
+            targetVersion: '2026.02.22',
+            transform: (data: any) => ({
+                ...data
+                // failureProperties is optional — absence means "disabled"
+                // No default injection needed; identity transform for version hop
+            })
         }
     ]
 };

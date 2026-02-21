@@ -1,14 +1,14 @@
 @dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\saveAndSubmitSimulationAction.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\listScenariosAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\listScenariosAction.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\editors\ScenarioEditor.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\editors\ScenarioEditor.tsx
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\editors\ScenarioCard.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\editors\ScenarioCard.tsx
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\getDocumentStatusAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\getDocumentStatusAction.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\modelPanel\PanelHeader.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\features\modelPanel\PanelHeader.tsx
 
 Whenever the user hits the Simulate button in PanelHeader:
 

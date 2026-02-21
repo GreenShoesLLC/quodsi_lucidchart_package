@@ -6,17 +6,17 @@ Copy and paste the command for your target environment:
 
 **Development (Dev):**
 ```powershell
-C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev
+C:\_source\quodsi\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev
 ```
 
 **Test (TST):**
 ```powershell
-C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment TST
+C:\_source\quodsi\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment TST
 ```
 
 **Production (PRD):**
 ```powershell
-C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
+C:\_source\quodsi\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
 ```
 
 **Output:** `package.zip` in project root → Upload to LucidChart developer portal
@@ -54,7 +54,7 @@ This PowerShell script orchestrates the process of preparing environment variabl
 The script requires PowerShell 7. Windows PowerShell (5.x) may fail with parsing errors due to character encoding differences.
 ```powershell
 # Use pwsh (PowerShell 7), not powershell
-pwsh -ExecutionPolicy Bypass -File "C:\_source\Greenshoes\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1" -TargetEnvironment Dev
+pwsh -ExecutionPolicy Bypass -File "C:\_source\quodsi\quodsi_lucidchart_package\deploy\lucid-package\build-bundle.ps1" -TargetEnvironment Dev
 ```
 
 **Execution Policy errors:**
@@ -64,7 +64,7 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 **Verify manifest files exist:**
 ```powershell
-Get-ChildItem C:\_source\Greenshoes\quodsi_lucidchart_package\manifest*.json
+Get-ChildItem C:\_source\quodsi\quodsi_lucidchart_package\manifest*.json
 ```
 
 **Check deployed package URL:**

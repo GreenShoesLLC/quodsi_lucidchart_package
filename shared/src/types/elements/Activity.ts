@@ -4,6 +4,7 @@ import { Duration } from "./Duration";
 import { PeriodUnit } from "./PeriodUnit";
 import { ConstantDistribution } from "./distributions";
 import { ActivityFinancialProperties } from "./FinancialProperties";
+import { FailureProperties } from "./FailureProperties";
 import { ConnectType } from "./ConnectType";
 import { Action } from "./actions";
 import { EntitySourceConfig } from "./EntitySourceConfig";
@@ -34,6 +35,11 @@ export class Activity extends FlowNode {
      * Financial properties for Phase 1 costing
      */
     financialProperties?: ActivityFinancialProperties;
+
+    /**
+     * Failure (MTBF/MTTR) properties for activity breakdowns
+     */
+    failureProperties?: FailureProperties;
 
     /**
      * Connect type for routing decisions from this activity

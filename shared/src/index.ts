@@ -87,6 +87,10 @@ export * from './types/elements/FlowNode';
 // Financial properties
 export * from './types/elements/FinancialProperties';
 
+// Failure properties
+export * from './types/elements/FailureClockMode';
+export * from './types/elements/FailureProperties';
+
 // Distribution types
 export * from './types/elements/distributions';
 

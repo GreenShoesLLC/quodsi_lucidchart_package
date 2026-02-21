@@ -1,9 +1,9 @@
 
 Please read the following documents:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\_docs\prompts\Data Connectors\Data connectors.md
+C:\_source\quodsi\quodsi_lucidchart_package\_docs\prompts\Data Connectors\Data connectors.md
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\_docs\prompts\Data Connectors\Data.md
+C:\_source\quodsi\quodsi_lucidchart_package\_docs\prompts\Data Connectors\Data.md
 
 The following URLs are relevant to this chat and contain type documentation from Lucid developer docs.
 
@@ -21,16 +21,16 @@ Here is the source code for 2 Lucid data connector examples in their development
 
 * Basic Data Connector example
 
-C:\_source\Greenshoes\sample-lucid-extensions\data-connector-example\dataconnectors\data-connector-1
+C:\_source\quodsi\sample-lucid-extensions\data-connector-example\dataconnectors\data-connector-1
 
 * Asana example
 
-C:\_source\Greenshoes\sample-lucid-extensions\asana
+C:\_source\quodsi\sample-lucid-extensions\asana
 
 
 ## CSV Files
 The following directory contains the same set of csv files that will be found in the Azure container.
-C:\_source\Greenshoes\quodsim\tests\simulation_tests\test_output\debug
+C:\_source\quodsi\quodsim\tests\simulation_tests\test_output\debug
 
 - activity_rep_summary.csv
 - activity_timing.csv
@@ -45,10 +45,10 @@ We need to create SchemaDefinition of each of those csv output files.
 
 For example, if you look at activity_utilization.csv, I have already created ActivityUtilizationSchema: SchemaDefinition.
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections\activityUtilizationSchema.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections\activityUtilizationSchema.ts
 
 I would like to create a new SchemaDefinition for the others.
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\collections
 
 
 
@@ -66,15 +66,15 @@ await this.client.performDataAction({
 
 From the shared documentation and examples, I created quodsi_data_connector, located here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector
 
 My manifest.json file is located here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\manifest.json
+C:\_source\quodsi\quodsi_lucidchart_package\manifest.json
 
 Please see all my actions in the following folder:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector\actions
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector\actions
 
 1. Import (importSimulationResults) - This action is called by the editor extension when users clicks a button, etc.
 2. HardRefresh - This action is called by an automatic process when users first open a document with existing data managed by this extension.
@@ -83,9 +83,9 @@ C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_conne
 
 I have craeted Lucid DataSource, Collections and SchemaDefinition in both quodsi_data_connector and quodsi_editor_extension.  Here are the 2 key folders for both respectively.
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector\collections
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector\collections
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\collections
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\collections
 
 
 Once you have read everything listed, let me know and I will tell you what we are working on.
@@ -93,13 +93,13 @@ Once you have read everything listed, let me know and I will tell you what we ar
 
 In the last chat, you and I created PageSchemaConversionService which can be found here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\services\conversion\PageSchemaConversionService.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\services\conversion\PageSchemaConversionService.ts
 
 the purpose of PageSchemaConversionService is to analyze the elements (shapes, lines, etc) on the active LucidChart page and determine what type of simulation object they are.  Elements chosen to be a simulation type have a DataItem within the chosen Collection and the element then references that DataItem.
 
 When the user chooses a LucidChart element that has not be converted to a simulation type, then the Quodsi apps offers them the ability to convert it.
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\core\ModelDefinitionPageBuilder.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\core\ModelDefinitionPageBuilder.ts
 
 
 

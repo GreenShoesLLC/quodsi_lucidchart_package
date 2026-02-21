@@ -19,8 +19,8 @@ This guide walks through setting up, developing, and deploying an Azure Function
 
    ```powershell
    # Working directory: any location
-   mkdir C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
-   cd C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   mkdir C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   cd C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    ```
 
 ## Step 2: Initialize the Azure Functions Project
@@ -28,14 +28,14 @@ This guide walks through setting up, developing, and deploying an Azure Function
 1. Open the new directory in VS Code:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors
    code quodsi_data_connector_lucidchart_v1
    ```
 
 2. Open the VS Code command palette (Ctrl+Shift+P) and type "Azure Functions: Create New Project"
 
 3. Select the project directory:
-   - Choose the current directory (`C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1`)
+   - Choose the current directory (`C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1`)
 
 4. Select the language:
    - Choose **TypeScript**
@@ -54,7 +54,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 1. Create a tsconfig.json file:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    echo '{
      "compilerOptions": {
        "module": "commonjs",
@@ -72,14 +72,14 @@ This guide walks through setting up, developing, and deploying an Azure Function
 1. Initialize the package.json (if not already created):
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    npm init -y
    ```
 
 2. Edit the package.json to include the necessary scripts and dependencies:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    code package.json
    ```
 
@@ -115,7 +115,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 4. Install dependencies:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    npm install
    ```
 
@@ -124,7 +124,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 1. Create src directory and index.ts:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    mkdir src
    cd src
    ```
@@ -132,7 +132,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 2. Create an index.ts file:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src
    echo 'import { app } from "@azure/functions";
 
    app.setup({
@@ -147,7 +147,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 3. Create functions directory and a sample function:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src
    mkdir functions
    cd functions
    ```
@@ -155,7 +155,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 4. Create a sample HTTP trigger function:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\functions
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\functions
    echo 'import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 
    export async function httpTrigger(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
@@ -185,7 +185,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 5. Go back to the root directory and create host.json:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\functions
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1\src\functions
    cd ../..
    echo '{
      "version": "2.0",
@@ -207,7 +207,7 @@ This guide walks through setting up, developing, and deploying an Azure Function
 6. Create local.settings.json for local development:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    echo '{
      "IsEncrypted": false,
      "Values": {
@@ -220,6 +220,6 @@ This guide walks through setting up, developing, and deploying an Azure Function
 7. Create .funcignore file:
 
    ```powershell
-   # Working directory: C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
+   # Working directory: C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v1
    echo '*.js.map
    *.t

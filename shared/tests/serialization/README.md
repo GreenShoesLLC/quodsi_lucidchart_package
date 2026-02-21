@@ -59,7 +59,7 @@ Do NOT update when:
 
 ### 1. Verify Current Serialization
 ```bash
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 npm run test:verify-snapshots
 ```
 This compares the current serialization output against the expected JSON snapshots.
@@ -72,7 +72,7 @@ Use this when you've:
 
 ```bash
 # Navigate to shared package
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 
 # Update specific model snapshot
 npm run test:update-single-snapshot -- model_def_e1_a2_r2_g1
@@ -99,7 +99,7 @@ Use this when you've:
 
 ```bash
 # Navigate to shared package
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 
 # Update all snapshots
 npm run test:update-snapshots

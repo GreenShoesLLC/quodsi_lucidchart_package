@@ -73,7 +73,7 @@ Module not found: Can't resolve '@quodsi/shared'
 **Solution:**
 
 ```bash
-cd /mnt/c/_source/Greenshoes/quodsi_lucidchart_package
+cd /mnt/c/_source/quodsi/quodsi_lucidchart_package
 npm run build -w @quodsi/shared
 ```
 
@@ -324,7 +324,7 @@ npm ERR! Workspace '@quodsi/shared' not found
 
 ```bash
 # Ensure you're in repository root
-cd /mnt/c/_source/Greenshoes/quodsi_lucidchart_package
+cd /mnt/c/_source/quodsi/quodsi_lucidchart_package
 pwd  # Should show repository root
 
 # Verify package.json has workspaces
@@ -405,7 +405,7 @@ lsof -ti:7071 | xargs kill -9
 **3. Clean Build:**
 
 ```bash
-cd /mnt/c/_source/Greenshoes/quodsi_lucidchart_package
+cd /mnt/c/_source/quodsi/quodsi_lucidchart_package
 rm -rf shared/dist
 rm -rf dataconnectors/quodsi_data_connector_lucidchart_v2/dist
 rm -rf editorextensions/quodsi_editor_extension/quodsim-react/build
@@ -526,7 +526,7 @@ If using WSL (Windows Subsystem for Linux):
 
 **Path Format:**
 ```bash
-cd /mnt/c/_source/Greenshoes/quodsi_lucidchart_package
+cd /mnt/c/_source/quodsi/quodsi_lucidchart_package
 ```
 
 **Port Access:**

@@ -148,6 +148,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             if (activity.financialProperties) {
                 serialized.financialProperties = activity.financialProperties.toJSON();
             }
+            if (activity.failureProperties) {
+                serialized.failureProperties = activity.failureProperties.toJSON();
+            }
             if (activity.connectType) {
                 serialized.connectType = activity.connectType;
             }

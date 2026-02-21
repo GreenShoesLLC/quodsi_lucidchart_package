@@ -53,6 +53,10 @@ export * from './StateModification';
 // Export financial properties
 export * from './FinancialProperties';
 
+// Export failure properties
+export * from './FailureClockMode';
+export * from './FailureProperties';
+
 // Export distributions
 export * from './distributions';
 

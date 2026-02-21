@@ -245,8 +245,8 @@ The conversion process maps LucidChart visual elements to corresponding simulati
 
 For more details on LucidChart integration, see:
 
-- `C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\types\README.md`
-- `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\platform\README.md`
+- `C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\types\README.md`
+- `C:\_source\quodsi\quodsi_lucidchart_package\shared\src\platform\README.md`
 
 ## Integration with Quodsim Python Engine
 
@@ -284,7 +284,7 @@ Validation occurs at multiple levels:
 4. **Model-level validation**: Ensures the overall model is coherent and executable
 
 The validation rules can be found in:
-`C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\validation\rules`
+`C:\_source\quodsi\quodsi_lucidchart_package\shared\src\validation\rules`
 
 ## Usage Examples
 
@@ -365,7 +365,7 @@ if (activity && activity.operationSteps.length > 0) {
 
 For more details on serialization, validation, and platform integration, refer to:
 
-- Serialization: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\serialization`
-- LucidChart Extension: `C:\_source\Greenshoes\quodsi_lucidchart_package\_docs\LucidChart Extension Panel Lifecycle Guide.md`
-- Validation: `C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\validation\services\ModelValidationService.ts`
-- Python Engine: `C:\_source\Greenshoes\quodsim\_docs\model-definition-docs.md`
+- Serialization: `C:\_source\quodsi\quodsi_lucidchart_package\shared\src\serialization`
+- LucidChart Extension: `C:\_source\quodsi\quodsi_lucidchart_package\_docs\LucidChart Extension Panel Lifecycle Guide.md`
+- Validation: `C:\_source\quodsi\quodsi_lucidchart_package\shared\src\validation\services\ModelValidationService.ts`
+- Python Engine: `C:\_source\quodsi\quodsim\_docs\model-definition-docs.md`

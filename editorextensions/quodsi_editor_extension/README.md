@@ -179,12 +179,12 @@ The extension stores model data within LucidChart's shape data:
 
 ```bash
 # First build the shared library
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\shared
+cd C:\_source\quodsi\quodsi_lucidchart_package\shared
 npm install
 npm run build
 
 # Then install and build this project
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension
+cd C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension
 npm install
 npm run build
 ```

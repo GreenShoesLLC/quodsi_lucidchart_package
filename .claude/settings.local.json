@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Read(//mnt/c/_source/Greenshoes/quodsim/quodsim_runner/**)",
+      "Read(//mnt/c/_source/quodsi/quodsim/quodsim_runner/**)",
       "WebFetch(domain:developer.lucid.co)",
       "WebSearch",
       "Bash(npx tsc:*)",
@@ -19,7 +19,7 @@
       "Bash(git mv:*)",
       "Bash(az account show:*)",
       "Bash(git log:*)",
-      "Read(//mnt/c/_source/Greenshoes/**)",
+      "Read(//mnt/c/_source/quodsi/**)",
       "Bash(npm test:*)",
       "Bash(powershell -ExecutionPolicy Bypass -File:*)",
       "Bash(powershell:*)",
@@ -32,7 +32,7 @@
     "deny": [],
     "ask": [],
     "additionalDirectories": [
-      "C:\\_source\\Greenshoes\\quodsim"
+      "C:\\_source\\quodsi\\quodsim"
     ]
   }
 }

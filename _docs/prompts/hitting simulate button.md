@@ -2,7 +2,7 @@ Please do not code, lets just discuss and form a plan.
 
 There is a "Simulate" button the user can click in the quodsi_react app.  The button is located in the Header component in this file:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\Header.tsx
 
 I shared an image of the button which is next to 2 other buttons.
 
@@ -10,13 +10,13 @@ When the user hits "Simulate" button, i want the button to be immediately disabl
 
 Hitting the Simulate button calls saveAndSubmitSimulationAction 
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\saveAndSubmitSimulationAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\saveAndSubmitSimulationAction.ts
 
 saveAndSubmitSimulationAction adds or updates a model_*.json file in an Azure Batch container and creates an Azure Batch job to simulate using model_*.json as the inputs.  another key thing saveAndSubmitSimulationAction  is create or update a scenarioResultsSchema item.
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\scenarioResultsSchema.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\collections\scenarioResultsSchema.ts
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\services\scenarioResultsService.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\services\scenarioResultsService.ts
 
 when the job starts, the python code immediate either creates or updates the scenarios_status.json file in the root of the Azure container.  Here is a working version of the contents:
 
@@ -65,9 +65,9 @@ export enum RunState {
 
  when the job initially starts, the runState is changed to Running.  here are the code files for SimStatusJsonUpdater and AzureBatchSimulationRunner
 
-C:\_source\Greenshoes\quodsim\quodsim_runner\lucidchart\sim_status_json_updater.py
+C:\_source\quodsi\quodsim\quodsim_runner\lucidchart\sim_status_json_updater.py
 
-C:\_source\Greenshoes\quodsim\quodsim_runner\lucidchart\azure_batch_simulation_runner.py
+C:\_source\quodsi\quodsim\quodsim_runner\lucidchart\azure_batch_simulation_runner.py
 
 As the simulation job is running, SimStatusJsonUpdater  is changing scenarios_status.json.  I am not sure in the current design if SimStatusJsonUpdater  can handle specifically updating the proper scenario id row or if it assumes a single hardcoded scenario to update.  
 
@@ -79,7 +79,7 @@ an alternative design is for each scenario to manage its own state with a file i
 
 Back in Lucid, every 30 seconds, polling code is executed.  here is the exact code currently being executed:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\pollAction.ts
+C:\_source\quodsi\quodsi_lucidchart_package\dataconnectors\quodsi_data_connector_lucidchart_v2\src\actions\pollAction.ts
 
 in the current design, first this code fetches scenarioResultsSchema items.  the id of scenarioResultsSchema item holds both the documentId and scenarioId which is then parsed.  The documentId  is the Azure Blob Container name.   In the current design, the pollAction will ALWAYS import the results of every csv file.  one of the most significant features i need to add is to only import the simulation csv files if there are newer files that what is currently saved in Lucid.  A super significant detail the pollAction can only read the id of scenarioResultsSchema items and cannot read the other values.  pollAction can call other APIs or read files from Azure storage obviously though.  How can we design a system that only updates csv file results as needed?
 

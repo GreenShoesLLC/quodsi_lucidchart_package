@@ -3,19 +3,19 @@ The primary purpose of Quodsi application is to enhance diagrams with simulation
 One of the features of Quodsi's LucidChart extension package is a "Simulate" button.  When the user hits the "Simulate" button, the application creates a Microsoft Azure Storage Container where the name of the container is the LucidChart active documentId.  AFter the diagram is simulated, Quodsi creates and uploads various files containing the simulation results to the Azure container with the same name as the documentId.
 
 Attached is a screenshot of the ModelPanelAccordion react component found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelPanelAccordion\ModelPanelAccordion.tsx
 
 Within LucidChart, the loaded document's Page is being selected, so within the ModelPanelAccordion, you will see ModelEditor react component found here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelEditor.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\ModelEditor.tsx
 
 Within the ModelEditor, there are tabs and the "Output Page" tab shows the OutputForm found here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\OutputForm.tsx
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\components\OutputForm.tsx
 
 In quodsim-react's OutputForm react component, when the user hits the "Create Page" button, the MessageTypes.OUTPUT_CREATE_PAGE message is sent to quodsi_editor_extension where ModelPanel.ts receives the message and handles it in handleOutputCreatePage method:
 
 For the full code of ModelPanel, see this file:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\src\panels\ModelPanel.ts
 
 
 Here is most if not all the relevant documentation for the request to add the csv data to the page.
@@ -36,7 +36,7 @@ Pleease review the code for ModelPanel.handleOutputCreatePage and the documenata
 
 Please notice in handleOutputCreatePage it uses LucidApiService where the full code is located here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\services\lucidApi.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\services\lucidApi.ts
 
 handleOutputCreatePage is currently failing with this console log message:
 
@@ -50,7 +50,7 @@ I want to enhance handleOutputCreatePage by showing data from one of the documen
 
 My application will have access to an web api.  My web api is written in C# asp.net 8x.  The full code can be found here:
 
-C:\_source\Greenshoes\quodsi_dotnet_api\quodsi_dotnet_api\API\Controllers\LucidController.cs
+C:\_source\quodsi\quodsi_dotnet_api\quodsi_dotnet_api\API\Controllers\LucidController.cs
 
 Please see LucidController's GetFile method
 
@@ -91,11 +91,11 @@ Please see LucidController's GetFile method
 
 useSimulationStatus utilizing LucidApiService and the full code for useSimulationStatus.ts can be found here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useSimulationStatus.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useSimulationStatus.ts
 
 We also added csvUtils
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\shared\src\utils\csvUtils.ts
+C:\_source\quodsi\quodsi_lucidchart_package\shared\src\utils\csvUtils.ts
 
 For my first enhancement, i simply want to hardcode the file I want to get and render it somehow in the newly created Page.
 

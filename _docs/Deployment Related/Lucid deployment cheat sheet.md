@@ -85,7 +85,7 @@ https://create-react-app.dev/docs/adding-custom-environment-variables/#what-othe
 
 ## Set your working directory:
 ```
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
+cd C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react
 Remove-Item -Path ".\build" -Recurse -Force
 ```
 
@@ -114,14 +114,14 @@ npx react-scripts build
 
 Delete files from here:
 
-[Open public quodsim-react folder](file:///C:/_source/Greenshoes/quodsi_lucidchart_package/public/quodsim-react)
+[Open public quodsim-react folder](file:///C:/_source/quodsi/quodsi_lucidchart_package/public/quodsim-react)
 
 Copy files from here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\build
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\build
 to:
-C:\_source\Greenshoes\quodsi_lucidchart_package\public\quodsim-react
+C:\_source\quodsi\quodsi_lucidchart_package\public\quodsim-react
 
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\
+cd C:\_source\quodsi\quodsi_lucidchart_package\
 npx lucid-package@latest bundle
 
 Go to Developer Portal and private publish new version and install on your account.
@@ -134,9 +134,9 @@ Copy this section from the route to index.html
 
 paste that onto all links in index.html located here:
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\public\quodsim-react\index.html
+C:\_source\quodsi\quodsi_lucidchart_package\public\quodsim-react\index.html
 
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\
+cd C:\_source\quodsi\quodsi_lucidchart_package\
 npx lucid-package@latest bundle
 
 Private Publish again.
@@ -149,5 +149,5 @@ copy "build" folder contents into public/quodsim-react/static
 
 replace index.html with the "pub" version.
 
-cd C:\_source\Greenshoes\quodsi_lucidchart_package\
+cd C:\_source\quodsi\quodsi_lucidchart_package\
 npx lucid-package@latest bundle

@@ -11,10 +11,10 @@ quodsim-react sends the MessageTypes.SIMULATE_MODEL
 quodsi_editor_extension handles MessageTypes.SIMULATE_MODEL and sends either MessageTypes.SIMULATION_STARTED or MessageTypes.ERROR to quodsim-react
 
 QuodsiApp's code for handling messages can found in messageHandlers located here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\services\messageHandlers\messageHandlers.ts
 
 Notice QuodsiApp.tsx calls useSimulationStatus located here:
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useSimulationStatus.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\hooks\useSimulationStatus.ts
 
 useSimulationStatus calls an api endpoint and gets back status for all scenarios of the documentId.  
 The response is serialized into a PageStatus
@@ -79,4 +79,4 @@ Enable "Simulate" button
 change Simulation Status to "Invalid Model"
 
 
-C:\_source\Greenshoes\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\utils\simulationState.ts
+C:\_source\quodsi\quodsi_lucidchart_package\editorextensions\quodsi_editor_extension\quodsim-react\src\utils\simulationState.ts

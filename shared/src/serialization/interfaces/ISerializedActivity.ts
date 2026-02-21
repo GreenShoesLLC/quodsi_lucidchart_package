@@ -21,6 +21,7 @@ export interface ISerializedActivity {
 
     connectors: ISerializedConnector[];
     financialProperties?: any;
+    failureProperties?: any;
 
     connectType?: ConnectType;
 }
