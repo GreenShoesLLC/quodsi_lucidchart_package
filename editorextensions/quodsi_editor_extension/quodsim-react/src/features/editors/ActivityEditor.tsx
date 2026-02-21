@@ -8,6 +8,7 @@ import {
   ArrowRightLeft,
   Info,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DndContext,
@@ -42,6 +43,8 @@ import {
   Duration,
   ConnectType,
   ActivityFinancialProperties,
+  FailureProperties,
+  FailureClockMode,
   StateListManager,
   ComponentType,
   Connector,
@@ -49,6 +52,7 @@ import {
   isNameUniqueInReferenceData,
 } from "@quodsi/shared";
 import { ActionEditor } from "./ActionEditor";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
@@ -176,6 +180,13 @@ const TAB_CONFIG = [
       "Track activity costs including fixed costs, per-entity costs, time-based costs, and resource cost multipliers",
   },
   {
+    id: "failure" as const,
+    title: "Failure Settings",
+    icon: AlertTriangle,
+    tooltip:
+      "Configure activity failure with Mean Time Between Failures (MTBF) and Mean Time To Repair (MTTR)",
+  },
+  {
     id: "connectors" as const,
     title: "Routing Configuration",
     icon: ArrowRightLeft,
@@ -238,6 +249,7 @@ type ActivityTab =
   | "basic"
   | "actions"
   | "financial"
+  | "failure"
   | "connectors"
   | "states";
 
@@ -385,6 +397,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? ActivityFinancialProperties.fromJSON(data.financialProperties)
       : new ActivityFinancialProperties();
 
+    // Initialize failureProperties if it doesn't exist
+    activity.failureProperties = data.failureProperties
+      ? FailureProperties.fromJSON(data.failureProperties)
+      : new FailureProperties();
+
     return activity;
   };
 
@@ -411,6 +428,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       actions: Action[];
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
+      failureProperties: FailureProperties;
     }>
   ): Activity => {
     const updated = new Activity(
@@ -428,6 +446,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     updated.connectType = updates.connectType ?? base.connectType;
     updated.financialProperties =
       updates.financialProperties ?? base.financialProperties;
+    updated.failureProperties =
+      updates.failureProperties ?? base.failureProperties;
 
     return updated;
   };
@@ -635,6 +655,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
     // Preserve financialProperties
     activityToSave.financialProperties = localActivityDraft.financialProperties;
+
+    // Preserve failureProperties
+    activityToSave.failureProperties = localActivityDraft.failureProperties;
 
     // Save is handled through Redux - modelOpsSender will dispatch ELEMENT_SAVE_START
     onSave(activityToSave);
@@ -869,6 +892,32 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       return updateActivityImmutably(prev, {
         financialProperties: updatedFinancial,
       });
+    });
+    setHasPendingChanges(true);
+  };
+
+  /**
+   * Handles changes to failure property fields.
+   *
+   * Creates a new FailureProperties instance with the updated field,
+   * preserving all other failure properties. Failure configuration enables
+   * MTBF/MTTR simulation for activity breakdowns.
+   */
+  const handleFailureChange = (
+    field: keyof FailureProperties,
+    value: any
+  ) => {
+    setLocalActivityDraft((prev) => {
+      const current = prev.failureProperties || new FailureProperties();
+      const updated = new FailureProperties({
+        enabled: current.enabled,
+        mtbfDuration: current.mtbfDuration,
+        mttrDuration: current.mttrDuration,
+        failureClockMode: current.failureClockMode,
+        repairResourceRequirementId: current.repairResourceRequirementId,
+        [field]: value,
+      });
+      return updateActivityImmutably(prev, { failureProperties: updated });
     });
     setHasPendingChanges(true);
   };
@@ -1353,6 +1402,206 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   </>
                 )}
               </div>
+          )}
+
+          {activeTab === "failure" && (
+            <div className="space-y-1">
+              {/* Enable Failure Simulation */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="failureEnabled"
+                  checked={
+                    localActivityDraft.failureProperties?.enabled || false
+                  }
+                  onChange={(e) =>
+                    handleFailureChange("enabled", e.target.checked)
+                  }
+                  className="w-3 h-3"
+                />
+                <label
+                  htmlFor="failureEnabled"
+                  className="text-xs font-medium text-gray-700"
+                >
+                  Enable Failure Simulation
+                </label>
+              </div>
+
+              {/* Failure fields - Only shown when failure is enabled */}
+              {localActivityDraft.failureProperties?.enabled && (
+                <div className="space-y-2">
+                  {/* MTBF Duration */}
+                  <div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <label className="text-xs font-medium text-gray-700">
+                        MTBF Duration
+                      </label>
+                      <span title="Mean Time Between Failures — average time the activity operates before a failure occurs">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <EnhancedDurationEditor
+                      periodUnit={
+                        localActivityDraft.failureProperties?.mtbfDuration
+                          ?.durationPeriodUnit ?? PeriodUnit.HOURS
+                      }
+                      distribution={
+                        localActivityDraft.failureProperties?.mtbfDuration
+                          ?.distribution ?? ConstantDistribution.create(8)
+                      }
+                      onChange={(periodUnit, distribution) =>
+                        handleFailureChange(
+                          "mtbfDuration",
+                          new Duration(periodUnit, distribution)
+                        )
+                      }
+                      compact={true}
+                    />
+                  </div>
+
+                  {/* MTTR Duration */}
+                  <div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <label className="text-xs font-medium text-gray-700">
+                        MTTR Duration
+                      </label>
+                      <span title="Mean Time To Repair — average time required to repair the activity after a failure">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <EnhancedDurationEditor
+                      periodUnit={
+                        localActivityDraft.failureProperties?.mttrDuration
+                          ?.durationPeriodUnit ?? PeriodUnit.MINUTES
+                      }
+                      distribution={
+                        localActivityDraft.failureProperties?.mttrDuration
+                          ?.distribution ?? ConstantDistribution.create(30)
+                      }
+                      onChange={(periodUnit, distribution) =>
+                        handleFailureChange(
+                          "mttrDuration",
+                          new Duration(periodUnit, distribution)
+                        )
+                      }
+                      compact={true}
+                    />
+                  </div>
+
+                  {/* Failure Clock Mode */}
+                  <div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <label className="text-xs font-medium text-gray-700">
+                        Failure Clock Mode
+                      </label>
+                      <span title="Determines how the MTBF timer advances: continuously (wall clock) or only during active processing">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <select
+                      className="w-full px-2 py-1 text-xs border rounded bg-white"
+                      value={
+                        localActivityDraft.failureProperties?.failureClockMode ??
+                        FailureClockMode.WALL_CLOCK
+                      }
+                      onChange={(e) =>
+                        handleFailureChange(
+                          "failureClockMode",
+                          e.target.value as FailureClockMode
+                        )
+                      }
+                    >
+                      <option value={FailureClockMode.WALL_CLOCK}>
+                        Wall Clock — runs continuously
+                      </option>
+                      <option value={FailureClockMode.ACTIVE_TIME}>
+                        Active Time — runs only while processing
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* Repair Resource Requirement */}
+                  <div className="pt-1 border-t">
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <label className="text-xs font-medium text-gray-700">
+                        Repair Resource Requirement
+                      </label>
+                      <span title="Optional resource requirement that must be acquired before repair can begin">
+                        <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <select
+                        className="flex-1 px-2 py-1 text-xs border rounded bg-white"
+                        value={
+                          localActivityDraft.failureProperties
+                            ?.repairResourceRequirementId || ""
+                        }
+                        onChange={(e) =>
+                          handleFailureChange(
+                            "repairResourceRequirementId",
+                            e.target.value
+                          )
+                        }
+                      >
+                        <option value="">None (no resource needed)</option>
+                        {referenceData?.resourceRequirements?.map((req) => (
+                          <option key={req.id} value={req.id}>
+                            {req.name}
+                          </option>
+                        ))}
+                      </select>
+                      {localActivityDraft.failureProperties
+                        ?.repairResourceRequirementId && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleOpenRequirementModal(
+                              localActivityDraft.failureProperties!
+                                .repairResourceRequirementId
+                            )
+                          }
+                          className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                          title="Edit resource requirement"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleCreateRequirement}
+                        className="px-2 py-1 text-xs border rounded hover:bg-gray-50"
+                        title="Create new resource requirement"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {/* Resource requirement preview */}
+                    {localActivityDraft.failureProperties
+                      ?.repairResourceRequirementId && (() => {
+                      const req = referenceData?.resourceRequirements?.find(
+                        (r) =>
+                          r.id ===
+                          localActivityDraft.failureProperties
+                            ?.repairResourceRequirementId
+                      );
+                      if (!req) return null;
+                      return (
+                        <div className="mt-1 p-1.5 bg-gray-50 border rounded text-xs text-gray-600">
+                          <span className="font-medium">{req.name}</span>
+                          {req.rootClauses && req.rootClauses.length > 0 && (
+                            <span className="ml-1">
+                              ({req.rootClauses.length} clause
+                              {req.rootClauses.length !== 1 ? "s" : ""})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === "connectors" && (
