@@ -12,6 +12,24 @@ interface MappingTableProps {
 type StatusFilterValue = 'all' | MappingStatus;
 type TypeFilterValue = 'all' | SimulationObjectType | 'skip';
 
+type SortColumn = 'name' | 'type' | 'status';
+type SortDirection = 'asc' | 'desc';
+type SortState = { column: SortColumn; direction: SortDirection } | null;
+
+const SortArrow: React.FC<{ column: SortColumn; sort: SortState; onToggle: (col: SortColumn) => void }> = ({ column, sort, onToggle }) => {
+    const active = sort?.column === column;
+    const arrow = !active ? '↕' : sort.direction === 'asc' ? '↑' : '↓';
+    return (
+        <button
+            onClick={() => onToggle(column)}
+            className={`ml-1 text-xs cursor-pointer ${active ? 'text-blue-600' : 'text-gray-400 hover:text-blue-600'}`}
+            title={`Sort by ${column}`}
+        >
+            {arrow}
+        </button>
+    );
+};
+
 const statusFilterOptions: { value: StatusFilterValue; label: string }[] = [
     { value: 'all', label: 'All' },
     { value: 'not_mapped', label: 'None' },
@@ -35,6 +53,18 @@ export const MappingTable: React.FC<MappingTableProps> = ({
 }) => {
     const [statusFilter, setStatusFilter] = useState<StatusFilterValue>('all');
     const [typeFilter, setTypeFilter] = useState<TypeFilterValue>('all');
+    const [sort, setSort] = useState<SortState>(null);
+
+    const toggleSort = (column: SortColumn) => {
+        setSort(prev => {
+            if (prev?.column === column) {
+                return prev.direction === 'asc'
+                    ? { column, direction: 'desc' as SortDirection }
+                    : null;
+            }
+            return { column, direction: 'asc' };
+        });
+    };
 
     // Filter items based on both status and type filters
     const filteredItems = useMemo(() => {
@@ -55,6 +85,37 @@ export const MappingTable: React.FC<MappingTableProps> = ({
             return true;
         });
     }, [items, statusFilter, typeFilter]);
+
+    // Sort filtered items
+    const sortedItems = useMemo(() => {
+        if (!sort) return filteredItems;
+
+        const multiplier = sort.direction === 'asc' ? 1 : -1;
+        return [...filteredItems].sort((a, b) => {
+            switch (sort.column) {
+                case 'name': {
+                    const nameA = a.elementName || '';
+                    const nameB = b.elementName || '';
+                    return multiplier * nameA.localeCompare(nameB);
+                }
+                case 'type': {
+                    const typeA = a.finalType ?? '';
+                    const typeB = b.finalType ?? '';
+                    // Nulls (skip) sort last
+                    if (!a.finalType && b.finalType) return 1;
+                    if (a.finalType && !b.finalType) return -1;
+                    return multiplier * String(typeA).localeCompare(String(typeB));
+                }
+                case 'status': {
+                    const statusA = computeStatus(a.finalType, a.hasOverride);
+                    const statusB = computeStatus(b.finalType, b.hasOverride);
+                    return multiplier * statusA.localeCompare(statusB);
+                }
+                default:
+                    return 0;
+            }
+        });
+    }, [filteredItems, sort]);
 
     // Count for status filter display
     const statusFilterCounts = useMemo(() => {
@@ -100,6 +161,7 @@ export const MappingTable: React.FC<MappingTableProps> = ({
                     <tr className="border-b border-gray-200">
                         <th className="text-left py-2 px-1 font-medium text-gray-700 w-[70px]">
                             Name
+                            <SortArrow column="name" sort={sort} onToggle={toggleSort} />
                         </th>
                         <th className="text-left py-2 px-1 font-medium text-gray-700">
                             <select
@@ -114,6 +176,7 @@ export const MappingTable: React.FC<MappingTableProps> = ({
                                     </option>
                                 ))}
                             </select>
+                            <SortArrow column="type" sort={sort} onToggle={toggleSort} />
                         </th>
                         <th className="text-left py-2 px-1 font-medium text-gray-700 w-[60px]">
                             <select
@@ -128,11 +191,12 @@ export const MappingTable: React.FC<MappingTableProps> = ({
                                     </option>
                                 ))}
                             </select>
+                            <SortArrow column="status" sort={sort} onToggle={toggleSort} />
                         </th>
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredItems.map((item) => {
+                    {sortedItems.map((item) => {
                         const status = computeStatus(item.finalType, item.hasOverride);
                         return (
                             <tr
@@ -159,7 +223,7 @@ export const MappingTable: React.FC<MappingTableProps> = ({
             </table>
 
             {/* Empty state */}
-            {filteredItems.length === 0 && (
+            {sortedItems.length === 0 && (
                 <div className="flex-1 flex items-center justify-center py-8 text-gray-400 text-sm">
                     {statusFilter === 'all' && typeFilter === 'all'
                         ? 'No items to map'
