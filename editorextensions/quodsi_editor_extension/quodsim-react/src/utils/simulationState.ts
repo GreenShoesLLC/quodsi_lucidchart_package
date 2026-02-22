@@ -24,19 +24,19 @@ export const getSimulationState = (
     status: PageStatus | null,
     isChecking: boolean
 ): SimulationStateOutput => {
-    if (!status?.scenarios || !Array.isArray(status.scenarios)) {
-        return { buttonLabel: "Simulate", statusText: "No Status or Scenarios" };
+    if (!status?.simulationRuns || !Array.isArray(status.simulationRuns)) {
+        return { buttonLabel: "Simulate", statusText: "No Status or Runs" };
     }
 
-    const emptyGuidScenario = status.scenarios.find(s =>
+    const emptyGuidRun = status.simulationRuns.find((s: { id: string }) =>
         s.id === "00000000-0000-0000-0000-000000000000"
     );
 
-    if (!emptyGuidScenario) {
+    if (!emptyGuidRun) {
         return { buttonLabel: "Simulate", statusText: "Ready" };
     }
 
-    switch (emptyGuidScenario.runState) {
+    switch (emptyGuidRun.runState) {
         case RunState.Queued:
             return { buttonLabel: "Queued...", statusText: "Queued" };
         case RunState.Running:
