@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/shared';
 
 /**
  * Record of skipped elements with their mapping source
@@ -14,6 +14,7 @@ export class StorageAdapter {
     private static readonly TIME_PATTERNS_KEY = 'q_time_patterns';
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
+    private static readonly SCENARIOS_KEY = 'q_scenarios';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
 
@@ -174,6 +175,57 @@ export class StorageAdapter {
             this.log('Successfully cleared states');
         } catch (error) {
             this.logError('Error clearing states:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the scenarios array for a page
+     */
+    public setScenarios(page: ElementProxy, scenarios: ISerializedScenario[]): void {
+        try {
+            this.log('Setting scenarios for page:', {
+                pageId: page.id,
+                scenariosCount: scenarios.length
+            });
+            const serialized = JSON.stringify(scenarios);
+            page.shapeData.set(StorageAdapter.SCENARIOS_KEY, serialized);
+            this.log('Successfully set scenarios');
+        } catch (error) {
+            this.logError('Error setting scenarios:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the scenarios array for a page
+     */
+    public getScenarios(page: ElementProxy): ISerializedScenario[] {
+        try {
+            this.log('Getting scenarios for page:', page.id);
+            const str = page.shapeData.get(StorageAdapter.SCENARIOS_KEY);
+            if (!str || typeof str !== 'string') {
+                this.log('No scenarios found, returning empty array');
+                return [];
+            }
+            const scenarios = JSON.parse(str) as ISerializedScenario[];
+            this.log('Retrieved scenarios:', { count: scenarios.length });
+            return scenarios;
+        } catch (error) {
+            this.logError('Error getting scenarios:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the scenarios array for a page
+     */
+    public clearScenarios(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.SCENARIOS_KEY);
+            this.log('Successfully cleared scenarios');
+        } catch (error) {
+            this.logError('Error clearing scenarios:', error);
             throw error;
         }
     }
@@ -585,6 +637,7 @@ export class StorageAdapter {
             this.clearResourceRequirements(page);
             this.clearTimePatterns(page);
             this.clearTimeDistributedConfigs(page);
+            this.clearScenarios(page);
             this.clearSkippedElements(page);
 
             // Clear data from all blocks

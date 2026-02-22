@@ -7,6 +7,7 @@ import {
     State,
     TimePattern,
     TimeDistributedConfig,
+    Scenario,
     Duration,
     VolumePeriodBasis
 } from '@quodsi/shared';
@@ -195,6 +196,9 @@ export class ModelDefinitionPageBuilder {
 
             // Load time distributed configs from storage
             this.loadTimeDistributedConfigs(page, modelDefinition);
+
+            // Load scenarios from storage
+            this.loadScenarios(page, modelDefinition);
 
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
@@ -421,6 +425,28 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final time distributed configs count: ${modelDefinition.timeDistributedConfigs.size()}`);
+    }
+
+    /**
+     * Loads scenarios from storage and adds them to the model definition.
+     */
+    private loadScenarios(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading scenarios from storage');
+
+        const serializedScenarios = this.storageAdapter.getScenarios(page);
+        this.log(`Found ${serializedScenarios.length} scenarios in storage`);
+
+        for (const serializedScenario of serializedScenarios) {
+            try {
+                const scenario = Scenario.fromJSON(serializedScenario);
+                modelDefinition.scenarios.add(scenario);
+                this.log(`Added scenario: ${scenario.name}`);
+            } catch (error) {
+                this.log(`Error deserializing scenario: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final scenarios count: ${modelDefinition.scenarios.size()}`);
     }
 
     /**

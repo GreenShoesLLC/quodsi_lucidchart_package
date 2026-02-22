@@ -20,6 +20,7 @@ import {
     ValidationMessages,
     ISerializedState,
     ISerializedResourceRequirement,
+    ISerializedScenario,
     EnvelopeMessageType,
     ValidationSeverity,
     ValidationIssue
@@ -1473,6 +1474,27 @@ export class ModelManager {
             });
         } catch (error) {
             this.debug.error('Error in updateTimeDistributedConfigs:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Updates the scenarios array for the model.
+     * Scenarios have no cross-references to clean up, so this is a simple save.
+     */
+    public async updateScenarios(scenarios: ISerializedScenario[], page: PageProxy): Promise<void> {
+        this.debug.log('updateScenarios - Start', {
+            scenariosCount: scenarios.length,
+            pageId: page.id,
+        });
+
+        try {
+            this.storageAdapter.setScenarios(page, scenarios);
+            this.markModelDirty();
+
+            this.debug.log('updateScenarios - Complete');
+        } catch (error) {
+            this.debug.error('Error in updateScenarios:', error);
             throw error;
         }
     }
