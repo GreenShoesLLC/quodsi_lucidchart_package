@@ -6,14 +6,14 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
-  MAX_SCENARIOS,
+  MAX_SIMULATION_RUNS,
 } from "@quodsi/shared";
 import { SimulationPollState } from "../../types/SimulationStatus";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
-import { useScenarios } from "../../messaging/MessageProvider";
-import { selectScenarios } from "../../messaging/state/scenarioSlice";
+import { useSimulationRuns } from "../../messaging/MessageProvider";
+import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { AboutModal } from "../shared/AboutModal";
 
 interface PanelHeaderProps {
@@ -57,10 +57,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const hasActiveJobs = useHasActiveJobs();
 
-  // Get scenarios to check limit
-  const scenarioState = useScenarios();
-  const scenarios = selectScenarios({ scenarios: scenarioState });
-  const atScenarioLimit = scenarios.length >= MAX_SCENARIOS;
+  // Get simulation runs to check limit
+  const simulationRunState = useSimulationRuns();
+  const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
+  const atRunLimit = simulationRuns.length >= MAX_SIMULATION_RUNS;
 
   // Click-outside handler to close menu
   useEffect(() => {
@@ -120,9 +120,9 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       const minutes = String(now.getMinutes()).padStart(2, '0');
       const seconds = String(now.getSeconds()).padStart(2, '0');
 
-      const scenarioName = `${twoDigitYear}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+      const runName = `${twoDigitYear}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 
-      onSimulate(scenarioName);
+      onSimulate(runName);
 
       // Clear loading state after 2 seconds
       setTimeout(() => {
@@ -252,19 +252,19 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             <button
               className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSimulateClick}
-              disabled={isSimulating || hasActiveJobs || atScenarioLimit}
+              disabled={isSimulating || hasActiveJobs || atRunLimit}
               title={
-                atScenarioLimit
-                  ? `Maximum ${MAX_SCENARIOS} scenarios reached. Delete a scenario to continue.`
+                atRunLimit
+                  ? `Maximum ${MAX_SIMULATION_RUNS} runs reached. Delete a run to continue.`
                   : hasActiveJobs
                   ? "Another simulation is running. Please wait for it to complete."
                   : "Run simulation"
               }
             >
-              {atScenarioLimit ? (
+              {atRunLimit ? (
                 <>
                   <AlertTriangle className="w-3 h-3" />
-                  Scenario Limit Reached
+                  Run Limit Reached
                 </>
               ) : hasActiveJobs ? (
                 <>

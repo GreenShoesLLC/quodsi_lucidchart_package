@@ -10,7 +10,7 @@ import {
 import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import ScenariosPanel from "./ScenariosPanel";
+import SimulationRunsPanel from "./SimulationRunsPanel";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
@@ -84,9 +84,9 @@ const TAB_CONFIG = [
   },
   {
     id: "scenarios" as const,
-    title: "Simulation Scenarios",
+    title: "Simulation Runs",
     icon: PlaySquare,
-    tooltip: "Configure and manage simulation scenarios with different parameter sets and run configurations"
+    tooltip: "Configure and manage simulation runs with different parameter sets and run configurations"
   },
   {
     id: "validation" as const,
@@ -612,7 +612,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
           />
       )}
       {activeTab === "scenarios" && (
-        <ScenariosPanel
+        <SimulationRunsPanel
           documentId={selection.documentContext?.documentId}
         />
       )}
