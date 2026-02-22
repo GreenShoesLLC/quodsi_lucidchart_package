@@ -72,11 +72,11 @@ export function useElementOps() {
 }
 
 /**
- * Hook to access scenarios state
+ * Hook to access simulation runs state
  */
-export function useScenarios() {
-  const { scenarios } = useMessaging();
-  return scenarios;
+export function useSimulationRuns() {
+  const { simulationRuns } = useMessaging();
+  return simulationRuns;
 }
 
 /**

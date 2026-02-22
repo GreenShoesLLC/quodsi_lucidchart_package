@@ -9,7 +9,7 @@ import { SelectionState, initialSelectionState, selectionReducer, SelectionActio
 import { SimulationState, initialSimulationState, simulationReducer, SimulationAction } from './simulationSlice';
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
-import { ScenarioState, initialScenarioState, scenarioReducer, ScenarioAction } from './scenarioSlice';
+import { SimulationRunState, initialSimulationRunState, simulationRunReducer, SimulationRunAction } from './simulationRunSlice';
 import { ConversionPreviewState, initialConversionPreviewState, conversionPreviewReducer, ConversionPreviewAction } from './conversionPreviewSlice';
 
 // Combined state type
@@ -19,7 +19,7 @@ export interface MessagingState {
   simulation: SimulationState;
   validation: ValidationState;
   elementOps: ElementOpsState;
-  scenarios: ScenarioState;
+  simulationRuns: SimulationRunState;
   conversionPreview: ConversionPreviewState;
 }
 
@@ -33,7 +33,7 @@ export const initialState: MessagingState = {
   simulation: initialSimulationState,
   validation: initialValidationState,
   elementOps: initialElementOpsState,
-  scenarios: initialScenarioState,
+  simulationRuns: initialSimulationRunState,
   conversionPreview: initialConversionPreviewState,
 };
 
@@ -48,7 +48,7 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     simulation: simulationReducer(state.simulation, action as SimulationAction),
     validation: validationReducer(state.validation, action as ValidationAction),
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
-    scenarios: scenarioReducer(state.scenarios, action as ScenarioAction),
+    simulationRuns: simulationRunReducer(state.simulationRuns, action as SimulationRunAction),
     conversionPreview: conversionPreviewReducer(state.conversionPreview, action as ConversionPreviewAction),
   };
 }

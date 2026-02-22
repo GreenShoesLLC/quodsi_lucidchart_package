@@ -99,5 +99,5 @@ export {
   useSelection,
   useSimulation,
   useValidation,
-  useScenarios,
+  useSimulationRuns,
 } from "./MessageContext";
