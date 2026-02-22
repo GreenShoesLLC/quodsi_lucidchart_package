@@ -829,18 +829,23 @@ const GeneratorEditor: React.FC<Props> = ({
 
                 {/* Advanced Settings - Expandable */}
                 <div className="pt-2 border-t">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                    className="flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900"
-                  >
-                    {showAdvancedSettings ? (
-                      <ChevronDown className="w-3 h-3" />
-                    ) : (
-                      <ChevronRight className="w-3 h-3" />
-                    )}
-                    Advanced Settings
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-700 hover:text-gray-900"
+                    >
+                      {showAdvancedSettings ? (
+                        <ChevronDown className="w-3 h-3" />
+                      ) : (
+                        <ChevronRight className="w-3 h-3" />
+                      )}
+                      Advanced Settings
+                    </button>
+                    <span title="Configure generation limits including occurrence count, start delay, batch size, and maximum entity count.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
 
                   {showAdvancedSettings && (
                     <div className="mt-2 space-y-2">

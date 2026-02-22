@@ -1080,9 +1080,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             <div className="space-y-2">
               {/* Name Section */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Activity Name
-                  </label>
+                  <div className="flex items-center gap-1 mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Activity Name
+                    </label>
+                    <span title="A unique name identifying this activity in the simulation model and results.">
+                      <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                    </span>
+                  </div>
                   <input
                     type="text"
                     name="name"
@@ -1255,6 +1260,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   >
                     Enable Financial Tracking
                   </label>
+                  <span title="When enabled, the simulation tracks costs for this activity including fixed costs, per-entity charges, and time-based rates. Financial data appears in simulation results.">
+                    <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                  </span>
                 </div>
 
                 {/* Cost fields - Only shown when financial tracking is enabled */}
@@ -1425,6 +1433,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 >
                   Enable Failure Simulation
                 </label>
+                <span title="When enabled, the activity will periodically break down based on MTBF timing and require repair time (MTTR) before resuming. Simulates equipment failures and maintenance.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
 
               {/* Failure fields - Only shown when failure is enabled */}

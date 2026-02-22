@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Plus, Filter } from "lucide-react";
+import { Plus, Filter, Info } from "lucide-react";
 import { State, StateListManager, ComponentType } from "@quodsi/shared";
 import StateFormDialog from "./StateFormDialog";
 import StateListItem from "./StateListItem";
@@ -89,6 +89,12 @@ const StatesEditor: React.FC<Props> = ({
     <div className="flex flex-col h-full">
       {/* Header with Filter and Add Button */}
       <div className="p-3 border-b bg-gray-50">
+        <div className="flex items-center gap-1 mb-2">
+          <span className="text-xs font-medium text-gray-700">States</span>
+          <span title="State variables track custom numeric or text values on simulation objects. Use states for conditional routing, tracking entity attributes (e.g., priority level), or counting occurrences.">
+            <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+          </span>
+        </div>
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 flex-1">
             <Filter className="w-3.5 h-3.5 text-gray-500" />

@@ -218,7 +218,7 @@ const StateFormDialog: React.FC<Props> = ({
               <label className="text-xs font-medium text-gray-700">
                 Component Type *
               </label>
-              <span title="Determines which component type can access and modify this state. Activity states are specific to this activity, while Entity, Resource, and Model states can be accessed across components.">
+              <span title="Determines which component type can access and modify this state. Activity states are specific to an activity, while Entity, Resource, and Model states can be accessed across components.">
                 <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
               </span>
             </div>

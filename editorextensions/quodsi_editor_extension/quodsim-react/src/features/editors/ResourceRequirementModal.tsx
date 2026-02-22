@@ -272,13 +272,16 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
           </button>
           <button
             onClick={() => setActiveTab('build')}
-            className={`flex-1 px-2 py-1 text-sm font-medium ${
+            className={`flex-1 px-2 py-1 text-sm font-medium flex items-center justify-center gap-1 ${
               activeTab === 'build'
                 ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-600 hover:text-gray-800'
             }`}
           >
             Build Custom
+            <span title="Define exactly which resources are needed by combining teams with ALL (need every team) or ANY (need one team) logic.">
+              <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+            </span>
           </button>
         </div>
 

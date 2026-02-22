@@ -1347,6 +1347,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 </option>
               ))}
             </select>
+            <p className="mt-0.5 text-[10px] text-gray-500 leading-tight">
+              {ACTION_TYPE_DESCRIPTIONS[action.actionType]}
+            </p>
           </div>
 
           {/* Action-specific content */}

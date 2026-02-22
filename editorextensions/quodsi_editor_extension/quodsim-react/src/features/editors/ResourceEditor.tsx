@@ -431,6 +431,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                 <label htmlFor="financialEnabled" className="text-xs font-medium text-gray-700">
                   Enable Financial Tracking
                 </label>
+                <span title="When enabled, the simulation tracks costs for this resource including per-seize charges and hourly utilization/idle rates. Financial data appears in simulation results.">
+                  <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+                </span>
               </div>
 
               {/* Cost fields - Only shown when financial tracking is enabled */}
