@@ -43,7 +43,13 @@ export interface ActivityCrossRep {
   total_time_blocked_median: number;
   total_time_blocked_std_dev: number;
   total_time_blocked_cv: number;
-  
+
+  // Total Time In Failure metrics
+  total_time_in_failure_mean: number;
+  total_time_in_failure_median: number;
+  total_time_in_failure_std_dev: number;
+  total_time_in_failure_cv: number;
+
   // Flow statistics
   total_arrivals_mean: number;
   total_arrivals_max: number;
@@ -119,7 +125,13 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     total_time_blocked_median: itemFields.get('total_time_blocked_median') as number,
     total_time_blocked_std_dev: itemFields.get('total_time_blocked_std_dev') as number,
     total_time_blocked_cv: itemFields.get('total_time_blocked_cv') as number,
-    
+
+    // Total Time In Failure metrics
+    total_time_in_failure_mean: itemFields.get('total_time_in_failure_mean') as number,
+    total_time_in_failure_median: itemFields.get('total_time_in_failure_median') as number,
+    total_time_in_failure_std_dev: itemFields.get('total_time_in_failure_std_dev') as number,
+    total_time_in_failure_cv: itemFields.get('total_time_in_failure_cv') as number,
+
     // Flow statistics
     total_arrivals_mean: itemFields.get('total_arrivals_mean') as number,
     total_arrivals_max: itemFields.get('total_arrivals_max') as number,

@@ -60,6 +60,11 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
+    key: "total_time_in_failure_mean",
+    label: "Failure Time",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
     key: "total_arrivals_mean",
     label: "Total Arrivals",
     format: formatInteger,
@@ -316,6 +321,11 @@ export const activityEntityColumns: TableColumn[] = [
   {
     key: "avg_cycle_time_mean",
     label: "Cycle",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "avg_failure_time_mean",
+    label: "Fail Time",
     format: (v) => formatDecimal(v, 2),
   },
   {

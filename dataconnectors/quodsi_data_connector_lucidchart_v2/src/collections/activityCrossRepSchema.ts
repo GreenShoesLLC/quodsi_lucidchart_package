@@ -42,7 +42,13 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "total_time_blocked_median", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_time_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_time_blocked_cv", type: ScalarFieldTypeEnum.NUMBER },
-        
+
+        // Total Time In Failure metrics
+        { name: "total_time_in_failure_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_in_failure_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_in_failure_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "total_time_in_failure_cv", type: ScalarFieldTypeEnum.NUMBER },
+
         // Flow statistics
         { name: "total_arrivals_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "total_arrivals_max", type: ScalarFieldTypeEnum.NUMBER },
@@ -112,7 +118,13 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'total_time_blocked_median': 'Median Total Time Blocked',
         'total_time_blocked_std_dev': 'Total Time Blocked Std Dev',
         'total_time_blocked_cv': 'Total Time Blocked CV',
-        
+
+        // Total Time In Failure metrics
+        'total_time_in_failure_mean': 'Mean Total Time In Failure',
+        'total_time_in_failure_median': 'Median Total Time In Failure',
+        'total_time_in_failure_std_dev': 'Total Time In Failure Std Dev',
+        'total_time_in_failure_cv': 'Total Time In Failure CV',
+
         // Flow statistics
         'total_arrivals_mean': 'Mean Total Arrivals',
         'total_arrivals_max': 'Max Total Arrivals',

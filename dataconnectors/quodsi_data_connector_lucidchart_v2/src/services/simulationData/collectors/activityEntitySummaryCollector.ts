@@ -49,6 +49,10 @@ export const requiredColumns: string[] = [
     'avg_blocked_time_std',
     'avg_blocked_time_min',
     'avg_blocked_time_max',
+    'avg_failure_time_mean',
+    'avg_failure_time_std',
+    'avg_failure_time_min',
+    'avg_failure_time_max',
     // Time metrics (total)
     'total_cycle_time_mean',
     'total_cycle_time_std',
@@ -62,6 +66,10 @@ export const requiredColumns: string[] = [
     'total_blocked_time_std',
     'total_blocked_time_min',
     'total_blocked_time_max',
+    'total_failure_time_mean',
+    'total_failure_time_std',
+    'total_failure_time_min',
+    'total_failure_time_max',
     // Cost metrics
     'fixed_cost_mean',
     'fixed_cost_std',
@@ -201,6 +209,10 @@ export async function fetchActivityEntitySummary(
                 avg_blocked_time_std: item.avg_blocked_time_std ?? 0,
                 avg_blocked_time_min: item.avg_blocked_time_min ?? 0,
                 avg_blocked_time_max: item.avg_blocked_time_max ?? 0,
+                avg_failure_time_mean: item.avg_failure_time_mean ?? 0,
+                avg_failure_time_std: item.avg_failure_time_std ?? 0,
+                avg_failure_time_min: item.avg_failure_time_min ?? 0,
+                avg_failure_time_max: item.avg_failure_time_max ?? 0,
 
                 // Time metrics (total)
                 total_cycle_time_mean: item.total_cycle_time_mean ?? 0,
@@ -215,6 +227,10 @@ export async function fetchActivityEntitySummary(
                 total_blocked_time_std: item.total_blocked_time_std ?? 0,
                 total_blocked_time_min: item.total_blocked_time_min ?? 0,
                 total_blocked_time_max: item.total_blocked_time_max ?? 0,
+                total_failure_time_mean: item.total_failure_time_mean ?? 0,
+                total_failure_time_std: item.total_failure_time_std ?? 0,
+                total_failure_time_min: item.total_failure_time_min ?? 0,
+                total_failure_time_max: item.total_failure_time_max ?? 0,
 
                 // Cost metrics
                 fixed_cost_mean: item.fixed_cost_mean ?? 0,

@@ -63,6 +63,11 @@ export const requiredColumns: string[] = [
     'total_time_blocked_std',
     'total_time_blocked_min',
     'total_time_blocked_max',
+    // Total time in failure
+    'total_time_in_failure_mean',
+    'total_time_in_failure_std',
+    'total_time_in_failure_min',
+    'total_time_in_failure_max',
     // Flow statistics
     'total_arrivals_mean',
     'total_arrivals_std',
@@ -279,6 +284,12 @@ export async function fetchActivityCrossRep(
             total_time_blocked_max: item.total_time_blocked_max,
             total_time_blocked_std_dev: item.total_time_blocked_std,
 
+            // Total time in failure
+            total_time_in_failure_mean: item.total_time_in_failure_mean,
+            total_time_in_failure_min: item.total_time_in_failure_min,
+            total_time_in_failure_max: item.total_time_in_failure_max,
+            total_time_in_failure_std_dev: item.total_time_in_failure_std,
+
             // Flow statistics
             total_arrivals_mean: item.total_arrivals_mean,
             total_arrivals_min: item.total_arrivals_min,
@@ -417,6 +428,12 @@ export async function fetchActivityCrossRep(
                 total_time_blocked_min: item.total_time_blocked_min ?? 0,
                 total_time_blocked_max: item.total_time_blocked_max ?? 0,
                 total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
+
+                // Total Time In Failure metrics
+                total_time_in_failure_mean: item.total_time_in_failure_mean ?? 0,
+                total_time_in_failure_min: item.total_time_in_failure_min ?? 0,
+                total_time_in_failure_max: item.total_time_in_failure_max ?? 0,
+                total_time_in_failure_std_dev: item.total_time_in_failure_std_dev ?? 0,
 
                 // Flow statistics
                 total_arrivals_mean: item.total_arrivals_mean ?? 0,
@@ -572,6 +589,12 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             total_time_blocked_min: item.total_time_blocked_min ?? 0,
             total_time_blocked_max: item.total_time_blocked_max ?? 0,
             total_time_blocked_std_dev: item.total_time_blocked_std_dev ?? 0,
+
+            // Total Time In Failure metrics
+            total_time_in_failure_mean: item.total_time_in_failure_mean ?? 0,
+            total_time_in_failure_min: item.total_time_in_failure_min ?? 0,
+            total_time_in_failure_max: item.total_time_in_failure_max ?? 0,
+            total_time_in_failure_std_dev: item.total_time_in_failure_std_dev ?? 0,
 
             // Flow statistics
             total_arrivals_mean: item.total_arrivals_mean ?? 0,

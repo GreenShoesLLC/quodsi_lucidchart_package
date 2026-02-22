@@ -51,6 +51,10 @@ export interface ActivityEntitySummaryData {
     avg_blocked_time_std: number;
     avg_blocked_time_min: number;
     avg_blocked_time_max: number;
+    avg_failure_time_mean: number;
+    avg_failure_time_std: number;
+    avg_failure_time_min: number;
+    avg_failure_time_max: number;
 
     // Time metrics (total)
     total_cycle_time_mean: number;
@@ -65,6 +69,10 @@ export interface ActivityEntitySummaryData {
     total_blocked_time_std: number;
     total_blocked_time_min: number;
     total_blocked_time_max: number;
+    total_failure_time_mean: number;
+    total_failure_time_std: number;
+    total_failure_time_min: number;
+    total_failure_time_max: number;
 
     // Cost metrics
     fixed_cost_mean: number;

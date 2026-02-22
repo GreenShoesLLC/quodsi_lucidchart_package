@@ -65,6 +65,12 @@ export interface ActivityCrossRepSummaryData {
     total_time_blocked_max: number;   // Maximum total time blocked
     total_time_blocked_std_dev: number;  // Total time blocked standard deviation
 
+    // Failure time metrics
+    total_time_in_failure_mean: number;  // Mean total time in failure
+    total_time_in_failure_min: number;   // Minimum total time in failure
+    total_time_in_failure_max: number;   // Maximum total time in failure
+    total_time_in_failure_std_dev: number;  // Total time in failure standard deviation
+
     // Flow statistics
     total_arrivals_mean: number;  // Mean total arrivals
     total_arrivals_min: number;   // Minimum total arrivals
