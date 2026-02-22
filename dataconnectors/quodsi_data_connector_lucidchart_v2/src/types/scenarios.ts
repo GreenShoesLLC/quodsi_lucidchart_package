@@ -1,6 +1,6 @@
 // src/types/scenarios.ts
 /**
- * SYNC WITH: @quodsi/shared/src/quodsi-messaging/scenario/messages.ts (ScenarioInfo)
+ * SYNC WITH: @quodsi/shared/src/quodsi-messaging/simulationRun/simulationRunMessages.ts (SimulationRunInfo)
  *
  * Data connector cannot import shared package due to dependency constraints.
  * When updating these interfaces, also update the shared version.
@@ -8,7 +8,7 @@
 
 import { RunState } from "./documentStatus";
 
-export interface ScenarioDownloadInfo {
+export interface SimulationRunDownloadInfo {
     zipUrl: string;
     excelUrl: string;
     fileSizeBytes: number;
@@ -16,7 +16,7 @@ export interface ScenarioDownloadInfo {
     expiresAt: string;
 }
 
-export interface ScenarioInfo {
+export interface SimulationRunInfo {
     id: string;
     name: string;
     runState: RunState;
@@ -26,7 +26,7 @@ export interface ScenarioInfo {
     simulationTimeType: string;
     completedAt?: string;
     hasResults: boolean;
-    downloadInfo?: ScenarioDownloadInfo;
+    downloadInfo?: SimulationRunDownloadInfo;
     // Progress tracking
     currentReplication?: number;
     // Error fields (populated when runState === RAN_WITH_ERRORS)

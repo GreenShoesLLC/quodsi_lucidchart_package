@@ -11,14 +11,14 @@ import { uploadModelDefinitionAction } from '../actions/uploadModelDefinitionAct
 import { submitSimulationJobAction } from '../actions/submitSimulationJobAction';
 import { markResultsViewedAction } from '../actions/markResultsViewedAction';
 import { getDocumentStatusAction } from '../actions/getDocumentStatusAction';
-import { listScenariosAction } from '../actions/listScenariosAction';
-import { deleteScenarioAction } from '../actions/deleteScenarioAction';
+import { listSimulationRunsAction } from '../actions/listSimulationRunsAction';
+import { deleteSimulationRunAction } from '../actions/deleteSimulationRunAction';
 import { getTaskStatusAction } from '../actions/getTaskStatusAction';
-import { checkScenarioTaskStatusAction } from '../actions/checkScenarioTaskStatusAction';
+import { checkSimulationRunTaskStatusAction } from '../actions/checkSimulationRunTaskStatusAction';
 import { getActivityCrossRepDataAction } from '../actions/getActivityCrossRepDataAction';
 import { getEntityCrossRepDataAction } from '../actions/getEntityCrossRepDataAction';
 import { getResourceCrossRepDataAction } from '../actions/getResourceCrossRepDataAction';
-import { getScenarioCrossRepDataAction } from '../actions/getScenarioCrossRepDataAction';
+import { getSimulationRunCrossRepDataAction } from '../actions/getSimulationRunCrossRepDataAction';
 import { getActivityContentsTimeseriesAction } from '../actions/getActivityContentsTimeseriesAction';
 import { getActivityInboundQueueTimeseriesAction } from '../actions/getActivityInboundQueueTimeseriesAction';
 import { getActivityOutboundQueueTimeseriesAction } from '../actions/getActivityOutboundQueueTimeseriesAction';
@@ -41,14 +41,14 @@ export const createDataConnector = () => {
         .defineAsynchronousAction("UploadModelDefinition", uploadModelDefinitionAction)
         .defineAsynchronousAction("SubmitSimulationJob", submitSimulationJobAction)
         .defineAsynchronousAction("GetDocumentStatus", getDocumentStatusAction)
-        .defineAsynchronousAction("ListScenarios", listScenariosAction)
-        .defineAsynchronousAction("DeleteScenario", deleteScenarioAction)
+        .defineAsynchronousAction("ListScenarios", listSimulationRunsAction)
+        .defineAsynchronousAction("DeleteScenario", deleteSimulationRunAction)
         .defineAsynchronousAction("GetTaskStatus", getTaskStatusAction)
-        .defineAsynchronousAction("CheckScenarioTaskStatus", checkScenarioTaskStatusAction)
+        .defineAsynchronousAction("CheckScenarioTaskStatus", checkSimulationRunTaskStatusAction)
         .defineAsynchronousAction("GetActivityCrossRepData", getActivityCrossRepDataAction)
         .defineAsynchronousAction("GetEntityCrossRepData", getEntityCrossRepDataAction)
         .defineAsynchronousAction("GetResourceCrossRepData", getResourceCrossRepDataAction)
-        .defineAsynchronousAction("GetScenarioCrossRepData", getScenarioCrossRepDataAction)
+        .defineAsynchronousAction("GetScenarioCrossRepData", getSimulationRunCrossRepDataAction)
         .defineAsynchronousAction("GetActivityContentsTimeseries", getActivityContentsTimeseriesAction)
         .defineAsynchronousAction("GetActivityInboundQueueTimeseries", getActivityInboundQueueTimeseriesAction)
         .defineAsynchronousAction("GetActivityOutboundQueueTimeseries", getActivityOutboundQueueTimeseriesAction)

@@ -2,7 +2,7 @@ import { DataConnectorAsynchronousAction } from 'lucid-extension-sdk';
 import { AzureStorageService } from "../services/azureStorageService";
 import { LucidSimulationJobSubmissionService } from "../services/lucidSimulationJobSubmissionService";
 import { BatchConfigurationError, BatchJobCreationError, BatchInfrastructureError } from "../services/errors/batchErrors";
-import { getConfig, MAX_SCENARIOS } from "../config";
+import { getConfig, MAX_SIMULATION_RUNS } from "../config";
 import { ActionLogger } from '../utils/logging';
 import { LoggingLevel } from '../utils/loggingLevels';
 
@@ -86,8 +86,8 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             logger.info(`Found ${existingScenarioIds.length} existing scenarios: ${existingScenarioIds.join(', ')}`);
 
             // Check if we're adding a new scenario (not updating existing one)
-            if (!existingScenarioIds.includes(scenarioId) && existingScenarioIds.length >= MAX_SCENARIOS) {
-                const errorMsg = `Maximum ${MAX_SCENARIOS} scenarios per document reached. Delete a scenario to continue.`;
+            if (!existingScenarioIds.includes(scenarioId) && existingScenarioIds.length >= MAX_SIMULATION_RUNS) {
+                const errorMsg = `Maximum ${MAX_SIMULATION_RUNS} scenarios per document reached. Delete a scenario to continue.`;
                 logger.error(errorMsg);
                 return {
                     success: false,
@@ -199,7 +199,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
         const jobId = jobIdMatch?.[1];
         const taskId = taskIdMatch?.[1];
 
-        // Update status.json with jobId/taskId so listScenariosAction can query Batch API
+        // Update status.json with jobId/taskId so listSimulationRunsAction can query Batch API
         // for task state when Python couldn't write status (e.g., storage failures)
         if (jobId && taskId) {
             try {
