@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
+import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario } from '@quodsi/shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -183,6 +183,17 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
+   * Send a request to update the scenario definitions array
+   *
+   * @param scenarios Array of serialized scenario definitions
+   */
+  const updateScenarioDefinitions = useCallback((scenarios: ISerializedScenario[]) => {
+    send(EnvelopeMessageType.SCENARIOS_DEFINITION_UPDATE, {
+      scenarios
+    });
+  }, [send]);
+
+  /**
    * Send a request for the serialized model JSON
    *
    * @param documentId Document ID to get model JSON from
@@ -225,6 +236,7 @@ export function useModelOpsSender() {
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,
+    updateScenarioDefinitions,
     requestModelJson,
     selectElement
   }), [
@@ -239,6 +251,7 @@ export function useModelOpsSender() {
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,
+    updateScenarioDefinitions,
     requestModelJson,
     selectElement
   ]);

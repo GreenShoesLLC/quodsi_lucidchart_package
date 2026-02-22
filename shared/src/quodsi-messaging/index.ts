@@ -228,6 +228,9 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.CONVERSION_PREVIEW_RESULT]: ConversionPreviewResultMessage['data'];
   [EnvelopeMessageType.CONVERSION_APPLY]: ConversionApplyMessage['data'];
   [EnvelopeMessageType.CONVERSION_APPLY_RESULT]: ConversionApplyResultMessage['data'];
+
+  [EnvelopeMessageType.SCENARIOS_DEFINITION_UPDATE]: { scenarios: any[] };
+  [EnvelopeMessageType.SCENARIOS_DEFINITION_RESULT]: { success: boolean; errorMessage?: string };
 }
 
 /**

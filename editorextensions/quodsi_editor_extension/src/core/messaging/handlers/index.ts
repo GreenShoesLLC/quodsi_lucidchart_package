@@ -11,6 +11,7 @@ import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
+import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -73,6 +74,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Scenario definition operations messages
+    if (ScenarioDefinitionHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -101,5 +107,6 @@ export {
   TimePatternHandler,
   StorageHandler,
   SimulationRunHandler,
-  ConversionPreviewHandler
+  ConversionPreviewHandler,
+  ScenarioDefinitionHandler
 };
