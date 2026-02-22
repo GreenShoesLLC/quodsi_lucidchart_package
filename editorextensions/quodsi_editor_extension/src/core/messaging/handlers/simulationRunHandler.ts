@@ -6,62 +6,62 @@ import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 
 /**
- * Handler for scenario management messages
+ * Handler for simulation run management messages
  */
-export class ScenarioHandler {
-  private static logger = ExtensionDebugService.forComponent('ScenarioHandler');
+export class SimulationRunHandler {
+  private static logger = ExtensionDebugService.forComponent('SimulationRunHandler');
 
   /**
-   * Handle messages related to scenario operations
+   * Handle messages related to simulation run operations
    *
    * @param msg The received message
    * @returns Whether the message was handled
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
-      case EnvelopeMessageType.SCENARIOS_LIST_REQUEST:
+      case EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST:
         // Handle async method - fire and forget, return true immediately
-        ScenarioHandler.handleScenariosListRequest(msg).catch(error => {
-          ScenarioHandler.logger.error('Error in handleScenariosListRequest:', error);
+        SimulationRunHandler.handleSimulationRunsListRequest(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleSimulationRunsListRequest:', error);
         });
         return true;
 
-      case EnvelopeMessageType.SCENARIO_DELETE:
+      case EnvelopeMessageType.SIMULATION_RUN_DELETE:
         // Handle async method - fire and forget, return true immediately
-        ScenarioHandler.handleScenarioDelete(msg).catch(error => {
-          ScenarioHandler.logger.error('Error in handleScenarioDelete:', error);
+        SimulationRunHandler.handleSimulationRunDelete(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleSimulationRunDelete:', error);
         });
         return true;
 
       case EnvelopeMessageType.CROSS_REP_DATA_REQUEST:
         // Handle async method - fire and forget, return true immediately
-        ScenarioHandler.handleCrossRepDataRequest(msg).catch(error => {
-          ScenarioHandler.logger.error('Error in handleCrossRepDataRequest:', error);
+        SimulationRunHandler.handleCrossRepDataRequest(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleCrossRepDataRequest:', error);
         });
         return true;
 
-      case EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST:
+      case EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST:
         // Handle async method - fire and forget, return true immediately
-        ScenarioHandler.handleResimulateRequest(msg).catch(error => {
-          ScenarioHandler.logger.error('Error in handleResimulateRequest:', error);
+        SimulationRunHandler.handleResimulateRequest(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleResimulateRequest:', error);
         });
         return true;
 
-      // Not a scenario message
+      // Not a simulation run message
       default:
         return false;
     }
   }
 
   /**
-   * Handle scenarios list request
+   * Handle simulation runs list request
    *
-   * @param msg SCENARIOS_LIST_REQUEST message
+   * @param msg SIMULATION_RUNS_LIST_REQUEST message
    */
-  private static async handleScenariosListRequest(msg: EnvelopeBase): Promise<void> {
+  private static async handleSimulationRunsListRequest(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId: string };
 
-    ScenarioHandler.logger.log('Scenarios list requested', {
+    SimulationRunHandler.logger.log('Simulation runs list requested', {
       documentId: data.documentId
     });
 
@@ -69,7 +69,7 @@ export class ScenarioHandler {
       // Get the EditorClient
       const client = ModelManager.getClient();
 
-      ScenarioHandler.logger.log('Calling data connector ListScenarios action...');
+      SimulationRunHandler.logger.log('Calling data connector ListScenarios action...');
 
       // Call the data connector to list scenarios
       const result = await LucidDataActionUtility.performDataAction(client, {
@@ -82,15 +82,15 @@ export class ScenarioHandler {
       });
 
       // Debug logging to understand response structure
-      ScenarioHandler.logger.log('ListScenarios raw result type:', typeof result);
-      ScenarioHandler.logger.log('ListScenarios raw result:', JSON.stringify(result, null, 2));
-      ScenarioHandler.logger.log('result.json exists?', !!result?.json);
-      ScenarioHandler.logger.log('result.json.scenarios exists?', !!result?.json?.scenarios);
+      SimulationRunHandler.logger.log('ListScenarios raw result type:', typeof result);
+      SimulationRunHandler.logger.log('ListScenarios raw result:', JSON.stringify(result, null, 2));
+      SimulationRunHandler.logger.log('result.json exists?', !!result?.json);
+      SimulationRunHandler.logger.log('result.json.scenarios exists?', !!result?.json?.scenarios);
 
       // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
 
-      ScenarioHandler.logger.log('ListScenarios action completed successfully', {
+      SimulationRunHandler.logger.log('ListScenarios action completed successfully', {
         scenarioCount: responseData?.scenarios?.length || 0
       });
 
@@ -106,7 +106,7 @@ export class ScenarioHandler {
       // Send success response with the unwrapped data
       router.send('model', {
         id: msg.id, // Use same ID for correlation
-        type: EnvelopeMessageType.SCENARIOS_LIST_RESULT,
+        type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
@@ -114,7 +114,7 @@ export class ScenarioHandler {
       });
 
     } catch (error) {
-      ScenarioHandler.logger.error('Error listing scenarios:', error);
+      SimulationRunHandler.logger.error('Error listing simulation runs:', error);
 
       // Send error response
       router.send('model', {
@@ -124,23 +124,23 @@ export class ScenarioHandler {
         target: 'model-iframe',
         version: '1.0',
         data: {
-          code: 'SCENARIOS_LIST_FAILED',
+          code: 'SIMULATION_RUNS_LIST_FAILED',
           message: error instanceof Error ? error.message : String(error),
-          relatedTo: EnvelopeMessageType.SCENARIOS_LIST_REQUEST
+          relatedTo: EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST
         }
       });
     }
   }
 
   /**
-   * Handle scenario deletion request
+   * Handle simulation run deletion request
    *
-   * @param msg SCENARIO_DELETE message
+   * @param msg SIMULATION_RUN_DELETE message
    */
-  private static async handleScenarioDelete(msg: EnvelopeBase): Promise<void> {
+  private static async handleSimulationRunDelete(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId: string; scenarioId: string };
 
-    ScenarioHandler.logger.log('Scenario deletion requested', {
+    SimulationRunHandler.logger.log('Simulation run deletion requested', {
       documentId: data.documentId,
       scenarioId: data.scenarioId
     });
@@ -149,7 +149,7 @@ export class ScenarioHandler {
       // Get the EditorClient
       const client = ModelManager.getClient();
 
-      ScenarioHandler.logger.log('Calling data connector DeleteScenario action...');
+      SimulationRunHandler.logger.log('Calling data connector DeleteScenario action...');
 
       // Call the data connector to delete scenario
       const result = await LucidDataActionUtility.performDataAction(client, {
@@ -165,7 +165,7 @@ export class ScenarioHandler {
       // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
 
-      ScenarioHandler.logger.log('DeleteScenario action completed', {
+      SimulationRunHandler.logger.log('DeleteScenario action completed', {
         success: responseData?.success,
         documentId: data.documentId,
         scenarioId: data.scenarioId
@@ -173,14 +173,14 @@ export class ScenarioHandler {
 
       // Clean up any active simulation jobs for this scenario
       if (responseData?.success) {
-        ScenarioHandler.logger.log('Cleaning up job tracking for deleted scenario');
+        SimulationRunHandler.logger.log('Cleaning up job tracking for deleted simulation run');
         SimulationHandler.stopPollingForScenario(data.scenarioId);
       }
 
       // Send success response
       router.send('model', {
         id: msg.id, // Use same ID for correlation
-        type: EnvelopeMessageType.SCENARIO_DELETE_RESULT,
+        type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
@@ -193,12 +193,12 @@ export class ScenarioHandler {
       });
 
     } catch (error) {
-      ScenarioHandler.logger.error('Error deleting scenario:', error);
+      SimulationRunHandler.logger.error('Error deleting simulation run:', error);
 
       // Send error response
       router.send('model', {
         id: msg.id,
-        type: EnvelopeMessageType.SCENARIO_DELETE_RESULT,
+        type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',
@@ -224,7 +224,7 @@ export class ScenarioHandler {
       dataType: 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries'
     };
 
-    ScenarioHandler.logger.log('Cross-rep data requested', {
+    SimulationRunHandler.logger.log('Cross-rep data requested', {
       documentId: data.documentId,
       scenarioId: data.scenarioId,
       dataType: data.dataType
@@ -251,7 +251,7 @@ export class ScenarioHandler {
 
       const actionName = actionMap[data.dataType];
 
-      ScenarioHandler.logger.log(`Calling data connector ${actionName} action...`);
+      SimulationRunHandler.logger.log(`Calling data connector ${actionName} action...`);
 
       // Call the data connector to fetch cross-rep data
       const result = await LucidDataActionUtility.performDataAction(client, {
@@ -267,7 +267,7 @@ export class ScenarioHandler {
       // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
 
-      ScenarioHandler.logger.log(`${actionName} action completed successfully`, {
+      SimulationRunHandler.logger.log(`${actionName} action completed successfully`, {
         success: responseData?.success,
         recordCount: responseData?.recordCount || responseData?.data?.length || 0
       });
@@ -286,7 +286,7 @@ export class ScenarioHandler {
       });
 
     } catch (error) {
-      ScenarioHandler.logger.error('Error fetching cross-rep data:', error);
+      SimulationRunHandler.logger.error('Error fetching cross-rep data:', error);
 
       // Send error response
       router.send('model', {
@@ -306,14 +306,14 @@ export class ScenarioHandler {
   }
 
   /**
-   * Handle scenario resimulate request
+   * Handle simulation run resimulate request
    *
-   * @param msg SCENARIO_RESIMULATE_REQUEST message
+   * @param msg SIMULATION_RUN_RESIMULATE_REQUEST message
    */
   private static async handleResimulateRequest(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId: string; scenarioId: string; scenarioName: string };
 
-    ScenarioHandler.logger.log('Scenario resimulate requested', {
+    SimulationRunHandler.logger.log('Simulation run resimulate requested', {
       documentId: data.documentId,
       scenarioId: data.scenarioId,
       scenarioName: data.scenarioName
@@ -323,7 +323,7 @@ export class ScenarioHandler {
       // Get the EditorClient
       const client = ModelManager.getClient();
 
-      ScenarioHandler.logger.log('Calling data connector SubmitSimulationJob action...');
+      SimulationRunHandler.logger.log('Calling data connector SubmitSimulationJob action...');
 
       // Call the data connector to submit simulation job (reuses existing model.json)
       const result = await LucidDataActionUtility.performDataAction(client, {
@@ -341,7 +341,7 @@ export class ScenarioHandler {
       // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
 
-      ScenarioHandler.logger.log('SubmitSimulationJob action completed', {
+      SimulationRunHandler.logger.log('SubmitSimulationJob action completed', {
         success: responseData?.success,
         documentId: data.documentId,
         scenarioId: data.scenarioId
@@ -377,7 +377,7 @@ export class ScenarioHandler {
       }
 
     } catch (error) {
-      ScenarioHandler.logger.error('Error resimulating scenario:', error);
+      SimulationRunHandler.logger.error('Error resimulating:', error);
 
       // Send MODEL_RUN_STATUS with FAILED status
       router.send('model', {

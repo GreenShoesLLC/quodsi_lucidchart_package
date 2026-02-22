@@ -9,7 +9,7 @@ import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
-import { ScenarioHandler } from './scenarioHandler';
+import { SimulationRunHandler } from './simulationRunHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
 
 /**
@@ -78,8 +78,8 @@ export class MessageHandlers {
       return true;
     }
 
-    // Scenario messages
-    if (ScenarioHandler.handleMessage(msg)) {
+    // Simulation run messages
+    if (SimulationRunHandler.handleMessage(msg)) {
       return true;
     }
 
@@ -100,6 +100,6 @@ export {
   ResourceRequirementsHandler,
   TimePatternHandler,
   StorageHandler,
-  ScenarioHandler,
+  SimulationRunHandler,
   ConversionPreviewHandler
 };
