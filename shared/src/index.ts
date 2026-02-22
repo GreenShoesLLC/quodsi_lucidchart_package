@@ -59,7 +59,7 @@ export * from './types/elements/ResourceListManager';
 export * from './types/elements/ResourceRequest';
 export * from './types/elements/RequirementClause';
 export * from './types/elements/ResourceRequirement';
-export * from './types/elements/Scenario';
+export * from './types/elements/SimulationRun';
 export * from './types/elements/SimulationObject';
 export * from './types/elements/SimulationObjectType';
 export * from './types/elements/SimulationTimeType';

@@ -1,8 +1,8 @@
 import { SimulationObjectType } from "./SimulationObjectType";
-import { Scenario } from "./Scenario";
+import { SimulationRun } from "./SimulationRun";
 import { SimulationObject } from "./SimulationObject";
 
 export interface Experiment extends SimulationObject {
-    scenarios: Scenario[];
+    simulationRuns: SimulationRun[];
     type: SimulationObjectType.Experiment;
 }

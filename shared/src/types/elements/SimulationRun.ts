@@ -2,11 +2,11 @@ import { SimulationObjectType } from "./SimulationObjectType";
 import { SimulationObject } from "./SimulationObject";
 import { RunState } from "./RunState";
 
-export interface Scenario extends SimulationObject {
+export interface SimulationRun extends SimulationObject {
     reps: number;
     forecastDays: number;
     runState: RunState;
-    type: SimulationObjectType.Scenario;
+    type: SimulationObjectType.Scenario;  // Keep enum value — it's the wire format
     // Progress tracking
     currentReplication?: number;  // Current replication being executed (1 to reps)
     // Error fields (populated when runState === RanWithErrors)

@@ -34,7 +34,7 @@ export * from './ResourceListManager';
 export * from './ResourceRequest';
 export * from './RequirementClause';
 export * from './ResourceRequirement';
-export * from './Scenario';
+export * from './SimulationRun';
 export * from './SimulationObject';
 export * from './SimulationObjectType';
 export * from './SimulationTimeType';

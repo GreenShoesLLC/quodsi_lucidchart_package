@@ -1,8 +1,8 @@
-import { Scenario } from "./elements/Scenario";
+import { SimulationRun } from "./elements/SimulationRun";
 
 
 export interface PageStatus {
     hasContainer: boolean;
-    scenarios: Scenario[];
+    simulationRuns: SimulationRun[];
     statusDateTime: string; // ISO format
 }
