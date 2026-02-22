@@ -90,13 +90,13 @@ try {
     # Check 3: tsconfig.json configuration
     if (Test-Path "tsconfig.json") {
         $tsconfig = Get-Content "tsconfig.json" | ConvertFrom-Json
-        $rootDir = $tsconfig.compilerOptions.rootDir
-        $outDir = $tsconfig.compilerOptions.outDir
+        $tsRootDir = $tsconfig.compilerOptions.rootDir
+        $tsOutDir = $tsconfig.compilerOptions.outDir
 
-        if ($rootDir -eq "./src" -and $outDir -eq "dist") {
+        if ($tsRootDir -eq "./src" -and $tsOutDir -eq "dist") {
             Record-Check "TypeScript configuration" $true "rootDir: ./src, outDir: dist"
         } else {
-            Record-Check "TypeScript configuration" $false "Expected rootDir='./src', outDir='dist'. Got rootDir='$rootDir', outDir='$outDir'" "Warning"
+            Record-Check "TypeScript configuration" $false "Expected rootDir='./src', outDir='dist'. Got rootDir='$tsRootDir', outDir='$tsOutDir'" "Warning"
         }
     } else {
         Record-Check "tsconfig.json exists" $false "tsconfig.json not found"
