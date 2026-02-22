@@ -16,6 +16,7 @@ import { TimeDistributedConfigListManager } from "./TimeDistributedConfigListMan
 import { TimePattern } from "./TimePattern";
 import { TimeDistributedConfig } from "./TimeDistributedConfig";
 import { SimulationObjectType } from "./SimulationObjectType";
+import { ScenarioListManager } from "./ScenarioListManager";
 
 export class ModelDefinition {
     public readonly activities: ActivityListManager;
@@ -27,6 +28,7 @@ export class ModelDefinition {
     public readonly states: StateListManager;
     public readonly timePatterns: TimePatternListManager;
     public readonly timeDistributedConfigs: TimeDistributedConfigListManager;
+    public readonly scenarios: ScenarioListManager;
 
     constructor(
         public readonly model: Model
@@ -40,6 +42,7 @@ export class ModelDefinition {
         this.states = new StateListManager();
         this.timePatterns = new TimePatternListManager();
         this.timeDistributedConfigs = new TimeDistributedConfigListManager();
+        this.scenarios = new ScenarioListManager();
 
         // Add default entity
         const defaultEntity = new Entity(

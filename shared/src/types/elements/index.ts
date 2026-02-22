@@ -67,6 +67,8 @@ export * from './ScenarioSetterType';
 export * from './NumericPropertyModification';
 export * from './BooleanPropertyModification';
 export * from './ScenarioChangeRequest';
+export * from './Scenario';
+export * from './ScenarioListManager';
 
 // Export action system
 export * from './actions';

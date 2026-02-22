@@ -32,6 +32,8 @@ export type {
     SerializedActionType
 } from './interfaces/ISerializedAction';
 export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
+export type { ISerializedScenarioChangeRequest } from './interfaces/ISerializedScenarioChangeRequest';
+export type { ISerializedScenario } from './interfaces/ISerializedScenario';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

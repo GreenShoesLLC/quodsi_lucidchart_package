@@ -101,6 +101,8 @@ export * from './types/elements/ScenarioSetterType';
 export * from './types/elements/NumericPropertyModification';
 export * from './types/elements/BooleanPropertyModification';
 export * from './types/elements/ScenarioChangeRequest';
+export * from './types/elements/Scenario';
+export * from './types/elements/ScenarioListManager';
 
 // Export accordion types
 export * from './types/accordion/ModelElement';

@@ -1,0 +1,49 @@
+import { ScenarioChangeRequest } from "./ScenarioChangeRequest";
+import { generateUUID } from "../../utils/uuidUtils";
+
+export class Scenario {
+    id: string;
+    name: string;
+    description: string;
+    changeRequests: ScenarioChangeRequest[];
+
+    constructor(options?: {
+        id?: string;
+        name?: string;
+        description?: string;
+        changeRequests?: ScenarioChangeRequest[];
+    }) {
+        this.id = options?.id ?? generateUUID();
+        this.name = options?.name ?? "New Scenario";
+        this.description = options?.description ?? "";
+        this.changeRequests = options?.changeRequests ?? [];
+    }
+
+    addChangeRequest(changeRequest: ScenarioChangeRequest): void {
+        this.changeRequests.push(changeRequest);
+    }
+
+    removeChangeRequest(changeRequestId: string): void {
+        this.changeRequests = this.changeRequests.filter(cr => cr.id !== changeRequestId);
+    }
+
+    toJSON(): any {
+        return {
+            id: this.id,
+            name: this.name,
+            description: this.description,
+            changeRequests: this.changeRequests.map(cr => cr.toJSON()),
+        };
+    }
+
+    static fromJSON(data: any): Scenario {
+        return new Scenario({
+            id: data.id,
+            name: data.name ?? "New Scenario",
+            description: data.description ?? "",
+            changeRequests: (data.changeRequests ?? []).map(
+                (cr: any) => ScenarioChangeRequest.fromJSON(cr)
+            ),
+        });
+    }
+}
