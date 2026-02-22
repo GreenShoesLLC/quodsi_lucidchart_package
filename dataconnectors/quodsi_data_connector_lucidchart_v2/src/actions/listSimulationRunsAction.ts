@@ -234,6 +234,14 @@ export const listSimulationRunsAction = async (
                             statusData.taskId = runtimeData.taskId;
                         }
 
+                        // Extract scenario definition association
+                        if (runtimeData.scenarioDefinitionId) {
+                            statusData.scenarioDefinitionId = runtimeData.scenarioDefinitionId;
+                        }
+                        if (runtimeData.scenarioDefinitionName) {
+                            statusData.scenarioDefinitionName = runtimeData.scenarioDefinitionName;
+                        }
+
                         logger.debug(`Merged status.json for scenario ${scenarioId}: runState=${statusData.runState}, hasError=${!!statusData.error}, hasJobId=${!!statusData.jobId}`);
                     } catch (parseError) {
                         logger.error(`Failed to parse status.json for scenario ${scenarioId}: ${parseError.message}`);
@@ -415,7 +423,10 @@ export const listSimulationRunsAction = async (
                     // Timing fields
                     startTime: statusData.startTime,
                     endTime: statusData.endTime,
-                    metrics: statusData.metrics
+                    metrics: statusData.metrics,
+                    // Scenario definition association
+                    scenarioDefinitionId: statusData.scenarioDefinitionId,
+                    scenarioDefinitionName: statusData.scenarioDefinitionName
                 };
 
                 // Generate SAS URLs only if results exist and status is successful

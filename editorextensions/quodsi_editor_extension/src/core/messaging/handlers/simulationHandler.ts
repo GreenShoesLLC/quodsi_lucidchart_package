@@ -70,6 +70,7 @@ export class SimulationHandler {
       durationDays?: number;
       repetitions?: number;
       parameters?: Record<string, unknown>;
+      scenarioDefinitionId?: string;
     };
     
     console.log('[SimulationHandler] Simulation run requested', {
@@ -272,6 +273,24 @@ export class SimulationHandler {
       const serializer = ModelSerializerFactory.create(modelDefinition);
       const serializedModel = serializer.serialize(modelDefinition);
       console.log('[SimulationHandler] Model serialized successfully');
+
+      // If a scenario definition was specified, embed its change requests in the model payload
+      let scenarioDefinitionName: string | undefined;
+      if (data.scenarioDefinitionId) {
+        const scenario = modelDefinition.scenarios.get(data.scenarioDefinitionId);
+        if (scenario) {
+          const serializedScenario = scenario.toJSON();
+          serializedModel.scenarioChangeRequests = serializedScenario.changeRequests;
+          scenarioDefinitionName = serializedScenario.name;
+          console.log('[SimulationHandler] Added scenarioChangeRequests to model payload', {
+            scenarioDefinitionId: data.scenarioDefinitionId,
+            scenarioDefinitionName,
+            changeRequestCount: serializedScenario.changeRequests.length
+          });
+        } else {
+          console.warn('[SimulationHandler] Scenario definition not found:', data.scenarioDefinitionId);
+        }
+      }
       
       // Get SVG representation of the current page
       console.log('[SimulationHandler] Getting SVG for the current page...');
@@ -340,7 +359,9 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: QUODSIM_VERSION
+            appVersion: QUODSIM_VERSION,
+            scenarioDefinitionId: data.scenarioDefinitionId,
+            scenarioDefinitionName
           },
           asynchronous: true
         });

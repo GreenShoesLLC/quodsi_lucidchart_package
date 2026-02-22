@@ -8,6 +8,7 @@ import { ISerializedResourceRequirement } from './ISerializedResourceRequirement
 import { ISerializedState } from './ISerializedState';
 import { ISerializedTimePattern } from './ISerializedTimePattern';
 import { ISerializedTimeDistributedConfig } from './ISerializedTimeDistributedConfig';
+import { ISerializedScenarioChangeRequest } from './ISerializedScenarioChangeRequest';
 
 export interface ISerializedMetadata {
     version: string;
@@ -40,4 +41,5 @@ export interface ISerializedModel {
     states: ISerializedState[];
     timePatterns?: ISerializedTimePattern[];
     timeDistributedConfigs?: ISerializedTimeDistributedConfig[];
+    scenarioChangeRequests?: ISerializedScenarioChangeRequest[];
 }

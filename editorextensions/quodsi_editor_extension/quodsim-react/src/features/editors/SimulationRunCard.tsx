@@ -22,6 +22,9 @@ interface SimulationRun {
   errorType?: string;
   errorDetails?: string;
   errorSuggestions?: string[];
+  // Scenario definition association
+  scenarioDefinitionId?: string;
+  scenarioDefinitionName?: string;
 }
 
 interface SimulationRunCardProps {
@@ -259,6 +262,15 @@ const SimulationRunCard: React.FC<SimulationRunCardProps> = ({ simulationRun, do
         </div>
         <h3 className="text-sm font-medium text-gray-900 truncate">{simulationRun.name}</h3>
       </div>
+
+      {/* Scenario Definition Badge */}
+      {simulationRun.scenarioDefinitionName && (
+        <div className="mb-1">
+          <span className="inline-block px-1.5 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded border border-indigo-200">
+            Scenario: {simulationRun.scenarioDefinitionName}
+          </span>
+        </div>
+      )}
 
       {/* Metadata */}
       <div className="text-xs text-gray-600 space-y-0.5 mb-1.5">

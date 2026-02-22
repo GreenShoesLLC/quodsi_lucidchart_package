@@ -18,20 +18,23 @@ export function useSimulationSender() {
    * @param durationDays Optional duration in days
    * @param repetitions Optional number of repetitions
    * @param parameters Additional simulation parameters
+   * @param scenarioDefinitionId Optional scenario definition ID (to apply change requests)
    */
   const requestSimulation = useCallback((
     documentId: string,
     scenarioName?: string,
     durationDays?: number,
     repetitions?: number,
-    parameters?: Record<string, unknown>
+    parameters?: Record<string, unknown>,
+    scenarioDefinitionId?: string
   ) => {
     send(EnvelopeMessageType.MODEL_RUN_REQUEST, {
       documentId,
       scenarioName,
       durationDays,
       repetitions,
-      parameters
+      parameters,
+      scenarioDefinitionId
     });
   }, [send]);
 
