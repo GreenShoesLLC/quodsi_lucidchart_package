@@ -98,6 +98,9 @@ export * from './types/elements/distributions';
 export * from './types/elements/ScenarioObjectType';
 export * from './types/elements/ScenarioPropertyName';
 export * from './types/elements/ScenarioSetterType';
+export * from './types/elements/NumericPropertyModification';
+export * from './types/elements/BooleanPropertyModification';
+export * from './types/elements/ScenarioChangeRequest';
 
 // Export accordion types
 export * from './types/accordion/ModelElement';
