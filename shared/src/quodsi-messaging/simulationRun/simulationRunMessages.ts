@@ -2,14 +2,14 @@ import { EnvelopeBase } from '../envelope/envelope';
 import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { RunState } from '../../types/elements';
 
-export interface ScenarioListRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SCENARIOS_LIST_REQUEST;
+export interface SimulationRunListRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST;
   data: {
     documentId: string;
   };
 }
 
-export interface ScenarioDownloadInfo {
+export interface SimulationRunDownloadInfo {
   zipUrl: string;
   excelUrl: string;
   fileSizeBytes: number;
@@ -17,7 +17,7 @@ export interface ScenarioDownloadInfo {
   expiresAt: string;
 }
 
-export interface ScenarioInfo {
+export interface SimulationRunInfo {
   id: string;
   name: string;
   runState: RunState;
@@ -27,7 +27,7 @@ export interface ScenarioInfo {
   simulationTimeType: string;
   completedAt?: string;
   hasResults: boolean;
-  downloadInfo?: ScenarioDownloadInfo;
+  downloadInfo?: SimulationRunDownloadInfo;
   // Progress tracking
   currentReplication?: number;  // Current replication being executed (1 to reps)
   // Error fields (populated when runState === RanWithErrors)
@@ -41,39 +41,39 @@ export interface ScenarioInfo {
   metrics?: Record<string, any>;  // Performance and execution metrics
 }
 
-export interface ScenarioListResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SCENARIOS_LIST_RESULT;
+export interface SimulationRunListResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT;
   data: {
     documentId: string;
-    scenarios: ScenarioInfo[];
+    simulationRuns: SimulationRunInfo[];
     generatedAt: string;
   };
 }
 
-export interface ScenarioDeleteMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SCENARIO_DELETE;
+export interface SimulationRunDeleteMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUN_DELETE;
   data: {
     documentId: string;
-    scenarioId: string;
+    simulationRunId: string;
   };
 }
 
-export interface ScenarioDeleteResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SCENARIO_DELETE_RESULT;
+export interface SimulationRunDeleteResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT;
   data: {
     success: boolean;
     documentId: string;
-    scenarioId: string;
+    simulationRunId: string;
     error?: string;
   };
 }
 
-export interface ScenarioResimulateRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST;
+export interface SimulationRunResimulateRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST;
   data: {
     documentId: string;
-    scenarioId: string;
-    scenarioName: string;
+    simulationRunId: string;
+    simulationRunName: string;
   };
 }
 
@@ -97,11 +97,11 @@ export interface CrossRepDataResultMessage extends EnvelopeBase {
   };
 }
 
-export type ScenarioMessage =
-  | ScenarioListRequestMessage
-  | ScenarioListResultMessage
-  | ScenarioDeleteMessage
-  | ScenarioDeleteResultMessage
-  | ScenarioResimulateRequestMessage
+export type SimulationRunMessage =
+  | SimulationRunListRequestMessage
+  | SimulationRunListResultMessage
+  | SimulationRunDeleteMessage
+  | SimulationRunDeleteResultMessage
+  | SimulationRunResimulateRequestMessage
   | CrossRepDataRequestMessage
   | CrossRepDataResultMessage;

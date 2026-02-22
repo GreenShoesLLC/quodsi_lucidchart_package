@@ -8,7 +8,7 @@ import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from '
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
-import { ScenarioListRequestMessage, ScenarioListResultMessage, ScenarioDeleteMessage, ScenarioDeleteResultMessage, ScenarioResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, ScenarioMessage, ScenarioInfo, ScenarioDownloadInfo } from './scenario/messages';
+import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 
 // Export message types enum
@@ -125,19 +125,19 @@ export {
   StorageMessage
 } from './storage/messages';
 
-// Export scenario messages
+// Export simulation run messages
 export {
-  ScenarioInfo,
-  ScenarioDownloadInfo,
-  ScenarioListRequestMessage,
-  ScenarioListResultMessage,
-  ScenarioDeleteMessage,
-  ScenarioDeleteResultMessage,
-  ScenarioResimulateRequestMessage,
+  SimulationRunInfo,
+  SimulationRunDownloadInfo,
+  SimulationRunListRequestMessage,
+  SimulationRunListResultMessage,
+  SimulationRunDeleteMessage,
+  SimulationRunDeleteResultMessage,
+  SimulationRunResimulateRequestMessage,
   CrossRepDataRequestMessage,
   CrossRepDataResultMessage,
-  ScenarioMessage
-} from './scenario/messages';
+  SimulationRunMessage
+} from './simulationRun/simulationRunMessages';
 
 // Export conversion preview messages
 export {
@@ -158,7 +158,7 @@ export type QuodsiMessage =
   | ModelOpsMessage
   | ElementOpsMessage
   | StorageMessage
-  | ScenarioMessage
+  | SimulationRunMessage
   | ConversionPreviewMessage;
 
 // Define payload type mapping
@@ -216,11 +216,11 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.STORAGE_DISCONNECT]: StorageDisconnectMessage['data'];
   [EnvelopeMessageType.STORAGE_STATUS]: StorageStatusMessage['data'];
 
-  [EnvelopeMessageType.SCENARIOS_LIST_REQUEST]: ScenarioListRequestMessage['data'];
-  [EnvelopeMessageType.SCENARIOS_LIST_RESULT]: ScenarioListResultMessage['data'];
-  [EnvelopeMessageType.SCENARIO_DELETE]: ScenarioDeleteMessage['data'];
-  [EnvelopeMessageType.SCENARIO_DELETE_RESULT]: ScenarioDeleteResultMessage['data'];
-  [EnvelopeMessageType.SCENARIO_RESIMULATE_REQUEST]: ScenarioResimulateRequestMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST]: SimulationRunListRequestMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT]: SimulationRunListResultMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUN_DELETE]: SimulationRunDeleteMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT]: SimulationRunDeleteResultMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST]: SimulationRunResimulateRequestMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_REQUEST]: CrossRepDataRequestMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_RESULT]: CrossRepDataResultMessage['data'];
 
