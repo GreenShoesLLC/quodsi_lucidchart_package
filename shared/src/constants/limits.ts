@@ -3,11 +3,11 @@
  */
 
 /**
- * Maximum number of scenarios allowed per document
+ * Maximum number of simulation runs allowed per document
  *
  * This limit ensures:
  * - Reasonable Azure Storage usage per document
- * - Good UX (not overwhelming the scenario list)
+ * - Good UX (not overwhelming the run list)
  * - Predictable billing and resource consumption
  */
-export const MAX_SCENARIOS = 5;
+export const MAX_SIMULATION_RUNS = 5;
