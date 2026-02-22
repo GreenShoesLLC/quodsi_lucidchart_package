@@ -94,6 +94,11 @@ export * from './types/elements/FailureProperties';
 // Distribution types
 export * from './types/elements/distributions';
 
+// Scenario change request types
+export * from './types/elements/ScenarioObjectType';
+export * from './types/elements/ScenarioPropertyName';
+export * from './types/elements/ScenarioSetterType';
+
 // Export accordion types
 export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';

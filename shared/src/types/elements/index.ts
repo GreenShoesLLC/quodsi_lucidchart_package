@@ -60,5 +60,10 @@ export * from './FailureProperties';
 // Export distributions
 export * from './distributions';
 
+// Scenario change request types
+export * from './ScenarioObjectType';
+export * from './ScenarioPropertyName';
+export * from './ScenarioSetterType';
+
 // Export action system
 export * from './actions';
