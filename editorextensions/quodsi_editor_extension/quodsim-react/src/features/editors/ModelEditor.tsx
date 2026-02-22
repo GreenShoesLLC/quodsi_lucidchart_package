@@ -11,11 +11,13 @@ import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle } from "lucide-r
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import SimulationRunsPanel from "./SimulationRunsPanel";
+import ScenarioDefinitionEditor from "./ScenarioDefinitionEditor";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
 import {
@@ -104,6 +106,55 @@ const DEFAULT_RANDOM_SEED = 12345;
 
 
 /**
+ * Sub-tab panel that combines Scenario Definitions and Simulation Runs
+ */
+type ScenariosSubTab = "scenarios" | "runs";
+
+const ScenariosAndRunsPanel: React.FC<{
+  documentId?: string;
+  referenceData?: EditorReferenceData;
+  onScenariosChange: (scenarios: ISerializedScenario[]) => void;
+}> = ({ documentId, referenceData, onScenariosChange }) => {
+  const [activeSubTab, setActiveSubTab] = useState<ScenariosSubTab>("scenarios");
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex gap-2 p-2 border-b bg-gray-50">
+        <button
+          onClick={() => setActiveSubTab("scenarios")}
+          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+            activeSubTab === "scenarios"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          Scenarios
+        </button>
+        <button
+          onClick={() => setActiveSubTab("runs")}
+          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+            activeSubTab === "runs"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+          }`}
+        >
+          Runs
+        </button>
+      </div>
+      {activeSubTab === "scenarios" && (
+        <ScenarioDefinitionEditor
+          referenceData={referenceData}
+          onScenariosChange={onScenariosChange}
+        />
+      )}
+      {activeSubTab === "runs" && (
+        <SimulationRunsPanel documentId={documentId} />
+      )}
+    </div>
+  );
+};
+
+/**
  * ModelEditor - Component for editing model-level simulation settings
  *
  * The ModelEditor orchestrates the configuration of simulation model settings across
@@ -153,7 +204,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
   const [isAdvancedExpanded, setIsAdvancedExpanded] = useState(false); // Start collapsed
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
   const { selection } = useMessaging();
-  const { updateResourceRequirements } = useModelOpsSender();
+  const { updateResourceRequirements, updateScenarioDefinitions } = useModelOpsSender();
 
   // Direct form state management
   const [localModelDraft, setLocalModelDraft] = useState<Model>(() => extractModelData(model));
@@ -612,8 +663,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
           />
       )}
       {activeTab === "scenarios" && (
-        <SimulationRunsPanel
+        <ScenariosAndRunsPanel
           documentId={selection.documentContext?.documentId}
+          referenceData={referenceData}
+          onScenariosChange={updateScenarioDefinitions}
         />
       )}
       {activeTab === "validation" && (

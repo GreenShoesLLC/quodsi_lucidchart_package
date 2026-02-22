@@ -3,6 +3,7 @@ import { Connector } from "./elements/Connector";
 import { ConnectType } from "./elements/ConnectType";
 import { ISerializedTimePattern } from "../serialization/interfaces/ISerializedTimePattern";
 import { ISerializedTimeDistributedConfig } from "../serialization/interfaces/ISerializedTimeDistributedConfig";
+import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
 
 /**
  * Reference data for React editors containing model-wide lookup data.
@@ -26,4 +27,5 @@ export interface EditorReferenceData {
     states?: any[]; // Serialized state definitions for all components
     timePatterns?: ISerializedTimePattern[]; // Serialized time pattern definitions
     timeDistributedConfigs?: ISerializedTimeDistributedConfig[]; // Serialized time distributed config definitions
+    scenarios?: ISerializedScenario[]; // Serialized scenario definitions
 }

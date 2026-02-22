@@ -103,6 +103,9 @@ export const referenceDataBuilder = {
           endDate: config.endDate
         }));
 
+        // Include scenarios - serialize Scenario objects
+        referenceData.scenarios = modelDef.scenarios.getAll().map(scenario => scenario.toJSON());
+
         this.debug.log('Reference data built:', {
           activities: referenceData.activities?.length || 0,
           generators: referenceData.generators?.length || 0,
@@ -112,7 +115,8 @@ export const referenceDataBuilder = {
           connectors: referenceData.connectors?.length || 0,
           states: referenceData.states?.length || 0,
           timePatterns: referenceData.timePatterns?.length || 0,
-          timeDistributedConfigs: referenceData.timeDistributedConfigs?.length || 0
+          timeDistributedConfigs: referenceData.timeDistributedConfigs?.length || 0,
+          scenarios: referenceData.scenarios?.length || 0
         });
       } else {
         this.debug.warn('No model definition available');
