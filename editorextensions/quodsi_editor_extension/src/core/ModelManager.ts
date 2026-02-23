@@ -23,7 +23,8 @@ import {
     ISerializedScenario,
     EnvelopeMessageType,
     ValidationSeverity,
-    ValidationIssue
+    ValidationIssue,
+    ensureBaselineScenario
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
@@ -156,6 +157,8 @@ export class ModelManager {
                     } catch (error) {
                         this.debug.error('Version check failed:', error);
                     }
+                    // Ensure a Baseline scenario exists for this model page
+                    this.ensureBaselineScenario(this.currentPage);
                 }
                 this.versionCheckedPageId = this.currentPage.id;
             }
@@ -1475,6 +1478,20 @@ export class ModelManager {
         } catch (error) {
             this.debug.error('Error in updateTimeDistributedConfigs:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Ensures a Baseline scenario exists for the given page.
+     * If no scenario has isBaseline === true, creates one and persists it.
+     * Called once per page load during model definition initialization.
+     */
+    private ensureBaselineScenario(page: PageProxy): void {
+        const scenarios = this.storageAdapter.getScenarios(page);
+        const { scenarios: updated, baselineAdded } = ensureBaselineScenario(scenarios);
+        if (baselineAdded) {
+            this.debug.log('ensureBaselineScenario - Creating Baseline scenario');
+            this.storageAdapter.setScenarios(page, updated);
         }
     }
 
