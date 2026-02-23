@@ -209,9 +209,16 @@ export function useModelPanel() {
     modelOpsSender.validateModel(documentContext.documentId);
   }, [documentContext.documentId, modelOpsSender]);
   
-  const onSimulate = (scenarioName?: string) => {
-    logger.log(`Simulating model with scenario name: ${scenarioName}`);
-    simulationSender.requestSimulation(documentContext.documentId, scenarioName);
+  const onSimulate = (scenarioName?: string, scenarioDefinitionId?: string) => {
+    logger.log(`Simulating model with scenario name: ${scenarioName}, scenarioDefinitionId: ${scenarioDefinitionId}`);
+    simulationSender.requestSimulation(
+      documentContext.documentId,
+      scenarioName,
+      undefined,  // durationDays
+      undefined,  // repetitions
+      undefined,  // parameters
+      scenarioDefinitionId
+    );
   };
   
   const onRemoveModel = () => {

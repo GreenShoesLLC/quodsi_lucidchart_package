@@ -88,10 +88,10 @@ export const ModelPanel: React.FC = () => {
   const [modelJson, setModelJson] = useState<object | null>(null);
 
   // Wrap onSimulate to auto-switch to scenarios tab after simulation starts
-  const handleSimulate = (scenarioName?: string) => {
+  const handleSimulate = (scenarioName?: string, scenarioDefinitionId?: string) => {
     // Set pending submission so SimulationRunEditor can show a placeholder immediately
     setPendingSubmission(scenarioName || 'New Simulation');
-    onSimulate(scenarioName);
+    onSimulate(scenarioName, scenarioDefinitionId);
     setActiveTab("scenarios");
   };
 
