@@ -312,6 +312,7 @@ export const ModelPanel: React.FC = () => {
             onTabChange={setActiveTab}
             onTimePatternsChange={handleTimePatternsChange}
             onTimeDistributedConfigsChange={handleTimeDistributedConfigsChange}
+            onSimulate={handleSimulate}
           />
         )}
       </div>

@@ -35,6 +35,7 @@ interface ElementEditorProps {
   validationState?: ValidationResult | null;
   activeTab?: EditorTab;
   onTabChange?: (tab: EditorTab) => void;
+  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string) => void;
 }
 
 /**
@@ -57,6 +58,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   validationState,
   activeTab,
   onTabChange,
+  onSimulate,
 }) => {
   // Simple cancel handler - no accordion state to manage
   const handleCancel = () => {
@@ -101,6 +103,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={onTabChange}
+            onSimulate={onSimulate}
           />
         );
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Model,
   PeriodUnit,
@@ -6,17 +6,25 @@ import {
   SimulationObjectType,
   StateListManager,
   ValidationResult,
+  RunState,
+  EnvelopeMessageType,
+  EnvelopeBase,
+  SimulationRunInfo,
+  generateUUID,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle } from "lucide-react";
+import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
-import SimulationRunsPanel from "./SimulationRunsPanel";
-import ScenarioDefinitionEditor from "./ScenarioDefinitionEditor";
+import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
+import { ScenarioDetailPanel } from "./ScenarioDetailPanel";
+import SimulationRunAnalysisDashboard from "./SimulationRunAnalysisDashboard";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
-import { useMessaging } from "../../messaging/MessageProvider";
+import { useMessaging, useSimulationRuns, useMessagingDispatch } from "../../messaging/MessageProvider";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
+import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -48,6 +56,7 @@ interface Props {
   validationState?: ValidationResult | null;
   activeTab?: EditorTab;
   onTabChange?: (tab: EditorTab) => void;
+  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string) => void;
 }
 
 export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "validation";
@@ -106,50 +115,291 @@ const DEFAULT_RANDOM_SEED = 12345;
 
 
 /**
- * Sub-tab panel that combines Scenario Definitions and Simulation Runs
+ * Maps SimulationStatus string values to RunState enum values.
  */
-type ScenariosSubTab = "scenarios" | "runs";
+function mapStatusToRunState(status: string): RunState {
+  switch (status.toLowerCase()) {
+    case 'queued':
+      return RunState.Queued;
+    case 'processing':
+    case 'validating':
+    case 'running':
+      return RunState.Running;
+    case 'completed':
+      return RunState.RanSuccessfully;
+    case 'failed':
+    case 'error':
+      return RunState.RanWithErrors;
+    default:
+      return RunState.NotRun;
+  }
+}
 
+type AutoRefreshMode = 'off' | 'smart' | 'on';
+
+/**
+ * Unified panel that combines scenario management with smart polling
+ * and analysis navigation. Replaces the old sub-tab (Scenarios | Runs) pattern
+ * with an integrated view where each scenario shows its run status inline.
+ */
 const ScenariosAndRunsPanel: React.FC<{
   documentId?: string;
   referenceData?: EditorReferenceData;
   onScenariosChange: (scenarios: ISerializedScenario[]) => void;
-}> = ({ documentId, referenceData, onScenariosChange }) => {
-  const [activeSubTab, setActiveSubTab] = useState<ScenariosSubTab>("scenarios");
+  onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
+}> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
+  const [analysisView, setAnalysisView] = useState<{ scenarioId: string; documentId: string } | null>(null);
+
+  // Messaging hooks
+  const { listSimulationRuns } = useSimulationRunSender();
+  const dispatch = useMessagingDispatch();
+  const simulationRunState = useSimulationRuns();
+  const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
+
+  // Ref to track current simulation runs without causing dependency cycles
+  const simulationRunsRef = useRef(simulationRuns);
+  simulationRunsRef.current = simulationRuns;
+
+  // Scenarios from reference data
+  const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
+
+  // Auto-select baseline scenario if nothing is selected
+  useEffect(() => {
+    if (selectedScenarioId === null && scenarios.length > 0) {
+      const baseline = scenarios.find(s => s.isBaseline);
+      setSelectedScenarioId(baseline?.id ?? scenarios[0].id);
+    }
+  }, [selectedScenarioId, scenarios]);
+
+  const selectedScenario = scenarios.find(s => s.id === selectedScenarioId) ?? null;
+
+  // Build a map from scenario id to run status
+  const runStatusMap = useMemo(() => {
+    const map = new Map<string, ScenarioRunStatus>();
+    for (const run of simulationRuns) {
+      if (run.scenarioDefinitionId) {
+        // Keep the most recent run per scenarioDefinitionId
+        const existing = map.get(run.scenarioDefinitionId);
+        if (!existing) {
+          map.set(run.scenarioDefinitionId, {
+            scenarioId: run.id,
+            status: run.runState,
+            hasResults: run.hasResults,
+          });
+        }
+      }
+    }
+    // Also check for baseline runs (no scenarioDefinitionId) and map to baseline scenario
+    const baselineScenario = scenarios.find(s => s.isBaseline);
+    if (baselineScenario) {
+      // Runs without scenarioDefinitionId are baseline runs
+      for (const run of simulationRuns) {
+        if (!run.scenarioDefinitionId && !map.has(baselineScenario.id)) {
+          map.set(baselineScenario.id, {
+            scenarioId: run.id,
+            status: run.runState,
+            hasResults: run.hasResults,
+          });
+        }
+      }
+    }
+    return map;
+  }, [simulationRuns, scenarios]);
+
+  // Play button handler with confirm dialog
+  const handlePlay = useCallback((scenario: ISerializedScenario) => {
+    const existingRun = runStatusMap.get(scenario.id);
+    if (existingRun && (existingRun.status === RunState.RanSuccessfully || existingRun.status === RunState.RanWithErrors)) {
+      if (!window.confirm(`This will replace existing results for "${scenario.name}". Continue?`)) {
+        return;
+      }
+    }
+    onSimulate(scenario.name, scenario.id);
+  }, [runStatusMap, onSimulate]);
+
+  // Scenario management handlers
+  const handleAddScenario = useCallback(() => {
+    const newScenario: ISerializedScenario = {
+      id: generateUUID(),
+      name: `Scenario ${scenarios.filter(s => !s.isBaseline).length + 1}`,
+      changeRequests: [],
+    };
+    onScenariosChange([...scenarios, newScenario]);
+    setSelectedScenarioId(newScenario.id);
+  }, [scenarios, onScenariosChange]);
+
+  const handleDeleteScenario = useCallback((scenarioId: string) => {
+    onScenariosChange(scenarios.filter(s => s.id !== scenarioId));
+    if (selectedScenarioId === scenarioId) {
+      setSelectedScenarioId(scenarios.find(s => s.isBaseline)?.id ?? null);
+    }
+  }, [scenarios, onScenariosChange, selectedScenarioId]);
+
+  const handleUpdateScenario = useCallback((updated: ISerializedScenario) => {
+    onScenariosChange(scenarios.map(s => s.id === updated.id ? updated : s));
+  }, [scenarios, onScenariosChange]);
+
+  // Load simulation runs
+  const loadSimulationRuns = useCallback(() => {
+    if (!documentId) return;
+    listSimulationRuns(documentId);
+  }, [documentId, listSimulationRuns]);
+
+  // Message listener for simulation run updates
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data as EnvelopeBase;
+      if (!message?.type) return;
+
+      if (message.type === EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT) {
+        const runs: SimulationRunInfo[] = (message as any).data?.scenarios || [];
+        // Preserve optimistic runs that haven't appeared in the server list yet
+        const currentRuns = simulationRunsRef.current;
+        const incomingIds = new Set(runs.map(s => s.id));
+        const optimisticRuns = currentRuns.filter(s =>
+          !incomingIds.has(s.id) &&
+          (s.runState === RunState.Queued || s.runState === RunState.Running)
+        );
+        dispatch({ type: 'SIMULATION_RUNS_SUCCESS', simulationRuns: [...optimisticRuns, ...runs] });
+      } else if (message.type === EnvelopeMessageType.MODEL_RUN_STATUS) {
+        const statusData = (message as any).data;
+        if (statusData?.scenarioId) {
+          if (statusData.scenarioId === 'error' && statusData.status === 'failed') {
+            dispatch({ type: 'SIMULATION_RUNS_ERROR', error: statusData.error || 'Simulation failed' });
+            return;
+          }
+          const currentRuns = simulationRunsRef.current;
+          const existing = currentRuns.find(r => r.id === statusData.scenarioId);
+          if (existing) {
+            dispatch({
+              type: 'SIMULATION_RUN_UPDATE_STATUS',
+              simulationRunId: statusData.scenarioId,
+              runState: mapStatusToRunState(statusData.status),
+              hasResults: statusData.status === 'completed' || statusData.hasResults || false,
+            });
+          } else if (statusData.status === 'queued' || statusData.status === 'processing') {
+            const newRun: SimulationRunInfo = {
+              id: statusData.scenarioId,
+              name: statusData.scenarioName || 'New Simulation',
+              runState: mapStatusToRunState(statusData.status),
+              reps: statusData.reps || 0,
+              runClockPeriod: statusData.runClockPeriod || 0,
+              runClockPeriodUnit: statusData.runClockPeriodUnit || 'Minutes',
+              simulationTimeType: statusData.simulationTimeType || 'Clock',
+              completedAt: statusData.queuedAt,
+              hasResults: false,
+              scenarioDefinitionId: statusData.scenarioDefinitionId,
+              scenarioDefinitionName: statusData.scenarioDefinitionName,
+            };
+            dispatch({ type: 'SIMULATION_RUNS_SUCCESS', simulationRuns: [newRun, ...currentRuns] });
+            setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
+          }
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [dispatch]);
+
+  // Initial load
+  useEffect(() => {
+    if (documentId) {
+      loadSimulationRuns();
+    }
+  }, [documentId, loadSimulationRuns]);
+
+  // Polling
+  useEffect(() => {
+    if (autoRefreshMode === 'off' || !documentId) return;
+
+    if (autoRefreshMode === 'smart') {
+      const hasActive = simulationRuns.some(r => r.runState === RunState.Running || r.runState === RunState.Queued);
+      if (!hasActive) return;
+    }
+
+    const interval = setInterval(() => {
+      listSimulationRuns(documentId);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [autoRefreshMode, simulationRuns, documentId, listSimulationRuns]);
+
+  // Analysis view
+  if (analysisView) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex items-center gap-2 p-2 border-b bg-gray-50">
+          <button
+            onClick={() => setAnalysisView(null)}
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back to Scenarios
+          </button>
+        </div>
+        <SimulationRunAnalysisDashboard
+          scenarioId={analysisView.scenarioId}
+          documentId={analysisView.documentId}
+          onBackToList={() => setAnalysisView(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex gap-2 p-2 border-b bg-gray-50">
+      {/* Scenario Card List */}
+      <div className="flex-shrink-0 max-h-[40%] overflow-y-auto border-b">
+        {scenarios.map(scenario => (
+          <ScenarioCard
+            key={scenario.id}
+            scenario={scenario}
+            runStatus={runStatusMap.get(scenario.id)}
+            isSelected={selectedScenarioId === scenario.id}
+            onSelect={() => setSelectedScenarioId(scenario.id)}
+            onPlay={() => handlePlay(scenario)}
+            onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
+          />
+        ))}
         <button
-          onClick={() => setActiveSubTab("scenarios")}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            activeSubTab === "scenarios"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
+          onClick={handleAddScenario}
+          className="flex items-center gap-1 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
         >
-          Scenarios
-        </button>
-        <button
-          onClick={() => setActiveSubTab("runs")}
-          className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-            activeSubTab === "runs"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-          }`}
-        >
-          Runs
+          <Plus className="w-3 h-3" />
+          Add Scenario
         </button>
       </div>
-      {activeSubTab === "scenarios" && (
-        <ScenarioDefinitionEditor
+
+      {/* Detail Panel */}
+      {selectedScenario && (
+        <ScenarioDetailPanel
+          scenario={selectedScenario}
           referenceData={referenceData}
-          onScenariosChange={onScenariosChange}
+          runStatus={runStatusMap.get(selectedScenario.id)}
+          onUpdate={handleUpdateScenario}
+          onAnalyze={(scenarioId) => {
+            if (documentId) {
+              setAnalysisView({ scenarioId, documentId });
+            }
+          }}
         />
       )}
-      {activeSubTab === "runs" && (
-        <SimulationRunsPanel documentId={documentId} />
-      )}
+
+      {/* Auto-refresh control */}
+      <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-t bg-gray-50">
+        <select
+          value={autoRefreshMode}
+          onChange={(e) => setAutoRefreshMode(e.target.value as AutoRefreshMode)}
+          className="text-xs border border-gray-300 rounded px-1 py-1 bg-white"
+          title="Auto-refresh mode"
+        >
+          <option value="off">Auto: Off</option>
+          <option value="smart">Auto: Smart</option>
+          <option value="on">Auto: On</option>
+        </select>
+      </div>
     </div>
   );
 };
@@ -188,7 +438,7 @@ const ScenariosAndRunsPanel: React.FC<{
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -667,6 +917,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
           documentId={selection.documentContext?.documentId}
           referenceData={referenceData}
           onScenariosChange={updateScenarioDefinitions}
+          onSimulate={onSimulate ?? (() => {})}
         />
       )}
       {activeTab === "validation" && (
