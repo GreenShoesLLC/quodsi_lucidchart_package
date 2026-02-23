@@ -1,26 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Play, Loader, Network, Map, Info, FileJson } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson } from "lucide-react";
 import {
   ValidationState,
-  ModelItemData,
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
-  MAX_SIMULATION_RUNS,
 } from "@quodsi/shared";
-import { SimulationPollState } from "../../types/SimulationStatus";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
-import { useHasActiveJobs } from "../../messaging/hooks/useHasActiveJobs";
-import { useSimulationRuns } from "../../messaging/MessageProvider";
-import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { AboutModal } from "../shared/AboutModal";
 
 interface PanelHeaderProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ExtendedModelItemData | null;
-  onSimulate?: (scenarioName?: string) => void;
   onRemoveModel?: () => void;
   onOpenDiagramMapping?: () => void;
   onElementTypeChange: (
@@ -28,8 +21,6 @@ interface PanelHeaderProps {
     newType: SimulationObjectType
   ) => void;
   diagramElementType?: DiagramElementType;
-  simulationStatus?: SimulationPollState;
-  onViewResults?: () => void;
   referenceData?: EditorReferenceData;
   onViewModelJson?: () => void;
 }
@@ -41,26 +32,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   modelName,
   validationState,
   currentElement,
-  onSimulate,
   onRemoveModel,
   onOpenDiagramMapping,
   onElementTypeChange,
   diagramElementType,
-  simulationStatus,
-  onViewResults,
   referenceData,
   onViewModelJson,
 }) => {
-  const [isSimulating, setIsSimulating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const hasActiveJobs = useHasActiveJobs();
-
-  // Get simulation runs to check limit
-  const simulationRunState = useSimulationRuns();
-  const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
-  const atRunLimit = simulationRuns.length >= MAX_SIMULATION_RUNS;
 
   // Click-outside handler to close menu
   useEffect(() => {
@@ -103,32 +84,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   ) => {
     console.log(`[PanelHeader] Type change for ${elementId}: ${newType}`);
     onElementTypeChange(elementId, newType);
-  };
-
-  const handleSimulateClick = () => {
-    if (onSimulate) {
-      // Set loading state
-      setIsSimulating(true);
-
-      // Generate user-friendly scenario name with timestamp
-      const now = new Date();
-      const year = now.getFullYear();
-      const twoDigitYear = String(year).slice(-2);
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-
-      const runName = `${twoDigitYear}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-
-      onSimulate(runName);
-
-      // Clear loading state after 2 seconds
-      setTimeout(() => {
-        setIsSimulating(false);
-      }, 2000);
-    }
   };
 
   // Helper to get icon for element type
@@ -243,46 +198,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               <span>•</span>
               <span>{stats.resources} Resources</span>
             </>
-          )}
-        </div>
-
-        {/* Row 3: Action buttons */}
-        <div className="flex gap-2">
-          {onSimulate && (
-            <button
-              className="flex-1 px-3 py-1.5 text-xs font-medium bg-green-600 hover:bg-green-700 text-white rounded transition-colors flex items-center justify-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSimulateClick}
-              disabled={isSimulating || hasActiveJobs || atRunLimit}
-              title={
-                atRunLimit
-                  ? `Maximum ${MAX_SIMULATION_RUNS} runs reached. Delete a run to continue.`
-                  : hasActiveJobs
-                  ? "Another simulation is running. Please wait for it to complete."
-                  : "Run simulation"
-              }
-            >
-              {atRunLimit ? (
-                <>
-                  <AlertTriangle className="w-3 h-3" />
-                  Run Limit Reached
-                </>
-              ) : hasActiveJobs ? (
-                <>
-                  <Loader className="w-3 h-3 animate-spin" />
-                  Simulation Running...
-                </>
-              ) : isSimulating ? (
-                <>
-                  <Loader className="w-3 h-3 animate-spin" />
-                  Starting...
-                </>
-              ) : (
-                <>
-                  <Play className="w-3 h-3" />
-                  Run Simulation
-                </>
-              )}
-            </button>
           )}
         </div>
       </>

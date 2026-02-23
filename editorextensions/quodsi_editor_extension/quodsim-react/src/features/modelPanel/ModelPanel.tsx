@@ -277,13 +277,10 @@ export const ModelPanel: React.FC = () => {
         modelName={modelName}
         validationState={validationState}
         currentElement={currentElement}
-        onSimulate={handleSimulate}
         onRemoveModel={onRemoveModel}
         onOpenDiagramMapping={openPreview}
         onElementTypeChange={onElementTypeChange}
         diagramElementType={diagramElementType}
-        simulationStatus={simulationStatus}
-        onViewResults={onViewResults}
         referenceData={referenceData}
         onViewModelJson={handleViewModelJson}
       />
