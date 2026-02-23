@@ -95,9 +95,9 @@ const TAB_CONFIG = [
   },
   {
     id: "scenarios" as const,
-    title: "Simulation Runs",
+    title: "Scenarios",
     icon: PlaySquare,
-    tooltip: "Configure and manage simulation runs with different parameter sets and run configurations"
+    tooltip: "Configure and manage scenarios with different parameter sets and run configurations"
   },
   {
     id: "validation" as const,

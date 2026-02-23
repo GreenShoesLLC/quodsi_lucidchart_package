@@ -1,7 +1,7 @@
 /**
  * Simple module-level store for pending simulation submission state.
- * Used to show a placeholder card in SimulationRunEditor immediately after
- * the user clicks "Run Simulation", before MODEL_RUN_STATUS arrives.
+ * Used to show a placeholder card immediately after the user clicks
+ * "Run Simulation", before MODEL_RUN_STATUS arrives.
  */
 
 let pendingRunName: string | null = null;
