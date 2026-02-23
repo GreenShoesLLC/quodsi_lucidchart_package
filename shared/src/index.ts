@@ -117,6 +117,7 @@ export * from './utils/uuidUtils';
 export * from './utils/NameParser';
 export * from './utils/nameUtils';
 export * from './utils/nameValidation';
+export * from './utils/scenarioUtils';
 
 // Serialization exports
 export * from './serialization';

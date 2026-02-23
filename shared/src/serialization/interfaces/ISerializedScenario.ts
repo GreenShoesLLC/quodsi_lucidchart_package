@@ -4,5 +4,6 @@ export interface ISerializedScenario {
     id: string;
     name: string;
     description?: string;
+    isBaseline?: boolean;
     changeRequests: ISerializedScenarioChangeRequest[];
 }

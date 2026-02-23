@@ -5,17 +5,20 @@ export class Scenario {
     id: string;
     name: string;
     description: string;
+    isBaseline: boolean;
     changeRequests: ScenarioChangeRequest[];
 
     constructor(options?: {
         id?: string;
         name?: string;
         description?: string;
+        isBaseline?: boolean;
         changeRequests?: ScenarioChangeRequest[];
     }) {
         this.id = options?.id ?? generateUUID();
         this.name = options?.name ?? "New Scenario";
         this.description = options?.description ?? "";
+        this.isBaseline = options?.isBaseline ?? false;
         this.changeRequests = options?.changeRequests ?? [];
     }
 
@@ -32,6 +35,7 @@ export class Scenario {
             id: this.id,
             name: this.name,
             description: this.description,
+            isBaseline: this.isBaseline,
             changeRequests: this.changeRequests.map(cr => cr.toJSON()),
         };
     }
@@ -41,9 +45,19 @@ export class Scenario {
             id: data.id,
             name: data.name ?? "New Scenario",
             description: data.description ?? "",
+            isBaseline: data.isBaseline ?? false,
             changeRequests: (data.changeRequests ?? []).map(
                 (cr: any) => ScenarioChangeRequest.fromJSON(cr)
             ),
+        });
+    }
+
+    static createBaseline(): Scenario {
+        return new Scenario({
+            name: "Baseline",
+            description: "No scenario changes",
+            changeRequests: [],
+            isBaseline: true,
         });
     }
 }
