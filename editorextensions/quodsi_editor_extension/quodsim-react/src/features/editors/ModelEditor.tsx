@@ -12,7 +12,7 @@ import {
   SimulationRunInfo,
   generateUUID,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft } from "lucide-react";
+import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft, RefreshCw } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
@@ -424,6 +424,13 @@ const ScenariosAndRunsPanel: React.FC<{
 
       {/* Auto-refresh control */}
       <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-t bg-gray-50">
+        <button
+          onClick={loadSimulationRuns}
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="Refresh simulation runs"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+        </button>
         <select
           value={autoRefreshMode}
           onChange={(e) => setAutoRefreshMode(e.target.value as AutoRefreshMode)}
