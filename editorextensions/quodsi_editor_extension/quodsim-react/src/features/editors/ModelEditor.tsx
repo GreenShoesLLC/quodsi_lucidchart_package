@@ -149,6 +149,7 @@ const ScenariosAndRunsPanel: React.FC<{
   onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
 }> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   const [analysisView, setAnalysisView] = useState<{ scenarioId: string; documentId: string } | null>(null);
 
@@ -219,16 +220,25 @@ const ScenariosAndRunsPanel: React.FC<{
   }, [scenarios, onScenariosChange]);
 
   const handleDeleteScenario = useCallback((scenarioId: string) => {
-    // Delete server-side run data if a run exists for this scenario
-    const existingRun = runStatusMap.get(scenarioId);
+    setDeletingScenarioId(scenarioId);
+  }, []);
+
+  const confirmDeleteScenario = useCallback(() => {
+    if (!deletingScenarioId) return;
+    const existingRun = runStatusMap.get(deletingScenarioId);
     if (existingRun && documentId) {
       deleteSimulationRun(documentId, existingRun.scenarioId);
     }
-    onScenariosChange(scenarios.filter(s => s.id !== scenarioId));
-    if (selectedScenarioId === scenarioId) {
+    onScenariosChange(scenarios.filter(s => s.id !== deletingScenarioId));
+    if (selectedScenarioId === deletingScenarioId) {
       setSelectedScenarioId(scenarios.find(s => s.isBaseline)?.id ?? null);
     }
-  }, [scenarios, onScenariosChange, selectedScenarioId, runStatusMap, documentId, deleteSimulationRun]);
+    setDeletingScenarioId(null);
+  }, [deletingScenarioId, scenarios, onScenariosChange, selectedScenarioId, runStatusMap, documentId, deleteSimulationRun]);
+
+  const cancelDeleteScenario = useCallback(() => {
+    setDeletingScenarioId(null);
+  }, []);
 
   const handleUpdateScenario = useCallback((updated: ISerializedScenario) => {
     onScenariosChange(scenarios.map(s => s.id === updated.id ? updated : s));
@@ -364,6 +374,30 @@ const ScenariosAndRunsPanel: React.FC<{
             onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
           />
         ))}
+        {deletingScenarioId && (
+          <div className="mx-3 mb-2 p-3 bg-red-50 border border-red-200 rounded">
+            <div className="text-xs font-medium text-red-900 mb-2">
+              Delete scenario "{scenarios.find(s => s.id === deletingScenarioId)?.name ?? deletingScenarioId}"?
+            </div>
+            <div className="text-xs text-red-700 mb-3">
+              This will also remove any associated simulation results. This action cannot be undone.
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmDeleteScenario}
+                className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+              <button
+                onClick={cancelDeleteScenario}
+                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         <button
           onClick={handleAddScenario}
           className="flex items-center gap-1 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
