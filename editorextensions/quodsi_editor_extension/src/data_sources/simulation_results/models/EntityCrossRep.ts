@@ -60,14 +60,14 @@ export interface EntityCrossRep {
   time_in_system_std_dev: number;
   
   // Time waiting statistics
-  time_waiting_mean: number;
-  time_waiting_median: number;
-  time_waiting_std_dev: number;
+  time_resource_wait_mean: number;
+  time_resource_wait_median: number;
+  time_resource_wait_std_dev: number;
   
   // Time blocked statistics
-  time_blocked_mean: number;
-  time_blocked_median: number;
-  time_blocked_std_dev: number;
+  time_queue_wait_mean: number;
+  time_queue_wait_median: number;
+  time_queue_wait_std_dev: number;
   
   // Time in operation statistics
   time_in_operation_mean: number;
@@ -80,10 +80,10 @@ export interface EntityCrossRep {
   time_connecting_std_dev: number;
   
   // Percentage metrics
-  percent_waiting_mean: number;
-  percent_waiting_std_dev: number;
-  percent_blocked_mean: number;
-  percent_blocked_std_dev: number;
+  percent_resource_wait_mean: number;
+  percent_resource_wait_std_dev: number;
+  percent_queue_wait_mean: number;
+  percent_queue_wait_std_dev: number;
   percent_operation_mean: number;
   percent_operation_std_dev: number;
   percent_connecting_mean: number;
@@ -152,14 +152,14 @@ export function mapToEntityCrossRep(itemFields: MapProxy<string, any>): EntityCr
     time_in_system_std_dev: itemFields.get('time_in_system_std_dev') as number,
     
     // Time waiting statistics
-    time_waiting_mean: itemFields.get('time_waiting_mean') as number,
-    time_waiting_median: itemFields.get('time_waiting_median') as number,
-    time_waiting_std_dev: itemFields.get('time_waiting_std_dev') as number,
+    time_resource_wait_mean: itemFields.get('time_resource_wait_mean') as number,
+    time_resource_wait_median: itemFields.get('time_resource_wait_median') as number,
+    time_resource_wait_std_dev: itemFields.get('time_resource_wait_std_dev') as number,
     
     // Time blocked statistics
-    time_blocked_mean: itemFields.get('time_blocked_mean') as number,
-    time_blocked_median: itemFields.get('time_blocked_median') as number,
-    time_blocked_std_dev: itemFields.get('time_blocked_std_dev') as number,
+    time_queue_wait_mean: itemFields.get('time_queue_wait_mean') as number,
+    time_queue_wait_median: itemFields.get('time_queue_wait_median') as number,
+    time_queue_wait_std_dev: itemFields.get('time_queue_wait_std_dev') as number,
     
     // Time in operation statistics
     time_in_operation_mean: itemFields.get('time_in_operation_mean') as number,
@@ -172,10 +172,10 @@ export function mapToEntityCrossRep(itemFields: MapProxy<string, any>): EntityCr
     time_connecting_std_dev: itemFields.get('time_connecting_std_dev') as number,
     
     // Percentage metrics
-    percent_waiting_mean: itemFields.get('percent_waiting_mean') as number,
-    percent_waiting_std_dev: itemFields.get('percent_waiting_std_dev') as number,
-    percent_blocked_mean: itemFields.get('percent_blocked_mean') as number,
-    percent_blocked_std_dev: itemFields.get('percent_blocked_std_dev') as number,
+    percent_resource_wait_mean: itemFields.get('percent_resource_wait_mean') as number,
+    percent_resource_wait_std_dev: itemFields.get('percent_resource_wait_std_dev') as number,
+    percent_queue_wait_mean: itemFields.get('percent_queue_wait_mean') as number,
+    percent_queue_wait_std_dev: itemFields.get('percent_queue_wait_std_dev') as number,
     percent_operation_mean: itemFields.get('percent_operation_mean') as number,
     percent_operation_std_dev: itemFields.get('percent_operation_std_dev') as number,
     percent_connecting_mean: itemFields.get('percent_connecting_mean') as number,

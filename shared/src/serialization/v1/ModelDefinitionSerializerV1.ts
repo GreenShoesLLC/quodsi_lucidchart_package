@@ -55,6 +55,9 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 ),
                 timeDistributedConfigs: modelDefinition.timeDistributedConfigs.getAll().map(config =>
                     this.serializeTimeDistributedConfig(config)
+                ),
+                scenarios: modelDefinition.scenarios.getAll().map(scenario =>
+                    scenario.toJSON()
                 )
             };
         } catch (error) {

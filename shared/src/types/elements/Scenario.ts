@@ -1,6 +1,8 @@
 import { ScenarioChangeRequest } from "./ScenarioChangeRequest";
 import { generateUUID } from "../../utils/uuidUtils";
 
+export const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
+
 export class Scenario {
     id: string;
     name: string;
@@ -54,6 +56,7 @@ export class Scenario {
 
     static createBaseline(): Scenario {
         return new Scenario({
+            id: BASELINE_SCENARIO_ID,
             name: "Baseline",
             description: "No scenario changes",
             changeRequests: [],

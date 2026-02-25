@@ -27,8 +27,8 @@ export class EntityCrossRepTableGenerator extends BaseTableGenerator {
             schema: EntityCrossRepSchema,
             identifierFields: ['id', 'entity_id', 'entity_name'],
             percentageFields: [
-                'percent_waiting_mean', 
-                'percent_blocked_mean', 
+                'percent_resource_wait_mean',
+                'percent_queue_wait_mean',
                 'percent_operation_mean',
                 'percent_connecting_mean'
             ],
@@ -41,11 +41,11 @@ export class EntityCrossRepTableGenerator extends BaseTableGenerator {
                 'in_progress_count_mean',
                 'throughput_rate_mean',
                 'time_in_system_mean',
-                'time_waiting_mean',
-                'time_blocked_mean',
+                'time_resource_wait_mean',
+                'time_queue_wait_mean',
                 'time_in_operation_mean',
-                'percent_waiting_mean',
-                'percent_blocked_mean',
+                'percent_resource_wait_mean',
+                'percent_queue_wait_mean',
                 'percent_operation_mean',
                 'percent_connecting_mean'
             ]

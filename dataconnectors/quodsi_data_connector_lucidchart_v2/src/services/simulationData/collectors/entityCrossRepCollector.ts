@@ -47,15 +47,15 @@ export const requiredColumns: string[] = [
     'time_in_system_min',
     'time_in_system_max',
     // Time waiting
-    'time_waiting_mean',
-    'time_waiting_std',
-    'time_waiting_min',
-    'time_waiting_max',
+    'time_resource_wait_mean',
+    'time_resource_wait_std',
+    'time_resource_wait_min',
+    'time_resource_wait_max',
     // Time blocked
-    'time_blocked_mean',
-    'time_blocked_std',
-    'time_blocked_min',
-    'time_blocked_max',
+    'time_queue_wait_mean',
+    'time_queue_wait_std',
+    'time_queue_wait_min',
+    'time_queue_wait_max',
     // Time in operation
     'time_in_operation_mean',
     'time_in_operation_std',
@@ -67,15 +67,15 @@ export const requiredColumns: string[] = [
     'time_connecting_min',
     'time_connecting_max',
     // Percent waiting
-    'percent_waiting_mean',
-    'percent_waiting_std',
-    'percent_waiting_min',
-    'percent_waiting_max',
+    'percent_resource_wait_mean',
+    'percent_resource_wait_std',
+    'percent_resource_wait_min',
+    'percent_resource_wait_max',
     // Percent blocked
-    'percent_blocked_mean',
-    'percent_blocked_std',
-    'percent_blocked_min',
-    'percent_blocked_max',
+    'percent_queue_wait_mean',
+    'percent_queue_wait_std',
+    'percent_queue_wait_min',
+    'percent_queue_wait_max',
     // Percent operation
     'percent_operation_mean',
     'percent_operation_std',
@@ -213,16 +213,16 @@ export async function fetchEntityCrossRep(
             time_in_system_max: item.time_in_system_max,
 
             // Time waiting statistics
-            time_waiting_mean: item.time_waiting_mean,
-            time_waiting_std_dev: item.time_waiting_std,
-            time_waiting_min: item.time_waiting_min,
-            time_waiting_max: item.time_waiting_max,
+            time_resource_wait_mean: item.time_resource_wait_mean,
+            time_resource_wait_std_dev: item.time_resource_wait_std,
+            time_resource_wait_min: item.time_resource_wait_min,
+            time_resource_wait_max: item.time_resource_wait_max,
 
             // Time blocked statistics
-            time_blocked_mean: item.time_blocked_mean,
-            time_blocked_std_dev: item.time_blocked_std,
-            time_blocked_min: item.time_blocked_min,
-            time_blocked_max: item.time_blocked_max,
+            time_queue_wait_mean: item.time_queue_wait_mean,
+            time_queue_wait_std_dev: item.time_queue_wait_std,
+            time_queue_wait_min: item.time_queue_wait_min,
+            time_queue_wait_max: item.time_queue_wait_max,
 
             // Time in operation statistics
             time_in_operation_mean: item.time_in_operation_mean,
@@ -237,15 +237,15 @@ export async function fetchEntityCrossRep(
             time_connecting_max: item.time_connecting_max,
 
             // Percentage metrics
-            percent_waiting_mean: item.percent_waiting_mean,
-            percent_waiting_std_dev: item.percent_waiting_std,
-            percent_waiting_min: item.percent_waiting_min,
-            percent_waiting_max: item.percent_waiting_max,
+            percent_resource_wait_mean: item.percent_resource_wait_mean,
+            percent_resource_wait_std_dev: item.percent_resource_wait_std,
+            percent_resource_wait_min: item.percent_resource_wait_min,
+            percent_resource_wait_max: item.percent_resource_wait_max,
 
-            percent_blocked_mean: item.percent_blocked_mean,
-            percent_blocked_std_dev: item.percent_blocked_std,
-            percent_blocked_min: item.percent_blocked_min,
-            percent_blocked_max: item.percent_blocked_max,
+            percent_queue_wait_mean: item.percent_queue_wait_mean,
+            percent_queue_wait_std_dev: item.percent_queue_wait_std,
+            percent_queue_wait_min: item.percent_queue_wait_min,
+            percent_queue_wait_max: item.percent_queue_wait_max,
 
             percent_operation_mean: item.percent_operation_mean,
             percent_operation_std_dev: item.percent_operation_std,
@@ -331,16 +331,16 @@ export async function fetchEntityCrossRep(
                 time_in_system_max: item.time_in_system_max ?? 0,
 
                 // Time waiting statistics
-                time_waiting_mean: item.time_waiting_mean ?? 0,
-                time_waiting_std_dev: item.time_waiting_std_dev ?? 0,
-                time_waiting_min: item.time_waiting_min ?? 0,
-                time_waiting_max: item.time_waiting_max ?? 0,
+                time_resource_wait_mean: item.time_resource_wait_mean ?? 0,
+                time_resource_wait_std_dev: item.time_resource_wait_std_dev ?? 0,
+                time_resource_wait_min: item.time_resource_wait_min ?? 0,
+                time_resource_wait_max: item.time_resource_wait_max ?? 0,
 
                 // Time blocked statistics
-                time_blocked_mean: item.time_blocked_mean ?? 0,
-                time_blocked_std_dev: item.time_blocked_std_dev ?? 0,
-                time_blocked_min: item.time_blocked_min ?? 0,
-                time_blocked_max: item.time_blocked_max ?? 0,
+                time_queue_wait_mean: item.time_queue_wait_mean ?? 0,
+                time_queue_wait_std_dev: item.time_queue_wait_std_dev ?? 0,
+                time_queue_wait_min: item.time_queue_wait_min ?? 0,
+                time_queue_wait_max: item.time_queue_wait_max ?? 0,
 
                 // Time in operation statistics
                 time_in_operation_mean: item.time_in_operation_mean ?? 0,
@@ -355,15 +355,15 @@ export async function fetchEntityCrossRep(
                 time_connecting_max: item.time_connecting_max ?? 0,
 
                 // Percentage metrics
-                percent_waiting_mean: item.percent_waiting_mean ?? 0,
-                percent_waiting_std_dev: item.percent_waiting_std_dev ?? 0,
-                percent_waiting_min: item.percent_waiting_min ?? 0,
-                percent_waiting_max: item.percent_waiting_max ?? 0,
+                percent_resource_wait_mean: item.percent_resource_wait_mean ?? 0,
+                percent_resource_wait_std_dev: item.percent_resource_wait_std_dev ?? 0,
+                percent_resource_wait_min: item.percent_resource_wait_min ?? 0,
+                percent_resource_wait_max: item.percent_resource_wait_max ?? 0,
 
-                percent_blocked_mean: item.percent_blocked_mean ?? 0,
-                percent_blocked_std_dev: item.percent_blocked_std_dev ?? 0,
-                percent_blocked_min: item.percent_blocked_min ?? 0,
-                percent_blocked_max: item.percent_blocked_max ?? 0,
+                percent_queue_wait_mean: item.percent_queue_wait_mean ?? 0,
+                percent_queue_wait_std_dev: item.percent_queue_wait_std_dev ?? 0,
+                percent_queue_wait_min: item.percent_queue_wait_min ?? 0,
+                percent_queue_wait_max: item.percent_queue_wait_max ?? 0,
 
                 percent_operation_mean: item.percent_operation_mean ?? 0,
                 percent_operation_std_dev: item.percent_operation_std_dev ?? 0,
@@ -471,16 +471,16 @@ export function prepareEntityCrossRepUpdate(data: EntityCrossRepSummaryData[]) {
             time_in_system_max: item.time_in_system_max ?? 0,
 
             // Time waiting statistics
-            time_waiting_mean: item.time_waiting_mean ?? 0,
-            time_waiting_std_dev: item.time_waiting_std_dev ?? 0,
-            time_waiting_min: item.time_waiting_min ?? 0,
-            time_waiting_max: item.time_waiting_max ?? 0,
+            time_resource_wait_mean: item.time_resource_wait_mean ?? 0,
+            time_resource_wait_std_dev: item.time_resource_wait_std_dev ?? 0,
+            time_resource_wait_min: item.time_resource_wait_min ?? 0,
+            time_resource_wait_max: item.time_resource_wait_max ?? 0,
 
             // Time blocked statistics
-            time_blocked_mean: item.time_blocked_mean ?? 0,
-            time_blocked_std_dev: item.time_blocked_std_dev ?? 0,
-            time_blocked_min: item.time_blocked_min ?? 0,
-            time_blocked_max: item.time_blocked_max ?? 0,
+            time_queue_wait_mean: item.time_queue_wait_mean ?? 0,
+            time_queue_wait_std_dev: item.time_queue_wait_std_dev ?? 0,
+            time_queue_wait_min: item.time_queue_wait_min ?? 0,
+            time_queue_wait_max: item.time_queue_wait_max ?? 0,
 
             // Time in operation statistics
             time_in_operation_mean: item.time_in_operation_mean ?? 0,
@@ -495,15 +495,15 @@ export function prepareEntityCrossRepUpdate(data: EntityCrossRepSummaryData[]) {
             time_connecting_max: item.time_connecting_max ?? 0,
 
             // Percentage metrics
-            percent_waiting_mean: item.percent_waiting_mean ?? 0,
-            percent_waiting_std_dev: item.percent_waiting_std_dev ?? 0,
-            percent_waiting_min: item.percent_waiting_min ?? 0,
-            percent_waiting_max: item.percent_waiting_max ?? 0,
+            percent_resource_wait_mean: item.percent_resource_wait_mean ?? 0,
+            percent_resource_wait_std_dev: item.percent_resource_wait_std_dev ?? 0,
+            percent_resource_wait_min: item.percent_resource_wait_min ?? 0,
+            percent_resource_wait_max: item.percent_resource_wait_max ?? 0,
 
-            percent_blocked_mean: item.percent_blocked_mean ?? 0,
-            percent_blocked_std_dev: item.percent_blocked_std_dev ?? 0,
-            percent_blocked_min: item.percent_blocked_min ?? 0,
-            percent_blocked_max: item.percent_blocked_max ?? 0,
+            percent_queue_wait_mean: item.percent_queue_wait_mean ?? 0,
+            percent_queue_wait_std_dev: item.percent_queue_wait_std_dev ?? 0,
+            percent_queue_wait_min: item.percent_queue_wait_min ?? 0,
+            percent_queue_wait_max: item.percent_queue_wait_max ?? 0,
 
             percent_operation_mean: item.percent_operation_mean ?? 0,
             percent_operation_std_dev: item.percent_operation_std_dev ?? 0,

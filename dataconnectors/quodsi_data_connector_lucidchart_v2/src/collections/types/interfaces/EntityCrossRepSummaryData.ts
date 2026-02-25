@@ -54,16 +54,16 @@ export interface EntityCrossRepSummaryData {
     time_in_system_max: number;
 
     // Time waiting statistics
-    time_waiting_mean: number;
-    time_waiting_std_dev: number;
-    time_waiting_min: number;
-    time_waiting_max: number;
+    time_resource_wait_mean: number;
+    time_resource_wait_std_dev: number;
+    time_resource_wait_min: number;
+    time_resource_wait_max: number;
 
     // Time blocked statistics
-    time_blocked_mean: number;
-    time_blocked_std_dev: number;
-    time_blocked_min: number;
-    time_blocked_max: number;
+    time_queue_wait_mean: number;
+    time_queue_wait_std_dev: number;
+    time_queue_wait_min: number;
+    time_queue_wait_max: number;
 
     // Time in operation statistics
     time_in_operation_mean: number;
@@ -78,15 +78,15 @@ export interface EntityCrossRepSummaryData {
     time_connecting_max: number;
 
     // Percentage metrics
-    percent_waiting_mean: number;
-    percent_waiting_std_dev: number;
-    percent_waiting_min: number;
-    percent_waiting_max: number;
+    percent_resource_wait_mean: number;
+    percent_resource_wait_std_dev: number;
+    percent_resource_wait_min: number;
+    percent_resource_wait_max: number;
 
-    percent_blocked_mean: number;
-    percent_blocked_std_dev: number;
-    percent_blocked_min: number;
-    percent_blocked_max: number;
+    percent_queue_wait_mean: number;
+    percent_queue_wait_std_dev: number;
+    percent_queue_wait_min: number;
+    percent_queue_wait_max: number;
 
     percent_operation_mean: number;
     percent_operation_std_dev: number;

@@ -1,11 +1,12 @@
 import React from "react";
-import { ISerializedScenario, RunState } from "@quodsi/shared";
+import { ISerializedScenario, RunState, SimulationRunDownloadInfo } from "@quodsi/shared";
 import { Play, Trash2, Loader2 } from "lucide-react";
 
 export interface ScenarioRunStatus {
   scenarioId: string;
   status: RunState;
   hasResults: boolean;
+  downloadInfo?: SimulationRunDownloadInfo;
 }
 
 interface ScenarioCardProps {

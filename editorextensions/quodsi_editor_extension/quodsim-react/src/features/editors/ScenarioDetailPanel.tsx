@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ISerializedScenario, ISerializedScenarioChangeRequest, EditorReferenceData, RunState } from "@quodsi/shared";
 import ChangeRequestEditor from "./ChangeRequestEditor";
 import { ScenarioRunStatus } from "./ScenarioCard";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Download, Check, Pencil, Info } from "lucide-react";
 
 interface ScenarioDetailPanelProps {
   scenario: ISerializedScenario;
@@ -20,8 +20,56 @@ export const ScenarioDetailPanel: React.FC<ScenarioDetailPanelProps> = ({
   onAnalyze,
 }) => {
   const [showAddCR, setShowAddCR] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [expiryText, setExpiryText] = useState<string | null>(null);
   const status = runStatus?.status ?? RunState.NotRun;
   const hasResults = runStatus?.hasResults ?? false;
+  const downloadInfo = runStatus?.downloadInfo;
+
+  const handleCopyExcelLink = async () => {
+    if (!downloadInfo?.excelUrl) return;
+    try {
+      await navigator.clipboard.writeText(downloadInfo.excelUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement("textarea");
+      textarea.value = downloadInfo.excelUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // Expiry countdown timer
+  useEffect(() => {
+    if (!downloadInfo?.expiresAt) {
+      setExpiryText(null);
+      return;
+    }
+    const updateExpiry = () => {
+      const now = Date.now();
+      const expires = new Date(downloadInfo.expiresAt!).getTime();
+      const diff = expires - now;
+      if (diff <= 0) {
+        setExpiryText("Expired");
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      if (mins >= 1) {
+        setExpiryText(`${mins}m left`);
+      } else {
+        setExpiryText("<1m left");
+      }
+    };
+    updateExpiry();
+    const interval = setInterval(updateExpiry, 30000);
+    return () => clearInterval(interval);
+  }, [downloadInfo?.expiresAt]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onUpdate({ ...scenario, name: e.target.value });
@@ -47,7 +95,24 @@ export const ScenarioDetailPanel: React.FC<ScenarioDetailPanelProps> = ({
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-3 space-y-3 border-t bg-white">
+    <div className="flex flex-col flex-1 border-t bg-white">
+      {/* Section header bar */}
+      <div className="px-3 py-1.5 bg-gray-100 border-b flex items-center gap-1.5">
+        {scenario.isBaseline ? (
+          <>
+            <Info className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-xs font-medium text-gray-500">Baseline</span>
+          </>
+        ) : (
+          <>
+            <Pencil className="w-3.5 h-3.5 text-gray-500" />
+            <span className="text-xs font-medium text-gray-700 truncate">{scenario.name}</span>
+          </>
+        )}
+      </div>
+
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
       {/* Baseline message or editable fields */}
       {scenario.isBaseline ? (
         <div className="text-xs text-gray-500 italic">
@@ -138,7 +203,23 @@ export const ScenarioDetailPanel: React.FC<ScenarioDetailPanelProps> = ({
               View Results
             </button>
           )}
+          {downloadInfo?.excelUrl && (
+            <button
+              onClick={handleCopyExcelLink}
+              className="flex items-center gap-0.5 text-[10px] text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100 px-1.5 py-0.5 rounded transition-colors"
+              title={copied ? "Copied!" : "Copy Excel download link to clipboard"}
+            >
+              {copied ? <Check className="w-3 h-3" /> : <Download className="w-3 h-3" />}
+              {copied ? "Copied" : "XLS"}
+            </button>
+          )}
+          {downloadInfo?.excelUrl && expiryText && (
+            <span className={`text-[9px] ${expiryText === "Expired" ? "text-red-500" : "text-gray-400"}`}>
+              {expiryText}
+            </span>
+          )}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -55,7 +55,7 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "total_time_waiting_for_resource_mean",
+    key: "total_time_resource_wait_for_resource_mean",
     label: "Total Time Waiting",
     format: (v) => formatDecimal(v, 2),
   },
@@ -143,8 +143,8 @@ export const entityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "time_waiting_mean",
-    label: "Wait",
+    key: "time_resource_wait_mean",
+    label: "Res Wait",
     format: (v) => formatDecimal(v, 2),
   },
   {
@@ -153,8 +153,8 @@ export const entityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "percent_waiting_mean",
-    label: "% Wait",
+    key: "percent_resource_wait_mean",
+    label: "% Res Wait",
     format: formatPercentRaw,
   },
   {
@@ -163,8 +163,8 @@ export const entityColumns: TableColumn[] = [
     format: formatPercentRaw,
   },
   {
-    key: "percent_blocked_mean",
-    label: "% Block",
+    key: "percent_queue_wait_mean",
+    label: "% Q Wait",
     format: formatPercentRaw,
   },
   {

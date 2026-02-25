@@ -53,16 +53,16 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "time_in_system_max", type: ScalarFieldTypeEnum.NUMBER },
 
         // Time waiting statistics
-        { name: "time_waiting_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_waiting_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_waiting_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_waiting_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_max", type: ScalarFieldTypeEnum.NUMBER },
 
         // Time blocked statistics
-        { name: "time_blocked_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_blocked_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_blocked_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_max", type: ScalarFieldTypeEnum.NUMBER },
 
         // Time in operation statistics
         { name: "time_in_operation_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -77,15 +77,15 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "time_connecting_max", type: ScalarFieldTypeEnum.NUMBER },
 
         // Percentage metrics
-        { name: "percent_waiting_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_waiting_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_waiting_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_waiting_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_max", type: ScalarFieldTypeEnum.NUMBER },
 
-        { name: "percent_blocked_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_blocked_min", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_blocked_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_max", type: ScalarFieldTypeEnum.NUMBER },
 
         { name: "percent_operation_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "percent_operation_std_dev", type: ScalarFieldTypeEnum.NUMBER },
@@ -167,16 +167,16 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'time_in_system_max': 'Max Time in System',
 
         // Time waiting statistics
-        'time_waiting_mean': 'Mean Time Waiting',
-        'time_waiting_std_dev': 'Time Waiting Std Dev',
-        'time_waiting_min': 'Min Time Waiting',
-        'time_waiting_max': 'Max Time Waiting',
+        'time_resource_wait_mean': 'Mean Time Resource Wait',
+        'time_resource_wait_std_dev': 'Time Resource Wait Std Dev',
+        'time_resource_wait_min': 'Min Time Resource Wait',
+        'time_resource_wait_max': 'Max Time Resource Wait',
 
         // Time blocked statistics
-        'time_blocked_mean': 'Mean Time Blocked',
-        'time_blocked_std_dev': 'Time Blocked Std Dev',
-        'time_blocked_min': 'Min Time Blocked',
-        'time_blocked_max': 'Max Time Blocked',
+        'time_queue_wait_mean': 'Mean Time Queue Wait',
+        'time_queue_wait_std_dev': 'Time Queue Wait Std Dev',
+        'time_queue_wait_min': 'Min Time Queue Wait',
+        'time_queue_wait_max': 'Max Time Queue Wait',
 
         // Time in operation statistics
         'time_in_operation_mean': 'Mean Time in Operation',
@@ -191,15 +191,15 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'time_connecting_max': 'Max Time Connecting',
 
         // Percentage metrics
-        'percent_waiting_mean': 'Mean % Waiting',
-        'percent_waiting_std_dev': '% Waiting Std Dev',
-        'percent_waiting_min': 'Min % Waiting',
-        'percent_waiting_max': 'Max % Waiting',
+        'percent_resource_wait_mean': 'Mean % Resource Wait',
+        'percent_resource_wait_std_dev': '% Resource Wait Std Dev',
+        'percent_resource_wait_min': 'Min % Resource Wait',
+        'percent_resource_wait_max': 'Max % Resource Wait',
 
-        'percent_blocked_mean': 'Mean % Blocked',
-        'percent_blocked_std_dev': '% Blocked Std Dev',
-        'percent_blocked_min': 'Min % Blocked',
-        'percent_blocked_max': 'Max % Blocked',
+        'percent_queue_wait_mean': 'Mean % Queue Wait',
+        'percent_queue_wait_std_dev': '% Queue Wait Std Dev',
+        'percent_queue_wait_min': 'Min % Queue Wait',
+        'percent_queue_wait_max': 'Max % Queue Wait',
 
         'percent_operation_mean': 'Mean % in Operation',
         'percent_operation_std_dev': '% in Operation Std Dev',

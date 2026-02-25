@@ -153,7 +153,7 @@ const ScenariosAndRunsPanel: React.FC<{
   const [analysisView, setAnalysisView] = useState<{ scenarioId: string; documentId: string } | null>(null);
 
   // Messaging hooks
-  const { listSimulationRuns } = useSimulationRunSender();
+  const { listSimulationRuns, deleteSimulationRun } = useSimulationRunSender();
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
@@ -161,6 +161,10 @@ const ScenariosAndRunsPanel: React.FC<{
   // Ref to track current simulation runs without causing dependency cycles
   const simulationRunsRef = useRef(simulationRuns);
   simulationRunsRef.current = simulationRuns;
+
+  // Ref to access documentId from message handler without adding it as a useEffect dependency
+  const documentIdRef = useRef(documentId);
+  documentIdRef.current = documentId;
 
   // Scenarios from reference data
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
@@ -176,37 +180,21 @@ const ScenariosAndRunsPanel: React.FC<{
   const selectedScenario = scenarios.find(s => s.id === selectedScenarioId) ?? null;
 
   // Build a map from scenario id to run status
+  // Since run.id = scenario definition ID (blob folder = def ID), map directly by run.id
   const runStatusMap = useMemo(() => {
     const map = new Map<string, ScenarioRunStatus>();
     for (const run of simulationRuns) {
-      if (run.scenarioDefinitionId) {
-        // Keep the most recent run per scenarioDefinitionId
-        const existing = map.get(run.scenarioDefinitionId);
-        if (!existing) {
-          map.set(run.scenarioDefinitionId, {
-            scenarioId: run.id,
-            status: run.runState,
-            hasResults: run.hasResults,
-          });
-        }
-      }
-    }
-    // Also check for baseline runs (no scenarioDefinitionId) and map to baseline scenario
-    const baselineScenario = scenarios.find(s => s.isBaseline);
-    if (baselineScenario) {
-      // Runs without scenarioDefinitionId are baseline runs
-      for (const run of simulationRuns) {
-        if (!run.scenarioDefinitionId && !map.has(baselineScenario.id)) {
-          map.set(baselineScenario.id, {
-            scenarioId: run.id,
-            status: run.runState,
-            hasResults: run.hasResults,
-          });
-        }
+      if (!map.has(run.id)) {
+        map.set(run.id, {
+          scenarioId: run.id,
+          status: run.runState,
+          hasResults: run.hasResults,
+          downloadInfo: run.downloadInfo,
+        });
       }
     }
     return map;
-  }, [simulationRuns, scenarios]);
+  }, [simulationRuns]);
 
   // Play button handler with confirm dialog
   const handlePlay = useCallback((scenario: ISerializedScenario) => {
@@ -231,11 +219,16 @@ const ScenariosAndRunsPanel: React.FC<{
   }, [scenarios, onScenariosChange]);
 
   const handleDeleteScenario = useCallback((scenarioId: string) => {
+    // Delete server-side run data if a run exists for this scenario
+    const existingRun = runStatusMap.get(scenarioId);
+    if (existingRun && documentId) {
+      deleteSimulationRun(documentId, existingRun.scenarioId);
+    }
     onScenariosChange(scenarios.filter(s => s.id !== scenarioId));
     if (selectedScenarioId === scenarioId) {
       setSelectedScenarioId(scenarios.find(s => s.isBaseline)?.id ?? null);
     }
-  }, [scenarios, onScenariosChange, selectedScenarioId]);
+  }, [scenarios, onScenariosChange, selectedScenarioId, runStatusMap, documentId, deleteSimulationRun]);
 
   const handleUpdateScenario = useCallback((updated: ISerializedScenario) => {
     onScenariosChange(scenarios.map(s => s.id === updated.id ? updated : s));
@@ -273,12 +266,18 @@ const ScenariosAndRunsPanel: React.FC<{
           const currentRuns = simulationRunsRef.current;
           const existing = currentRuns.find(r => r.id === statusData.scenarioId);
           if (existing) {
+            const newRunState = mapStatusToRunState(statusData.status);
             dispatch({
               type: 'SIMULATION_RUN_UPDATE_STATUS',
               simulationRunId: statusData.scenarioId,
-              runState: mapStatusToRunState(statusData.status),
+              runState: newRunState,
               hasResults: statusData.status === 'completed' || statusData.hasResults || false,
             });
+            // Immediately refresh to get downloadInfo for completed/failed runs
+            if (newRunState === RunState.RanSuccessfully || newRunState === RunState.RanWithErrors) {
+              const docId = documentIdRef.current;
+              if (docId) listSimulationRuns(docId);
+            }
           } else if (statusData.status === 'queued' || statusData.status === 'processing') {
             const newRun: SimulationRunInfo = {
               id: statusData.scenarioId,
@@ -290,8 +289,6 @@ const ScenariosAndRunsPanel: React.FC<{
               simulationTimeType: statusData.simulationTimeType || 'Clock',
               completedAt: statusData.queuedAt,
               hasResults: false,
-              scenarioDefinitionId: statusData.scenarioDefinitionId,
-              scenarioDefinitionName: statusData.scenarioDefinitionName,
             };
             dispatch({ type: 'SIMULATION_RUNS_SUCCESS', simulationRuns: [newRun, ...currentRuns] });
             setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
@@ -301,7 +298,7 @@ const ScenariosAndRunsPanel: React.FC<{
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [dispatch]);
+  }, [dispatch, listSimulationRuns]);
 
   // Initial load
   useEffect(() => {
@@ -316,7 +313,10 @@ const ScenariosAndRunsPanel: React.FC<{
 
     if (autoRefreshMode === 'smart') {
       const hasActive = simulationRuns.some(r => r.runState === RunState.Running || r.runState === RunState.Queued);
-      if (!hasActive) return;
+      const needsDownloadInfo = simulationRuns.some(r =>
+        r.runState === RunState.RanSuccessfully && r.hasResults && !r.downloadInfo
+      );
+      if (!hasActive && !needsDownloadInfo) return;
     }
 
     const interval = setInterval(() => {
@@ -343,6 +343,7 @@ const ScenariosAndRunsPanel: React.FC<{
           scenarioId={analysisView.scenarioId}
           documentId={analysisView.documentId}
           onBackToList={() => setAnalysisView(null)}
+          downloadInfo={simulationRuns.find(r => r.id === analysisView.scenarioId)?.downloadInfo}
         />
       </div>
     );

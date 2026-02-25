@@ -38,7 +38,4 @@ export interface SimulationRunInfo {
     startTime?: string;  // ISO timestamp when simulation started
     endTime?: string;    // ISO timestamp when simulation completed
     metrics?: Record<string, any>;  // Performance and execution metrics
-    // Scenario definition association (which scenario definition was used for this run)
-    scenarioDefinitionId?: string;
-    scenarioDefinitionName?: string;
 }

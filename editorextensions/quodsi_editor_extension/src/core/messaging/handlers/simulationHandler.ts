@@ -274,31 +274,31 @@ export class SimulationHandler {
       const serializedModel = serializer.serialize(modelDefinition);
       console.log('[SimulationHandler] Model serialized successfully');
 
+      // Use scenario definition ID as blob folder name (or generate UUID for baseline)
+      const scenarioId = data.scenarioDefinitionId || generateUUID();
+
       // If a scenario definition was specified, embed its change requests in the model payload
       let scenarioDefinitionName: string | undefined;
       if (data.scenarioDefinitionId) {
-        const scenario = modelDefinition.scenarios.get(data.scenarioDefinitionId);
+        const scenario = modelDefinition.scenarios.get(scenarioId);
         if (scenario) {
           const serializedScenario = scenario.toJSON();
           serializedModel.scenarioChangeRequests = serializedScenario.changeRequests;
           scenarioDefinitionName = serializedScenario.name;
           console.log('[SimulationHandler] Added scenarioChangeRequests to model payload', {
-            scenarioDefinitionId: data.scenarioDefinitionId,
+            scenarioId,
             scenarioDefinitionName,
             changeRequestCount: serializedScenario.changeRequests.length
           });
         } else {
-          console.warn('[SimulationHandler] Scenario definition not found:', data.scenarioDefinitionId);
+          console.warn('[SimulationHandler] Scenario definition not found:', scenarioId);
         }
       }
-      
+
       // Get SVG representation of the current page
       console.log('[SimulationHandler] Getting SVG for the current page...');
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
       console.log('[SimulationHandler] SVG obtained successfully');
-      
-      // Generate unique scenario ID and job ID
-      const scenarioId = generateUUID();
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
@@ -359,9 +359,7 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: QUODSIM_VERSION,
-            scenarioDefinitionId: data.scenarioDefinitionId,
-            scenarioDefinitionName
+            appVersion: QUODSIM_VERSION
           },
           asynchronous: true
         });

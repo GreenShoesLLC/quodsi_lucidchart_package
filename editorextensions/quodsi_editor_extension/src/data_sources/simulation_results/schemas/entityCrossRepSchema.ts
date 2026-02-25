@@ -59,14 +59,14 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "time_in_system_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Time waiting statistics
-        { name: "time_waiting_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_waiting_median", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_waiting_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_resource_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Time blocked statistics
-        { name: "time_blocked_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_blocked_median", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "time_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_median", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "time_queue_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Time in operation statistics
         { name: "time_in_operation_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -79,10 +79,10 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         { name: "time_connecting_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         
         // Percentage metrics
-        { name: "percent_waiting_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_waiting_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_blocked_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "percent_blocked_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_resource_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "percent_queue_wait_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         { name: "percent_operation_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "percent_operation_std_dev", type: ScalarFieldTypeEnum.NUMBER },
         { name: "percent_connecting_mean", type: ScalarFieldTypeEnum.NUMBER },
@@ -145,14 +145,14 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'time_in_system_std_dev': 'Time in System Std Dev',
         
         // Time waiting statistics
-        'time_waiting_mean': 'Mean Time Waiting',
-        'time_waiting_median': 'Median Time Waiting',
-        'time_waiting_std_dev': 'Time Waiting Std Dev',
+        'time_resource_wait_mean': 'Mean Time Resource Wait',
+        'time_resource_wait_median': 'Median Time Resource Wait',
+        'time_resource_wait_std_dev': 'Time Resource Wait Std Dev',
         
         // Time blocked statistics
-        'time_blocked_mean': 'Mean Time Blocked',
-        'time_blocked_median': 'Median Time Blocked',
-        'time_blocked_std_dev': 'Time Blocked Std Dev',
+        'time_queue_wait_mean': 'Mean Time Queue Wait',
+        'time_queue_wait_median': 'Median Time Queue Wait',
+        'time_queue_wait_std_dev': 'Time Queue Wait Std Dev',
         
         // Time in operation statistics
         'time_in_operation_mean': 'Mean Time in Operation',
@@ -165,10 +165,10 @@ export const EntityCrossRepSchema: SchemaDefinition = {
         'time_connecting_std_dev': 'Time Connecting Std Dev',
         
         // Percentage metrics
-        'percent_waiting_mean': 'Mean % Waiting',
-        'percent_waiting_std_dev': '% Waiting Std Dev',
-        'percent_blocked_mean': 'Mean % Blocked',
-        'percent_blocked_std_dev': '% Blocked Std Dev',
+        'percent_resource_wait_mean': 'Mean % Resource Wait',
+        'percent_resource_wait_std_dev': '% Resource Wait Std Dev',
+        'percent_queue_wait_mean': 'Mean % Queue Wait',
+        'percent_queue_wait_std_dev': '% Queue Wait Std Dev',
         'percent_operation_mean': 'Mean % in Operation',
         'percent_operation_std_dev': '% in Operation Std Dev',
         'percent_connecting_mean': 'Mean % Connecting',

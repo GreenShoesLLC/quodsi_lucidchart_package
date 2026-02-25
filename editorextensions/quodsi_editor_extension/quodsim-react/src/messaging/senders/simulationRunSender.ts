@@ -27,10 +27,10 @@ export function useSimulationRunSender() {
    * @param documentId Document ID containing the simulation run
    * @param simulationRunId Simulation run ID to delete
    */
-  const deleteSimulationRun = useCallback((documentId: string, simulationRunId: string) => {
+  const deleteSimulationRun = useCallback((documentId: string, scenarioId: string) => {
     send(EnvelopeMessageType.SIMULATION_RUN_DELETE, {
       documentId,
-      simulationRunId
+      scenarioId
     });
   }, [send]);
 

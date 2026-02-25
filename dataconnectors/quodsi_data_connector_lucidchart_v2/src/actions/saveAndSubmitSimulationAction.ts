@@ -31,8 +31,6 @@ interface SaveAndSubmitRequest {
     diagramSvg?: string; // New field for diagram SVG content
     // applicationId?: string;
     appVersion?: string;
-    scenarioDefinitionId?: string;  // ID of the scenario definition used (for change requests)
-    scenarioDefinitionName?: string;  // Name of the scenario definition used
 }
 
 interface SaveAndSubmitResult {
@@ -63,7 +61,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
     try {
         // Extract and validate request data
         const data = action.data as SaveAndSubmitRequest;
-        const { documentId, scenarioId, model, scenarioName, diagramSvg, appVersion, scenarioDefinitionId, scenarioDefinitionName } = data;
+        const { documentId, scenarioId, model, scenarioName, diagramSvg, appVersion } = data;
         
         // Use default baseline scenario ID if not provided
         // const scenarioId = data.scenarioId || BASELINE_SCENARIO_ID;
@@ -134,9 +132,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
             id: scenarioId,
             name: scenarioName,
             runState: 'QUEUED',
-            submittedAt: new Date().toISOString(),
-            ...(scenarioDefinitionId && { scenarioDefinitionId }),
-            ...(scenarioDefinitionName && { scenarioDefinitionName })
+            submittedAt: new Date().toISOString()
         }, null, 2);
         const statusBlobName = `${scenarioId}/status.json`;
         logger.info(`Uploading initial status.json for scenario: ${scenarioId}`);
@@ -213,9 +209,7 @@ export const saveAndSubmitSimulationAction: (action: DataConnectorAsynchronousAc
                     runState: 'QUEUED',
                     submittedAt: new Date().toISOString(),
                     jobId: jobId,
-                    taskId: taskId,
-                    ...(scenarioDefinitionId && { scenarioDefinitionId }),
-                    ...(scenarioDefinitionName && { scenarioDefinitionName })
+                    taskId: taskId
                 }, null, 2);
                 await storageService.uploadBlobContent(
                     documentId,
