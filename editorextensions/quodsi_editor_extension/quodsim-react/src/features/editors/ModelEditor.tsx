@@ -12,7 +12,7 @@ import {
   SimulationRunInfo,
   generateUUID,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft, RefreshCw } from "lucide-react";
+import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
@@ -158,6 +158,7 @@ const ScenariosAndRunsPanel: React.FC<{
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
+  const simulationRunsLoading = simulationRunState.loading;
 
   // Ref to track current simulation runs without causing dependency cycles
   const simulationRunsRef = useRef(simulationRuns);
@@ -247,8 +248,9 @@ const ScenariosAndRunsPanel: React.FC<{
   // Load simulation runs
   const loadSimulationRuns = useCallback(() => {
     if (!documentId) return;
+    dispatch({ type: 'SIMULATION_RUNS_LOADING' });
     listSimulationRuns(documentId);
-  }, [documentId, listSimulationRuns]);
+  }, [documentId, listSimulationRuns, dispatch]);
 
   // Message listener for simulation run updates
   useEffect(() => {
@@ -363,17 +365,24 @@ const ScenariosAndRunsPanel: React.FC<{
     <div className="flex flex-col h-full">
       {/* Scenario Card List */}
       <div className="flex-shrink-0 max-h-[40%] overflow-y-auto border-b">
-        {scenarios.map(scenario => (
-          <ScenarioCard
-            key={scenario.id}
-            scenario={scenario}
-            runStatus={runStatusMap.get(scenario.id)}
-            isSelected={selectedScenarioId === scenario.id}
-            onSelect={() => setSelectedScenarioId(scenario.id)}
-            onPlay={() => handlePlay(scenario)}
-            onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
-          />
-        ))}
+        {simulationRunsLoading && simulationRuns.length === 0 ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="ml-2 text-sm text-gray-500">Loading runs...</span>
+          </div>
+        ) : (
+          scenarios.map(scenario => (
+            <ScenarioCard
+              key={scenario.id}
+              scenario={scenario}
+              runStatus={runStatusMap.get(scenario.id)}
+              isSelected={selectedScenarioId === scenario.id}
+              onSelect={() => setSelectedScenarioId(scenario.id)}
+              onPlay={() => handlePlay(scenario)}
+              onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
+            />
+          ))
+        )}
         {deletingScenarioId && (
           <div className="mx-3 mb-2 p-3 bg-red-50 border border-red-200 rounded">
             <div className="text-xs font-medium text-red-900 mb-2">
