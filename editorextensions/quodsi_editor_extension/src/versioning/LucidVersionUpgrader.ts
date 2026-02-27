@@ -111,8 +111,11 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             const transform = transformations.find(t => t.objectType === elementType);
 
             if (transform && transform.transformations.length > 0) {
-                // Transform the component data
-                const transformedData = transform.transformations[0].transform(data);
+                // Apply all chained transforms in sequence, piping output into the next
+                let transformedData = data;
+                for (const t of transform.transformations) {
+                    transformedData = t.transform(transformedData);
+                }
 
                 // Preserve type info fields
                 transformedData.type = data.type;

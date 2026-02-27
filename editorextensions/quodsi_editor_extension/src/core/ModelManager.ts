@@ -24,16 +24,18 @@ import {
     EnvelopeMessageType,
     ValidationSeverity,
     ValidationIssue,
-    ensureBaselineScenario
+    ensureBaselineScenario,
+    compareVersions
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
+import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy, DocumentProxy } from "lucid-extension-sdk";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { ExtensionDebugService } from "./logging/ExtensionDebugService";
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
+import { LucidDataActionUtility } from "../utils/LucidDataActionUtility";
 
 
 interface ChangeTracker {
@@ -152,13 +154,24 @@ export class ModelManager {
             // Check version once per page — upgrade storage data before rebuilding
             if (this.versionCheckedPageId !== this.currentPage.id) {
                 if (this.storageAdapter.isQuodsiModel(this.currentPage)) {
+                    let upgradeResult = { upgraded: false, sourceVersion: '', targetVersion: '' };
                     try {
-                        await this.versionManager.handlePageLoad(this.currentPage);
+                        upgradeResult = await this.versionManager.handlePageLoad(this.currentPage);
                     } catch (error) {
                         this.debug.error('Version check failed:', error);
                     }
                     // Ensure a Baseline scenario exists for this model page
                     this.ensureBaselineScenario(this.currentPage);
+
+                    // One-time scenario adoption for documents upgrading from < 2026.02.23.
+                    // Prior to 2026.02.23, q_scenarios didn't exist. Old simulation runs
+                    // in Azure blob storage are adopted as scenario definitions.
+                    if (upgradeResult.upgraded &&
+                        compareVersions(upgradeResult.sourceVersion, '2026.02.23') < 0) {
+                        this.adoptLegacySimulationRuns(this.currentPage).catch(error => {
+                            this.debug.error('Scenario adoption failed (runs still in Azure, not lost):', error);
+                        });
+                    }
                 }
                 this.versionCheckedPageId = this.currentPage.id;
             }
@@ -1492,6 +1505,67 @@ export class ModelManager {
         if (baselineAdded) {
             this.debug.log('ensureBaselineScenario - Creating Baseline scenario');
             this.storageAdapter.setScenarios(page, updated);
+        }
+    }
+
+    /**
+     * One-time migration: adopts legacy simulation runs from Azure as scenario definitions.
+     * Called when a document upgrades from a version before 2026.02.23 (when q_scenarios was introduced).
+     * Each existing run in Azure gets a ScenarioDefinition with the run's blob folder ID as the scenario ID
+     * and empty changeRequests (they were all baseline-equivalent runs).
+     * Runs asynchronously after the version stamp is updated. If it fails, runs remain in Azure but
+     * won't appear as scenario definitions — user would see just Baseline.
+     */
+    private async adoptLegacySimulationRuns(page: PageProxy): Promise<void> {
+        this.debug.log('adoptLegacySimulationRuns - Starting scenario adoption for pre-2026.02.23 document');
+
+        try {
+            const client = ModelManager.getClient();
+            const documentProxy = new DocumentProxy(client);
+            const documentId = documentProxy.id;
+
+            this.debug.log('adoptLegacySimulationRuns - Fetching runs from Azure', { documentId });
+
+            const result = await LucidDataActionUtility.performDataAction(client, {
+                dataConnectorName: 'quodsi_data_connector',
+                actionName: 'ListScenarios',
+                actionData: { documentId },
+                asynchronous: true,
+            });
+
+            const responseData = result.json || result;
+            const runs = responseData?.scenarios || [];
+
+            if (runs.length === 0) {
+                this.debug.log('adoptLegacySimulationRuns - No existing runs found, nothing to adopt');
+                return;
+            }
+
+            this.debug.log('adoptLegacySimulationRuns - Found runs to adopt', { count: runs.length });
+
+            // Read current scenarios (should already have Baseline from ensureBaselineScenario)
+            const existingScenarios = this.storageAdapter.getScenarios(page);
+
+            // Create a scenario definition for each legacy run
+            const adoptedScenarios: ISerializedScenario[] = runs.map((run: any) => ({
+                id: run.id,
+                name: run.name || run.id,
+                description: '',
+                isBaseline: false,
+                changeRequests: [],
+            }));
+
+            // Merge: existing scenarios (Baseline) + adopted scenarios
+            const merged = [...existingScenarios, ...adoptedScenarios];
+            this.storageAdapter.setScenarios(page, merged);
+
+            this.debug.log('adoptLegacySimulationRuns - Adopted runs as scenarios', {
+                adoptedCount: adoptedScenarios.length,
+                totalCount: merged.length,
+            });
+        } catch (error) {
+            this.debug.error('adoptLegacySimulationRuns - Failed (runs not lost in Azure):', error);
+            throw error;
         }
     }
 

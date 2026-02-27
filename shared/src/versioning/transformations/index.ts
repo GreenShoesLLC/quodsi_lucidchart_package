@@ -13,6 +13,7 @@ import { EntityTransforms } from './EntityTransforms';
 import { GeneratorTransforms } from './GeneratorTransforms';
 import { ResourceTransforms } from './ResourceTransforms';
 import { ModelTransforms } from './ModelTransforms';
+import { compareVersions } from '../../constants/version';
 
 /**
  * Collection of all available transformations
@@ -34,7 +35,11 @@ export function getTransformations(objectType: string): TransformationSet | unde
 }
 
 /**
- * Helper to get all transformations between two versions
+ * Helper to get all transformations between two versions.
+ * Uses range-based matching: applies all transforms where the document
+ * hasn't been upgraded past the transform's sourceVersion yet, and the
+ * transform's targetVersion is within the current version.
+ * Results are ordered by sourceVersion ascending for correct chaining.
  */
 export function getTransformationsBetweenVersions(
     sourceVersion: string,
@@ -42,8 +47,11 @@ export function getTransformationsBetweenVersions(
 ): TransformationSet[] {
     return AllTransformations.map(transformSet => ({
         ...transformSet,
-        transformations: transformSet.transformations.filter(t => 
-            t.sourceVersion === sourceVersion && t.targetVersion === targetVersion
-        )
+        transformations: transformSet.transformations
+            .filter(t =>
+                compareVersions(t.sourceVersion, sourceVersion) >= 0 &&
+                compareVersions(t.targetVersion, targetVersion) <= 0
+            )
+            .sort((a, b) => compareVersions(a.sourceVersion, b.sourceVersion))
     })).filter(transformSet => transformSet.transformations.length > 0);
 }

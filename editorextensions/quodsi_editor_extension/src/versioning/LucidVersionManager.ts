@@ -6,6 +6,18 @@ import { PageProxy } from 'lucid-extension-sdk';
 import { NotificationService } from '../services/NotificationService';
 
 /**
+ * Result returned from handlePageLoad indicating what happened during version check.
+ */
+export interface UpgradeResult {
+    /** Whether a version upgrade was performed */
+    upgraded: boolean;
+    /** The version the document was on before upgrade (empty string if no upgrade) */
+    sourceVersion: string;
+    /** The version the document was upgraded to (empty string if no upgrade) */
+    targetVersion: string;
+}
+
+/**
  * Manages version upgrades in the LucidChart environment
  */
 export class LucidVersionManager {
@@ -30,15 +42,19 @@ export class LucidVersionManager {
     }
 
     /**
-     * Checks if a page needs upgrading and performs upgrade if necessary
+     * Checks if a page needs upgrading and performs upgrade if necessary.
+     * Returns metadata about what happened so the caller can trigger
+     * post-upgrade migrations (e.g., scenario adoption).
      */
-    async handlePageLoad(page: PageProxy): Promise<void> {
+    async handlePageLoad(page: PageProxy): Promise<UpgradeResult> {
+        const noUpgrade: UpgradeResult = { upgraded: false, sourceVersion: '', targetVersion: '' };
+
         try {
             // Get current version from page
             const preflightResult = await this.versionManager.checkUpgrade(page);
-            
+
             if (!preflightResult.canUpgrade) {
-                return;
+                return noUpgrade;
             }
 
             // Show upgrade needed notification
@@ -54,15 +70,22 @@ export class LucidVersionManager {
                 this.notificationService.showWarning(
                     `Upgrade issues found:\n${issueMessages}`
                 );
-                return;
+                return noUpgrade;
             }
 
             // Perform upgrade
             await this.versionManager.performUpgrade(page);
 
+            return {
+                upgraded: true,
+                sourceVersion: preflightResult.sourceVersion,
+                targetVersion: preflightResult.targetVersion,
+            };
+
         } catch (error) {
             const message = error instanceof Error ? error.message : 'Unknown error';
             this.notificationService.showError(`Error during version check: ${message}`);
+            return noUpgrade;
         }
     }
 
