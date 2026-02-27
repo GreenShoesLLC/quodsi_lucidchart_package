@@ -330,6 +330,44 @@ catch {
 }
 
 
+# --- Step 5.6: Create Versioned Package Copy ---
+Write-Host "--------------------------------------------------"
+Write-Host "Step 5.6: Creating versioned package copy..."
+Write-Host "--------------------------------------------------"
+
+$PackageZipPath = Join-Path $LucidPackageDir "package.zip"
+
+if (-not (Test-Path $PackageZipPath)) {
+    Write-Error "package.zip not found at '$PackageZipPath'. Bundle step may have failed."
+    exit 1
+}
+
+# Extract QUODSI_VERSION from version.ts
+$VersionFilePath = Join-Path $LucidPackageDir "shared\src\constants\version.ts"
+$VersionFileContent = Get-Content $VersionFilePath -Raw
+if ($VersionFileContent -match 'QUODSI_VERSION\s*=\s*"([^"]+)"') {
+    $QuodsiVersion = $Matches[1]
+    Write-Host "Detected QUODSI_VERSION: $QuodsiVersion" -ForegroundColor Cyan
+} else {
+    Write-Error "Could not extract QUODSI_VERSION from '$VersionFilePath'."
+    exit 1
+}
+
+# Copy package.zip and versioned copy to parent directory
+$OutputDir = Split-Path $LucidPackageDir -Parent
+$VersionedPackagePath = Join-Path $OutputDir "package_v${QuodsiVersion}.zip"
+$OutputPackagePath = Join-Path $OutputDir "package.zip"
+try {
+    Copy-Item -Path $PackageZipPath -Destination $VersionedPackagePath -Force -ErrorAction Stop
+    Write-Host "[OK] Created versioned copy: $VersionedPackagePath" -ForegroundColor Green
+    Copy-Item -Path $PackageZipPath -Destination $OutputPackagePath -Force -ErrorAction Stop
+    Write-Host "[OK] Created output copy: $OutputPackagePath" -ForegroundColor Green
+} catch {
+    Write-Error "Failed to create package copies: $($_.Exception.Message)"
+    exit 1
+}
+
+
 # --- Step 6: Restore Original Manifest --- (NEW STEP)
 Write-Host "--------------------------------------------------"
 Write-Host "Step 6: Restoring original manifest..."
