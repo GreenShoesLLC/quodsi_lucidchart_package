@@ -1,22 +1,58 @@
-import React from "react";
-import { ISerializedScenario, RunState, SimulationRunDownloadInfo } from "@quodsi/shared";
-import { Play, Trash2, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  ISerializedScenario,
+  ISerializedScenarioChangeRequest,
+  EditorReferenceData,
+  RunState,
+  SimulationRunDownloadInfo,
+} from "@quodsi/shared";
+import {
+  Play,
+  Trash2,
+  Loader2,
+  ChevronDown,
+  ChevronUp,
+  Plus,
+  Download,
+  Check,
+  AlertTriangle,
+} from "lucide-react";
+import ChangeRequestEditor from "./ChangeRequestEditor";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface ScenarioRunStatus {
   scenarioId: string;
   status: RunState;
   hasResults: boolean;
   downloadInfo?: SimulationRunDownloadInfo;
+  // Error fields (restored from SimulationRunInfo)
+  error?: string;
+  errorType?: string;
+  errorDetails?: string;
+  errorSuggestions?: string[];
+  // Progress tracking
+  currentReplication?: number;
+  reps?: number;
 }
 
 interface ScenarioCardProps {
   scenario: ISerializedScenario;
   runStatus?: ScenarioRunStatus;
-  isSelected: boolean;
-  onSelect: () => void;
+  referenceData?: EditorReferenceData;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onPlay: () => void;
   onDelete?: () => void;
+  onUpdate: (updated: ISerializedScenario) => void;
+  onAnalyze?: (scenarioId: string) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Status display config
+// ---------------------------------------------------------------------------
 
 const statusDisplay: Record<string, { label: string; color: string }> = {
   [RunState.NotRun]: { label: "No run", color: "text-gray-400" },
@@ -26,75 +62,411 @@ const statusDisplay: Record<string, { label: string; color: string }> = {
   [RunState.RanWithErrors]: { label: "Error", color: "text-red-600" },
 };
 
+// ---------------------------------------------------------------------------
+// RunStatusBadge (moved from ScenarioDetailPanel)
+// ---------------------------------------------------------------------------
+
+const RunStatusBadge: React.FC<{ status: RunState }> = ({ status }) => {
+  const config: Record<string, { label: string; bg: string; text: string }> = {
+    [RunState.NotRun]: { label: "Not run", bg: "bg-gray-100", text: "text-gray-500" },
+    [RunState.Queued]: { label: "Queued", bg: "bg-yellow-100", text: "text-yellow-700" },
+    [RunState.Running]: { label: "Running", bg: "bg-blue-100", text: "text-blue-700" },
+    [RunState.RanSuccessfully]: { label: "Completed", bg: "bg-green-100", text: "text-green-700" },
+    [RunState.RanWithErrors]: { label: "Error", bg: "bg-red-100", text: "text-red-700" },
+  };
+  const c = config[status] ?? config[RunState.NotRun];
+  return (
+    <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${c.bg} ${c.text}`}>
+      {c.label}
+    </span>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// ScenarioCard
+// ---------------------------------------------------------------------------
+
 export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   scenario,
   runStatus,
-  isSelected,
-  onSelect,
+  referenceData,
+  expanded,
+  onToggleExpand,
   onPlay,
   onDelete,
+  onUpdate,
+  onAnalyze,
 }) => {
+  // --- derived values ---
   const status = runStatus?.status ?? RunState.NotRun;
   const display = statusDisplay[status] ?? statusDisplay[RunState.NotRun];
   const isActive = status === RunState.Queued || status === RunState.Running;
   const changeCount = scenario.changeRequests?.length ?? 0;
+  const hasResults = runStatus?.hasResults ?? false;
+  const downloadInfo = runStatus?.downloadInfo;
+
+  // --- local state ---
+  const [showAddCR, setShowAddCR] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [expiryText, setExpiryText] = useState<string | null>(null);
+  const [errorExpanded, setErrorExpanded] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+
+  // --- Expiry countdown timer (from ScenarioDetailPanel) ---
+  useEffect(() => {
+    if (!downloadInfo?.expiresAt) {
+      setExpiryText(null);
+      return;
+    }
+    const updateExpiry = () => {
+      const now = Date.now();
+      const expires = new Date(downloadInfo.expiresAt!).getTime();
+      const diff = expires - now;
+      if (diff <= 0) {
+        setExpiryText("Expired");
+        return;
+      }
+      const mins = Math.floor(diff / 60000);
+      if (mins >= 1) {
+        setExpiryText(`${mins}m left`);
+      } else {
+        setExpiryText("<1m left");
+      }
+    };
+    updateExpiry();
+    const interval = setInterval(updateExpiry, 30000);
+    return () => clearInterval(interval);
+  }, [downloadInfo?.expiresAt]);
+
+  // --- handlers (from ScenarioDetailPanel) ---
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onUpdate({ ...scenario, name: e.target.value });
+  };
+
+  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onUpdate({ ...scenario, description: e.target.value || undefined });
+  };
+
+  const handleDeleteChangeRequest = (crId: string) => {
+    onUpdate({
+      ...scenario,
+      changeRequests: scenario.changeRequests.filter((cr) => cr.id !== crId),
+    });
+  };
+
+  const handleAddChangeRequest = (cr: ISerializedScenarioChangeRequest) => {
+    onUpdate({
+      ...scenario,
+      changeRequests: [...scenario.changeRequests, cr],
+    });
+    setShowAddCR(false);
+  };
+
+  const handleCopyExcelLink = async () => {
+    if (!downloadInfo?.excelUrl) return;
+    try {
+      await navigator.clipboard.writeText(downloadInfo.excelUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = downloadInfo.excelUrl;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  // =========================================================================
+  // Render
+  // =========================================================================
 
   return (
-    <div
-      onClick={onSelect}
-      className={`flex items-center gap-2 px-3 py-2 cursor-pointer border-b transition-colors ${
-        isSelected
-          ? "bg-blue-50 border-l-2 border-l-blue-500"
-          : "hover:bg-gray-50 border-l-2 border-l-transparent"
-      }`}
-    >
-      <button
-        onClick={(e) => { e.stopPropagation(); onPlay(); }}
-        disabled={isActive}
-        className={`flex-shrink-0 p-1 rounded transition-colors ${
-          isActive
-            ? "text-gray-300 cursor-not-allowed"
-            : "text-green-600 hover:bg-green-50"
+    <div className="bg-white rounded border border-gray-200 overflow-hidden">
+      {/* ---- Summary Row ---- */}
+      <div
+        onClick={onToggleExpand}
+        className={`flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
+          expanded ? "bg-blue-50" : "hover:bg-gray-50"
         }`}
-        title={isActive ? "Simulation in progress" : "Run simulation"}
       >
-        {isActive ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <Play className="w-4 h-4" />
-        )}
-      </button>
+        {/* Play button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onPlay(); }}
+          disabled={isActive}
+          className={`flex-shrink-0 p-1 rounded transition-colors ${
+            isActive
+              ? "text-gray-300 cursor-not-allowed"
+              : "text-green-600 hover:bg-green-50"
+          }`}
+          title={isActive ? "Simulation in progress" : "Run simulation"}
+        >
+          {isActive ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Play className="w-4 h-4" />
+          )}
+        </button>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-medium text-gray-800 truncate">
-            {scenario.name}
-          </span>
-          {scenario.isBaseline && (
-            <span className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-500 rounded">
-              default
+        {/* Name + badges */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1">
+            <span
+              className="text-xs font-medium text-gray-800 truncate"
+              title={scenario.id}
+            >
+              {scenario.name}
+            </span>
+            {scenario.isBaseline && (
+              <span className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-500 rounded">
+                default
+              </span>
+            )}
+          </div>
+          {!scenario.isBaseline && changeCount > 0 && (
+            <span className="text-[10px] text-gray-400">
+              {changeCount} change{changeCount !== 1 ? "s" : ""}
             </span>
           )}
         </div>
-        {!scenario.isBaseline && changeCount > 0 && (
-          <span className="text-[10px] text-gray-400">
-            {changeCount} change{changeCount !== 1 ? "s" : ""}
-          </span>
+
+        {/* Status badge */}
+        <span className={`text-[10px] font-medium ${display.color}`}>
+          {display.label}
+        </span>
+
+        {/* Expand/collapse chevron */}
+        {expanded ? (
+          <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        )}
+
+        {/* Delete button */}
+        {onDelete && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500 transition-colors"
+            title="Delete scenario"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
         )}
       </div>
 
-      <span className={`text-[10px] font-medium ${display.color}`}>
-        {display.label}
-      </span>
+      {/* ---- Expanded Content ---- */}
+      {expanded && (
+        <div className="p-3 border-t border-gray-200 space-y-3">
+          {/* A. Editing area */}
+          {scenario.isBaseline ? (
+            <div className="text-xs text-gray-500 italic">
+              Baseline scenario — no parameter changes applied
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={scenario.name}
+                  onChange={handleNameChange}
+                  className="w-full px-2 py-1 text-xs border rounded mt-0.5"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                  Description
+                </label>
+                <textarea
+                  value={scenario.description || ""}
+                  onChange={handleDescriptionChange}
+                  rows={2}
+                  className="w-full px-2 py-1 text-xs border rounded mt-0.5 resize-none"
+                  placeholder="Optional description"
+                />
+              </div>
 
-      {onDelete && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="flex-shrink-0 p-1 text-gray-300 hover:text-red-500 transition-colors"
-          title="Delete scenario"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+              {/* Change Requests List */}
+              <div>
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                  Change Requests ({scenario.changeRequests.length})
+                </label>
+                {scenario.changeRequests.length === 0 && !showAddCR && (
+                  <p className="text-[10px] text-gray-400 mt-1">No change requests defined</p>
+                )}
+                {scenario.changeRequests.map((cr) => (
+                  <div key={cr.id} className="flex items-center justify-between py-1 px-2 mt-1 bg-gray-50 rounded text-[10px]">
+                    <span className="text-gray-700 truncate">
+                      {cr.objectType} → {cr.modificationDetails?.propertyName}: {cr.modificationDetails?.setterType} {cr.modificationDetails?.newValue}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteChangeRequest(cr.id)}
+                      className="text-gray-300 hover:text-red-500 ml-2 flex-shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                {showAddCR ? (
+                  <div className="mt-2">
+                    <ChangeRequestEditor
+                      referenceData={referenceData}
+                      onSave={handleAddChangeRequest}
+                      onCancel={() => setShowAddCR(false)}
+                    />
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowAddCR(true)}
+                    className="flex items-center gap-1 mt-2 text-[10px] text-blue-600 hover:text-blue-800"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Change Request
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* B. Progress bar (restored from old ScenarioCard) */}
+          {status === RunState.Running && runStatus?.currentReplication && runStatus.reps && runStatus.reps > 0 && (
+            <div className="pt-2 border-t border-gray-200">
+              <div className="flex items-center justify-between text-xs text-gray-700 mb-1">
+                <span className="font-medium">Progress:</span>
+                <span className="font-semibold">{runStatus.currentReplication} / {runStatus.reps}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((runStatus.currentReplication / runStatus.reps) * 100, 100)}%` }}
+                />
+              </div>
+              <div className="text-xs text-center text-gray-600 mt-0.5">
+                {Math.round((runStatus.currentReplication / runStatus.reps) * 100)}% Complete
+              </div>
+            </div>
+          )}
+
+          {/* C. Error section (restored from old ScenarioCard) */}
+          {status === RunState.RanWithErrors && runStatus?.error && (
+            <div className="pt-2 border-t border-gray-200">
+              <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+                {/* Error Header - Collapsible */}
+                <button
+                  onClick={() => setErrorExpanded(!errorExpanded)}
+                  className="w-full px-2 py-1.5 flex items-center justify-between hover:bg-red-100 transition-colors"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                    <span className="text-xs font-semibold text-red-900 text-left">
+                      {runStatus.error}
+                    </span>
+                  </div>
+                  {errorExpanded ? (
+                    <ChevronUp className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-red-600 flex-shrink-0" />
+                  )}
+                </button>
+
+                {/* Expanded Error Details */}
+                {errorExpanded && (
+                  <div className="px-2 pb-2 space-y-1.5 border-t border-red-200 bg-white">
+                    {/* Error Type Badge */}
+                    {runStatus.errorType && (
+                      <div className="pt-1.5">
+                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-red-100 text-red-800 rounded border border-red-300">
+                          {runStatus.errorType}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Error Suggestions */}
+                    {runStatus.errorSuggestions && runStatus.errorSuggestions.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-gray-900 mb-1">
+                          Suggested Fixes:
+                        </div>
+                        <ul className="space-y-0.5">
+                          {runStatus.errorSuggestions.map((suggestion, index) => (
+                            <li key={index} className="text-xs text-gray-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                              • {suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Technical Details - Nested Accordion */}
+                    {runStatus.errorDetails && (
+                      <div>
+                        <button
+                          onClick={() => setDetailsExpanded(!detailsExpanded)}
+                          className="w-full flex items-center justify-between px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                        >
+                          <span className="text-xs font-semibold text-gray-900">
+                            Technical Details
+                          </span>
+                          {detailsExpanded ? (
+                            <ChevronUp className="w-3 h-3 text-gray-600" />
+                          ) : (
+                            <ChevronDown className="w-3 h-3 text-gray-600" />
+                          )}
+                        </button>
+                        {detailsExpanded && (
+                          <div className="mt-1 px-2 py-1.5 bg-gray-50 border border-gray-300 rounded">
+                            <pre className="text-xs text-gray-800 font-mono whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+                              {runStatus.errorDetails}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* D. Run status + downloads */}
+          <div className="pt-2 border-t border-gray-200">
+            <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+              Run Status
+            </label>
+            <div className="mt-1 flex items-center gap-2">
+              <RunStatusBadge status={status} />
+              {hasResults && onAnalyze && runStatus?.scenarioId && (
+                <button
+                  onClick={() => onAnalyze(runStatus.scenarioId)}
+                  className="text-[10px] text-blue-600 hover:underline"
+                >
+                  View Results
+                </button>
+              )}
+              {downloadInfo?.excelUrl && (
+                <button
+                  onClick={handleCopyExcelLink}
+                  className="flex items-center gap-0.5 text-[10px] text-green-700 hover:text-green-900 bg-green-50 hover:bg-green-100 px-1.5 py-0.5 rounded transition-colors"
+                  title={copied ? "Copied!" : "Copy Excel download link to clipboard"}
+                >
+                  {copied ? <Check className="w-3 h-3" /> : <Download className="w-3 h-3" />}
+                  {copied ? "Copied" : "XLS"}
+                </button>
+              )}
+              {downloadInfo?.excelUrl && expiryText && (
+                <span className={`text-[9px] ${expiryText === "Expired" ? "text-red-500" : "text-gray-400"}`}>
+                  {expiryText}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

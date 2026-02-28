@@ -16,7 +16,6 @@ import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
-import { ScenarioDetailPanel } from "./ScenarioDetailPanel";
 import SimulationRunAnalysisDashboard from "./SimulationRunAnalysisDashboard";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
@@ -148,7 +147,7 @@ const ScenariosAndRunsPanel: React.FC<{
   onScenariosChange: (scenarios: ISerializedScenario[]) => void;
   onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
 }> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
-  const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
+  const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   const [analysisView, setAnalysisView] = useState<{ scenarioId: string; documentId: string } | null>(null);
@@ -171,16 +170,6 @@ const ScenariosAndRunsPanel: React.FC<{
   // Scenarios from reference data
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
 
-  // Auto-select baseline scenario if nothing is selected
-  useEffect(() => {
-    if (selectedScenarioId === null && scenarios.length > 0) {
-      const baseline = scenarios.find(s => s.isBaseline);
-      setSelectedScenarioId(baseline?.id ?? scenarios[0].id);
-    }
-  }, [selectedScenarioId, scenarios]);
-
-  const selectedScenario = scenarios.find(s => s.id === selectedScenarioId) ?? null;
-
   // Build a map from scenario id to run status
   // Since run.id = scenario definition ID (blob folder = def ID), map directly by run.id
   const runStatusMap = useMemo(() => {
@@ -192,6 +181,12 @@ const ScenariosAndRunsPanel: React.FC<{
           status: run.runState,
           hasResults: run.hasResults,
           downloadInfo: run.downloadInfo,
+          error: run.error,
+          errorType: run.errorType,
+          errorDetails: run.errorDetails,
+          errorSuggestions: run.errorSuggestions,
+          currentReplication: run.currentReplication,
+          reps: run.reps,
         });
       }
     }
@@ -207,7 +202,27 @@ const ScenariosAndRunsPanel: React.FC<{
       }
     }
     onSimulate(scenario.name, scenario.id);
-  }, [runStatusMap, onSimulate]);
+
+    // Optimistic update: immediately show Queued status so the play button
+    // becomes a spinner without waiting for the server round-trip.
+    const optimisticRun: SimulationRunInfo = {
+      id: scenario.id,
+      name: scenario.name,
+      runState: RunState.Queued,
+      reps: 0,
+      runClockPeriod: 0,
+      runClockPeriodUnit: 'Minutes',
+      simulationTimeType: 'Clock',
+      hasResults: false,
+    };
+    const currentRuns = simulationRunsRef.current;
+    dispatch({
+      type: 'SIMULATION_RUNS_SUCCESS',
+      simulationRuns: [optimisticRun, ...currentRuns.filter(r => r.id !== scenario.id)],
+    });
+    // Enable smart auto-refresh to start polling for real status
+    setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
+  }, [runStatusMap, onSimulate, dispatch]);
 
   // Scenario management handlers
   const handleAddScenario = useCallback(() => {
@@ -217,7 +232,7 @@ const ScenariosAndRunsPanel: React.FC<{
       changeRequests: [],
     };
     onScenariosChange([...scenarios, newScenario]);
-    setSelectedScenarioId(newScenario.id);
+    setExpandedScenarioId(newScenario.id);
   }, [scenarios, onScenariosChange]);
 
   const handleDeleteScenario = useCallback((scenarioId: string) => {
@@ -231,11 +246,11 @@ const ScenariosAndRunsPanel: React.FC<{
       deleteSimulationRun(documentId, existingRun.scenarioId);
     }
     onScenariosChange(scenarios.filter(s => s.id !== deletingScenarioId));
-    if (selectedScenarioId === deletingScenarioId) {
-      setSelectedScenarioId(scenarios.find(s => s.isBaseline)?.id ?? null);
+    if (expandedScenarioId === deletingScenarioId) {
+      setExpandedScenarioId(null);
     }
     setDeletingScenarioId(null);
-  }, [deletingScenarioId, scenarios, onScenariosChange, selectedScenarioId, runStatusMap, documentId, deleteSimulationRun]);
+  }, [deletingScenarioId, scenarios, onScenariosChange, expandedScenarioId, runStatusMap, documentId, deleteSimulationRun]);
 
   const cancelDeleteScenario = useCallback(() => {
     setDeletingScenarioId(null);
@@ -363,8 +378,8 @@ const ScenariosAndRunsPanel: React.FC<{
 
   return (
     <div className="flex flex-col h-full">
-      {/* Scenario Card List */}
-      <div className="flex-shrink-0 max-h-[40%] overflow-y-auto border-b">
+      {/* Scenario Card List — flat scrollable list, each card expands inline */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {simulationRunsLoading && simulationRuns.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
@@ -376,15 +391,24 @@ const ScenariosAndRunsPanel: React.FC<{
               key={scenario.id}
               scenario={scenario}
               runStatus={runStatusMap.get(scenario.id)}
-              isSelected={selectedScenarioId === scenario.id}
-              onSelect={() => setSelectedScenarioId(scenario.id)}
+              referenceData={referenceData}
+              expanded={expandedScenarioId === scenario.id}
+              onToggleExpand={() =>
+                setExpandedScenarioId(expandedScenarioId === scenario.id ? null : scenario.id)
+              }
               onPlay={() => handlePlay(scenario)}
               onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
+              onUpdate={handleUpdateScenario}
+              onAnalyze={(scenarioId) => {
+                if (documentId) {
+                  setAnalysisView({ scenarioId, documentId });
+                }
+              }}
             />
           ))
         )}
         {deletingScenarioId && (
-          <div className="mx-3 mb-2 p-3 bg-red-50 border border-red-200 rounded">
+          <div className="p-3 bg-red-50 border border-red-200 rounded">
             <div className="text-xs font-medium text-red-900 mb-2">
               Delete scenario "{scenarios.find(s => s.id === deletingScenarioId)?.name ?? deletingScenarioId}"?
             </div>
@@ -409,27 +433,12 @@ const ScenariosAndRunsPanel: React.FC<{
         )}
         <button
           onClick={handleAddScenario}
-          className="flex items-center gap-1 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors"
+          className="flex items-center gap-1 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors rounded"
         >
           <Plus className="w-3 h-3" />
           Add Scenario
         </button>
       </div>
-
-      {/* Detail Panel */}
-      {selectedScenario && (
-        <ScenarioDetailPanel
-          scenario={selectedScenario}
-          referenceData={referenceData}
-          runStatus={runStatusMap.get(selectedScenario.id)}
-          onUpdate={handleUpdateScenario}
-          onAnalyze={(scenarioId) => {
-            if (documentId) {
-              setAnalysisView({ scenarioId, documentId });
-            }
-          }}
-        />
-      )}
 
       {/* Auto-refresh control */}
       <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-t bg-gray-50">
