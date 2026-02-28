@@ -16,6 +16,7 @@ import {
   Download,
   Check,
   AlertTriangle,
+  Edit2,
 } from "lucide-react";
 import ChangeRequestEditor from "./ChangeRequestEditor";
 
@@ -107,6 +108,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
 
   // --- local state ---
   const [showAddCR, setShowAddCR] = useState(false);
+  const [editingCRId, setEditingCRId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [expiryText, setExpiryText] = useState<string | null>(null);
   const [errorExpanded, setErrorExpanded] = useState(false);
@@ -162,6 +164,16 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
     setShowAddCR(false);
   };
 
+  const handleUpdateChangeRequest = (updated: ISerializedScenarioChangeRequest) => {
+    onUpdate({
+      ...scenario,
+      changeRequests: scenario.changeRequests.map((cr) =>
+        cr.id === editingCRId ? updated : cr
+      ),
+    });
+    setEditingCRId(null);
+  };
+
   const handleCopyExcelLink = async () => {
     if (!downloadInfo?.excelUrl) return;
     try {
@@ -202,7 +214,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               ? "text-gray-300 cursor-not-allowed"
               : "text-green-600 hover:bg-green-50"
           }`}
-          title={isActive ? "Simulation in progress" : "Run simulation"}
+          title={isActive ? "Simulation in progress" : hasResults ? "Re-run simulation (replaces existing results)" : "Run simulation"}
         >
           {isActive ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -226,7 +238,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               </span>
             )}
           </div>
-          {!scenario.isBaseline && changeCount > 0 && (
+          {changeCount > 0 && (
             <span className="text-[10px] text-gray-400">
               {changeCount} change{changeCount !== 1 ? "s" : ""}
             </span>
@@ -261,11 +273,8 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
       {expanded && (
         <div className="p-3 border-t border-gray-200 space-y-3">
           {/* A. Editing area */}
-          {scenario.isBaseline ? (
-            <div className="text-xs text-gray-500 italic">
-              Baseline scenario — no parameter changes applied
-            </div>
-          ) : (
+          {/* Name & Description — non-Baseline only */}
+          {!scenario.isBaseline && (
             <>
               <div>
                 <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
@@ -290,49 +299,70 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
                   placeholder="Optional description"
                 />
               </div>
+            </>
+          )}
 
-              {/* Change Requests List */}
-              <div>
-                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-                  Change Requests ({scenario.changeRequests.length})
-                </label>
-                {scenario.changeRequests.length === 0 && !showAddCR && (
-                  <p className="text-[10px] text-gray-400 mt-1">No change requests defined</p>
-                )}
-                {scenario.changeRequests.map((cr) => (
-                  <div key={cr.id} className="flex items-center justify-between py-1 px-2 mt-1 bg-gray-50 rounded text-[10px]">
+          {/* Change Requests — all scenarios including Baseline */}
+          <div>
+            <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+              Change Requests ({scenario.changeRequests.length})
+            </label>
+            {scenario.changeRequests.length === 0 && !showAddCR && (
+              <p className="text-[10px] text-gray-400 mt-1">No change requests defined</p>
+            )}
+            {scenario.changeRequests.map((cr) => (
+              <div key={cr.id} className="mt-1">
+                {editingCRId === cr.id ? (
+                  <ChangeRequestEditor
+                    referenceData={referenceData}
+                    changeRequest={cr}
+                    onSave={handleUpdateChangeRequest}
+                    onCancel={() => setEditingCRId(null)}
+                  />
+                ) : (
+                  <div className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-[10px]">
                     <span className="text-gray-700 truncate">
                       {cr.objectType} → {cr.modificationDetails?.propertyName}: {cr.modificationDetails?.setterType} {cr.modificationDetails?.newValue}
                     </span>
-                    <button
-                      onClick={() => handleDeleteChangeRequest(cr.id)}
-                      className="text-gray-300 hover:text-red-500 ml-2 flex-shrink-0"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                      <button
+                        onClick={() => { setEditingCRId(cr.id); setShowAddCR(false); }}
+                        className="text-gray-300 hover:text-blue-500"
+                        title="Edit change request"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteChangeRequest(cr.id)}
+                        className="text-gray-300 hover:text-red-500"
+                        title="Delete change request"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                ))}
-
-                {showAddCR ? (
-                  <div className="mt-2">
-                    <ChangeRequestEditor
-                      referenceData={referenceData}
-                      onSave={handleAddChangeRequest}
-                      onCancel={() => setShowAddCR(false)}
-                    />
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowAddCR(true)}
-                    className="flex items-center gap-1 mt-2 text-[10px] text-blue-600 hover:text-blue-800"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Add Change Request
-                  </button>
                 )}
               </div>
-            </>
-          )}
+            ))}
+
+            {showAddCR ? (
+              <div className="mt-2">
+                <ChangeRequestEditor
+                  referenceData={referenceData}
+                  onSave={handleAddChangeRequest}
+                  onCancel={() => setShowAddCR(false)}
+                />
+              </div>
+            ) : !editingCRId && (
+              <button
+                onClick={() => { setShowAddCR(true); setEditingCRId(null); }}
+                className="flex items-center gap-1 mt-2 text-[10px] text-blue-600 hover:text-blue-800"
+              >
+                <Plus className="w-3 h-3" />
+                Add Change Request
+              </button>
+            )}
+          </div>
 
           {/* B. Progress bar (restored from old ScenarioCard) */}
           {status === RunState.Running && runStatus?.currentReplication && runStatus.reps && runStatus.reps > 0 && (

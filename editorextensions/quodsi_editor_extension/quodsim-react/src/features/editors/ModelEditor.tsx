@@ -193,14 +193,8 @@ const ScenariosAndRunsPanel: React.FC<{
     return map;
   }, [simulationRuns]);
 
-  // Play button handler with confirm dialog
+  // Play button handler — no confirm dialog (window.confirm is blocked in LucidChart iframe)
   const handlePlay = useCallback((scenario: ISerializedScenario) => {
-    const existingRun = runStatusMap.get(scenario.id);
-    if (existingRun && (existingRun.status === RunState.RanSuccessfully || existingRun.status === RunState.RanWithErrors)) {
-      if (!window.confirm(`This will replace existing results for "${scenario.name}". Continue?`)) {
-        return;
-      }
-    }
     onSimulate(scenario.name, scenario.id);
 
     // Optimistic update: immediately show Queued status so the play button
@@ -222,7 +216,7 @@ const ScenariosAndRunsPanel: React.FC<{
     });
     // Enable smart auto-refresh to start polling for real status
     setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
-  }, [runStatusMap, onSimulate, dispatch]);
+  }, [onSimulate, dispatch]);
 
   // Scenario management handlers
   const handleAddScenario = useCallback(() => {
