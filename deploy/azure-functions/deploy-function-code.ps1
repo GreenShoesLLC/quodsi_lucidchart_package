@@ -138,6 +138,30 @@ function Deploy-ToEnvironment {
         return $false
     }
 
+    # Check version deploy tag
+    $TagName = $null
+    $VersionFilePath = Join-Path $rootDir "shared\src\constants\version.ts"
+    if (Test-Path $VersionFilePath) {
+        $VersionFileContent = Get-Content $VersionFilePath -Raw
+        if ($VersionFileContent -match 'QUODSI_VERSION\s*=\s*"([^"]+)"') {
+            $QuodsiVersion = $Matches[1]
+            $TagName = "func/v${QuodsiVersion}/${Env}"
+            Write-Host "QUODSI_VERSION: $QuodsiVersion" -ForegroundColor Cyan
+
+            $existingTag = git tag -l $TagName 2>$null
+            if ($existingTag) {
+                Write-Host ""
+                Write-Host "WARNING: Version $QuodsiVersion was already deployed to $Env." -ForegroundColor Yellow
+                Write-Host "Tag '$TagName' already exists. Did you forget to bump QUODSI_VERSION?" -ForegroundColor Yellow
+                Write-Host ""
+            }
+        } else {
+            Write-Warning "Could not extract QUODSI_VERSION from '$VersionFilePath'."
+        }
+    } else {
+        Write-Warning "Version file not found at '$VersionFilePath'. Skipping version tag check."
+    }
+
     # Check if Function App exists
     Write-Host "Verifying Function App is accessible..." -ForegroundColor Cyan
     try {
@@ -383,6 +407,16 @@ function Deploy-ToEnvironment {
             --output none
 
         Write-Host "Version info set: DEPLOYED_COMMIT=$commitHash, DEPLOYED_AT=$deployedAt" -ForegroundColor Green
+
+        # Create version deploy tag
+        if ($TagName) {
+            try {
+                git tag -f $TagName 2>$null | Out-Null
+                Write-Host "Created git tag: $TagName" -ForegroundColor Green
+            } catch {
+                Write-Warning "Could not create git tag '$TagName': $($_.Exception.Message)"
+            }
+        }
 
         Write-Host "Verifying deployed functions..." -ForegroundColor Cyan
         az functionapp function list --name $functionAppName --resource-group $resourceGroup -o table

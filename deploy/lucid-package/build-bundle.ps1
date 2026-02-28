@@ -389,6 +389,33 @@ if (Test-Path "manifest.json.backup") {
 Write-Host ""
 
 
+# --- Step 7: Version Deploy Tag ---
+Write-Host "--------------------------------------------------"
+Write-Host "Step 7: Checking version deploy tag..."
+Write-Host "--------------------------------------------------"
+
+$TagName = "lucid/v${QuodsiVersion}/${TargetEnvironment}"
+
+# Check if this version was already bundled for this environment
+$existingTag = git tag -l $TagName 2>$null
+if ($existingTag) {
+    Write-Host ""
+    Write-Host "WARNING: Version $QuodsiVersion was already bundled for $TargetEnvironment." -ForegroundColor Yellow
+    Write-Host "Tag '$TagName' already exists. Did you forget to bump QUODSI_VERSION?" -ForegroundColor Yellow
+    Write-Host ""
+}
+
+# Create/update the tag on current HEAD
+try {
+    git tag -f $TagName 2>$null | Out-Null
+    Write-Host "Created git tag: $TagName" -ForegroundColor Green
+} catch {
+    Write-Warning "Could not create git tag '$TagName': $($_.Exception.Message)"
+}
+
+Write-Host ""
+
+
 # --- Script End ---
 Write-Host "--------------------------------------------------"
 Write-Host "Lucid Package Bundle process ($ScriptName) completed successfully for environment '$TargetEnvironment'." -ForegroundColor Green
