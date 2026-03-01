@@ -23,19 +23,29 @@ const logger = debugService.forComponent('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model'
+  initialPanelType?: 'auth' | 'model' | 'results'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
       // Try to determine panel type from URL search params
       const urlParams = new URLSearchParams(window.location.search);
       const panelParam = urlParams.get("panel");
+      const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | undefined = initialPanelType;
 
-      if (panelParam) {
+      if (viewParam === "results") {
+        // Modal mode: view=results takes precedence
+        detectedType = "results";
+      } else if (panelParam) {
         // If panel parameter exists, use it
-        detectedType = panelParam.toLowerCase() === "auth" ? "auth" : "model";
+        if (panelParam.toLowerCase() === "auth") {
+          detectedType = "auth";
+        } else if (panelParam.toLowerCase() === "results") {
+          detectedType = "results";
+        } else {
+          detectedType = "model";
+        }
       } else if (window.location.pathname.includes("auth")) {
         // Fallback to checking URL path
         detectedType = "auth";

@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/shared';
 import { debugService } from '../utils/debugService';
 
 const logger = debugService.forComponent('useSendMessage');
@@ -9,16 +9,21 @@ const logger = debugService.forComponent('useSendMessage');
  * Hook for sending messages to the host application
  */
 export function useSendMessage(
-  state: { app: { panelType?: 'auth' | 'model' } },
+  state: { app: { panelType?: 'auth' | 'model' | 'results' } },
   dispatch: React.Dispatch<any>
 ) {
   return useCallback(
     <T extends EnvelopeMessageType>(type: T, data?: any) => {
       // Create message envelope
+      const sourceMap: Record<string, MessageSource> = {
+        auth: 'auth-iframe',
+        model: 'model-iframe',
+        results: 'results-iframe',
+      };
       const envelope: EnvelopeBase = {
         id: uuid(),
         type,
-        source: state.app.panelType === "auth" ? "auth-iframe" : "model-iframe",
+        source: sourceMap[state.app.panelType || 'model'] ?? 'model-iframe',
         target: "host",
         version: "1.0",
         data: data || {},

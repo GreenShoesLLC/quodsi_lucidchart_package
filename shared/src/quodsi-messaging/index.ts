@@ -231,6 +231,8 @@ export interface EnvelopMessagePayloads {
 
   [EnvelopeMessageType.SCENARIOS_DEFINITION_UPDATE]: { scenarios: any[] };
   [EnvelopeMessageType.SCENARIOS_DEFINITION_RESULT]: { success: boolean; errorMessage?: string };
+
+  [EnvelopeMessageType.OPEN_RESULTS_MODAL]: { scenarioId: string; documentId: string };
 }
 
 /**

@@ -72,10 +72,24 @@ export function useSimulationRunSender() {
     });
   }, [send]);
 
+  /**
+   * Send an OPEN_RESULTS_MODAL message to open simulation results in a full-width modal
+   *
+   * @param documentId Document ID
+   * @param scenarioId Scenario ID to view results for
+   */
+  const openResultsModal = useCallback((documentId: string, scenarioId: string) => {
+    send(EnvelopeMessageType.OPEN_RESULTS_MODAL, {
+      scenarioId,
+      documentId
+    });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
     resimulateSimulationRun,
-    getCrossRepData
+    getCrossRepData,
+    openResultsModal
   };
 }

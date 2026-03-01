@@ -12,11 +12,10 @@ import {
   SimulationRunInfo,
   generateUUID,
 } from "@quodsi/shared";
-import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, ArrowLeft, RefreshCw, Loader2 } from "lucide-react";
+import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, RefreshCw, Loader2 } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
-import SimulationRunAnalysisDashboard from "./SimulationRunAnalysisDashboard";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
@@ -150,10 +149,8 @@ const ScenariosAndRunsPanel: React.FC<{
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
-  const [analysisView, setAnalysisView] = useState<{ scenarioId: string; documentId: string } | null>(null);
-
   // Messaging hooks
-  const { listSimulationRuns, deleteSimulationRun } = useSimulationRunSender();
+  const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
@@ -347,29 +344,6 @@ const ScenariosAndRunsPanel: React.FC<{
     return () => clearInterval(interval);
   }, [autoRefreshMode, simulationRuns, documentId, listSimulationRuns]);
 
-  // Analysis view
-  if (analysisView) {
-    return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2 p-2 border-b bg-gray-50">
-          <button
-            onClick={() => setAnalysisView(null)}
-            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            Back to Scenarios
-          </button>
-        </div>
-        <SimulationRunAnalysisDashboard
-          scenarioId={analysisView.scenarioId}
-          documentId={analysisView.documentId}
-          onBackToList={() => setAnalysisView(null)}
-          downloadInfo={simulationRuns.find(r => r.id === analysisView.scenarioId)?.downloadInfo}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full">
       {/* Scenario Card List — flat scrollable list, each card expands inline */}
@@ -395,7 +369,7 @@ const ScenariosAndRunsPanel: React.FC<{
               onUpdate={handleUpdateScenario}
               onAnalyze={(scenarioId) => {
                 if (documentId) {
-                  setAnalysisView({ scenarioId, documentId });
+                  openResultsModal(documentId, scenarioId);
                 }
               }}
             />

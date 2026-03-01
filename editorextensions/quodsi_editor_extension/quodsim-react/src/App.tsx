@@ -2,13 +2,30 @@ import React from "react";
 import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
+import ModalResultsView from "./features/ModalResultsView";
 
 interface AppProps {
   panelType?: "model";
 }
 
 export const App: React.FC<AppProps> = ({ panelType }) => {
-  // Always use model panel (auth has been removed)
+  // Check if we're in modal results mode (opened via ResultsModal)
+  const urlParams = new URLSearchParams(window.location.search);
+  const isResultsModal = urlParams.get("view") === "results";
+
+  if (isResultsModal) {
+    const scenarioId = urlParams.get("scenarioId") || "";
+    const documentId = urlParams.get("documentId") || "";
+    return (
+      <MessageProvider initialPanelType="results">
+        <div className="h-full w-full">
+          <ModalResultsView scenarioId={scenarioId} documentId={documentId} />
+        </div>
+      </MessageProvider>
+    );
+  }
+
+  // Default: model panel in right dock
   const currentPanelType: "model" = "model";
 
   return (

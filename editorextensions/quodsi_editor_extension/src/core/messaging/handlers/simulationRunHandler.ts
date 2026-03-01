@@ -1,9 +1,11 @@
 import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
 import { router } from '../index';
+import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
+import { ResultsModal } from '../../../panels/ResultsModal';
 
 /**
  * Handler for simulation run management messages
@@ -47,10 +49,39 @@ export class SimulationRunHandler {
         });
         return true;
 
+      case EnvelopeMessageType.OPEN_RESULTS_MODAL:
+        SimulationRunHandler.handleOpenResultsModal(msg);
+        return true;
+
       // Not a simulation run message
       default:
         return false;
     }
+  }
+
+  /**
+   * Determine which channel to send a response to based on the message source.
+   * Messages from 'results-iframe' are routed to the 'results' channel,
+   * everything else goes to 'model'.
+   */
+  private static getResponseChannel(msg: EnvelopeBase): PanelRole {
+    if (msg.source === 'results-iframe') return 'results';
+    return 'model';
+  }
+
+  /**
+   * Handle OPEN_RESULTS_MODAL by creating and showing a ResultsModal
+   */
+  private static handleOpenResultsModal(msg: EnvelopeBase): void {
+    const data = msg.data as { scenarioId: string; documentId: string };
+    SimulationRunHandler.logger.log('Opening results modal', {
+      scenarioId: data.scenarioId,
+      documentId: data.documentId
+    });
+
+    const client = ModelManager.getClient();
+    const modal = new ResultsModal(client, data.scenarioId, data.documentId);
+    modal.show();
   }
 
   /**
@@ -273,11 +304,12 @@ export class SimulationRunHandler {
       });
 
       // Send success response with the unwrapped data and include dataType
-      router.send('model', {
+      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(responseChannel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.CROSS_REP_DATA_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${responseChannel}-iframe`,
         version: '1.0',
         data: {
           ...responseData,
@@ -289,11 +321,12 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error('Error fetching cross-rep data:', error);
 
       // Send error response
-      router.send('model', {
+      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(errorChannel, {
         id: msg.id,
         type: EnvelopeMessageType.ERROR,
         source: 'host',
-        target: 'model-iframe',
+        target: `${errorChannel}-iframe`,
         version: '1.0',
         data: {
           code: 'CROSS_REP_DATA_FAILED',

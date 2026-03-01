@@ -8,7 +8,7 @@ import { PendingRequests } from './types';
 // State shape
 export interface AppState {
   initialized: boolean;
-  panelType?: 'auth' | 'model';
+  panelType?: 'auth' | 'model' | 'results';
   pendingRequests: PendingRequests;
 }
 
@@ -21,7 +21,7 @@ export const initialAppState: AppState = {
 
 // Action types
 export type AppAction = 
-  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' }
+  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' | 'results' }
   | { type: 'ADD_PENDING_REQUEST'; id: string; requestType: string }
   | { type: 'REMOVE_PENDING_REQUEST'; id: string }
   | { type: 'MODEL_CONVERSION_SUCCESS'; success: boolean }
