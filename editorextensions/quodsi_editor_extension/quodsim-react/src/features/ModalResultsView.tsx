@@ -19,10 +19,6 @@ const ModalResultsView: React.FC<ModalResultsViewProps> = ({
       <SimulationRunAnalysisDashboard
         scenarioId={scenarioId}
         documentId={documentId}
-        onBackToList={() => {
-          // In modal mode, there's no "back to list" — user closes the modal via the X button.
-          // This is a no-op placeholder required by the component's interface.
-        }}
       />
     </div>
   );

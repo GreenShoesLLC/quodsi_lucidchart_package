@@ -27,7 +27,7 @@ import {
 interface SimulationRunAnalysisDashboardProps {
   scenarioId: string;
   documentId: string;
-  onBackToList: () => void;
+  onBackToList?: () => void;
   downloadInfo?: SimulationRunDownloadInfo;
 }
 
@@ -158,7 +158,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("table");
+  const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("both");
   const [zipCopied, setZipCopied] = useState<boolean>(false);
   const [selectedMetric, setSelectedMetric] =
     useState<string>("utilization_mean");
@@ -848,14 +848,16 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     <div className="p-3 space-y-3">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <button
-          onClick={onBackToList}
-          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-          title="Back to run list"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          Back
-        </button>
+        {onBackToList && (
+          <button
+            onClick={onBackToList}
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
+            title="Back to run list"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Back
+          </button>
+        )}
         <div className="flex items-center gap-1">
           <BarChart3 className="w-4 h-4 text-blue-600" />
           <h2 className="text-xs font-semibold text-gray-800">Analysis</h2>
