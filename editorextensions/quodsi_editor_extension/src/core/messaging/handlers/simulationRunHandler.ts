@@ -313,7 +313,8 @@ export class SimulationRunHandler {
         version: '1.0',
         data: {
           ...responseData,
-          dataType: data.dataType // Include dataType so React knows which data this is
+          dataType: data.dataType, // Include dataType so React knows which data this is
+          scenarioId: data.scenarioId // Include scenarioId for scenario comparison support
         }
       });
 
@@ -332,7 +333,8 @@ export class SimulationRunHandler {
           code: 'CROSS_REP_DATA_FAILED',
           message: error instanceof Error ? error.message : String(error),
           relatedTo: EnvelopeMessageType.CROSS_REP_DATA_REQUEST,
-          dataType: data.dataType
+          dataType: data.dataType,
+          scenarioId: data.scenarioId
         }
       });
     }
