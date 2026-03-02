@@ -135,11 +135,13 @@ export class SimulationRunHandler {
       }
 
       // Send success response with the unwrapped data
-      router.send('model', {
+      // Route to the correct channel (model or results) based on message source
+      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(responseChannel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${responseChannel}-iframe`,
         version: '1.0',
         data: responseData
       });
@@ -148,11 +150,12 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error('Error listing simulation runs:', error);
 
       // Send error response
-      router.send('model', {
+      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(errorChannel, {
         id: msg.id,
         type: EnvelopeMessageType.ERROR,
         source: 'host',
-        target: 'model-iframe',
+        target: `${errorChannel}-iframe`,
         version: '1.0',
         data: {
           code: 'SIMULATION_RUNS_LIST_FAILED',
