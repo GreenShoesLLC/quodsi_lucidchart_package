@@ -285,7 +285,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
         fetchDataType(dataType);
       }
     }
-  }, [isComparing, viewType, dataType, selectedScenarios.length, fetchDataType]);
+  }, [isComparing, viewType, dataType, selectedScenarios.map(s => s.id).join(","), fetchDataType]);
 
   // Listen for data responses
   useEffect(() => {
@@ -890,7 +890,10 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                   {selectedScenarios.map((s) => (
                     <React.Fragment key={s.id}>
                       <th className="text-right px-2 py-1.5 font-medium text-gray-600">
-                        Util ({s.name.substring(0, 8)})
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                          Util ({s.name.substring(0, 8)})
+                        </span>
                       </th>
                       <th className="text-right px-2 py-1.5 font-medium text-gray-600">
                         Cycle ({s.name.substring(0, 8)})
@@ -946,7 +949,10 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                   {selectedScenarios.map((s) => (
                     <React.Fragment key={s.id}>
                       <th className="text-right px-2 py-1.5 font-medium text-gray-600">
-                        Util ({s.name.substring(0, 8)})
+                        <span className="inline-flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                          Util ({s.name.substring(0, 8)})
+                        </span>
                       </th>
                       <th className="text-right px-2 py-1.5 font-medium text-gray-600">
                         Cost ({s.name.substring(0, 8)})
