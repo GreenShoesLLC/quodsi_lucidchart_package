@@ -23,6 +23,14 @@ import {
   CrossRepDataType,
   getColumnsForDataType,
 } from "./crossRepTableConfigs";
+import ScenarioPicker from "../../components/ScenarioPicker";
+import { useComparisonData } from "../../hooks/useComparisonData";
+import {
+  mergeBarChartData,
+  mergeTimeseriesData,
+  mergeTableColumns,
+  mergeTableData,
+} from "../../utils/scenarioDataMerge";
 
 interface SimulationRunAnalysisDashboardProps {
   scenarioId: string;
@@ -169,6 +177,19 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   // Hooks
   const { getCrossRepData } = useSimulationRunSender();
 
+  const {
+    selectedScenarios,
+    availableScenarios,
+    addScenario,
+    removeScenario,
+    getDataForType,
+    isLoading: comparisonLoading,
+    fetchDataType,
+    availableScenariosLoading,
+  } = useComparisonData(documentId, scenarioId);
+
+  const isComparing = selectedScenarios.length > 1;
+
   // Handle ZIP download link copy
   const handleCopyZipLink = () => {
     if (!downloadInfo?.zipUrl) return;
@@ -252,6 +273,19 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
       fetchDetailedData();
     }
   }, [viewType, fetchSummaryData, fetchDetailedData]);
+
+  // Fetch comparison data when scenarios or data type change
+  useEffect(() => {
+    if (isComparing) {
+      if (viewType === "summary") {
+        fetchDataType("scenario");
+        fetchDataType("activity");
+        fetchDataType("resource");
+      } else {
+        fetchDataType(dataType);
+      }
+    }
+  }, [isComparing, viewType, dataType, selectedScenarios.length, fetchDataType]);
 
   // Listen for data responses
   useEffect(() => {
@@ -395,6 +429,28 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     return data.filter((item: any) => item[key] === selectedActivity);
   }, [data, dataType, selectedActivity, isFilterableType]);
 
+  // Comparison table data (merged across scenarios)
+  const comparisonTableData = React.useMemo(() => {
+    if (!isComparing) return null;
+
+    const dataMap = getDataForType(dataType);
+    const baseColumns = getColumnsForDataType(dataType);
+
+    const nameKey =
+      dataType === "activity" ? "activity_name"
+        : dataType === "entity" ? "entity_name"
+        : dataType === "resource" ? "resource_name"
+        : dataType === "activity-entity" ? "activity_name"
+        : dataType === "state-summary" ? "state_name"
+        : dataType === "scenario" ? "scenario_name"
+        : "object_id";
+
+    return {
+      columns: mergeTableColumns(selectedScenarios, baseColumns, nameKey),
+      data: mergeTableData(selectedScenarios, dataMap, nameKey),
+    };
+  }, [isComparing, dataType, selectedScenarios, getDataForType]);
+
   // Reset selected activity, metric, and expanded activity when data type changes
   useEffect(() => {
     setSelectedActivity("all");
@@ -490,6 +546,71 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             height={300}
             layout="vertical"
           />
+        </ChartContainer>
+      );
+    }
+
+    return null;
+  };
+
+  // Render comparison chart (multi-scenario overlay)
+  const renderComparisonChart = () => {
+    const dataMap = getDataForType(dataType);
+
+    const isTimeseriesType =
+      dataType === "activity-contents-timeseries" ||
+      dataType === "activity-inbound-queue-timeseries" ||
+      dataType === "activity-outbound-queue-timeseries" ||
+      dataType === "state-values-timeseries" ||
+      dataType === "entity-throughput-timeseries";
+
+    if (isTimeseriesType) {
+      const merged = mergeTimeseriesData(selectedScenarios, dataMap, "object_id", "period_start_clock", "mean");
+
+      if (expandedActivity) {
+        const objectData = merged.data.filter((d: any) => d.object_id === expandedActivity);
+        return (
+          <ChartContainer data={objectData} loading={comparisonLoading} error={null} emptyMessage={`No data for ${expandedActivity}`}>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-gray-700">{expandedActivity}</h3>
+                <button onClick={() => setExpandedActivity(null)} className="text-xs text-gray-500 hover:text-gray-700">Back to grid</button>
+              </div>
+              <TimeseriesChart data={objectData} xKey="period_start_clock" yKeys={merged.yKeys} colors={merged.colors} height={400} />
+            </div>
+          </ChartContainer>
+        );
+      }
+
+      return (
+        <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
+          <SparklineGrid
+            data={merged.data}
+            groupByKey="object_id"
+            xKey="period_start_clock"
+            yKeys={merged.yKeys}
+            colors={merged.colors}
+            onItemClick={(id) => setExpandedActivity(id)}
+            sparklineHeight={50}
+          />
+        </ChartContainer>
+      );
+    }
+
+    // Bar chart for summary types
+    if (metricOptions[dataType]) {
+      const nameKey =
+        dataType === "activity" ? "activity_name"
+          : dataType === "entity" ? "entity_name"
+          : dataType === "resource" ? "resource_name"
+          : dataType === "activity-entity" ? "activity_name"
+          : dataType === "state-summary" ? "state_name"
+          : "scenario_name";
+
+      const merged = mergeBarChartData(selectedScenarios, dataMap, nameKey, selectedMetric);
+      return (
+        <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
+          <ComparisonBarChart data={merged.data} xKey={nameKey} yKeys={merged.yKeys} colors={merged.colors} height={300} layout="vertical" />
         </ChartContainer>
       );
     }
@@ -695,6 +816,182 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     );
   };
 
+  // Render Comparison Summary View (multi-scenario)
+  const renderComparisonSummaryView = () => {
+    const scenarioDataMap = getDataForType("scenario");
+    const activityDataMap = getDataForType("activity");
+    const resourceDataMap = getDataForType("resource");
+
+    if (comparisonLoading && scenarioDataMap.size === 0) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <div className="text-xs text-gray-500">Loading comparison data...</div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {/* System Performance Comparison */}
+        <div className="border border-gray-200 rounded">
+          <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">System Performance</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">Metric</th>
+                  {selectedScenarios.map((s) => (
+                    <th key={s.id} className="text-right px-2 py-1.5 font-medium text-gray-600">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
+                        <span className="truncate max-w-[80px]">{s.name}</span>
+                      </span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { key: "total_throughput_mean", label: "Total Throughput", decimals: 0 },
+                  { key: "total_cost_mean", label: "Total Cost", decimals: 2 },
+                  { key: "avg_cycle_time_mean", label: "Avg Cycle Time", decimals: 2 },
+                  { key: "avg_time_in_system_mean", label: "Avg Time in System", decimals: 2 },
+                  { key: "avg_entities_in_system_mean", label: "Avg # in System", decimals: 2 },
+                ].map(({ key, label, decimals }) => (
+                  <tr key={key} className="border-b border-gray-100">
+                    <td className="px-2 py-1.5 text-gray-600">{label}</td>
+                    {selectedScenarios.map((s) => {
+                      const scenarioData = scenarioDataMap.get(s.id)?.[0];
+                      return (
+                        <td key={s.id} className="px-2 py-1.5 text-right font-medium">
+                          {formatNumber(scenarioData?.[key], decimals)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Activities Comparison */}
+        <div className="border border-gray-200 rounded">
+          <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">Activities Summary</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">Activity</th>
+                  {selectedScenarios.map((s) => (
+                    <React.Fragment key={s.id}>
+                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                        Util ({s.name.substring(0, 8)})
+                      </th>
+                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                        Cycle ({s.name.substring(0, 8)})
+                      </th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const merged = mergeTableData(selectedScenarios, activityDataMap, "activity_name");
+                  if (merged.length === 0) {
+                    return (
+                      <tr><td colSpan={1 + selectedScenarios.length * 2} className="px-2 py-3 text-center text-gray-500">No activities</td></tr>
+                    );
+                  }
+                  return merged.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => handleDrillDown("activity", row.activity_name)}
+                      title="Click to view details"
+                    >
+                      <td className="px-2 py-1.5 text-blue-600 truncate max-w-[100px]">{row.activity_name}</td>
+                      {selectedScenarios.map((s) => (
+                        <React.Fragment key={s.id}>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatPercent(row[`utilization_mean_${s.name}`])}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(row[`cycle_time_mean_${s.name}`], 1)}
+                          </td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Resources Comparison */}
+        <div className="border border-gray-200 rounded">
+          <div className="bg-gray-100 px-3 py-2 border-b border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase">Resource Summary</h4>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="text-left px-2 py-1.5 font-medium text-gray-600">Resource</th>
+                  {selectedScenarios.map((s) => (
+                    <React.Fragment key={s.id}>
+                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                        Util ({s.name.substring(0, 8)})
+                      </th>
+                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                        Cost ({s.name.substring(0, 8)})
+                      </th>
+                    </React.Fragment>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const merged = mergeTableData(selectedScenarios, resourceDataMap, "resource_name");
+                  if (merged.length === 0) {
+                    return (
+                      <tr><td colSpan={1 + selectedScenarios.length * 2} className="px-2 py-3 text-center text-gray-500">No resources</td></tr>
+                    );
+                  }
+                  return merged.map((row, idx) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => handleDrillDown("resource", row.resource_name)}
+                      title="Click to view details"
+                    >
+                      <td className="px-2 py-1.5 text-blue-600 truncate max-w-[120px]">{row.resource_name}</td>
+                      {selectedScenarios.map((s) => (
+                        <React.Fragment key={s.id}>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatPercent(row[`utilization_mean_${s.name}`])}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {formatNumber(row[`total_cost_mean_${s.name}`], 2)}
+                          </td>
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Get filter label based on data type
   const getFilterLabel = () => {
     if (dataType === "activity") return "Activity";
@@ -827,16 +1124,16 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
 
         {/* Chart View */}
         {(viewMode === "chart" || viewMode === "both") && (
-          <div className="space-y-2">{renderChart()}</div>
+          <div className="space-y-2">{isComparing ? renderComparisonChart() : renderChart()}</div>
         )}
 
         {/* Data Table */}
         {(viewMode === "table" || viewMode === "both") && (
           <DataTable
-            data={filteredData}
-            columns={columns}
-            loading={loading}
-            error={error}
+            data={isComparing ? (comparisonTableData?.data || []) : filteredData}
+            columns={isComparing ? (comparisonTableData?.columns || columns) : columns}
+            loading={isComparing ? comparisonLoading : loading}
+            error={isComparing ? null : error}
             emptyMessage={`No ${dataType} data available for this run`}
           />
         )}
@@ -908,8 +1205,20 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
         </button>
       </div>
 
+      {/* Scenario Picker */}
+      {!availableScenariosLoading && availableScenarios.length > 1 && (
+        <ScenarioPicker
+          selectedScenarios={selectedScenarios}
+          availableScenarios={availableScenarios}
+          onAdd={addScenario}
+          onRemove={removeScenario}
+        />
+      )}
+
       {/* Content based on view type */}
-      {viewType === "summary" ? renderSummaryView() : renderDetailedView()}
+      {viewType === "summary"
+        ? (isComparing ? renderComparisonSummaryView() : renderSummaryView())
+        : renderDetailedView()}
     </div>
   );
 };
