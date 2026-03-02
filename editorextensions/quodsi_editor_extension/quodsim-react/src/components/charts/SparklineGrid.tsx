@@ -5,12 +5,15 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
+import { CHART_COLORS } from "./chartColors";
 
 interface SparklineGridProps {
   data: any[];
   groupByKey: string;
   xKey: string;
-  yKey: string;
+  yKey?: string;           // single series (existing, backwards compat)
+  yKeys?: string[];        // multi-series for comparison
+  colors?: string[];       // colors for multi-series
   onItemClick?: (objectId: string) => void;
   sparklineHeight?: number;
   maxItems?: number;
@@ -35,9 +38,24 @@ function groupByObject(data: any[], key: string): Map<string, any[]> {
  */
 const SparklineTooltip: React.FC<any> = ({ active, payload }) => {
   if (active && payload && payload.length) {
+    if (payload.length === 1) {
+      return (
+        <div className="bg-white border border-gray-200 rounded px-2 py-1 shadow-sm text-xs">
+          <span className="font-medium">{payload[0].value?.toFixed(2)}</span>
+        </div>
+      );
+    }
     return (
       <div className="bg-white border border-gray-200 rounded px-2 py-1 shadow-sm text-xs">
-        <span className="font-medium">{payload[0].value?.toFixed(2)}</span>
+        {payload.map((entry: any, idx: number) => (
+          <div key={idx} className="flex items-center gap-1">
+            <span
+              className="inline-block w-2 h-2 rounded-full"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="font-medium">{entry.value?.toFixed(2)}</span>
+          </div>
+        ))}
       </div>
     );
   }
@@ -53,10 +71,16 @@ const SparklineGrid: React.FC<SparklineGridProps> = ({
   groupByKey,
   xKey,
   yKey,
+  yKeys,
+  colors,
   onItemClick,
   sparklineHeight = 50,
   maxItems = 20,
 }) => {
+  // Derive effective keys and colors: support both single yKey and multi yKeys
+  const effectiveYKeys = yKeys || (yKey ? [yKey] : ["value"]);
+  const effectiveColors = colors || CHART_COLORS;
+
   // Group data by object ID
   const groupedData = useMemo(() => {
     return groupByObject(data, groupByKey);
@@ -110,14 +134,17 @@ const SparklineGrid: React.FC<SparklineGridProps> = ({
             <div className="sparkline-chart flex-1" style={{ height: sparklineHeight }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={sortedData}>
-                  <Line
-                    type="monotone"
-                    dataKey={yKey}
-                    stroke="#3b82f6"
-                    dot={false}
-                    strokeWidth={1.5}
-                    isAnimationActive={false}
-                  />
+                  {effectiveYKeys.map((key, idx) => (
+                    <Line
+                      key={key}
+                      type="monotone"
+                      dataKey={key}
+                      stroke={effectiveColors[idx % effectiveColors.length]}
+                      strokeWidth={1.5}
+                      dot={false}
+                      isAnimationActive={false}
+                    />
+                  ))}
                   <Tooltip content={<SparklineTooltip />} />
                 </LineChart>
               </ResponsiveContainer>
