@@ -1,4 +1,4 @@
-import { mergeBarChartData, mergeTimeseriesData } from "../scenarioDataMerge";
+import { mergeBarChartData, mergeTimeseriesData, mergeTableColumns, mergeTableData } from "../scenarioDataMerge";
 
 describe("mergeBarChartData", () => {
   const scenarios = [
@@ -145,5 +145,85 @@ describe("mergeTimeseriesData", () => {
     ]);
     const result = mergeTimeseriesData(scenarios, dataMap, "object_id", "period_start_clock", "mean");
     expect(result.data[1]["mean_Scenario 2"]).toBeNull();
+  });
+});
+
+describe("mergeTableColumns", () => {
+  const scenarios = [
+    { id: "s1", name: "Baseline", color: "#3b82f6" },
+    { id: "s2", name: "Scenario 2", color: "#f97316" },
+  ];
+
+  const columns = [
+    { key: "activity_name", label: "Activity" },
+    { key: "utilization_mean", label: "Utilization" },
+    { key: "cycle_time_mean", label: "Cycle Time" },
+  ];
+
+  it("returns columns unchanged for single scenario", () => {
+    const result = mergeTableColumns([scenarios[0]], columns, "activity_name");
+    expect(result).toEqual(columns);
+  });
+
+  it("creates scenario-suffixed columns for 2 scenarios", () => {
+    const result = mergeTableColumns(scenarios, columns, "activity_name");
+    expect(result[0]).toEqual({ key: "activity_name", label: "Activity" });
+    expect(result[1].key).toBe("utilization_mean_Baseline");
+    expect(result[1].label).toBe("Utilization (Baseline)");
+    expect(result[2].key).toBe("utilization_mean_Scenario 2");
+    expect(result[2].label).toBe("Utilization (Scenario 2)");
+    expect(result[3].key).toBe("cycle_time_mean_Baseline");
+    expect(result[4].key).toBe("cycle_time_mean_Scenario 2");
+    expect(result).toHaveLength(5); // 1 name + 2 metrics * 2 scenarios
+  });
+});
+
+describe("mergeTableData", () => {
+  const scenarios = [
+    { id: "s1", name: "Baseline", color: "#3b82f6" },
+    { id: "s2", name: "Scenario 2", color: "#f97316" },
+  ];
+
+  it("returns data unchanged for single scenario", () => {
+    const dataMap = new Map([
+      ["s1", [{ activity_name: "A", utilization_mean: 0.8 }]],
+    ]);
+    const result = mergeTableData([scenarios[0]], dataMap, "activity_name");
+    expect(result).toEqual(dataMap.get("s1"));
+  });
+
+  it("merges two scenarios into scenario-suffixed fields", () => {
+    const dataMap = new Map([
+      ["s1", [
+        { activity_name: "A", utilization_mean: 0.8, cycle_time_mean: 5.0 },
+      ]],
+      ["s2", [
+        { activity_name: "A", utilization_mean: 0.7, cycle_time_mean: 4.0 },
+      ]],
+    ]);
+    const result = mergeTableData(scenarios, dataMap, "activity_name");
+    expect(result).toEqual([{
+      activity_name: "A",
+      "utilization_mean_Baseline": 0.8,
+      "cycle_time_mean_Baseline": 5.0,
+      "utilization_mean_Scenario 2": 0.7,
+      "cycle_time_mean_Scenario 2": 4.0,
+    }]);
+  });
+
+  it("handles items missing in one scenario", () => {
+    const dataMap = new Map([
+      ["s1", [
+        { activity_name: "A", utilization_mean: 0.8 },
+        { activity_name: "B", utilization_mean: 0.6 },
+      ]],
+      ["s2", [
+        { activity_name: "A", utilization_mean: 0.7 },
+      ]],
+    ]);
+    const result = mergeTableData(scenarios, dataMap, "activity_name");
+    const rowB = result.find((r) => r.activity_name === "B");
+    expect(rowB["utilization_mean_Baseline"]).toBe(0.6);
+    expect(rowB["utilization_mean_Scenario 2"]).toBeUndefined();
   });
 });

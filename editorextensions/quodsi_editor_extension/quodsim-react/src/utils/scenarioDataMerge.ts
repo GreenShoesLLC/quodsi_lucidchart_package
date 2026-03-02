@@ -1,3 +1,5 @@
+import { TableColumn } from "../components/DataTable";
+
 export interface SelectedScenario {
   id: string;
   name: string;
@@ -110,4 +112,68 @@ export function mergeTimeseriesData(
   });
 
   return { data, yKeys, colors };
+}
+
+/**
+ * Creates merged column definitions for multi-scenario tables.
+ * The name column stays unchanged; metric columns are duplicated per scenario.
+ */
+export function mergeTableColumns(
+  scenarios: SelectedScenario[],
+  columns: TableColumn[],
+  nameKey: string
+): TableColumn[] {
+  if (scenarios.length === 1) return columns;
+
+  const result: TableColumn[] = [];
+  for (const col of columns) {
+    if (col.key === nameKey) {
+      result.push(col);
+    } else {
+      for (const scenario of scenarios) {
+        result.push({
+          key: `${col.key}_${scenario.name}`,
+          label: `${col.label} (${scenario.name})`,
+          format: col.format,
+        });
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * Merges per-scenario data arrays into rows with scenario-suffixed fields.
+ * Joins on nameKey.
+ */
+export function mergeTableData(
+  scenarios: SelectedScenario[],
+  dataMap: Map<string, any[]>,
+  nameKey: string
+): Record<string, any>[] {
+  if (scenarios.length === 1) {
+    return dataMap.get(scenarios[0].id) || [];
+  }
+
+  const rowMap = new Map<string, Record<string, any>>();
+  for (const scenario of scenarios) {
+    const rows = dataMap.get(scenario.id) || [];
+    for (const row of rows) {
+      const name = row[nameKey];
+      if (!name) continue;
+      if (!rowMap.has(name)) {
+        rowMap.set(name, { [nameKey]: name });
+      }
+      const mergedRow = rowMap.get(name)!;
+      for (const [key, value] of Object.entries(row)) {
+        if (key !== nameKey) {
+          mergedRow[`${key}_${scenario.name}`] = value;
+        }
+      }
+    }
+  }
+
+  return Array.from(rowMap.values()).sort((a, b) =>
+    String(a[nameKey]).localeCompare(String(b[nameKey]))
+  );
 }
