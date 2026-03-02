@@ -222,7 +222,7 @@ describe("mergeTableData", () => {
       ]],
     ]);
     const result = mergeTableData(scenarios, dataMap, "activity_name");
-    const rowB = result.find((r) => r.activity_name === "B");
+    const rowB = result.find((r) => r.activity_name === "B")!;
     expect(rowB["utilization_mean_Baseline"]).toBe(0.6);
     expect(rowB["utilization_mean_Scenario 2"]).toBeUndefined();
   });

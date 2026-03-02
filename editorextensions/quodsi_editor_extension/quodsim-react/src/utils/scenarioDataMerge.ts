@@ -30,11 +30,11 @@ export function mergeBarChartData(
 
   // Collect all unique names across all scenarios
   const allNames = new Set<string>();
-  for (const [, rows] of dataMap) {
+  dataMap.forEach((rows) => {
     for (const row of rows) {
       if (row[nameKey]) allNames.add(row[nameKey]);
     }
-  }
+  });
 
   // Build yKeys and colors
   const yKeys = scenarios.map((s) => `${metricKey}_${s.name}`);
