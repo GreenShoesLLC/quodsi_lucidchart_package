@@ -53,3 +53,61 @@ export function mergeBarChartData(
 
   return { data, yKeys, colors };
 }
+
+interface MergedTimeseriesData {
+  data: Record<string, any>[];
+  yKeys: string[];
+  colors: string[];
+}
+
+/**
+ * Merges per-scenario timeseries data by joining on (groupKey, xKey).
+ * Produces scenario-suffixed y-keys for overlaid chart rendering.
+ * For a single scenario, returns data unchanged.
+ */
+export function mergeTimeseriesData(
+  scenarios: SelectedScenario[],
+  dataMap: Map<string, any[]>,
+  groupKey: string,
+  xKey: string,
+  yKey: string
+): MergedTimeseriesData {
+  if (scenarios.length === 1) {
+    const data = dataMap.get(scenarios[0].id) || [];
+    return { data, yKeys: [yKey], colors: [scenarios[0].color] };
+  }
+
+  const yKeys = scenarios.map((s) => `${yKey}_${s.name}`);
+  const colors = scenarios.map((s) => s.color);
+
+  // Build a lookup: (groupValue, xValue) -> merged row
+  const mergedMap = new Map<string, Record<string, any>>();
+
+  for (const scenario of scenarios) {
+    const rows = dataMap.get(scenario.id) || [];
+    for (const row of rows) {
+      const key = `${row[groupKey]}__${row[xKey]}`;
+      if (!mergedMap.has(key)) {
+        const newRow: Record<string, any> = {
+          [groupKey]: row[groupKey],
+          [xKey]: row[xKey],
+        };
+        // Initialize all scenario columns as null
+        for (const s of scenarios) {
+          newRow[`${yKey}_${s.name}`] = null;
+        }
+        mergedMap.set(key, newRow);
+      }
+      mergedMap.get(key)![`${yKey}_${scenario.name}`] = row[yKey];
+    }
+  }
+
+  // Sort by groupKey then xKey
+  const data = Array.from(mergedMap.values()).sort((a, b) => {
+    const groupCmp = String(a[groupKey]).localeCompare(String(b[groupKey]));
+    if (groupCmp !== 0) return groupCmp;
+    return (a[xKey] as number) - (b[xKey] as number);
+  });
+
+  return { data, yKeys, colors };
+}
