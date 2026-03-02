@@ -93,6 +93,7 @@ export interface CrossRepDataResultMessage extends EnvelopeBase {
     data: any[];
     recordCount: number;
     dataType: 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'entity-throughput-timeseries';
+    scenarioId: string;
     error?: string;
   };
 }
