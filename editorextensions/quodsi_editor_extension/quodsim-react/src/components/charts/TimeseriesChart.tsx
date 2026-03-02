@@ -9,6 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { CHART_COLORS } from "./chartColors";
 
 interface TimeseriesChartProps {
   data: any[];
@@ -20,18 +21,6 @@ interface TimeseriesChartProps {
   colors?: string[];
 }
 
-// Default color palette
-const DEFAULT_COLORS = [
-  "#3b82f6", // blue
-  "#10b981", // green
-  "#f59e0b", // amber
-  "#ef4444", // red
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-  "#06b6d4", // cyan
-  "#f97316", // orange
-];
-
 /**
  * Line chart component for timeseries data
  */
@@ -42,7 +31,7 @@ const TimeseriesChart: React.FC<TimeseriesChartProps> = ({
   xLabel = "Time",
   yLabel = "Value",
   height = 400,
-  colors = DEFAULT_COLORS,
+  colors = CHART_COLORS,
 }) => {
   return (
     <ResponsiveContainer width="100%" height={height}>
