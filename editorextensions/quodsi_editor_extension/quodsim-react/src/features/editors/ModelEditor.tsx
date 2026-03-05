@@ -148,6 +148,7 @@ const ScenariosAndRunsPanel: React.FC<{
 }> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
+  const [rerunningScenarioId, setRerunningScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   // Messaging hooks
   const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
@@ -190,8 +191,8 @@ const ScenariosAndRunsPanel: React.FC<{
     return map;
   }, [simulationRuns]);
 
-  // Play button handler — no confirm dialog (window.confirm is blocked in LucidChart iframe)
-  const handlePlay = useCallback((scenario: ISerializedScenario) => {
+  // Execute the actual play/simulate action with optimistic update
+  const executePlay = useCallback((scenario: ISerializedScenario) => {
     onSimulate(scenario.name, scenario.id);
 
     // Optimistic update: immediately show Queued status so the play button
@@ -213,7 +214,19 @@ const ScenariosAndRunsPanel: React.FC<{
     });
     // Enable smart auto-refresh to start polling for real status
     setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
+    setRerunningScenarioId(null);
   }, [onSimulate, dispatch]);
+
+  // Play button handler — confirm before re-running if results already exist
+  const handlePlay = useCallback((scenario: ISerializedScenario) => {
+    const existingRun = runStatusMap.get(scenario.id);
+    if (existingRun?.hasResults) {
+      setRerunningScenarioId(scenario.id);
+      setDeletingScenarioId(null);
+      return;
+    }
+    executePlay(scenario);
+  }, [runStatusMap, executePlay]);
 
   // Scenario management handlers
   const handleAddScenario = useCallback(() => {
@@ -226,8 +239,18 @@ const ScenariosAndRunsPanel: React.FC<{
     setExpandedScenarioId(newScenario.id);
   }, [scenarios, onScenariosChange]);
 
+  const confirmRerun = useCallback(() => {
+    const scenario = scenarios.find(s => s.id === rerunningScenarioId);
+    if (scenario) executePlay(scenario);
+  }, [rerunningScenarioId, scenarios, executePlay]);
+
+  const cancelRerun = useCallback(() => {
+    setRerunningScenarioId(null);
+  }, []);
+
   const handleDeleteScenario = useCallback((scenarioId: string) => {
     setDeletingScenarioId(scenarioId);
+    setRerunningScenarioId(null);
   }, []);
 
   const confirmDeleteScenario = useCallback(() => {
@@ -392,6 +415,30 @@ const ScenariosAndRunsPanel: React.FC<{
               </button>
               <button
                 onClick={cancelDeleteScenario}
+                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+        {rerunningScenarioId && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <div className="text-xs font-medium text-yellow-900 mb-2">
+              Re-run scenario "{scenarios.find(s => s.id === rerunningScenarioId)?.name ?? rerunningScenarioId}"?
+            </div>
+            <div className="text-xs text-yellow-700 mb-3">
+              This will replace the existing simulation results. This action cannot be undone.
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmRerun}
+                className="px-3 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
+              >
+                Re-run
+              </button>
+              <button
+                onClick={cancelRerun}
                 className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
               >
                 Cancel
