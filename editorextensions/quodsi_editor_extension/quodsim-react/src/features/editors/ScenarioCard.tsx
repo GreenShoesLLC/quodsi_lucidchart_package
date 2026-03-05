@@ -17,6 +17,7 @@ import {
   Check,
   AlertTriangle,
   Edit2,
+  BarChart3,
 } from "lucide-react";
 import ChangeRequestEditor from "./ChangeRequestEditor";
 
@@ -245,16 +246,19 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
           )}
         </div>
 
-        {/* Status badge */}
-        <span className={`text-[10px] font-medium ${display.color}`}>
-          {display.label}
-        </span>
-
-        {/* Expand/collapse chevron */}
-        {expanded ? (
-          <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        {/* Status / View Results */}
+        {hasResults && onAnalyze && runStatus?.scenarioId ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAnalyze(runStatus.scenarioId); }}
+            className="flex-shrink-0 p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+            title="View Results"
+          >
+            <BarChart3 className="w-3.5 h-3.5" />
+          </button>
         ) : (
-          <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+          <span className={`text-[10px] font-medium ${display.color}`}>
+            {display.label}
+          </span>
         )}
 
         {/* Delete button */}
@@ -266,6 +270,13 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
           >
             <Trash2 className="w-3 h-3" />
           </button>
+        )}
+
+        {/* Expand/collapse chevron */}
+        {expanded ? (
+          <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
         )}
       </div>
 
