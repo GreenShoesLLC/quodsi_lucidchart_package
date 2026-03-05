@@ -846,7 +846,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                     <th key={s.id} className="text-right px-2 py-1.5 font-medium text-gray-600">
                       <span className="inline-flex items-center gap-1">
                         <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
-                        <span className="truncate max-w-[80px]">{s.name}</span>
+                        <span className="truncate max-w-[100px] inline-block align-bottom" title={s.name}>{s.name}</span>
                       </span>
                     </th>
                   ))}
@@ -887,23 +887,32 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left px-2 py-1.5 font-medium text-gray-600">Activity</th>
-                  {selectedScenarios.map((s) => (
-                    <React.Fragment key={s.id}>
-                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                  {[
+                    { key: "utilization_mean", label: "Util", format: formatPercent },
+                    { key: "cycle_time_mean", label: "Cycle", format: (v: number | null | undefined) => formatNumber(v, 1) },
+                  ].map((metric, mIdx) =>
+                    selectedScenarios.map((s) => (
+                      <th
+                        key={`${metric.key}_${s.id}`}
+                        className={`text-right px-2 py-1.5 font-medium text-gray-600${mIdx > 0 && s === selectedScenarios[0] ? " border-l-2 border-gray-300" : ""}`}
+                      >
                         <span className="inline-flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
-                          Util ({s.name.substring(0, 8)})
+                          <span className="truncate max-w-[100px] inline-block align-bottom" title={s.name}>
+                            {metric.label} ({s.name})
+                          </span>
                         </span>
                       </th>
-                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
-                        Cycle ({s.name.substring(0, 8)})
-                      </th>
-                    </React.Fragment>
-                  ))}
+                    ))
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {(() => {
+                  const activityMetrics = [
+                    { key: "utilization_mean", format: formatPercent },
+                    { key: "cycle_time_mean", format: (v: number | null | undefined) => formatNumber(v, 1) },
+                  ];
                   const merged = mergeTableData(selectedScenarios, activityDataMap, "activity_name");
                   if (merged.length === 0) {
                     return (
@@ -918,16 +927,16 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                       title="Click to view details"
                     >
                       <td className="px-2 py-1.5 text-blue-600 truncate max-w-[100px]">{row.activity_name}</td>
-                      {selectedScenarios.map((s) => (
-                        <React.Fragment key={s.id}>
-                          <td className="px-2 py-1.5 text-right">
-                            {formatPercent(row[`utilization_mean_${s.name}`])}
+                      {activityMetrics.map((metric, mIdx) =>
+                        selectedScenarios.map((s) => (
+                          <td
+                            key={`${metric.key}_${s.id}`}
+                            className={`px-2 py-1.5 text-right${mIdx > 0 && s === selectedScenarios[0] ? " border-l-2 border-gray-300" : ""}`}
+                          >
+                            {metric.format(row[`${metric.key}_${s.name}`])}
                           </td>
-                          <td className="px-2 py-1.5 text-right">
-                            {formatNumber(row[`cycle_time_mean_${s.name}`], 1)}
-                          </td>
-                        </React.Fragment>
-                      ))}
+                        ))
+                      )}
                     </tr>
                   ));
                 })()}
@@ -946,23 +955,32 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left px-2 py-1.5 font-medium text-gray-600">Resource</th>
-                  {selectedScenarios.map((s) => (
-                    <React.Fragment key={s.id}>
-                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
+                  {[
+                    { key: "utilization_mean", label: "Util", format: formatPercent },
+                    { key: "total_cost_mean", label: "Cost", format: (v: number | null | undefined) => formatNumber(v, 2) },
+                  ].map((metric, mIdx) =>
+                    selectedScenarios.map((s) => (
+                      <th
+                        key={`${metric.key}_${s.id}`}
+                        className={`text-right px-2 py-1.5 font-medium text-gray-600${mIdx > 0 && s === selectedScenarios[0] ? " border-l-2 border-gray-300" : ""}`}
+                      >
                         <span className="inline-flex items-center gap-1">
                           <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: s.color }} />
-                          Util ({s.name.substring(0, 8)})
+                          <span className="truncate max-w-[100px] inline-block align-bottom" title={s.name}>
+                            {metric.label} ({s.name})
+                          </span>
                         </span>
                       </th>
-                      <th className="text-right px-2 py-1.5 font-medium text-gray-600">
-                        Cost ({s.name.substring(0, 8)})
-                      </th>
-                    </React.Fragment>
-                  ))}
+                    ))
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {(() => {
+                  const resourceMetrics = [
+                    { key: "utilization_mean", format: formatPercent },
+                    { key: "total_cost_mean", format: (v: number | null | undefined) => formatNumber(v, 2) },
+                  ];
                   const merged = mergeTableData(selectedScenarios, resourceDataMap, "resource_name");
                   if (merged.length === 0) {
                     return (
@@ -977,16 +995,16 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                       title="Click to view details"
                     >
                       <td className="px-2 py-1.5 text-blue-600 truncate max-w-[120px]">{row.resource_name}</td>
-                      {selectedScenarios.map((s) => (
-                        <React.Fragment key={s.id}>
-                          <td className="px-2 py-1.5 text-right">
-                            {formatPercent(row[`utilization_mean_${s.name}`])}
+                      {resourceMetrics.map((metric, mIdx) =>
+                        selectedScenarios.map((s) => (
+                          <td
+                            key={`${metric.key}_${s.id}`}
+                            className={`px-2 py-1.5 text-right${mIdx > 0 && s === selectedScenarios[0] ? " border-l-2 border-gray-300" : ""}`}
+                          >
+                            {metric.format(row[`${metric.key}_${s.name}`])}
                           </td>
-                          <td className="px-2 py-1.5 text-right">
-                            {formatNumber(row[`total_cost_mean_${s.name}`], 2)}
-                          </td>
-                        </React.Fragment>
-                      ))}
+                        ))
+                      )}
                     </tr>
                   ));
                 })()}
