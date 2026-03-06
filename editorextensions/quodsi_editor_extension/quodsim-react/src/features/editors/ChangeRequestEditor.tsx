@@ -29,25 +29,19 @@ interface ChangeRequestEditorProps {
  */
 const PROPERTIES_BY_OBJECT_TYPE: Record<string, ScenarioPropertyName[]> = {
   [ScenarioObjectType.ACTIVITY]: [
-    ScenarioPropertyName.DURATION,
     ScenarioPropertyName.ACTIVITY_CAPACITY,
     ScenarioPropertyName.INBOUND_QUEUE_CAPACITY,
     ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY,
-    ScenarioPropertyName.INCLUDE,
   ],
   [ScenarioObjectType.RESOURCE]: [
     ScenarioPropertyName.CAPACITY,
-    ScenarioPropertyName.INCLUDE,
   ],
   [ScenarioObjectType.GENERATOR]: [
-    ScenarioPropertyName.INTERVAL,
     ScenarioPropertyName.MAX_ENTITIES,
     ScenarioPropertyName.ENTITIES_PER_CREATION,
-    ScenarioPropertyName.INCLUDE,
   ],
   [ScenarioObjectType.CONNECTOR]: [
     ScenarioPropertyName.WEIGHT,
-    ScenarioPropertyName.INCLUDE,
   ],
   [ScenarioObjectType.MODEL]: [
     ScenarioPropertyName.REPS,
@@ -69,7 +63,6 @@ const PROPERTY_LABELS: Record<string, string> = {
   [ScenarioPropertyName.INTERVAL]: "Interval",
   [ScenarioPropertyName.MAX_ENTITIES]: "Max Entities",
   [ScenarioPropertyName.ENTITIES_PER_CREATION]: "Entities Per Creation",
-  [ScenarioPropertyName.INCLUDE]: "Include",
   [ScenarioPropertyName.NAME]: "Name",
   [ScenarioPropertyName.REPS]: "Replications",
   [ScenarioPropertyName.SEED]: "Seed",
@@ -129,12 +122,6 @@ function getTargetObjects(
   }
 }
 
-/**
- * Returns whether the given property is a boolean property (INCLUDE).
- */
-function isBooleanProperty(propertyName: string): boolean {
-  return propertyName === ScenarioPropertyName.INCLUDE;
-}
 
 // ============================================================================
 // COMPONENT
@@ -175,11 +162,6 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
       ? changeRequest.modificationDetails.newValue
       : 0
   );
-  const [booleanValue, setBooleanValue] = useState<boolean>(
-    typeof changeRequest?.modificationDetails?.newValue === "boolean"
-      ? changeRequest.modificationDetails.newValue
-      : true
-  );
   const [description, setDescription] = useState<string>(
     changeRequest?.description ?? ""
   );
@@ -191,7 +173,6 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   const availableProperties = PROPERTIES_BY_OBJECT_TYPE[objectType] ?? [];
   const targetObjects = getTargetObjects(objectType, referenceData);
   const isModelType = objectType === ScenarioObjectType.MODEL;
-  const isBoolean = isBooleanProperty(propertyName);
 
   // ============================================================================
   // EFFECTS
@@ -218,11 +199,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
    * When propertyName changes, reset setter type and value defaults.
    */
   useEffect(() => {
-    if (isBooleanProperty(propertyName)) {
-      setBooleanValue(true);
-    } else {
-      setSetterType(ScenarioSetterType.EQUAL);
-    }
+    setSetterType(ScenarioSetterType.EQUAL);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyName]);
 
@@ -250,10 +227,6 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     setNumericValue(parseFloat(e.target.value) || 0);
   };
 
-  const handleBooleanValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBooleanValue(e.target.checked);
-  };
-
   const handleDescriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDescription(e.target.value);
   };
@@ -262,19 +235,13 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     const cr: ISerializedScenarioChangeRequest = {
       id: changeRequest?.id ?? generateUUID(),
       objectType,
-      objectMatchCriteria: isModelType ? {} : { name: targetName },
-      modificationDetails: isBoolean
-        ? {
-            type: "boolean",
-            propertyName,
-            newValue: booleanValue,
-          }
-        : {
-            type: "numeric",
-            propertyName,
-            setterType,
-            newValue: numericValue,
-          },
+      objectMatchCriteria: isModelType ? { name: "*" } : { name: targetName },
+      modificationDetails: {
+        type: "numeric",
+        propertyName,
+        setterType,
+        newValue: numericValue,
+      },
       description: description.trim() || undefined,
     };
     onSave(cr);
@@ -355,53 +322,36 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
       </div>
 
       {/* Value Section */}
-      {isBoolean ? (
-        /* Boolean Property Modification */
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="cr-bool-value"
-            checked={booleanValue}
-            onChange={handleBooleanValueChange}
-            className="w-3 h-3"
-          />
-          <label htmlFor="cr-bool-value" className="text-xs text-gray-700">
-            {booleanValue ? "Included" : "Excluded"}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-0.5">
+            Setter Type
           </label>
+          <select
+            className="w-full px-2 py-1 text-xs border rounded bg-white"
+            value={setterType}
+            onChange={handleSetterTypeChange}
+          >
+            {Object.values(ScenarioSetterType).map((st) => (
+              <option key={st} value={st}>
+                {SETTER_TYPE_LABELS[st] ?? st}
+              </option>
+            ))}
+          </select>
         </div>
-      ) : (
-        /* Numeric Property Modification */
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-xs font-medium text-gray-700 block mb-0.5">
-              Setter Type
-            </label>
-            <select
-              className="w-full px-2 py-1 text-xs border rounded bg-white"
-              value={setterType}
-              onChange={handleSetterTypeChange}
-            >
-              {Object.values(ScenarioSetterType).map((st) => (
-                <option key={st} value={st}>
-                  {SETTER_TYPE_LABELS[st] ?? st}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-700 block mb-0.5">
-              Value
-            </label>
-            <input
-              type="number"
-              className="w-full px-2 py-1 text-xs border rounded"
-              value={numericValue}
-              onChange={handleNumericValueChange}
-              step="any"
-            />
-          </div>
+        <div>
+          <label className="text-xs font-medium text-gray-700 block mb-0.5">
+            Value
+          </label>
+          <input
+            type="number"
+            className="w-full px-2 py-1 text-xs border rounded"
+            value={numericValue}
+            onChange={handleNumericValueChange}
+            step="any"
+          />
         </div>
-      )}
+      </div>
 
       {/* Description */}
       <div>

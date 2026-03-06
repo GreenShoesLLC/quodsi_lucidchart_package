@@ -17,7 +17,6 @@ export enum ScenarioPropertyName {
     ENTITIES_PER_CREATION = "ENTITIES_PER_CREATION",
 
     // Universal properties
-    INCLUDE = "INCLUDE",
     NAME = "NAME",
 
     // Model-level properties
