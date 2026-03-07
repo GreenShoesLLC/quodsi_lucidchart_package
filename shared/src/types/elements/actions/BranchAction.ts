@@ -35,6 +35,11 @@ export interface BranchAction {
      * Actions to execute if condition evaluates to false
      */
     ifFalse: Action[];
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -49,7 +54,8 @@ export function createBranchAction(
         actionType: ActionType.BRANCH,
         condition: options?.condition ?? null,
         ifTrue: options?.ifTrue ?? [],
-        ifFalse: options?.ifFalse ?? []
+        ifFalse: options?.ifFalse ?? [],
+        stateCondition: options?.stateCondition ?? null
     };
 }
 

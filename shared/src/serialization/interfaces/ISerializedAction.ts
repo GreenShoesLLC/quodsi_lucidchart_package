@@ -21,6 +21,7 @@ export type SerializedActionType =
  */
 export interface ISerializedActionBase {
     actionType: SerializedActionType;
+    stateCondition?: any | null;
 }
 
 /**

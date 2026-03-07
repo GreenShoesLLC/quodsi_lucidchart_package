@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that modifies state values.
@@ -22,15 +23,21 @@ export interface AssignAction {
      * List of state modifications to apply
      */
     modifications: StateModification[];
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
  * Creates an AssignAction
  */
-export function createAssignAction(modifications: StateModification[]): AssignAction {
+export function createAssignAction(modifications: StateModification[], stateCondition?: StateCondition | null): AssignAction {
     return {
         actionType: ActionType.ASSIGN,
-        modifications
+        modifications,
+        stateCondition: stateCondition ?? null
     };
 }
 

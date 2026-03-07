@@ -1,4 +1,5 @@
 import { ActionType } from './ActionType';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that captures resource capacity.
@@ -24,15 +25,21 @@ export interface SeizeAction {
      * ID of the ResourceRequirement that defines what resources to seize
      */
     resourceRequirementId: string;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
  * Creates a SeizeAction
  */
-export function createSeizeAction(resourceRequirementId: string): SeizeAction {
+export function createSeizeAction(resourceRequirementId: string, stateCondition?: StateCondition | null): SeizeAction {
     return {
         actionType: ActionType.SEIZE,
-        resourceRequirementId
+        resourceRequirementId,
+        stateCondition: stateCondition ?? null
     };
 }
 

@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that creates a new entity while the original continues processing.
@@ -41,6 +42,11 @@ export interface CreateAction {
      * State modifications to apply to the new entity
      */
     modifications: StateModification[];
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -56,7 +62,8 @@ export function createCreateAction(
         entityTemplateId: options?.entityTemplateId ?? null,
         destinationId: options?.destinationId ?? null,
         inheritStates: options?.inheritStates ?? [],
-        modifications: options?.modifications ?? []
+        modifications: options?.modifications ?? [],
+        stateCondition: options?.stateCondition ?? null
     };
 }
 

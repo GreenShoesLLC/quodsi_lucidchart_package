@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { Duration } from '../Duration';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that waits for a duration without resource requirements.
@@ -24,15 +25,21 @@ export interface DelayAction {
      * Duration to wait
      */
     duration: Duration;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
  * Creates a DelayAction
  */
-export function createDelayAction(duration: Duration): DelayAction {
+export function createDelayAction(duration: Duration, stateCondition?: StateCondition | null): DelayAction {
     return {
         actionType: ActionType.DELAY,
-        duration
+        duration,
+        stateCondition: stateCondition ?? null
     };
 }
 

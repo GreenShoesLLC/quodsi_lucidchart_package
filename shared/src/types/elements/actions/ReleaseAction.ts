@@ -1,4 +1,5 @@
 import { ActionType } from './ActionType';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that releases previously seized resource capacity.
@@ -23,15 +24,21 @@ export interface ReleaseAction {
      * ID of the ResourceRequirement that defines what resources to release
      */
     resourceRequirementId: string;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
  * Creates a ReleaseAction
  */
-export function createReleaseAction(resourceRequirementId: string): ReleaseAction {
+export function createReleaseAction(resourceRequirementId: string, stateCondition?: StateCondition | null): ReleaseAction {
     return {
         actionType: ActionType.RELEASE,
-        resourceRequirementId
+        resourceRequirementId,
+        stateCondition: stateCondition ?? null
     };
 }
 

@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that replaces the current entity with N new entities.
@@ -55,6 +56,11 @@ export interface SplitAction {
      * If specified, each new entity gets its index stored in this state.
      */
     splitIndexState: string | null;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -74,7 +80,8 @@ export function createSplitAction(
         destinationId: options?.destinationId ?? null,
         inheritStates: options?.inheritStates ?? [],
         modifications: options?.modifications ?? [],
-        splitIndexState: options?.splitIndexState ?? null
+        splitIndexState: options?.splitIndexState ?? null,
+        stateCondition: options?.stateCondition ?? null
     };
 }
 

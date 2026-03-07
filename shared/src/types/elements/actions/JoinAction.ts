@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that waits for entities with matching state value to join.
@@ -57,6 +58,11 @@ export interface JoinAction {
      * State name to store the actual number of entities that were joined
      */
     joinCountState: string | null;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -75,7 +81,8 @@ export function createJoinAction(
         destinationId: options?.destinationId ?? null,
         inheritStates: options?.inheritStates ?? [],
         modifications: options?.modifications ?? [],
-        joinCountState: options?.joinCountState ?? null
+        joinCountState: options?.joinCountState ?? null,
+        stateCondition: options?.stateCondition ?? null
     };
 }
 

@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { Duration } from '../Duration';
 import { StateModification } from '../StateModification';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Composite action that combines resource seizure with a delay.
@@ -46,6 +47,11 @@ export interface DelayWithResourceAction {
      * State modifications to apply during this action
      */
     stateModifications?: StateModification[];
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -57,6 +63,7 @@ export function createDelayWithResourceAction(
         resourceRequirementId?: string | null;
         keepResource?: boolean;
         stateModifications?: StateModification[];
+        stateCondition?: StateCondition | null;
     }
 ): DelayWithResourceAction {
     return {
@@ -64,7 +71,8 @@ export function createDelayWithResourceAction(
         duration,
         resourceRequirementId: options?.resourceRequirementId ?? null,
         keepResource: options?.keepResource ?? false,
-        stateModifications: options?.stateModifications ?? []
+        stateModifications: options?.stateModifications ?? [],
+        stateCondition: options?.stateCondition ?? null
     };
 }
 

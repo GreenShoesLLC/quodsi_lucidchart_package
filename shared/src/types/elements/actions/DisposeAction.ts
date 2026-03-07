@@ -1,4 +1,5 @@
 import { ActionType } from './ActionType';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that terminates an entity early, before it reaches the natural exit point.
@@ -21,6 +22,11 @@ export interface DisposeAction {
      * Action type discriminator
      */
     actionType: ActionType.DISPOSE;
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -28,9 +34,10 @@ export interface DisposeAction {
  *
  * DisposeAction has no parameters - it simply terminates the entity.
  */
-export function createDisposeAction(): DisposeAction {
+export function createDisposeAction(stateCondition?: StateCondition | null): DisposeAction {
     return {
-        actionType: ActionType.DISPOSE
+        actionType: ActionType.DISPOSE,
+        stateCondition: stateCondition ?? null
     };
 }
 

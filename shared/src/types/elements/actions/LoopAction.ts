@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { Action } from './Action';
+import { StateCondition } from '../StateCondition';
 
 /**
  * Action that repeats a set of actions a specified number of times.
@@ -34,6 +35,11 @@ export interface LoopAction {
      * List of actions to repeat
      */
     actions: Action[];
+
+    /**
+     * Optional guard condition — action only executes if condition is met
+     */
+    stateCondition?: StateCondition | null;
 }
 
 /**
@@ -44,12 +50,14 @@ export interface LoopAction {
  */
 export function createLoopAction(
     count: number = 1,
-    actions: Action[] = []
+    actions: Action[] = [],
+    stateCondition?: StateCondition | null
 ): LoopAction {
     return {
         actionType: ActionType.LOOP,
         count,
-        actions
+        actions,
+        stateCondition: stateCondition ?? null
     };
 }
 

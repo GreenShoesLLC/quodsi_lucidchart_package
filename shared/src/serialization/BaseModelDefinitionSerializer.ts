@@ -452,53 +452,59 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
     protected serializeAction(action: Action): ISerializedAction {
         try {
+            let serialized: ISerializedAction;
+
             switch (action.actionType) {
                 case ActionType.ASSIGN:
-                    return {
+                    serialized = {
                         actionType: ActionType.ASSIGN,
                         modifications: (action as AssignAction).modifications.map(m => this.serializeModification(m))
                     };
+                    break;
 
                 case ActionType.SEIZE:
-                    return {
+                    serialized = {
                         actionType: ActionType.SEIZE,
                         resourceRequirementId: (action as SeizeAction).resourceRequirementId
                     };
+                    break;
 
                 case ActionType.RELEASE:
-                    return {
+                    serialized = {
                         actionType: ActionType.RELEASE,
                         resourceRequirementId: (action as ReleaseAction).resourceRequirementId
                     };
+                    break;
 
                 case ActionType.DELAY:
-                    return {
+                    serialized = {
                         actionType: ActionType.DELAY,
                         duration: this.serializeDuration((action as DelayAction).duration)
                     };
+                    break;
 
                 case ActionType.DELAY_WITH_RESOURCE: {
                     const delayWithResource = action as DelayWithResourceAction;
-                    const serialized: ISerializedAction = {
+                    serialized = {
                         actionType: ActionType.DELAY_WITH_RESOURCE,
                         resourceRequirementId: delayWithResource.resourceRequirementId,
                         duration: this.serializeDuration(delayWithResource.duration)
                     };
 
                     if (delayWithResource.keepResource !== undefined) {
-                        serialized.keepResource = delayWithResource.keepResource;
+                        (serialized as any).keepResource = delayWithResource.keepResource;
                     }
 
                     if (delayWithResource.stateModifications && delayWithResource.stateModifications.length > 0) {
-                        serialized.stateModifications = delayWithResource.stateModifications.map(m => this.serializeModification(m));
+                        (serialized as any).stateModifications = delayWithResource.stateModifications.map(m => this.serializeModification(m));
                     }
 
-                    return serialized;
+                    break;
                 }
 
                 case ActionType.SPLIT: {
                     const splitAction = action as SplitAction;
-                    return {
+                    serialized = {
                         actionType: ActionType.SPLIT,
                         count: splitAction.count,
                         entityTemplateId: splitAction.entityTemplateId,
@@ -507,25 +513,28 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                         modifications: splitAction.modifications.map(m => this.serializeModification(m)),
                         splitIndexState: splitAction.splitIndexState
                     };
+                    break;
                 }
 
                 case ActionType.CREATE: {
                     const createAction = action as CreateAction;
-                    return {
+                    serialized = {
                         actionType: ActionType.CREATE,
                         entityTemplateId: createAction.entityTemplateId,
                         destinationId: createAction.destinationId,
                         inheritStates: createAction.inheritStates,
                         modifications: createAction.modifications.map(m => this.serializeModification(m))
                     };
+                    break;
                 }
 
                 case ActionType.DISPOSE:
-                    return { actionType: ActionType.DISPOSE };
+                    serialized = { actionType: ActionType.DISPOSE };
+                    break;
 
                 case ActionType.JOIN: {
                     const joinAction = action as JoinAction;
-                    return {
+                    serialized = {
                         actionType: ActionType.JOIN,
                         matchState: joinAction.matchState,
                         joinCount: joinAction.joinCount,
@@ -535,30 +544,41 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                         modifications: joinAction.modifications.map(m => this.serializeModification(m)),
                         joinCountState: joinAction.joinCountState
                     };
+                    break;
                 }
 
                 case ActionType.LOOP: {
                     const loopAction = action as LoopAction;
-                    return {
+                    serialized = {
                         actionType: ActionType.LOOP,
                         count: loopAction.count,
                         actions: loopAction.actions.map(a => this.serializeAction(a))
                     };
+                    break;
                 }
 
                 case ActionType.BRANCH: {
                     const branchAction = action as BranchAction;
-                    return {
+                    serialized = {
                         actionType: ActionType.BRANCH,
                         condition: branchAction.condition ? branchAction.condition.toJSON() : null,
                         ifTrue: branchAction.ifTrue.map(a => this.serializeAction(a)),
                         ifFalse: branchAction.ifFalse.map(a => this.serializeAction(a))
                     };
+                    break;
                 }
 
                 default:
                     throw new InvalidModelError(`Unknown action type: ${(action as Action).actionType}`);
             }
+
+            // Add optional stateCondition guard
+            if ((action as any).stateCondition) {
+                const sc = (action as any).stateCondition;
+                (serialized as any).stateCondition = typeof sc.toJSON === 'function' ? sc.toJSON() : sc;
+            }
+
+            return serialized;
         } catch (error) {
             throw new SerializationError('Action', 'Failed to serialize action', error instanceof Error ? error : undefined);
         }
