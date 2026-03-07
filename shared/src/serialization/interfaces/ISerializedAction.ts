@@ -9,7 +9,12 @@ export type SerializedActionType =
     | 'RELEASE'
     | 'DELAY'
     | 'DELAY_WITH_RESOURCE'
-    | 'SPLIT';
+    | 'SPLIT'
+    | 'CREATE'
+    | 'DISPOSE'
+    | 'JOIN'
+    | 'LOOP'
+    | 'BRANCH';
 
 /**
  * Base interface for all serialized actions
@@ -75,6 +80,57 @@ export interface ISerializedSplitAction extends ISerializedActionBase {
 }
 
 /**
+ * Serialized CreateAction
+ */
+export interface ISerializedCreateAction extends ISerializedActionBase {
+    actionType: 'CREATE';
+    entityTemplateId: string | null;
+    destinationId: string | null;
+    inheritStates: string[];
+    modifications: any[];
+}
+
+/**
+ * Serialized DisposeAction
+ */
+export interface ISerializedDisposeAction extends ISerializedActionBase {
+    actionType: 'DISPOSE';
+}
+
+/**
+ * Serialized JoinAction
+ */
+export interface ISerializedJoinAction extends ISerializedActionBase {
+    actionType: 'JOIN';
+    matchState: string | null;
+    joinCount: number;
+    combinedTemplateId: string | null;
+    destinationId: string | null;
+    inheritStates: string[];
+    modifications: any[];
+    joinCountState: string | null;
+}
+
+/**
+ * Serialized LoopAction
+ */
+export interface ISerializedLoopAction extends ISerializedActionBase {
+    actionType: 'LOOP';
+    count: number;
+    actions: ISerializedAction[];
+}
+
+/**
+ * Serialized BranchAction
+ */
+export interface ISerializedBranchAction extends ISerializedActionBase {
+    actionType: 'BRANCH';
+    condition: any | null;
+    ifTrue: ISerializedAction[];
+    ifFalse: ISerializedAction[];
+}
+
+/**
  * Union type for all serialized actions
  */
 export type ISerializedAction =
@@ -83,4 +139,9 @@ export type ISerializedAction =
     | ISerializedReleaseAction
     | ISerializedDelayAction
     | ISerializedDelayWithResourceAction
-    | ISerializedSplitAction;
+    | ISerializedSplitAction
+    | ISerializedCreateAction
+    | ISerializedDisposeAction
+    | ISerializedJoinAction
+    | ISerializedLoopAction
+    | ISerializedBranchAction;

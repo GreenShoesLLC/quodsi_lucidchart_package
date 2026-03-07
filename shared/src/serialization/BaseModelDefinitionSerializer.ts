@@ -24,7 +24,12 @@ import {
     ReleaseAction,
     DelayAction,
     DelayWithResourceAction,
-    SplitAction
+    SplitAction,
+    CreateAction,
+    DisposeAction,
+    JoinAction,
+    LoopAction,
+    BranchAction
 } from '../types/elements/actions';
 
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
@@ -501,6 +506,53 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                         inheritStates: splitAction.inheritStates,
                         modifications: splitAction.modifications.map(m => this.serializeModification(m)),
                         splitIndexState: splitAction.splitIndexState
+                    };
+                }
+
+                case ActionType.CREATE: {
+                    const createAction = action as CreateAction;
+                    return {
+                        actionType: ActionType.CREATE,
+                        entityTemplateId: createAction.entityTemplateId,
+                        destinationId: createAction.destinationId,
+                        inheritStates: createAction.inheritStates,
+                        modifications: createAction.modifications.map(m => this.serializeModification(m))
+                    };
+                }
+
+                case ActionType.DISPOSE:
+                    return { actionType: ActionType.DISPOSE };
+
+                case ActionType.JOIN: {
+                    const joinAction = action as JoinAction;
+                    return {
+                        actionType: ActionType.JOIN,
+                        matchState: joinAction.matchState,
+                        joinCount: joinAction.joinCount,
+                        combinedTemplateId: joinAction.combinedTemplateId,
+                        destinationId: joinAction.destinationId,
+                        inheritStates: joinAction.inheritStates,
+                        modifications: joinAction.modifications.map(m => this.serializeModification(m)),
+                        joinCountState: joinAction.joinCountState
+                    };
+                }
+
+                case ActionType.LOOP: {
+                    const loopAction = action as LoopAction;
+                    return {
+                        actionType: ActionType.LOOP,
+                        count: loopAction.count,
+                        actions: loopAction.actions.map(a => this.serializeAction(a))
+                    };
+                }
+
+                case ActionType.BRANCH: {
+                    const branchAction = action as BranchAction;
+                    return {
+                        actionType: ActionType.BRANCH,
+                        condition: branchAction.condition ? branchAction.condition.toJSON() : null,
+                        ifTrue: branchAction.ifTrue.map(a => this.serializeAction(a)),
+                        ifFalse: branchAction.ifFalse.map(a => this.serializeAction(a))
                     };
                 }
 

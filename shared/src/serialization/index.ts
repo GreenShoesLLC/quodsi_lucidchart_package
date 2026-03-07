@@ -29,6 +29,12 @@ export type {
     ISerializedReleaseAction,
     ISerializedDelayAction,
     ISerializedDelayWithResourceAction,
+    ISerializedSplitAction,
+    ISerializedCreateAction,
+    ISerializedDisposeAction,
+    ISerializedJoinAction,
+    ISerializedLoopAction,
+    ISerializedBranchAction,
     SerializedActionType
 } from './interfaces/ISerializedAction';
 export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';

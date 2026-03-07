@@ -308,12 +308,32 @@ const ScenariosAndRunsPanel: React.FC<{
           const existing = currentRuns.find(r => r.id === statusData.scenarioId);
           if (existing) {
             const newRunState = mapStatusToRunState(statusData.status);
-            dispatch({
-              type: 'SIMULATION_RUN_UPDATE_STATUS',
-              simulationRunId: statusData.scenarioId,
-              runState: newRunState,
-              hasResults: statusData.status === 'completed' || statusData.hasResults || false,
-            });
+            // For failed status with error info, update the full run object to include error fields
+            if (newRunState === RunState.RanWithErrors && statusData.error) {
+              dispatch({
+                type: 'SIMULATION_RUNS_SUCCESS',
+                simulationRuns: currentRuns.map(r =>
+                  r.id === statusData.scenarioId
+                    ? {
+                        ...r,
+                        runState: RunState.RanWithErrors,
+                        hasResults: false,
+                        error: statusData.error,
+                        errorType: statusData.errorType,
+                        errorDetails: statusData.errorDetails,
+                        errorSuggestions: statusData.errorSuggestions,
+                      }
+                    : r
+                ),
+              });
+            } else {
+              dispatch({
+                type: 'SIMULATION_RUN_UPDATE_STATUS',
+                simulationRunId: statusData.scenarioId,
+                runState: newRunState,
+                hasResults: statusData.status === 'completed' || statusData.hasResults || false,
+              });
+            }
             // Immediately refresh to get downloadInfo for completed/failed runs
             if (newRunState === RunState.RanSuccessfully || newRunState === RunState.RanWithErrors) {
               const docId = documentIdRef.current;

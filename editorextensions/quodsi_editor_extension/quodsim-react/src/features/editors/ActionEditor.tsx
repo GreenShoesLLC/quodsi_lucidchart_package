@@ -1067,8 +1067,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                     Loop contains {loopAction.actions?.length || 0} action(s)
                   </p>
                   <p className="mt-1 text-blue-700">
-                    Nested action editing is not yet available in the UI.
-                    You can configure nested actions via the model JSON.
+                    This action type is read-only. Nested actions can be configured via model JSON.
                   </p>
                 </div>
               </div>
@@ -1241,8 +1240,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
               <div className="p-2 bg-gray-50 border border-gray-200 rounded">
                 <div className="text-[10px] text-gray-600">
-                  Nested action editing is not yet available in the UI.
-                  You can configure nested actions via the model JSON.
+                  This action type is read-only. Nested actions can be configured via model JSON.
                 </div>
               </div>
             </div>
@@ -1341,7 +1339,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               onChange={(e) => handleActionTypeChange(e.target.value as ActionType)}
               className="w-full px-1 py-0.5 text-xs border rounded bg-white"
             >
-              {(Object.values(ActionType) as ActionType[]).map((type) => (
+              {(Object.values(ActionType) as ActionType[])
+                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH))
+                .map((type) => (
                 <option key={type} value={type}>
                   {ACTION_TYPE_LABELS[type]}
                 </option>

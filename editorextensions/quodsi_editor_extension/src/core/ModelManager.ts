@@ -191,6 +191,12 @@ export class ModelManager {
                     throw new Error(`activities.add is not a function: ${typeof newModelDefinition.activities.add}`);
                 }
                 // ModelDefinitionLogger.logModelDefinition(newModelDefinition)
+
+                // Detect elements deleted from diagram and clean up orphaned references
+                if (this.modelDefinition) {
+                    await this.detectAndCleanupDeletedElements(this.modelDefinition, newModelDefinition, this.currentPage);
+                }
+
                 this.modelDefinition = newModelDefinition;
                 this.changeTracker.modelDefinitionDirty = false;
                 this.changeTracker.lastModelDefinitionUpdate = Date.now();
@@ -374,6 +380,14 @@ export class ModelManager {
             this.debug.log('Entity deletion detected, performing cascading cleanup:', elementId);
             const affectedCount = await this.cleanupEntityReferences(elementId, this.currentPage);
             this.debug.log('Cleaned up entity references:', { affectedCount });
+        }
+
+        // Check if this is an Activity - if so, clean up destination references in actions
+        const existingActivity = modelDef.activities.get(elementId);
+        if (existingActivity) {
+            this.debug.log('Activity deletion detected, performing destination cleanup:', elementId);
+            const affectedCount = await this.cleanupActivityDestinationReferences(elementId, this.currentPage);
+            this.debug.log('Cleaned up activity destination references:', { affectedCount });
         }
 
         // Remove from all list managers
@@ -1243,6 +1257,123 @@ export class ModelManager {
     }
 
     /**
+     * Clean up all action destinationId references to a deleted Activity.
+     * Scans all blocks (Activities) and lines (Connectors) for SPLIT, CREATE, and JOIN
+     * actions whose destinationId matches the deleted Activity ID, and nullifies them.
+     */
+    private async cleanupActivityDestinationReferences(
+        activityId: string,
+        page: PageProxy
+    ): Promise<number> {
+        this.debug.log('Cleaning up destination references to activity:', activityId);
+        let affectedCount = 0;
+
+        // Process all blocks (Activities)
+        for (const [, block] of page.allBlocks) {
+            const elementData = this.storageAdapter.getElementData<any>(block);
+            if (!elementData) continue;
+
+            const typeInfo = this.storageAdapter.getElementType(block);
+            if (typeInfo?.type !== SimulationObjectType.Activity) continue;
+
+            let modified = false;
+
+            if (elementData.actions && Array.isArray(elementData.actions)) {
+                const result = this.cleanActionsActivityDestinationReferences(
+                    elementData.actions,
+                    activityId
+                );
+                elementData.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+
+            if (modified) {
+                this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
+                affectedCount++;
+                this.debug.log('Cleaned activity destination references from Activity:', block.id);
+            }
+        }
+
+        // Process all lines (Connectors)
+        for (const [, line] of page.allLines) {
+            const elementData = this.storageAdapter.getElementData<any>(line);
+            if (!elementData) continue;
+
+            const lineTypeInfo = this.storageAdapter.getElementType(line);
+            if (lineTypeInfo?.type !== SimulationObjectType.Connector) continue;
+
+            let modified = false;
+
+            if (elementData.actions && Array.isArray(elementData.actions)) {
+                const result = this.cleanActionsActivityDestinationReferences(
+                    elementData.actions,
+                    activityId
+                );
+                elementData.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+
+            if (modified) {
+                this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
+                affectedCount++;
+                this.debug.log('Cleaned activity destination references from Connector:', line.id);
+            }
+        }
+
+        return affectedCount;
+    }
+
+    /**
+     * Helper method to clean activity destination references from an actions array.
+     * Handles SPLIT, CREATE, and JOIN actions that have a destinationId field.
+     * Nullifies destinationId when it references the deleted activity.
+     */
+    private cleanActionsActivityDestinationReferences(
+        actions: any[],
+        deletedActivityId: string
+    ): { actions: any[]; modified: boolean } {
+        let modified = false;
+
+        for (const action of actions) {
+            if (!action || !action.actionType) continue;
+
+            // Nullify destinationId for SPLIT, CREATE, JOIN actions referencing the deleted activity
+            if (
+                (action.actionType === 'SPLIT' || action.actionType === 'CREATE' || action.actionType === 'JOIN') &&
+                action.destinationId === deletedActivityId
+            ) {
+                this.debug.debug(`Nullifying ${action.actionType} action destinationId:`, deletedActivityId);
+                action.destinationId = null;
+                modified = true;
+            }
+
+            // Handle BRANCH action - recursively clean nested actions
+            if (action.actionType === 'BRANCH') {
+                if (action.ifTrue && Array.isArray(action.ifTrue)) {
+                    const result = this.cleanActionsActivityDestinationReferences(action.ifTrue, deletedActivityId);
+                    action.ifTrue = result.actions;
+                    if (result.modified) modified = true;
+                }
+
+                if (action.ifFalse && Array.isArray(action.ifFalse)) {
+                    const result = this.cleanActionsActivityDestinationReferences(action.ifFalse, deletedActivityId);
+                    action.ifFalse = result.actions;
+                    if (result.modified) modified = true;
+                }
+            }
+
+            // Handle LOOP action - recursively clean nested actions
+            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+                const result = this.cleanActionsActivityDestinationReferences(action.actions, deletedActivityId);
+                action.actions = result.actions;
+                if (result.modified) modified = true;
+            }
+        }
+
+        return { actions, modified };
+    }
+
+    /**
      * Helper to check if a clause or its sub-clauses reference a specific resource.
      */
     private clauseReferencesResource(clause: any, resourceId: string): boolean {
@@ -1316,6 +1447,47 @@ export class ModelManager {
         }
 
         return deletedRequirementIds;
+    }
+
+    /**
+     * Detects elements that were present in the old model but missing from the new model
+     * (i.e., deleted from the diagram via native deletion, undo, etc.) and runs the
+     * existing cascading cleanup methods to remove orphaned references.
+     */
+    private async detectAndCleanupDeletedElements(
+        oldModel: ModelDefinition,
+        newModel: ModelDefinition,
+        page: PageProxy
+    ): Promise<void> {
+        // Detect deleted Activities → clean destinationId references
+        const newActivityIds = new Set(newModel.activities.getAll().map(a => a.id));
+        for (const oldActivity of oldModel.activities.getAll()) {
+            if (!newActivityIds.has(oldActivity.id)) {
+                this.debug.log('Detected deleted activity during rebuild:', oldActivity.id);
+                await this.cleanupActivityDestinationReferences(oldActivity.id, page);
+            }
+        }
+
+        // Detect deleted Entities → clean generator/activity/action references
+        const newEntityIds = new Set(newModel.entities.getAll().map(e => e.id));
+        for (const oldEntity of oldModel.entities.getAll()) {
+            if (!newEntityIds.has(oldEntity.id)) {
+                this.debug.log('Detected deleted entity during rebuild:', oldEntity.id);
+                await this.cleanupEntityReferences(oldEntity.id, page);
+            }
+        }
+
+        // Detect deleted Resources → clean requirements and action references
+        const newResourceIds = new Set(newModel.resources.getAll().map(r => r.id));
+        for (const oldResource of oldModel.resources.getAll()) {
+            if (!newResourceIds.has(oldResource.id)) {
+                this.debug.log('Detected deleted resource during rebuild:', oldResource.id);
+                const deletedReqIds = await this.cleanupResourceReferences(oldResource.id, page);
+                for (const reqId of deletedReqIds) {
+                    await this.cleanupRequirementReferences(reqId, page);
+                }
+            }
+        }
     }
 
     /**

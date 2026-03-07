@@ -107,9 +107,9 @@ export class SimulationHandler {
         target: 'model-iframe',
         version: '1.0',
         data: {
-          jobId: 'error',
+          jobId: `error-${Date.now()}`,
           documentId: data.documentId,
-          scenarioId: 'error',
+          scenarioId: data.scenarioDefinitionId || 'baseline',
           scenarioName: data.scenarioName || 'Error',
           status: SimulationStatus.FAILED,
           progress: 0,
@@ -146,9 +146,9 @@ export class SimulationHandler {
             target: 'model-iframe',
             version: '1.0',
             data: {
-              jobId: 'error',
+              jobId: `error-${Date.now()}`,
               documentId: data.documentId,
-              scenarioId: 'error',
+              scenarioId: data.scenarioDefinitionId || 'baseline',
               scenarioName: data.scenarioName || 'Error',
               status: SimulationStatus.FAILED,
               progress: 0,
@@ -157,7 +157,7 @@ export class SimulationHandler {
               error: 'Editor client not initialized. Please try again.'
             }
           });
-          
+
           return true;
         }
       }
@@ -179,9 +179,9 @@ export class SimulationHandler {
           target: 'model-iframe',
           version: '1.0',
           data: {
-            jobId: 'error',
+            jobId: `error-${Date.now()}`,
             documentId: data.documentId,
-            scenarioId: 'error',
+            scenarioId: data.scenarioDefinitionId || 'baseline',
             scenarioName: data.scenarioName || 'Error',
             status: SimulationStatus.FAILED,
             progress: 0,
@@ -190,7 +190,7 @@ export class SimulationHandler {
             error: 'No active page found'
           }
         });
-        
+
         return true;
       }
       
@@ -216,9 +216,9 @@ export class SimulationHandler {
               target: 'model-iframe',
               version: '1.0',
               data: {
-                jobId: 'error',
+                jobId: `error-${Date.now()}`,
                 documentId: data.documentId,
-                scenarioId: 'error',
+                scenarioId: data.scenarioDefinitionId || 'baseline',
                 scenarioName: data.scenarioName || 'Error',
                 status: SimulationStatus.FAILED,
                 progress: 0,
@@ -253,9 +253,9 @@ export class SimulationHandler {
           target: 'model-iframe',
           version: '1.0',
           data: {
-            jobId: 'error',
+            jobId: `error-${Date.now()}`,
             documentId: data.documentId,
-            scenarioId: 'error',
+            scenarioId: data.scenarioDefinitionId || 'baseline',
             scenarioName: data.scenarioName || 'Error',
             status: SimulationStatus.FAILED,
             progress: 0,
@@ -435,6 +435,8 @@ export class SimulationHandler {
     } catch (error) {
       console.error('[SimulationHandler] Error handling simulation request:', error);
 
+      const errorScenarioId = data.scenarioDefinitionId || 'baseline';
+
       // Send general error response
       router.send('model', {
         id: msg.id,
@@ -443,15 +445,17 @@ export class SimulationHandler {
         target: 'model-iframe',
         version: '1.0',
         data: {
-          jobId: 'error',
+          jobId: `error-${Date.now()}`,
           documentId: data.documentId,
-          scenarioId: 'error',
+          scenarioId: errorScenarioId,
           scenarioName: data.scenarioName || 'Error',
           status: SimulationStatus.FAILED,
           progress: 0,
           lastChecked: new Date().toISOString(),
           queuedAt: new Date().toISOString(),
-          error: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`
+          error: `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`,
+          errorType: 'SERIALIZATION_ERROR',
+          errorDetails: error instanceof Error ? error.stack : undefined
         }
       });
     }
