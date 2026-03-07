@@ -1818,11 +1818,97 @@ export class ModelManager {
             this.debug.debug('Registering element with model manager');
             await this.registerElement(simObject, element);
 
+            // Auto-convert connected lines to Connectors for Activity/Generator conversions
+            if (
+                element instanceof BlockProxy &&
+                (newType === SimulationObjectType.Activity || newType === SimulationObjectType.Generator)
+            ) {
+                await this.autoConvertConnectedLines(element, page);
+            }
+
             this.debug.log('handleTypeConversion - Completed successfully');
 
         } catch (error) {
             this.debug.error('handleTypeConversion - Error:', error);
             throw error;
+        }
+    }
+
+    /**
+     * Auto-converts connected lines to Connectors when a block is converted to Activity or Generator.
+     * Only converts lines where the other endpoint is already mapped to an Activity or Generator.
+     */
+    private async autoConvertConnectedLines(
+        block: BlockProxy,
+        page: PageProxy
+    ): Promise<void> {
+        for (const [lineId, line] of page.allLines) {
+            try {
+                // Skip lines already mapped to a simulation type
+                if (this.storageAdapter.getElementType(line)) {
+                    continue;
+                }
+
+                const endpoint1 = line.getEndpoint1();
+                const endpoint2 = line.getEndpoint2();
+
+                // Both endpoints must be connected to blocks
+                if (!endpoint1?.connection || !endpoint2?.connection) {
+                    continue;
+                }
+
+                // Determine if this line connects to the just-converted block
+                const ep1Id = endpoint1.connection.id;
+                const ep2Id = endpoint2.connection.id;
+
+                let otherBlockId: string;
+                if (ep1Id === block.id) {
+                    otherBlockId = ep2Id;
+                } else if (ep2Id === block.id) {
+                    otherBlockId = ep1Id;
+                } else {
+                    // Line doesn't connect to this block
+                    continue;
+                }
+
+                // Check if the other block is mapped to Activity or Generator
+                const otherBlock = page.allBlocks.get(otherBlockId);
+                if (!otherBlock) {
+                    continue;
+                }
+                const otherTypeInfo = this.storageAdapter.getElementType(otherBlock);
+                if (
+                    !otherTypeInfo ||
+                    (otherTypeInfo.type !== SimulationObjectType.Activity &&
+                     otherTypeInfo.type !== SimulationObjectType.Generator)
+                ) {
+                    continue;
+                }
+
+                // Convert the line to a Connector
+                this.debug.debug('Auto-converting line to Connector', { lineId });
+
+                const factory = new LucidElementFactory(this.storageAdapter);
+                factory.setLogging(false);
+
+                const platformObject = factory.createPlatformObject(
+                    line,
+                    SimulationObjectType.Connector,
+                    true
+                );
+
+                const connector = platformObject.getSimulationObject() as Connector;
+                connector.sourceId = ep1Id;
+                connector.targetId = ep2Id;
+                connector.weight = 1.0;
+
+                platformObject.updateFromPlatform();
+                await this.registerElement(connector, line);
+
+            } catch (error) {
+                this.debug.error(`Failed to auto-convert line ${lineId}:`, error);
+                // Continue with other lines rather than failing the whole operation
+            }
         }
     }
 
