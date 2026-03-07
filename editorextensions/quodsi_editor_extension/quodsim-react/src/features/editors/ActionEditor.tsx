@@ -269,6 +269,8 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   states,
   onNavigateToModelEditor,
 }) => {
+  const [conditionExpanded, setConditionExpanded] = useState(false);
+
   const getResourceName = (id: string): string => {
     return availableResources.find((r) => r.id === id)?.name || "Unknown";
   };
@@ -438,6 +440,147 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         label="Duration"
         compact={true}
       />
+    );
+  };
+
+  // Render collapsible state condition guard section
+  const renderStateConditionGuard = () => {
+    const allStates: State[] = states?.getAll() || [];
+    const currentCondition = (action as any).stateCondition as StateCondition | null | undefined;
+    const hasCondition = !!currentCondition;
+
+    const conditionSummary = hasCondition
+      ? `When: ${currentCondition!.stateName} ${currentCondition!.comparison} ${currentCondition!.value}`
+      : "No condition (always runs)";
+
+    const comparisonOperators: { value: StateComparison; label: string }[] = [
+      { value: StateComparison.EQUAL, label: "==" },
+      { value: StateComparison.NOT_EQUAL, label: "!=" },
+      { value: StateComparison.GREATER_THAN, label: ">" },
+      { value: StateComparison.GREATER_EQUAL, label: ">=" },
+      { value: StateComparison.LESS_THAN, label: "<" },
+      { value: StateComparison.LESS_EQUAL, label: "<=" },
+    ];
+
+    const handleGuardConditionChange = (
+      field: "stateName" | "comparison" | "value",
+      newValue: string | number | boolean
+    ) => {
+      let updatedCondition: StateCondition;
+
+      if (currentCondition) {
+        if (field === "stateName") {
+          updatedCondition = new StateCondition(newValue as string, currentCondition.comparison, currentCondition.value);
+        } else if (field === "comparison") {
+          updatedCondition = new StateCondition(currentCondition.stateName, newValue as StateComparison, currentCondition.value);
+        } else {
+          updatedCondition = new StateCondition(currentCondition.stateName, currentCondition.comparison, newValue);
+        }
+      } else {
+        updatedCondition = new StateCondition(
+          field === "stateName" ? (newValue as string) : "",
+          field === "comparison" ? (newValue as StateComparison) : StateComparison.EQUAL,
+          field === "value" ? newValue : 0
+        );
+      }
+
+      onChange({ ...action, stateCondition: updatedCondition } as Action);
+    };
+
+    const handleClearCondition = () => {
+      onChange({ ...action, stateCondition: null } as Action);
+      setConditionExpanded(false);
+    };
+
+    // Don't show if no states available
+    if (allStates.length === 0) return null;
+
+    return (
+      <div className="border border-gray-200 rounded">
+        <button
+          type="button"
+          onClick={() => setConditionExpanded(!conditionExpanded)}
+          className="w-full flex items-center justify-between px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+        >
+          <span className="inline-flex items-center gap-1">
+            {conditionExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            <span className={hasCondition ? "font-medium text-blue-700" : ""}>
+              {action.actionType === ActionType.BRANCH ? "Run Condition" : "Condition"}
+            </span>
+          </span>
+          <span className={`text-[10px] ${hasCondition ? "text-blue-600" : "text-gray-400"}`}>
+            {conditionSummary}
+          </span>
+        </button>
+
+        {conditionExpanded && (
+          <div className="px-2 pb-2 space-y-1">
+            <div className="flex gap-1">
+              {/* State Name */}
+              <select
+                value={currentCondition?.stateName || ""}
+                onChange={(e) => handleGuardConditionChange("stateName", e.target.value)}
+                className="flex-1 px-1 py-0.5 text-xs border rounded bg-white"
+              >
+                <option value="">Select state...</option>
+                {allStates.map((state: State) => (
+                  <option key={state.id} value={state.name}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Comparison Operator */}
+              <select
+                value={currentCondition?.comparison || StateComparison.EQUAL}
+                onChange={(e) => handleGuardConditionChange("comparison", e.target.value as StateComparison)}
+                className="w-16 px-1 py-0.5 text-xs border rounded bg-white"
+                disabled={!currentCondition?.stateName}
+              >
+                {comparisonOperators.map((op) => (
+                  <option key={op.value} value={op.value}>
+                    {op.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Value */}
+              <input
+                type="text"
+                value={currentCondition?.value !== undefined ? String(currentCondition.value) : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "true") {
+                    handleGuardConditionChange("value", true);
+                  } else if (val === "false") {
+                    handleGuardConditionChange("value", false);
+                  } else {
+                    const parsed = Number(val);
+                    handleGuardConditionChange("value", isNaN(parsed) ? val : parsed);
+                  }
+                }}
+                placeholder="Value"
+                className="w-20 px-1 py-0.5 text-xs border rounded"
+                disabled={!currentCondition?.stateName}
+              />
+            </div>
+
+            {hasCondition && (
+              <button
+                type="button"
+                onClick={handleClearCondition}
+                className="text-[10px] text-red-500 hover:text-red-700"
+              >
+                Clear condition
+              </button>
+            )}
+
+            <p className="text-[10px] text-gray-400">
+              When set, this action only runs if the entity's state matches the condition.
+            </p>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -1351,6 +1494,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               {ACTION_TYPE_DESCRIPTIONS[action.actionType]}
             </p>
           </div>
+
+          {/* State Condition Guard */}
+          {renderStateConditionGuard()}
 
           {/* Action-specific content */}
           {renderActionContent()}
