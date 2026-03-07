@@ -12,6 +12,8 @@ export { ElementCountsValidation } from './rules/ElementCountsValidation';
 export { EntityValidation } from './rules/EntityValidation';
 export { GeneratorValidation } from './rules/GeneratorValidation';
 export { ResourceValidation } from './rules/ResourceValidation';
+export { validateChangeRequestValue, isIntegerInput } from './rules/ScenarioChangeValidation';
+export type { ChangeRequestValidationResult } from './rules/ScenarioChangeValidation';
 
 // Service exports
 export { ModelValidationService } from './services/ModelValidationService';

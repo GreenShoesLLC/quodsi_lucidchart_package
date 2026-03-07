@@ -6,6 +6,8 @@ import {
   ScenarioSetterType,
   EditorReferenceData,
   generateUUID,
+  validateChangeRequestValue,
+  isIntegerInput,
 } from "@quodsi/shared";
 
 // ============================================================================
@@ -247,9 +249,23 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     onSave(cr);
   };
 
-  // Validation: require a target name for non-MODEL types
+  // Value validation
+  const valueValidation = propertyName
+    ? validateChangeRequestValue(
+        propertyName as ScenarioPropertyName,
+        setterType as ScenarioSetterType,
+        numericValue
+      )
+    : { valid: true };
+  const useIntegerInput = propertyName
+    ? isIntegerInput(propertyName as ScenarioPropertyName, setterType as ScenarioSetterType)
+    : false;
+
+  // Validation: require a target name for non-MODEL types + value validation
   const isValid =
-    propertyName !== "" && (isModelType || targetName !== "");
+    propertyName !== "" &&
+    (isModelType || targetName !== "") &&
+    valueValidation.valid;
 
   // ============================================================================
   // RENDER
@@ -345,11 +361,19 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
           </label>
           <input
             type="number"
-            className="w-full px-2 py-1 text-xs border rounded"
+            className={`w-full px-2 py-1 text-xs border rounded ${
+              valueValidation.error ? "border-red-400" : valueValidation.warning ? "border-yellow-400" : ""
+            }`}
             value={numericValue}
             onChange={handleNumericValueChange}
-            step="any"
+            step={useIntegerInput ? "1" : "any"}
           />
+          {valueValidation.error && (
+            <p className="text-xs text-red-600 mt-0.5">{valueValidation.error}</p>
+          )}
+          {valueValidation.warning && !valueValidation.error && (
+            <p className="text-xs text-yellow-600 mt-0.5">{valueValidation.warning}</p>
+          )}
         </div>
       </div>
 
