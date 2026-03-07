@@ -792,7 +792,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 onChange={handleInputChange}
               >
                 <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
-                <option value={GeneratorType.TIME_DISTRIBUTED}>Time-Distributed</option>
+                <option value={GeneratorType.TIME_DISTRIBUTED} disabled>Time-Distributed (Coming Soon)</option>
               </select>
             </div>
 
