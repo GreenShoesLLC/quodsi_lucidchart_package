@@ -29,11 +29,11 @@ import {
   StateType,
   State,
   StateCondition,
-  StateComparison,
 } from "@quodsi/shared";
 import { X, Edit2, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";
+import { StateConditionEditor } from "./StateConditionEditor";
 import { convertRootClausesToStructure, generatePreview } from "../../utils/resourceRequirementConverter";
 
 interface ActionEditorProps {
@@ -453,37 +453,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
       ? `When: ${currentCondition!.stateName} ${currentCondition!.comparison} ${currentCondition!.value}`
       : "No condition (always runs)";
 
-    const comparisonOperators: { value: StateComparison; label: string }[] = [
-      { value: StateComparison.EQUAL, label: "==" },
-      { value: StateComparison.NOT_EQUAL, label: "!=" },
-      { value: StateComparison.GREATER_THAN, label: ">" },
-      { value: StateComparison.GREATER_EQUAL, label: ">=" },
-      { value: StateComparison.LESS_THAN, label: "<" },
-      { value: StateComparison.LESS_EQUAL, label: "<=" },
-    ];
-
-    const handleGuardConditionChange = (
-      field: "stateName" | "comparison" | "value",
-      newValue: string | number | boolean
-    ) => {
-      let updatedCondition: StateCondition;
-
-      if (currentCondition) {
-        if (field === "stateName") {
-          updatedCondition = new StateCondition(newValue as string, currentCondition.comparison, currentCondition.value);
-        } else if (field === "comparison") {
-          updatedCondition = new StateCondition(currentCondition.stateName, newValue as StateComparison, currentCondition.value);
-        } else {
-          updatedCondition = new StateCondition(currentCondition.stateName, currentCondition.comparison, newValue);
-        }
-      } else {
-        updatedCondition = new StateCondition(
-          field === "stateName" ? (newValue as string) : "",
-          field === "comparison" ? (newValue as StateComparison) : StateComparison.EQUAL,
-          field === "value" ? newValue : 0
-        );
-      }
-
+    const handleGuardConditionUpdate = (updatedCondition: StateCondition) => {
       onChange({ ...action, stateCondition: updatedCondition } as Action);
     };
 
@@ -515,65 +485,13 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
         {conditionExpanded && (
           <div className="px-2 pb-2 space-y-1">
-            <div className="flex gap-1">
-              {/* State Name */}
-              <select
-                value={currentCondition?.stateName || ""}
-                onChange={(e) => handleGuardConditionChange("stateName", e.target.value)}
-                className="flex-1 px-1 py-0.5 text-xs border rounded bg-white"
-              >
-                <option value="">Select state...</option>
-                {allStates.map((state: State) => (
-                  <option key={state.id} value={state.name}>
-                    {state.name}
-                  </option>
-                ))}
-              </select>
-
-              {/* Comparison Operator */}
-              <select
-                value={currentCondition?.comparison || StateComparison.EQUAL}
-                onChange={(e) => handleGuardConditionChange("comparison", e.target.value as StateComparison)}
-                className="w-16 px-1 py-0.5 text-xs border rounded bg-white"
-                disabled={!currentCondition?.stateName}
-              >
-                {comparisonOperators.map((op) => (
-                  <option key={op.value} value={op.value}>
-                    {op.label}
-                  </option>
-                ))}
-              </select>
-
-              {/* Value */}
-              <input
-                type="text"
-                value={currentCondition?.value !== undefined ? String(currentCondition.value) : ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "true") {
-                    handleGuardConditionChange("value", true);
-                  } else if (val === "false") {
-                    handleGuardConditionChange("value", false);
-                  } else {
-                    const parsed = Number(val);
-                    handleGuardConditionChange("value", isNaN(parsed) ? val : parsed);
-                  }
-                }}
-                placeholder="Value"
-                className="w-20 px-1 py-0.5 text-xs border rounded"
-                disabled={!currentCondition?.stateName}
-              />
-            </div>
-
-            {hasCondition && (
-              <button
-                type="button"
-                onClick={handleClearCondition}
-                className="text-[10px] text-red-500 hover:text-red-700"
-              >
-                Clear condition
-              </button>
-            )}
+            <StateConditionEditor
+              condition={currentCondition || null}
+              states={allStates}
+              onChange={handleGuardConditionUpdate}
+              onClear={handleClearCondition}
+              compact={true}
+            />
 
             <p className="text-[10px] text-gray-400">
               When set, this action only runs if the entity's state matches the condition.
@@ -1226,59 +1144,6 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         // Get all states for condition dropdown
         const allStates: State[] = states?.getAll() || [];
 
-        // Available comparison operators
-        const comparisonOperators: { value: StateComparison; label: string }[] = [
-          { value: StateComparison.EQUAL, label: "==" },
-          { value: StateComparison.NOT_EQUAL, label: "!=" },
-          { value: StateComparison.GREATER_THAN, label: ">" },
-          { value: StateComparison.GREATER_EQUAL, label: ">=" },
-          { value: StateComparison.LESS_THAN, label: "<" },
-          { value: StateComparison.LESS_EQUAL, label: "<=" },
-        ];
-
-        const handleConditionChange = (
-          field: "stateName" | "comparison" | "value",
-          newValue: string | number | boolean
-        ) => {
-          const currentCondition = branchAction.condition;
-          let updatedCondition: StateCondition;
-
-          if (currentCondition) {
-            // Update existing condition
-            if (field === "stateName") {
-              updatedCondition = new StateCondition(
-                newValue as string,
-                currentCondition.comparison,
-                currentCondition.value
-              );
-            } else if (field === "comparison") {
-              updatedCondition = new StateCondition(
-                currentCondition.stateName,
-                newValue as StateComparison,
-                currentCondition.value
-              );
-            } else {
-              updatedCondition = new StateCondition(
-                currentCondition.stateName,
-                currentCondition.comparison,
-                newValue
-              );
-            }
-          } else {
-            // Create new condition with defaults
-            updatedCondition = new StateCondition(
-              field === "stateName" ? (newValue as string) : "",
-              field === "comparison" ? (newValue as StateComparison) : StateComparison.EQUAL,
-              field === "value" ? newValue : 0
-            );
-          }
-
-          onChange({
-            ...branchAction,
-            condition: updatedCondition,
-          });
-        };
-
         return (
           <div className="space-y-2">
             {/* Condition Editor */}
@@ -1292,58 +1157,18 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                   </span>
                 </span>
               </label>
-              <div className="flex gap-1">
-                {/* State Name */}
-                <select
-                  value={branchAction.condition?.stateName || ""}
-                  onChange={(e) => handleConditionChange("stateName", e.target.value)}
-                  className={`flex-1 px-1 py-0.5 text-xs border rounded bg-white ${
-                    isConditionMissing ? "border-red-300 bg-red-50" : ""
-                  }`}
-                >
-                  <option value="">Select state...</option>
-                  {allStates.map((state: State) => (
-                    <option key={state.id} value={state.name}>
-                      {state.name}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Comparison Operator */}
-                <select
-                  value={branchAction.condition?.comparison || StateComparison.EQUAL}
-                  onChange={(e) => handleConditionChange("comparison", e.target.value as StateComparison)}
-                  className="w-16 px-1 py-0.5 text-xs border rounded bg-white"
-                  disabled={!branchAction.condition?.stateName}
-                >
-                  {comparisonOperators.map((op) => (
-                    <option key={op.value} value={op.value}>
-                      {op.label}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Value */}
-                <input
-                  type="text"
-                  value={branchAction.condition?.value !== undefined ? String(branchAction.condition.value) : ""}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    // Try to parse as number, boolean, otherwise keep as string
-                    if (val === "true") {
-                      handleConditionChange("value", true);
-                    } else if (val === "false") {
-                      handleConditionChange("value", false);
-                    } else {
-                      const parsed = Number(val);
-                      handleConditionChange("value", isNaN(parsed) ? val : parsed);
-                    }
-                  }}
-                  placeholder="Value"
-                  className="w-20 px-1 py-0.5 text-xs border rounded"
-                  disabled={!branchAction.condition?.stateName}
-                />
-              </div>
+              <StateConditionEditor
+                condition={branchAction.condition || null}
+                states={allStates}
+                onChange={(updatedCondition) => {
+                  onChange({
+                    ...branchAction,
+                    condition: updatedCondition,
+                  });
+                }}
+                compact={true}
+                required={true}
+              />
               {isConditionMissing && (
                 <div className="mt-0.5 text-[10px] text-red-600">
                   Required - set the condition to evaluate

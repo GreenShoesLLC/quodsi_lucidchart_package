@@ -1,15 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import {
   ConnectType,
-  StateComparison,
-  StateCondition,
-  StateType,
   ComponentType,
   StateListManager,
   Connector,
-  getSupportedComparisonsForType,
 } from "@quodsi/shared";
 import { AlertCircle, Info } from "lucide-react";
+import { StateConditionEditor } from "./StateConditionEditor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -233,35 +230,6 @@ export const RoutingConfigurationPanel: React.FC<
     handleConnectorChange(connectorId, { weight });
   };
 
-  // Handle state condition change
-  const handleStateConditionChange = (
-    connectorId: string,
-    field: "stateName" | "comparison" | "value",
-    value: any
-  ) => {
-    const connector = localConnectors.find((c) => c.id === connectorId);
-    if (!connector) return;
-
-    const currentCondition = connector.stateCondition || {
-      stateName: "",
-      comparison: StateComparison.EQUAL,
-      value: "",
-    };
-
-    const updatedCondition = {
-      ...currentCondition,
-      [field]: value,
-    };
-
-    handleConnectorChange(connectorId, {
-      stateCondition: new StateCondition(
-        updatedCondition.stateName,
-        updatedCondition.comparison,
-        updatedCondition.value
-      ),
-    });
-  };
-
   // Handle entity template change
   const handleEntityTemplateChange = (
     connectorId: string,
@@ -270,34 +238,6 @@ export const RoutingConfigurationPanel: React.FC<
     handleConnectorChange(connectorId, {
       entityTemplateUniqueId: entityTemplateId,
     });
-  };
-
-  // Get supported comparisons for a state
-  const getSupportedComparisons = (stateName: string): StateComparison[] => {
-    const state = entityStateOptions.find((s) => s.name === stateName);
-    if (!state) return Object.values(StateComparison);
-
-    return getSupportedComparisonsForType(state.dataType);
-  };
-
-  // Get input type for state value based on state type
-  const getValueInputType = (
-    stateName: string
-  ): { type: string; options?: string[] } => {
-    const state = entityStateOptions.find((s) => s.name === stateName);
-    if (!state) return { type: "text" };
-
-    switch (state.dataType) {
-      case StateType.NUMBER:
-        return { type: "number" };
-      case StateType.BOOLEAN:
-        return { type: "select", options: ["true", "false"] };
-      case StateType.CATEGORY:
-        return { type: "select", options: state.categoryValues || [] };
-      case StateType.STRING:
-      default:
-        return { type: "text" };
-    }
   };
 
   // Render no connectors message
@@ -408,16 +348,7 @@ export const RoutingConfigurationPanel: React.FC<
           {/* Connector list */}
           <div className="space-y-3">
             {localConnectors.map((connector) => {
-              const condition = connector.stateCondition || {
-                stateName: "",
-                comparison: StateComparison.EQUAL,
-                value: "",
-              };
-
-              const valueInput = getValueInputType(condition.stateName);
-              const supportedComparisons = getSupportedComparisons(
-                condition.stateName
-              );
+              const condition = connector.stateCondition || null;
 
               return (
                 <div
@@ -439,111 +370,18 @@ export const RoutingConfigurationPanel: React.FC<
                   </div>
 
                   <div className="p-3 space-y-2">
-                    {/* State name selection */}
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        State
-                      </label>
-                      <select
-                        className="w-full px-2 py-1 text-xs border rounded bg-white"
-                        value={condition.stateName}
-                        onChange={(e) =>
-                          handleStateConditionChange(
-                            connector.id,
-                            "stateName",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="">Select a state...</option>
-                        {entityStateOptions.map((state) => (
-                          <option key={state.id} value={state.name}>
-                            {state.name} ({state.dataType})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Comparison operator */}
-                    {condition.stateName && (
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Comparison
-                        </label>
-                        <select
-                          className="w-full px-2 py-1 text-xs border rounded bg-white"
-                          value={condition.comparison}
-                          onChange={(e) =>
-                            handleStateConditionChange(
-                              connector.id,
-                              "comparison",
-                              e.target.value as StateComparison
-                            )
-                          }
-                        >
-                          {supportedComparisons.map((comp) => (
-                            <option key={comp} value={comp}>
-                              {comp}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {/* Value input */}
-                    {condition.stateName && (
-                      <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Value
-                        </label>
-                        {valueInput.type === "select" ? (
-                          <select
-                            className="w-full px-2 py-1 text-xs border rounded bg-white"
-                            value={String(condition.value)}
-                            onChange={(e) => {
-                              const value =
-                                valueInput.options?.includes("true") &&
-                                valueInput.options?.includes("false")
-                                  ? e.target.value === "true"
-                                  : e.target.value;
-                              handleStateConditionChange(
-                                connector.id,
-                                "value",
-                                value
-                              );
-                            }}
-                          >
-                            <option value="">Select a value...</option>
-                            {valueInput.options?.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type={valueInput.type}
-                            className="w-full px-2 py-1 text-xs border rounded"
-                            value={String(condition.value)}
-                            onChange={(e) => {
-                              const value =
-                                valueInput.type === "number"
-                                  ? parseFloat(e.target.value)
-                                  : e.target.value;
-                              handleStateConditionChange(
-                                connector.id,
-                                "value",
-                                value
-                              );
-                            }}
-                            placeholder={`Enter ${valueInput.type} value...`}
-                          />
-                        )}
-                      </div>
-                    )}
+                    <StateConditionEditor
+                      condition={condition}
+                      states={entityStateOptions}
+                      onChange={(updatedCondition) => {
+                        handleConnectorChange(connector.id, {
+                          stateCondition: updatedCondition,
+                        });
+                      }}
+                    />
 
                     {/* Display condition summary */}
-                    {condition.stateName && condition.value !== "" && (
+                    {condition?.stateName && condition.value !== "" && (
                       <div className="text-xs text-gray-600 bg-white p-2 rounded border mt-2">
                         <span className="font-medium">Condition:</span>{" "}
                         {condition.stateName} {condition.comparison}{" "}
