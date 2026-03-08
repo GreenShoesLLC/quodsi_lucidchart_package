@@ -219,16 +219,16 @@ export class ModelManager {
     public async initializeModel(modelData: Model, pageProxy: PageProxy): Promise<void> {
         this.currentPage = pageProxy;
 
-        // Force a rebuild for initialization
-        this.markModelDirty();
-        await this.ensureModelDefinition();
-
-        // Store the model data
+        // Store the model data FIRST so ensureModelDefinition can read it
         this.storageAdapter.setElementData(
             pageProxy,
             modelData,
             SimulationObjectType.Model
         );
+
+        // Now rebuild from storage (will find the data we just wrote)
+        this.markModelDirty();
+        await this.ensureModelDefinition();
 
         await this.validateModel();
     }

@@ -10,6 +10,7 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 // Simple ID generator for extension context (crypto.getRandomValues not available)
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { SelectionHandler } from './selection';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
@@ -285,21 +286,17 @@ export class ModelOpsHandler {
             }
           });
           
-          // Send both MODEL_CONTEXT and SELECTION_CHANGED messages to force UI refresh
-          // Use immediate Promise execution since timing functions may not be available
-          Promise.resolve().then(() => {
+          // Send context refresh messages using SelectionHandler for proper modelItemData & referenceData
+          Promise.resolve().then(async () => {
             const documentId = document.id;
-            const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
             const title = document.getTitle() || 'Untitled Document';
 
             ModelOpsHandler.logger.log('Sending context refresh messages after conversion:', {
               documentId,
               pageId: currentPage.id,
-              title,
-              isQuodsiModel,
-              hasValidModel: isQuodsiModel
+              title
             });
-            
+
             // Send MODEL_CONTEXT message
             router.send('model', {
               id: generateId(),
@@ -311,38 +308,20 @@ export class ModelOpsHandler {
                 documentId,
                 title,
                 pageId: currentPage.id,
-                isQuodsiModel,
-                hasValidModel: isQuodsiModel
+                isQuodsiModel: true,
+                hasValidModel: true
               }
             });
-            
-            // Send SELECTION_CHANGED message with embedded document context to force complete refresh
-            router.send('model', {
-              id: generateId(),
-              type: EnvelopeMessageType.SELECTION_CHANGED,
-              source: 'host',
-              target: 'model-iframe',
-              version: '1.0',
-              data: {
-                selectionType: 'page',
-                documentId: documentId,
-                hasModel: true,
-                selectionState: {
-                  pageId: currentPage.id,
-                  selectedIds: [],
-                  selectionType: 'page'
-                },
-                documentContext: {
-                  documentId,
-                  pageId: currentPage.id,
-                  title,
-                  isQuodsiModel,
-                  metadata: {}
-                }
-              }
-            });
-            
-            ModelOpsHandler.logger.log('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
+
+            // Use SelectionHandler to send proper SELECTION_CHANGED with modelItemData & referenceData
+            SelectionHandler.setDocumentContext(
+              documentId,
+              currentPage.id,
+              title,
+              true
+            );
+
+            ModelOpsHandler.logger.log('Sent MODEL_CONTEXT and triggered SelectionHandler refresh');
           }).catch(error => {
             ModelOpsHandler.logger.error('Error sending context refresh messages:', error);
           });

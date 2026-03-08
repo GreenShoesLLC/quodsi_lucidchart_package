@@ -14,6 +14,7 @@ import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { SelectionHandler } from './selection';
 
 // Simple ID generator for extension context
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -197,10 +198,9 @@ export class ConversionPreviewHandler {
                 }
             });
 
-            // Send context refresh messages (same pattern as MODEL_CONVERT)
-            Promise.resolve().then(() => {
+            // Send context refresh messages using SelectionHandler for proper modelItemData & referenceData
+            Promise.resolve().then(async () => {
                 const documentId = document.id;
-                const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
                 const title = document.getTitle() || 'Untitled Document';
 
                 // Send MODEL_CONTEXT message
@@ -214,36 +214,18 @@ export class ConversionPreviewHandler {
                         documentId,
                         title,
                         pageId: currentPage.id,
-                        isQuodsiModel,
-                        hasValidModel: isQuodsiModel
+                        isQuodsiModel: true,
+                        hasValidModel: true
                     }
                 });
 
-                // Send SELECTION_CHANGED message to force complete UI refresh
-                router.send('model', {
-                    id: generateId(),
-                    type: EnvelopeMessageType.SELECTION_CHANGED,
-                    source: 'host',
-                    target: 'model-iframe',
-                    version: '1.0',
-                    data: {
-                        selectionType: 'page',
-                        documentId: documentId,
-                        hasModel: true,
-                        selectionState: {
-                            pageId: currentPage.id,
-                            selectedIds: [],
-                            selectionType: 'page'
-                        },
-                        documentContext: {
-                            documentId,
-                            pageId: currentPage.id,
-                            title,
-                            isQuodsiModel,
-                            metadata: {}
-                        }
-                    }
-                });
+                // Use SelectionHandler to send proper SELECTION_CHANGED with modelItemData & referenceData
+                SelectionHandler.setDocumentContext(
+                    documentId,
+                    currentPage.id,
+                    title,
+                    true
+                );
 
                 ConversionPreviewHandler.logger.log('Sent context refresh messages after conversion');
             }).catch(error => {
