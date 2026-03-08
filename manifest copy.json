@@ -1,13 +1,11 @@
 {
   "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
-  "version": "2026.02.21",
+  "version": "2026.03.07",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
       "title": "Quodsim",
-      "products": [
-        "chart"
-      ],
+      "products": ["chart"],
       "codePath": "editorextensions/quodsi_editor_extension/bin/extension.js",
       "scopes": [
         "READ",
@@ -27,12 +25,8 @@
       "title": "Lucid",
       "authorizationUrl": "https://lucid.app/oauth2/authorize",
       "tokenUrl": "https://api.lucid.co/oauth2/token",
-      "scopes": [
-        "offline_access"
-      ],
-      "domainWhitelist": [
-        "https://api.lucid.co"
-      ],
+      "scopes": ["offline_access"],
+      "domainWhitelist": ["https://api.lucid.co"],
       "clientAuthentication": "clientParameters",
       "faviconUrl": "https://cdn-cashy-static-assets.lucidchart.com/marketing/images/LucidSoftwareFavicon.png"
     }

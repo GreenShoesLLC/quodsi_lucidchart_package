@@ -31,6 +31,15 @@ export const ActivityTransforms: TransformationSet = {
                 // Identity transform — establishes version boundary for scenario adoption.
                 // Scenarios are additive (stored in q_scenarios, not per-element).
             })
+        },
+        {
+            sourceVersion: '2026.03.01',
+            targetVersion: '2026.03.08',
+            transform: (data: any) => ({
+                ...data
+                // stateCondition added to all action types as optional field.
+                // Absence means no guard — identity transform for version hop.
+            })
         }
     ]
 };
