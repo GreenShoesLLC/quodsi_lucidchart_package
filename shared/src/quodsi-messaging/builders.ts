@@ -149,45 +149,6 @@ export function createAuthStatusMessage(
   );
 }
 
-/**
- * Create a REQUEST_AUTH_STATUS message
- * 
- * @returns A properly formatted REQUEST_AUTH_STATUS message
- */
-export function createRequestAuthStatusMessage(source: MessageSource = 'model-iframe') {
-  return createBaseMessage(
-    EnvelopeMessageType.REQUEST_AUTH_STATUS,
-    source,
-    'host',
-    {}
-  );
-}
-
-// Subscription message builders
-
-/**
- * Create a SUBSCRIPTION_STATUS message
- * 
- * @param tier Subscription tier
- * @param status Subscription status
- * @param expiresAt Optional expiration timestamp (for in_grace status)
- * @param featureFlags Optional feature flags
- * @returns A properly formatted SUBSCRIPTION_STATUS message
- */
-export function createSubscriptionStatusMessage(
-  tier: EnvelopMessagePayloads[EnvelopeMessageType.SUBSCRIPTION_STATUS]['tier'],
-  status: EnvelopMessagePayloads[EnvelopeMessageType.SUBSCRIPTION_STATUS]['status'],
-  expiresAt?: string,
-  featureFlags?: Record<string, boolean>
-) {
-  return createBaseMessage(
-    EnvelopeMessageType.SUBSCRIPTION_STATUS,
-    'host',
-    'broadcast',
-    { tier, status, expiresAt, featureFlags }
-  );
-}
-
 // Simulation message builders
 
 /**

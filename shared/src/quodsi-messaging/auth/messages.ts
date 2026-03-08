@@ -41,17 +41,6 @@ export interface AuthLogoutMessage extends EnvelopeBase {
 }
 
 /**
- * Sent upon successful completion of the B2C password-reset flow.
- */
-export interface AuthPasswordResetMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.AUTH_PASSWORD_RESET;
-  data: {
-    /** Email address associated with the reset password */
-    email: string;
-  };
-}
-
-/**
  * Broadcast immediately after REACT_APP_READY and whenever login/logout occurs.
  */
 export interface AuthStatusMessage extends EnvelopeBase {
@@ -94,7 +83,6 @@ export interface AuthErrorMessage extends EnvelopeBase {
 export type AuthMessage =
   | AuthLoginSuccessMessage
   | AuthLogoutMessage
-  | AuthPasswordResetMessage
   | AuthStatusMessage
   | AuthRequiredMessage
   | AuthErrorMessage;

@@ -50,19 +50,6 @@ export function useFormSync<T>(
 }
 
 /**
- * DEPRECATED: Use useFormSync instead.
- * Kept for backward compatibility with ActivityEditor.
- */
-export function useActivityFormSync(
-  activityId: string,
-  hasPendingChanges: boolean,
-  extractActivityData: () => any,
-  setLocalActivityDraft: (activity: any) => void
-) {
-  return useFormSync(activityId, hasPendingChanges, extractActivityData, setLocalActivityDraft);
-}
-
-/**
  * Custom hook that detects when a save operation completes and clears the
  * pending changes flag.
  *

@@ -1,4 +1,4 @@
-import { AuthErrorMessage, AuthLoginSuccessMessage, AuthLogoutMessage, AuthMessage, AuthPasswordResetMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
+import { AuthErrorMessage, AuthLoginSuccessMessage, AuthLogoutMessage, AuthMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
 import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
@@ -7,7 +7,6 @@ import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessag
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
-import { SubscriptionChangeRequestMessage, SubscriptionChangeResultMessage, SubscriptionErrorMessage, SubscriptionMessage, SubscriptionStatusMessage } from './subscription/messages';
 import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 
@@ -43,23 +42,11 @@ export {
   QuodsiUserInfo,
   AuthLoginSuccessMessage,
   AuthLogoutMessage,
-  AuthPasswordResetMessage,
   AuthStatusMessage,
   AuthRequiredMessage,
   AuthErrorMessage,
   AuthMessage
 } from './auth/messages';
-
-// Export subscription messages
-export {
-  SubscriptionTier,
-  SubscriptionStatus,
-  SubscriptionStatusMessage,
-  SubscriptionChangeRequestMessage,
-  SubscriptionChangeResultMessage,
-  SubscriptionErrorMessage,
-  SubscriptionMessage
-} from './subscription/messages';
 
 // Export selection messages
 export {
@@ -152,7 +139,6 @@ export {
 export type QuodsiMessage =
   | FrameworkMessage
   | AuthMessage
-  | SubscriptionMessage
   | SelectionMessage
   | SimulationMessage
   | ModelOpsMessage
@@ -169,16 +155,9 @@ export interface EnvelopMessagePayloads {
 
   [EnvelopeMessageType.AUTH_LOGIN_SUCCESS]: AuthLoginSuccessMessage['data'];
   [EnvelopeMessageType.AUTH_LOGOUT]: AuthLogoutMessage['data'];
-  [EnvelopeMessageType.AUTH_PASSWORD_RESET]: AuthPasswordResetMessage['data'];
   [EnvelopeMessageType.AUTH_STATUS]: AuthStatusMessage['data'];
   [EnvelopeMessageType.AUTH_REQUIRED]: AuthRequiredMessage['data'];
   [EnvelopeMessageType.AUTH_ERROR]: AuthErrorMessage['data'];
-  [EnvelopeMessageType.REQUEST_AUTH_STATUS]: {}; // Empty object as payload
-
-  [EnvelopeMessageType.SUBSCRIPTION_STATUS]: SubscriptionStatusMessage['data'];
-  [EnvelopeMessageType.SUBSCRIPTION_CHANGE_REQUEST]: SubscriptionChangeRequestMessage['data'];
-  [EnvelopeMessageType.SUBSCRIPTION_CHANGE_RESULT]: SubscriptionChangeResultMessage['data'];
-  [EnvelopeMessageType.SUBSCRIPTION_ERROR]: SubscriptionErrorMessage['data'];
 
   [EnvelopeMessageType.MODEL_CONTEXT]: ModelContextMessage['data'];
   [EnvelopeMessageType.SELECTION_CHANGED]: SelectionChangedMessage['data'];

@@ -43,5 +43,3 @@ export {
     CollectionImportConfig
 } from './simulationImportService';
 
-// Re-export existing services that might be used by others
-// export * from './simulationData/dataAccessService';

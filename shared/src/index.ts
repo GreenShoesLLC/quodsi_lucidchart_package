@@ -108,7 +108,6 @@ export * from './types/elements/ScenarioListManager';
 export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
-export * from './types/accordion/AccordionState';
 
 // Service exports
 export * from './services/lucidApi';
