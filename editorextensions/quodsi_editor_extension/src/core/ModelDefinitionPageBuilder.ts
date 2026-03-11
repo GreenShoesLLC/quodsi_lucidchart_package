@@ -2,6 +2,7 @@ import { PageProxy, BlockProxy } from 'lucid-extension-sdk';
 import {
     ModelDefinition,
     SimulationObjectType,
+    Resource,
     ResourceRequirement,
     RequirementClause,
     State,
@@ -9,11 +10,16 @@ import {
     TimeDistributedConfig,
     Scenario,
     Duration,
-    VolumePeriodBasis
+    VolumePeriodBasis,
+    SwimLaneQuodsiData,
+    SwimLaneResourceData,
+    ResourceFinancialProperties
 } from '@quodsi/shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelLucid } from '../types/ModelLucid';
+
+const SWIMLANE_DATA_KEY = 'q_swimlane';
 
 export class ModelDefinitionPageBuilder {
     private loggingEnabled: boolean = false;
@@ -199,6 +205,9 @@ export class ModelDefinitionPageBuilder {
 
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
+
+            // Load swimlane-derived resources
+            this.loadSwimLaneResources(page, modelDefinition);
 
             // Process all lines (connectors)
             this.log(`Processing ${page.allLines.size} lines`);
@@ -447,6 +456,75 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final scenarios count: ${modelDefinition.scenarios.size()}`);
+    }
+
+    /**
+     * Loads Resources defined inline in swimlane lane mappings.
+     */
+    private loadSwimLaneResources(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading swimlane-derived resources');
+        let addedCount = 0;
+
+        for (const [blockId, block] of page.allBlocks) {
+            if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
+
+            const dataStr = block.shapeData.get(SWIMLANE_DATA_KEY);
+            if (!dataStr) {
+                this.log(`Swimlane ${blockId} has no q_swimlane data`);
+                continue;
+            }
+
+            let swimlaneData: SwimLaneQuodsiData;
+            try {
+                swimlaneData = JSON.parse(dataStr as string);
+            } catch (error) {
+                this.log(`Error parsing q_swimlane for block ${blockId}: ${error}`, 'error');
+                continue;
+            }
+
+            for (const mapping of swimlaneData.lanes) {
+                if (!mapping) continue;
+
+                const resData: SwimLaneResourceData = mapping.resource;
+
+                // Skip if a Resource with this ID already exists
+                const existing = modelDefinition.resources.getAll().find(r => r.id === resData.id);
+                if (existing) {
+                    this.log(`Swimlane resource ${resData.id} already exists in model, skipping`);
+                    continue;
+                }
+
+                // Create Resource from inline data
+                const resource = new Resource(
+                    resData.id,
+                    resData.name,
+                    resData.capacity,
+                    0, // x — no canvas position for lane-derived resources
+                    0  // y
+                );
+                resource.description = resData.description || '';
+
+                if (resData.financialProperties) {
+                    resource.financialProperties = new ResourceFinancialProperties({
+                        enabled: resData.financialProperties.enabled,
+                        costPerSeize: resData.financialProperties.costPerSeize,
+                        costPerHourUtilized: resData.financialProperties.costPerHourUtilized,
+                        costPerHourIdle: resData.financialProperties.costPerHourIdle,
+                    });
+                }
+
+                modelDefinition.resources.add(resource);
+
+                // Create a default single-resource requirement
+                const requirement = ResourceRequirement.createForSingleResource(resource);
+                modelDefinition.resourceRequirements.add(requirement);
+
+                this.log(`Added swimlane resource: ${resource.name} (lane: ${mapping.titleSnapshot})`);
+                addedCount++;
+            }
+        }
+
+        this.log(`Loaded ${addedCount} swimlane-derived resources`);
     }
 
     /**
