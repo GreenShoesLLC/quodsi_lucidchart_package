@@ -9,6 +9,7 @@ import { ResourceProcessor } from './ResourceProcessor';
 import { GeneratorProcessor } from './GeneratorProcessor';
 import { ModelProcessor } from './ModelProcessor';
 import { UnconvertedProcessor } from './UnconvertedProcessor';
+import { SwimLaneProcessor } from './SwimLaneProcessor';
 
 /**
  * Factory for creating the appropriate selection processor
@@ -32,6 +33,7 @@ export class ProcessorFactory {
     ProcessorFactory.processors.set(SelectionType.MODEL, new ModelProcessor());
     ProcessorFactory.processors.set(SelectionType.UNCONVERTED_ELEMENT, new UnconvertedProcessor());
     ProcessorFactory.processors.set(SelectionType.UNKNOWN_BLOCK, new UnconvertedProcessor());
+    ProcessorFactory.processors.set(SelectionType.SWIMLANE, new SwimLaneProcessor());
   }
   
   /**
