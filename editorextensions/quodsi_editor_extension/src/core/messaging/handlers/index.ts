@@ -12,6 +12,7 @@ import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
+import { DevtoolsHandler } from './devtoolsHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -89,6 +90,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // DevTools messages
+    if (DevtoolsHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Message wasn't handled by any handler
     console.warn(`Unhandled message type: ${msg.type}`);
     return false;
@@ -108,5 +114,6 @@ export {
   StorageHandler,
   SimulationRunHandler,
   ConversionPreviewHandler,
-  ScenarioDefinitionHandler
+  ScenarioDefinitionHandler,
+  DevtoolsHandler
 };

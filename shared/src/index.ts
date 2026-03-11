@@ -125,5 +125,8 @@ export * from './serialization';
 export * from './validation';
 export * from './versioning';
 
+// DevTools types
+export * from './types/devtools/DevToolsTypes';
+
 // New Quodsi Messaging Protocol
 export * from './quodsi-messaging';
