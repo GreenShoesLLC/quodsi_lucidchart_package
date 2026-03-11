@@ -13,6 +13,7 @@ import { SimulationRunHandler } from './simulationRunHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
+import { SwimLaneHandler } from './swimlaneHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -90,6 +91,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Swimlane operations
+    if (SwimLaneHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // DevTools messages
     if (DevtoolsHandler.handleMessage(msg)) {
       return true;
@@ -115,5 +121,6 @@ export {
   SimulationRunHandler,
   ConversionPreviewHandler,
   ScenarioDefinitionHandler,
-  DevtoolsHandler
+  DevtoolsHandler,
+  SwimLaneHandler
 };
