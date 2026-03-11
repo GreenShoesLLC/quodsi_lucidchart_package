@@ -12,5 +12,6 @@ export enum SelectionType {
     ENTITY = 'entity',
     GENERATOR = 'generator',
     RESOURCE = 'resource',
-    MODEL = 'model'
+    MODEL = 'model',
+    SWIMLANE = 'swimlane'
 }
