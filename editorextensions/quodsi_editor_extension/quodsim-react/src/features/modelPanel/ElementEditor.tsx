@@ -17,6 +17,7 @@ import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
 import EntityEditor from "../editors/EntityEditor";
 import ConnectorsEditor from "../editors/ConnectorsEditor";
+import SwimLaneEditor from "../editors/SwimLaneEditor";
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | string;
@@ -67,6 +68,22 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
 
   // Renders the appropriate editor component based on element type
   const renderEditor = () => {
+    // Check for SwimLane type before SimulationObjectType normalization
+    // (SwimLane is not a SimulationObjectType — it's a visual container)
+    if (elementData?.className === 'AdvancedSwimLaneBlock') {
+      const safeElementData = {
+        ...(elementData && typeof elementData === "object" ? elementData : {}),
+        id: elementData?.id || currentElement?.id || "",
+      };
+      return (
+        <SwimLaneEditor
+          elementData={safeElementData}
+          onSave={onSave}
+          referenceData={referenceData}
+        />
+      );
+    }
+
     const safeElementType = getSimulationObjectType(elementType, currentElement, elementData);
 
     // Ensure element data has ID
