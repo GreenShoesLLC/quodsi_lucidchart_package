@@ -44,6 +44,15 @@ export const selectionTypeUtils = {
       itemId: item.id 
     });
 
+    // Check for swimlane blocks BEFORE the unconverted check.
+    // Swimlanes are visual containers, not simulation objects — they use
+    // q_swimlane storage (not q_data), so they'd be classified as "unconverted"
+    // without this early return.
+    if (item instanceof BlockProxy && item.getClassName() === 'AdvancedSwimLaneBlock') {
+      console.log('[selectionTypeUtils] Item is a swimlane block', { itemId: item.id });
+      return SelectionType.SWIMLANE;
+    }
+
     if (modelManager.isUnconvertedElement(item)) {
       console.log('[selectionTypeUtils] Item is unconverted', { 
         itemId: item.id 
