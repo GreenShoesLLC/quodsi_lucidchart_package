@@ -8,6 +8,7 @@ import {
   generateUUID,
   QUODSIM_VERSION
 } from '@quodsi/shared';
+import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
   DocumentProxy,
   PageProxy,
@@ -272,6 +273,10 @@ export class SimulationHandler {
       console.log('[SimulationHandler] Serializing model...');
       const serializer = ModelSerializerFactory.create(modelDefinition);
       const serializedModel = serializer.serialize(modelDefinition);
+
+      // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
+      SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
+
       console.log('[SimulationHandler] Model serialized successfully');
 
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)

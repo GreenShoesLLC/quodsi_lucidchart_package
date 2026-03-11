@@ -10,6 +10,7 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 // Simple ID generator for extension context (crypto.getRandomValues not available)
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import { SelectionHandler } from './selection';
 
 /**
@@ -827,6 +828,10 @@ export class ModelOpsHandler {
         ModelOpsHandler.logger.log('Serializing model...');
         const serializer = ModelSerializerFactory.create(currentModelDef);
         const serializedModel = serializer.serialize(currentModelDef);
+
+        // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
+        SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
+
         ModelOpsHandler.logger.log('Model serialized successfully');
 
         // Send success response with JSON
