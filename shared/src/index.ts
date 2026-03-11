@@ -109,6 +109,13 @@ export * from './types/accordion/ModelElement';
 export * from './types/accordion/ModelStructure';
 export * from './types/accordion/ValidationState';
 
+// Swimlane types
+export {
+  SwimLaneResourceData,
+  SwimLaneLaneMapping,
+  SwimLaneQuodsiData,
+} from './types/swimlane/SwimLaneQuodsiData';
+
 // Service exports
 export * from './services/lucidApi';
 export * from './utils/csvUtils';
