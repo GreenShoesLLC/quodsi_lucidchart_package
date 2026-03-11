@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef } from "react";
 import { X } from "lucide-react";
 import { QUODSI_VERSION, QUODSIM_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
@@ -16,6 +16,31 @@ interface AboutModalProps {
  * Triggered from the 3-dots menu in PanelHeader.
  */
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+  const [clickCount, setClickCount] = useState(0);
+  const [devModeMessage, setDevModeMessage] = useState(false);
+  const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleVersionClick = () => {
+    const newCount = clickCount + 1;
+    setClickCount(newCount);
+
+    // Reset timeout
+    if (clickTimeoutRef.current) {
+      clearTimeout(clickTimeoutRef.current);
+    }
+
+    if (newCount >= 5) {
+      localStorage.setItem('quodsi_devtools', 'true');
+      setDevModeMessage(true);
+      setClickCount(0);
+      setTimeout(() => setDevModeMessage(false), 2000);
+    } else {
+      clickTimeoutRef.current = setTimeout(() => {
+        setClickCount(0);
+      }, 3000);
+    }
+  };
+
   if (!isOpen) return null;
 
   const environment = detectEnvironment();
@@ -52,9 +77,17 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           <div className="text-sm text-gray-600 mt-1">
             Discrete Event Simulation
           </div>
-          <div className="text-xs text-gray-500 mt-3">
+          <div
+            className="text-xs text-gray-500 mt-3 cursor-default select-none"
+            onClick={handleVersionClick}
+          >
             App: {QUODSI_VERSION}
           </div>
+          {devModeMessage && (
+            <div className="text-xs text-green-600 mt-1 font-medium">
+              Developer mode enabled
+            </div>
+          )}
           <div className="text-xs text-gray-500 mt-1">
             Simulation Engine: {QUODSIM_VERSION}
           </div>

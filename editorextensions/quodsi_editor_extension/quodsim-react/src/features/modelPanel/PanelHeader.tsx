@@ -9,6 +9,7 @@ import {
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
+import { DevToolsModal } from "../shared/DevToolsModal";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -41,7 +42,14 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
+  const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
+  const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Check for developer tools flag on mount and when about modal closes
+  useEffect(() => {
+    setDevToolsEnabled(localStorage.getItem('quodsi_devtools') === 'true');
+  }, [aboutModalOpen]);
 
   // Click-outside handler to close menu
   useEffect(() => {
@@ -155,6 +163,18 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             >
               <FileJson className="w-3 h-3 text-gray-500" />
               View Model JSON
+            </button>
+          )}
+          {devToolsEnabled && (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                setDevToolsModalOpen(true);
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            >
+              <Wrench className="w-3 h-3 text-gray-500" />
+              Developer Tools
             </button>
           )}
           <button
@@ -307,6 +327,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <AboutModal
         isOpen={aboutModalOpen}
         onClose={() => setAboutModalOpen(false)}
+      />
+      <DevToolsModal
+        isOpen={devToolsModalOpen}
+        onClose={() => setDevToolsModalOpen(false)}
       />
     </>
   );
