@@ -62,12 +62,19 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         const isAlreadyConverted = storageAdapter.isQuodsiModel(page);
 
         const mappings: ElementMappingPreview[] = [];
+        let swimlaneLaneCount = 0;
 
         // Process all blocks
         for (const [blockId, block] of page.allBlocks) {
             // Skip swimlane container blocks — they're not simulation objects.
             // Their lanes are converted to Resources separately.
             if (block.getClassName() === 'AdvancedSwimLaneBlock') {
+                try {
+                    const lanes = (block as any).getPrimaryLanes();
+                    swimlaneLaneCount += lanes?.length ?? 0;
+                } catch {
+                    // getPrimaryLanes not available; skip lane count for this block
+                }
                 continue;
             }
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
@@ -157,7 +164,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         }
 
         // Calculate summary
-        const summary = this.calculateSummary(mappings);
+        const summary = this.calculateSummary(mappings, swimlaneLaneCount);
 
         return {
             pageId: page.id,
@@ -223,7 +230,7 @@ export class LucidPageAnalyzer extends QuodsiLogger {
     /**
      * Calculates summary counts from the mappings
      */
-    private calculateSummary(mappings: ElementMappingPreview[]): ConversionPreviewSummary {
+    private calculateSummary(mappings: ElementMappingPreview[], swimlaneLaneCount: number = 0): ConversionPreviewSummary {
         const summary: ConversionPreviewSummary = {
             totalBlocks: 0,
             totalLines: 0,
@@ -232,7 +239,8 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             resources: 0,
             entities: 0,
             connectors: 0,
-            skipped: 0
+            skipped: 0,
+            swimlaneLaneCount
         };
 
         for (const mapping of mappings) {

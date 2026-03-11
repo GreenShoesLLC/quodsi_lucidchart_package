@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { MappingTable } from './MappingTable';
+import { AutoMappedSummary } from './AutoMappedSummary';
 
 interface ConversionPreviewPanelProps {
     onRemoveModel?: () => void;
@@ -20,6 +21,9 @@ export const ConversionPreviewPanel: React.FC<ConversionPreviewPanelProps> = ({
         error,
         previewData,
         mergedMappings,
+        dynamicSummary,
+        groupedAutoMapped,
+        unmappedItems,
         closePreview,
         setOverride,
         applyConversion
@@ -71,6 +75,13 @@ export const ConversionPreviewPanel: React.FC<ConversionPreviewPanelProps> = ({
                     X
                 </button>
             </div>
+
+            {/* Auto-mapped summary */}
+            <AutoMappedSummary
+                grouped={groupedAutoMapped}
+                hasUnmappedItems={unmappedItems.length > 0}
+                swimlaneLaneCount={dynamicSummary.swimlaneLaneCount}
+            />
 
             {/* Table content area */}
             <div className="flex-1 overflow-y-auto">

@@ -71,7 +71,8 @@ export function useConversionPreview() {
             resources: 0,
             entities: 0,
             connectors: 0,
-            skipped: 0
+            skipped: 0,
+            swimlaneLaneCount: state.previewData?.summary?.swimlaneLaneCount ?? 0
         };
 
         for (const mapping of mergedMappings) {

@@ -4,6 +4,7 @@ import { GroupedAutoMapped } from '../../messaging/hooks/useConversionPreview';
 interface AutoMappedSummaryProps {
     grouped: GroupedAutoMapped;
     hasUnmappedItems: boolean;
+    swimlaneLaneCount: number;
 }
 
 /**
@@ -12,13 +13,15 @@ interface AutoMappedSummaryProps {
  */
 export const AutoMappedSummary: React.FC<AutoMappedSummaryProps> = ({
     grouped,
-    hasUnmappedItems
+    hasUnmappedItems,
+    swimlaneLaneCount
 }) => {
     const totalAutoMapped =
         grouped.generators.length +
         grouped.activities.length +
         grouped.connectors.length +
-        grouped.skipped.length;
+        grouped.skipped.length +
+        swimlaneLaneCount;
 
     const title = hasUnmappedItems
         ? `Auto-mapped: ${totalAutoMapped} items`
@@ -53,6 +56,12 @@ export const AutoMappedSummary: React.FC<AutoMappedSummaryProps> = ({
                 {grouped.skipped.length > 0 && (
                     <span className="text-gray-400">
                         {grouped.skipped.length} Skipped
+                    </span>
+                )}
+                {swimlaneLaneCount > 0 && (
+                    <span>
+                        {swimlaneLaneCount} Resource{swimlaneLaneCount !== 1 ? 's' : ''}
+                        <span className="text-gray-400 ml-1">(from swimlane lanes)</span>
                     </span>
                 )}
             </div>

@@ -68,6 +68,8 @@ export interface ConversionPreviewSummary {
     entities: number;
     connectors: number;
     skipped: number;
+    /** Number of swimlane lanes that will be auto-converted to Resources */
+    swimlaneLaneCount: number;
 }
 
 /**
