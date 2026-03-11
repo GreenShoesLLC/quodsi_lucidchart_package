@@ -270,10 +270,13 @@ export const ModelPanel: React.FC = () => {
   // Determine if the current element is the Model itself
   const isModelElement = currentElement?.metadata?.type === SimulationObjectType.Model;
 
+  // Swimlanes have their own header; PanelHeader's "unconverted" view is irrelevant
+  const isSwimLane = currentElement?.data?.className === 'AdvancedSwimLaneBlock';
+
   // Main content render
   return (
     <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
-      <PanelHeader
+      {!isSwimLane && <PanelHeader
         modelName={modelName}
         validationState={validationState}
         currentElement={currentElement}
@@ -283,7 +286,7 @@ export const ModelPanel: React.FC = () => {
         diagramElementType={diagramElementType}
         referenceData={referenceData}
         onViewModelJson={handleViewModelJson}
-      />
+      />}
 
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* If current element exists and is either not unconverted or is a Model type */}

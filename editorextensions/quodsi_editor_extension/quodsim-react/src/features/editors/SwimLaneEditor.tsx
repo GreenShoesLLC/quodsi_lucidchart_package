@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Layers, Plus, Loader2 } from "lucide-react";
+import { AccordionSection } from "../shared/AccordionSection";
 import {
   SwimLaneQuodsiData,
   SwimLaneResourceData,
@@ -41,6 +42,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
   const { sendMessage } = useMessaging();
   const [activeLaneIndex, setActiveLaneIndex] = useState(0);
   const [converting, setConverting] = useState(false);
+  const [isAssignmentExpanded, setIsAssignmentExpanded] = useState(true);
   const [swimlaneData, setSwimlaneData] = useState<SwimLaneQuodsiData>(
     elementData.swimlaneData || {
       lanes: elementData.lanes.map(() => null),
@@ -204,27 +206,23 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
         </div>
       </div>
 
-      {/* Lane Tabs */}
-      <div className="flex border-b border-gray-200 overflow-x-auto">
-        {elementData.lanes.map((lane, i) => {
-          const mapping = swimlaneData.lanes[i];
-          return (
-            <button
-              key={i}
-              onClick={() => setActiveLaneIndex(i)}
-              className={`px-3 py-1.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors ${
-                i === activeLaneIndex
-                  ? "border-blue-600 text-blue-600 bg-blue-50"
-                  : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
-            >
-              <span>{lane.title || `Lane ${i}`}</span>
-              {mapping && (
-                <span className="ml-1.5 w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-              )}
-            </button>
-          );
-        })}
+      {/* Lane Selector */}
+      <div className="px-3 py-2 border-b border-gray-200">
+        <label className="block text-xs font-medium text-gray-700 mb-1">Lane</label>
+        <select
+          value={activeLaneIndex}
+          onChange={(e) => setActiveLaneIndex(Number(e.target.value))}
+          className="w-full text-sm border border-gray-300 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+        >
+          {elementData.lanes.map((lane, i) => {
+            const mapping = swimlaneData.lanes[i];
+            return (
+              <option key={i} value={i}>
+                {mapping ? "\u2713 " : ""}{lane.title || `Lane ${i}`}
+              </option>
+            );
+          })}
+        </select>
       </div>
 
       {/* Lane Content */}
@@ -255,10 +253,11 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
           /* Mapped lane — embed ResourceEditor + assignment mode toggle */
           <div className="space-y-4">
             {/* Assignment Mode */}
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Resource Assignment
-              </label>
+            <AccordionSection
+              title="Resource Assignment"
+              isExpanded={isAssignmentExpanded}
+              onToggle={() => setIsAssignmentExpanded(!isAssignmentExpanded)}
+            >
               <div className="space-y-1.5">
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
@@ -293,7 +292,7 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
                   </div>
                 </label>
               </div>
-            </div>
+            </AccordionSection>
 
             {/* Embedded ResourceEditor */}
             <div className="border-t border-gray-200 pt-3">

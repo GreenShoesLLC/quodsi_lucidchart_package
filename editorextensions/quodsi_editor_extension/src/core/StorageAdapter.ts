@@ -15,6 +15,7 @@ export class StorageAdapter {
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly SCENARIOS_KEY = 'q_scenarios';
+    private static readonly SWIMLANE_DATA_KEY = 'q_swimlane';
     private static readonly LOG_PREFIX = '[StorageAdapter]';
     private loggingEnabled: boolean = false;
 
@@ -616,6 +617,25 @@ export class StorageAdapter {
     }
 
     /**
+     * Clears a specific shapeData key from an element, if present.
+     */
+    private clearShapeDataKey(element: ElementProxy, key: string): void {
+        try {
+            const value = element.shapeData.get(key);
+            if (value !== undefined) {
+                try {
+                    element.shapeData.delete(key);
+                } catch {
+                    element.shapeData.set(key, '');
+                }
+                this.log(`Cleared ${key} from element:`, element.id);
+            }
+        } catch (error) {
+            this.logError(`Error clearing ${key}:`, error);
+        }
+    }
+
+    /**
      * Validates that an element has the required q_data storage key
      */
     public validateStorage(element: ElementProxy): boolean {
@@ -640,9 +660,10 @@ export class StorageAdapter {
             this.clearScenarios(page);
             this.clearSkippedElements(page);
 
-            // Clear data from all blocks
+            // Clear data from all blocks (q_data and q_swimlane)
             for (const [, block] of page.allBlocks) {
                 this.clearElementData(block);
+                this.clearShapeDataKey(block, StorageAdapter.SWIMLANE_DATA_KEY);
             }
 
             // Clear data from all lines

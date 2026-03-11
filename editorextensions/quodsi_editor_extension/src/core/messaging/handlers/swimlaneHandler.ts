@@ -2,9 +2,6 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SwimLaneQuodsiData,
-  SwimLaneLaneMapping,
-  Resource,
-  ResourceRequirement,
   generateUUID,
 } from '@quodsi/shared';
 import { router } from '../index';
@@ -96,7 +93,6 @@ export class SwimLaneHandler {
       const client = ModelManager.getClient();
       const viewport = new Viewport(client);
       const currentPage = viewport.getCurrentPage();
-      const modelManager = ModelManager.getInstance();
 
       if (!currentPage) {
         SwimLaneHandler.sendConvertResult(msg.id, data.swimlaneBlockId, data.laneIndex, false, 'No current page');
@@ -109,30 +105,9 @@ export class SwimLaneHandler {
         return;
       }
 
-      // Get current model definition
-      const modelDef = await modelManager.getModelDefinition();
-      if (!modelDef) {
-        SwimLaneHandler.sendConvertResult(msg.id, data.swimlaneBlockId, data.laneIndex, false, 'No model definition');
-        return;
-      }
-
-      // Create the Resource and add to ModelDefinition
+      // Generate resource identity — the full Resource object will be created
+      // during the next model rebuild via loadSwimLaneResources()
       const resourceId = generateUUID();
-      const resource = Resource.createDefault(resourceId);
-      resource.name = data.resourceName;
-
-      modelDef.resources.add(resource);
-
-      // Create default ResourceRequirement (matches ModelManager.registerElement pattern)
-      const requirement = ResourceRequirement.createForSingleResource(resource);
-      modelDef.resourceRequirements.add(requirement);
-
-      SwimLaneHandler.logger.log('Created Resource for lane', {
-        resourceId,
-        resourceName: resource.name,
-        requirementId: requirement.id,
-        laneIndex: data.laneIndex,
-      });
 
       // Read existing q_swimlane data or create new
       const existingStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
@@ -161,15 +136,25 @@ export class SwimLaneHandler {
         assignmentMode: 'runtime-derive',
         resource: {
           id: resourceId,
-          name: resource.name,
-          capacity: resource.capacity,
-          description: resource.description || '',
+          name: data.resourceName,
+          capacity: 1,
+          description: '',
         },
       };
       swimlaneData.lastSyncedAt = new Date().toISOString();
 
       // Persist q_swimlane
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
+
+      // Invalidate model cache so loadSwimLaneResources picks up the new resource
+      const modelManager = ModelManager.getInstance();
+      modelManager.invalidateModelCache();
+
+      SwimLaneHandler.logger.log('Created Resource for lane', {
+        resourceId,
+        resourceName: data.resourceName,
+        laneIndex: data.laneIndex,
+      });
 
       // Send success result with updated swimlaneData so React can update its state
       SwimLaneHandler.sendConvertResult(

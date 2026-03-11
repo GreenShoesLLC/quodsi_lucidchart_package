@@ -509,6 +509,15 @@ export class ModelManager {
         this.markModelDirty();
     }
 
+    /**
+     * Invalidates the cached ModelDefinition so it is rebuilt on next access.
+     * Used by handlers that modify model data outside the normal element CRUD flow
+     * (e.g., swimlane lane-to-resource conversion).
+     */
+    public invalidateModelCache(): void {
+        this.markModelDirty();
+    }
+
     public async getModelDefinition(): Promise<ModelDefinition | null> {
         return await this.ensureModelDefinition();
     }
