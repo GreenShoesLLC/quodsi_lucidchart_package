@@ -66,6 +66,11 @@ export class SwimLaneHandler {
 
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(data.swimlaneData));
 
+      // Invalidate model cache so changes (resource edits, unconverts) are
+      // picked up by loadSwimLaneResources() on next rebuild
+      const modelManager = ModelManager.getInstance();
+      modelManager.invalidateModelCache();
+
       SwimLaneHandler.logger.log('Saved swimlane data', {
         blockId: data.swimlaneBlockId,
         laneCount: data.swimlaneData.lanes.length,

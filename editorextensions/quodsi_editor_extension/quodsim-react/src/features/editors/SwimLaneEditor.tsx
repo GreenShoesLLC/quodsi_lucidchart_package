@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Layers, Plus, Loader2 } from "lucide-react";
+import { Layers, Plus, Loader2, Trash2 } from "lucide-react";
 import { AccordionSection } from "../shared/AccordionSection";
 import {
   SwimLaneQuodsiData,
@@ -90,6 +90,11 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
   const activeMapping = swimlaneData.lanes[activeLaneIndex] || null;
   const activeLane = elementData.lanes[activeLaneIndex];
 
+  // Reset confirmation state when switching lanes
+  useEffect(() => {
+    setConfirmingRemove(false);
+  }, [activeLaneIndex]);
+
   // Resource data is stored inline in the lane mapping
   const activeResource = activeMapping?.resource || null;
 
@@ -106,6 +111,26 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
       resourceName: activeLane.title || `Lane ${activeLane.index} Resource`,
     });
   }, [activeLane, activeLaneIndex, converting, elementData.blockId, sendMessage]);
+
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
+
+  const handleUnconvertLane = useCallback(() => {
+    if (!activeMapping) return;
+
+    const updatedLanes = [...swimlaneData.lanes];
+    updatedLanes[activeLaneIndex] = null;
+    const updatedData: SwimLaneQuodsiData = {
+      lanes: updatedLanes,
+      lastSyncedAt: new Date().toISOString(),
+    };
+    setSwimlaneData(updatedData);
+    setConfirmingRemove(false);
+
+    sendMessage(EnvelopeMessageType.SWIMLANE_UPDATE, {
+      swimlaneBlockId: elementData.blockId,
+      swimlaneData: updatedData,
+    });
+  }, [activeMapping, activeLaneIndex, swimlaneData, elementData.blockId, sendMessage]);
 
   const handleAssignmentModeChange = useCallback((mode: "runtime-derive" | "explicit") => {
     const updatedLanes = [...swimlaneData.lanes];
@@ -311,6 +336,39 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
               <div>Lane index: {activeLane.index}</div>
               <div>Size: {activeLane.size}px</div>
               <div>Resource ID: <code className="text-xs">{activeMapping.resource.id}</code></div>
+            </div>
+
+            {/* Remove Resource */}
+            <div className="border-t border-gray-100 pt-3">
+              {!confirmingRemove ? (
+                <button
+                  onClick={() => setConfirmingRemove(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 rounded transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Remove Resource
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-red-600">
+                    Remove resource mapping from this lane? The resource will be deleted from the model.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleUnconvertLane}
+                      className="px-2.5 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors"
+                    >
+                      Confirm Remove
+                    </button>
+                    <button
+                      onClick={() => setConfirmingRemove(false)}
+                      className="px-2.5 py-1 text-xs font-medium text-gray-600 border border-gray-300 hover:bg-gray-50 rounded transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
