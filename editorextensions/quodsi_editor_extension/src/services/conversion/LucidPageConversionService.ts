@@ -11,8 +11,14 @@ import {
     Resource,
     ResourceRequirement,
     MappingSource,
-    generateUniqueName
+    generateUniqueName,
+    SwimLaneQuodsiData,
+    SwimLaneLaneMapping,
+    SwimLaneResourceData,
+    generateUUID
 } from '@quodsi/shared';
+
+const SWIMLANE_DATA_KEY = 'q_swimlane';
 
 import { StorageAdapter, SkippedElementsRecord } from '../../core/StorageAdapter';
 import { ModelManager } from '../../core/ModelManager';
@@ -362,6 +368,10 @@ export class LucidPageConversionService extends QuodsiLogger {
         const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
         resources += autoResourceCount;
 
+        // Auto-convert swimlane lanes to Resources (same as quick convert)
+        const swimlaneResourceCount = await this.convertSwimLanes(page, usedNamesByType);
+        resources += swimlaneResourceCount;
+
         this.log('Conversion counts:', { activities, generators, resources, connectors });
         return { activities, generators, resources, connectors };
     }
@@ -454,6 +464,10 @@ export class LucidPageConversionService extends QuodsiLogger {
         // Process auto-created resources from Activity resourceName fields
         const autoResourceCount = await this.processAutoCreatedResources(page, usedNamesByType);
         resources += autoResourceCount;
+
+        // Auto-convert swimlane lanes to Resources
+        const swimlaneResourceCount = await this.convertSwimLanes(page, usedNamesByType);
+        resources += swimlaneResourceCount;
 
         return { activities, generators, resources };
     }
@@ -625,6 +639,102 @@ export class LucidPageConversionService extends QuodsiLogger {
 
         this.log(`Created ${createdResources.size} auto-resources`);
         return createdResources.size;
+    }
+
+    /**
+     * Auto-converts swimlane lanes to Resources during page conversion.
+     */
+    private async convertSwimLanes(
+        page: PageProxy,
+        usedNamesByType: Map<SimulationObjectType, Set<string>>
+    ): Promise<number> {
+        this.log('Processing swimlane lanes as Resources');
+        let resourceCount = 0;
+
+        let resourceNames = usedNamesByType.get(SimulationObjectType.Resource);
+        if (!resourceNames) {
+            resourceNames = new Set<string>();
+            usedNamesByType.set(SimulationObjectType.Resource, resourceNames);
+        }
+
+        for (const [blockId, block] of page.allBlocks) {
+            if (block.getClassName() !== 'AdvancedSwimLaneBlock') continue;
+
+            this.log(`Found swimlane block: ${blockId}`);
+
+            const swimlaneProxy = block as any;
+            let lanes: any[];
+            try {
+                lanes = swimlaneProxy.getPrimaryLanes();
+            } catch (e) {
+                this.logError(`Could not get lanes for swimlane ${blockId}:`, e);
+                continue;
+            }
+
+            if (!lanes || lanes.length === 0) {
+                this.log(`Swimlane ${blockId} has no lanes, skipping`);
+                continue;
+            }
+
+            const laneMappings: (SwimLaneLaneMapping | null)[] = [];
+
+            for (let i = 0; i < lanes.length; i++) {
+                const lane = lanes[i];
+                const laneTitle = lane.getTitle() || `Lane ${i}`;
+                const resourceId = generateUUID();
+
+                let resourceName = laneTitle;
+                if (resourceNames.has(resourceName)) {
+                    resourceName = `${laneTitle} (${blockId.substring(0, 6)}-${i})`;
+                }
+                resourceNames.add(resourceName);
+
+                const bb = block.getBoundingBox();
+                const resource = new Resource(
+                    resourceId,
+                    resourceName,
+                    1,
+                    bb.x + bb.w + 50,
+                    bb.y + (i * 60)
+                );
+                resource.description = `Auto-created from swimlane lane: ${laneTitle}`;
+
+                const modelDef = await this.modelManager.getModelDefinition();
+                if (modelDef) {
+                    modelDef.resources.add(resource);
+                    const requirement = ResourceRequirement.createForSingleResource(resource);
+                    modelDef.resourceRequirements.add(requirement);
+                }
+
+                const inlineResource: SwimLaneResourceData = {
+                    id: resourceId,
+                    name: resourceName,
+                    capacity: 1,
+                    description: resource.description,
+                };
+
+                laneMappings.push({
+                    laneId: generateUUID(),
+                    titleSnapshot: laneTitle,
+                    assignmentMode: 'runtime-derive',
+                    resource: inlineResource,
+                });
+
+                resourceCount++;
+                this.log(`Created Resource "${resourceName}" for lane ${i} of swimlane ${blockId}`);
+            }
+
+            const swimlaneData: SwimLaneQuodsiData = {
+                lanes: laneMappings,
+                lastSyncedAt: new Date().toISOString(),
+            };
+            block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(swimlaneData));
+
+            this.log(`Persisted q_swimlane for block ${blockId} with ${laneMappings.length} lane mappings`);
+        }
+
+        this.log(`Auto-converted ${resourceCount} swimlane lanes to Resources`);
+        return resourceCount;
     }
 
     /**

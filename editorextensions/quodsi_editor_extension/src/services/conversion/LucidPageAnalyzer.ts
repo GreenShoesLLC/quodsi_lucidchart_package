@@ -65,6 +65,11 @@ export class LucidPageAnalyzer extends QuodsiLogger {
 
         // Process all blocks
         for (const [blockId, block] of page.allBlocks) {
+            // Skip swimlane container blocks — they're not simulation objects.
+            // Their lanes are converted to Resources separately.
+            if (block.getClassName() === 'AdvancedSwimLaneBlock') {
+                continue;
+            }
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
             const typeInfo = storageAdapter.getElementType(block);
             const currentType = typeInfo?.type ?? null;
@@ -268,7 +273,12 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         page: PageProxy,
         blockAnalysis: Map<string, BlockAnalysis>
     ): void {
-        for (const [blockId] of page.allBlocks) {
+        for (const [blockId, block] of page.allBlocks) {
+            // Skip swimlane container blocks — they're not simulation objects.
+            // Their lanes are converted to Resources separately.
+            if (block.getClassName() === 'AdvancedSwimLaneBlock') {
+                continue;
+            }
             blockAnalysis.set(blockId, {
                 incomingCount: 0,
                 outgoingCount: 0,
