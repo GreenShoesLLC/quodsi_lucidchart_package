@@ -518,6 +518,33 @@ export class ModelManager {
         this.markModelDirty();
     }
 
+    /**
+     * Cleans up ResourceRequirements and actions referencing a deleted resource.
+     * Used for swimlane-derived resources that have no canvas block and cannot
+     * go through removeElement().
+     */
+    public async cleanupDeletedResource(resourceId: string): Promise<void> {
+        if (!this.currentPage) return;
+
+        this.debug.log('Cleaning up deleted swimlane resource:', resourceId);
+
+        // Step 1: Clean up ResourceRequirements referencing this resource
+        const deletedReqIds = await this.cleanupResourceReferences(resourceId, this.currentPage);
+
+        // Step 2: Clean up actions referencing those requirements
+        for (const reqId of deletedReqIds) {
+            await this.cleanupRequirementReferences(reqId, this.currentPage);
+        }
+
+        // Remove from cached model definition if present
+        if (this.modelDefinition) {
+            this.modelDefinition.resources.remove(resourceId);
+            this.modelDefinition.resourceRequirements.remove(resourceId);
+        }
+
+        this.markModelDirty(resourceId);
+    }
+
     public async getModelDefinition(): Promise<ModelDefinition | null> {
         return await this.ensureModelDefinition();
     }

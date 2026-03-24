@@ -2,6 +2,7 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   SwimLaneQuodsiData,
+  SwimLaneLaneMapping,
   generateUUID,
 } from '@quodsi/shared';
 import { router } from '../index';
@@ -10,6 +11,13 @@ import { ModelManager } from '../../ModelManager';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
+
+/** Extract resource IDs from swimlane data for diffing. */
+function extractResourceIds(data: SwimLaneQuodsiData): string[] {
+  return data.lanes
+    .filter((lane): lane is SwimLaneLaneMapping => lane !== null)
+    .map(lane => lane.resource.id);
+}
 
 /**
  * Handler for swimlane lane-resource mapping operations.
@@ -25,7 +33,8 @@ export class SwimLaneHandler {
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.SWIMLANE_UPDATE:
-        SwimLaneHandler.handleUpdate(msg);
+        SwimLaneHandler.handleUpdate(msg)
+          .catch(err => SwimLaneHandler.logger.error('Error in SWIMLANE_UPDATE:', err));
         return true;
       case EnvelopeMessageType.SWIMLANE_CONVERT_LANE:
         SwimLaneHandler.handleConvertLane(msg)
@@ -40,9 +49,11 @@ export class SwimLaneHandler {
   }
 
   /**
-   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode changes)
+   * Handle SWIMLANE_UPDATE: save q_swimlane data (e.g., assignment mode changes,
+   * lane unconverts). When a lane is unconverted, cascades cleanup of
+   * ResourceRequirements and actions that referenced the removed resource.
    */
-  private static handleUpdate(msg: EnvelopeBase): void {
+  private static async handleUpdate(msg: EnvelopeBase): Promise<void> {
     try {
       const data = msg.data as {
         swimlaneBlockId: string;
@@ -64,17 +75,39 @@ export class SwimLaneHandler {
         return;
       }
 
+      // Read OLD swimlane data before overwriting so we can detect removed resources
+      const oldDataStr = block.shapeData.get(SWIMLANE_DATA_KEY) as string | undefined;
+      let oldResourceIds: string[] = [];
+      if (oldDataStr) {
+        try {
+          const oldData: SwimLaneQuodsiData = JSON.parse(oldDataStr);
+          oldResourceIds = extractResourceIds(oldData);
+        } catch { /* ignore parse errors on old data */ }
+      }
+
+      // Write new data
       block.shapeData.set(SWIMLANE_DATA_KEY, JSON.stringify(data.swimlaneData));
+
+      // Detect removed resources and cascade cleanup
+      const newResourceIds = new Set(extractResourceIds(data.swimlaneData));
+      const removedResourceIds = oldResourceIds.filter(id => !newResourceIds.has(id));
+
+      const modelManager = ModelManager.getInstance();
+
+      for (const resourceId of removedResourceIds) {
+        SwimLaneHandler.logger.log('Lane unconverted, cleaning up resource:', resourceId);
+        await modelManager.cleanupDeletedResource(resourceId);
+      }
 
       // Invalidate model cache so changes (resource edits, unconverts) are
       // picked up by loadSwimLaneResources() on next rebuild
-      const modelManager = ModelManager.getInstance();
       modelManager.invalidateModelCache();
 
       SwimLaneHandler.logger.log('Saved swimlane data', {
         blockId: data.swimlaneBlockId,
         laneCount: data.swimlaneData.lanes.length,
         mappedLanes: data.swimlaneData.lanes.filter(l => l !== null).length,
+        removedResources: removedResourceIds.length,
       });
 
       SwimLaneHandler.sendUpdateResult(msg.id, true);
