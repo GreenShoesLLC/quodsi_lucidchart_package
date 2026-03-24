@@ -114,6 +114,7 @@ export {
   SwimLaneResourceData,
   SwimLaneLaneMapping,
   SwimLaneQuodsiData,
+  SwimLaneContainment,
 } from './types/swimlane/SwimLaneQuodsiData';
 
 // Service exports

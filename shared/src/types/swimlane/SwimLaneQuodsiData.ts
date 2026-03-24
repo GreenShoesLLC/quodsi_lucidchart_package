@@ -50,3 +50,17 @@ export interface SwimLaneQuodsiData {
   /** ISO timestamp of last sync */
   lastSyncedAt: string;
 }
+
+/**
+ * Describes which swimlane lane contains a given activity (if any).
+ * Computed at selection time and passed to the React ActivityEditor
+ * so it can display a read-only info banner.
+ */
+export interface SwimLaneContainment {
+  swimlaneBlockId: string;
+  laneIndex: number;
+  laneName: string;
+  resourceId: string;
+  resourceName: string;
+  assignmentMode: 'runtime-derive' | 'explicit';
+}

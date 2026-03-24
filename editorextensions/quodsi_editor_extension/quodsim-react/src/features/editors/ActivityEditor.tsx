@@ -1050,6 +1050,20 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   return (
     <>
       <div className="space-y-2">
+        {/* Swimlane Resource Banner */}
+        {referenceData?.swimLaneContainment && (
+          <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs">
+            <div className="font-medium text-blue-700">
+              Swimlane Resource: {referenceData.swimLaneContainment.resourceName}
+            </div>
+            <div className="text-blue-600 mt-0.5">
+              {referenceData.swimLaneContainment.assignmentMode === 'runtime-derive'
+                ? 'Seize/Release actions auto-injected at simulation time'
+                : 'Explicit assignment mode — manage resource actions manually'}
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation */}
         <div className="border-b bg-gray-50">
           <div className="flex">

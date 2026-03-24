@@ -1,19 +1,9 @@
 import { PageProxy } from 'lucid-extension-sdk';
 import { SwimLaneQuodsiData, ISerializedModel, ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/shared';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
+import { isCenterInBox } from './swimLaneGeometry';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
-
-interface BoundingBox {
-  x: number; y: number; w: number; h: number;
-}
-
-function isCenterInBox(blockBB: BoundingBox, laneBB: BoundingBox): boolean {
-  const cx = blockBB.x + blockBB.w / 2;
-  const cy = blockBB.y + blockBB.h / 2;
-  return cx >= laneBB.x && cx <= laneBB.x + laneBB.w
-      && cy >= laneBB.y && cy <= laneBB.y + laneBB.h;
-}
 
 /**
  * Injects Seize/Release action brackets for swimlane lanes

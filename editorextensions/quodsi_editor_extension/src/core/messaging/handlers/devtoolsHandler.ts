@@ -4,15 +4,9 @@ import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { StorageAdapter } from '../../StorageAdapter';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { isCenterInBox } from '../../../services/swimLaneGeometry';
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-function isBlockInLane(blockBB: { x: number; y: number; w: number; h: number }, laneBB: { x: number; y: number; w: number; h: number }): boolean {
-  const centerX = blockBB.x + blockBB.w / 2;
-  const centerY = blockBB.y + blockBB.h / 2;
-  return centerX >= laneBB.x && centerX <= laneBB.x + laneBB.w
-      && centerY >= laneBB.y && centerY <= laneBB.y + laneBB.h;
-}
 
 /**
  * Handler for DevTools diagnostic operations
@@ -101,7 +95,7 @@ export class DevtoolsHandler {
             for (const block of nonSwimLaneBlockProxies) {
               const blockBB = block.getBoundingBox();
               const blockBox = { x: blockBB.x, y: blockBB.y, w: blockBB.w, h: blockBB.h };
-              if (isBlockInLane(blockBox, laneBB)) {
+              if (isCenterInBox(blockBox, laneBB)) {
                 containedBlocks.push(DevtoolsHandler.buildBlockInfo(block, storageAdapter));
               }
             }

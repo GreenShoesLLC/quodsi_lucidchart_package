@@ -4,6 +4,7 @@ import { ConnectType } from "./elements/ConnectType";
 import { ISerializedTimePattern } from "../serialization/interfaces/ISerializedTimePattern";
 import { ISerializedTimeDistributedConfig } from "../serialization/interfaces/ISerializedTimeDistributedConfig";
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
+import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
 
 /**
  * Reference data for React editors containing model-wide lookup data.
@@ -28,4 +29,5 @@ export interface EditorReferenceData {
     timePatterns?: ISerializedTimePattern[]; // Serialized time pattern definitions
     timeDistributedConfigs?: ISerializedTimeDistributedConfig[]; // Serialized time distributed config definitions
     scenarios?: ISerializedScenario[]; // Serialized scenario definitions
+    swimLaneContainment?: SwimLaneContainment; // Swimlane lane containing the selected activity (if any)
 }
