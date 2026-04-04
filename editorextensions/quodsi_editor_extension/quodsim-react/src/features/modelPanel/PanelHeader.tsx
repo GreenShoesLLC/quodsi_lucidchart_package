@@ -10,7 +10,7 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
-import { getEditorAccentClass } from "../../constants/editorColors";
+import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -205,7 +205,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Row 1: Icon + Model name + Menu */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <Icon className="w-5 h-5 text-blue-600 flex-shrink-0" />
+            <Icon className={`w-5 h-5 ${getEditorIconClass(editorType)} flex-shrink-0`} />
             <span className="text-sm font-semibold text-gray-900 truncate">
               {modelName}
             </span>
@@ -237,7 +237,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* Row 1: Icon + Element name + Menu */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
-            <Icon className="w-5 h-5 text-orange-600 flex-shrink-0" />
+            <Icon className={`w-5 h-5 ${getEditorIconClass(editorType)} flex-shrink-0`} />
             <span className="text-sm font-semibold text-gray-900 truncate">
               {elementName}
             </span>
