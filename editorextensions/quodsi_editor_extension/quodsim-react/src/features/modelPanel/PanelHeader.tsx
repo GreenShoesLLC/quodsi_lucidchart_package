@@ -10,11 +10,13 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
+import { getEditorAccentClass } from "../../constants/editorColors";
 
 interface PanelHeaderProps {
   modelName: string;
   validationState: ValidationState | null;
   currentElement: ExtendedModelItemData | null;
+  editorType: string;
   onRemoveModel?: () => void;
   onOpenDiagramMapping?: () => void;
   onElementTypeChange: (
@@ -33,6 +35,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   modelName,
   validationState,
   currentElement,
+  editorType,
   onRemoveModel,
   onOpenDiagramMapping,
   onElementTypeChange,
@@ -321,7 +324,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
   return (
     <>
-      <div className="p-2 border-b bg-gray-50 shadow-sm space-y-2">
+      <div className={`p-2 border-b bg-gray-50 shadow-sm space-y-2 border-l-[3px] ${getEditorAccentClass(editorType)}`}>
         {renderAdaptiveHeader()}
       </div>
       <AboutModal

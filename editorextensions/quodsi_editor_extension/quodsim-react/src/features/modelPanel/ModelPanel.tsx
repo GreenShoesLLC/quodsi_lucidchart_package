@@ -273,6 +273,12 @@ export const ModelPanel: React.FC = () => {
   // Swimlanes have their own header; PanelHeader's "unconverted" view is irrelevant
   const isSwimLane = currentElement?.data?.className === 'AdvancedSwimLaneBlock';
 
+  // Derive editor type for accent stripe
+  const editorType = !currentElement ||
+    (currentElement.metadata?.type as SimulationObjectType) === SimulationObjectType.Model
+      ? SimulationObjectType.Model
+      : (currentElement.metadata?.type as SimulationObjectType) || SimulationObjectType.Model;
+
   // Main content render
   return (
     <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
@@ -280,6 +286,7 @@ export const ModelPanel: React.FC = () => {
         modelName={modelName}
         validationState={validationState}
         currentElement={currentElement}
+        editorType={editorType}
         onRemoveModel={onRemoveModel}
         onOpenDiagramMapping={openPreview}
         onElementTypeChange={onElementTypeChange}

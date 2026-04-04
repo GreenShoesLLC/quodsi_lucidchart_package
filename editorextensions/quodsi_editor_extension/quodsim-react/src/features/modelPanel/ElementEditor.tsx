@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   SimulationObjectType,
   EditorReferenceData,
@@ -61,6 +61,31 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   onTabChange,
   onSimulate,
 }) => {
+  // Track editor type for fade transition
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const previousEditorTypeRef = useRef<string | null>(null);
+
+  const currentEditorType = elementData?.className === 'AdvancedSwimLaneBlock'
+    ? 'SwimLane'
+    : getSimulationObjectType(elementType, currentElement, elementData);
+
+  useEffect(() => {
+    if (previousEditorTypeRef.current !== null && previousEditorTypeRef.current !== currentEditorType) {
+      setIsTransitioning(true);
+      const timer = setTimeout(() => {
+        setIsTransitioning(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+    previousEditorTypeRef.current = currentEditorType;
+  }, [currentEditorType]);
+
+  useEffect(() => {
+    if (!isTransitioning) {
+      previousEditorTypeRef.current = currentEditorType;
+    }
+  }, [isTransitioning, currentEditorType]);
+
   // Simple cancel handler - no accordion state to manage
   const handleCancel = () => {
     // Editors handle their own cancel behavior
@@ -261,7 +286,10 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   }
 
   return (
-    <div className="bg-white">
+    <div
+      className="bg-white transition-opacity duration-200 ease-in-out"
+      style={{ opacity: isTransitioning ? 0 : 1 }}
+    >
       {editorContent}
     </div>
   );
