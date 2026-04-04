@@ -131,7 +131,7 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 - Azure Functions for data connector
 - Azure Batch for simulation execution
 - Azure Storage for model and results storage
-- Azure AD for authentication (via MSAL)
+- User authentication not yet implemented (Kinde under evaluation; auth messaging protocol exists in shared library)
 
 ### Local Azure Development
 1. Copy `local.settings.json.template` to `local.settings.json` in data connector
