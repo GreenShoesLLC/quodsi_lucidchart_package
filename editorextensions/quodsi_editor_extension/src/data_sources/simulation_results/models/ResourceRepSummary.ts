@@ -23,6 +23,7 @@ export interface ResourceRepSummary {
   average_utilization: number;
   peak_utilization: number;
   current_utilization: number;
+  active_time_pct: number;
   average_wait_time: number;
   max_wait_time: number;
   average_entities: number;
@@ -57,6 +58,7 @@ export function mapToResourceRepSummary(itemFields: MapProxy<string, any>): Reso
     average_utilization: itemFields.get('average_utilization') as number,
     peak_utilization: itemFields.get('peak_utilization') as number,
     current_utilization: itemFields.get('current_utilization') as number,
+    active_time_pct: itemFields.get('active_time_pct') as number,
     average_wait_time: itemFields.get('average_wait_time') as number,
     max_wait_time: itemFields.get('max_wait_time') as number,
     average_entities: itemFields.get('average_entities') as number,

@@ -9,35 +9,35 @@ describe("mergeBarChartData", () => {
   it("returns data unchanged for single scenario", () => {
     const dataMap = new Map([
       ["s1", [
-        { activity_name: "A", utilization_mean: 0.8 },
-        { activity_name: "B", utilization_mean: 0.6 },
+        { activity_name: "A", capacity_utilization_mean: 0.8 },
+        { activity_name: "B", capacity_utilization_mean: 0.6 },
       ]],
     ]);
     const result = mergeBarChartData(
       [scenarios[0]],
       dataMap,
       "activity_name",
-      "utilization_mean"
+      "capacity_utilization_mean"
     );
     expect(result.data).toEqual([
-      { activity_name: "A", utilization_mean: 0.8 },
-      { activity_name: "B", utilization_mean: 0.6 },
+      { activity_name: "A", capacity_utilization_mean: 0.8 },
+      { activity_name: "B", capacity_utilization_mean: 0.6 },
     ]);
-    expect(result.yKeys).toEqual(["utilization_mean"]);
+    expect(result.yKeys).toEqual(["capacity_utilization_mean"]);
   });
 
   it("merges two scenarios into scenario-suffixed columns", () => {
     const dataMap = new Map([
       ["s1", [
-        { activity_name: "A", utilization_mean: 0.8 },
-        { activity_name: "B", utilization_mean: 0.6 },
+        { activity_name: "A", capacity_utilization_mean: 0.8 },
+        { activity_name: "B", capacity_utilization_mean: 0.6 },
       ]],
       ["s2", [
-        { activity_name: "A", utilization_mean: 0.7 },
-        { activity_name: "B", utilization_mean: 0.9 },
+        { activity_name: "A", capacity_utilization_mean: 0.7 },
+        { activity_name: "B", capacity_utilization_mean: 0.9 },
       ]],
     ]);
-    const result = mergeBarChartData(scenarios, dataMap, "activity_name", "utilization_mean");
+    const result = mergeBarChartData(scenarios, dataMap, "activity_name", "capacity_utilization_mean");
     expect(result.data).toEqual([
       { activity_name: "A", "utilization_mean_Baseline": 0.8, "utilization_mean_Scenario 2": 0.7 },
       { activity_name: "B", "utilization_mean_Baseline": 0.6, "utilization_mean_Scenario 2": 0.9 },
@@ -48,14 +48,14 @@ describe("mergeBarChartData", () => {
   it("handles missing items in one scenario", () => {
     const dataMap = new Map([
       ["s1", [
-        { activity_name: "A", utilization_mean: 0.8 },
-        { activity_name: "B", utilization_mean: 0.6 },
+        { activity_name: "A", capacity_utilization_mean: 0.8 },
+        { activity_name: "B", capacity_utilization_mean: 0.6 },
       ]],
       ["s2", [
-        { activity_name: "A", utilization_mean: 0.7 },
+        { activity_name: "A", capacity_utilization_mean: 0.7 },
       ]],
     ]);
-    const result = mergeBarChartData(scenarios, dataMap, "activity_name", "utilization_mean");
+    const result = mergeBarChartData(scenarios, dataMap, "activity_name", "capacity_utilization_mean");
     expect(result.data[1]).toEqual({
       activity_name: "B",
       "utilization_mean_Baseline": 0.6,
@@ -64,7 +64,7 @@ describe("mergeBarChartData", () => {
   });
 
   it("handles empty data map", () => {
-    const result = mergeBarChartData(scenarios, new Map(), "activity_name", "utilization_mean");
+    const result = mergeBarChartData(scenarios, new Map(), "activity_name", "capacity_utilization_mean");
     expect(result.data).toEqual([]);
     expect(result.yKeys).toEqual(["utilization_mean_Baseline", "utilization_mean_Scenario 2"]);
   });
@@ -156,7 +156,7 @@ describe("mergeTableColumns", () => {
 
   const columns = [
     { key: "activity_name", label: "Activity" },
-    { key: "utilization_mean", label: "Utilization" },
+    { key: "capacity_utilization_mean", label: "Utilization" },
     { key: "cycle_time_mean", label: "Cycle Time" },
   ];
 
@@ -186,7 +186,7 @@ describe("mergeTableData", () => {
 
   it("returns data unchanged for single scenario", () => {
     const dataMap = new Map([
-      ["s1", [{ activity_name: "A", utilization_mean: 0.8 }]],
+      ["s1", [{ activity_name: "A", capacity_utilization_mean: 0.8 }]],
     ]);
     const result = mergeTableData([scenarios[0]], dataMap, "activity_name");
     expect(result).toEqual(dataMap.get("s1"));
@@ -195,10 +195,10 @@ describe("mergeTableData", () => {
   it("merges two scenarios into scenario-suffixed fields", () => {
     const dataMap = new Map([
       ["s1", [
-        { activity_name: "A", utilization_mean: 0.8, cycle_time_mean: 5.0 },
+        { activity_name: "A", capacity_utilization_mean: 0.8, cycle_time_mean: 5.0 },
       ]],
       ["s2", [
-        { activity_name: "A", utilization_mean: 0.7, cycle_time_mean: 4.0 },
+        { activity_name: "A", capacity_utilization_mean: 0.7, cycle_time_mean: 4.0 },
       ]],
     ]);
     const result = mergeTableData(scenarios, dataMap, "activity_name");
@@ -214,11 +214,11 @@ describe("mergeTableData", () => {
   it("handles items missing in one scenario", () => {
     const dataMap = new Map([
       ["s1", [
-        { activity_name: "A", utilization_mean: 0.8 },
-        { activity_name: "B", utilization_mean: 0.6 },
+        { activity_name: "A", capacity_utilization_mean: 0.8 },
+        { activity_name: "B", capacity_utilization_mean: 0.6 },
       ]],
       ["s2", [
-        { activity_name: "A", utilization_mean: 0.7 },
+        { activity_name: "A", capacity_utilization_mean: 0.7 },
       ]],
     ]);
     const result = mergeTableData(scenarios, dataMap, "activity_name");

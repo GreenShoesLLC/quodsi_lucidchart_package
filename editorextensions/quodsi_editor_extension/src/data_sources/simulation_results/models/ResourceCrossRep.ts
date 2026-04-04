@@ -10,10 +10,14 @@ export interface ResourceCrossRep {
   scenario_name: string;
   resource_id: string;
   resource_name: string;
-  utilization_mean: number;
-  utilization_min: number;
-  utilization_max: number;
-  utilization_std_dev: number;
+  capacity_utilization_mean: number;
+  capacity_utilization_min: number;
+  capacity_utilization_max: number;
+  capacity_utilization_std_dev: number;
+  active_time_pct_mean: number;
+  active_time_pct_min: number;
+  active_time_pct_max: number;
+  active_time_pct_std_dev: number;
 
   // Cost metrics
   seize_cost_mean: number;
@@ -46,10 +50,14 @@ export function mapToResourceCrossRep(itemFields: MapProxy<string, any>): Resour
     scenario_name: itemFields.get('scenario_name') as string,
     resource_id: itemFields.get('resource_id') as string,
     resource_name: itemFields.get('resource_name') as string,
-    utilization_mean: itemFields.get('utilization_mean') as number,
-    utilization_min: itemFields.get('utilization_min') as number,
-    utilization_max: itemFields.get('utilization_max') as number,
-    utilization_std_dev: itemFields.get('utilization_std_dev') as number,
+    capacity_utilization_mean: itemFields.get('capacity_utilization_mean') as number,
+    capacity_utilization_min: itemFields.get('capacity_utilization_min') as number,
+    capacity_utilization_max: itemFields.get('capacity_utilization_max') as number,
+    capacity_utilization_std_dev: itemFields.get('capacity_utilization_std_dev') as number,
+    active_time_pct_mean: itemFields.get('active_time_pct_mean') as number,
+    active_time_pct_min: itemFields.get('active_time_pct_min') as number,
+    active_time_pct_max: itemFields.get('active_time_pct_max') as number,
+    active_time_pct_std_dev: itemFields.get('active_time_pct_std_dev') as number,
 
     // Cost metrics
     seize_cost_mean: itemFields.get('seize_cost_mean') as number,

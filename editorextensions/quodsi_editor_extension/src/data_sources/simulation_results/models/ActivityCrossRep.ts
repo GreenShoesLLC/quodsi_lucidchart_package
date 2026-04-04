@@ -12,10 +12,16 @@ export interface ActivityCrossRep {
   activity_name: string;
   
   // Utilization metrics
-  utilization_mean: number;
-  utilization_max: number;
-  utilization_std_dev: number;
-  
+  capacity_utilization_mean: number;
+  capacity_utilization_max: number;
+  capacity_utilization_std_dev: number;
+
+  // Active time percentage metrics
+  active_time_pct_mean: number;
+  active_time_pct_min: number;
+  active_time_pct_max: number;
+  active_time_pct_std_dev: number;
+
   // Capacity metrics
   capacity_mean: number;
   capacity_max: number;
@@ -94,10 +100,16 @@ export function mapToActivityCrossRep(itemFields: MapProxy<string, any>): Activi
     activity_name: itemFields.get('activity_name') as string,
     
     // Utilization metrics
-    utilization_mean: itemFields.get('utilization_mean') as number,
-    utilization_max: itemFields.get('utilization_max') as number,
-    utilization_std_dev: itemFields.get('utilization_std_dev') as number,
-    
+    capacity_utilization_mean: itemFields.get('capacity_utilization_mean') as number,
+    capacity_utilization_max: itemFields.get('capacity_utilization_max') as number,
+    capacity_utilization_std_dev: itemFields.get('capacity_utilization_std_dev') as number,
+
+    // Active time percentage metrics
+    active_time_pct_mean: itemFields.get('active_time_pct_mean') as number,
+    active_time_pct_min: itemFields.get('active_time_pct_min') as number,
+    active_time_pct_max: itemFields.get('active_time_pct_max') as number,
+    active_time_pct_std_dev: itemFields.get('active_time_pct_std_dev') as number,
+
     // Capacity metrics
     capacity_mean: itemFields.get('capacity_mean') as number,
     capacity_max: itemFields.get('capacity_max') as number,

@@ -20,7 +20,7 @@ export const requiredColumns = getRequiredColumnsFromType<ActivityRepSummaryData
     'total_captures',
     'total_releases',
     'total_time_in_capture',
-    'utilization_0_to_1'
+    'capacity_utilization'
 ]);
 
 /**
@@ -89,7 +89,8 @@ export async function fetchActivityRepSummary(
                 average_contents: item.average_contents ?? 0,
                 maximum_contents: item.maximum_contents ?? 0,
                 current_contents: item.current_contents ?? 0,
-                utilization_0_to_1: item.utilization_0_to_1 ?? 0,
+                capacity_utilization: item.capacity_utilization ?? 0,
+                active_time_pct: item.active_time_pct ?? 0,
                 average_time_per_entry: item.average_time_per_entry ?? 0,
                 inbound_queue_utilization: item.inbound_queue_utilization ?? 0,
                 outbound_queue_utilization: item.outbound_queue_utilization ?? 0,
@@ -149,7 +150,8 @@ export function prepareActivityRepSummaryUpdate(data: ActivityRepSummaryData[]) 
             average_contents: item.average_contents ?? 0,
             maximum_contents: item.maximum_contents ?? 0,
             current_contents: item.current_contents ?? 0,
-            utilization_0_to_1: item.utilization_0_to_1 ?? 0,
+            capacity_utilization: item.capacity_utilization ?? 0,
+            active_time_pct: item.active_time_pct ?? 0,
             average_time_per_entry: item.average_time_per_entry ?? 0,
             inbound_queue_utilization: item.inbound_queue_utilization ?? 0,
             outbound_queue_utilization: item.outbound_queue_utilization ?? 0,

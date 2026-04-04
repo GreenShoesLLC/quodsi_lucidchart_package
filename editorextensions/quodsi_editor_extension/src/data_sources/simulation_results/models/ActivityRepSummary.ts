@@ -22,7 +22,8 @@ export interface ActivityRepSummary {
   average_contents: number;
   maximum_contents: number;
   current_contents: number;
-  utilization_0_to_1: number;
+  capacity_utilization: number;
+  active_time_pct: number;
   throughput_rate: number;
   average_time_per_entry: number;
   inbound_queue_utilization: number;
@@ -61,7 +62,8 @@ export function mapToActivityRepSummary(itemFields: MapProxy<string, any>): Acti
     average_contents: itemFields.get('average_contents') as number,
     maximum_contents: itemFields.get('maximum_contents') as number,
     current_contents: itemFields.get('current_contents') as number,
-    utilization_0_to_1: itemFields.get('utilization_0_to_1') as number,
+    capacity_utilization: itemFields.get('capacity_utilization') as number,
+    active_time_pct: itemFields.get('active_time_pct') as number,
     throughput_rate: itemFields.get('throughput_rate') as number,
     average_time_per_entry: itemFields.get('average_time_per_entry') as number,
     inbound_queue_utilization: itemFields.get('inbound_queue_utilization') as number,

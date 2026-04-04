@@ -11,10 +11,16 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         { name: "activity_name", type: ScalarFieldTypeEnum.STRING },
         
         // Utilization metrics
-        { name: "utilization_mean", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "utilization_max", type: ScalarFieldTypeEnum.NUMBER },
-        { name: "utilization_std_dev", type: ScalarFieldTypeEnum.NUMBER },
-        
+        { name: "capacity_utilization_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "capacity_utilization_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "capacity_utilization_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+
+        // Active time percentage metrics
+        { name: "active_time_pct_mean", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "active_time_pct_min", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "active_time_pct_max", type: ScalarFieldTypeEnum.NUMBER },
+        { name: "active_time_pct_std_dev", type: ScalarFieldTypeEnum.NUMBER },
+
         // Capacity metrics
         { name: "capacity_mean", type: ScalarFieldTypeEnum.NUMBER },
         { name: "capacity_max", type: ScalarFieldTypeEnum.NUMBER },
@@ -87,10 +93,16 @@ export const ActivityCrossRepSchema: SchemaDefinition = {
         'activity_name': 'Activity Name',
         
         // Utilization metrics
-        'utilization_mean': 'Mean Utilization',
-        'utilization_max': 'Max Utilization',
-        'utilization_std_dev': 'Utilization Std Dev',
-        
+        'capacity_utilization_mean': 'Mean Utilization',
+        'capacity_utilization_max': 'Max Utilization',
+        'capacity_utilization_std_dev': 'Utilization Std Dev',
+
+        // Active time percentage metrics
+        'active_time_pct_mean': 'Active Time % Mean',
+        'active_time_pct_min': 'Active Time % Min',
+        'active_time_pct_max': 'Active Time % Max',
+        'active_time_pct_std_dev': 'Active Time % Std Dev',
+
         // Capacity metrics
         'capacity_mean': 'Mean Capacity',
         'capacity_max': 'Max Capacity',

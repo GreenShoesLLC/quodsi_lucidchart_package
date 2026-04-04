@@ -12,10 +12,16 @@ export interface ResourceCrossRepData {
     resource_name: string;
 
     // Utilization metrics
-    utilization_mean: number;
-    utilization_min: number;
-    utilization_max: number;
-    utilization_std_dev: number;
+    capacity_utilization_mean: number;
+    capacity_utilization_min: number;
+    capacity_utilization_max: number;
+    capacity_utilization_std_dev: number;
+
+    // Active time metrics
+    active_time_pct_mean: number;
+    active_time_pct_min: number;
+    active_time_pct_max: number;
+    active_time_pct_std_dev: number;
 
     // Cost metrics
     seize_cost_mean: number;

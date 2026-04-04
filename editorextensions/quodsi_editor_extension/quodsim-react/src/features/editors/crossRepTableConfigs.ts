@@ -30,18 +30,38 @@ export const activityColumns: TableColumn[] = [
     label: "Name",
   },
   {
-    key: "utilization_mean",
+    key: "capacity_utilization_mean",
     label: "Util %",
     format: formatPercent,
   },
   {
-    key: "utilization_max",
+    key: "capacity_utilization_max",
     label: "Max %",
     format: formatPercent,
   },
   {
-    key: "utilization_std_dev",
+    key: "capacity_utilization_std_dev",
     label: "StdDev",
+    format: (v) => formatDecimal(v, 3),
+  },
+  {
+    key: "active_time_pct_mean",
+    label: "Active %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_min",
+    label: "Active Min %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_max",
+    label: "Active Max %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_std_dev",
+    label: "Active StdDev",
     format: (v) => formatDecimal(v, 3),
   },
   {
@@ -234,23 +254,43 @@ export const resourceColumns: TableColumn[] = [
     label: "Name",
   },
   {
-    key: "utilization_mean",
+    key: "capacity_utilization_mean",
     label: "Util %",
     format: formatPercent,
   },
   {
-    key: "utilization_min",
+    key: "capacity_utilization_min",
     label: "Min %",
     format: formatPercent,
   },
   {
-    key: "utilization_max",
+    key: "capacity_utilization_max",
     label: "Max %",
     format: formatPercent,
   },
   {
-    key: "utilization_std_dev",
+    key: "capacity_utilization_std_dev",
     label: "StdDev",
+    format: (v) => formatDecimal(v, 3),
+  },
+  {
+    key: "active_time_pct_mean",
+    label: "Active %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_min",
+    label: "Active Min %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_max",
+    label: "Active Max %",
+    format: formatPercent,
+  },
+  {
+    key: "active_time_pct_std_dev",
+    label: "Active StdDev",
     format: (v) => formatDecimal(v, 3),
   },
   {

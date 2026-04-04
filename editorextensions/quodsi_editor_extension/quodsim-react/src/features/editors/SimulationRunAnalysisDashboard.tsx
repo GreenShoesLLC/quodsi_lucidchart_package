@@ -63,9 +63,12 @@ const formatPercent = (value: number | null | undefined): string => {
 // Metric options for chart by data type
 const metricOptions: Record<string, { value: string; label: string }[]> = {
   activity: [
-    { value: "utilization_mean", label: "Utilization (Mean)" },
-    { value: "utilization_max", label: "Utilization (Max)" },
-    { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
+    { value: "capacity_utilization_mean", label: "Capacity Utilization (Mean)" },
+    { value: "capacity_utilization_max", label: "Capacity Utilization (Max)" },
+    { value: "capacity_utilization_std_dev", label: "Capacity Utilization (Std Dev)" },
+    { value: "active_time_pct_mean", label: "Active Time % (Mean)" },
+    { value: "active_time_pct_max", label: "Active Time % (Max)" },
+    { value: "active_time_pct_std_dev", label: "Active Time % (Std Dev)" },
     { value: "cycle_time_mean", label: "Cycle Time (Mean)" },
     { value: "cycle_time_median", label: "Cycle Time (Median)" },
     {
@@ -98,10 +101,14 @@ const metricOptions: Record<string, { value: string; label: string }[]> = {
     { value: "peak_wip_mean", label: "Peak WIP" },
   ],
   resource: [
-    { value: "utilization_mean", label: "Utilization (Mean)" },
-    { value: "utilization_min", label: "Utilization (Min)" },
-    { value: "utilization_max", label: "Utilization (Max)" },
-    { value: "utilization_std_dev", label: "Utilization (Std Dev)" },
+    { value: "capacity_utilization_mean", label: "Capacity Utilization (Mean)" },
+    { value: "capacity_utilization_min", label: "Capacity Utilization (Min)" },
+    { value: "capacity_utilization_max", label: "Capacity Utilization (Max)" },
+    { value: "capacity_utilization_std_dev", label: "Capacity Utilization (Std Dev)" },
+    { value: "active_time_pct_mean", label: "Active Time % (Mean)" },
+    { value: "active_time_pct_min", label: "Active Time % (Min)" },
+    { value: "active_time_pct_max", label: "Active Time % (Max)" },
+    { value: "active_time_pct_std_dev", label: "Active Time % (Std Dev)" },
     { value: "seize_cost_mean", label: "Seize Cost" },
     { value: "utilization_cost_mean", label: "Utilization Cost" },
     { value: "idle_cost_mean", label: "Idle Cost" },
@@ -169,7 +176,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("both");
   const [zipCopied, setZipCopied] = useState<boolean>(false);
   const [selectedMetric, setSelectedMetric] =
-    useState<string>("utilization_mean");
+    useState<string>("capacity_utilization_mean");
 
   // Expanded activity for timeseries small multiples view
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
@@ -735,7 +742,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                         {activity.activity_name}
                       </td>
                       <td className="px-2 py-1.5 text-right">
-                        {formatPercent(activity.utilization_mean)}
+                        {formatPercent(activity.capacity_utilization_mean)}
                       </td>
                       <td className="px-2 py-1.5 text-right">
                         {formatNumber(activity.cycle_time_mean, 1)}
@@ -800,7 +807,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                         {resource.resource_name}
                       </td>
                       <td className="px-2 py-1.5 text-right">
-                        {formatPercent(resource.utilization_mean)}
+                        {formatPercent(resource.capacity_utilization_mean)}
                       </td>
                       <td className="px-2 py-1.5 text-right">
                         {formatNumber(resource.total_cost_mean, 2)}
@@ -888,7 +895,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left px-2 py-1.5 font-medium text-gray-600">Activity</th>
                   {[
-                    { key: "utilization_mean", label: "Util", format: formatPercent },
+                    { key: "capacity_utilization_mean", label: "Util", format: formatPercent },
                     { key: "cycle_time_mean", label: "Cycle", format: (v: number | null | undefined) => formatNumber(v, 1) },
                   ].map((metric, mIdx) =>
                     selectedScenarios.map((s) => (
@@ -910,7 +917,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
               <tbody>
                 {(() => {
                   const activityMetrics = [
-                    { key: "utilization_mean", format: formatPercent },
+                    { key: "capacity_utilization_mean", format: formatPercent },
                     { key: "cycle_time_mean", format: (v: number | null | undefined) => formatNumber(v, 1) },
                   ];
                   const merged = mergeTableData(selectedScenarios, activityDataMap, "activity_name");
@@ -956,7 +963,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="text-left px-2 py-1.5 font-medium text-gray-600">Resource</th>
                   {[
-                    { key: "utilization_mean", label: "Util", format: formatPercent },
+                    { key: "capacity_utilization_mean", label: "Util", format: formatPercent },
                     { key: "total_cost_mean", label: "Cost", format: (v: number | null | undefined) => formatNumber(v, 2) },
                   ].map((metric, mIdx) =>
                     selectedScenarios.map((s) => (
@@ -978,7 +985,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
               <tbody>
                 {(() => {
                   const resourceMetrics = [
-                    { key: "utilization_mean", format: formatPercent },
+                    { key: "capacity_utilization_mean", format: formatPercent },
                     { key: "total_cost_mean", format: (v: number | null | undefined) => formatNumber(v, 2) },
                   ];
                   const merged = mergeTableData(selectedScenarios, resourceDataMap, "resource_name");
@@ -1018,11 +1025,11 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
 
   // Get filter label based on data type
   const getFilterLabel = () => {
-    if (dataType === "activity") return "Activity";
-    if (dataType === "entity") return "Entity";
-    if (dataType === "resource") return "Resource";
-    if (dataType === "activity-entity") return "Activity";
-    return "Item";
+    if (dataType === "activity") return "Activities";
+    if (dataType === "entity") return "Entities";
+    if (dataType === "resource") return "Resources";
+    if (dataType === "activity-entity") return "Activities";
+    return "Items";
   };
 
   // Render Detailed View (existing functionality)
@@ -1120,7 +1127,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
               onChange={(e) => setSelectedActivity(e.target.value)}
               className="px-2 py-1.5 text-xs font-medium border border-gray-300 rounded bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All {getFilterLabel()}s</option>
+              <option value="all">All {getFilterLabel()}</option>
               {uniqueFilterItems.map((item) => (
                 <option key={item} value={item}>
                   {item}

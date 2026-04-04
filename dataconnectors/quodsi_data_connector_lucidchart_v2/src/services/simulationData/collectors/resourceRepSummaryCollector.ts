@@ -88,6 +88,7 @@ export async function fetchResourceRepSummary(
                 average_utilization: item.average_utilization ?? 0,
                 peak_utilization: item.peak_utilization ?? 0,
                 current_utilization: item.current_utilization ?? 0,
+                active_time_pct: item.active_time_pct ?? 0,
                 // Performance metrics
                 average_wait_time: item.average_wait_time ?? 0,
                 max_wait_time: item.max_wait_time ?? 0,
@@ -149,6 +150,7 @@ export function prepareResourceRepSummaryUpdate(data: ResourceRepSummaryData[]) 
             average_utilization: item.average_utilization ?? 0,
             peak_utilization: item.peak_utilization ?? 0,
             current_utilization: item.current_utilization ?? 0,
+            active_time_pct: item.active_time_pct ?? 0,
             // Performance metrics
             average_wait_time: item.average_wait_time ?? 0,
             max_wait_time: item.max_wait_time ?? 0,

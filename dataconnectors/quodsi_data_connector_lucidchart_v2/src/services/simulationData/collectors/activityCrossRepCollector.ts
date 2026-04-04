@@ -34,10 +34,15 @@ export const requiredColumns: string[] = [
     'total_avg_contents_min',
     'total_avg_contents_max',
     // Utilization
-    'utilization_mean',
-    'utilization_std',
-    'utilization_min',
-    'utilization_max',
+    'capacity_utilization_mean',
+    'capacity_utilization_std',
+    'capacity_utilization_min',
+    'capacity_utilization_max',
+    // Active time percentage
+    'active_time_pct_mean',
+    'active_time_pct_std',
+    'active_time_pct_min',
+    'active_time_pct_max',
     // Avg number allocated
     'avg_number_allocated_mean',
     'avg_number_allocated_std',
@@ -249,10 +254,16 @@ export async function fetchActivityCrossRep(
             total_avg_contents_max: item.total_avg_contents_max,
 
             // Utilization - Map _std to _std_dev
-            utilization_mean: item.utilization_mean,
-            utilization_min: item.utilization_min,
-            utilization_max: item.utilization_max,
-            utilization_std_dev: item.utilization_std,
+            capacity_utilization_mean: item.capacity_utilization_mean,
+            capacity_utilization_min: item.capacity_utilization_min,
+            capacity_utilization_max: item.capacity_utilization_max,
+            capacity_utilization_std_dev: item.capacity_utilization_std,
+
+            // Active time percentage
+            active_time_pct_mean: item.active_time_pct_mean,
+            active_time_pct_min: item.active_time_pct_min,
+            active_time_pct_max: item.active_time_pct_max,
+            active_time_pct_std_dev: item.active_time_pct_std,
 
             // Avg number allocated
             avg_number_allocated_mean: item.avg_number_allocated_mean,
@@ -394,10 +405,16 @@ export async function fetchActivityCrossRep(
                 total_avg_contents_max: item.total_avg_contents_max ?? 0,
 
                 // Utilization metrics
-                utilization_mean: item.utilization_mean ?? 0,
-                utilization_min: item.utilization_min ?? 0,
-                utilization_max: item.utilization_max ?? 0,
-                utilization_std_dev: item.utilization_std_dev ?? 0,
+                capacity_utilization_mean: item.capacity_utilization_mean ?? 0,
+                capacity_utilization_min: item.capacity_utilization_min ?? 0,
+                capacity_utilization_max: item.capacity_utilization_max ?? 0,
+                capacity_utilization_std_dev: item.capacity_utilization_std_dev ?? 0,
+
+                // Active time percentage metrics
+                active_time_pct_mean: item.active_time_pct_mean ?? 0,
+                active_time_pct_min: item.active_time_pct_min ?? 0,
+                active_time_pct_max: item.active_time_pct_max ?? 0,
+                active_time_pct_std_dev: item.active_time_pct_std_dev ?? 0,
 
                 // Avg Number Allocated metrics
                 avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,
@@ -555,10 +572,16 @@ export function prepareActivityCrossRepUpdate(data: ActivityCrossRepSummaryData[
             total_avg_contents_max: item.total_avg_contents_max ?? 0,
 
             // Utilization metrics
-            utilization_mean: item.utilization_mean ?? 0,
-            utilization_min: item.utilization_min ?? 0,
-            utilization_max: item.utilization_max ?? 0,
-            utilization_std_dev: item.utilization_std_dev ?? 0,
+            capacity_utilization_mean: item.capacity_utilization_mean ?? 0,
+            capacity_utilization_min: item.capacity_utilization_min ?? 0,
+            capacity_utilization_max: item.capacity_utilization_max ?? 0,
+            capacity_utilization_std_dev: item.capacity_utilization_std_dev ?? 0,
+
+            // Active time percentage metrics
+            active_time_pct_mean: item.active_time_pct_mean ?? 0,
+            active_time_pct_min: item.active_time_pct_min ?? 0,
+            active_time_pct_max: item.active_time_pct_max ?? 0,
+            active_time_pct_std_dev: item.active_time_pct_std_dev ?? 0,
 
             // Avg Number Allocated metrics
             avg_number_allocated_mean: item.avg_number_allocated_mean ?? 0,

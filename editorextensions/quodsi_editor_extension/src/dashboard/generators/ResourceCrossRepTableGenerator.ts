@@ -26,15 +26,19 @@ export class ResourceCrossRepTableGenerator extends BaseTableGenerator {
         return {
             schema: ResourceCrossRepSchema,
             identifierFields: ['id', 'resource_id', 'resource_name'],
-            percentageFields: ['utilization_mean', 'utilization_min', 'utilization_max'],
+            percentageFields: ['capacity_utilization_mean', 'capacity_utilization_min', 'capacity_utilization_max', 'active_time_pct_mean', 'active_time_pct_min', 'active_time_pct_max'],
             priorityFields: [
                 'resource_id',
                 'resource_name',
                 'scenario_name',
-                'utilization_mean',
-                'utilization_min',
-                'utilization_max',
-                'utilization_std_dev',
+                'capacity_utilization_mean',
+                'capacity_utilization_min',
+                'capacity_utilization_max',
+                'capacity_utilization_std_dev',
+                'active_time_pct_mean',
+                'active_time_pct_min',
+                'active_time_pct_max',
+                'active_time_pct_std_dev',
                 'total_cost_mean'
             ]
         };

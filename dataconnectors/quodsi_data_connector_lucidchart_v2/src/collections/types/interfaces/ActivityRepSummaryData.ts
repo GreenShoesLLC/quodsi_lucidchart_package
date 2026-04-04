@@ -21,7 +21,8 @@ export interface ActivityRepSummaryData {
     average_contents: number;
     maximum_contents: number;
     current_contents: number;
-    utilization_0_to_1: number;
+    capacity_utilization: number;
+    active_time_pct: number;
     average_time_per_entry: number;
     inbound_queue_utilization: number;
     outbound_queue_utilization: number;

@@ -27,6 +27,7 @@ export interface ResourceRepSummaryData {
     average_utilization: number;
     peak_utilization: number;
     current_utilization: number;
+    active_time_pct: number;
     // Performance metrics
     average_wait_time: number;
     max_wait_time: number;

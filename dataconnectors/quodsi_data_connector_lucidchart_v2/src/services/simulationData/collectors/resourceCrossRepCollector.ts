@@ -7,17 +7,21 @@ import { conditionalLog, conditionalError, conditionalWarn } from '../storageSer
 import { SerializedFields } from 'lucid-extension-sdk';
 
 // Required columns for validation
-// Note: CSV uses utilization_rate_* (not utilization_*), and utilization_rate_std (not _std_dev)
+// Note: CSV uses utilization_rate_* (not utilization_*), and capacity_utilization_std (not _std_dev)
 // CSV is missing id/scenario_id/scenario_name - these will be injected during mapping
 // Using plain string array instead of getRequiredColumnsFromType to avoid TypeScript errors
 // since CSV column names don't match interface property names
 export const requiredColumns: string[] = [
     'resource_id',
     'resource_name',
-    'utilization_rate_mean',  // CSV uses utilization_rate_*, not utilization_*
-    'utilization_rate_min',
-    'utilization_rate_max',
-    'utilization_rate_std',  // CSV uses _std, not _std_dev
+    'capacity_utilization_mean',  // CSV uses utilization_rate_*, not utilization_*
+    'capacity_utilization_min',
+    'capacity_utilization_max',
+    'capacity_utilization_std',  // CSV uses _std, not _std_dev
+    'active_time_pct_mean',
+    'active_time_pct_std',
+    'active_time_pct_min',
+    'active_time_pct_max',
     // Cost metrics (CSV uses _std suffix)
     'seize_cost_mean',
     'seize_cost_std',
@@ -129,7 +133,7 @@ export async function fetchResourceCrossRep(
 
         // Map CSV column names to schema field names
         // CSV uses utilization_rate_* prefix, schema expects utilization_*
-        // CSV uses utilization_rate_std suffix, schema expects utilization_std_dev
+        // CSV uses capacity_utilization_std suffix, schema expects capacity_utilization_std_dev
         // Also inject scenario_id, scenario_name, and generate composite ID
         const mappedResult: ResourceCrossRepData[] = result.map((item: any) => ({
             // Generate composite ID from scenario and resource
@@ -142,10 +146,14 @@ export async function fetchResourceCrossRep(
             resource_name: item.resource_name,
 
             // Map utilization_rate_* to utilization_*, and _std to _std_dev
-            utilization_mean: item.utilization_rate_mean,  // Map utilization_rate_mean to utilization_mean
-            utilization_min: item.utilization_rate_min,    // Map utilization_rate_min to utilization_min
-            utilization_max: item.utilization_rate_max,    // Map utilization_rate_max to utilization_max
-            utilization_std_dev: item.utilization_rate_std,  // Map utilization_rate_std to utilization_std_dev
+            capacity_utilization_mean: item.capacity_utilization_mean,  // Map capacity_utilization_mean to capacity_utilization_mean
+            capacity_utilization_min: item.capacity_utilization_min,    // Map capacity_utilization_min to capacity_utilization_min
+            capacity_utilization_max: item.capacity_utilization_max,    // Map capacity_utilization_max to capacity_utilization_max
+            capacity_utilization_std_dev: item.capacity_utilization_std,  // Map capacity_utilization_std to capacity_utilization_std_dev
+            active_time_pct_mean: item.active_time_pct_mean,
+            active_time_pct_min: item.active_time_pct_min,
+            active_time_pct_max: item.active_time_pct_max,
+            active_time_pct_std_dev: item.active_time_pct_std,
 
             // Cost metrics (map _std to _std_dev)
             seize_cost_mean: item.seize_cost_mean,
@@ -183,10 +191,14 @@ export async function fetchResourceCrossRep(
                 scenario_name: String(item.scenario_name || "Unknown"),
                 resource_id: String(item.resource_id || "Unknown"),
                 resource_name: String(item.resource_name || "Unknown"),
-                utilization_mean: item.utilization_mean ?? 0,
-                utilization_min: item.utilization_min ?? 0,
-                utilization_max: item.utilization_max ?? 0,
-                utilization_std_dev: item.utilization_std_dev ?? 0,
+                capacity_utilization_mean: item.capacity_utilization_mean ?? 0,
+                capacity_utilization_min: item.capacity_utilization_min ?? 0,
+                capacity_utilization_max: item.capacity_utilization_max ?? 0,
+                capacity_utilization_std_dev: item.capacity_utilization_std_dev ?? 0,
+                active_time_pct_mean: item.active_time_pct_mean ?? 0,
+                active_time_pct_min: item.active_time_pct_min ?? 0,
+                active_time_pct_max: item.active_time_pct_max ?? 0,
+                active_time_pct_std_dev: item.active_time_pct_std_dev ?? 0,
                 // Cost metrics
                 seize_cost_mean: item.seize_cost_mean ?? 0,
                 seize_cost_std_dev: item.seize_cost_std_dev ?? 0,
@@ -241,10 +253,14 @@ export function prepareResourceCrossRepUpdate(data: ResourceCrossRepData[]) {
             scenario_name: String(item.scenario_name || "Unknown"),
             resource_id: String(item.resource_id || "Unknown"),
             resource_name: String(item.resource_name || "Unknown"),
-            utilization_mean: item.utilization_mean ?? 0,
-            utilization_min: item.utilization_min ?? 0,
-            utilization_max: item.utilization_max ?? 0,
-            utilization_std_dev: item.utilization_std_dev ?? 0,
+            capacity_utilization_mean: item.capacity_utilization_mean ?? 0,
+            capacity_utilization_min: item.capacity_utilization_min ?? 0,
+            capacity_utilization_max: item.capacity_utilization_max ?? 0,
+            capacity_utilization_std_dev: item.capacity_utilization_std_dev ?? 0,
+            active_time_pct_mean: item.active_time_pct_mean ?? 0,
+            active_time_pct_min: item.active_time_pct_min ?? 0,
+            active_time_pct_max: item.active_time_pct_max ?? 0,
+            active_time_pct_std_dev: item.active_time_pct_std_dev ?? 0,
             // Cost metrics
             seize_cost_mean: item.seize_cost_mean ?? 0,
             seize_cost_std_dev: item.seize_cost_std_dev ?? 0,

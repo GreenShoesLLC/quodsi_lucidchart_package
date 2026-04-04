@@ -36,10 +36,16 @@ export interface ActivityCrossRepSummaryData {
     total_avg_contents_max: number;
 
     // Utilization metrics
-    utilization_mean: number;  // Mean utilization
-    utilization_min: number;   // Minimum utilization
-    utilization_max: number;   // Maximum utilization
-    utilization_std_dev: number;  // Utilization standard deviation
+    capacity_utilization_mean: number;  // Mean utilization
+    capacity_utilization_min: number;   // Minimum utilization
+    capacity_utilization_max: number;   // Maximum utilization
+    capacity_utilization_std_dev: number;  // Utilization standard deviation
+
+    // Active time metrics
+    active_time_pct_mean: number;  // Mean active time percentage
+    active_time_pct_min: number;   // Minimum active time percentage
+    active_time_pct_max: number;   // Maximum active time percentage
+    active_time_pct_std_dev: number;  // Active time percentage standard deviation
 
     // Avg Number Allocated metrics (formerly contents)
     avg_number_allocated_mean: number;  // Mean average number allocated
