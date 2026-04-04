@@ -7,9 +7,9 @@ import { SimulationObjectType } from "@quodsi/shared";
 export const EDITOR_ACCENT_COLORS: Record<string, string> = {
   [SimulationObjectType.Model]: "border-blue-500",
   [SimulationObjectType.Activity]: "border-amber-500",
-  [SimulationObjectType.Generator]: "border-cyan-500",
+  [SimulationObjectType.Generator]: "border-purple-500",
   [SimulationObjectType.Resource]: "border-green-500",
-  [SimulationObjectType.Entity]: "border-purple-500",
+  [SimulationObjectType.Entity]: "border-cyan-500",
   [SimulationObjectType.Connector]: "border-gray-400",
 };
 
