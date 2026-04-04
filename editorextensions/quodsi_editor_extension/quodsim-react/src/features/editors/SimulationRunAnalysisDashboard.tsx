@@ -60,6 +60,34 @@ const formatPercent = (value: number | null | undefined): string => {
   return `${(value * 100).toFixed(1)}%`;
 };
 
+// Metrics stored as 0-1 decimals that should display as percentages (multiply by 100)
+const DECIMAL_PERCENT_METRICS = new Set([
+  "capacity_utilization_mean",
+  "capacity_utilization_max",
+  "capacity_utilization_min",
+  "capacity_utilization_std_dev",
+  "active_time_pct_mean",
+  "active_time_pct_max",
+  "active_time_pct_min",
+  "active_time_pct_std_dev",
+]);
+
+// Metrics already stored as 0-100 that just need a "%" suffix
+const RAW_PERCENT_METRICS = new Set([
+  "percent_resource_wait_mean",
+  "percent_operation_mean",
+  "percent_queue_wait_mean",
+]);
+
+const formatDecimalAsPercent = (value: number): string => `${(value * 100).toFixed(1)}%`;
+const formatRawAsPercent = (value: number): string => `${value.toFixed(1)}%`;
+
+const getPercentFormatter = (metric: string): ((value: number) => string) | undefined => {
+  if (DECIMAL_PERCENT_METRICS.has(metric)) return formatDecimalAsPercent;
+  if (RAW_PERCENT_METRICS.has(metric)) return formatRawAsPercent;
+  return undefined;
+};
+
 // Metric options for chart by data type
 const metricOptions: Record<string, { value: string; label: string }[]> = {
   activity: [
@@ -552,6 +580,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             yKeys={[selectedMetric]}
             height={300}
             layout="vertical"
+            valueFormatter={getPercentFormatter(selectedMetric)}
           />
         </ChartContainer>
       );
@@ -617,7 +646,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
       const merged = mergeBarChartData(selectedScenarios, dataMap, nameKey, selectedMetric);
       return (
         <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
-          <ComparisonBarChart data={merged.data} xKey={nameKey} yKeys={merged.yKeys} colors={merged.colors} height={300} layout="vertical" />
+          <ComparisonBarChart data={merged.data} xKey={nameKey} yKeys={merged.yKeys} colors={merged.colors} height={300} layout="vertical" valueFormatter={getPercentFormatter(selectedMetric)} />
         </ChartContainer>
       );
     }

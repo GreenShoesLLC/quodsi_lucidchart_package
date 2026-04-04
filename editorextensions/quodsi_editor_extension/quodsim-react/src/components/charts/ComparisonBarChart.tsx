@@ -20,6 +20,7 @@ interface ComparisonBarChartProps {
   height?: number;
   colors?: string[];
   layout?: "horizontal" | "vertical";
+  valueFormatter?: (value: number) => string;
 }
 
 /**
@@ -34,6 +35,7 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
   height = 400,
   colors = CHART_COLORS,
   layout = "horizontal",
+  valueFormatter,
 }) => {
   // Custom label formatter for long names
   const formatLabel = (value: any) => {
@@ -72,6 +74,7 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
               label={{ value: yLabel, angle: -90, position: "insideLeft" }}
               tick={{ fontSize: 11 }}
               stroke="#6b7280"
+              tickFormatter={valueFormatter ? (v: any) => (typeof v === "number" ? valueFormatter(v) : v) : undefined}
             />
           </>
         ) : (
@@ -81,6 +84,7 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
               tick={{ fontSize: 9 }}
               stroke="#6b7280"
               tickCount={4}
+              tickFormatter={valueFormatter ? (v: any) => (typeof v === "number" ? valueFormatter(v) : v) : undefined}
             />
             <YAxis
               type="category"
@@ -101,7 +105,7 @@ const ComparisonBarChart: React.FC<ComparisonBarChartProps> = ({
           }}
           formatter={(value: any) => {
             if (typeof value === "number") {
-              return value.toFixed(2);
+              return valueFormatter ? valueFormatter(value) : value.toFixed(2);
             }
             return value;
           }}
