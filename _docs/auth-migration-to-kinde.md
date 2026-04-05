@@ -476,9 +476,10 @@ UI components read `auth.isAuthenticated` and `auth.user` to conditionally rende
 
 | Task | Details |
 |------|---------|
-| Install `@kinde-oss/kinde-typescript-sdk` | Add to data connector `package.json` |
+| ~~Install `@kinde-oss/kinde-typescript-sdk`~~ | ~~Add to data connector `package.json`~~ — **Superseded**: the full TypeScript SDK requires a `SessionManager` implementation and has Express-oriented dependencies, making it overkill for stateless serverless JWT validation |
+| Install `@kinde/jwt-validator` | Add to data connector `package.json`. Lightweight, serverless-friendly package designed for edge/serverless environments. Simple API: `await validateToken({ token, domain: 'https://censio.kinde.com' })`. Handles JWKS fetching and RS256 signature verification internally. |
 | Validate Kinde JWT | Verify tokens arriving from any surface (LucidChart, standalone website, Miro) |
-| JWKS endpoint | Use Kinde's `/.well-known/jwks.json` for token verification |
+| JWKS endpoint | Use Kinde's `/.well-known/jwks.json` for token verification (handled automatically by `@kinde/jwt-validator`) |
 
 ### Phase 2: Standalone Website (Approach A)
 
