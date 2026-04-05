@@ -1,4 +1,5 @@
 import { TableColumn } from "../components/DataTable";
+import { CHART_COLORS } from "../components/charts/chartColors";
 
 export interface SelectedScenario {
   id: string;
@@ -176,4 +177,93 @@ export function mergeTableData(
   return Array.from(rowMap.values()).sort((a, b) =>
     String(a[nameKey]).localeCompare(String(b[nameKey]))
   );
+}
+
+interface PivotedTimeseriesData {
+  data: Record<string, any>[];
+  yKeys: string[];
+  colors: string[];
+}
+
+/**
+ * Pivots flat timeseries data so each selected object becomes its own column.
+ * Input rows: { object_id, period_start_clock, mean, ... }
+ * Output rows: { period_start_clock, "Object A": meanA, "Object B": meanB, ... }
+ */
+export function pivotTimeseriesByObject(
+  data: any[],
+  selectedIds: string[],
+  xKey: string,
+  yKey: string,
+  groupKey: string
+): PivotedTimeseriesData {
+  const yKeys = selectedIds;
+  const colors = selectedIds.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+
+  const rowMap = new Map<number | string, Record<string, any>>();
+
+  for (const row of data) {
+    const objectId = row[groupKey];
+    if (!selectedIds.includes(objectId)) continue;
+
+    const xVal = row[xKey];
+    if (!rowMap.has(xVal)) {
+      const newRow: Record<string, any> = { [xKey]: xVal };
+      for (const id of selectedIds) {
+        newRow[id] = null;
+      }
+      rowMap.set(xVal, newRow);
+    }
+    rowMap.get(xVal)![objectId] = row[yKey];
+  }
+
+  const sorted = Array.from(rowMap.values()).sort((a, b) => {
+    const aVal = a[xKey];
+    const bVal = b[xKey];
+    if (typeof aVal === "number" && typeof bVal === "number") return aVal - bVal;
+    return String(aVal).localeCompare(String(bVal));
+  });
+
+  return { data: sorted, yKeys, colors };
+}
+
+/**
+ * Builds a formatter that shortens dot-separated object IDs
+ * (e.g., "Model.Model.Arrivals") to the shortest unambiguous suffix.
+ *
+ * If all state names (last segment) are unique → just "Arrivals"
+ * If duplicates exist → "ComponentName.StateName" (e.g., "Registration.count")
+ * Falls back to the full ID if still ambiguous.
+ */
+export function buildShortNameFormatter(objectIds: string[]): (id: string) => string {
+  // Parse each ID into segments
+  const parsed = objectIds.map(id => {
+    const parts = id.split(".");
+    return { full: id, parts };
+  });
+
+  // Try shortest suffix first (just state name), then progressively longer
+  const cache = new Map<string, string>();
+
+  // Check if last segment alone is unique
+  const lastSegments = parsed.map(p => p.parts[p.parts.length - 1]);
+  const lastSegmentCounts = new Map<string, number>();
+  for (const seg of lastSegments) {
+    lastSegmentCounts.set(seg, (lastSegmentCounts.get(seg) || 0) + 1);
+  }
+
+  for (const { full, parts } of parsed) {
+    const stateName = parts[parts.length - 1];
+    if (lastSegmentCounts.get(stateName) === 1) {
+      // Unique — just use state name
+      cache.set(full, stateName);
+    } else if (parts.length >= 2) {
+      // Disambiguate with component name
+      cache.set(full, parts.slice(-2).join("."));
+    } else {
+      cache.set(full, full);
+    }
+  }
+
+  return (id: string) => cache.get(id) ?? id;
 }

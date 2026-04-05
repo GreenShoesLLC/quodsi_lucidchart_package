@@ -19,6 +19,7 @@ interface TimeseriesChartProps {
   yLabel?: string;
   height?: number;
   colors?: string[];
+  nameFormatter?: (key: string) => string;
 }
 
 /**
@@ -32,6 +33,7 @@ const TimeseriesChart: React.FC<TimeseriesChartProps> = ({
   yLabel = "Value",
   height = 400,
   colors = CHART_COLORS,
+  nameFormatter,
 }) => {
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -72,7 +74,7 @@ const TimeseriesChart: React.FC<TimeseriesChartProps> = ({
             strokeWidth={2}
             dot={false}
             activeDot={{ r: 4 }}
-            name={key}
+            name={nameFormatter ? nameFormatter(key) : key}
           />
         ))}
       </LineChart>

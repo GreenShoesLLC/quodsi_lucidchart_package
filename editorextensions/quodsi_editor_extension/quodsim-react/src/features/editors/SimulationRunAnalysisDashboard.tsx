@@ -30,6 +30,8 @@ import {
   mergeTimeseriesData,
   mergeTableColumns,
   mergeTableData,
+  pivotTimeseriesByObject,
+  buildShortNameFormatter,
 } from "../../utils/scenarioDataMerge";
 
 interface SimulationRunAnalysisDashboardProps {
@@ -206,8 +208,24 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   const [selectedMetric, setSelectedMetric] =
     useState<string>("capacity_utilization_mean");
 
-  // Expanded activity for timeseries small multiples view
-  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
+  // Selected objects for timeseries multi-select overlay
+  const [selectedObjects, setSelectedObjects] = useState<Set<string>>(new Set());
+
+  const toggleObjectSelection = useCallback((objectId: string) => {
+    setSelectedObjects(prev => {
+      const next = new Set(prev);
+      if (next.has(objectId)) {
+        next.delete(objectId);
+      } else {
+        next.add(objectId);
+      }
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedObjects(new Set());
+  }, []);
 
   // Hooks
   const { getCrossRepData } = useSimulationRunSender();
@@ -464,6 +482,12 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     return data.filter((item: any) => item[key] === selectedActivity);
   }, [data, dataType, selectedActivity, isFilterableType]);
 
+  // Short name formatter for timeseries object IDs (e.g., "Model.Model.Arrivals" → "Arrivals")
+  const shortNameFormatter = React.useMemo(() => {
+    const objectIds = Array.from(new Set(data.map((item: any) => item.object_id).filter(Boolean)));
+    return buildShortNameFormatter(objectIds as string[]);
+  }, [data]);
+
   // Comparison table data (merged across scenarios)
   const comparisonTableData = React.useMemo(() => {
     if (!isComparing) return null;
@@ -489,7 +513,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   // Reset selected activity, metric, and expanded activity when data type changes
   useEffect(() => {
     setSelectedActivity("all");
-    setExpandedActivity(null);
+    setSelectedObjects(new Set());
     // Set default metric for the new data type
     const options = metricOptions[dataType];
     if (options && options.length > 0) {
@@ -506,49 +530,62 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
       dataType === "state-values-timeseries" ||
       dataType === "entity-throughput-timeseries";
 
-    // Timeseries chart - use small multiples grid approach
+    // Timeseries chart - sparkline grid with multi-select overlay
     if (isTimeseriesType) {
-      // If an activity is selected for expansion, show full chart
-      if (expandedActivity) {
-        const activityData = filteredData.filter(
-          (d: any) => d.object_id === expandedActivity
+      // Build overlay chart when 1+ items are selected
+      let overlayChart: React.ReactNode = null;
+
+      if (selectedObjects.size > 0) {
+        const selectedIds = Array.from(selectedObjects);
+        const pivoted = pivotTimeseriesByObject(
+          filteredData, selectedIds, "period_start_clock", "mean", "object_id"
         );
-        return (
-          <ChartContainer
-            data={activityData}
-            loading={loading}
-            error={error}
-            emptyMessage={`No data available for ${expandedActivity}`}
-          >
-            <ExpandedTimeseriesChart
-              data={activityData}
-              objectId={expandedActivity}
+        overlayChart = (
+          <div className="border border-gray-200 rounded bg-white p-2">
+            <div className="flex items-center justify-between mb-1 px-1">
+              <span className="text-xs font-semibold text-gray-700">
+                {selectedIds.length === 1 ? shortNameFormatter(selectedIds[0]) : `Comparing ${selectedIds.length} items`}
+              </span>
+              <button
+                onClick={clearSelection}
+                className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+            <TimeseriesChart
+              data={pivoted.data}
               xKey="period_start_clock"
-              yKeys={["mean", "min", "max"]}
-              onClose={() => setExpandedActivity(null)}
-              height={400}
+              yKeys={pivoted.yKeys}
+              colors={pivoted.colors}
+              height={200}
+              nameFormatter={shortNameFormatter}
             />
-          </ChartContainer>
+          </div>
         );
       }
 
-      // Default: show sparkline grid for all activities
       return (
-        <ChartContainer
-          data={filteredData}
-          loading={loading}
-          error={error}
-          emptyMessage={`No ${dataType} data available for this run`}
-        >
-          <SparklineGrid
+        <div className="space-y-3">
+          {overlayChart}
+          <ChartContainer
             data={filteredData}
-            groupByKey="object_id"
-            xKey="period_start_clock"
-            yKey="mean"
-            onItemClick={(id) => setExpandedActivity(id)}
-            sparklineHeight={50}
-          />
-        </ChartContainer>
+            loading={loading}
+            error={error}
+            emptyMessage={`No ${dataType} data available for this run`}
+          >
+            <SparklineGrid
+              data={filteredData}
+              groupByKey="object_id"
+              xKey="period_start_clock"
+              yKey="mean"
+              selectedItems={selectedObjects}
+              onItemSelect={toggleObjectSelection}
+              labelFormatter={shortNameFormatter}
+              sparklineHeight={50}
+            />
+          </ChartContainer>
+        </div>
       );
     }
 
@@ -603,33 +640,90 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     if (isTimeseriesType) {
       const merged = mergeTimeseriesData(selectedScenarios, dataMap, "object_id", "period_start_clock", "mean");
 
-      if (expandedActivity) {
-        const objectData = merged.data.filter((d: any) => d.object_id === expandedActivity);
-        return (
-          <ChartContainer data={objectData} loading={comparisonLoading} error={null} emptyMessage={`No data for ${expandedActivity}`}>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-semibold text-gray-700">{expandedActivity}</h3>
-                <button onClick={() => setExpandedActivity(null)} className="text-xs text-gray-500 hover:text-gray-700">Back to grid</button>
-              </div>
-              <TimeseriesChart data={objectData} xKey="period_start_clock" yKeys={merged.yKeys} colors={merged.colors} height={400} />
+      // Build short name formatter from comparison data object IDs
+      const comparisonObjectIds = Array.from(new Set(merged.data.map((d: any) => d.object_id).filter(Boolean))) as string[];
+      const comparisonNameFormatter = buildShortNameFormatter(comparisonObjectIds);
+
+      // Build overlay chart when items are selected
+      let overlayChart: React.ReactNode = null;
+
+      if (selectedObjects.size > 0) {
+        const selectedIds = Array.from(selectedObjects);
+        // Pivot: for each time point, create columns like "ShortName (ScenarioName)"
+        const overlayYKeys: string[] = [];
+        const overlayColors: string[] = [];
+        for (let oi = 0; oi < selectedIds.length; oi++) {
+          const shortName = comparisonNameFormatter(selectedIds[oi]);
+          for (let si = 0; si < selectedScenarios.length; si++) {
+            const label = `${shortName} (${selectedScenarios[si].name})`;
+            overlayYKeys.push(label);
+            overlayColors.push(selectedScenarios[si].color);
+          }
+        }
+
+        const filteredMerged = merged.data.filter((d: any) => selectedObjects.has(d.object_id));
+        const timeMap = new Map<number | string, Record<string, any>>();
+        for (const row of filteredMerged) {
+          const xVal = row["period_start_clock"];
+          if (!timeMap.has(xVal)) {
+            const newRow: Record<string, any> = { period_start_clock: xVal };
+            for (const k of overlayYKeys) newRow[k] = null;
+            timeMap.set(xVal, newRow);
+          }
+          const target = timeMap.get(xVal)!;
+          const shortName = comparisonNameFormatter(row.object_id);
+          for (const s of selectedScenarios) {
+            const srcKey = `mean_${s.name}`;
+            const destKey = `${shortName} (${s.name})`;
+            target[destKey] = row[srcKey];
+          }
+        }
+        const overlayData = Array.from(timeMap.values()).sort((a, b) =>
+          (a.period_start_clock as number) - (b.period_start_clock as number)
+        );
+
+        const headerLabel = selectedIds.length === 1
+          ? comparisonNameFormatter(selectedIds[0])
+          : `Comparing ${selectedIds.length} items`;
+
+        overlayChart = (
+          <div className="border border-gray-200 rounded bg-white p-2">
+            <div className="flex items-center justify-between mb-1 px-1">
+              <span className="text-xs font-semibold text-gray-700">
+                {headerLabel} across {selectedScenarios.length} scenarios
+              </span>
+              <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+                Clear
+              </button>
             </div>
-          </ChartContainer>
+            <TimeseriesChart
+              data={overlayData}
+              xKey="period_start_clock"
+              yKeys={overlayYKeys}
+              colors={overlayColors}
+              height={200}
+            />
+          </div>
         );
       }
 
       return (
-        <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
-          <SparklineGrid
-            data={merged.data}
-            groupByKey="object_id"
-            xKey="period_start_clock"
-            yKeys={merged.yKeys}
-            colors={merged.colors}
-            onItemClick={(id) => setExpandedActivity(id)}
-            sparklineHeight={50}
-          />
-        </ChartContainer>
+        <div className="space-y-3">
+          {overlayChart}
+          <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
+            <SparklineGrid
+              data={merged.data}
+              groupByKey="object_id"
+              xKey="period_start_clock"
+              yKeys={merged.yKeys}
+              colors={merged.colors}
+              selectedItems={selectedObjects}
+              onItemSelect={toggleObjectSelection}
+              labelFormatter={comparisonNameFormatter}
+              sparklineHeight={50}
+            />
+          </ChartContainer>
+        </div>
       );
     }
 
