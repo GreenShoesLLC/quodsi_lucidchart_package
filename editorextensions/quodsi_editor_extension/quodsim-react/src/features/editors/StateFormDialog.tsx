@@ -58,6 +58,24 @@ const StateFormDialog: React.FC<Props> = ({
     }
   }, [isOpen, state, defaultComponentType]);
 
+  // Update initialValue when dataType changes
+  useEffect(() => {
+    switch (dataType) {
+      case StateType.NUMBER:
+        setInitialValue("0");
+        break;
+      case StateType.BOOLEAN:
+        setInitialValue("true");
+        break;
+      case StateType.STRING:
+        setInitialValue("");
+        break;
+      case StateType.CATEGORY:
+        setInitialValue("");
+        break;
+    }
+  }, [dataType]);
+
   const validateForm = (): boolean => {
     const validationErrors: string[] = [];
 
