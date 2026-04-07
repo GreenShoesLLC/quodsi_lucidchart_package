@@ -206,29 +206,6 @@ export class ValidationMessages {
         };
     }
 
-    static queueOverflowRisk(elementId: string): ValidationIssue {
-        const code = 'queue_overflow_risk';
-        return {
-            id: this.generateId(code, elementId),
-            severity: ValidationSeverity.WARNING,
-            message: `Activity ${elementId} may experience inbound queue overflow at maximum throughput`,
-            elementId,
-            code
-        };
-    }
-
-    static smallInboundQueue(elementId: string, activityName?: string): ValidationIssue {
-        const code = 'small_inbound_queue';
-        const displayName = this.getDisplayName(activityName, elementId);
-        return {
-            id: this.generateId(code, elementId),
-            severity: ValidationSeverity.WARNING,
-            message: `Activity ${displayName} inbound queue may be too small for incoming flow capacity`,
-            elementId,
-            code
-        };
-    }
-
     static circularDependency(elementId: string, activityName?: string): ValidationIssue {
         const code = 'circular_dependency';
         const displayName = this.getDisplayName(activityName, elementId);

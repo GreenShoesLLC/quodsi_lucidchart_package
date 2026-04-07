@@ -19,7 +19,7 @@ export class ActivityValidation extends ValidationRule {
         activities.forEach((activity: Activity) => {
             this.validateActivityConnectivity(activity, state, issues);
             this.validateActivityData(activity, issues);
-            this.validateQueueConstraints(activity, state, issues);
+
         });
 
         this.validateActivityInteractions(state, issues);
@@ -158,33 +158,6 @@ export class ActivityValidation extends ValidationRule {
             case ActionType.ASSIGN:
                 // Could validate stateModifications exist
                 break;
-        }
-    }
-
-    private validateQueueConstraints(
-        activity: Activity,
-        state: ModelDefinitionState,
-        issues: ValidationIssue[]
-    ): void {
-        this.log(`Validating queue constraints for Activity ID: ${activity.id}`);
-
-        const relationships = state.activityRelationships.get(activity.id);
-        if (!relationships) return;
-
-        const incomingCapacity = Array.from(relationships.incomingConnectors as Set<string>).reduce((total, connectorId) => {
-            const connector = state.connections.get(connectorId);
-            if (connector) {
-                const sourceActivity = state.modelDefinition.activities.get(connector.sourceId);
-                if (sourceActivity) {
-                    total += sourceActivity.capacity;
-                }
-            }
-            return total;
-        }, 0);
-
-        if (incomingCapacity > activity.inboundQueueCapacity * 2) {
-            this.log(`Activity ID ${activity.id} has insufficient inbound queue capacity.`);
-            issues.push(ValidationMessages.smallInboundQueue(activity.id, activity.name));
         }
     }
 
