@@ -5,14 +5,17 @@ import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
  * User information structure shared across auth messages
  */
 export interface QuodsiUserInfo {
-  /** B2C objectId (sub) */
+  /** Kinde user ID (sub claim) */
   id: string;
 
-  /** Primary sign-in address */
+  /** User email address (from user_profile endpoint) */
   email: string;
 
-  /** Friendly name (optional) */
+  /** Friendly display name (from user_profile endpoint) */
   displayName?: string;
+
+  /** Kinde organization code (from access token org_code claim) */
+  orgCode?: string;
 }
 
 /**
