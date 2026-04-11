@@ -10,21 +10,21 @@ import {
   X,
 } from "lucide-react";
 import { EnvelopeMessageType, SimulationRunDownloadInfo } from "@quodsi/shared";
-import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
-import DataTable from "../../components/DataTable";
+import { useSimulationRunSender } from "../../../messaging/senders/simulationRunSender";
+import DataTable from "../../../components/DataTable";
 import {
   ChartContainer,
   TimeseriesChart,
   ComparisonBarChart,
   SparklineGrid,
   ExpandedTimeseriesChart,
-} from "../../components/charts";
+} from "../../../components/charts";
 import {
   CrossRepDataType,
   getColumnsForDataType,
 } from "./crossRepTableConfigs";
-import ScenarioPicker from "../../components/ScenarioPicker";
-import { useComparisonData } from "../../hooks/useComparisonData";
+import ScenarioPicker from "../../../components/ScenarioPicker";
+import { useComparisonData } from "../../../hooks/useComparisonData";
 import {
   mergeBarChartData,
   mergeTimeseriesData,
@@ -32,7 +32,7 @@ import {
   mergeTableData,
   pivotTimeseriesByObject,
   buildShortNameFormatter,
-} from "../../utils/scenarioDataMerge";
+} from "../../../utils/scenarioDataMerge";
 
 interface SimulationRunAnalysisDashboardProps {
   scenarioId: string;
@@ -437,50 +437,58 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     dataType === "state-values-timeseries" ||
     dataType === "entity-throughput-timeseries";
 
+  // Compute the filter key for the current data type
+  const filterKey = React.useMemo(() => {
+    if (dataType === "activity") return "activity_name";
+    if (dataType === "entity") return "entity_name";
+    if (dataType === "resource") return "resource_name";
+    if (dataType === "activity-entity") return "activity_name";
+    return "object_id"; // timeseries types
+  }, [dataType]);
+
+  // Filter a comparison dataMap by the selected activity/entity/resource
+  const filterDataMap = React.useCallback(
+    (dataMap: Map<string, any[]>): Map<string, any[]> => {
+      if (selectedActivity === "all") return dataMap;
+      const filtered = new Map<string, any[]>();
+      dataMap.forEach((rows, scenarioId) => {
+        filtered.set(scenarioId, rows.filter((row: any) => row[filterKey] === selectedActivity));
+      });
+      return filtered;
+    },
+    [selectedActivity, filterKey]
+  );
+
   // Get unique items for filtering based on data type
   const uniqueFilterItems = React.useMemo(() => {
-    if (!isFilterableType || data.length === 0) return [];
+    if (!isFilterableType) return [];
 
-    const isTimeseriesType =
-      dataType === "activity-contents-timeseries" ||
-      dataType === "activity-inbound-queue-timeseries" ||
-      dataType === "activity-outbound-queue-timeseries" ||
-      dataType === "state-values-timeseries" ||
-      dataType === "entity-throughput-timeseries";
+    if (isComparing) {
+      // Derive filter items from all scenarios' data
+      const dataMap = getDataForType(dataType);
+      const allItems = new Set<string>();
+      dataMap.forEach((rows) => {
+        for (const row of rows) {
+          if (row[filterKey]) allItems.add(row[filterKey]);
+        }
+      });
+      return Array.from(allItems).sort();
+    }
 
-    let key = "object_id"; // Default for timeseries
-    if (dataType === "activity") key = "activity_name";
-    else if (dataType === "entity") key = "entity_name";
-    else if (dataType === "resource") key = "resource_name";
-    else if (dataType === "activity-entity") key = "activity_name";
-
-    const items = Array.from(new Set(data.map((item: any) => item[key])))
+    if (data.length === 0) return [];
+    const items = Array.from(new Set(data.map((item: any) => item[filterKey])))
       .filter(Boolean)
       .sort();
     return items as string[];
-  }, [data, dataType, isFilterableType]);
+  }, [data, dataType, isFilterableType, filterKey, isComparing, getDataForType]);
 
   // Filter data by selected item
   const filteredData = React.useMemo(() => {
     if (!isFilterableType || selectedActivity === "all") {
       return data;
     }
-
-    const isTimeseriesType =
-      dataType === "activity-contents-timeseries" ||
-      dataType === "activity-inbound-queue-timeseries" ||
-      dataType === "activity-outbound-queue-timeseries" ||
-      dataType === "state-values-timeseries" ||
-      dataType === "entity-throughput-timeseries";
-
-    let key = "object_id"; // Default for timeseries
-    if (dataType === "activity") key = "activity_name";
-    else if (dataType === "entity") key = "entity_name";
-    else if (dataType === "resource") key = "resource_name";
-    else if (dataType === "activity-entity") key = "activity_name";
-
-    return data.filter((item: any) => item[key] === selectedActivity);
-  }, [data, dataType, selectedActivity, isFilterableType]);
+    return data.filter((item: any) => item[filterKey] === selectedActivity);
+  }, [data, selectedActivity, isFilterableType, filterKey]);
 
   // Short name formatter for timeseries object IDs (e.g., "Model.Model.Arrivals" → "Arrivals")
   const shortNameFormatter = React.useMemo(() => {
@@ -492,7 +500,8 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   const comparisonTableData = React.useMemo(() => {
     if (!isComparing) return null;
 
-    const dataMap = getDataForType(dataType);
+    const rawDataMap = getDataForType(dataType);
+    const dataMap = isFilterableType ? filterDataMap(rawDataMap) : rawDataMap;
     const baseColumns = getColumnsForDataType(dataType);
 
     const nameKey =
@@ -508,7 +517,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
       columns: mergeTableColumns(selectedScenarios, baseColumns, nameKey),
       data: mergeTableData(selectedScenarios, dataMap, nameKey),
     };
-  }, [isComparing, dataType, selectedScenarios, getDataForType]);
+  }, [isComparing, dataType, selectedScenarios, getDataForType, isFilterableType, filterDataMap]);
 
   // Reset selected activity, metric, and expanded activity when data type changes
   useEffect(() => {
@@ -628,7 +637,8 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
 
   // Render comparison chart (multi-scenario overlay)
   const renderComparisonChart = () => {
-    const dataMap = getDataForType(dataType);
+    const rawDataMap = getDataForType(dataType);
+    const dataMap = isFilterableType ? filterDataMap(rawDataMap) : rawDataMap;
 
     const isTimeseriesType =
       dataType === "activity-contents-timeseries" ||

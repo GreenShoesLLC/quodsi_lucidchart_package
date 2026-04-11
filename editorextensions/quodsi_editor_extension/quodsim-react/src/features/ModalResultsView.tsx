@@ -1,5 +1,5 @@
 import React from "react";
-import SimulationRunAnalysisDashboard from "./editors/SimulationRunAnalysisDashboard";
+import SimulationRunAnalysisDashboard from "./editors/analysis/SimulationRunAnalysisDashboard";
 
 interface ModalResultsViewProps {
   scenarioId: string;

@@ -1,4 +1,4 @@
-import { TableColumn } from "../../components/DataTable";
+import { TableColumn } from "../../../components/DataTable";
 
 // Formatting helper functions
 // For values in 0-1 range (like utilization 0.85 -> 85%)
