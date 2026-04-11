@@ -267,7 +267,8 @@ export class MessageRouter {
     this.requestModelContext(role);
 
     // Non-blocking auth check — broadcasts AUTH_STATUS to React
-    AuthHandler.checkCachedAuth();
+    // TODO: Re-enable once sign-out/cached-token behavior is resolved
+    // AuthHandler.checkCachedAuth();
   }
 
   /**

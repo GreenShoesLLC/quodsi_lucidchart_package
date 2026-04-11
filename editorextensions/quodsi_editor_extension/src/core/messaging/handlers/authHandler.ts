@@ -112,11 +112,14 @@ export class AuthHandler {
       });
 
       if (profileResponse) {
-        const profile = typeof profileResponse === 'string'
-          ? JSON.parse(profileResponse)
-          : profileResponse;
+        // oauthXhr returns a response wrapper with responseText containing the JSON body
+        const responseBody = profileResponse.responseText || profileResponse;
+        const profile = typeof responseBody === 'string'
+          ? JSON.parse(responseBody)
+          : responseBody;
         email = profile.email || '';
         displayName = profile.name || profile.given_name || undefined;
+        AuthHandler.logger.log('User profile:', { email, displayName });
       }
     } catch (error) {
       AuthHandler.logger.log('Could not fetch user profile, continuing with token claims only:', error);
