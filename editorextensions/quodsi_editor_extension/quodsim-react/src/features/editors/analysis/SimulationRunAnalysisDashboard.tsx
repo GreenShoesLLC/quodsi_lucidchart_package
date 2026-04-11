@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ArrowLeft,
   BarChart3,
@@ -9,7 +9,7 @@ import {
   List,
   X,
 } from "lucide-react";
-import { EnvelopeMessageType, SimulationRunDownloadInfo } from "@quodsi/shared";
+import { SimulationRunDownloadInfo } from "@quodsi/shared";
 import { useSimulationRunSender } from "../../../messaging/senders/simulationRunSender";
 import DataTable from "../../../components/DataTable";
 import {
@@ -41,13 +41,7 @@ interface SimulationRunAnalysisDashboardProps {
   downloadInfo?: SimulationRunDownloadInfo;
 }
 
-// Summary data structure
-interface SummaryData {
-  scenario: any | null;
-  activities: any[];
-  resources: any[];
-}
-
+import { useCrossRepData, SummaryData } from "../../../hooks/useCrossRepData";
 import {
   formatNumber,
   formatPercent,
@@ -64,24 +58,8 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   // View type: summary (compact) or detailed (existing tables/charts)
   const [viewType, setViewType] = useState<"summary" | "detailed">("summary");
 
-  // Summary view state
-  const [summaryData, setSummaryData] = useState<SummaryData>({
-    scenario: null,
-    activities: [],
-    resources: [],
-  });
-  const [summaryLoading, setSummaryLoading] = useState(false);
-  const summaryDataReceived = useRef({
-    scenario: false,
-    activity: false,
-    resource: false,
-  });
-
-  // Detailed view state (existing)
+  // Detailed view state (owned here because comparison fetch effect depends on dataType)
   const [dataType, setDataType] = useState<CrossRepDataType>("activity");
-  const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("both");
   const [zipCopied, setZipCopied] = useState<boolean>(false);
@@ -109,6 +87,22 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
 
   // Hooks
   const { getCrossRepData } = useSimulationRunSender();
+
+  const {
+    data,
+    loading,
+    error,
+    summaryData,
+    summaryLoading,
+    fetchSummaryData,
+    fetchDetailedData,
+  } = useCrossRepData({
+    documentId,
+    scenarioId,
+    viewType,
+    dataType,
+    getCrossRepData,
+  });
 
   const {
     selectedScenarios,
@@ -162,42 +156,6 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     setViewType("detailed");
   };
 
-  // Fetch summary data (all 3 types in parallel)
-  const fetchSummaryData = useCallback(() => {
-    if (!documentId || !scenarioId) return;
-
-    console.log("[SimulationRunAnalysisDashboard] Fetching summary data...");
-    setSummaryLoading(true);
-    summaryDataReceived.current = {
-      scenario: false,
-      activity: false,
-      resource: false,
-    };
-
-    // Fetch all 3 data types
-    getCrossRepData(documentId, scenarioId, "scenario");
-    getCrossRepData(documentId, scenarioId, "activity");
-    getCrossRepData(documentId, scenarioId, "resource");
-  }, [documentId, scenarioId, getCrossRepData]);
-
-  // Fetch detailed data (single type)
-  const fetchDetailedData = useCallback(() => {
-    if (!documentId || !scenarioId) {
-      setError("Missing documentId or scenarioId");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setData([]);
-
-    console.log(
-      `[SimulationRunAnalysisDashboard] Fetching ${dataType} data for scenario ${scenarioId}`
-    );
-
-    getCrossRepData(documentId, scenarioId, dataType);
-  }, [documentId, scenarioId, dataType, getCrossRepData]);
-
   // Fetch data based on view type
   useEffect(() => {
     if (viewType === "summary") {
@@ -219,88 +177,6 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
       }
     }
   }, [isComparing, viewType, dataType, selectedScenarios.map(s => s.id).join(","), fetchDataType]);
-
-  // Listen for data responses
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-
-      if (message.type === EnvelopeMessageType.CROSS_REP_DATA_RESULT) {
-        console.log(
-          "[SimulationRunAnalysisDashboard] Received cross-rep data:",
-          message.data
-        );
-
-        const {
-          dataType: receivedType,
-          success,
-          data: receivedData,
-        } = message.data;
-
-        // Handle summary view data
-        if (viewType === "summary") {
-          if (success) {
-            // Update refs BEFORE setSummaryData so they're synchronous
-            if (receivedType === "scenario") {
-              summaryDataReceived.current.scenario = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                scenario: receivedData?.[0] || null,
-              }));
-            } else if (receivedType === "activity") {
-              summaryDataReceived.current.activity = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                activities: receivedData || [],
-              }));
-            } else if (receivedType === "resource") {
-              summaryDataReceived.current.resource = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                resources: receivedData || [],
-              }));
-            }
-
-            // Now this check works because refs were updated synchronously above
-            if (
-              summaryDataReceived.current.scenario &&
-              summaryDataReceived.current.activity &&
-              summaryDataReceived.current.resource
-            ) {
-              setSummaryLoading(false);
-            }
-          }
-        }
-
-        // Handle detailed view data
-        if (viewType === "detailed" && receivedType === dataType) {
-          if (success) {
-            setData(receivedData || []);
-            setLoading(false);
-          } else {
-            setError(message.data.error || "Failed to fetch data");
-            setLoading(false);
-          }
-        }
-      }
-
-      // Handle error response
-      if (message.type === EnvelopeMessageType.ERROR) {
-        if (
-          message.data?.relatedTo === EnvelopeMessageType.CROSS_REP_DATA_REQUEST
-        ) {
-          console.error("[SimulationRunAnalysisDashboard] Error:", message.data);
-          if (viewType === "detailed" && message.data?.dataType === dataType) {
-            setError(message.data.message || "An error occurred");
-            setLoading(false);
-          }
-        }
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [viewType, dataType]);
 
   // Get columns for current data type (detailed view)
   const columns = getColumnsForDataType(dataType);
