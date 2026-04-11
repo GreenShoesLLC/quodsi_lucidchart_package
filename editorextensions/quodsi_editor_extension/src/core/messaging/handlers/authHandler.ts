@@ -109,14 +109,11 @@ export class AuthHandler {
       const profileResponse = await client.oauthXhr('kinde', {
         url: 'https://quodsim.kinde.com/oauth2/v2/user_profile',
         method: 'GET',
+        responseFormat: 'utf8',
       });
 
       if (profileResponse) {
-        // oauthXhr returns a response wrapper with responseText containing the JSON body
-        const responseBody = profileResponse.responseText || profileResponse;
-        const profile = typeof responseBody === 'string'
-          ? JSON.parse(responseBody)
-          : responseBody;
+        const profile = JSON.parse(profileResponse.responseText);
         email = profile.email || '';
         displayName = profile.name || profile.given_name || undefined;
         AuthHandler.logger.log('User profile:', { email, displayName });
