@@ -94,3 +94,11 @@ export function useScenarioDefinitions() {
   const { scenarioDefinitions } = useMessaging();
   return scenarioDefinitions;
 }
+
+/**
+ * Hook to access authentication state
+ */
+export function useAuth() {
+  const { auth } = useMessaging();
+  return auth;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, User, LogOut } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -11,6 +11,8 @@ import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
+import { useAuth } from "../../messaging/MessageContext";
+import { useAuthSender } from "../../messaging/senders/authSender";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -47,7 +49,24 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
+  const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const authDropdownRef = useRef<HTMLDivElement>(null);
+  const auth = useAuth();
+  const authSender = useAuthSender();
+
+  // Click-outside handler for auth dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (authDropdownRef.current && !authDropdownRef.current.contains(event.target as Node)) {
+        setAuthDropdownOpen(false);
+      }
+    };
+    if (authDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [authDropdownOpen]);
 
   // Check for developer tools flag on mount and when about modal closes
   useEffect(() => {
@@ -128,6 +147,55 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     return { activities, resources, entities };
   };
 
+  // Auth status indicator
+  const AuthStatusIndicator = () => {
+    if (!auth.isAuthenticated) {
+      return (
+        <button
+          onClick={() => authSender.requestAuth()}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+        >
+          <User className="w-3 h-3" />
+          Sign In
+        </button>
+      );
+    }
+
+    return (
+      <div className="relative" ref={authDropdownRef}>
+        <button
+          onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors max-w-[140px]"
+          title={auth.user?.email || "Signed in"}
+        >
+          <User className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">
+            {auth.user?.displayName || auth.user?.email || "Signed in"}
+          </span>
+        </button>
+        {authDropdownOpen && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[160px]">
+            {auth.user?.email && (
+              <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100 truncate">
+                {auth.user.email}
+              </div>
+            )}
+            <button
+              onClick={() => {
+                setAuthDropdownOpen(false);
+                authSender.logout();
+              }}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            >
+              <LogOut className="w-3 h-3 text-gray-500" />
+              Sign Out
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Reusable menu button with dropdown
   const MenuButton = () => (
     <div className="relative" ref={menuRef}>
@@ -202,7 +270,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     return (
       <>
-        {/* Row 1: Icon + Model name + Menu */}
+        {/* Row 1: Icon + Model name + Auth + Menu */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <Icon className={`w-5 h-5 ${getEditorIconClass(editorType)} flex-shrink-0`} />
@@ -210,7 +278,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {modelName}
             </span>
           </div>
-          <MenuButton />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <AuthStatusIndicator />
+            <MenuButton />
+          </div>
         </div>
 
         {/* Row 2: Statistics */}
@@ -234,7 +305,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     return (
       <>
-        {/* Row 1: Icon + Element name + Menu */}
+        {/* Row 1: Icon + Element name + Auth + Menu */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <Icon className={`w-5 h-5 ${getEditorIconClass(editorType)} flex-shrink-0`} />
@@ -242,7 +313,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {elementName}
             </span>
           </div>
-          <MenuButton />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <AuthStatusIndicator />
+            <MenuButton />
+          </div>
         </div>
 
         {/* Row 2: Context */}
@@ -271,7 +345,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     return (
       <>
-        {/* Row 1: Warning icon + Title + Menu */}
+        {/* Row 1: Warning icon + Title + Auth + Menu */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0">
             <Icon className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -279,7 +353,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Unconverted Element
             </span>
           </div>
-          <MenuButton />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <AuthStatusIndicator />
+            <MenuButton />
+          </div>
         </div>
 
         {/* Row 2: Instruction */}

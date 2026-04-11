@@ -17,6 +17,16 @@
       }
     },
     {
+      "label": "WaitForReact",
+      "type": "shell",
+      "command": "Write-Host 'Waiting for React on port 3000...'; while (-not (Test-NetConnection -ComputerName localhost -Port 3000 -InformationLevel Quiet -WarningAction SilentlyContinue)) { Start-Sleep -Seconds 2 }; Write-Host 'React is ready!'",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      }
+    },
+    {
       "label": "LucidPackage",
       "type": "shell",
       "command": "npx lucid-package@latest test-editor-extension quodsi_editor_extension --watch",
@@ -26,7 +36,8 @@
         "reveal": "always",
         "panel": "shared",
         "echo": true
-      }
+      },
+      "dependsOn": ["WaitForReact"]
     },
     {
       "label": "ReactApp",
@@ -36,6 +47,7 @@
         "cwd": "${workspaceFolder}/editorextensions/quodsi_editor_extension/quodsim-react"
       },
       "problemMatcher": [],
+      "isBackground": true,
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -121,7 +133,7 @@
     },
     {
       "label": "Start Apps",
-      "dependsOn": ["Azure Function Start", "LucidPackage", "ReactApp"],
+      "dependsOn": ["Azure Function Start", "ReactApp", "LucidPackage"],
       "problemMatcher": []
     }
   ]

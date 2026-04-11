@@ -41,6 +41,7 @@ infrastructure/extracted-config/*.json
 
 # Lucid credentials
 lucid.credentials.local
+kinde.credentials.local
 
 # Azure credentials and publish profiles
 *.publishsettings

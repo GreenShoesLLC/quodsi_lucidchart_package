@@ -12,6 +12,7 @@ import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
+import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
 import { SwimLaneHandler } from './swimlaneHandler';
 
@@ -33,6 +34,11 @@ export class MessageHandlers {
     // Framework messages have highest priority
     if (FrameworkHandler.handleMessage(msg)) {
       console.log(`[MessageHandlers] Message ${msg.type} handled by FrameworkHandler`);
+      return true;
+    }
+
+    // Auth messages
+    if (AuthHandler.handleMessage(msg)) {
       return true;
     }
 
@@ -110,6 +116,7 @@ export class MessageHandlers {
 // Re-export handlers for direct access
 export {
   FrameworkHandler,
+  AuthHandler,
   SelectionHandler,
   SimulationHandler,
   ModelOpsHandler,

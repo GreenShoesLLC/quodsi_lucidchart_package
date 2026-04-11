@@ -28,6 +28,7 @@ export interface PendingRequests {
 
 // Import action types from the slices once they're created
 import { AppAction } from './appSlice';
+import { AuthAction } from './authSlice';
 import { SelectionAction } from './selectionSlice';
 import { SimulationAction } from './simulationSlice';
 import { ValidationAction } from './validationSlice';
@@ -39,6 +40,7 @@ import { ScenarioDefinitionAction } from './scenarioDefinitionSlice';
 // Re-export the action types
 export type {
   AppAction,
+  AuthAction,
   SelectionAction,
   SimulationAction,
   ValidationAction,
@@ -51,6 +53,7 @@ export type {
 // Union type that encompasses all possible actions
 export type MessagingAction =
   | AppAction
+  | AuthAction
   | SelectionAction
   | SimulationAction
   | ValidationAction

@@ -8,6 +8,7 @@ import { PanelRole, LogEntry } from './types';
 import { ChannelManager } from './ChannelManager';
 import { RoutablePanel } from './RoutablePanel';
 import { MessageHandlers } from './handlers'; // Pre-load handlers at initialization time
+import { AuthHandler } from './handlers/authHandler';
 import { ExtensionDebugService } from '../logging/ExtensionDebugService';
 
 /**
@@ -264,6 +265,9 @@ export class MessageRouter {
     // Request the panel to send MODEL_CONTEXT
     this.debug.log(`About to request MODEL_CONTEXT for ${role}`);
     this.requestModelContext(role);
+
+    // Non-blocking auth check — broadcasts AUTH_STATUS to React
+    AuthHandler.checkCachedAuth();
   }
 
   /**

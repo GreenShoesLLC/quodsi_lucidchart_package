@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Search, Loader2 } from "lucide-react";
+import { X, Search, Loader2, KeyRound } from "lucide-react";
 import { useMessaging } from "../../messaging/MessageContext";
 import {
   EnvelopeMessageType,
@@ -81,11 +81,19 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
   const { sendMessage } = useMessaging();
   const [scanning, setScanning] = useState(false);
   const [resultText, setResultText] = useState<string | null>(null);
+  const [authTesting, setAuthTesting] = useState(false);
+  const [authResultText, setAuthResultText] = useState<string | null>(null);
 
   const handleScan = useCallback(() => {
     setScanning(true);
     setResultText(null);
     sendMessage(EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST);
+  }, [sendMessage]);
+
+  const handleTestKindeAuth = useCallback(() => {
+    setAuthTesting(true);
+    setAuthResultText(null);
+    sendMessage(EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_REQUEST);
   }, [sendMessage]);
 
   useEffect(() => {
@@ -98,6 +106,35 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
           const result = msg.data as SwimLaneScanResult;
           setResultText(formatScanResult(result));
           setScanning(false);
+        }
+        if (msg?.type === EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_RESULT) {
+          const result = msg.data;
+          if (result.success && result.rawToken) {
+            try {
+              // Decode JWT in browser where atob is available
+              const parts = result.rawToken.split('.');
+              const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+              const claims = JSON.parse(atob(base64));
+
+              const lines: string[] = [];
+              lines.push("Kinde Auth SUCCESS");
+              lines.push("");
+              lines.push("Key Claims:");
+              lines.push(`  sub:      ${claims.sub || "(missing)"}`);
+              lines.push(`  email:    ${claims.email || "(missing)"}`);
+              lines.push(`  name:     ${claims.name || claims.given_name || "(missing)"}`);
+              lines.push(`  org_code: ${claims.org_code || "(missing)"}`);
+              lines.push("");
+              lines.push("All Claims:");
+              lines.push(JSON.stringify(claims, null, 2));
+              setAuthResultText(lines.join("\n"));
+            } catch (decodeErr) {
+              setAuthResultText(`Kinde Auth SUCCESS (token received but decode failed)\n\nRaw token length: ${result.rawToken.length}`);
+            }
+          } else {
+            setAuthResultText(`Kinde Auth FAILED\n\nError: ${result.error}`);
+          }
+          setAuthTesting(false);
         }
       } catch {
         // Ignore non-matching messages
@@ -113,6 +150,8 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
     if (!isOpen) {
       setScanning(false);
       setResultText(null);
+      setAuthTesting(false);
+      setAuthResultText(null);
     }
   }, [isOpen]);
 
@@ -144,8 +183,8 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
           </button>
         </div>
 
-        {/* Scan Button */}
-        <div className="mb-3">
+        {/* Action Buttons */}
+        <div className="mb-3 flex gap-2">
           <button
             onClick={handleScan}
             disabled={scanning}
@@ -158,18 +197,34 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
             )}
             {scanning ? "Scanning..." : "Scan Swimlanes"}
           </button>
+          <button
+            onClick={handleTestKindeAuth}
+            disabled={authTesting}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 rounded transition-colors"
+          >
+            {authTesting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <KeyRound className="w-3.5 h-3.5" />
+            )}
+            {authTesting ? "Authenticating..." : "Test Kinde Auth"}
+          </button>
         </div>
 
         {/* Results */}
         <div className="flex-1 min-h-0 overflow-auto">
-          {resultText !== null ? (
+          {authResultText !== null ? (
+            <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap font-mono">
+              {authResultText}
+            </pre>
+          ) : resultText !== null ? (
             <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap font-mono">
               {resultText}
             </pre>
           ) : (
-            !scanning && (
+            !scanning && !authTesting && (
               <div className="text-xs text-gray-500 text-center py-6">
-                Click "Scan Swimlanes" to inspect the current page
+                Use the buttons above to test developer features
               </div>
             )
           )}

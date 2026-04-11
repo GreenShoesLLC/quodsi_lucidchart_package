@@ -6,6 +6,12 @@ import { StorageAdapter } from '../../StorageAdapter';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { isCenterInBox } from '../../../services/swimLaneGeometry';
 
+interface KindeAuthResult {
+  success: boolean;
+  rawToken?: string;
+  error?: string;
+}
+
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 /**
@@ -18,6 +24,9 @@ export class DevtoolsHandler {
     switch (msg.type) {
       case EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST:
         DevtoolsHandler.handleSwimlaneScanRequest(msg);
+        return true;
+      case EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_REQUEST:
+        DevtoolsHandler.handleKindeAuthRequest(msg);
         return true;
       default:
         return false;
@@ -206,6 +215,49 @@ export class DevtoolsHandler {
       hasQuodsiData,
       quodsiType,
     };
+  }
+
+  private static async handleKindeAuthRequest(msg: EnvelopeBase): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      DevtoolsHandler.logger.log('Attempting Kinde OAuth token request...');
+
+      const token = await client.getOAuthToken('kinde');
+
+      if (!token) {
+        DevtoolsHandler.sendKindeAuthResult(msg.id, {
+          success: false,
+          error: 'No token returned. User may have cancelled the consent flow.',
+        });
+        return;
+      }
+
+      // Send raw token to React for decoding (extension runtime lacks atob/Buffer)
+      DevtoolsHandler.logger.log('Kinde token received, sending to React for decode');
+
+      DevtoolsHandler.sendKindeAuthResult(msg.id, {
+        success: true,
+        rawToken: token,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      DevtoolsHandler.logger.error('Kinde auth error:', error);
+      DevtoolsHandler.sendKindeAuthResult(msg.id, {
+        success: false,
+        error: errorMessage,
+      });
+    }
+  }
+
+  private static sendKindeAuthResult(correlationId: string, result: KindeAuthResult): void {
+    router.send('model', {
+      id: correlationId,
+      type: EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_RESULT,
+      source: 'host',
+      target: 'model-iframe',
+      version: '1.0',
+      data: result,
+    });
   }
 
   private static sendResult(correlationId: string, result: SwimLaneScanResult): void {

@@ -1,0 +1,206 @@
+import { EnvelopeBase, EnvelopeMessageType, QuodsiUserInfo } from '@quodsi/shared';
+import { router } from '../index';
+import { ModelManager } from '../../ModelManager';
+import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+
+const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/**
+ * Handler for Kinde authentication operations.
+ * Manages getOAuthToken('kinde') calls and broadcasts AUTH_STATUS to React.
+ */
+export class AuthHandler {
+  private static logger = ExtensionDebugService.forComponent('AuthHandler');
+  private static isAuthenticated = false;
+  private static currentUser: QuodsiUserInfo | undefined;
+  private static currentToken: string | undefined;
+
+  public static handleMessage(msg: EnvelopeBase): boolean {
+    switch (msg.type) {
+      case EnvelopeMessageType.AUTH_REQUIRED:
+        AuthHandler.handleAuthRequired(msg);
+        return true;
+      case EnvelopeMessageType.AUTH_LOGOUT:
+        AuthHandler.handleLogout(msg);
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Non-blocking check for cached Kinde token.
+   * Called after REACT_APP_READY to set initial auth state.
+   */
+  public static async checkCachedAuth(): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      AuthHandler.logger.log('Checking for cached Kinde token...');
+
+      const token = await client.getOAuthToken('kinde');
+
+      if (token) {
+        AuthHandler.logger.log('Cached Kinde token found, fetching user profile...');
+        await AuthHandler.processToken(token);
+      } else {
+        AuthHandler.logger.log('No cached Kinde token');
+        AuthHandler.broadcastAuthStatus(false);
+      }
+    } catch (error) {
+      AuthHandler.logger.error('Error checking cached auth:', error);
+      AuthHandler.broadcastAuthStatus(false);
+    }
+  }
+
+  /**
+   * Handle AUTH_REQUIRED: user clicked Sign In or a gated action.
+   * Initiates the Kinde OAuth flow via LucidChart's native popup.
+   */
+  private static async handleAuthRequired(msg: EnvelopeBase): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      AuthHandler.logger.log('Auth required, initiating Kinde OAuth flow...');
+
+      const token = await client.getOAuthToken('kinde');
+
+      if (token) {
+        await AuthHandler.processToken(token);
+      } else {
+        AuthHandler.logger.log('No token returned (user may have cancelled)');
+        AuthHandler.broadcastAuthStatus(false);
+      }
+    } catch (error) {
+      AuthHandler.logger.error('Error during Kinde auth:', error);
+      AuthHandler.broadcastAuthError(
+        'AUTH_FAILED',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
+  }
+
+  /**
+   * Handle AUTH_LOGOUT: clear local auth state.
+   */
+  private static handleLogout(msg: EnvelopeBase): void {
+    AuthHandler.logger.log('Logging out, clearing auth state');
+    AuthHandler.isAuthenticated = false;
+    AuthHandler.currentUser = undefined;
+    AuthHandler.currentToken = undefined;
+    AuthHandler.broadcastAuthStatus(false);
+  }
+
+  /**
+   * Process a valid token: decode claims, fetch user profile, broadcast status.
+   */
+  private static async processToken(token: string): Promise<void> {
+    // Decode access token for sub and org_code
+    const claims = AuthHandler.decodeTokenClaims(token);
+    if (!claims || !claims.sub) {
+      AuthHandler.logger.error('Token missing sub claim');
+      AuthHandler.broadcastAuthStatus(false);
+      return;
+    }
+
+    // Fetch user profile for email and display name
+    let email = '';
+    let displayName: string | undefined;
+    try {
+      const client = ModelManager.getClient();
+      const profileResponse = await client.oauthXhr('kinde', {
+        url: 'https://quodsim.kinde.com/oauth2/v2/user_profile',
+        method: 'GET',
+      });
+
+      if (profileResponse) {
+        // oauthXhr returns a response wrapper with responseText containing the JSON body
+        const responseBody = profileResponse.responseText || profileResponse;
+        const profile = typeof responseBody === 'string'
+          ? JSON.parse(responseBody)
+          : responseBody;
+        email = profile.email || '';
+        displayName = profile.name || profile.given_name || undefined;
+        AuthHandler.logger.log('User profile:', { email, displayName });
+      }
+    } catch (error) {
+      AuthHandler.logger.log('Could not fetch user profile, continuing with token claims only:', error);
+    }
+
+    const user: QuodsiUserInfo = {
+      id: claims.sub,
+      email,
+      displayName,
+      orgCode: claims.org_code || undefined,
+    };
+
+    AuthHandler.isAuthenticated = true;
+    AuthHandler.currentUser = user;
+    AuthHandler.currentToken = token;
+
+    AuthHandler.logger.log('Auth successful:', { id: user.id, email: user.email, orgCode: user.orgCode });
+    AuthHandler.broadcastAuthStatus(true, user);
+  }
+
+  /**
+   * Decode JWT payload without verification.
+   * Uses manual base64 decode safe for the extension sandbox (no atob/Buffer).
+   */
+  private static decodeTokenClaims(token: string): Record<string, any> | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+      let output = '';
+      let buffer = 0;
+      let bits = 0;
+      for (let i = 0; i < base64.length; i++) {
+        const idx = chars.indexOf(base64[i]);
+        if (idx === -1) continue;
+        buffer = (buffer << 6) | idx;
+        bits += 6;
+        if (bits >= 8) {
+          bits -= 8;
+          output += String.fromCharCode((buffer >> bits) & 0xff);
+        }
+      }
+
+      return JSON.parse(output);
+    } catch (error) {
+      AuthHandler.logger.error('Failed to decode token:', error);
+      return null;
+    }
+  }
+
+  private static broadcastAuthStatus(isAuthenticated: boolean, user?: QuodsiUserInfo): void {
+    router.send('broadcast', {
+      id: generateId(),
+      type: EnvelopeMessageType.AUTH_STATUS,
+      source: 'host',
+      target: 'broadcast',
+      version: '1.0',
+      data: { isAuthenticated, user },
+    });
+  }
+
+  private static broadcastAuthError(code: string, message: string): void {
+    router.send('broadcast', {
+      id: generateId(),
+      type: EnvelopeMessageType.AUTH_ERROR,
+      source: 'host',
+      target: 'broadcast',
+      version: '1.0',
+      data: { code, message },
+    });
+  }
+
+  /** Get the current token for use by other handlers (e.g., SimulationHandler) */
+  public static getToken(): string | undefined {
+    return AuthHandler.currentToken;
+  }
+
+  /** Check if user is currently authenticated */
+  public static getIsAuthenticated(): boolean {
+    return AuthHandler.isAuthenticated;
+  }
+}

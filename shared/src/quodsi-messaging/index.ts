@@ -215,6 +215,8 @@ export interface EnvelopMessagePayloads {
 
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_RESULT]: import('../types/devtools/DevToolsTypes').SwimLaneScanResult;
+  [EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_REQUEST]: Record<string, never>;
+  [EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_RESULT]: { success: boolean; claims?: Record<string, any>; error?: string };
 
   [EnvelopeMessageType.SWIMLANE_UPDATE]: { swimlaneBlockId: string; swimlaneData: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData };
   [EnvelopeMessageType.SWIMLANE_UPDATE_RESULT]: { success: boolean; errorMessage?: string };
