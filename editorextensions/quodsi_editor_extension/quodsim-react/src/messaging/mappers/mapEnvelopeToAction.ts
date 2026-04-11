@@ -1,5 +1,6 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
 import { mapFramework } from './framework.mapper';
+import { mapAuth } from './auth.mapper';
 import { mapSelection } from './selection.mapper';
 import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
@@ -18,6 +19,7 @@ const logger = debugService.forComponent('MessageMapper');
  */
 const mappers = [
   mapFramework,
+  mapAuth,
   mapSelection,
   mapSimulation,
   mapModelOps,
