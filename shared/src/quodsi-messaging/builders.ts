@@ -10,7 +10,7 @@ import { EnvelopeMessageType, EnvelopMessagePayloads, EnvelopeBase, MessageSourc
  * @param data Message payload
  * @returns A properly formatted message envelope
  */
-export function createBaseMessage<T extends EnvelopeMessageType>(
+export function createBaseMessage<T extends keyof EnvelopMessagePayloads>(
   type: T,
   source: MessageSource,
   target: MessageTarget,
