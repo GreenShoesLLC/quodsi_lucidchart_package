@@ -1,0 +1,5 @@
+domain_id,name,slug,parent_domain_id,is_foundational_pattern,is_canonical,approval_status,description,display_order
+1,"Manufacturing","manufacturing",,false,true,seed,"Models for discrete and process manufacturing, assembly lines, job shops, paint shops, and related production operations.",20
+2,"Home Appliances","home-appliances",1,false,false,approved,"Manufacturing of major home appliances including refrigerators, washing machines, dryers, dishwashers, ranges, ovens, and air conditioners. Non-canonical sub-domain refinement of Manufacturing.",10
+3,"Production Engineering","production-engineering",,false,false,approved,"Cross-cutting engineering discipline covering process design, line balancing, shop floor optimization, and manufacturing capacity planning. Non-canonical cross-cutting theme.",90
+4,"Assembly Line Balancing","assembly-line-balancing",,false,false,approved,"Narrow topical theme specifically about balancing work across assembly stations to minimize cycle time. Non-canonical narrow theme that could be considered for consolidation with Production Engineering.",95

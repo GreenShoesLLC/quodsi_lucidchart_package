@@ -1,0 +1,10 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","Refrigerator variant is a canonical example of new-product line design — the Egyptian case (73 stations) shows what a new refrigerator line model looks like."
+1,2,"full","Refrigerator variant explicitly identifies Station 7 as the bottleneck, making it the primary reference for the bottleneck-mitigation scenario."
+2,1,"full","Washing machine variant covers new-product station allocation for 100+ component assemblies."
+2,2,"full","Midea washing machine case reports a 20% line balance improvement, reaching >90% balance rate — canonical bottleneck-mitigation outcome."
+2,3,"full","High-end washing machine variant with flexibility improvements explicitly addresses mixed-model sequencing (multiple SKUs on a shared line)."
+3,1,"full","Air conditioner variant based on PMC paper shows 29-station line design with 68-to-85% balance improvement."
+3,2,"full","Air conditioner variant explicitly reduces bottleneck from 96.67 to 74.6 seconds."
+3,4,"partial","PMC air conditioner paper documents 10-hour single-shift baseline, enabling scenario comparisons against multi-shift configurations, though the paper itself does not test shift variations directly."
+4,1,"partial","Generic teaching variant supports Scenario 1 at a pedagogical level, using simplified parameter sets rather than domain-specific case study data."

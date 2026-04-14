@@ -1,0 +1,4 @@
+blueprint_id,feature_code,usage_note
+1,balking,"Not used by the canonical pure M/M/1, but used by the 'balking' variant (model_definition_id=4). Tagged at the blueprint level because the M/M/1 family of variants includes a balking form. Surfaces a schema question: feature tags at the blueprint level don't distinguish 'used by the canonical' from 'used by a variant only.'"
+1,reneging,"Not used by the canonical pure M/M/1, but used by the 'reneging' variant (model_definition_id=3). Same variant-level scoping comment as above."
+1,physical_queue_capacity,"Not used by the canonical pure M/M/1 (which has infinite buffer), but used by the M/M/1/K variant (model_definition_id=2) where K is the finite queue capacity. Same variant-level scoping comment."

@@ -1,0 +1,26 @@
+code,display_name,category,description,display_order,approval_status
+discrete_event,"Discrete Event Simulation",simulation_paradigm,"The product supports discrete event simulation as a first-class modeling paradigm, where state changes occur at discrete points in time triggered by scheduled events.",10,seed
+agent_based,"Agent-Based Modeling",simulation_paradigm,"The product supports agent-based modeling, where autonomous agents interact according to rules and produce emergent system behavior.",20,seed
+system_dynamics,"System Dynamics",simulation_paradigm,"The product supports system dynamics modeling with stocks, flows, feedback loops, and continuous differential equations.",30,seed
+continuous_simulation,"Continuous Simulation",simulation_paradigm,"The product supports continuous simulation via differential equations or continuous state variables, not just discrete event scheduling.",40,seed
+monte_carlo,"Monte Carlo Simulation",simulation_paradigm,"The product supports pure Monte Carlo simulation for statistical sampling and uncertainty quantification, distinct from time-based discrete event simulation.",50,seed
+hybrid_modeling,"Hybrid / Multi-Paradigm Modeling",simulation_paradigm,"The product supports models that combine multiple paradigms (e.g., discrete event + agent-based + system dynamics) in the same simulation.",60,seed
+visual_drag_drop_modeling,"Visual Drag-and-Drop Modeling",authoring_modality,"Models are built primarily by dragging visual components from a palette onto a canvas, connecting them, and configuring properties through forms — with little or no code required.",10,seed
+code_based_modeling,"Code-Based Modeling",authoring_modality,"Models are built primarily by writing code in a scripting or programming language, with limited or no visual authoring. Common in open-source libraries like SimPy.",20,seed
+diagram_based_modeling,"Diagram-Based Modeling",authoring_modality,"Models are built by drawing or authoring process flow diagrams (BPMN, flowchart, or custom notation) that are then interpreted or translated into simulation logic.",30,seed
+domain_specific_language,"Domain-Specific Language",authoring_modality,"Models are authored in a proprietary or domain-specific language designed for simulation (e.g., SIMAN in Arena, SimTalk in Plant Simulation, FlexScript in FlexSim).",40,seed
+python_scripting,"Python Scripting",scripting_language,"The product supports authoring or extending models using Python code.",10,seed
+java_scripting,"Java Scripting",scripting_language,"The product supports authoring or extending models using Java code.",20,seed
+csharp_scripting,"C# Scripting",scripting_language,"The product supports authoring or extending models using C# code.",30,seed
+javascript_scripting,"JavaScript Scripting",scripting_language,"The product supports authoring or extending models using JavaScript or TypeScript code.",40,seed
+vba_scripting,"VBA Scripting",scripting_language,"The product supports authoring or extending models using Visual Basic for Applications (VBA).",50,seed
+animation_2d,"2D Animation",visualization,"The product supports 2D animation of entity flow through the simulation, visible during execution or in replay.",10,seed
+animation_3d,"3D Animation",visualization,"The product supports 3D animation with spatial positioning, camera controls, and realistic visualization of physical systems.",20,seed
+static_charts,"Static Charts and Reports",visualization,"The product produces static charts, reports, and plots of simulation output (histograms, time series, utilization reports).",30,seed
+live_dashboards,"Live Dashboards",visualization,"The product supports live dashboards that update during simulation execution — gauges, counters, real-time charts.",40,seed
+built_in_optimization,"Built-In Optimization",analytical_feature,"The product has built-in or tightly integrated optimization (e.g., OptQuest, genetic algorithms, gradient-based) for parameter tuning and scenario optimization.",10,seed
+design_of_experiments,"Design of Experiments",analytical_feature,"The product has built-in support for factorial, fractional factorial, or other structured DOE techniques for systematic scenario comparison.",20,seed
+output_analysis_tools,"Output Analysis Tools",analytical_feature,"The product has built-in statistical analysis of simulation output — confidence intervals, warm-up detection, replication analysis, comparison tests.",30,seed
+database_connectivity,"Database Connectivity",integration,"The product can read from and write to external databases (SQL Server, Oracle, PostgreSQL, etc.) for parameter loading and output persistence.",10,seed
+api_programmability,"API Programmability",integration,"The product exposes a programmatic API (library, REST, or IPC) that allows external code to control the simulation, load models, run experiments, or retrieve results.",20,seed
+diagramming_tool_integration,"Diagramming Tool Integration",integration,"The product integrates with general-purpose diagramming tools (LucidChart, Miro, diagrams.net, Visio) to import or author models from diagrams drawn in those tools.",30,seed

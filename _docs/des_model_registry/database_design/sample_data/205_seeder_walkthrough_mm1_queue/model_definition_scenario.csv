@@ -1,0 +1,11 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","Pure M/M/1 is the canonical form used to teach basic queueing behavior — the wait-time-vs-utilization curve is most cleanly visible in the canonical model without distractions from variants."
+1,2,"full","Pure M/M/1 is the canonical validation benchmark — its closed-form L = rho/(1-rho), W = 1/(mu-lambda) are the reference values that simulation output must match."
+1,3,"partial","Pure M/M/1 serves Scenario 3 as the baseline against which a lower-variance comparison is made. Fully demonstrating the Pollaczek-Khinchine insight requires M/G/1 which is a separate blueprint (future gap-driven walkthrough)."
+1,4,"full","Pure M/M/1 is an ideal setting for demonstrating Little's Law — its closed-form L and W make the identity easy to verify."
+2,1,"partial","M/M/1/K shows a variant of Scenario 1 where wait time saturates because the queue is bounded — arrivals beyond capacity are lost rather than accumulating."
+2,4,"full","Little's Law holds for any stable queueing system including M/M/1/K (adjusted to account for effective arrival rate)."
+3,1,"partial","Reneging makes Scenario 1 more complex — as rho approaches 1, observed wait times are bounded by the patience distribution rather than growing without bound."
+3,4,"full","Little's Law applies to the reneging variant with effective arrival and departure rates."
+4,1,"partial","Balking modifies Scenario 1 by reducing effective arrival rate as the queue grows, creating a self-limiting feedback effect."
+4,4,"full","Little's Law applies to the balking variant with the effective (post-balking) arrival rate."

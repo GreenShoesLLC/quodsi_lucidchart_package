@@ -1,0 +1,4 @@
+domain_id,name,slug,parent_domain_id,is_foundational_pattern,is_canonical,approval_status,description,display_order
+1,"Healthcare","healthcare",,false,true,seed,"Models for healthcare delivery including hospitals, clinics, specialty care, and related services.",10
+2,"Outpatient Care","outpatient-care",1,false,false,approved,"Ambulatory and non-inpatient healthcare delivery including clinic visits, urgent care, and same-day procedures. Non-canonical sub-domain refinement of Healthcare.",10
+3,"Specialty Clinics","specialty-clinics",2,false,false,approved,"Specialty-focused outpatient care (ENT, orthopedics, cardiology, dermatology, etc.) with physician-class specialization and condition-specific workflows. Non-canonical sub-sub-domain refinement of Healthcare.",10

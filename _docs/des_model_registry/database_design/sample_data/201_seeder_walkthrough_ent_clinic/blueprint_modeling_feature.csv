@@ -1,0 +1,5 @@
+blueprint_id,feature_code,usage_note
+1,appointment_based_arrivals,"ENT clinics operate primarily on an appointment schedule with stochastic patient punctuality. The IEEE paper's central research question (context row 2) is specifically about alternative appointment schedules."
+1,customer_classes,"Patients differentiated by visit type (new patient, follow-up, referral) and possibly acuity or insurance class."
+1,multi_skill_resources,"Residents (multiple experience levels), attending physicians, and nursing staff have different service speeds and capabilities — the Illinois ENT study tested resident allocation with a 5.29% wait time reduction from adding one resident."
+1,resource_schedules,"Clinic sessions have fixed start and end times with resources operating on session-based schedules."

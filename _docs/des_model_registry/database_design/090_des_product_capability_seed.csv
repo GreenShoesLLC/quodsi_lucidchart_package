@@ -1,0 +1,114 @@
+des_product_code,capability_code,usage_note
+simio,discrete_event,
+simio,agent_based,
+simio,continuous_simulation,
+simio,hybrid_modeling,
+simio,visual_drag_drop_modeling,"Primary authoring modality — drag objects from the Standard Library onto the facility view."
+simio,code_based_modeling,"Secondary — C# add-ins and process steps can be coded when visual authoring is insufficient."
+simio,csharp_scripting,"Via Simio's C# add-in API."
+simio,animation_3d,"Strong 3D animation is a Simio signature feature."
+simio,built_in_optimization,"OptQuest integration for simulation-based optimization."
+simio,design_of_experiments,
+simio,output_analysis_tools,
+simio,database_connectivity,
+simio,api_programmability,"Simio API for external control."
+anylogic,discrete_event,
+anylogic,agent_based,"AnyLogic is known for strong agent-based modeling capability."
+anylogic,system_dynamics,
+anylogic,hybrid_modeling,"Multi-method simulation is AnyLogic's headline feature."
+anylogic,visual_drag_drop_modeling,
+anylogic,code_based_modeling,
+anylogic,java_scripting,"Primary authoring language."
+anylogic,python_scripting,"Available via the AnyLogic Python API in AnyLogic 8.8+."
+anylogic,animation_2d,
+anylogic,animation_3d,
+anylogic,live_dashboards,
+anylogic,built_in_optimization,
+anylogic,design_of_experiments,
+anylogic,output_analysis_tools,
+anylogic,database_connectivity,
+anylogic,api_programmability,
+arena,discrete_event,
+arena,visual_drag_drop_modeling,"Primary authoring modality via the SIMAN template library."
+arena,domain_specific_language,"SIMAN is Arena's underlying modeling language."
+arena,vba_scripting,"VBA support for customization and automation."
+arena,animation_2d,
+arena,static_charts,
+arena,built_in_optimization,"OptQuest integration."
+arena,output_analysis_tools,
+arena,database_connectivity,
+flexsim,discrete_event,
+flexsim,visual_drag_drop_modeling,
+flexsim,code_based_modeling,"Via FlexScript."
+flexsim,domain_specific_language,"FlexScript is FlexSim's proprietary C++-style scripting language."
+flexsim,animation_3d,"3D animation is a core FlexSim strength."
+flexsim,built_in_optimization,
+flexsim,design_of_experiments,
+flexsim,database_connectivity,
+flexsim,api_programmability,
+simul8,discrete_event,
+simul8,visual_drag_drop_modeling,
+simul8,domain_specific_language,"Simul8 Visual Logic."
+simul8,animation_2d,
+simul8,static_charts,
+simul8,output_analysis_tools,
+simul8,database_connectivity,
+promodel,discrete_event,
+promodel,visual_drag_drop_modeling,
+promodel,domain_specific_language,"ProModel expression language."
+promodel,animation_2d,
+promodel,built_in_optimization,
+promodel,output_analysis_tools,
+promodel,database_connectivity,
+witness,discrete_event,
+witness,visual_drag_drop_modeling,
+witness,code_based_modeling,
+witness,domain_specific_language,
+witness,animation_2d,
+witness,animation_3d,
+witness,built_in_optimization,
+witness,design_of_experiments,
+witness,database_connectivity,
+visual_components,discrete_event,
+visual_components,visual_drag_drop_modeling,
+visual_components,python_scripting,"Python API for component authoring and control."
+visual_components,animation_3d,"3D manufacturing visualization is the core product focus."
+visual_components,api_programmability,
+plant_simulation,discrete_event,
+plant_simulation,visual_drag_drop_modeling,
+plant_simulation,code_based_modeling,
+plant_simulation,domain_specific_language,"SimTalk is Plant Simulation's proprietary language."
+plant_simulation,animation_2d,
+plant_simulation,animation_3d,
+plant_simulation,built_in_optimization,
+plant_simulation,design_of_experiments,
+plant_simulation,output_analysis_tools,
+plant_simulation,database_connectivity,
+plant_simulation,api_programmability,
+simpy,discrete_event,
+simpy,code_based_modeling,"Pure code-based; no visual authoring."
+simpy,python_scripting,"Primary and only authoring language."
+simpy,api_programmability,"SimPy is itself a Python library — programmability is inherent."
+salabim,discrete_event,
+salabim,code_based_modeling,
+salabim,python_scripting,
+salabim,animation_2d,"Built-in 2D animation is a Salabim differentiator from SimPy."
+salabim,api_programmability,
+ciw,discrete_event,
+ciw,code_based_modeling,
+ciw,python_scripting,
+ciw,output_analysis_tools,"Ciw has strong built-in statistical analysis for queueing networks."
+ciw,api_programmability,
+jaamsim,discrete_event,
+jaamsim,visual_drag_drop_modeling,
+jaamsim,code_based_modeling,
+jaamsim,java_scripting,
+jaamsim,animation_2d,
+jaamsim,api_programmability,
+quodsi,discrete_event,
+quodsi,diagram_based_modeling,"Primary authoring modality — users draw process diagrams in LucidChart, Miro, or diagrams.net and Quodsi interprets them as DES models."
+quodsi,visual_drag_drop_modeling,"Via the underlying diagramming tool's native drag-and-drop interface."
+quodsi,python_scripting,"The simulation engine is Python-based."
+quodsi,javascript_scripting,"LucidChart extension and React frontend are TypeScript/JavaScript."
+quodsi,diagramming_tool_integration,"Integrates natively with LucidChart, Miro, and diagrams.net."
+quodsi,api_programmability,

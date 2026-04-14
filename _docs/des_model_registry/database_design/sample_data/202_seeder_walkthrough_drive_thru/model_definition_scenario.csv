@@ -1,0 +1,4 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","SimPy teaching variant is the canonical form of the station-count sizing scenario — its whole purpose per the GitHub README is 'finding the optimal number of ID check queues and baggage scanners to keep wait times under a threshold' (drive-thru adaptation: optimal station counts for order/pay/pickup)."
+2,2,"full","Chick-fil-A case study variant is explicitly designed around peak-congestion management and operational policy changes (dual lanes, secondary order takers, expedited payment) — this is the INFORMS case article's central focus."
+3,3,"full","Hybrid ordering variant is explicitly designed to compare kiosk-only, counter-only, and hybrid mixes, which is exactly what Scenario 3 asks."

@@ -1,0 +1,12 @@
+name,slug,is_foundational_pattern,description,display_order,approval_status
+"Healthcare","healthcare",false,"Models for healthcare delivery including hospitals, clinics, specialty care, emergency services, pharmacy, and related medical operations.",10,seed
+"Manufacturing","manufacturing",false,"Models for discrete and process manufacturing, assembly lines, job shops, paint shops, and related production operations.",20,seed
+"Logistics & Supply Chain","logistics-and-supply-chain",false,"Models for warehousing, order fulfillment, cross-docking, freight, distribution networks, and supply chain operations.",30,seed
+"Retail","retail",false,"Models for retail and consumer-facing operations including storefront queuing, checkout, fulfillment, and point-of-sale operations.",40,seed
+"Food & Beverage","food-and-beverage",false,"Models for quick-service and sit-down restaurants, commercial kitchens, drive-thru operations, and food-retail activities.",50,seed
+"Transportation","transportation",false,"Models for transportation systems including aviation, rail, maritime, urban transit, and last-mile delivery.",60,seed
+"Telecommunications","telecommunications",false,"Models for call centers, network traffic, service desks, customer support, and telecommunications infrastructure.",70,seed
+"Financial Services","financial-services",false,"Models for banking operations, insurance claims, trading floors, branch operations, and financial infrastructure.",80,seed
+"Government & Public Sector","government-and-public-sector",false,"Models for government and public services including DMV operations, courts, social services, and public-facing administration.",90,seed
+"Energy","energy",false,"Models for utilities, power plants, grid operations, and energy distribution including field service dispatch for utility workers.",100,seed
+"Foundational Patterns","foundational-patterns",true,"Domain-agnostic classical DES models that serve as educational building blocks and validation benchmarks — M/M/1, job shop, inventory policies, batch-and-queue, and similar canonical patterns that appear across industries.",999,seed

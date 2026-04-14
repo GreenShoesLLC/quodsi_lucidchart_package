@@ -1,0 +1,19 @@
+code,display_name,category,is_binary,supports_extraction,phase_enabled,phase_notes,mime_types,max_size_bytes,approval_status
+text_plain,"Plain Text",text,false,false,v1,"Minimum viable. Used for pasted prose and .txt uploads.","text/plain",5242880,seed
+text_markdown,"Markdown",text,false,false,v1,"Minimum viable. Preferred format for structured context.","text/markdown, text/x-markdown",5242880,seed
+text_html_extracted,"HTML (Extracted Text)",text,false,false,v1,"Text content extracted from HTML pages fetched via URL. Original HTML is not retained.","text/html",5242880,seed
+text_code,"Source Code",text,false,false,v1,"Python, Jupyter notebook source, configuration files. Fetched from GitHub READMEs and code files.","text/x-python, application/x-ipynb+json, text/x-yaml, application/json",10485760,seed
+document_pdf,"PDF Document",document,true,true,v1.2,"v1.2 fast-follow: PDF extraction is the dominant Seeder friction pattern per walkthroughs 203, 204, 205, 206. Closing this gap unlocks most academic content.","application/pdf",52428800,seed
+document_word,"Word Document",document,true,true,v1.2,"v1.2: accessibility for consultancy-style contributors who work primarily in Word.","application/vnd.openxmlformats-officedocument.wordprocessingml.document",52428800,seed
+document_slides,"Slide Deck",document,true,true,v1.2,"v1.2: conference talks and vendor webinar decks contain valuable model descriptions.","application/vnd.openxmlformats-officedocument.presentationml.presentation",104857600,seed
+document_latex,"LaTeX Source",document,false,true,v1.2,"v1.2: academic contributors may prefer LaTeX for equations and formal notation. Text-native but treated as a document format.","application/x-tex, text/x-tex",10485760,seed
+data_csv,"CSV Data",data,false,true,v2,"Reference parameter tables (e.g., typical service time distributions by domain).","text/csv",10485760,seed
+data_json,"JSON Data",data,false,true,v2,"Structured parameter sets and configuration data.","application/json",10485760,seed
+data_spreadsheet,"Spreadsheet",data,true,true,v2,"Excel workbooks with parameter tables or calibration data.","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",52428800,seed
+audio_recording,"Audio Recording",audio,true,true,v3,"Voice recordings to be transcribed. Deferred per 027_raw_context_ingestion.md; v3 introduces the voice capture workflow.","audio/mpeg, audio/wav, audio/mp4, audio/ogg",104857600,seed
+audio_url,"Audio URL",audio,false,true,v3,"External audio reference (podcast, interview). Transcript produced via external service.","",,seed
+image_raster,"Raster Image",image,true,true,v3,"PNG/JPG/WebP screenshots, photos, and whiteboard captures. Text extraction via OCR.","image/png, image/jpeg, image/webp",20971520,seed
+image_vector,"Vector Image",image,true,false,v3,"SVG diagrams. No text extraction supported; captions or descriptions only.","image/svg+xml",5242880,seed
+image_diagram,"Diagram",image,true,true,v3,"BPMN, flowchart, or sketch images with modeled DES logic. Text extraction via OCR where possible.","image/png, image/jpeg, image/svg+xml",20971520,seed
+video_file,"Video File",video,true,true,future,"Uploaded video content with transcript. Low priority.","video/mp4, video/webm",1073741824,seed
+video_url,"Video URL",video,false,true,future,"YouTube, Vimeo, and similar external video references. Transcripts fetched from captions when available.","",,seed

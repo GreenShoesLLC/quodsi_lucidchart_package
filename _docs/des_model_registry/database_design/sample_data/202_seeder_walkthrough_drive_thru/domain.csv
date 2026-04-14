@@ -1,0 +1,5 @@
+domain_id,name,slug,parent_domain_id,is_foundational_pattern,is_canonical,approval_status,description,display_order
+1,"Food & Beverage","food-and-beverage",,false,true,seed,"Models for quick-service and sit-down restaurants, commercial kitchens, drive-thru operations, and food-retail activities. (The walkthrough originally used 'Food Service' verbatim but has been updated to the canonical 'Food & Beverage' per the canonical domain seed.)",50
+2,"Retail","retail",,false,true,seed,"Consumer-facing retail operations including storefront queuing, checkout, and fulfillment.",40
+3,"Queue Management","queue-management",,false,false,approved,"Cross-cutting domain for any system whose central modeling question is queue formation, wait time, and throughput — applies broadly across industries. Non-canonical cross-cutting theme.",90
+4,"Service Operations","service-operations",,false,false,approved,"Cross-cutting domain for service-oriented queueing and resource-contention models that serve customers through finite-capacity resources, independent of a specific industry. Non-canonical cross-cutting theme.",91

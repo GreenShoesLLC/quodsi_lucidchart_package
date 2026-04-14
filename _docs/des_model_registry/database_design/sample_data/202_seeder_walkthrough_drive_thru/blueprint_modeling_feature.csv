@@ -1,0 +1,8 @@
+blueprint_id,feature_code,usage_note
+1,balking,"Drive-thru customers balk when the physical lane is full and they cannot enter. Mentioned explicitly in the Queues, Metrics, and Assumptions sections of the summary — balking rate is a tracked performance metric. Drive-thru is one of the canonical examples of balking in DES literature."
+1,physical_queue_capacity,"The drive-thru lane has a finite physical capacity — cars cannot pass each other and the lane has a fixed length. When the lane is full, additional arrivals cannot enter and must either wait in the parking lot or drive away (balking)."
+1,time_varying_arrivals,"Drive-thru arrival rates peak during breakfast, lunch, and dinner windows and drop by 80-90% off-peak. Non-homogeneous Poisson process or piecewise-constant rates across hourly intervals."
+1,customer_classes,"Customers differ by order complexity (single item vs. multi-item), payment method (credit, cash, mobile), and party size — each affecting service time distributions."
+1,conditional_routing,"During peak operations, drive-thrus activate secondary order takers and expedited payment policies based on congestion thresholds. This is conditional routing of resources and flow based on current queue state."
+1,parallel_paths,"Dual-lane drive-thru configurations (Scenario 4) introduce parallel ordering lanes that merge at the pickup window."
+1,shortest_queue_routing,"Dual-lane variants use shortest-queue routing at entry. Hybrid ordering variants use customer-preference-or-policy routing between kiosk and counter paths."

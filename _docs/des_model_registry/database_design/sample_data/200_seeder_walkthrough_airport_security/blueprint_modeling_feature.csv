@@ -1,0 +1,8 @@
+blueprint_id,feature_code,usage_note
+1,time_varying_arrivals,"Ruiz et al. paper discretizes interarrival times into 15-minute periods across a full day, capturing morning/lunch/evening peaks at airport security."
+1,customer_classes,"Two primary passenger classes: regular and PreCheck. PreCheck passengers route to dedicated lanes with faster service."
+1,multi_class_entities,"Same as customer_classes at the entity level — the model tracks class as an attribute throughout the flow."
+1,resource_schedules,"TSOs and TDCs operate on shift schedules modeled explicitly in the SIMIO production variant."
+1,probabilistic_routing,"After primary screening, a fraction of passengers are routed to secondary inspection based on a Bernoulli outcome from scan alarm rates."
+1,conditional_routing,"The reactive and proactive staffing strategies in the Ruiz paper dynamically route staff based on current or predicted cycle time — a form of conditional routing of resources rather than entities."
+1,shortest_queue_routing,"Within a lane class, passengers may use shortest-queue routing in the simplified GT ISYE 6501 teaching variant."

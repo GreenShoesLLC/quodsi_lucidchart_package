@@ -1,0 +1,8 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","High-throughput clinical variant is the primary reference for scanner capacity sizing — the P480 class at 480 slides per batch is the canonical anchor for this scenario."
+1,3,"full","High-throughput clinical variant includes AI tissue detection and safety container, which directly implement the QC and rescan handling scenario."
+1,4,"partial","High-throughput clinical variant supports the capability dimension of multi-scanner load balancing (multi-layer, polarization) but modeling a full multi-scanner fleet requires the multi-scanner-lab variant instead."
+2,1,"full","Medium-throughput research variant serves capacity sizing for smaller labs where a full 480-slide scanner is overkill."
+2,2,"partial","Medium-throughput research variant can support upstream workflow integration for smaller labs where the scanner is not the bottleneck."
+3,4,"full","Multi-scanner lab variant is the canonical form of the load balancing scenario — N scanners of mixed capability with LIS-driven routing."
+4,2,"full","End-to-end lab variant is the canonical form of the upstream workflow integration scenario — it explicitly models tissue processing, embedding, cutting, and staining upstream of the scanner."

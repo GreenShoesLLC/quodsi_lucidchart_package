@@ -1,0 +1,12 @@
+blueprint_id,feature_code,usage_note
+1,multi_class_entities,"Orders are differentiated by priority, size, product mix, and customer class — multiple entity classes flow through the same picking process with different service time distributions and routing rules."
+1,customer_classes,"Retail vs. wholesale customers create distinct order classes with different SLAs and throughput priorities."
+1,time_varying_arrivals,"Order arrival rates vary heavily by time of day (post-10-AM spike for standard orders, late-afternoon spike for same-day commitments) and day of week (Mondays and Fridays typically heavier). Peak-season volumes can exceed baseline by 3-5x."
+1,priority_arrivals,"Same-day orders carry priority attributes that jump them ahead of standard orders in the picking queue."
+1,batch_arrivals,"In batch picking variants, orders are consolidated into batches before being released to pickers — the batch becomes the unit of arrival at the picking workstation."
+1,shortest_queue_routing,"In multi-picker zones, orders can be routed to the picker with the shortest current queue (shortest-job-first or JSQ at the zone level)."
+1,conditional_routing,"Routing decisions are highly strategy-specific — the same blueprint supports piece/batch/zone/wave/goods-to-person routing based on the configured strategy. Strategy selection is itself a conditional routing decision at the WMS level."
+1,parallel_paths,"Zone picking uses parallel zone-level pick streams that merge at a downstream consolidation point. Wave picking adds time-based sequencing to the parallel zone structure."
+1,resource_schedules,"Pickers operate on shift-based schedules — the Seeder workflow needs to represent shift availability, breaks, and handoffs."
+1,shared_resources,"Pickers are shared across zones in some strategies (cross-trained pickers moving between zones as needed). Packing stations and dock doors are shared downstream resources."
+1,priority_queueing,"Same-day orders jump ahead of standard orders in the order backlog queue — priority-based service discipline rather than FIFO."

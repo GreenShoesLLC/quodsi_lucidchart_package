@@ -1,0 +1,5 @@
+blueprint_id,domain_id,is_primary
+1,1,true
+1,2,false
+1,3,false
+1,4,false

@@ -1,0 +1,11 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","Piece Picking variant is the reference baseline in the strategy selection scenario — the simplest case against which all batch/zone/wave/automation strategies are compared."
+2,1,"full","Batch Picking variant is one of the primary strategies evaluated in strategy selection."
+2,3,"full","Batch Picking variant is the canonical setting for batch size optimization — its configurable batch_size parameter is the central decision variable."
+3,1,"full","Zone Picking variant is one of the primary strategies evaluated in strategy selection."
+3,2,"full","Zone Picking variant is the canonical setting for picker staffing and zone allocation scenarios — its zone-based work allocation is exactly what the scenario optimizes."
+4,1,"full","Wave Picking variant is one of the primary strategies evaluated in strategy selection. DHL used this strategy in the AnyLogic case study with quantified results."
+4,2,"full","Wave Picking variant supports the staffing scenario with both zone and wave-timing as controllable parameters."
+4,4,"partial","Wave Picking variant can serve as the 'advanced manual' baseline in the automation investment decision, representing the best non-automated alternative before considering goods-to-person."
+5,1,"partial","Goods-to-Person variant can be included in strategy selection comparisons but is most relevant when automation is a candidate strategy rather than a refinement of manual picking."
+5,4,"full","Goods-to-Person variant is the canonical setting for the automation investment decision — it represents the 'automated' alternative being compared against manual picking variants."

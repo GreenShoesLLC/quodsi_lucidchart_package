@@ -1,0 +1,6 @@
+model_definition_id,scenario_id,support_level,support_note
+1,1,"full","SimPy teaching variant supports the capacity sizing scenario with a fixed arrival rate and constant resource counts. Small enough to run interactively."
+2,1,"full","SIMIO production variant supports capacity sizing with realistic time-varying arrivals, making its capacity-sizing results closer to what a consulting engagement would produce."
+2,2,"full","SIMIO production variant is the canonical form of the workforce scheduling scenario — it explicitly models shift schedules and tests both proportional and optimization-driven allocation strategies."
+2,3,"full","SIMIO production variant tests both reactive and proactive staffing strategies directly (per the Ruiz et al. paper, context row 1)."
+2,4,"full","SIMIO production variant supports PreCheck lane allocation via its passenger-class modeling (regular vs. PreCheck) even though the specific scenario is not a headline experiment in the source paper."

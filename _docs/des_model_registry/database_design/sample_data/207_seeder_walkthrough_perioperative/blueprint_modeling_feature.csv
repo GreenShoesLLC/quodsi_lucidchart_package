@@ -1,0 +1,13 @@
+blueprint_id,feature_code,usage_note
+1,multi_class_entities,"Patients are differentiated by surgical specialty, procedure complexity, urgency class, and admission type — multiple entity classes flow through the same perioperative process with different service time distributions and routing rules."
+1,customer_classes,"Elective vs. emergency cases and day-of-surgery vs. inpatient admissions create distinct patient classes with different priorities and routing."
+1,appointment_based_arrivals,"Elective surgeries are scheduled days to weeks in advance with stochastic punctuality."
+1,time_varying_arrivals,"Elective volume peaks weekday mornings; emergency arrivals follow a Poisson rate that varies by time of day and day of week."
+1,priority_arrivals,"Emergency cases carry priority attributes that preempt scheduled elective cases."
+1,priority_queueing,"Emergency cases bump scheduled cases from OR assignments via priority-based service discipline rather than FIFO."
+1,resource_schedules,"Elective ORs run 7am-5pm weekdays; emergency capability is 24/7 with on-call staffing."
+1,multi_skill_resources,"Surgeons have specialty certifications; anesthesiologists have specialty certifications; nurses have scrub vs. circulator roles — not every resource is interchangeable."
+1,shared_resources,"PACU beds are shared across all ORs and are a common bottleneck; surgical teams and anesthesia staff are also shared across competing cases."
+1,conditional_routing,"Post-PACU destination depends on clinical state (ward, ICU, or discharge); OR contamination triggers case rescheduling."
+1,feedback_loops,"When PACU is full, OR cases stall at the OR-PACU handoff, creating upstream backpressure that blocks the OR from accepting the next case."
+1,parallel_paths,"Scenario 4 (Parallel Induction of Anesthesia) explicitly models anesthesia induction in an adjacent room concurrent with the current case as a parallel-path optimization."

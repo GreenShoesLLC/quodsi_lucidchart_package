@@ -1,0 +1,9 @@
+blueprint_id,feature_code,usage_note
+1,multi_class_entities,"Slides are differentiated by magnification requirement (20x vs. 40x), layer requirement (single-layer vs. multi-layer Z-stack), specimen size (standard vs. double-width), urgency (priority vs. routine), and tissue type (histology, cytology, IHC)."
+1,batch_arrivals,"Slides arrive from upstream lab processes in batches following the tissue processing and staining schedule, rather than as individual independent arrivals."
+1,time_varying_arrivals,"Strong morning surges from overnight tissue processing; mid-day smaller batches from daytime processing. Many labs separate priority specimens from routine flow."
+1,priority_arrivals,"Priority specimens are processed on a different timing track than routine specimens, with shorter turnaround targets."
+1,feedback_loops,"QC failures route slides to a safety container for manual re-preparation or rescan — a rework loop back to upstream prep or to a direct rescan. First-pass yield vs. effective throughput metrics distinguish the two."
+1,resource_schedules,"Scanners run 24 hours in some labs; operators load slides in shift-based availability windows; upstream tissue processors and stainers have their own batch schedules."
+1,conditional_routing,"In multi-scanner labs, slide-to-scanner routing depends on slide requirements (multi-layer Z-stack requires a capable scanner like the P480) — a state-dependent routing decision."
+1,shared_resources,"The scanner and safety container are shared resources across multiple upstream batch streams; contention arises when multiple wards or specialty clinics feed the same central pathology lab."
