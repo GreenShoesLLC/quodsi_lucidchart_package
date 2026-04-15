@@ -135,6 +135,39 @@ export class AuthHandler {
 
     AuthHandler.logger.log('Auth successful:', { id: user.id, email: user.email, orgCode: user.orgCode });
     AuthHandler.broadcastAuthStatus(true, user);
+
+    // Sync user to quodsi_api database via the Lucid data connector.
+    // Non-blocking: a sync failure does not block the sign-in flow.
+    AuthHandler.syncUserToDatabase(user).catch((error) => {
+      AuthHandler.logger.error('Failed to sync user to quodsi_api:', error);
+    });
+  }
+
+  /**
+   * Sync the authenticated user to quodsi_api database via the Lucid data connector.
+   * Registered in the manifest as "quodsi_api_data_connector" with the "kinde"
+   * OAuth provider, so Lucid attaches the Kinde token automatically.
+   */
+  private static async syncUserToDatabase(user: QuodsiUserInfo): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      AuthHandler.logger.log('Syncing user to quodsi_api database...');
+
+      const result = await client.performDataAction({
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'SyncUser',
+        actionData: {
+          email: user.email,
+          displayName: user.displayName,
+        },
+        asynchronous: false,
+      });
+
+      AuthHandler.logger.log('User synced to quodsi_api:', result);
+    } catch (error) {
+      AuthHandler.logger.error('syncUserToDatabase error:', error);
+      throw error;
+    }
   }
 
   /**
