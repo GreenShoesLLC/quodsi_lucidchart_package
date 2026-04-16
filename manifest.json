@@ -1,6 +1,6 @@
 {
   "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
-  "version": "2026.04.13",
+  "version": "2026.04.16",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -71,6 +71,14 @@
         "GetStateValuesTimeseries": "getStateValuesTimeseries",
         "GetEntityThroughputTimeseries": "getEntityThroughputTimeseries",
         "GetActivityEntitySummary": "getActivityEntitySummary"
+      }
+    },
+    {
+      "name": "quodsi_api_data_connector",
+      "oauthProviderName": "kinde",
+      "callbackBaseUrl": "http://localhost:8000/lucid/",
+      "dataActions": {
+        "SyncUser": "SyncUser"
       }
     }
   ]

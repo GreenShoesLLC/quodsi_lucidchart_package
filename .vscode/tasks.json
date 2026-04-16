@@ -121,6 +121,30 @@
       "dependsOn": ["Kill Debug Port", "Azure Function Build"]
     },
     {
+      "label": "Quodsi API Start",
+      "type": "shell",
+      "command": "C:\\_source\\quodsi\\quodsim\\venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
+      "options": {
+        "cwd": "C:\\_source\\quodsi\\quodsim\\quodsi_api"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Started server process.*$",
+          "endsPattern": "^.*Application startup complete.*$"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      }
+    },
+    {
       "label": "Run All",
       "dependsOn": ["Setup And Watch", "Start Apps"],
       "dependsOrder": "sequence",
@@ -133,7 +157,7 @@
     },
     {
       "label": "Start Apps",
-      "dependsOn": ["Azure Function Start", "ReactApp", "LucidPackage"],
+      "dependsOn": ["Azure Function Start", "Quodsi API Start", "ReactApp", "LucidPackage"],
       "problemMatcher": []
     }
   ]
