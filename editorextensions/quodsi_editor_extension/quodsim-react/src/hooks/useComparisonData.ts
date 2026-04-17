@@ -17,6 +17,7 @@ interface UseComparisonDataReturn {
   getDataForType: (dataType: string) => Map<string, any[]>;
   isLoading: boolean;
   fetchDataType: (dataType: string) => void;
+  fetchDataTypes: (dataTypes: string[]) => void;
   availableScenariosLoading: boolean;
 }
 
@@ -25,7 +26,7 @@ export function useComparisonData(
   initialScenarioId: string,
   initialScenarioName?: string
 ): UseComparisonDataReturn {
-  const { getCrossRepData, listSimulationRuns } = useSimulationRunSender();
+  const { getCrossRepData, getCrossRepBatchData, listSimulationRuns } = useSimulationRunSender();
 
   const [selectedScenarios, setSelectedScenarios] = useState<SelectedScenario[]>([
     {
@@ -78,7 +79,7 @@ export function useComparisonData(
         }
       }
 
-      // Handle cross-rep data responses
+      // Handle single-type cross-rep data responses
       if (message.type === EnvelopeMessageType.CROSS_REP_DATA_RESULT) {
         const { dataType, scenarioId, success, data } = message.data;
         if (!scenarioId) return;
@@ -91,6 +92,28 @@ export function useComparisonData(
             cacheRef.current.set(scenarioId, new Map());
           }
           cacheRef.current.get(scenarioId)!.set(dataType, data || []);
+        }
+
+        if (pendingRef.current.size === 0) {
+          setIsLoading(false);
+        }
+      }
+
+      // Handle batch cross-rep data responses
+      if (message.type === EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT) {
+        const { results, scenarioId } = message.data;
+        if (!scenarioId || !results) return;
+
+        for (const [dataType, typeResult] of Object.entries(results) as [string, any][]) {
+          const pendingKey = `${scenarioId}__${dataType}`;
+          pendingRef.current.delete(pendingKey);
+
+          if (typeResult.success) {
+            if (!cacheRef.current.has(scenarioId)) {
+              cacheRef.current.set(scenarioId, new Map());
+            }
+            cacheRef.current.get(scenarioId)!.set(dataType, typeResult.data || []);
+          }
         }
 
         if (pendingRef.current.size === 0) {
@@ -139,6 +162,36 @@ export function useComparisonData(
     [documentId, selectedScenarios, getCrossRepData]
   );
 
+  const fetchDataTypes = useCallback(
+    (dataTypes: string[]) => {
+      let anyFetched = false;
+      for (const scenario of selectedScenarios) {
+        // Find which types are not yet cached for this scenario
+        const needed = dataTypes.filter((dt) => {
+          if (cacheRef.current.get(scenario.id)?.has(dt)) return false;
+          const pendingKey = `${scenario.id}__${dt}`;
+          if (pendingRef.current.has(pendingKey)) return false;
+          return true;
+        });
+
+        if (needed.length === 0) continue;
+
+        // Mark all as pending
+        for (const dt of needed) {
+          pendingRef.current.add(`${scenario.id}__${dt}`);
+        }
+
+        // One batch call per scenario
+        getCrossRepBatchData(documentId, scenario.id, needed);
+        anyFetched = true;
+      }
+      if (anyFetched) {
+        setIsLoading(true);
+      }
+    },
+    [documentId, selectedScenarios, getCrossRepBatchData]
+  );
+
   const getDataForType = useCallback(
     (dataType: string): Map<string, any[]> => {
       const result = new Map<string, any[]>();
@@ -161,6 +214,7 @@ export function useComparisonData(
     getDataForType,
     isLoading,
     fetchDataType,
+    fetchDataTypes,
     availableScenariosLoading,
   };
 }

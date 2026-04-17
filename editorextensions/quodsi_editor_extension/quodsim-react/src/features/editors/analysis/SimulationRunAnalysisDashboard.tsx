@@ -66,6 +66,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     getDataForType,
     isLoading: comparisonLoading,
     fetchDataType,
+    fetchDataTypes,
     availableScenariosLoading,
   } = useComparisonData(documentId, scenarioId);
 
@@ -121,14 +122,12 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   useEffect(() => {
     if (isComparing) {
       if (viewType === "summary") {
-        fetchDataType("scenario");
-        fetchDataType("activity");
-        fetchDataType("resource");
+        fetchDataTypes(["scenario", "activity", "resource"]);
       } else {
-        fetchDataType(dataType);
+        fetchDataTypes([dataType]);
       }
     }
-  }, [isComparing, viewType, dataType, selectedScenarios.map(s => s.id).join(","), fetchDataType]);
+  }, [isComparing, viewType, dataType, selectedScenarios.map(s => s.id).join(","), fetchDataTypes]);
 
   return (
     <div className="p-3 space-y-3">
