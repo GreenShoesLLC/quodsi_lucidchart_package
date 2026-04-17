@@ -1,4 +1,5 @@
 import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
+import { Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -191,15 +192,14 @@ export class SimulationRunHandler {
 
       SimulationRunHandler.logger.log('Calling data connector DeleteScenario action...');
 
-      // Call the data connector to delete scenario
       const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
+        dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'DeleteScenario',
         actionData: {
           documentId: data.documentId,
           scenarioId: data.scenarioId
         },
-        asynchronous: true
+        asynchronous: false
       });
 
       // Extract the actual data from the Lucid SDK wrapper
@@ -421,22 +421,24 @@ export class SimulationRunHandler {
     });
 
     try {
-      // Get the EditorClient
       const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      const currentPage = viewport.getCurrentPage();
+      const pageId = currentPage?.id || '';
 
-      SimulationRunHandler.logger.log('Calling data connector SubmitSimulationJob action...');
+      SimulationRunHandler.logger.log('Calling SubmitSimulationJob action...');
 
-      // Call the data connector to submit simulation job (reuses existing model.json)
       const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
+        dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'SubmitSimulationJob',
         actionData: {
           documentId: data.documentId,
+          pageId,
           scenarioId: data.scenarioId,
           scenarioName: data.scenarioName,
           appVersion: QUODSIM_VERSION
         },
-        asynchronous: true
+        asynchronous: false
       });
 
       // Extract the actual data from the Lucid SDK wrapper

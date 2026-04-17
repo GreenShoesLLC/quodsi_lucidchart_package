@@ -83,7 +83,10 @@
         "UpsertModel": "UpsertModel",
         "RemoveModel": "RemoveModel",
         "SyncScenarios": "SyncScenarios",
-        "ListScenarios": "ListScenarios"
+        "ListScenarios": "ListScenarios",
+        "SaveAndSubmitSimulation": "SaveAndSubmitSimulation",
+        "SubmitSimulationJob": "SubmitSimulationJob",
+        "DeleteScenario": "DeleteScenario"
       }
     }
   ]

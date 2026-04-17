@@ -354,19 +354,19 @@ export class SimulationHandler {
       console.log('[SimulationHandler] Submitting simulation to data connector...');
 
       try {
-        // Must use asynchronous: true because SaveAndSubmitSimulation is defined as async action
         await LucidDataActionUtility.performDataAction(client, {
-          dataConnectorName: 'quodsi_data_connector',
+          dataConnectorName: 'quodsi_api_data_connector',
           actionName: 'SaveAndSubmitSimulation',
           actionData: {
             documentId: documentProxy.id,
+            pageId: activePageProxy.id,
             scenarioId,
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
             appVersion: QUODSIM_VERSION
           },
-          asynchronous: true
+          asynchronous: false
         });
 
         console.log('[SimulationHandler] Simulation submitted successfully');

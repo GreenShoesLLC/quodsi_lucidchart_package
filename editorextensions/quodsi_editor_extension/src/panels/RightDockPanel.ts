@@ -19,6 +19,7 @@ import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
 import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
+import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 
 /**
@@ -295,6 +296,26 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                     }).catch(err => {
                         this.debug.error('Failed to upsert model in database:', err);
                     });
+
+                    // Sync scenarios from shapeData to DB (fire-and-forget)
+                    const storageAdapter = new StorageAdapter();
+                    const scenarios = storageAdapter.getScenarios(currentPage);
+                    if (scenarios.length > 0) {
+                        LucidDataActionUtility.performDataAction(this.client, {
+                            dataConnectorName: 'quodsi_api_data_connector',
+                            actionName: 'SyncScenarios',
+                            actionData: {
+                                documentId: document.id,
+                                pageId: currentPage.id,
+                                scenarios
+                            },
+                            asynchronous: false
+                        }).then(() => {
+                            this.debug.log('Scenarios synced to database on panel init', { count: scenarios.length });
+                        }).catch(err => {
+                            this.debug.error('Failed to sync scenarios to database:', err);
+                        });
+                    }
                 }
 
                 // Get the current selection and update it
