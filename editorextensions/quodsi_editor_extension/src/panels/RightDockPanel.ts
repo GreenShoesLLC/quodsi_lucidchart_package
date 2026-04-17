@@ -18,6 +18,7 @@ import {
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
+import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 
 /**
@@ -278,6 +279,24 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                     { /* Additional metadata if needed */ }
                 );
                 
+                // Upsert model in quodsi_api database if this is a converted model (fire-and-forget)
+                if (isQuodsiModel) {
+                    LucidDataActionUtility.performDataAction(this.client, {
+                        dataConnectorName: 'quodsi_api_data_connector',
+                        actionName: 'UpsertModel',
+                        actionData: {
+                            documentId: document.id,
+                            pageId: currentPage.id,
+                            modelName: document.getTitle() || 'Untitled Model'
+                        },
+                        asynchronous: false
+                    }).then(() => {
+                        this.debug.log('Model upserted in database on panel init');
+                    }).catch(err => {
+                        this.debug.error('Failed to upsert model in database:', err);
+                    });
+                }
+
                 // Get the current selection and update it
                 const selectedItems = viewport.getSelectedItems();
                 this.handleSelectionChange(selectedItems);

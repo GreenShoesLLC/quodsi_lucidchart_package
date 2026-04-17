@@ -513,6 +513,21 @@ export class ModelOpsHandler {
         });
         
         ModelOpsHandler.logger.log('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
+
+        // Remove model from quodsi_api database (fire-and-forget)
+        LucidDataActionUtility.performDataAction(client, {
+          dataConnectorName: 'quodsi_api_data_connector',
+          actionName: 'RemoveModel',
+          actionData: {
+            documentId,
+            pageId: currentPage.id
+          },
+          asynchronous: false
+        }).then(() => {
+          ModelOpsHandler.logger.log('Model removed from database after unmap');
+        }).catch(err => {
+          ModelOpsHandler.logger.error('Failed to remove model from database:', err);
+        });
       }).catch(error => {
         ModelOpsHandler.logger.error('Error sending context refresh messages after removal:', error);
       });

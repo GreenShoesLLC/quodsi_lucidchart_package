@@ -13,6 +13,7 @@ import { StorageAdapter } from '../../StorageAdapter';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SelectionHandler } from './selection';
 
@@ -228,6 +229,22 @@ export class ConversionPreviewHandler {
                 );
 
                 ConversionPreviewHandler.logger.log('Sent context refresh messages after conversion');
+
+                // Register model in quodsi_api database (fire-and-forget)
+                LucidDataActionUtility.performDataAction(client, {
+                    dataConnectorName: 'quodsi_api_data_connector',
+                    actionName: 'UpsertModel',
+                    actionData: {
+                        documentId,
+                        pageId: currentPage.id,
+                        modelName: title || 'Untitled Model'
+                    },
+                    asynchronous: false
+                }).then(() => {
+                    ConversionPreviewHandler.logger.log('Model registered in database after conversion');
+                }).catch(err => {
+                    ConversionPreviewHandler.logger.error('Failed to register model in database:', err);
+                });
             }).catch(error => {
                 ConversionPreviewHandler.logger.error('Error sending context refresh messages:', error);
             });

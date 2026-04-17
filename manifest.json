@@ -79,7 +79,9 @@
       "callbackBaseUrl": "http://localhost:8000/lucid/",
       "dataActions": {
         "SyncUser": "SyncUser",
-        "GetResultsData": "GetResultsData"
+        "GetResultsData": "GetResultsData",
+        "UpsertModel": "UpsertModel",
+        "RemoveModel": "RemoveModel"
       }
     }
   ]
