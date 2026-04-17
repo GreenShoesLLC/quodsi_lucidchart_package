@@ -39,7 +39,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   const [initialFilter, setInitialFilter] = useState<string | undefined>();
 
   // Hooks
-  const { getCrossRepData } = useSimulationRunSender();
+  const { getCrossRepData, getCrossRepBatchData } = useSimulationRunSender();
 
   const {
     data,
@@ -55,6 +55,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
     viewType,
     dataType,
     getCrossRepData,
+    getCrossRepBatchData,
   });
 
   const {

@@ -42,6 +42,12 @@ export class SimulationRunHandler {
         });
         return true;
 
+      case EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST:
+        SimulationRunHandler.handleCrossRepBatchDataRequest(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleCrossRepBatchDataRequest:', error);
+        });
+        return true;
+
       case EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST:
         // Handle async method - fire and forget, return true immediately
         SimulationRunHandler.handleResimulateRequest(msg).catch(error => {
@@ -265,59 +271,45 @@ export class SimulationRunHandler {
     });
 
     try {
-      // Get the EditorClient
       const client = ModelManager.getClient();
 
-      // Map data type to action name
-      const actionMap = {
-        scenario: 'GetScenarioCrossRepData',
-        activity: 'GetActivityCrossRepData',
-        entity: 'GetEntityCrossRepData',
-        resource: 'GetResourceCrossRepData',
-        'activity-entity': 'GetActivityEntitySummary',
-        'activity-contents-timeseries': 'GetActivityContentsTimeseries',
-        'activity-inbound-queue-timeseries': 'GetActivityInboundQueueTimeseries',
-        'activity-outbound-queue-timeseries': 'GetActivityOutboundQueueTimeseries',
-        'state-summary': 'GetStateSummary',
-        'state-values-timeseries': 'GetStateValuesTimeseries',
-        'entity-throughput-timeseries': 'GetEntityThroughputTimeseries'
-      };
+      SimulationRunHandler.logger.log(`Calling GetResultsData for ${data.dataType}...`);
 
-      const actionName = actionMap[data.dataType];
-
-      SimulationRunHandler.logger.log(`Calling data connector ${actionName} action...`);
-
-      // Call the data connector to fetch cross-rep data
       const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
-        actionName: actionName,
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'GetResultsData',
         actionData: {
           documentId: data.documentId,
-          scenarioId: data.scenarioId
+          scenarioId: data.scenarioId,
+          dataTypes: [data.dataType]
         },
-        asynchronous: true
+        asynchronous: false
       });
 
-      // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
+      const typeResult = responseData.results?.[data.dataType] || {
+        success: false,
+        data: [],
+        recordCount: 0,
+        error: 'No data returned'
+      };
 
-      SimulationRunHandler.logger.log(`${actionName} action completed successfully`, {
-        success: responseData?.success,
-        recordCount: responseData?.recordCount || responseData?.data?.length || 0
+      SimulationRunHandler.logger.log(`GetResultsData completed for ${data.dataType}`, {
+        success: typeResult?.success,
+        recordCount: typeResult?.recordCount || 0
       });
 
-      // Send success response with the unwrapped data and include dataType
       const responseChannel = SimulationRunHandler.getResponseChannel(msg);
       router.send(responseChannel, {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
         type: EnvelopeMessageType.CROSS_REP_DATA_RESULT,
         source: 'host',
         target: `${responseChannel}-iframe`,
         version: '1.0',
         data: {
-          ...responseData,
-          dataType: data.dataType, // Include dataType so React knows which data this is
-          scenarioId: data.scenarioId // Include scenarioId for scenario comparison support
+          ...typeResult,
+          dataType: data.dataType,
+          scenarioId: data.scenarioId
         }
       });
 
@@ -337,6 +329,77 @@ export class SimulationRunHandler {
           message: error instanceof Error ? error.message : String(error),
           relatedTo: EnvelopeMessageType.CROSS_REP_DATA_REQUEST,
           dataType: data.dataType,
+          scenarioId: data.scenarioId
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle batch cross-rep data request — fetches multiple data types in a single API call.
+   */
+  private static async handleCrossRepBatchDataRequest(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as {
+      documentId: string;
+      scenarioId: string;
+      dataTypes: string[];
+    };
+
+    SimulationRunHandler.logger.log('Batch cross-rep data requested', {
+      documentId: data.documentId,
+      scenarioId: data.scenarioId,
+      dataTypes: data.dataTypes
+    });
+
+    try {
+      const client = ModelManager.getClient();
+
+      const result = await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'GetResultsData',
+        actionData: {
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          dataTypes: data.dataTypes
+        },
+        asynchronous: false
+      });
+
+      const responseData = result.json || result;
+
+      SimulationRunHandler.logger.log('Batch GetResultsData completed', {
+        success: responseData?.success,
+        dataTypes: data.dataTypes
+      });
+
+      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(responseChannel, {
+        id: msg.id,
+        type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT,
+        source: 'host',
+        target: `${responseChannel}-iframe`,
+        version: '1.0',
+        data: {
+          success: responseData?.success ?? false,
+          results: responseData?.results ?? {},
+          scenarioId: data.scenarioId
+        }
+      });
+
+    } catch (error) {
+      SimulationRunHandler.logger.error('Error fetching batch cross-rep data:', error);
+
+      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
+      router.send(errorChannel, {
+        id: msg.id,
+        type: EnvelopeMessageType.ERROR,
+        source: 'host',
+        target: `${errorChannel}-iframe`,
+        version: '1.0',
+        data: {
+          code: 'CROSS_REP_BATCH_DATA_FAILED',
+          message: error instanceof Error ? error.message : String(error),
+          relatedTo: EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST,
           scenarioId: data.scenarioId
         }
       });

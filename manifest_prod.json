@@ -78,7 +78,8 @@
       "oauthProviderName": "kinde",
       "callbackBaseUrl": "http://localhost:8000/lucid/",
       "dataActions": {
-        "SyncUser": "SyncUser"
+        "SyncUser": "SyncUser",
+        "GetResultsData": "GetResultsData"
       }
     }
   ]

@@ -7,7 +7,7 @@ import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessag
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
-import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
+import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, CrossRepBatchDataRequestMessage, CrossRepBatchDataResultMessage, CrossRepDataType, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 
 // Export message types enum
@@ -123,6 +123,9 @@ export {
   SimulationRunResimulateRequestMessage,
   CrossRepDataRequestMessage,
   CrossRepDataResultMessage,
+  CrossRepBatchDataRequestMessage,
+  CrossRepBatchDataResultMessage,
+  CrossRepDataType,
   SimulationRunMessage
 } from './simulationRun/simulationRunMessages';
 

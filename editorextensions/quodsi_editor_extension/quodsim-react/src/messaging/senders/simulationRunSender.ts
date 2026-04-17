@@ -73,6 +73,21 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
+   * Send a CROSS_REP_BATCH_DATA_REQUEST message to fetch multiple data types in one round trip
+   */
+  const getCrossRepBatchData = useCallback((
+    documentId: string,
+    scenarioId: string,
+    dataTypes: string[]
+  ) => {
+    send(EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST, {
+      documentId,
+      scenarioId,
+      dataTypes
+    });
+  }, [send]);
+
+  /**
    * Send an OPEN_RESULTS_MODAL message to open simulation results in a full-width modal
    *
    * @param documentId Document ID
@@ -90,6 +105,7 @@ export function useSimulationRunSender() {
     deleteSimulationRun,
     resimulateSimulationRun,
     getCrossRepData,
+    getCrossRepBatchData,
     openResultsModal
   };
 }

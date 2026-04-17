@@ -98,6 +98,26 @@ export interface CrossRepDataResultMessage extends EnvelopeBase {
   };
 }
 
+export type CrossRepDataType = 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries';
+
+export interface CrossRepBatchDataRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST;
+  data: {
+    documentId: string;
+    scenarioId: string;
+    dataTypes: CrossRepDataType[];
+  };
+}
+
+export interface CrossRepBatchDataResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT;
+  data: {
+    success: boolean;
+    results: Record<string, { success: boolean; data: any[]; recordCount: number; error?: string }>;
+    scenarioId: string;
+  };
+}
+
 export type SimulationRunMessage =
   | SimulationRunListRequestMessage
   | SimulationRunListResultMessage
@@ -105,4 +125,6 @@ export type SimulationRunMessage =
   | SimulationRunDeleteResultMessage
   | SimulationRunResimulateRequestMessage
   | CrossRepDataRequestMessage
-  | CrossRepDataResultMessage;
+  | CrossRepDataResultMessage
+  | CrossRepBatchDataRequestMessage
+  | CrossRepBatchDataResultMessage;

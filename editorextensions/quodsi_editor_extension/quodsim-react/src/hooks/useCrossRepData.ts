@@ -14,6 +14,7 @@ interface UseCrossRepDataParams {
   viewType: "summary" | "detailed";
   dataType: CrossRepDataType;
   getCrossRepData: (documentId: string, scenarioId: string, dataType: CrossRepDataType) => void;
+  getCrossRepBatchData: (documentId: string, scenarioId: string, dataTypes: string[]) => void;
 }
 
 interface UseCrossRepDataResult {
@@ -32,6 +33,7 @@ export function useCrossRepData({
   viewType,
   dataType,
   getCrossRepData,
+  getCrossRepBatchData,
 }: UseCrossRepDataParams): UseCrossRepDataResult {
   // Detailed view state
   const [data, setData] = useState<any[]>([]);
@@ -45,28 +47,16 @@ export function useCrossRepData({
     resources: [],
   });
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const summaryDataReceived = useRef({
-    scenario: false,
-    activity: false,
-    resource: false,
-  });
 
-  // Fetch summary data (all 3 types in parallel)
+  // Fetch summary data (all 3 types in one batch request)
   const fetchSummaryData = useCallback(() => {
     if (!documentId || !scenarioId) return;
 
-    console.log("[useCrossRepData] Fetching summary data...");
+    console.log("[useCrossRepData] Fetching summary data (batch)...");
     setSummaryLoading(true);
-    summaryDataReceived.current = {
-      scenario: false,
-      activity: false,
-      resource: false,
-    };
 
-    getCrossRepData(documentId, scenarioId, "scenario");
-    getCrossRepData(documentId, scenarioId, "activity");
-    getCrossRepData(documentId, scenarioId, "resource");
-  }, [documentId, scenarioId, getCrossRepData]);
+    getCrossRepBatchData(documentId, scenarioId, ["scenario", "activity", "resource"]);
+  }, [documentId, scenarioId, getCrossRepBatchData]);
 
   // Fetch detailed data (single type)
   const fetchDetailedData = useCallback(() => {
@@ -91,6 +81,25 @@ export function useCrossRepData({
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
 
+      // Handle batch result (summary view)
+      if (message.type === EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT) {
+        console.log(
+          "[useCrossRepData] Received batch cross-rep data:",
+          message.data
+        );
+
+        if (viewType === "summary") {
+          const { results } = message.data;
+          setSummaryData({
+            scenario: results?.scenario?.data?.[0] || null,
+            activities: results?.activity?.data || [],
+            resources: results?.resource?.data || [],
+          });
+          setSummaryLoading(false);
+        }
+      }
+
+      // Handle single-type result (detailed view)
       if (message.type === EnvelopeMessageType.CROSS_REP_DATA_RESULT) {
         console.log(
           "[useCrossRepData] Received cross-rep data:",
@@ -102,39 +111,6 @@ export function useCrossRepData({
           success,
           data: receivedData,
         } = message.data;
-
-        // Handle summary view data
-        if (viewType === "summary") {
-          if (success) {
-            if (receivedType === "scenario") {
-              summaryDataReceived.current.scenario = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                scenario: receivedData?.[0] || null,
-              }));
-            } else if (receivedType === "activity") {
-              summaryDataReceived.current.activity = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                activities: receivedData || [],
-              }));
-            } else if (receivedType === "resource") {
-              summaryDataReceived.current.resource = true;
-              setSummaryData((prev) => ({
-                ...prev,
-                resources: receivedData || [],
-              }));
-            }
-
-            if (
-              summaryDataReceived.current.scenario &&
-              summaryDataReceived.current.activity &&
-              summaryDataReceived.current.resource
-            ) {
-              setSummaryLoading(false);
-            }
-          }
-        }
 
         // Handle detailed view data
         if (viewType === "detailed" && receivedType === dataType) {
@@ -157,6 +133,14 @@ export function useCrossRepData({
           if (viewType === "detailed" && message.data?.dataType === dataType) {
             setError(message.data.message || "An error occurred");
             setLoading(false);
+          }
+        }
+        if (
+          message.data?.relatedTo === EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST
+        ) {
+          console.error("[useCrossRepData] Batch error:", message.data);
+          if (viewType === "summary") {
+            setSummaryLoading(false);
           }
         }
       }
