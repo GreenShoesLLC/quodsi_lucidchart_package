@@ -1,7 +1,8 @@
 import { EnvelopeBase, EnvelopeMessageType, ISerializedScenario } from '@quodsi/shared';
 import { router } from '../index';
-import { Viewport } from 'lucid-extension-sdk';
+import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 /**
@@ -61,6 +62,23 @@ export class ScenarioDefinitionHandler {
         data: {
           success: true
         }
+      });
+
+      // Sync scenarios to quodsi_api database (fire-and-forget)
+      const document = new DocumentProxy(client);
+      LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'SyncScenarios',
+        actionData: {
+          documentId: document.id,
+          pageId: currentPage.id,
+          scenarios: data.scenarios
+        },
+        asynchronous: false
+      }).then(() => {
+        console.log('[ScenarioDefinitionHandler] Scenarios synced to database');
+      }).catch(err => {
+        console.error('[ScenarioDefinitionHandler] Failed to sync scenarios to database:', err);
       });
 
       return true;

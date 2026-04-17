@@ -81,7 +81,9 @@
         "SyncUser": "SyncUser",
         "GetResultsData": "GetResultsData",
         "UpsertModel": "UpsertModel",
-        "RemoveModel": "RemoveModel"
+        "RemoveModel": "RemoveModel",
+        "SyncScenarios": "SyncScenarios",
+        "ListScenarios": "ListScenarios"
       }
     }
   ]
