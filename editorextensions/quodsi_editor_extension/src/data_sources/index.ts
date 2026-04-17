@@ -2,7 +2,6 @@
 export * from './common/constants';
 
 // Export all data source readers
-export { SimulationResultsReader } from './simulation_results/SimulationResultsReader';
 export { ModelReader, ModelDataSource, ModelDefinitionRepository } from './model';
 
 // Export data types

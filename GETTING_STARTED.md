@@ -12,13 +12,11 @@ Fast-track commands to get Quodsi running locally. Copy and paste each block int
 
 Ensure you have:
 - Node.js 18+
-- Azure Functions Core Tools v4
 - Git
 
 **Verify:**
 ```bash
 node --version
-func --version
 ```
 
 **If missing:** See [prerequisites guide](./_docs/development/01_prerequisites.md)
@@ -36,21 +34,7 @@ npm run build -w @quodsi/shared
 
 ---
 
-## Terminal 2: Start Azure Function
-
-**Before starting:** Ensure `local.settings.json` is configured. Copy from `local.settings.json.template` and replace placeholder keys. See [environment guide](./editorextensions/quodsi_editor_extension/_docs/architecture/environment/04_azure_function_environment.md).
-
-```bash
-cd dataconnectors/quodsi_data_connector_lucidchart_v2
-npm run build
-func start --debug --verbose
-```
-
-**Expected:** Function listening on `http://localhost:7071`
-
----
-
-## Terminal 3: Start React Dev Server
+## Terminal 2: Start React Dev Server
 
 ```bash
 cd editorextensions/quodsi_editor_extension/quodsim-react
@@ -63,7 +47,7 @@ npx react-scripts start
 
 ---
 
-## Terminal 4: Launch Extension Test
+## Terminal 3: Launch Extension Test
 
 ```bash
 npx lucid-package@latest test-editor-extension quodsi_editor_extension
@@ -84,17 +68,16 @@ webpack compiled successfully
 
 ## Verification
 
-**Check all services running:**
+**Check services running:**
 ```bash
 # In a new terminal
-netstat -ano | findstr "3000 7071"  # Windows
-lsof -i :3000 && lsof -i :7071      # Mac/Linux
+netstat -ano | findstr "3000"  # Windows
+lsof -i :3000                  # Mac/Linux
 ```
 
 **Test endpoints:**
 ```bash
 curl http://localhost:3000  # React
-curl http://localhost:7071  # Function
 ```
 
 ---
@@ -112,7 +95,6 @@ taskkill /PID <PID> /F
 **Mac/Linux:**
 ```bash
 lsof -ti:3000 | xargs kill -9
-lsof -ti:7071 | xargs kill -9
 ```
 
 ### Module Not Found
@@ -121,7 +103,7 @@ lsof -ti:7071 | xargs kill -9
 npm run build -w @quodsi/shared
 ```
 
-Then restart Terminals 2 and 4.
+Then restart Terminals 2 and 3.
 
 ### Extension Not Loading
 
@@ -141,24 +123,15 @@ Cmd+Shift+R (Mac)
 npm run build -w @quodsi/shared
 ```
 
-Then restart Terminal 2 (Function) and Terminal 4 (Extension).
+Then restart Terminal 3 (Extension).
 
 ### Extension Changes
 
-Restart Terminal 4 (Extension test) and refresh browser.
+Restart Terminal 3 (Extension test) and refresh browser.
 
 ### React Changes
 
 Hot reload automatic - no restart needed.
-
-### Function Changes
-
-In Terminal 2:
-```bash
-# Ctrl+C to stop
-npm run build
-func start --debug --verbose
-```
 
 ---
 
@@ -178,7 +151,6 @@ killall node              # Mac/Linux
 
 ```bash
 rm -rf shared/dist
-rm -rf dataconnectors/quodsi_data_connector_lucidchart_v2/dist
 rm -rf editorextensions/quodsi_editor_extension/quodsim-react/build
 npm install
 npm run build -w @quodsi/shared
@@ -188,45 +160,24 @@ Then restart all 4 terminals.
 
 ---
 
-## Configuration
-
-### Azure Function Settings
-
-**Required for:** Simulation submission (function starts without it, but simulations will fail)
-
-**Create configuration file:**
-```bash
-cd dataconnectors/quodsi_data_connector_lucidchart_v2
-cp local.settings.json.template local.settings.json
-```
-
-**Edit `local.settings.json`:**
-- Replace all `YOUR_*_KEY` placeholders with real Azure credentials
-- See [Azure Function environment guide](./editorextensions/quodsi_editor_extension/_docs/architecture/environment/04_azure_function_environment.md) for details
-
-**Note:** Extension and React work without Azure credentials - only simulation features require them.
-
----
-
 ## Project Structure
 
 ```
 quodsi_lucidchart_package/
 ├── shared/                         # Core library (build first)
-├── editorextensions/
-│   └── quodsi_editor_extension/
-│       ├── src/                    # Extension TypeScript
-│       └── quodsim-react/          # React UI (port 3000)
-└── dataconnectors/
-    └── quodsi_data_connector_lucidchart_v2/  # Azure Function (port 7071)
+└── editorextensions/
+    └── quodsi_editor_extension/
+        ├── src/                    # Extension TypeScript
+        └── quodsim-react/          # React UI (port 3000)
 ```
+
+Simulation/data backend lives in the separate `quodsi_api` repository.
 
 ---
 
 ## Ports
 
 - **3000** - React dev server
-- **7071** - Azure Function
 
 ---
 
@@ -244,9 +195,8 @@ quodsi_lucidchart_package/
 | Terminal | Command | Port | Hot Reload |
 |----------|---------|------|------------|
 | 1 | `npm run build -w @quodsi/shared` | - | No (one-time) |
-| 2 | `func start --debug --verbose` | 7071 | No |
-| 3 | `npx react-scripts start` | 3000 | Yes |
-| 4 | `npx lucid-package@latest test-editor-extension quodsi_editor_extension` | - | No |
+| 2 | `npx react-scripts start` | 3000 | Yes |
+| 3 | `npx lucid-package@latest test-editor-extension quodsi_editor_extension` | - | No |
 
 ---
 

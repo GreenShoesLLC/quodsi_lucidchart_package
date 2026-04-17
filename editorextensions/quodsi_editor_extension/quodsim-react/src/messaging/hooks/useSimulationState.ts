@@ -12,7 +12,7 @@ import { SimulationStatus } from '@quodsi/shared';
  */
 export function useSimulationState(pollingInterval?: number) {
   const simulation = useSimulation();
-  const { requestSimulation, viewResults } = useSimulationSender();
+  const { requestSimulation } = useSimulationSender();
   
   // Local state for polling controls - now managed by the hook itself, not state
   const [isPolling, setIsPolling] = useState(false);
@@ -95,9 +95,6 @@ export function useSimulationState(pollingInterval?: number) {
       requestSimulation(documentId, scenarioName, durationDays, repetitions);
       setIsPolling(true);
     },
-    viewResults: (documentId: string, jobId?: string) => {
-      viewResults(documentId, jobId);
-    },
     startPolling: () => setIsPolling(true),
     stopPolling: () => setIsPolling(false)
   }), [
@@ -110,8 +107,7 @@ export function useSimulationState(pollingInterval?: number) {
     simulation.lastUpdated,
     results,
     isPolling,
-    requestSimulation,
-    viewResults
+    requestSimulation
   ]);
   
   return simulationState;

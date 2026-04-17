@@ -231,11 +231,6 @@ export function useModelPanel() {
     modelOpsSender.convertPage();
   };
   
-  const onViewResults = () => {
-    logger.log('Viewing simulation results');
-    simulationSender.viewResults(documentContext.documentId, simulation.jobId ?? undefined);
-  };
-  
   // Use reference data from selection state or provide empty default
   const referenceData: EditorReferenceData = selection.referenceData || {
     activities: [],
@@ -363,7 +358,6 @@ export function useModelPanel() {
     onValidate,
     onSimulate,
     onRemoveModel,
-    onConvertPage,
-    onViewResults
+    onConvertPage
   };
 }

@@ -56,71 +56,6 @@
       }
     },
     {
-      "label": "Azure Function Build",
-      "type": "shell",
-      "command": "npm run build",
-      "options": {
-        "cwd": "C:\\_source\\quodsi\\quodsi_lucidchart_package\\dataconnectors\\quodsi_data_connector_lucidchart_v2"
-      },
-      "problemMatcher": ["$tsc"],
-      "group": "build"
-    },
-    {
-      "label": "Azure Function Clean",
-      "type": "shell",
-      "command": "npm run clean",
-      "options": {
-        "cwd": "C:\\_source\\quodsi\\quodsi_lucidchart_package\\dataconnectors\\quodsi_data_connector_lucidchart_v2"
-      }
-    },
-    {
-      "label": "Azure Function Watch",
-      "type": "shell",
-      "command": "npm run watch",
-      "options": {
-        "cwd": "C:\\_source\\quodsi\\quodsi_lucidchart_package\\dataconnectors\\quodsi_data_connector_lucidchart_v2"
-      },
-      "problemMatcher": ["$tsc-watch"],
-      "isBackground": true,
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "echo": true
-      }
-    },
-    {
-      "label": "Kill Debug Port",
-      "type": "shell",
-      "command": "Get-Process | Where-Object {$_.Name -like '*node*'} | Where-Object {$_.CommandLine -like '*--inspect=9229*'} | Stop-Process -Force",
-      "presentation": {
-        "reveal": "never"
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Azure Function Start",
-      "type": "shell",
-      "command": "func start --debug --verbose",
-      "options": {
-        "cwd": "${workspaceFolder}/dataconnectors/quodsi_data_connector_lucidchart_v2",
-        "env": {
-          "NODE_OPTIONS": "--inspect=9229"
-        }
-      },
-      "isBackground": true,
-      "problemMatcher": {
-        "pattern": {
-          "regexp": "."
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^.*Worker process started and initialized.*$",
-          "endsPattern": "^.*For detailed output.*$"
-        }
-      },
-      "dependsOn": ["Kill Debug Port", "Azure Function Build"]
-    },
-    {
       "label": "Quodsi API Start",
       "type": "shell",
       "command": "C:\\_source\\quodsi\\quodsim\\venv\\Scripts\\python.exe -m uvicorn app.main:app --reload --port 8000",
@@ -152,12 +87,12 @@
     },
     {
       "label": "Setup And Watch",
-      "dependsOn": ["Kill Debug Port", "Watch Shared", "Azure Function Build"],
+      "dependsOn": ["Watch Shared"],
       "problemMatcher": []
     },
     {
       "label": "Start Apps",
-      "dependsOn": ["Azure Function Start", "Quodsi API Start", "ReactApp", "LucidPackage"],
+      "dependsOn": ["Quodsi API Start", "ReactApp", "LucidPackage"],
       "problemMatcher": []
     }
   ]

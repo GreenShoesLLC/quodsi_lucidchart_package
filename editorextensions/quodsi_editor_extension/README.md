@@ -64,18 +64,9 @@ The extension follows a modular architecture with clear separation of concerns:
 Provides access to data stored within LucidChart documents:
 
 - **DataSourceReader**: Base class for data source access
-- **SimulationResultsReader**: Specialized reader for simulation results
+- **ModelReader**: Reader for model metadata
 
 [→ Data Sources Documentation](./src/data_sources/README.md)
-
-### Dashboard
-
-Generates visualization dashboards for simulation results:
-
-- **SimulationResultsDashboard**: Creates dashboard pages
-- **Table Generators**: Creates specialized tables for different data types
-
-[→ Dashboard Documentation](./src/dashboard/README.md)
 
 ### Versioning
 
@@ -199,12 +190,7 @@ quodsi_editor_extension/
 │   │   ├── ModelManager.ts  # Simulation model management
 │   │   └── StorageAdapter.ts # Data persistence
 │   │
-│   ├── dashboard/         # Dashboard generation
-│   │   ├── generators/    # Table generators
-│   │   └── SimulationResultsDashboard.ts
-│   │
 │   ├── data_sources/      # Data access
-│   │   └── simulation_results/ # Simulation data handling
 │   │
 │   ├── panels/            # UI panel containers
 │   │   ├── ContentDockPanel.ts # Auth panel container

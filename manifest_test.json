@@ -44,36 +44,6 @@
   ],
   "dataConnectors": [
     {
-      "name": "quodsi_data_connector",
-      "oauthProviderName": "lucid",
-      "callbackBaseUrl": "https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/",
-      "pollingInterval": 30,
-      "dataActions": {
-        "Simulate": "simulate",
-        "MarkResultsViewed": "markResultsViewed",
-        "ImportSimulationResults": "importSimulationResults",
-        "SaveAndSubmitSimulation": "saveAndSubmitSimulationAction",
-        "SubmitSimulationJob": "submitSimulationJobAction",
-        "UploadModelDefinition": "uploadModelDefinitionAction",
-        "GetDocumentStatus": "getDocumentStatusAction",
-        "ListScenarios": "listScenarios",
-        "DeleteScenario": "deleteScenario",
-        "GetTaskStatus": "getTaskStatus",
-        "CheckScenarioTaskStatus": "checkScenarioTaskStatus",
-        "GetActivityCrossRepData": "getActivityCrossRepData",
-        "GetEntityCrossRepData": "getEntityCrossRepData",
-        "GetResourceCrossRepData": "getResourceCrossRepData",
-        "GetScenarioCrossRepData": "getScenarioCrossRepData",
-        "GetActivityContentsTimeseries": "getActivityContentsTimeseries",
-        "GetActivityInboundQueueTimeseries": "getActivityInboundQueueTimeseries",
-        "GetActivityOutboundQueueTimeseries": "getActivityOutboundQueueTimeseries",
-        "GetStateSummary": "getStateSummary",
-        "GetStateValuesTimeseries": "getStateValuesTimeseries",
-        "GetEntityThroughputTimeseries": "getEntityThroughputTimeseries",
-        "GetActivityEntitySummary": "getActivityEntitySummary"
-      }
-    },
-    {
       "name": "quodsi_api_data_connector",
       "oauthProviderName": "kinde",
       "callbackBaseUrl": "http://localhost:8000/lucid/",

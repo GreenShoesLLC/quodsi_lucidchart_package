@@ -5,7 +5,6 @@ import { ModelManager } from '../../ModelManager';
 import { StorageAdapter } from '../../StorageAdapter';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
-import { SimulationResultsDashboard } from '../../../dashboard/SimulationResultsDashboard';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 // Simple ID generator for extension context (crypto.getRandomValues not available)
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -62,12 +61,6 @@ export class ModelOpsHandler {
 
       case EnvelopeMessageType.MODEL_JSON_RESPONSE:
         return ModelOpsHandler.handleModelJsonResponse(msg);
-
-      case EnvelopeMessageType.RESULTS_PAGE_CREATE:
-        return ModelOpsHandler.handleResultsPageCreate(msg);
-
-      case EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT:
-        return ModelOpsHandler.handleResultsPageCreateResult(msg);
 
       // Not a model operations message
       default:
@@ -564,165 +557,6 @@ export class ModelOpsHandler {
     
     ModelOpsHandler.logger.log('Removal result received', {
       success: data.success,
-      error: data.error
-    });
-    
-    // This is usually sent by the extension, not received
-    // But we'll handle it anyway for completeness
-    
-    return true;
-  }
-  
-  /**
-   * Handle results page creation request
-   *
-   * @param msg RESULTS_PAGE_CREATE message
-   * @returns True indicating message was handled
-   */
-  private static handleResultsPageCreate(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      scenarioId: string;
-      documentId: string;
-      pageTitle?: string;
-      createDashboard?: boolean;
-    };
-
-    ModelOpsHandler.logger.log('Results page creation requested', {
-      scenarioId: data.scenarioId,
-      documentId: data.documentId,
-      pageTitle: data.pageTitle,
-      createDashboard: data.createDashboard
-    });
-
-    // Start async process but return true immediately
-    ModelOpsHandler.createResultsPage(msg, data)
-      .catch(err => ModelOpsHandler.logger.error('Error creating results page:', err));
-
-    return true;
-  }
-  
-  /**
-   * Async method to create the results page
-   */
-  private static async createResultsPage(msg: EnvelopeBase, data: {
-    scenarioId: string;
-    documentId: string;
-    pageTitle?: string;
-    createDashboard?: boolean;
-  }): Promise<void> {
-    try {
-      ModelOpsHandler.logger.log('Creating simulation results dashboard...');
-
-      const client = ModelManager.getClient();
-
-      // Validate required parameters
-      if (!data.scenarioId) {
-        throw new Error('scenarioId is required to create results page');
-      }
-
-      // Always import results before creating dashboard
-      // Note: Every results page needs data, so we always call ImportSimulationResults
-      await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
-        actionName: 'ImportSimulationResults',
-        actionData: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          collectionsToImport: [
-            'activity_cross_rep',
-            'entity_cross_rep',
-            'resource_cross_rep',
-          ]
-        },
-        asynchronous: true
-      });
-      
-      // Create dashboard instance
-      const dashboard = new SimulationResultsDashboard(client);
-      
-      // Generate a dashboard with the current date/time in the name
-      const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
-      const pageName = data.pageTitle || `Quodsi - ${timestamp}`;
-      const result = await dashboard.createDashboard(pageName);
-      
-      ModelOpsHandler.logger.log(`Dashboard created with ${result.tables.length} tables`);
-      
-      // Check for issues
-      if (result.emptyDataTypes.length > 0) {
-        ModelOpsHandler.logger.log(`The following data types had no data: ${result.emptyDataTypes.join(', ')}`);
-      }
-      
-      if (result.errors.length > 0) {
-        ModelOpsHandler.logger.warn(`${result.errors.length} errors occurred while creating the dashboard`);
-        result.errors.forEach(err => {
-          ModelOpsHandler.logger.error(`Error creating ${err.type} table:`, err.error);
-        });
-      }
-      
-      // Mark results as viewed
-      await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
-        actionName: 'MarkResultsViewed',
-        actionData: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId
-        },
-        asynchronous: true
-      });
-      
-      // Send success response
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: true,
-          pageId: result.page.id,
-          tablesCreated: result.tables.length,
-          emptyDataTypes: result.emptyDataTypes,
-          errors: result.errors.map(err => ({
-            type: err.type,
-            message: err.error instanceof Error ? err.error.message : String(err.error)
-          }))
-        }
-      });
-      
-    } catch (error) {
-      ModelOpsHandler.logger.error('Error creating simulation results dashboard:', error);
-      
-      // Send error response
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-    }
-  }
-  
-  /**
-   * Handle results page creation result
-   * 
-   * @param msg RESULTS_PAGE_CREATE_RESULT message
-   * @returns True indicating message was handled
-   */
-  private static handleResultsPageCreateResult(msg: EnvelopeBase): boolean {
-    const data = msg.data as {
-      success: boolean;
-      pageId?: string;
-      error?: string;
-    };
-    
-    ModelOpsHandler.logger.log('Results page creation result received', {
-      success: data.success,
-      pageId: data.pageId,
       error: data.error
     });
     

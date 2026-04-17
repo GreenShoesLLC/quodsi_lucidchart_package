@@ -95,12 +95,11 @@ export interface SimulationState {
   isCancelled: boolean;
   progressPercent: number;
   runSimulation: (
-    documentId: string, 
+    documentId: string,
     scenarioName?: string,
     durationDays?: number,
     repetitions?: number
   ) => void;
-  viewResults: (documentId: string, jobId?: string) => void;
   startPolling: () => void;
   stopPolling: () => void;
 }

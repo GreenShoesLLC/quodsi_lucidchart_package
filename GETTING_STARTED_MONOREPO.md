@@ -52,15 +52,6 @@ npm run build -w @quodsi/shared
 
 ---
 
-## Terminal 2: Start Azure Function
-
-**Before starting:** Ensure `local.settings.json` is configured. Copy from `local.settings.json.template` and replace placeholder keys. See [environment guide](./quodsi_lucidchart_package/editorextensions/quodsi_editor_extension/_docs/architecture/environment/04_azure_function_environment.md).
-
-```bash
-cd quodsi_lucidchart_package/dataconnectors/quodsi_data_connector_lucidchart_v2
-npm run build
-func start --debug --verbose
-```
 
 **Expected:** Function listening on `http://localhost:7071`
 
@@ -227,7 +218,6 @@ killall node              # Mac/Linux
 
 ```bash
 rm -rf quodsi_lucidchart_package/shared/dist
-rm -rf quodsi_lucidchart_package/dataconnectors/quodsi_data_connector_lucidchart_v2/dist
 rm -rf quodsi_lucidchart_package/editorextensions/quodsi_editor_extension/quodsim-react/build
 cd quodsi_lucidchart_package && npm install
 npm run build -w @quodsi/shared
@@ -237,38 +227,16 @@ Then restart all 5 terminals.
 
 ---
 
-## Configuration
-
-### Azure Function Settings
-
-**Required for:** Simulation submission (function starts without it, but simulations will fail)
-
-**Create configuration file:**
-```bash
-cd quodsi_lucidchart_package/dataconnectors/quodsi_data_connector_lucidchart_v2
-cp local.settings.json.template local.settings.json
-```
-
-**Edit `local.settings.json`:**
-- Replace all `YOUR_*_KEY` placeholders with real Azure credentials
-- See [Azure Function environment guide](./quodsi_lucidchart_package/editorextensions/quodsi_editor_extension/_docs/architecture/environment/04_azure_function_environment.md) for details
-
-**Note:** Extension and React work without Azure credentials - only simulation features require them.
-
----
-
 ## Project Structure
 
 ```
 quodsi/                                    # ← you are here (monorepo root)
 ├── quodsi_lucidchart_package/
 │   ├── shared/                            # Core library (build first)
-│   ├── editorextensions/
-│   │   └── quodsi_editor_extension/
-│   │       ├── src/                       # Extension TypeScript
-│   │       └── quodsim-react/             # React UI (port 3000)
-│   └── dataconnectors/
-│       └── quodsi_data_connector_lucidchart_v2/  # Azure Function (port 7071)
+│   └── editorextensions/
+│       └── quodsi_editor_extension/
+│           ├── src/                       # Extension TypeScript
+│           └── quodsim-react/             # React UI (port 3000)
 └── quodsim/
     ├── venv/                              # Python virtual environment
     └── quodsi_api/                        # FastAPI backend (port 8000)

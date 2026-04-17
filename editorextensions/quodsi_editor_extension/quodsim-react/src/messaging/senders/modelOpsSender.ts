@@ -54,25 +54,6 @@ export function useModelOpsSender() {
   }, [send]);
   
   /**
-   * Send a RESULTS_PAGE_CREATE message
-   *
-   * @param scenarioId Scenario ID of the completed simulation
-   * @param documentId Document ID to create results page in
-   * @param pageTitle Optional page title
-   */
-  const createResultsPage = useCallback((
-    scenarioId: string,
-    documentId: string,
-    pageTitle?: string
-  ) => {
-    send(EnvelopeMessageType.RESULTS_PAGE_CREATE, {
-      scenarioId,
-      documentId,
-      pageTitle
-    });
-  }, [send]);
-  
-  /**
    * Send an element data update
    *
    * @param elementId Element ID to update
@@ -228,7 +209,6 @@ export function useModelOpsSender() {
     validateModel,
     convertModel,
     removeModel,
-    createResultsPage,
     updateElementData,
     convertElement,
     convertPage,
@@ -243,7 +223,6 @@ export function useModelOpsSender() {
     validateModel,
     convertModel,
     removeModel,
-    createResultsPage,
     updateElementData,
     convertElement,
     convertPage,

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Quodsi is a LucidChart extension that transforms diagrams into discrete event simulation models. The project is structured as a monorepo with four main components that work together to provide a seamless simulation modeling experience.
+Quodsi is a LucidChart extension that transforms diagrams into discrete event simulation models. The project is structured as a monorepo with three main components that work together to provide a seamless simulation modeling experience. The simulation/data backend lives in a separate repository (`quodsi_api`) and is reached via the `quodsi_api_data_connector` defined in the manifests.
 
 ## Architecture
 
@@ -12,7 +12,6 @@ Quodsi is a LucidChart extension that transforms diagrams into discrete event si
 1. **Shared Library** (`/shared`) - Core domain models, validation, serialization, and messaging protocol
 2. **Editor Extension** (`/editorextensions/quodsi_editor_extension`) - TypeScript-based LucidChart extension that manages the model lifecycle
 3. **React UI** (`/editorextensions/quodsi_editor_extension/quodsim-react`) - Embedded React app for model editing and simulation controls
-4. **Data Connector** (`/dataconnectors/quodsi_data_connector_lucidchart_v2`) - Azure Functions backend for simulation execution
 
 ### Key Architectural Patterns
 
@@ -47,9 +46,6 @@ npm start
 
 # Start React app development server (with hot reload)
 cd editorextensions/quodsi_editor_extension/quodsim-react && npm start
-
-# Start data connector locally
-cd dataconnectors/quodsi_data_connector_lucidchart_v2 && npm start
 ```
 
 ### Building

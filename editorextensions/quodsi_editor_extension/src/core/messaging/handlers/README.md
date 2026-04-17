@@ -62,7 +62,6 @@ Manages model operations:
 - `MODEL_VALIDATE`: Validates model integrity
 - `MODEL_CONVERT`: Converts diagram to model
 - `MODEL_REMOVE`: Removes model from diagram
-- `RESULTS_PAGE_CREATE`: Creates simulation results page
 
 ### `subscriptionHandler.ts`
 

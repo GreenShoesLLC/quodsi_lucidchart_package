@@ -96,6 +96,52 @@ export class SimulationRunHandler {
    *
    * @param msg SIMULATION_RUNS_LIST_REQUEST message
    */
+  /**
+   * Map DB run status to the RunState values React expects
+   */
+  private static mapStatusToRunState(status: string): string {
+    switch (status) {
+      case 'COMPLETED': return 'RAN_SUCCESSFULLY';
+      case 'FAILED': return 'RAN_WITH_ERRORS';
+      case 'RUNNING': return 'RUNNING';
+      case 'QUEUED': return 'QUEUED';
+      default: return 'NOT_RUN';
+    }
+  }
+
+  /**
+   * Transform nested API response (scenarios with runs) into flat SimulationRunInfo list
+   */
+  private static transformToFlatScenarioList(apiScenarios: any[]): any[] {
+    return apiScenarios.map(scenario => {
+      const latestRun = scenario.runs?.[0]; // runs are ordered by created_at DESC
+      const runState = latestRun
+        ? SimulationRunHandler.mapStatusToRunState(latestRun.status)
+        : 'NOT_RUN';
+      const hasResults = runState === 'RAN_SUCCESSFULLY';
+
+      return {
+        id: scenario.id,
+        name: scenario.name,
+        runState,
+        hasResults,
+        reps: 0,
+        runClockPeriod: 0,
+        runClockPeriodUnit: 'MINUTES',
+        simulationTimeType: 'Clock',
+        completedAt: latestRun?.completed_at || undefined,
+        currentReplication: latestRun?.current_replication || undefined,
+        error: latestRun?.error || undefined,
+        errorType: latestRun?.error_type || undefined,
+        errorDetails: latestRun?.error_details || undefined,
+        errorSuggestions: latestRun?.error_suggestions || undefined,
+        startTime: latestRun?.start_time || latestRun?.submitted_at || undefined,
+        endTime: latestRun?.end_time || latestRun?.completed_at || undefined,
+        metrics: latestRun?.metrics || undefined,
+      };
+    });
+  }
+
   private static async handleSimulationRunsListRequest(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId: string };
 
@@ -104,53 +150,56 @@ export class SimulationRunHandler {
     });
 
     try {
-      // Get the EditorClient
       const client = ModelManager.getClient();
+      const viewport = new Viewport(client);
+      const currentPage = viewport.getCurrentPage();
+      const pageId = currentPage?.id || '';
 
-      SimulationRunHandler.logger.log('Calling data connector ListScenarios action...');
+      SimulationRunHandler.logger.log('Calling quodsi_api ListScenarios...');
 
-      // Call the data connector to list scenarios
       const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_data_connector',
+        dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'ListScenarios',
         actionData: {
-          documentId: data.documentId
+          documentId: data.documentId,
+          pageId
         },
-        asynchronous: true
+        asynchronous: false
       });
 
-      // Debug logging to understand response structure
-      SimulationRunHandler.logger.log('ListScenarios raw result type:', typeof result);
-      SimulationRunHandler.logger.log('ListScenarios raw result:', JSON.stringify(result, null, 2));
-      SimulationRunHandler.logger.log('result.json exists?', !!result?.json);
-      SimulationRunHandler.logger.log('result.json.scenarios exists?', !!result?.json?.scenarios);
-
-      // Extract the actual data from the Lucid SDK wrapper
       const responseData = result.json || result;
 
-      SimulationRunHandler.logger.log('ListScenarios action completed successfully', {
-        scenarioCount: responseData?.scenarios?.length || 0
+      // Transform nested scenarios+runs into flat SimulationRunInfo list
+      const flatScenarios = responseData?.scenarios
+        ? SimulationRunHandler.transformToFlatScenarioList(responseData.scenarios)
+        : [];
+
+      SimulationRunHandler.logger.log('ListScenarios completed', {
+        scenarioCount: flatScenarios.length
       });
 
       // Reconcile active simulation jobs with scenario list
-      // This replaces the need for separate GetDocumentStatus polling
-      if (responseData?.scenarios) {
+      if (flatScenarios.length > 0) {
         SimulationHandler.reconcileWithScenarioList(
           data.documentId,
-          responseData.scenarios
+          flatScenarios
         );
       }
 
-      // Send success response with the unwrapped data
-      // Route to the correct channel (model or results) based on message source
+      // Send success response in the shape React expects
       const responseChannel = SimulationRunHandler.getResponseChannel(msg);
       router.send(responseChannel, {
-        id: msg.id, // Use same ID for correlation
+        id: msg.id,
         type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT,
         source: 'host',
         target: `${responseChannel}-iframe`,
         version: '1.0',
-        data: responseData
+        data: {
+          success: true,
+          documentId: data.documentId,
+          scenarios: flatScenarios,
+          generatedAt: responseData?.generatedAt || new Date().toISOString()
+        }
       });
 
     } catch (error) {

@@ -38,8 +38,7 @@ export const ModelPanel: React.FC = () => {
     onValidate,
     onSimulate,
     onRemoveModel,
-    onConvertPage,
-    onViewResults
+    onConvertPage
   } = useModelPanel();
 
   // Get message senders

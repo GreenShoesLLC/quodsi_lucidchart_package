@@ -102,40 +102,6 @@ export interface ModelRemoveResultMessage extends EnvelopeBase {
 }
 
 /**
- * Sent to request results page creation
- */
-export interface ResultsPageCreateMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.RESULTS_PAGE_CREATE;
-  data: {
-    /** Job ID of the completed simulation */
-    jobId: string;
-
-    /** Document ID to create results page in */
-    documentId: string;
-
-    /** Optional page title */
-    pageTitle?: string;
-  };
-}
-
-/**
- * Sent with results page creation results
- */
-export interface ResultsPageCreateResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.RESULTS_PAGE_CREATE_RESULT;
-  data: {
-    /** Success flag */
-    success: boolean;
-
-    /** Created page ID */
-    pageId?: string;
-
-    /** Error message if creation failed */
-    error?: string;
-  };
-}
-
-/**
  * Sent to request serialized model JSON
  */
 export interface ModelJsonRequestMessage extends EnvelopeBase {
@@ -172,6 +138,4 @@ export type ModelOpsMessage =
   | ModelRemoveMessage
   | ModelRemoveResultMessage
   | ModelJsonRequestMessage
-  | ModelJsonResponseMessage
-  | ResultsPageCreateMessage
-  | ResultsPageCreateResultMessage;
+  | ModelJsonResponseMessage;

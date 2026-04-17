@@ -38,25 +38,8 @@ export function useSimulationSender() {
     });
   }, [send]);
 
-  /**
-   * Request to view simulation results
-   *
-   * @param documentId Document ID
-   * @param jobId Optional job ID
-   */
-  const viewResults = useCallback((documentId: string, jobId?: string) => {
-    // Use RESULTS_PAGE_CREATE to view results
-    // Since ACTION_REQUEST is not available in EnvelopeMessageType
-    send(EnvelopeMessageType.RESULTS_PAGE_CREATE, {
-      documentId,
-      jobId: jobId || 'current',
-      createDashboard: true // This might need adjustment based on protocol
-    });
-  }, [send]);
-
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
-    requestSimulation,
-    viewResults
-  }), [requestSimulation, viewResults]);
+    requestSimulation
+  }), [requestSimulation]);
 }
