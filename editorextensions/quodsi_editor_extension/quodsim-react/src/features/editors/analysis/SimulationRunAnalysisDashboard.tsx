@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { SimulationRunDownloadInfo } from "@quodsi/shared";
 import { useSimulationRunSender } from "../../../messaging/senders/simulationRunSender";
+import { useAnalyticsSender } from "../../../messaging/senders/analyticsSender";
 import { CrossRepDataType } from "./crossRepTableConfigs";
 import ScenarioPicker from "../../../components/ScenarioPicker";
 import { useComparisonData } from "../../../hooks/useComparisonData";
@@ -40,6 +41,14 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
 
   // Hooks
   const { getCrossRepData, getCrossRepBatchData } = useSimulationRunSender();
+  const { track } = useAnalyticsSender();
+
+  // Fire analytics on mount — backend deduplicates first_results_viewed via user flag.
+  useEffect(() => {
+    if (!scenarioId) return;
+    track('first_results_viewed', { run_id: scenarioId });
+    track('results_viewed', { run_id: scenarioId });
+  }, [scenarioId, track]);
 
   const {
     data,
