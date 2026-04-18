@@ -15,6 +15,7 @@ import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
 import { SwimLaneHandler } from './swimlaneHandler';
+import { AnalyticsHandler } from './analyticsHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -30,7 +31,12 @@ export class MessageHandlers {
     console.log(`[MessageHandlers] Handling message type: ${msg.type}`);
     
     // Try each handler in order of priority
-    
+
+    // Analytics (fire-and-forget, check first for cheap short-circuit)
+    if (AnalyticsHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Framework messages have highest priority
     if (FrameworkHandler.handleMessage(msg)) {
       console.log(`[MessageHandlers] Message ${msg.type} handled by FrameworkHandler`);
@@ -129,5 +135,6 @@ export {
   ConversionPreviewHandler,
   ScenarioDefinitionHandler,
   DevtoolsHandler,
-  SwimLaneHandler
+  SwimLaneHandler,
+  AnalyticsHandler
 };

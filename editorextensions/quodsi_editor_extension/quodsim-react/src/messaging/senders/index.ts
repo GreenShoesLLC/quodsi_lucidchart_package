@@ -6,3 +6,4 @@ export { useSimulationSender } from './simulationSender';
 export { useModelOpsSender } from './modelOpsSender';
 export { useStorageSender } from './storageSender';
 export { useConversionPreviewSender } from './conversionPreviewSender';
+export { useAnalyticsSender } from './analyticsSender';

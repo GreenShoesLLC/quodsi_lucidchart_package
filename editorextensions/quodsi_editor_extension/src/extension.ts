@@ -7,6 +7,7 @@ import { StorageAdapter } from './core/StorageAdapter';
 import { RightDockPanel } from './panels/RightDockPanel';
 import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
+import { AnalyticsHandler } from './core/messaging/handlers/analyticsHandler';
 
 const client = new EditorClient();
 const viewport = new Viewport(client);
@@ -24,6 +25,9 @@ console.info('[EXT][extension] Using new messaging system with RightDockPanel');
 
 // Initialize messaging system with logging enabled
 initializeMessaging(true);
+
+// Initialize analytics handler so ANALYTICS_TRACK messages can be forwarded
+AnalyticsHandler.initialize(client);
 
 let rightDockPanel;
 console.info('[EXT][extension] About to create RightDockPanel');

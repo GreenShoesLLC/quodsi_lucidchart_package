@@ -10,6 +10,7 @@ import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisco
 import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, CrossRepBatchDataRequestMessage, CrossRepBatchDataResultMessage, CrossRepDataType, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
+import { AnalyticsMessage, AnalyticsTrackMessage, ClientAnalyticsEvent } from './analytics/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -146,6 +147,13 @@ export {
   EntitlementMessage
 } from './entitlements/messages';
 
+// Export analytics messages
+export {
+  AnalyticsMessage,
+  AnalyticsTrackMessage,
+  ClientAnalyticsEvent
+} from './analytics/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage
@@ -157,7 +165,8 @@ export type QuodsiMessage =
   | StorageMessage
   | SimulationRunMessage
   | ConversionPreviewMessage
-  | EntitlementMessage;
+  | EntitlementMessage
+  | AnalyticsMessage;
 
 // Define payload type mapping
 export interface EnvelopMessagePayloads {
@@ -234,6 +243,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT]: { success: boolean; swimlaneBlockId: string; swimlaneData?: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData; error?: string };
 
   [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
+
+  [EnvelopeMessageType.ANALYTICS_TRACK]: AnalyticsTrackMessage['data'];
 }
 
 /**

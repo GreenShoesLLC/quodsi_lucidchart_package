@@ -11,6 +11,7 @@ const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import { SelectionHandler } from './selection';
+import { AnalyticsHandler } from './analyticsHandler';
 
 /**
  * Handler for model operations (validate, convert, remove, results page)
@@ -314,6 +315,9 @@ export class ModelOpsHandler {
               title,
               true
             );
+
+            // Page just became a Quodsi model — activation milestone.
+            AnalyticsHandler.fire('first_model_created', { model_id: documentId });
 
             ModelOpsHandler.logger.log('Sent MODEL_CONTEXT and triggered SelectionHandler refresh');
           }).catch(error => {

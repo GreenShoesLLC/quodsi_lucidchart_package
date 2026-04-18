@@ -56,7 +56,8 @@
         "ListScenarios": "ListScenarios",
         "SaveAndSubmitSimulation": "SaveAndSubmitSimulation",
         "SubmitSimulationJob": "SubmitSimulationJob",
-        "DeleteScenario": "DeleteScenario"
+        "DeleteScenario": "DeleteScenario",
+        "TrackEvent": "TrackEvent"
       }
     }
   ]
