@@ -132,12 +132,12 @@ The application uses Tailwind CSS for styling:
 
 ## Authentication & Authorization
 
-The application uses MSAL (Microsoft Authentication Library) for Azure AD authentication:
+The application uses Kinde for authentication via Lucid's platform OAuth. The extension calls `getOAuthToken('kinde')`; the React panel receives auth state via `AUTH_STATUS` messages and never handles tokens directly.
 
-- **Sign-in/Sign-out**: User authentication flow
-- **Token Management**: Handles refresh and access tokens
-- **User Identity**: Provides user profile information
-- **Role-based Access**: Controls feature availability
+- **Sign-in/Sign-out**: Triggered from React via auth messages; Lucid shows the Kinde OAuth popup
+- **Token Management**: Lucid platform caches the Kinde token and handles refresh
+- **User Identity**: Fetched from the Kinde `user_profile` endpoint by the extension
+- **Role-based Access**: Controls feature availability (based on Kinde claims such as `org_code`)
 
 ## Component Patterns
 

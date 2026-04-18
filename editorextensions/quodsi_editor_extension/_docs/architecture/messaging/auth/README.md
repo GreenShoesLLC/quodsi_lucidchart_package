@@ -30,16 +30,16 @@ AUTH_STATUS broadcast → All panels update UI
 - Broadcasts updates to all panels
 - Validates auth before protected operations
 
-**React Side:**
-- MSAL handles OAuth flows
-- LocalStorage provides persistence
+**Extension Side (OAuth):**
+- Kinde handles OAuth flows via Lucid's platform OAuth (`client.getOAuthToken('kinde')`)
+- Lucid platform caches the Kinde token
 - mapAuth converts messages to reducer actions
 
 ## Common Workflows
 
 **Login:**
 1. User initiates login in auth panel
-2. MSAL OAuth flow completes
+2. Extension calls `getOAuthToken('kinde')` and Kinde OAuth flow completes
 3. AUTH_LOGIN_SUCCESS → Extension
 4. Extension broadcasts AUTH_STATUS
 5. All panels show authenticated UI
@@ -60,4 +60,4 @@ AUTH_STATUS broadcast → All panels update UI
 ## Integration
 
 - **Extension:** `AuthHandler`, `MessageRouter.sendAuthStatus()`
-- **React:** `mapAuth`, auth reducers, MSAL hooks
+- **React:** `mapAuth`, auth reducers, auth senders

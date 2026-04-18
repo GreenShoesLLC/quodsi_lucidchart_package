@@ -3,7 +3,7 @@ import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { QuodsiUserInfo } from '../auth/messages';
 
 /**
- * Sent by the iframe immediately after QReact mounts and MSAL completes a silent login attempt.
+ * Sent by the iframe immediately after QReact mounts and the Kinde auth probe completes.
  * This is the first application-level message in a session.
  */
 export interface ReactAppReadyMessage extends EnvelopeBase {
@@ -12,7 +12,7 @@ export interface ReactAppReadyMessage extends EnvelopeBase {
     /** Which Lucid panel this iframe represents. */
     panel: 'model' | 'auth';
 
-    /** Initial auth probe result (true = MSAL already holds a valid account). */
+    /** Initial auth probe result (true = Kinde token already cached by Lucid platform OAuth). */
     isAuthenticated: boolean;
 
     /** Basic user snapshot if isAuthenticated is true. */

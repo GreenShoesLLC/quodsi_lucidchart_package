@@ -19,12 +19,12 @@ export interface QuodsiUserInfo {
 }
 
 /**
- * Sent after MSAL sign-in or sign-up finishes in popup.
+ * Sent after Kinde sign-in or sign-up finishes via Lucid platform OAuth.
  */
 export interface AuthLoginSuccessMessage extends EnvelopeBase {
   type: EnvelopeMessageType.AUTH_LOGIN_SUCCESS;
   data: {
-    /** JWT token from MSAL authentication */
+    /** JWT token from Kinde authentication */
     idToken: string;
 
     /** User information */

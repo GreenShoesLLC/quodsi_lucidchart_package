@@ -127,7 +127,7 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 - Azure Functions for data connector
 - Azure Batch for simulation execution
 - Azure Storage for model and results storage
-- User authentication not yet implemented (Kinde under evaluation; auth messaging protocol exists in shared library)
+- User authentication via Kinde (integrated through Lucid's platform OAuth; see `_docs/auth-migration-to-kinde.md` for architecture)
 
 ### Local Azure Development
 1. Copy `local.settings.json.template` to `local.settings.json` in data connector

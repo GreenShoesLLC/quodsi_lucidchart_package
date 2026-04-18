@@ -169,7 +169,7 @@ if (!this.state.isAuthenticated()) {
 1. **Direct messaging**: AUTH_STATUS sent to specific panels
 2. **Broadcast**: Updates all panels simultaneously
 3. **LocalStorage backup**: React persists auth state
-4. **MSAL cache**: Token storage for session persistence
+4. **Kinde token cache**: Lucid platform OAuth layer caches the Kinde token for session persistence
 
 ### State Consistency
 - Extension maintains authoritative auth state
@@ -190,7 +190,7 @@ if (!this.state.isAuthenticated()) {
 - LocalStorage provides offline capability
 
 ### Token Expiration
-- MSAL handles token refresh
+- Lucid platform handles Kinde token refresh via `getOAuthToken`
 - Extension notified of auth changes
 - Automatic AUTH_STATUS broadcast
 
@@ -222,7 +222,7 @@ if (authRequired) {
 ## Reliability Features
 
 1. **Multiple Send Triggers**: Ensures panels always have current state
-2. **Fallback Sources**: LocalStorage, MSAL cache, direct query
+2. **Fallback Sources**: LocalStorage, Kinde token cache (via Lucid platform), direct query
 3. **Broadcast Pattern**: All panels updated simultaneously
 4. **Request/Response**: Panels can query when uncertain
 

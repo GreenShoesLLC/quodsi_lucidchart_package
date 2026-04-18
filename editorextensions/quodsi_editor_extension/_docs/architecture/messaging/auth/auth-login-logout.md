@@ -63,7 +63,7 @@ Authentication messages handle user login and logout flows, synchronizing authen
 ## Login Sequence
 
 1. User enters credentials in auth panel
-2. React authenticates with MSAL identity provider
+2. Extension calls `getOAuthToken('kinde')`; Lucid shows Kinde OAuth popup and the flow completes
 3. React saves auth state to localStorage
 4. React updates local state
 5. **AUTH_LOGIN_SUCCESS** sent to extension
@@ -75,7 +75,7 @@ Authentication messages handle user login and logout flows, synchronizing authen
 ## Logout Sequence
 
 1. User clicks "Sign Out" button
-2. React clears MSAL cache
+2. Extension clears the Kinde token via the Lucid platform
 3. **AUTH_LOGOUT** sent to extension
 4. Extension clears internal auth state
 5. Extension clears localStorage
@@ -134,7 +134,7 @@ handleLogout(msg: EnvelopeBase): void {
 - Multiple fallback mechanisms ensure reliable delivery
 - localStorage backup provides resilience
 - Direct panel access if messaging fails
-- MSAL handles identity provider errors
+- Kinde returns identity provider errors via the OAuth response
 
 ### Logout Errors
 - localStorage cleared even if other operations fail

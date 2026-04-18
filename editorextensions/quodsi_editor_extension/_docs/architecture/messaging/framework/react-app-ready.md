@@ -45,8 +45,8 @@ The REACT_APP_READY message is the initial handshake between the React applicati
 
 1. User clicks panel icon in LucidChart
 2. LucidChart creates iframe with React app
-3. React app initializes (MSAL, MessageProvider, etc.)
-4. Silent authentication check completes
+3. React app initializes (MessageProvider, etc.)
+4. Initial Kinde auth probe completes (via Lucid platform OAuth cache)
 5. **REACT_APP_READY** sent to extension
 6. Extension marks channel as ready
 7. Extension flushes queued messages
@@ -109,7 +109,7 @@ private handleReactAppReady(msg: EnvelopeBase): void {
 
 2. **Auth State Resilience**:
    - `ensureAuthState()` checks localStorage as source of truth
-   - Silent auth provides immediate state from cache
+   - Kinde token cached by Lucid platform provides immediate state
 
 3. **Message Queuing**:
    - Extension queues messages until REACT_APP_READY received

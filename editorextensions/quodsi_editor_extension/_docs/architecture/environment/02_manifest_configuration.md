@@ -518,7 +518,6 @@ REACT_APP_DATA_CONNECTOR_API_URL=https://dev-quodsi-func-v1.azurewebsites.net/ap
 ## Related Documentation
 
 - [01. React Environment](./01_react_environment.md) - React .env must match manifest
-- [03. MSAL Authentication](./03_msal_authentication.md) - Auth also affected by environment
 - [04. Azure Function Environment](./04_azure_function_environment.md) - Backend configuration
 - [05. Common Gotchas](./05_common_gotchas.md) - Manifest mismatch issues
 

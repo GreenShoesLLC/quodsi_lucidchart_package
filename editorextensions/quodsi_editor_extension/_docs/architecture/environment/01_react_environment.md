@@ -497,7 +497,6 @@ NODE_ENV=development npm run build
 ## Related Documentation
 
 - [02. Manifest Configuration](./02_manifest_configuration.md) - Extension manifest must match
-- [03. MSAL Authentication](./03_msal_authentication.md) - Redirect URIs affected by environment
 - [04. Azure Function Environment](./04_azure_function_environment.md) - Backend configuration
 - [05. Common Gotchas](./05_common_gotchas.md) - Mismatched environment issues
 

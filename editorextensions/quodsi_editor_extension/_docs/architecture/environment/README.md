@@ -51,22 +51,6 @@ Complete reference for environment variables, manifests, and configuration that 
 
 ---
 
-### [03. MSAL Authentication](./03_msal_authentication.md)
-
-**What it covers:**
-- Tenant configuration (hard-coded in `authPolicies.ts`)
-- Redirect URI logic per environment
-- Cache location settings
-- B2C policies (sign-in, password reset, profile edit)
-
-**When to read:**
-- Authentication redirect errors
-- Cached login state issues
-- MSAL errors in console
-- Running in iframe vs standalone
-
----
-
 ### [04. Azure Function Environment](./04_azure_function_environment.md)
 
 **What it covers:**
@@ -112,17 +96,6 @@ Complete reference for environment variables, manifests, and configuration that 
 
 ---
 
-### Issue: "Authentication redirect errors"
-
-**Quick check:**
-1. What URL is redirect attempting? → Check browser console for MSAL logs
-2. Running in iframe? → Extension at localhost:9900
-3. React standalone? → http://localhost:3000
-
-**Fix:** See [03. MSAL Authentication](./03_msal_authentication.md)
-
----
-
 ### Issue: "Extension loads but React panel blank"
 
 **Quick check:**
@@ -147,7 +120,6 @@ Terminal 4: Extension → localhost:9900
 Manifest: manifest_local.json
 React .env: .env.local (empty/minimal)
 Data Connector: localhost:7071
-MSAL Redirect: http://localhost:9900/resources/quodsim-react/index.html
 ```
 
 **Used for:** Daily development, full feature testing, debugging
@@ -162,7 +134,6 @@ Terminal 3: React → localhost:3000 (standalone)
 Manifest: Not loaded
 React .env: .env.development (empty)
 Data Connector: N/A
-MSAL Redirect: http://localhost:3000/
 ```
 
 **Used for:** UI work, component development, no backend needed
@@ -177,7 +148,6 @@ Terminal 4: Extension → localhost:9900
 Manifest: manifest_dev.json
 React .env: .env.production
 Data Connector: https://dev-quodsi-func-v1.azurewebsites.net
-MSAL Redirect: http://localhost:9900/resources/quodsim-react/index.html
 ```
 
 **Used for:** Testing with dev backend, integration testing
@@ -203,13 +173,6 @@ editorextensions/quodsi_editor_extension/quodsim-react/
 ├── manifest_dev.json       # Dev environment
 ├── manifest_test.json      # Test environment
 └── manifest.json           # Production (generated during build)
-```
-
-### MSAL Configuration (Hard-coded)
-```
-editorextensions/quodsi_editor_extension/quodsim-react/src/config/
-├── authPolicies.ts         # Tenant, client ID, B2C policies
-└── msalConfig.ts          # Redirect URI logic, cache settings
 ```
 
 ### Azure Function Configuration
@@ -327,7 +290,6 @@ dataconnectors/quodsi_data_connector_lucidchart_v2/
 - [ ] Read [05. Common Gotchas](./05_common_gotchas.md)
 - [ ] Verify which manifest you're using (local vs dev vs test)
 - [ ] Check `.env.local` exists (even if empty)
-- [ ] Review MSAL redirect URI logic in [03. MSAL Authentication](./03_msal_authentication.md)
 - [ ] Verify `local.settings.json` exists (for local Azure Function)
 - [ ] Check ports 3000, 7071, 9900, 9901 are available
 

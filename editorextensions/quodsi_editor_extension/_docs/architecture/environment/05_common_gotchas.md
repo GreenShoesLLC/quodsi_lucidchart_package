@@ -91,117 +91,7 @@ cat manifest.json | grep callbackBaseUrl
 
 ---
 
-## Gotcha #2: Cached Authentication State
-
-### Symptoms
-
-- Logged in as old/wrong user
-- Can't log out
-- "Already authenticated" but with old account
-- MSAL errors about token mismatch
-
-### What Happened
-
-sessionStorage or cookies retained tokens from previous session. MSAL thinks you're logged in but tokens are stale or wrong.
-
-### The Confusion
-
-```
-You think:    I logged out yesterday
-Reality:      sessionStorage kept old token
-Result:       Still "logged in" with stale auth
-```
-
-### Fix
-
-**Clear storage:**
-```javascript
-// Browser console (F12)
-sessionStorage.clear();
-
-// Or more targeted:
-Object.keys(sessionStorage).forEach(key => {
-  if (key.includes('msal') || key.includes('login')) {
-    sessionStorage.removeItem(key);
-  }
-});
-```
-
-**Or use incognito mode:**
-- Opens clean slate
-- No cached auth
-- Perfect for testing fresh login flow
-
-### Prevention
-
-- Use incognito mode when testing auth
-- Clear sessionStorage at end of each session
-- Document which test account you're using
-
----
-
-## Gotcha #3: Wrong Redirect URI
-
-### Symptoms
-
-- After MSAL login, shows error page
-- "AADB2C90090: The provided redirect_uri is not registered"
-- Login succeeds but never returns to app
-
-### What Happened
-
-Your environment doesn't match registered Azure AD B2C redirect URIs.
-
-### The Confusion
-
-```
-Extension running at:      localhost:9900
-MSAL redirect URI logic:   Returns to localhost:9900/resources/...
-Azure AD B2C expects:      Only localhost:3000 registered
-Result:                    URI mismatch = error
-```
-
-### Common Scenarios
-
-**Scenario 1:** Just switched from React standalone to extension
-- React redirect: `http://localhost:3000/`
-- Extension redirect: `http://localhost:9900/resources/quodsim-react/index.html`
-- **Forgot to register both in Azure AD B2C**
-
-**Scenario 2:** Testing in production Lucid
-- Redirect: `https://lucid.app/documents/...` (dynamic)
-- **Forgot to register wildcard: `https://lucid.app/*`**
-
-### Fix
-
-1. **Check what redirect URI is being used:**
-   ```javascript
-   // Browser console - before login
-   console.log(window.location.href);
-   // This is what will be used for redirect
-   ```
-
-2. **Register in Azure AD B2C:**
-   - Azure Portal → Azure AD B2C → App registrations
-   - Your app → Authentication → Platform configurations
-   - Add redirect URI:
-     - `http://localhost:9900/resources/quodsim-react/index.html`
-     - `http://localhost:3000/`
-     - `https://lucid.app/*`
-
-3. **Wait 5 minutes** (Azure takes time to propagate)
-
-4. **Clear sessionStorage** and try again
-
-### Prevention
-
-- Register all redirect URIs upfront
-- Document which URIs are registered
-- Test auth in all contexts (standalone, extension, production)
-
----
-
-## Gotcha #4: React .env Not Loaded
+## Gotcha #2: React .env Not Loaded
 
 ### Symptoms
 
@@ -248,7 +138,7 @@ ls -la .env*
 
 ---
 
-## Gotcha #5: Missing local.settings.json
+## Gotcha #3: Missing local.settings.json
 
 ### Symptoms
 
@@ -292,7 +182,7 @@ cp local.settings.json.template local.settings.json
 
 ---
 
-## Gotcha #6: Port Conflicts
+## Gotcha #4: Port Conflicts
 
 ### Symptoms
 
@@ -347,7 +237,7 @@ killall node
 
 ---
 
-## Gotcha #7: Shared Library Out of Sync
+## Gotcha #5: Shared Library Out of Sync
 
 ### Symptoms
 
@@ -388,7 +278,7 @@ npm run build -w @quodsi/shared
 
 ---
 
-## Gotcha #8: Extension Changes Not Reflected
+## Gotcha #6: Extension Changes Not Reflected
 
 ### Symptoms
 
@@ -432,7 +322,7 @@ Cmd+Shift+R (Mac)
 
 ---
 
-## Gotcha #9: Browser DevTools Closed
+## Gotcha #7: Browser DevTools Closed
 
 ### Symptoms
 
@@ -463,7 +353,7 @@ You forgot to open browser DevTools. All errors are hidden.
 
 ---
 
-## Gotcha #10: Testing in Production (lucid.app) Without Deploying
+## Gotcha #8: Testing in Production (lucid.app) Without Deploying
 
 ### Symptoms
 
@@ -502,7 +392,7 @@ Result:     Either not found or old version
 
 ---
 
-## Gotcha #11: CORS Errors After Switching Environments
+## Gotcha #9: CORS Errors After Switching Environments
 
 ### Symptoms
 
@@ -545,7 +435,7 @@ func start --debug --verbose
 
 ---
 
-## Gotcha #12: Forgot Which Environment You're In
+## Gotcha #10: Forgot Which Environment You're In
 
 ### Symptoms
 
@@ -706,7 +596,6 @@ When specific issue identified:
 
 - **Manifest wrong:** [02. Manifest Configuration](./02_manifest_configuration.md)
 - **React .env issues:** [01. React Environment](./01_react_environment.md)
-- **Auth errors:** [03. MSAL Authentication](./03_msal_authentication.md)
 - **Function config:** [04. Azure Function Environment](./04_azure_function_environment.md)
 
 For systematic setup:
@@ -746,12 +635,11 @@ Test account: test@example.com
 
 **In order of frequency:**
 
-1. ✅ **Cached auth** → Clear sessionStorage
-2. ✅ **Wrong manifest** → Check callbackBaseUrl
-3. ✅ **Forgot to restart** → Ctrl+C, restart all
-4. ✅ **Missing local.settings.json** → Copy from template
-5. ✅ **Port conflicts** → Kill Node processes
-6. ✅ **Shared library outdated** → Rebuild shared
+1. ✅ **Wrong manifest** → Check callbackBaseUrl
+2. ✅ **Forgot to restart** → Ctrl+C, restart all
+3. ✅ **Missing local.settings.json** → Copy from template
+4. ✅ **Port conflicts** → Kill Node processes
+5. ✅ **Shared library outdated** → Rebuild shared
 
 **Start with #1, work down the list.**
 
