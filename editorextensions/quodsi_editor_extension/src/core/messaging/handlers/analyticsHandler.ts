@@ -11,9 +11,17 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
  */
 export class AnalyticsHandler {
   private static client: EditorClient | null = null;
+  private static lastModelOpenedId: string | null = null;
 
   public static initialize(client: EditorClient): void {
     AnalyticsHandler.client = client;
+  }
+
+  /** Fire `model_opened` only when the modelId differs from the last open in this session. */
+  public static fireModelOpenedIfNew(modelId: string): void {
+    if (!modelId || AnalyticsHandler.lastModelOpenedId === modelId) return;
+    AnalyticsHandler.lastModelOpenedId = modelId;
+    AnalyticsHandler.fire('model_opened', { model_id: modelId });
   }
 
   public static handleMessage(msg: EnvelopeBase): boolean {

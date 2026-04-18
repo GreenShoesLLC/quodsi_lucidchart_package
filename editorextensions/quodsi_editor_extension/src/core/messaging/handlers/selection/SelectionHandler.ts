@@ -20,6 +20,7 @@ import { selectionTypeUtils } from './utils/selectionTypeUtils';
 import { SelectionStateData } from './types';
 import { ModelManager } from '../../../ModelManager';
 import { itemDataBuilder } from './utils/itemDataBuilder';
+import { AnalyticsHandler } from '../analyticsHandler';
 import { referenceDataBuilder } from './utils/referenceDataBuilder';
 
 /**
@@ -303,7 +304,12 @@ export class SelectionHandler {
       isQuodsiModel,
       metadata
     );
-    
+
+    // Fire model_opened once per unique model_id per session.
+    if (isQuodsiModel && documentId) {
+      AnalyticsHandler.fireModelOpenedIfNew(documentId);
+    }
+
     // Send updated context to React
     SelectionHandler.sendSelectionChangedMessage();
   }
