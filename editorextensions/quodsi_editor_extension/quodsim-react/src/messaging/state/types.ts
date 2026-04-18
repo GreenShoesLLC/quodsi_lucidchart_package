@@ -36,6 +36,7 @@ import { ElementOpsAction } from './elementOpsSlice';
 import { SimulationRunAction } from './simulationRunSlice';
 import { ConversionPreviewAction } from './conversionPreviewSlice';
 import { ScenarioDefinitionAction } from './scenarioDefinitionSlice';
+import { EntitlementsAction } from './entitlementsSlice';
 
 // Re-export the action types
 export type {
@@ -47,7 +48,8 @@ export type {
   ElementOpsAction,
   SimulationRunAction,
   ConversionPreviewAction,
-  ScenarioDefinitionAction
+  ScenarioDefinitionAction,
+  EntitlementsAction
 };
 
 // Union type that encompasses all possible actions
@@ -60,4 +62,5 @@ export type MessagingAction =
   | ElementOpsAction
   | SimulationRunAction
   | ConversionPreviewAction
-  | ScenarioDefinitionAction;
+  | ScenarioDefinitionAction
+  | EntitlementsAction;

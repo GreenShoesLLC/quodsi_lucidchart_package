@@ -115,6 +115,11 @@ Basic account creation works from any surface — Kinde's hosted auth page inclu
 
 ### Plan/Role Enforcement
 
+> **Implementation landed.** Billing and entitlements are now enforced in `quodsim/quodsi_api`. See `_docs/040_billing_and_entitlements.md` for the full runbook. TL;DR: the resolver in `app/services/entitlement_service.py` picks org-first then user-then-free; gates live on `/scenarios/{id}/runs` (monthly count) and `POST /models/{id}/scenarios` (2nd+ scenario requires `scenario_studies`); webhooks land on `POST /api/kinde/webhook`.
+
+Original design notes below for context.
+
+
 The user's plan tier needs to be accessible from any surface to gate features. Two options:
 
 | Approach | How It Works | Pros | Cons |

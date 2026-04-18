@@ -94,6 +94,19 @@
       "label": "Start Apps",
       "dependsOn": ["Quodsi API Start", "ReactApp", "LucidPackage"],
       "problemMatcher": []
+    },
+    {
+      "label": "Ngrok Tunnel (webhook testing only)",
+      "type": "shell",
+      "command": "ngrok http --domain=uneven-payee-purposely.ngrok-free.dev 8000",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "echo": true
+      },
+      "detail": "Exposes localhost:8000 via the static ngrok subdomain for Kinde webhook testing. Not required for normal dev."
     }
   ]
 }

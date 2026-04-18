@@ -141,6 +141,52 @@ export class AuthHandler {
     AuthHandler.syncUserToDatabase(user).catch((error) => {
       AuthHandler.logger.error('Failed to sync user to quodsi_api:', error);
     });
+
+    // Fetch entitlements and broadcast to the React panel. Non-blocking; the UI
+    // falls back to "free plan" defaults if this request fails or is slow.
+    AuthHandler.fetchAndBroadcastEntitlements().catch((error) => {
+      AuthHandler.logger.error('Failed to fetch entitlements:', error);
+    });
+  }
+
+  /**
+   * Fetch /me/entitlements from quodsi_api via the data connector and broadcast
+   * an ENTITLEMENTS_STATUS message so the React panel can gate paid features.
+   */
+  private static async fetchAndBroadcastEntitlements(): Promise<void> {
+    try {
+      const client = ModelManager.getClient();
+      const result = await client.performDataAction({
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'GetMyEntitlements',
+        actionData: {},
+        asynchronous: false,
+      });
+      AuthHandler.logger.log('Entitlements fetched:', result);
+      AuthHandler.broadcastEntitlements(result as any);
+    } catch (error) {
+      AuthHandler.logger.log(
+        'Entitlements fetch failed (UI stays on free defaults):',
+        error
+      );
+    }
+  }
+
+  private static broadcastEntitlements(data: {
+    subjectType: string;
+    planKey: string;
+    planStatus: string;
+    trialExpiresAt?: string;
+    features: Record<string, unknown>;
+  }): void {
+    router.send('broadcast', {
+      id: generateId(),
+      type: EnvelopeMessageType.ENTITLEMENTS_STATUS,
+      source: 'host',
+      target: 'broadcast',
+      version: '1.0',
+      data,
+    });
   }
 
   /**

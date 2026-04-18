@@ -9,6 +9,7 @@ import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, Simul
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
 import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, CrossRepBatchDataRequestMessage, CrossRepBatchDataResultMessage, CrossRepDataType, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
+import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -136,6 +137,15 @@ export {
   ConversionPreviewMessage
 } from './conversionPreview/messages';
 
+// Export entitlement messages
+export {
+  EntitlementsStatusMessage,
+  EntitlementSubjectType,
+  EntitlementPlanStatus,
+  EntitlementMeteredFeature,
+  EntitlementMessage
+} from './entitlements/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage
@@ -146,7 +156,8 @@ export type QuodsiMessage =
   | ElementOpsMessage
   | StorageMessage
   | SimulationRunMessage
-  | ConversionPreviewMessage;
+  | ConversionPreviewMessage
+  | EntitlementMessage;
 
 // Define payload type mapping
 export interface EnvelopMessagePayloads {
@@ -221,6 +232,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SWIMLANE_UPDATE_RESULT]: { success: boolean; errorMessage?: string };
   [EnvelopeMessageType.SWIMLANE_CONVERT_LANE]: { swimlaneBlockId: string; laneIndex: number; resourceName: string };
   [EnvelopeMessageType.SWIMLANE_CONVERT_LANE_RESULT]: { success: boolean; swimlaneBlockId: string; swimlaneData?: import('../types/swimlane/SwimLaneQuodsiData').SwimLaneQuodsiData; error?: string };
+
+  [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
 }
 
 /**

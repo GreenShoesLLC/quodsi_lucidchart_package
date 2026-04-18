@@ -213,4 +213,22 @@ export function createModelRunStatusMessage(
   );
 }
 
+// Entitlements
+
+/**
+ * Create an ENTITLEMENTS_STATUS message from the /me/entitlements response.
+ * Broadcast to the React panel after login and after any refresh so the UI
+ * can gate paid features and show plan/trial badges.
+ */
+export function createEntitlementsStatusMessage(
+  data: EnvelopMessagePayloads[EnvelopeMessageType.ENTITLEMENTS_STATUS]
+) {
+  return createBaseMessage(
+    EnvelopeMessageType.ENTITLEMENTS_STATUS,
+    'host',
+    'model-iframe',
+    data
+  );
+}
+
 // Add other category builders as needed...
