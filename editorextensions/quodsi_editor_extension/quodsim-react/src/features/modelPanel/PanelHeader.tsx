@@ -213,7 +213,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <div className="relative" ref={authDropdownRef}>
         <button
           onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors max-w-[140px]"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors max-w-[200px]"
           title={auth.user?.email || "Signed in"}
         >
           <User className="w-3 h-3 flex-shrink-0" />
@@ -243,6 +243,19 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       </div>
     );
   };
+
+  // Account strip — renders plan badge (left) and sign-in/user dropdown (right)
+  // on their own row so they don't compete with the model/element title for width.
+  const AccountStrip = () => (
+    <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200">
+      <div className="min-w-0">
+        <PlanBadge />
+      </div>
+      <div className="flex-shrink-0">
+        <AuthStatusIndicator />
+      </div>
+    </div>
+  );
 
   // Reusable menu button with dropdown
   const MenuButton = () => (
@@ -326,9 +339,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {modelName}
             </span>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <PlanBadge />
-            <AuthStatusIndicator />
+          <div className="flex-shrink-0">
             <MenuButton />
           </div>
         </div>
@@ -362,9 +373,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               {elementName}
             </span>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <PlanBadge />
-            <AuthStatusIndicator />
+          <div className="flex-shrink-0">
             <MenuButton />
           </div>
         </div>
@@ -403,9 +412,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Unconverted Element
             </span>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <PlanBadge />
-            <AuthStatusIndicator />
+          <div className="flex-shrink-0">
             <MenuButton />
           </div>
         </div>
@@ -453,6 +460,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   return (
     <>
       <div className={`p-2 border-b bg-gray-50 shadow-sm space-y-2 border-l-[3px] ${getEditorAccentClass(editorType)}`}>
+        <AccountStrip />
         {renderAdaptiveHeader()}
       </div>
       <AboutModal
