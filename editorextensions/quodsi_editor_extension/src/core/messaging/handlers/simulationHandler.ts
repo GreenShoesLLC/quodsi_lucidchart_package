@@ -35,6 +35,31 @@ export class SimulationHandler {
   }> = new Map();
 
   /**
+   * Turn a 402 entitlement-exceeded response into a friendly user message.
+   * Falls back to a generic HTTP-status message for other errors.
+   */
+  private static describeGateError(response: { status?: number; json?: any }): string {
+    const detail = response?.json?.detail ?? response?.json;
+    const code = detail?.code;
+    const feature = detail?.feature;
+    if (response?.status === 402 && code === 'entitlement_exceeded') {
+      if (feature === 'simulations_per_month') {
+        const limit = detail?.limit;
+        return limit
+          ? `Monthly simulation quota reached (${limit} runs). Upgrade your plan to run more this month.`
+          : 'Monthly simulation quota reached. Upgrade your plan to run more this month.';
+      }
+      if (feature === 'scenario_studies') {
+        return 'Scenario studies are a paid feature. Upgrade your plan to run this scenario.';
+      }
+      return 'This action requires a paid plan. Upgrade to continue.';
+    }
+    const detailText =
+      typeof detail === 'string' ? detail : detail?.message ?? JSON.stringify(response?.json);
+    return `Simulation request failed (HTTP ${response?.status ?? 'unknown'}): ${detailText}`;
+  }
+
+  /**
    * Handle messages related to simulations
    * 
    * @param msg The received message
@@ -354,7 +379,7 @@ export class SimulationHandler {
       console.log('[SimulationHandler] Submitting simulation to data connector...');
 
       try {
-        await LucidDataActionUtility.performDataAction(client, {
+        const submitResult = await LucidDataActionUtility.performDataAction(client, {
           dataConnectorName: 'quodsi_api_data_connector',
           actionName: 'SaveAndSubmitSimulation',
           actionData: {
@@ -367,7 +392,34 @@ export class SimulationHandler {
             appVersion: QUODSIM_VERSION
           },
           asynchronous: false
-        });
+        }) as { status?: number; json?: any };
+
+        // Lucid's performDataAction returns { status, json } rather than
+        // throwing on 4xx. Detect the entitlement gate explicitly so the
+        // user sees a clear "quota reached" message instead of a silent
+        // failure or a generic network error.
+        if (submitResult?.status && submitResult.status >= 400) {
+          const err: any = new Error(
+            SimulationHandler.describeGateError(submitResult)
+          );
+          err.status = submitResult.status;
+          err.detail = submitResult.json?.detail ?? submitResult.json;
+          throw err;
+        }
+
+        // Broadcast updated entitlements so the React PlanBadge reflects
+        // the bumped `used` counter without a separate fetch.
+        const refreshed = submitResult?.json?.entitlements;
+        if (refreshed) {
+          router.send('broadcast', {
+            id: `ent-${Date.now()}`,
+            type: EnvelopeMessageType.ENTITLEMENTS_STATUS,
+            source: 'host',
+            target: 'broadcast',
+            version: '1.0',
+            data: refreshed,
+          });
+        }
 
         console.log('[SimulationHandler] Simulation submitted successfully');
 
@@ -408,14 +460,32 @@ export class SimulationHandler {
 
       } catch (submitError) {
         console.error('[SimulationHandler] Error submitting simulation:', submitError);
-        
+
         // Update job status
         const job = SimulationHandler.activeJobs.get(jobId);
         if (job) {
           job.status = SimulationStatus.FAILED;
           job.lastUpdate = new Date();
         }
-        
+
+        // If the error carries a 402 detail (either from our own throw above
+        // or from the Lucid SDK when it decides to throw on 4xx), prefer the
+        // friendly entitlement message over a generic "Failed to submit".
+        const errAny = submitError as any;
+        const wrappedStatus = errAny?.status ?? errAny?.response?.status;
+        const wrappedJson = errAny?.detail
+          ? { detail: errAny.detail }
+          : errAny?.response?.json;
+        const friendly =
+          wrappedStatus && wrappedStatus >= 400
+            ? SimulationHandler.describeGateError({
+                status: wrappedStatus,
+                json: wrappedJson,
+              })
+            : null;
+        const errorMessage = friendly
+          ?? `Failed to submit simulation: ${submitError instanceof Error ? submitError.message : String(submitError)}`;
+
         // Send error status
         router.send('model', {
           id: '',
@@ -432,7 +502,8 @@ export class SimulationHandler {
             progress: 0,
             lastChecked: new Date().toISOString(),
             queuedAt: queuedAt,
-            error: `Failed to submit simulation: ${submitError instanceof Error ? submitError.message : String(submitError)}`
+            error: errorMessage,
+            errorType: wrappedStatus === 402 ? 'ENTITLEMENT_EXCEEDED' : undefined,
           }
         });
       }
