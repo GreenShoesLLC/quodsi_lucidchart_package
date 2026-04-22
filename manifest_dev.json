@@ -57,7 +57,8 @@
         "SaveAndSubmitSimulation": "SaveAndSubmitSimulation",
         "SubmitSimulationJob": "SubmitSimulationJob",
         "DeleteScenario": "DeleteScenario",
-        "TrackEvent": "TrackEvent"
+        "TrackEvent": "TrackEvent",
+        "GetMyEntitlements": "GetMyEntitlements"
       }
     }
   ]

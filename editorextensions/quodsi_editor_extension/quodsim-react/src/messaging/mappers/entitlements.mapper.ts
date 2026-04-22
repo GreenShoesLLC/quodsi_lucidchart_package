@@ -29,6 +29,9 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     subjectType: data.subjectType,
     planKey: data.planKey,
     planStatus: data.planStatus,
+    trialExpiresAt: data.trialExpiresAt,
+    features: data.features,
+    featureKeys: data.features ? Object.keys(data.features) : [],
   });
 
   return {

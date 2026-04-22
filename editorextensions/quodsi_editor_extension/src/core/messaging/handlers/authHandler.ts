@@ -156,14 +156,26 @@ export class AuthHandler {
   private static async fetchAndBroadcastEntitlements(): Promise<void> {
     try {
       const client = ModelManager.getClient();
+      // performDataAction returns { status, json } where `json` is the actual
+      // response body. We care about the body.
       const result = await client.performDataAction({
         dataConnectorName: 'quodsi_api_data_connector',
         actionName: 'GetMyEntitlements',
         actionData: {},
         asynchronous: false,
-      });
+      }) as { status?: number; json?: any };
+
       AuthHandler.logger.log('Entitlements fetched:', result);
-      AuthHandler.broadcastEntitlements(result as any);
+
+      if (!result?.json) {
+        AuthHandler.logger.log(
+          'Entitlements fetch returned no body; UI stays on free defaults. Status:',
+          result?.status
+        );
+        return;
+      }
+
+      AuthHandler.broadcastEntitlements(result.json);
     } catch (error) {
       AuthHandler.logger.log(
         'Entitlements fetch failed (UI stays on free defaults):',
