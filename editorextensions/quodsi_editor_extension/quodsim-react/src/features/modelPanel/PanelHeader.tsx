@@ -11,8 +11,13 @@ import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
-import { useAuth } from "../../messaging/MessageContext";
+import { useAuth, useEntitlements } from "../../messaging/MessageContext";
 import { useAuthSender } from "../../messaging/senders/authSender";
+import {
+  planDisplayLabel,
+  simulationsRemaining,
+  trialDaysRemaining,
+} from "../../messaging/state/entitlementsSlice";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -53,6 +58,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const authDropdownRef = useRef<HTMLDivElement>(null);
   const auth = useAuth();
+  const entitlements = useEntitlements();
   const authSender = useAuthSender();
 
   // Click-outside handler for auth dropdown
@@ -145,6 +151,48 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     const entities = referenceData.entities?.length || 0;
 
     return { activities, resources, entities };
+  };
+
+  // Plan badge — shows resolved plan + trial countdown. Hidden until
+  // entitlements have loaded so we don't flash "Free plan" during sign-in.
+  const PlanBadge = () => {
+    if (!auth.isAuthenticated || !entitlements.loaded) return null;
+
+    const label = planDisplayLabel(entitlements);
+    const trialDays = trialDaysRemaining(entitlements);
+    const remaining = simulationsRemaining(entitlements);
+
+    const isTrial = trialDays !== null;
+    const isLow = remaining !== null && remaining > 0 && remaining <= 2;
+    const isExhausted = remaining !== null && remaining <= 0;
+
+    const parts = [label];
+    if (isTrial) parts.push(`Trial: ${trialDays}d`);
+
+    const tone = isExhausted
+      ? "bg-red-50 text-red-700 border-red-200"
+      : isLow
+      ? "bg-amber-50 text-amber-700 border-amber-200"
+      : isTrial
+      ? "bg-blue-50 text-blue-700 border-blue-200"
+      : "bg-gray-50 text-gray-600 border-gray-200";
+
+    const title = [
+      `Plan: ${label}`,
+      remaining !== null ? `Simulations remaining this month: ${remaining}` : null,
+      isTrial ? `${trialDays} day${trialDays === 1 ? "" : "s"} left in trial` : null,
+    ]
+      .filter(Boolean)
+      .join(" — ");
+
+    return (
+      <span
+        className={`px-2 py-0.5 text-[10px] font-medium rounded border ${tone}`}
+        title={title}
+      >
+        {parts.join(" • ")}
+      </span>
+    );
   };
 
   // Auth status indicator
@@ -279,6 +327,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <PlanBadge />
             <AuthStatusIndicator />
             <MenuButton />
           </div>
@@ -314,6 +363,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <PlanBadge />
             <AuthStatusIndicator />
             <MenuButton />
           </div>
@@ -354,6 +404,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </span>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
+            <PlanBadge />
             <AuthStatusIndicator />
             <MenuButton />
           </div>

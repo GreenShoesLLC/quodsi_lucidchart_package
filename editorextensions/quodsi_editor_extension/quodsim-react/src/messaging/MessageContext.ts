@@ -102,3 +102,14 @@ export function useAuth() {
   const { auth } = useMessaging();
   return auth;
 }
+
+/**
+ * Hook to access entitlements state (plan, features, trial).
+ * Use alongside selectors from state/entitlementsSlice, e.g.:
+ *   const entitlements = useEntitlements();
+ *   const canSubmit = canSubmitSimulation(entitlements);
+ */
+export function useEntitlements() {
+  const { entitlements } = useMessaging();
+  return entitlements;
+}

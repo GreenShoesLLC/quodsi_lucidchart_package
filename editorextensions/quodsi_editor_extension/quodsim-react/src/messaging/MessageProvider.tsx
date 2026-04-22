@@ -100,4 +100,5 @@ export {
   useSimulation,
   useValidation,
   useSimulationRuns,
+  useEntitlements,
 } from "./MessageContext";

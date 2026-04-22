@@ -20,6 +20,11 @@ import {
   BarChart3,
 } from "lucide-react";
 import ChangeRequestEditor from "./ChangeRequestEditor";
+import { useEntitlements } from "../../messaging/MessageContext";
+import {
+  canSubmitSimulation,
+  simulationsRemaining,
+} from "../../messaging/state/entitlementsSlice";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -106,6 +111,13 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const changeCount = scenario.changeRequests?.length ?? 0;
   const hasResults = runStatus?.hasResults ?? false;
   const downloadInfo = runStatus?.downloadInfo;
+
+  // --- entitlement gating ---
+  const entitlements = useEntitlements();
+  const canRun = canSubmitSimulation(entitlements);
+  const remaining = simulationsRemaining(entitlements);
+  const quotaExhausted = !canRun && entitlements.loaded;
+  const playDisabled = isActive || quotaExhausted;
 
   // --- local state ---
   const [showAddCR, setShowAddCR] = useState(false);
@@ -209,13 +221,23 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
         {/* Play button */}
         <button
           onClick={(e) => { e.stopPropagation(); onPlay(); }}
-          disabled={isActive}
+          disabled={playDisabled}
           className={`flex-shrink-0 p-1 rounded transition-colors ${
-            isActive
+            playDisabled
               ? "text-gray-300 cursor-not-allowed"
               : "text-green-600 hover:bg-green-50"
           }`}
-          title={isActive ? "Simulation in progress" : hasResults ? "Re-run simulation (replaces existing results)" : "Run simulation"}
+          title={
+            isActive
+              ? "Simulation in progress"
+              : quotaExhausted
+              ? "Monthly simulation quota reached — upgrade to run more"
+              : remaining !== null && remaining <= 2
+              ? `${remaining} simulation${remaining === 1 ? "" : "s"} remaining this month`
+              : hasResults
+              ? "Re-run simulation (replaces existing results)"
+              : "Run simulation"
+          }
         >
           {isActive ? (
             <Loader2 className="w-4 h-4 animate-spin" />

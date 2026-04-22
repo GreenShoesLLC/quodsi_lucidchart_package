@@ -19,7 +19,8 @@ import { ScenarioCard, ScenarioRunStatus } from "./ScenarioCard";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
-import { useMessaging, useSimulationRuns, useMessagingDispatch } from "../../messaging/MessageProvider";
+import { useMessaging, useSimulationRuns, useMessagingDispatch, useEntitlements } from "../../messaging/MessageProvider";
+import { canUseScenarioStudies } from "../../messaging/state/entitlementsSlice";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
@@ -167,6 +168,15 @@ const ScenariosAndRunsPanel: React.FC<{
 
   // Scenarios from reference data
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
+
+  // --- entitlement gating for "Add Scenario" ---
+  // Free users keep the baseline scenario that every model ships with and
+  // can still simulate it. The gate only kicks in on the 2nd+ scenario,
+  // which requires the `scenario_studies` feature.
+  const entitlements = useEntitlements();
+  const hasScenarioStudies = canUseScenarioStudies(entitlements);
+  const addScenarioBlocked =
+    entitlements.loaded && !hasScenarioStudies && scenarios.length >= 1;
 
   // Build a map from scenario id to run status
   // Since run.id = scenario definition ID (blob folder = def ID), map directly by run.id
@@ -468,7 +478,19 @@ const ScenariosAndRunsPanel: React.FC<{
         )}
         <button
           onClick={handleAddScenario}
-          className="flex items-center gap-1 w-full px-3 py-2 text-xs text-blue-600 hover:bg-blue-50 transition-colors rounded"
+          disabled={addScenarioBlocked}
+          className={`flex items-center gap-1 w-full px-3 py-2 text-xs transition-colors rounded ${
+            addScenarioBlocked
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-blue-600 hover:bg-blue-50"
+          }`}
+          title={
+            addScenarioBlocked
+              ? scenarios.length === 1
+                ? "Scenario studies are a paid feature — upgrade to Pro to create additional scenarios"
+                : `The Free plan allows 1 scenario per model. This model has ${scenarios.length} — delete down to 1 to match the limit, or upgrade to Pro to keep all of them.`
+              : "Add another scenario to this model"
+          }
         >
           <Plus className="w-3 h-3" />
           Add Scenario
