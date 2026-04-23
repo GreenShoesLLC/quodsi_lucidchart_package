@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, User, LogOut } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, User, LogOut, ExternalLink } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -244,12 +244,37 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     );
   };
 
-  // Account strip — renders plan badge (left) and sign-in/user dropdown (right)
-  // on their own row so they don't compete with the model/element title for width.
+  // Upgrade link — deep-links to Quodsi Studio's /upgrade route, which
+  // redirects to Kinde's hosted pricing table. Hidden until entitlements
+  // load so we don't flash an upgrade prompt during auth bootstrap.
+  const UpgradeLink = () => {
+    if (!auth.isAuthenticated || !entitlements.loaded) return null;
+    const studioBase =
+      process.env.REACT_APP_STUDIO_URL || "https://dev-studio.quodsi.com";
+    const onClick = () => {
+      window.open(`${studioBase.replace(/\/+$/, "")}/upgrade`, "_blank", "noopener");
+    };
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded border border-blue-200 bg-blue-50 transition-colors"
+        title="Pick or change your Quodsi plan (opens in a new tab)"
+      >
+        Upgrade
+        <ExternalLink className="w-3 h-3" />
+      </button>
+    );
+  };
+
+  // Account strip — renders plan badge + upgrade link (left) and sign-in /
+  // user dropdown (right) on their own row so they don't compete with the
+  // model/element title for width.
   const AccountStrip = () => (
     <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200">
-      <div className="min-w-0">
+      <div className="flex items-center gap-2 min-w-0">
         <PlanBadge />
+        <UpgradeLink />
       </div>
       <div className="flex-shrink-0">
         <AuthStatusIndicator />
