@@ -20,7 +20,7 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging, useSimulationRuns, useMessagingDispatch, useEntitlements } from "../../messaging/MessageProvider";
-import { canUseScenarioStudies } from "../../messaging/state/entitlementsSlice";
+import { canAddScenarioToModel, scenariosPerModelLimit } from "../../messaging/state/entitlementsSlice";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
@@ -170,13 +170,13 @@ const ScenariosAndRunsPanel: React.FC<{
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
 
   // --- entitlement gating for "Add Scenario" ---
-  // Free users keep the baseline scenario that every model ships with and
-  // can still simulate it. The gate only kicks in on the 2nd+ scenario,
-  // which requires the `scenario_studies` feature.
+  // Per-model scenario cap (`scenarios_per_model`). Free users have limit=1
+  // (baseline only); paid tiers raise the cap. The gate compares the model's
+  // current scenario count against the limit.
   const entitlements = useEntitlements();
-  const hasScenarioStudies = canUseScenarioStudies(entitlements);
   const addScenarioBlocked =
-    entitlements.loaded && !hasScenarioStudies && scenarios.length >= 1;
+    entitlements.loaded && !canAddScenarioToModel(entitlements, scenarios.length);
+  const scenarioCapLimit = scenariosPerModelLimit(entitlements);
 
   // Build a map from scenario id to run status
   // Since run.id = scenario definition ID (blob folder = def ID), map directly by run.id
@@ -486,9 +486,9 @@ const ScenariosAndRunsPanel: React.FC<{
           }`}
           title={
             addScenarioBlocked
-              ? scenarios.length === 1
-                ? "Scenario studies are a paid feature — upgrade to Pro to create additional scenarios"
-                : `The Free plan allows 1 scenario per model. This model has ${scenarios.length} — delete down to 1 to match the limit, or upgrade to Pro to keep all of them.`
+              ? scenarioCapLimit !== null
+                ? `Your plan allows ${scenarioCapLimit} ${scenarioCapLimit === 1 ? "scenario" : "scenarios"} per model. Upgrade to add more, or delete a scenario to free up a slot.`
+                : "Upgrade your plan to add more scenarios per model."
               : "Add another scenario to this model"
           }
         >

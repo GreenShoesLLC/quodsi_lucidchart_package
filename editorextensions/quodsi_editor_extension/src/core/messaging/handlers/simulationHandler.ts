@@ -49,8 +49,11 @@ export class SimulationHandler {
           ? `Monthly simulation quota reached (${limit} runs). Upgrade your plan to run more this month.`
           : 'Monthly simulation quota reached. Upgrade your plan to run more this month.';
       }
-      if (feature === 'scenario_studies') {
-        return 'Scenario studies are a paid feature. Upgrade your plan to run this scenario.';
+      if (feature === 'scenarios_per_model') {
+        const limit = detail?.limit;
+        return limit
+          ? `This model has reached its plan's per-model scenario cap (${limit}). Upgrade your plan to add more scenarios.`
+          : 'This model has reached its plan\'s per-model scenario cap. Upgrade your plan to add more scenarios.';
       }
       return 'This action requires a paid plan. Upgrade to continue.';
     }
