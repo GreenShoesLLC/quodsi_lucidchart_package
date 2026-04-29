@@ -1,219 +1,85 @@
-# Application Deployment
+# LucidChart Extension Deployment
 
-This directory contains scripts for deploying application code to existing Azure infrastructure.
+This directory builds and packages the **LucidChart extension** for upload to the Lucid developer portal.
 
-## Overview
+> **Backend (FastAPI) deployment lives in the monorepo:**
+> See `quodsi/.github/workflows/deploy-api-dev.yml` and `quodsi/infrastructure/docs/040-deployment-runbook.md`. The legacy Azure Functions data connector is being retired in favor of `quodsi_api`.
 
-The `/deploy/` directory focuses on **application deployment** (frequent operation), while `/infrastructure/` focuses on **infrastructure provisioning** (rare operation).
-
-## Directory Structure
+## Directory structure
 
 ```
 /deploy/
-├── azure-functions/       # Deploy Azure Function App code
-├── lucid-package/         # Build and bundle Lucid extension
-├── react/                 # Build React application (optional)
-├── deploy-function.bat    # Convenience wrapper for function deployment
-└── README.md             # This file
+├── lucid-package/             # Build + bundle the LucidChart extension
+│   ├── build-bundle.ps1
+│   └── README.md
+├── react/                     # Standalone React app build (rarely needed)
+│   ├── build-react.ps1
+│   └── README.md
+├── quodsi_all/
+│   └── publish-checklist.md   # Pre/post-release checklist
+└── README.md                  # this file
 ```
 
-## Quick Start
+## Quick start
 
-### Deploy Function App Code
+### Build the LucidChart extension package
 
-The most common deployment task is updating the Azure Function App code:
+```powershell
+# Dev
+.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev
 
-```bash
-# Windows (uses convenience wrapper)
-deploy-function.bat dev
-
-# PowerShell (more options)
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment dev
-```
-
-### Build Lucid Extension Package
-
-When you've made changes to the extension or React UI:
-
-```bash
-# Build for production
-.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
-
-# Build for test
+# Test
 .\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment TST
 
-# Build for dev
-.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev
-```
-
-Then upload the resulting `package.zip` to the LucidChart developer portal.
-
-## Component Details
-
-### Azure Functions (`/azure-functions/`)
-
-Deploys the data connector code to Azure Function Apps.
-
-**Scripts:**
-- `deploy-function-code.ps1` - PowerShell deployment script (recommended)
-- `deploy-function-code.bat` - Batch script wrapper
-- `verify-deployment-ready.ps1` - Pre-deployment validation
-
-**Usage:**
-```powershell
-# Deploy to specific environment
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment dev
-
-# Deploy without confirmation prompts
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment tst -Force
-
-# Skip build steps (use with caution)
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment prd -SkipBuild
-
-# Deploy to all environments sequentially
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment all
-```
-
-**Prerequisites:**
-- Azure CLI installed and logged in
-- Azure Functions Core Tools installed
-- Function App infrastructure already provisioned
-- Valid node_modules (~67MB) in the function app directory
-
-**See also:** `azure-functions/README.md` for detailed information
-
-### Lucid Package (`/lucid-package/`)
-
-Builds and bundles the LucidChart extension for deployment to the Lucid developer portal.
-
-**Scripts:**
-- `build-bundle.ps1` - Main build and bundle orchestration script
-
-**Usage:**
-```powershell
-# Build for production (default - skips separate React build)
+# Production
 .\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
-
-# Build with separate React build (optional)
-.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev -RunReactBuild
 ```
 
-**What it does:**
-1. Sets environment-specific variables
-2. (Optionally) Runs separate React build
-3. Selects correct manifest file for environment
-4. Executes `npx lucid-package bundle`
-5. Restores original manifest
-6. Creates `package.zip` at project root
+Then upload the resulting `package.zip` (at the repo root) to the LucidChart developer portal.
 
-**Output:** `package.zip` at project root
+### React standalone build (rarely needed)
 
-**See also:** `lucid-package/README.md` for detailed information
+The Lucid bundler runs the React build internally with the right env vars; you almost never need to run this separately.
 
-### React (`/react/`)
-
-Standalone React application build (typically not needed).
-
-**Scripts:**
-- `build-react.ps1` - Standalone React build script
-
-**Usage:**
 ```powershell
-# Build React app for specific environment
 .\deploy\react\build-react.ps1 -TargetEnvironment Dev
 ```
 
-**Note:** The Lucid package bundler (`npx lucid-package bundle`) performs its own React build internally using the environment variables set by `build-bundle.ps1`. You typically don't need to run this separately.
+## What was removed (2026-04-27)
 
-**See also:** `react/README.md` for detailed information
+- `azure-functions/` (entire subtree) and `deploy-function.bat` — the Azure Functions backend has been replaced by `quodsi_api` (FastAPI). API deploys are now handled by the GitHub Actions workflow `deploy-api-dev.yml` in the monorepo.
+- `quodsi_all/deploy-all.ps1` — the orchestrator referenced `azure-functions/verify-deployment-ready.ps1` and `azure-functions/deploy-function-code.ps1`, both removed. Its only remaining useful step (Lucid bundle build) is already a one-liner via `lucid-package/build-bundle.ps1`.
 
-## Deployment Workflows
+## Backend environment URLs
 
-### Complete Deployment Workflow
+The LucidChart extension manifests still point at the legacy Function App URLs (`{env}-quodsi-func-v1.azurewebsites.net`). When the extension is migrated to call `quodsi_api` directly, those manifests need to be updated to the new Container App URL:
 
-When deploying a full release:
+| Environment | New (Container Apps) |
+|---|---|
+| Dev | `https://ca-quodsi-dev-api.<env-default-domain>.eastus2.azurecontainerapps.io` |
+| Test | TBD (test environment not yet provisioned) |
+| Prd | TBD (prd environment not yet provisioned) |
 
-```bash
-# 1. Deploy backend (Function App code)
-.\deploy\azure-functions\deploy-function-code.ps1 -Environment prd
+Tracking the manifest migration as a separate, larger workstream (it touches manifest schema, data connector wiring, and the extension's own data layer).
 
-# 2. Build frontend (Lucid extension)
-.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
+## Lucid bundle workflow detail
 
-# 3. Upload package.zip to Lucid developer portal (manual step)
-```
+`build-bundle.ps1` does:
 
-### Backend-Only Deployment
+1. Sets `REACT_APP_*` env vars for the target environment.
+2. Builds `@quodsi/shared`.
+3. Cleans build artifacts.
+4. Swaps the active manifest (`manifest_dev.json` / `manifest_test.json` / `manifest_prod.json`) into `manifest.json`.
+5. Runs `npx lucid-package build-editor-extension` and `npx lucid-package bundle`.
+6. Creates a versioned `package_v{VERSION}.zip` and a corresponding git tag.
+7. Restores the original manifest.
 
-When you've only changed backend code:
+After upload to the Lucid developer portal, complete the post-publish checklist in `quodsi_all/publish-checklist.md`.
 
-```bash
-.\deploy\deploy-function.bat prd
-```
+## Common issues
 
-### Frontend-Only Deployment
+**Manifest file not found** — ensure `manifest_dev.json`, `manifest_test.json`, and `manifest_prod.json` exist at the repo root.
 
-When you've only changed extension or UI code:
+**Wrong environment deployed** — verify `package.zip` was built with the correct `-TargetEnvironment`. Rebuild if uncertain.
 
-```bash
-.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment PRD
-# Then upload package.zip to Lucid portal
-```
-
-## Environment Variables
-
-Each deployment target uses environment-specific configuration:
-
-| Environment | Function App | Data Connector URL |
-|-------------|--------------|-------------------|
-| **dev** | `dev-quodsi-func-v1` | `https://dev-quodsi-func-v1.azurewebsites.net/api/` |
-| **tst** | `tst-quodsi-func-v1` | `https://tst-quodsi-func-v1.azurewebsites.net/api/` |
-| **prd** | `prd-quodsi-func-v1` | `https://prd-quodsi-func-v1.azurewebsites.net/api/` |
-| **local** | N/A | `http://localhost:7071/api/` |
-
-## Common Issues
-
-### Function Deployment Fails
-
-**Issue:** "node_modules size is only XX MB - this seems too small!"
-
-**Cause:** Function app is likely in root `package.json` workspaces array
-
-**Solution:**
-1. Remove function app from root `package.json` workspaces
-2. Delete `node_modules` in function app directory
-3. Run `npm install` in function app directory
-4. Verify size is ~67MB
-
-### Lucid Bundle Fails
-
-**Issue:** "Manifest file not found"
-
-**Cause:** Missing environment-specific manifest file
-
-**Solution:** Ensure `manifest_dev.json`, `manifest_test.json`, and `manifest_prod.json` exist at project root
-
-### Wrong Environment Deployed
-
-**Issue:** Extension connects to wrong backend
-
-**Cause:** Wrong manifest or environment variables
-
-**Solution:**
-1. Check which manifest was used during build
-2. Verify `package.zip` was built with correct `-TargetEnvironment`
-3. Rebuild with correct environment if needed
-
-## Related Documentation
-
-- **Infrastructure Provisioning**: See `/infrastructure/README.md`
-- **Project Overview**: See `/CLAUDE.md`
-- **Development Guide**: See `/GETTING_STARTED.md`
-
-## Support
-
-For deployment issues:
-1. Check component-specific README in subdirectories
-2. Review troubleshooting sections in component READMEs
-3. Check Azure portal for infrastructure status
-4. Review deployment logs and error messages
+**Bundle fails on `@quodsi/shared` import errors** — the shared library must build first. Run `npm run build -w @quodsi/shared` and retry.

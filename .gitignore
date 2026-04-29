@@ -31,13 +31,7 @@ yarn-error.log*
 # OS files
 .DS_Store
 
-# Azure Infrastructure
-# Extracted ARM templates (may contain sensitive information)
-infrastructure/extracted-config/*.json
-# Exclude these specific files which don't contain sensitive info
-!infrastructure/extracted-config/dev.parameters.json
-!infrastructure/extracted-config/tst.parameters.json
-!infrastructure/extracted-config/prd.parameters.json
+# (infrastructure/extracted-config/ was removed 2026-04-27 — held hardcoded secrets)
 
 # Lucid credentials
 lucid.credentials.local

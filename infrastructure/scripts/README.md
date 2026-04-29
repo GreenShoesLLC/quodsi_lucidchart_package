@@ -59,13 +59,7 @@ These scripts provide the underlying functionality for the main deployment scrip
 
 ## Common Usage Patterns
 
-### Function App Deployment
-
-To deploy a Function App for the development environment:
-
-```powershell
-.\Deploy-ArTemplate.ps1 -Environment dev -Mode Deploy -TemplateFile "..\function-apps\function-app-template.json" -ParameterFile "..\function-apps\function-app-dev-params.json"
-```
+> **Reference only.** These scripts and the templates they reference (`batch/`, `storage/`) are no longer the active provisioning path. The active Bicep templates live in the monorepo at `quodsi/infrastructure/bicep/`. Examples below are preserved for historical context — do **not** run them against live Azure resources without first comparing against the monorepo Bicep modules.
 
 ### Storage Account Deployment
 
@@ -75,12 +69,10 @@ To deploy a Storage Account for the test environment:
 .\Deploy-ArTemplate.ps1 -Environment tst -Mode Deploy -TemplateFile "..\storage\storage-only.json" -ParameterFile "..\storage\storage-params-tst.json"
 ```
 
-### Update Environment Variables
-
-To update environment variables on an existing Function App:
+### Batch Pool Deployment
 
 ```powershell
-.\Deploy-ArTemplate.ps1 -Environment dev -Mode Deploy -TemplateFile "..\function-apps\function-app-env-vars.json" -ParameterFile "..\function-apps\function-app-env-vars-params.json"
+.\Deploy-ArTemplate.ps1 -Environment dev -Mode Deploy -TemplateFile "..\batch\v1\quodsi-pool-template.json" -ParameterFile "..\batch\v1\quodsi-pool-dev-params.json"
 ```
 
 ### Export Existing Resources as Template

@@ -1,37 +1,18 @@
-# Quodsi Full Deployment
+# Release Checklist
 
-Deploys Azure Functions and builds the Lucid extension package in one step.
+This folder previously held a unified deploy script (`deploy-all.ps1`) that combined Azure Function code deployment with the LucidChart bundle build. The Function half is now obsolete (replaced by `quodsi_api` deployed via the monorepo's GitHub Actions workflow), so the orchestrator was deleted.
 
-## Deploy to Each Environment
+What remains here is the **release checklist** — the pre/post-publish steps for cutting a new LucidChart extension release.
 
-```powershell
-# Dev
-.\deploy\quodsi_all\deploy-all.ps1 -Environment Dev -Force
+See [`publish-checklist.md`](./publish-checklist.md).
 
-# Test
-.\deploy\quodsi_all\deploy-all.ps1 -Environment TST -Force
-
-# Production
-.\deploy\quodsi_all\deploy-all.ps1 -Environment PRD -Force
-```
-
-## Partial Deploys
+## Routine release (frontend-only)
 
 ```powershell
-# Azure Functions only
-.\deploy\quodsi_all\deploy-all.ps1 -Environment Dev -Force -SkipLucidBuild
+# 1. Build the package for the target environment
+.\deploy\lucid-package\build-bundle.ps1 -TargetEnvironment Dev
 
-# Lucid package only
-.\deploy\quodsi_all\deploy-all.ps1 -Environment Dev -SkipAzureDeploy
+# 2. Upload package_v{VERSION}.zip to the LucidChart developer portal (manual)
 ```
 
-## Flags
-
-| Flag | Description |
-|---|---|
-| `-Environment` | Required. `Dev`, `TST`, or `PRD` |
-| `-Force` | Skip Azure deployment confirmation prompts |
-| `-SkipAzureDeploy` | Skip Azure Function deployment |
-| `-SkipLucidBuild` | Skip Lucid package build |
-
-After the build completes, upload `package.zip` to the Lucid developer portal.
+For the API backend, see the monorepo workflow `deploy-api-dev.yml`.

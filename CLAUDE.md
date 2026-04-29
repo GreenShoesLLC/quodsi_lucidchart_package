@@ -157,44 +157,34 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 
 ## Deployment
 
-The project separates **infrastructure provisioning** (rare) from **application deployment** (frequent):
+The project separates **infrastructure provisioning** (rare) from **application deployment** (frequent). The backend (FastAPI) has been extracted to the **`quodsi` monorepo**; this repo now ships only the LucidChart extension package.
 
-### Infrastructure Provisioning (`/infrastructure/`)
-Infrastructure as Code (ARM templates) for creating Azure resources:
-- **Batch**: `/infrastructure/batch/v1/` - Batch account and environment pools
-- **Function Apps**: `/infrastructure/function-apps/v1/` - Function App infrastructure
-- **Storage**: `/infrastructure/storage/v1/` - Storage accounts
-- **Shared Scripts**: `/infrastructure/scripts/` - ARM deployment utilities
+### Infrastructure Provisioning
 
-Provision infrastructure rarely, only when creating new environments or modifying resources.
+The active Bicep templates live in the monorepo at `quodsi/infrastructure/`. The legacy ARM templates in `/infrastructure/batch/` and `/infrastructure/storage/` are **reference-only** — they document the resources that are still running but are not re-deployed. The `function-apps/` and `extracted-config/` subtrees were removed (FastAPI replaced Functions; extracted-config held hardcoded secrets).
 
 ### Application Deployment (`/deploy/`)
-Scripts for deploying code to existing infrastructure:
 
-#### Function App Code Deployment
+This directory now packages the LucidChart extension only.
+
+#### LucidChart extension package
 ```bash
-# Quick deployment (uses convenience wrapper)
-./deploy/deploy-function.bat dev
-
-# Or use PowerShell directly with options
-./deploy/azure-functions/deploy-function-code.ps1 -Environment dev -Force
-```
-
-#### Lucid Extension Package
-```bash
-# Build and bundle for specific environment
 ./deploy/lucid-package/build-bundle.ps1 -TargetEnvironment PRD
-
 # Then upload package.zip to LucidChart developer portal
 ```
 
-#### React App (optional standalone build)
+#### React app (optional standalone build)
 ```bash
 # Usually bundled automatically by Lucid package build
 ./deploy/react/build-react.ps1 -TargetEnvironment Dev
 ```
 
+#### Backend API (FastAPI)
+Deployed from the monorepo via GitHub Actions:
+- Workflow: `quodsi/.github/workflows/deploy-api-dev.yml`
+- Runbook: `quodsi/infrastructure/docs/040-deployment-runbook.md`
+
 ### Deployment Frequency
 - **Infrastructure**: Rarely (new environments or resource changes)
-- **Function Code**: Frequently (on backend changes)
+- **Backend (FastAPI)**: Frequently (on push to main; via monorepo workflow)
 - **Lucid Extension**: Frequently (on extension/UI changes)
