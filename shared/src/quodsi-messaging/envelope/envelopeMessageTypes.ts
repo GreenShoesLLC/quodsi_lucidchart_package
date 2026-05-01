@@ -92,6 +92,8 @@ export enum EnvelopeMessageType {
 
   // Billing & Entitlements (Kinde)
   ENTITLEMENTS_STATUS = "ENTITLEMENTS_STATUS",
+  PORTAL_URL_REQUEST = "PORTAL_URL_REQUEST",
+  PORTAL_URL_RESPONSE = "PORTAL_URL_RESPONSE",
 
   // Analytics
   ANALYTICS_TRACK = "ANALYTICS_TRACK"

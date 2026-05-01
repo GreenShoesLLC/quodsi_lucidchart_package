@@ -58,7 +58,8 @@
         "SubmitSimulationJob": "SubmitSimulationJob",
         "DeleteScenario": "DeleteScenario",
         "TrackEvent": "TrackEvent",
-        "GetMyEntitlements": "GetMyEntitlements"
+        "GetMyEntitlements": "GetMyEntitlements",
+        "GeneratePortalUrl": "GeneratePortalUrl"
       }
     }
   ]

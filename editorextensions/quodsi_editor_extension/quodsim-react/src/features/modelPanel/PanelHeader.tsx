@@ -13,6 +13,7 @@ import { DevToolsModal } from "../shared/DevToolsModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
 import { useAuth, useEntitlements } from "../../messaging/MessageContext";
 import { useAuthSender } from "../../messaging/senders/authSender";
+import { usePortalSender } from "../../messaging/senders/portalSender";
 import {
   planDisplayLabel,
   simulationsRemaining,
@@ -244,24 +245,45 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     );
   };
 
-  // Upgrade link — deep-links to Quodsi Studio's /upgrade route, which
-  // redirects to Kinde's hosted pricing table. Hidden until entitlements
-  // load so we don't flash an upgrade prompt during auth bootstrap.
+  // Upgrade link — opens Kinde's hosted plan-management portal in a new
+  // tab. Mints the one-time signed URL via the data-connector RPC so the
+  // resulting tab carries the same Kinde identity as the panel (rather
+  // than whatever Kinde session happens to be in the user's browser).
+  // Hidden until entitlements load so we don't flash the prompt during
+  // auth bootstrap.
   const UpgradeLink = () => {
+    const { requestPortalUrl } = usePortalSender();
+    const [requesting, setRequesting] = useState(false);
+
     if (!auth.isAuthenticated || !entitlements.loaded) return null;
-    const studioBase =
-      process.env.REACT_APP_STUDIO_URL || "https://dev-studio.quodsi.com";
-    const onClick = () => {
-      window.open(`${studioBase.replace(/\/+$/, "")}/upgrade`, "_blank", "noopener");
+
+    const onClick = async () => {
+      if (requesting) return;
+      setRequesting(true);
+      try {
+        const url = await requestPortalUrl(
+          "organization_plan_details",
+          "https://lucid.app",
+        );
+        window.open(url, "_blank", "noopener");
+      } catch (err) {
+        // Soft failure: log and stay on the panel; user can retry.
+        // Future: surface a toast.
+        console.error("portal_url_request_failed", err);
+      } finally {
+        setRequesting(false);
+      }
     };
+
     return (
       <button
         type="button"
         onClick={onClick}
-        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded border border-blue-200 bg-blue-50 transition-colors"
+        disabled={requesting}
+        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded border border-blue-200 bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
         title="Pick or change your Quodsi plan (opens in a new tab)"
       >
-        Upgrade
+        {requesting ? "Loading…" : "Upgrade"}
         <ExternalLink className="w-3 h-3" />
       </button>
     );

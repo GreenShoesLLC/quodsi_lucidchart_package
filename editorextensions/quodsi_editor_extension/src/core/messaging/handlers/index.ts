@@ -14,6 +14,7 @@ import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
+import { PortalHandler } from './portalHandler';
 import { SwimLaneHandler } from './swimlaneHandler';
 import { AnalyticsHandler } from './analyticsHandler';
 
@@ -113,6 +114,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Portal URL minting (panel button → API → Kinde)
+    if (PortalHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Message wasn't handled by any handler
     console.warn(`Unhandled message type: ${msg.type}`);
     return false;
@@ -135,6 +141,7 @@ export {
   ConversionPreviewHandler,
   ScenarioDefinitionHandler,
   DevtoolsHandler,
+  PortalHandler,
   SwimLaneHandler,
   AnalyticsHandler
 };
