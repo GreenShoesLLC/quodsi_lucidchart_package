@@ -123,6 +123,7 @@ export class SimulationRunHandler {
       return {
         id: scenario.id,
         name: scenario.name,
+        isBaseline: scenario.isBaseline === true,
         runState,
         hasResults,
         reps: 0,

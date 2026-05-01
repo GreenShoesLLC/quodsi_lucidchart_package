@@ -5,6 +5,7 @@ import {
     Viewport,
     Panel,
     DocumentProxy,
+    PageProxy,
     BlockProxy,
     LineProxy,
     JsonSerializable
@@ -280,42 +281,16 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                     { /* Additional metadata if needed */ }
                 );
                 
-                // Upsert model in quodsi_api database if this is a converted model (fire-and-forget)
+                // Upsert model + sync scenarios on panel init. Must run
+                // sequentially: SyncScenarios's first action is a binding
+                // lookup keyed on (platform, documentId, pageId), and that
+                // binding is created by UpsertModel. Firing both in
+                // parallel races -- if the binding read in SyncScenarios
+                // beats UpsertModel's commit, sync 404s on
+                // "Model not found for this document/page" and the
+                // scenario rows are never written.
                 if (isQuodsiModel) {
-                    LucidDataActionUtility.performDataAction(this.client, {
-                        dataConnectorName: 'quodsi_api_data_connector',
-                        actionName: 'UpsertModel',
-                        actionData: {
-                            documentId: document.id,
-                            pageId: currentPage.id,
-                            modelName: document.getTitle() || 'Untitled Model'
-                        },
-                        asynchronous: false
-                    }).then(() => {
-                        this.debug.log('Model upserted in database on panel init');
-                    }).catch(err => {
-                        this.debug.error('Failed to upsert model in database:', err);
-                    });
-
-                    // Sync scenarios from shapeData to DB (fire-and-forget)
-                    const storageAdapter = new StorageAdapter();
-                    const scenarios = storageAdapter.getScenarios(currentPage);
-                    if (scenarios.length > 0) {
-                        LucidDataActionUtility.performDataAction(this.client, {
-                            dataConnectorName: 'quodsi_api_data_connector',
-                            actionName: 'SyncScenarios',
-                            actionData: {
-                                documentId: document.id,
-                                pageId: currentPage.id,
-                                scenarios
-                            },
-                            asynchronous: false
-                        }).then(() => {
-                            this.debug.log('Scenarios synced to database on panel init', { count: scenarios.length });
-                        }).catch(err => {
-                            this.debug.error('Failed to sync scenarios to database:', err);
-                        });
-                    }
+                    void this.upsertAndSyncOnPanelInit(document, currentPage);
                 }
 
                 // Get the current selection and update it
@@ -324,6 +299,81 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             }
         } catch (error) {
             this.debug.error('Error initializing model context:', error);
+        }
+    }
+
+    /**
+     * Sequentially upsert the model + sync scenarios on panel init.
+     * Awaiting UpsertModel before SyncScenarios prevents the race where
+     * SyncScenarios's binding lookup fires before UpsertModel's commit
+     * is visible -- which would 404 with "Model not found" and silently
+     * skip writing the scenario rows.
+     *
+     * After SyncScenarios responds, apply any server-side id
+     * substitutions (`replaced_id`) back into Lucid shape data so
+     * future syncs use the canonical id. See ScenarioDefinitionHandler
+     * for the matching logic on the edit-driven sync path.
+     */
+    private async upsertAndSyncOnPanelInit(
+        document: DocumentProxy,
+        currentPage: PageProxy
+    ): Promise<void> {
+        try {
+            await LucidDataActionUtility.performDataAction(this.client, {
+                dataConnectorName: 'quodsi_api_data_connector',
+                actionName: 'UpsertModel',
+                actionData: {
+                    documentId: document.id,
+                    pageId: currentPage.id,
+                    modelName: document.getTitle() || 'Untitled Model'
+                },
+                asynchronous: false
+            });
+            this.debug.log('Model upserted in database on panel init');
+        } catch (err) {
+            this.debug.error('Failed to upsert model in database:', err);
+            // Without a binding the sync will 404; bail rather than wasting
+            // a network round-trip.
+            return;
+        }
+
+        const storageAdapter = new StorageAdapter();
+        const scenarios = storageAdapter.getScenarios(currentPage);
+        if (scenarios.length === 0) {
+            return;
+        }
+
+        try {
+            const result = await LucidDataActionUtility.performDataAction(this.client, {
+                dataConnectorName: 'quodsi_api_data_connector',
+                actionName: 'SyncScenarios',
+                actionData: {
+                    documentId: document.id,
+                    pageId: currentPage.id,
+                    scenarios
+                },
+                asynchronous: false
+            }) as { json?: { scenarios?: Array<{ id?: string; replaced_id?: string }> } };
+
+            this.debug.log('Scenarios synced to database on panel init', { count: scenarios.length });
+
+            const responseData = result?.json ?? (result as any);
+            const substitutions = new Map<string, string>();
+            for (const s of responseData?.scenarios ?? []) {
+                if (s?.replaced_id && s?.id && s.replaced_id !== s.id) {
+                    substitutions.set(s.replaced_id, s.id);
+                }
+            }
+            if (substitutions.size > 0) {
+                const modelManager = ModelManager.getInstance();
+                const updated = scenarios.map(s =>
+                    substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
+                );
+                await modelManager.updateScenarios(updated, currentPage);
+                this.debug.log('Applied server id substitutions:', Array.from(substitutions.entries()));
+            }
+        } catch (err) {
+            this.debug.error('Failed to sync scenarios to database:', err);
         }
     }
 

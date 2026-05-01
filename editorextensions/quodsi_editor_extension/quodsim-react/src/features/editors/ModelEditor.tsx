@@ -170,12 +170,15 @@ const ScenariosAndRunsPanel: React.FC<{
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
 
   // --- entitlement gating for "Add Scenario" ---
-  // Per-model scenario cap (`scenarios_per_model`). Free users have limit=1
-  // (baseline only); paid tiers raise the cap. The gate compares the model's
-  // current scenario count against the limit.
+  // Per-model scenario cap (`scenarios_per_model`) counts NON-baseline
+  // scenarios only -- the baseline is free for every model. Free users
+  // have limit=1 (one user-added scenario beyond the baseline); paid
+  // tiers raise the cap. Server is the authoritative gate; this just
+  // greys out the button before the user clicks.
   const entitlements = useEntitlements();
+  const nonBaselineCount = scenarios.filter(s => !s.isBaseline).length;
   const addScenarioBlocked =
-    entitlements.loaded && !canAddScenarioToModel(entitlements, scenarios.length);
+    entitlements.loaded && !canAddScenarioToModel(entitlements, nonBaselineCount);
   const scenarioCapLimit = scenariosPerModelLimit(entitlements);
 
   // Build a map from scenario id to run status
@@ -487,7 +490,7 @@ const ScenariosAndRunsPanel: React.FC<{
           title={
             addScenarioBlocked
               ? scenarioCapLimit !== null
-                ? `Your plan allows ${scenarioCapLimit} ${scenarioCapLimit === 1 ? "scenario" : "scenarios"} per model. Upgrade to add more, or delete a scenario to free up a slot.`
+                ? `Your plan allows ${scenarioCapLimit} ${scenarioCapLimit === 1 ? "scenario" : "scenarios"} per model in addition to the Baseline. Upgrade to add more, or delete a scenario to free up a slot.`
                 : "Upgrade your plan to add more scenarios per model."
               : "Add another scenario to this model"
           }

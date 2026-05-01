@@ -20,6 +20,13 @@ export interface SimulationRunDownloadInfo {
 export interface SimulationRunInfo {
   id: string;
   name: string;
+  /**
+   * True when the run is for the model's baseline scenario. Used by the
+   * UI to surface the baseline run's status on the page-level Simulate
+   * button. Replaces the legacy convention of detecting baselines by
+   * id === '00000000-0000-0000-0000-000000000000'.
+   */
+  isBaseline?: boolean;
   runState: RunState;
   reps: number;
   runClockPeriod: number;

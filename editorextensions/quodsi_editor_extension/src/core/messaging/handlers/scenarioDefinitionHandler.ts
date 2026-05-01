@@ -64,7 +64,12 @@ export class ScenarioDefinitionHandler {
         }
       });
 
-      // Sync scenarios to quodsi_api database (fire-and-forget)
+      // Sync scenarios to quodsi_api database (fire-and-forget). After
+      // the server responds, apply any server-side id substitutions
+      // (`replaced_id`) back into Lucid shape data so future syncs use
+      // the canonical id. Substitutions happen when the server absorbed
+      // a mismatched-id baseline into an existing one, or rewrote a
+      // legacy zero-UUID baseline to a fresh UUID.
       const document = new DocumentProxy(client);
       LucidDataActionUtility.performDataAction(client, {
         dataConnectorName: 'quodsi_api_data_connector',
@@ -75,8 +80,27 @@ export class ScenarioDefinitionHandler {
           scenarios: data.scenarios
         },
         asynchronous: false
-      }).then(() => {
+      }).then(async (result: any) => {
         console.log('[ScenarioDefinitionHandler] Scenarios synced to database');
+
+        const responseData = result?.json ?? result;
+        const substitutions = new Map<string, string>();
+        for (const s of responseData?.scenarios ?? []) {
+          if (s?.replaced_id && s?.id && s.replaced_id !== s.id) {
+            substitutions.set(s.replaced_id, s.id);
+          }
+        }
+
+        if (substitutions.size > 0) {
+          const updated = data.scenarios.map(s =>
+            substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
+          );
+          await modelManager.updateScenarios(updated, currentPage);
+          console.log(
+            '[ScenarioDefinitionHandler] Applied server id substitutions:',
+            Array.from(substitutions.entries())
+          );
+        }
       }).catch(err => {
         console.error('[ScenarioDefinitionHandler] Failed to sync scenarios to database:', err);
       });

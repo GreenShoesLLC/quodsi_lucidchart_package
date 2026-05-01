@@ -28,15 +28,18 @@ export const getSimulationState = (
         return { buttonLabel: "Simulate", statusText: "No Status or Runs" };
     }
 
-    const emptyGuidRun = status.simulationRuns.find((s: { id: string }) =>
-        s.id === "00000000-0000-0000-0000-000000000000"
+    // Find the baseline run via the isBaseline flag. Replaces the
+    // legacy convention of detecting baselines by id === '00000000-...'
+    // — that broke when scenarios moved to a database with a global PK.
+    const baselineRun = status.simulationRuns.find(
+        (s: { isBaseline?: boolean }) => s.isBaseline === true
     );
 
-    if (!emptyGuidRun) {
+    if (!baselineRun) {
         return { buttonLabel: "Simulate", statusText: "Ready" };
     }
 
-    switch (emptyGuidRun.runState) {
+    switch (baselineRun.runState) {
         case RunState.Queued:
             return { buttonLabel: "Queued...", statusText: "Queued" };
         case RunState.Running:

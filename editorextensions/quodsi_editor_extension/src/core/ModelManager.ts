@@ -1695,13 +1695,21 @@ export class ModelManager {
     /**
      * Ensures a Baseline scenario exists for the given page.
      * If no scenario has isBaseline === true, creates one and persists it.
-     * Called once per page load during model definition initialization.
+     * Also migrates any legacy zero-UUID baseline ids (predates the
+     * database) to fresh UUIDs so SyncScenarios won't collide on the
+     * server-side global PK. Called once per page load during model
+     * definition initialization.
      */
     private ensureBaselineScenario(page: PageProxy): void {
         const scenarios = this.storageAdapter.getScenarios(page);
-        const { scenarios: updated, baselineAdded } = ensureBaselineScenario(scenarios);
-        if (baselineAdded) {
-            this.debug.log('ensureBaselineScenario - Creating Baseline scenario');
+        const { scenarios: updated, baselineAdded, migrated } = ensureBaselineScenario(scenarios);
+        if (baselineAdded || migrated) {
+            if (baselineAdded) {
+                this.debug.log('ensureBaselineScenario - Creating Baseline scenario');
+            }
+            if (migrated) {
+                this.debug.log('ensureBaselineScenario - Migrated legacy zero-UUID baseline to a real UUID');
+            }
             this.storageAdapter.setScenarios(page, updated);
         }
     }

@@ -87,26 +87,31 @@ export function simulationsRemaining(state: EntitlementsState): number | null {
 }
 
 /**
- * Per-model scenario cap. Returns true if the user can add another scenario
- * to a model that currently has `currentScenarioCount` scenarios. The plan's
- * `scenarios_per_model.limit` is the maximum (baseline counts toward it).
+ * Per-model scenario cap. Returns true if the user can add another
+ * non-baseline scenario to a model that currently has
+ * `currentNonBaselineCount` non-baseline scenarios. The cap counts only
+ * non-baseline scenarios — every model gets a baseline for free.
  *
- * Free=1 (baseline only), Starter=3, Pro=10, Enterprise=2,147,483,647 (sentinel).
- * If the feature is missing or pre-load (entitlements haven't arrived), allows
- * the action — UI must not block users on transient state.
+ * Free=1 non-baseline allowed, Starter=3, Pro=10,
+ * Enterprise=2,147,483,647 (sentinel). If the feature is missing or
+ * pre-load (entitlements haven't arrived), allows the action — UI must
+ * not block users on transient state.
+ *
+ * Backend is the authoritative gate (returns 402 if a sync would
+ * net-add non-baselines beyond the cap); this helper is for UX so the
+ * "Add Scenario" button can be greyed out before the user clicks.
  */
 export function canAddScenarioToModel(
   state: EntitlementsState,
-  currentScenarioCount: number
+  currentNonBaselineCount: number
 ): boolean {
   if (!state.loaded) return true;
   const f = state.features['scenarios_per_model'];
   if (typeof f === 'object' && f !== null && 'limit' in f) {
-    return currentScenarioCount < f.limit;
+    return currentNonBaselineCount < f.limit;
   }
   // Feature absent — defensive default of "allow" so we don't lock users out
-  // due to a missing entitlement payload. Backend remains the authoritative
-  // gate (returns 402 if over the cap).
+  // due to a missing entitlement payload.
   return true;
 }
 

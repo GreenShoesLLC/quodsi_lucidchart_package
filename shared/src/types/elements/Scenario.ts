@@ -1,7 +1,16 @@
 import { ScenarioChangeRequest } from "./ScenarioChangeRequest";
 import { generateUUID } from "../../utils/uuidUtils";
 
-export const BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
+/**
+ * Legacy sentinel id used as the baseline scenario's `id` before
+ * scenarios were persisted to a database. Two documents both stuck
+ * with this id would collide on the global PK in `dbo.scenarios`.
+ * New baselines now use real UUIDs; baseline-ness is identified via
+ * the `isBaseline` flag, not the id. Kept exported solely so that
+ * `ensureBaselineScenario` can recognise legacy serialised data and
+ * migrate it on load.
+ */
+export const LEGACY_BASELINE_SCENARIO_ID = '00000000-0000-0000-0000-000000000000';
 
 export class Scenario {
     id: string;
@@ -55,8 +64,9 @@ export class Scenario {
     }
 
     static createBaseline(): Scenario {
+        // id omitted -> constructor calls generateUUID(). Baselines are
+        // identified by isBaseline === true, not by a sentinel id.
         return new Scenario({
-            id: BASELINE_SCENARIO_ID,
             name: "Baseline",
             description: "No scenario changes",
             changeRequests: [],

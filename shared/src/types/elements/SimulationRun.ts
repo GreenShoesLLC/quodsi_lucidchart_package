@@ -7,6 +7,11 @@ export interface SimulationRun extends SimulationObject {
     forecastDays: number;
     runState: RunState;
     type: SimulationObjectType.Scenario;  // Keep enum value — it's the wire format
+    // True when this run is for the baseline scenario. UI uses this to
+    // surface the baseline run's state on the page-level Simulate button.
+    // Replaces the legacy convention of detecting baseline by
+    // id === '00000000-0000-0000-0000-000000000000'.
+    isBaseline?: boolean;
     // Progress tracking
     currentReplication?: number;  // Current replication being executed (1 to reps)
     // Error fields (populated when runState === RanWithErrors)
