@@ -46,7 +46,7 @@
     {
       "name": "quodsi_api_data_connector",
       "oauthProviderName": "kinde",
-      "callbackBaseUrl": "http://localhost:8000/lucid/",
+      "callbackBaseUrl": "https://ca-quodsi-dev-api.niceisland-1fa2af68.eastus2.azurecontainerapps.io/lucid/",
       "dataActions": {
         "SyncUser": "SyncUser",
         "GetResultsData": "GetResultsData",
