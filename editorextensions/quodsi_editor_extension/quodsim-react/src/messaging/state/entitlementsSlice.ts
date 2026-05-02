@@ -87,28 +87,30 @@ export function simulationsRemaining(state: EntitlementsState): number | null {
 }
 
 /**
- * Per-model scenario cap. Returns true if the user can add another
- * non-baseline scenario to a model that currently has
- * `currentNonBaselineCount` non-baseline scenarios. The cap counts only
- * non-baseline scenarios — every model gets a baseline for free.
+ * Per-model RUN cap. Returns true if the user can run *a new scenario
+ * for the first time* given that `distinctRunsCount` distinct scenarios
+ * have already been run for this model. Re-running an already-run
+ * scenario is always allowed (doesn't consume a slot) -- callers
+ * typically only invoke this helper for not-yet-run scenarios.
  *
- * Free=1 non-baseline allowed, Starter=3, Pro=10,
+ * Free=1 distinct scenario per model, Starter=3, Pro=10,
  * Enterprise=2,147,483,647 (sentinel). If the feature is missing or
  * pre-load (entitlements haven't arrived), allows the action — UI must
  * not block users on transient state.
  *
- * Backend is the authoritative gate (returns 402 if a sync would
- * net-add non-baselines beyond the cap); this helper is for UX so the
- * "Add Scenario" button can be greyed out before the user clicks.
+ * Backend is the authoritative gate (returns 402 from
+ * SaveAndSubmitSimulation / SubmitSimulationJob when a new run would
+ * push the model over its cap); this helper just lets the panel grey
+ * out per-scenario Run buttons proactively.
  */
-export function canAddScenarioToModel(
+export function canRunNewScenario(
   state: EntitlementsState,
-  currentNonBaselineCount: number
+  distinctRunsCount: number
 ): boolean {
   if (!state.loaded) return true;
   const f = state.features['scenarios_per_model'];
   if (typeof f === 'object' && f !== null && 'limit' in f) {
-    return currentNonBaselineCount < f.limit;
+    return distinctRunsCount < f.limit;
   }
   // Feature absent — defensive default of "allow" so we don't lock users out
   // due to a missing entitlement payload.

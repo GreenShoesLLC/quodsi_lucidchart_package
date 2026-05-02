@@ -52,8 +52,8 @@ export class SimulationHandler {
       if (feature === 'scenarios_per_model') {
         const limit = detail?.limit;
         return limit
-          ? `This model has reached its plan's per-model scenario cap (${limit}). Upgrade your plan to add more scenarios.`
-          : 'This model has reached its plan\'s per-model scenario cap. Upgrade your plan to add more scenarios.';
+          ? `This model has reached its plan's run cap (${limit} distinct ${limit === 1 ? 'scenario' : 'scenarios'} per model). Re-runs are free, but to run a new scenario you'll need to delete an existing one or upgrade your plan.`
+          : 'This model has reached its plan\'s run cap. Re-runs are free, but to run a new scenario you\'ll need to delete an existing one or upgrade your plan.';
       }
       return 'This action requires a paid plan. Upgrade to continue.';
     }

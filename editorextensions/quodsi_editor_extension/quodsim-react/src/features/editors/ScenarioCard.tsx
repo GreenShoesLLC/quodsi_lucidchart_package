@@ -52,6 +52,17 @@ interface ScenarioCardProps {
   expanded: boolean;
   onToggleExpand: () => void;
   onPlay: () => void;
+  /**
+   * True when this scenario can't be run because the
+   * `scenarios_per_model` cap is full and this scenario is "new"
+   * (never been run before). Re-runs are always allowed; the parent
+   * is expected to set this to false when the scenario already has
+   * any non-deleted runs.
+   */
+  runCapBlocked?: boolean;
+  /** Tooltip text to show on the disabled Play button when
+   * `runCapBlocked` is true. */
+  runCapTooltip?: string;
   onDelete?: () => void;
   onUpdate: (updated: ISerializedScenario) => void;
   onAnalyze?: (scenarioId: string) => void;
@@ -100,6 +111,8 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   expanded,
   onToggleExpand,
   onPlay,
+  runCapBlocked = false,
+  runCapTooltip,
   onDelete,
   onUpdate,
   onAnalyze,
@@ -117,7 +130,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const canRun = canSubmitSimulation(entitlements);
   const remaining = simulationsRemaining(entitlements);
   const quotaExhausted = !canRun && entitlements.loaded;
-  const playDisabled = isActive || quotaExhausted;
+  const playDisabled = isActive || quotaExhausted || runCapBlocked;
 
   // --- local state ---
   const [showAddCR, setShowAddCR] = useState(false);
@@ -232,6 +245,8 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               ? "Simulation in progress"
               : quotaExhausted
               ? "Monthly simulation quota reached — upgrade to run more"
+              : runCapBlocked
+              ? (runCapTooltip ?? "You've reached the limit of distinct scenarios that can be run for this model. Re-run an existing one or upgrade to add more.")
               : remaining !== null && remaining <= 2
               ? `${remaining} simulation${remaining === 1 ? "" : "s"} remaining this month`
               : hasResults

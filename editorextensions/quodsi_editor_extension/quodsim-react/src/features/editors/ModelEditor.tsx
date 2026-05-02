@@ -20,7 +20,7 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging, useSimulationRuns, useMessagingDispatch, useEntitlements } from "../../messaging/MessageProvider";
-import { canAddScenarioToModel, scenariosPerModelLimit } from "../../messaging/state/entitlementsSlice";
+import { canRunNewScenario, scenariosPerModelLimit } from "../../messaging/state/entitlementsSlice";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
@@ -169,16 +169,13 @@ const ScenariosAndRunsPanel: React.FC<{
   // Scenarios from reference data
   const scenarios: ISerializedScenario[] = referenceData?.scenarios ?? [];
 
-  // --- entitlement gating for "Add Scenario" ---
-  // Per-model scenario cap (`scenarios_per_model`) counts NON-baseline
-  // scenarios only -- the baseline is free for every model. Free users
-  // have limit=1 (one user-added scenario beyond the baseline); paid
-  // tiers raise the cap. Server is the authoritative gate; this just
-  // greys out the button before the user clicks.
+  // --- entitlement gating for per-scenario Run ---
+  // `scenarios_per_model` caps the number of DISTINCT scenarios that
+  // have ever been run for this model. Re-runs are free; the first run
+  // of a new scenario consumes a slot. Adding/defining scenarios is
+  // unmetered. Server is the authoritative gate; this just greys out
+  // the per-scenario Run button proactively.
   const entitlements = useEntitlements();
-  const nonBaselineCount = scenarios.filter(s => !s.isBaseline).length;
-  const addScenarioBlocked =
-    entitlements.loaded && !canAddScenarioToModel(entitlements, nonBaselineCount);
   const scenarioCapLimit = scenariosPerModelLimit(entitlements);
 
   // Build a map from scenario id to run status
@@ -203,6 +200,20 @@ const ScenariosAndRunsPanel: React.FC<{
     }
     return map;
   }, [simulationRuns]);
+
+  // Distinct-runs count for the scenarios_per_model cap. A scenario
+  // counts iff its run state is anything other than NotRun. Used below
+  // to decide which per-scenario Run buttons to grey out.
+  const distinctRunsCount = useMemo(
+    () =>
+      scenarios.reduce((acc, s) => {
+        const st = runStatusMap.get(s.id)?.status;
+        return acc + (st && st !== RunState.NotRun ? 1 : 0);
+      }, 0),
+    [scenarios, runStatusMap],
+  );
+  const newScenarioRunBlocked =
+    entitlements.loaded && !canRunNewScenario(entitlements, distinctRunsCount);
 
   // Execute the actual play/simulate action with optimistic update
   const executePlay = useCallback((scenario: ISerializedScenario) => {
@@ -410,26 +421,38 @@ const ScenariosAndRunsPanel: React.FC<{
             <span className="ml-2 text-sm text-gray-500">Loading runs...</span>
           </div>
         ) : (
-          scenarios.map(scenario => (
-            <ScenarioCard
-              key={scenario.id}
-              scenario={scenario}
-              runStatus={runStatusMap.get(scenario.id)}
-              referenceData={referenceData}
-              expanded={expandedScenarioId === scenario.id}
-              onToggleExpand={() =>
-                setExpandedScenarioId(expandedScenarioId === scenario.id ? null : scenario.id)
-              }
-              onPlay={() => handlePlay(scenario)}
-              onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
-              onUpdate={handleUpdateScenario}
-              onAnalyze={(scenarioId) => {
-                if (documentId) {
-                  openResultsModal(documentId, scenarioId);
+          scenarios.map(scenario => {
+            const scenarioStatus = runStatusMap.get(scenario.id)?.status;
+            const hasBeenRun = !!scenarioStatus && scenarioStatus !== RunState.NotRun;
+            // Block running this scenario only if it's a NEW scenario (never run)
+            // and we're already at the distinct-runs cap. Re-runs are always free.
+            const runCapBlocked = !hasBeenRun && newScenarioRunBlocked;
+            const runCapTooltip = runCapBlocked && scenarioCapLimit !== null
+              ? `Your plan allows running up to ${scenarioCapLimit} distinct ${scenarioCapLimit === 1 ? "scenario" : "scenarios"} per model. Re-runs are free, but you've already started runs for ${distinctRunsCount} different ${distinctRunsCount === 1 ? "scenario" : "scenarios"}. Delete one or upgrade to run a new one.`
+              : undefined;
+            return (
+              <ScenarioCard
+                key={scenario.id}
+                scenario={scenario}
+                runStatus={runStatusMap.get(scenario.id)}
+                referenceData={referenceData}
+                expanded={expandedScenarioId === scenario.id}
+                onToggleExpand={() =>
+                  setExpandedScenarioId(expandedScenarioId === scenario.id ? null : scenario.id)
                 }
-              }}
-            />
-          ))
+                onPlay={() => handlePlay(scenario)}
+                runCapBlocked={runCapBlocked}
+                runCapTooltip={runCapTooltip}
+                onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
+                onUpdate={handleUpdateScenario}
+                onAnalyze={(scenarioId) => {
+                  if (documentId) {
+                    openResultsModal(documentId, scenarioId);
+                  }
+                }}
+              />
+            );
+          })
         )}
         {deletingScenarioId && (
           <div className="p-3 bg-red-50 border border-red-200 rounded">
@@ -481,19 +504,8 @@ const ScenariosAndRunsPanel: React.FC<{
         )}
         <button
           onClick={handleAddScenario}
-          disabled={addScenarioBlocked}
-          className={`flex items-center gap-1 w-full px-3 py-2 text-xs transition-colors rounded ${
-            addScenarioBlocked
-              ? "text-gray-400 cursor-not-allowed"
-              : "text-blue-600 hover:bg-blue-50"
-          }`}
-          title={
-            addScenarioBlocked
-              ? scenarioCapLimit !== null
-                ? `Your plan allows ${scenarioCapLimit} ${scenarioCapLimit === 1 ? "scenario" : "scenarios"} per model in addition to the Baseline. Upgrade to add more, or delete a scenario to free up a slot.`
-                : "Upgrade your plan to add more scenarios per model."
-              : "Add another scenario to this model"
-          }
+          className="flex items-center gap-1 w-full px-3 py-2 text-xs transition-colors rounded text-blue-600 hover:bg-blue-50"
+          title="Add another scenario to this model"
         >
           <Plus className="w-3 h-3" />
           Add Scenario
