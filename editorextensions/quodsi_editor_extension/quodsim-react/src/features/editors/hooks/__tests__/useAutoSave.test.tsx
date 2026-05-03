@@ -243,6 +243,39 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v4" });
     });
+
+    it("transitions to 'saved' when trailing flag is set but draft is no longer pending+valid", () => {
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Step 1: User edits e1 → debounce fires → first save dispatched (call count 1)
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Step 2: Save in flight; user edits again → debounce effect sets trailingSaveNeededRef=true
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true }));
+
+      // Step 3: Parent clears hasPendingChanges before save completes — e.g., a Redux
+      // action that overwrites the local draft (collaborative-edit patch) or a different
+      // optimistic UI clear. Note: useSaveCompletionDetector cannot produce this state
+      // because it only clears the flag at the saving→not-saving transition.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: false, isSaving: true }));
+
+      // Step 4: Save completes. trailingSaveNeededRef=true but hasPendingRef=false → the
+      // fallthrough branch fires setStatus("saved") instead of dispatchSave(). The
+      // critical regression assertion: no SPURIOUS second save fires.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: false, isSaving: false }));
+
+      expect(onSave).toHaveBeenCalledTimes(1); // still just the one from Step 1
+      expect(result.current.status).toBe("saved");
+      expect(result.current.lastSavedAt).not.toBeNull();
+    });
   });
 
   describe("element-switch flush", () => {
@@ -481,4 +514,5 @@ describe("useAutoSave", () => {
       void consoleErrorSpy;
     });
   });
+
 });
