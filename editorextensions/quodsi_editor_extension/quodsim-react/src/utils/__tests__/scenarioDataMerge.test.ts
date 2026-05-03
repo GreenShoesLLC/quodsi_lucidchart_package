@@ -39,10 +39,10 @@ describe("mergeBarChartData", () => {
     ]);
     const result = mergeBarChartData(scenarios, dataMap, "activity_name", "capacity_utilization_mean");
     expect(result.data).toEqual([
-      { activity_name: "A", "utilization_mean_Baseline": 0.8, "utilization_mean_Scenario 2": 0.7 },
-      { activity_name: "B", "utilization_mean_Baseline": 0.6, "utilization_mean_Scenario 2": 0.9 },
+      { activity_name: "A", "capacity_utilization_mean_Baseline": 0.8, "capacity_utilization_mean_Scenario 2": 0.7 },
+      { activity_name: "B", "capacity_utilization_mean_Baseline": 0.6, "capacity_utilization_mean_Scenario 2": 0.9 },
     ]);
-    expect(result.yKeys).toEqual(["utilization_mean_Baseline", "utilization_mean_Scenario 2"]);
+    expect(result.yKeys).toEqual(["capacity_utilization_mean_Baseline", "capacity_utilization_mean_Scenario 2"]);
   });
 
   it("handles missing items in one scenario", () => {
@@ -58,15 +58,15 @@ describe("mergeBarChartData", () => {
     const result = mergeBarChartData(scenarios, dataMap, "activity_name", "capacity_utilization_mean");
     expect(result.data[1]).toEqual({
       activity_name: "B",
-      "utilization_mean_Baseline": 0.6,
-      "utilization_mean_Scenario 2": null,
+      "capacity_utilization_mean_Baseline": 0.6,
+      "capacity_utilization_mean_Scenario 2": null,
     });
   });
 
   it("handles empty data map", () => {
     const result = mergeBarChartData(scenarios, new Map(), "activity_name", "capacity_utilization_mean");
     expect(result.data).toEqual([]);
-    expect(result.yKeys).toEqual(["utilization_mean_Baseline", "utilization_mean_Scenario 2"]);
+    expect(result.yKeys).toEqual(["capacity_utilization_mean_Baseline", "capacity_utilization_mean_Scenario 2"]);
   });
 });
 
@@ -168,9 +168,9 @@ describe("mergeTableColumns", () => {
   it("creates scenario-suffixed columns for 2 scenarios", () => {
     const result = mergeTableColumns(scenarios, columns, "activity_name");
     expect(result[0]).toEqual({ key: "activity_name", label: "Activity" });
-    expect(result[1].key).toBe("utilization_mean_Baseline");
+    expect(result[1].key).toBe("capacity_utilization_mean_Baseline");
     expect(result[1].label).toBe("Utilization (Baseline)");
-    expect(result[2].key).toBe("utilization_mean_Scenario 2");
+    expect(result[2].key).toBe("capacity_utilization_mean_Scenario 2");
     expect(result[2].label).toBe("Utilization (Scenario 2)");
     expect(result[3].key).toBe("cycle_time_mean_Baseline");
     expect(result[4].key).toBe("cycle_time_mean_Scenario 2");
@@ -204,9 +204,9 @@ describe("mergeTableData", () => {
     const result = mergeTableData(scenarios, dataMap, "activity_name");
     expect(result).toEqual([{
       activity_name: "A",
-      "utilization_mean_Baseline": 0.8,
+      "capacity_utilization_mean_Baseline": 0.8,
       "cycle_time_mean_Baseline": 5.0,
-      "utilization_mean_Scenario 2": 0.7,
+      "capacity_utilization_mean_Scenario 2": 0.7,
       "cycle_time_mean_Scenario 2": 4.0,
     }]);
   });
@@ -223,7 +223,7 @@ describe("mergeTableData", () => {
     ]);
     const result = mergeTableData(scenarios, dataMap, "activity_name");
     const rowB = result.find((r) => r.activity_name === "B")!;
-    expect(rowB["utilization_mean_Baseline"]).toBe(0.6);
-    expect(rowB["utilization_mean_Scenario 2"]).toBeUndefined();
+    expect(rowB["capacity_utilization_mean_Baseline"]).toBe(0.6);
+    expect(rowB["capacity_utilization_mean_Scenario 2"]).toBeUndefined();
   });
 });

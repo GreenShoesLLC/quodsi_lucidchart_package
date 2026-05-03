@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Custom hook that syncs form state when the element ID changes.
@@ -79,4 +79,203 @@ export function useSaveCompletionDetector(
     // Update ref for next render
     previousSavingStateRef.current = isSaving;
   }, [isSaving, setHasPendingChanges]);
+}
+
+/**
+ * Status reported by useAutoSave for rendering in the SaveStatusLine.
+ * - "saved": idle; no pending edits, last save (if any) succeeded.
+ * - "saving": save is in flight, or about to fire from a debounce timer.
+ * - "invalid": pending edits exist but draft fails validation; no save will fire.
+ * - "error": last save threw. The next edit retriggers debounce → automatic retry.
+ */
+export type SaveStatus = "saved" | "saving" | "invalid" | "error";
+
+export interface UseAutoSaveArgs<T> {
+  /** Current local draft. */
+  draft: T;
+  /** Whether the user has unsaved changes (existing dirty flag — kept). */
+  hasPendingChanges: boolean;
+  /** Whether the draft passes validation. When false, no save fires. */
+  isValid: boolean;
+  /** Existing save callback — receives the draft when auto-save fires. */
+  onSave: (draft: T) => void;
+  /** True while a save is in flight (from Redux elementOpsState). */
+  isSaving: boolean;
+  /** ID of the currently selected element. Switching this flushes pending edits. */
+  elementId: string;
+  /** Debounce delay in ms. Defaults to 500. */
+  debounceMs?: number;
+}
+
+export interface UseAutoSaveResult {
+  status: SaveStatus;
+  lastSavedAt: number | null;
+  /** Imperative flush — bypasses debounce. Use from onBlur and discrete-event handlers. */
+  saveNow: () => void;
+}
+
+/**
+ * Auto-save hook for inline panel editors.
+ *
+ * Debounces onSave(draft) after debounceMs when hasPendingChanges + isValid
+ * + !isSaving. Also provides saveNow() for imperative flush, coalesces edits
+ * during in-flight saves into a single trailing save, flushes pending edits on
+ * element switch, and flushes on unmount. Error handling (status='error') is
+ * added in Task 9.
+ */
+export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
+  const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
+
+  const [status, setStatus] = useState<SaveStatus>("saved");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+
+  // Refs synced each render so timer callbacks see fresh values
+  const draftRef = useRef(draft);
+  const onSaveRef = useRef(onSave);
+  const hasPendingRef = useRef(hasPendingChanges);
+  const isValidRef = useRef(isValid);
+  const isSavingRef = useRef(isSaving);
+  draftRef.current = draft;
+  onSaveRef.current = onSave;
+  hasPendingRef.current = hasPendingChanges;
+  isValidRef.current = isValid;
+  isSavingRef.current = isSaving;
+
+  const timerRef = useRef<number | null>(null);
+  const wasSavingRef = useRef(isSaving);
+  const trailingSaveNeededRef = useRef(false);
+  const prevElementIdRef = useRef(elementId);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const dispatchSave = useCallback(() => {
+    setStatus("saving");
+    try {
+      onSaveRef.current(draftRef.current);
+    } catch (err) {
+      console.error("[useAutoSave] save failed:", err);
+      setStatus("error");
+    }
+  }, []);
+
+  const saveNow = useCallback(() => {
+    // Cancel any pending debounce timer regardless of guard results below,
+    // so an explicit flush always wins over the timer path.
+    clearTimer();
+    if (!hasPendingRef.current) return;
+    if (!isValidRef.current) {
+      setStatus("invalid");
+      return;
+    }
+    if (isSavingRef.current) {
+      // No-op while a save is in flight. Task 5 adds trailingSaveNeededRef
+      // so the edit is retried after the current save completes.
+      return;
+    }
+    dispatchSave();
+  }, [clearTimer, dispatchSave]);
+
+  // Schedule debounced save on draft/dirty changes
+  useEffect(() => {
+    if (!hasPendingChanges) {
+      return;
+    }
+    if (!isValid) {
+      clearTimer();
+      setStatus("invalid");
+      return;
+    }
+    if (isSaving) {
+      trailingSaveNeededRef.current = true;
+      setStatus("saving");
+      return;
+    }
+    clearTimer();
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      if (!hasPendingRef.current || !isValidRef.current) {
+        // State changed between schedule and fire — bail.
+        return;
+      }
+      if (isSavingRef.current) {
+        // Save raced into flight between schedule and timer firing.
+        // setStatus("saving") omitted — status is already "saving" because
+        // dispatchSave() set it before the in-flight save started.
+        trailingSaveNeededRef.current = true;
+        return;
+      }
+      dispatchSave();
+    }, debounceMs);
+    return clearTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, hasPendingChanges, isValid, isSaving, debounceMs]);
+
+  // Detect saving→not-saving transition; fire trailing save or report saved.
+  useEffect(() => {
+    if (wasSavingRef.current && !isSaving) {
+      if (trailingSaveNeededRef.current) {
+        trailingSaveNeededRef.current = false;
+        if (hasPendingRef.current && isValidRef.current) {
+          dispatchSave();
+        } else {
+          setStatus("saved");
+          setLastSavedAt(Date.now());
+        }
+      } else {
+        setStatus("saved");
+        setLastSavedAt(Date.now());
+      }
+    }
+    wasSavingRef.current = isSaving;
+  }, [isSaving, dispatchSave]);
+
+  // Element switch flush — see spec section "Edge cases" for ordering rationale.
+  // useFormSync's setLocalDraft is queued for the next render, so draftRef.current
+  // still holds the previous element's draft when this effect runs.
+  //
+  // KNOWN GAP (Phase 1 TODO): when isSaving=true at switch time AND there are
+  // edits made during the in-flight save (trailingSaveNeededRef=true), this
+  // effect skips the flush and clears the trailing flag, dropping those edits.
+  // The fix requires either dispatching a second save (Redux concurrent-save
+  // behavior must be verified) or capturing the pending draft into a separate
+  // ref to be consumed by the saving-transition effect after the in-flight save
+  // completes. Address before Phase 1 (any editor importing this hook).
+  useEffect(() => {
+    if (prevElementIdRef.current !== elementId) {
+      clearTimer();
+      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
+        dispatchSave();
+      }
+      trailingSaveNeededRef.current = false;
+      prevElementIdRef.current = elementId;
+    }
+  }, [elementId, clearTimer, dispatchSave]);
+
+  // Unmount flush
+  useEffect(() => {
+    return () => {
+      // Inline rather than calling clearTimer() to avoid adding a dep to the [] array.
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
+        try {
+          onSaveRef.current(draftRef.current);
+        } catch (err) {
+          // Cannot update React state during unmount — log for diagnosability.
+          // (dispatchSave's own try/catch in Task 9 handles non-unmount errors.)
+          console.error("[useAutoSave] unmount flush failed:", err);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return { status, lastSavedAt, saveNow };
 }
