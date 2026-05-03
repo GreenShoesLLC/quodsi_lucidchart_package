@@ -119,9 +119,20 @@ export interface UseAutoSaveResult {
  *
  * Debounces onSave(draft) after debounceMs when hasPendingChanges + isValid
  * + !isSaving. Also provides saveNow() for imperative flush, coalesces edits
- * during in-flight saves into a single trailing save, flushes pending edits on
- * element switch, and flushes on unmount. Error handling (status='error') is
- * added in Task 9.
+ * during in-flight saves into a single trailing save, captures pending edits
+ * on element switch (drained when the in-flight save completes), flushes on
+ * unmount, and reports status="error" when onSave throws.
+ *
+ * Contract — REQUIRED of consumers:
+ *   onSave MUST trigger a Redux-mediated isSaving transition (false → true →
+ *   false). The hook uses the saving→not-saving transition to clear the
+ *   "saving" status, fire trailing saves, and drain captured pending flushes.
+ *   If onSave is synchronous and never causes isSaving to flip, status will
+ *   stay at "saving" forever and trailing/captured saves will never fire.
+ *
+ *   In practice, every editor consumer routes onSave through Redux's
+ *   elementOpsState, which dispatches ELEMENT_SAVE_START (sets isSaving=true)
+ *   and ELEMENT_SAVE_SUCCESS/ERROR (sets isSaving=false). Honor that pattern.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
@@ -145,6 +156,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const wasSavingRef = useRef(isSaving);
   const trailingSaveNeededRef = useRef(false);
   const prevElementIdRef = useRef(elementId);
+  const pendingFlushDraftRef = useRef<T | null>(null);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -215,10 +227,26 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, hasPendingChanges, isValid, isSaving, debounceMs]);
 
-  // Detect saving→not-saving transition; fire trailing save or report saved.
+  // Detect saving→not-saving transition. Three handling priorities:
+  // 1. Captured pending flush (from element switch) — drain silently.
+  // 2. Trailing save needed (edits during in-flight save) — fire it.
+  // 3. Default — mark the current element saved.
   useEffect(() => {
     if (wasSavingRef.current && !isSaving) {
-      if (trailingSaveNeededRef.current) {
+      if (pendingFlushDraftRef.current !== null) {
+        // Drain the captured flush for the PREVIOUS element. Fire-and-forget:
+        // failures log via console.error but do not surface in the new element's
+        // UI status, because the user has already moved on.
+        const captured = pendingFlushDraftRef.current;
+        pendingFlushDraftRef.current = null;
+        try {
+          onSaveRef.current(captured);
+        } catch (err) {
+          console.error("[useAutoSave] pending flush failed:", err);
+        }
+        // Note: do NOT update status or lastSavedAt — the new element's panel
+        // owns its own visual state.
+      } else if (trailingSaveNeededRef.current) {
         trailingSaveNeededRef.current = false;
         if (hasPendingRef.current && isValidRef.current) {
           dispatchSave();
@@ -238,20 +266,27 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   // useFormSync's setLocalDraft is queued for the next render, so draftRef.current
   // still holds the previous element's draft when this effect runs.
   //
-  // KNOWN GAP (Phase 1 TODO): when isSaving=true at switch time AND there are
-  // edits made during the in-flight save (trailingSaveNeededRef=true), this
-  // effect skips the flush and clears the trailing flag, dropping those edits.
-  // The fix requires either dispatching a second save (Redux concurrent-save
-  // behavior must be verified) or capturing the pending draft into a separate
-  // ref to be consumed by the saving-transition effect after the in-flight save
-  // completes. Address before Phase 1 (any editor importing this hook).
+  // When isSaving=true at switch time and there are pending edits, we cannot
+  // dispatch a second save (Redux's per-element save queueing is not verified
+  // for concurrent dispatch). Instead, we capture the pending draft into
+  // pendingFlushDraftRef; the saving-transition effect will drain it after the
+  // in-flight save completes. The drain is silent (no status update) because
+  // the user has moved on to the new element.
   useEffect(() => {
     if (prevElementIdRef.current !== elementId) {
       clearTimer();
-      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
-        dispatchSave();
+      if (hasPendingRef.current && isValidRef.current) {
+        if (isSavingRef.current) {
+          // Save in flight — capture pending draft for post-completion flush.
+          pendingFlushDraftRef.current = draftRef.current;
+        } else {
+          dispatchSave();
+        }
       }
       trailingSaveNeededRef.current = false;
+      // Reset status to reflect the new (clean) element. If a captured flush
+      // is pending in the background, its progress will not surface here.
+      setStatus("saved");
       prevElementIdRef.current = elementId;
     }
   }, [elementId, clearTimer, dispatchSave]);
