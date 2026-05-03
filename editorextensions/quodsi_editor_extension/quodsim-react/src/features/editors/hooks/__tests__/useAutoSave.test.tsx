@@ -52,4 +52,66 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
     });
   });
+
+  describe("saveNow", () => {
+    it("flushes immediately, bypassing the debounce timer", () => {
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+
+      // saveNow before debounce expires
+      act(() => {
+        result.current.saveNow();
+      });
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
+    });
+
+    it("does not fire onSave again when the debounce timer later expires", () => {
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+
+      act(() => {
+        result.current.saveNow();
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Advance well past the debounce window
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1); // still just one
+    });
+
+    it("does nothing when there are no pending changes", () => {
+      const onSave = jest.fn();
+      const { result } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, hasPendingChanges: false }) }
+      );
+
+      act(() => {
+        result.current.saveNow();
+      });
+
+      expect(onSave).not.toHaveBeenCalled();
+
+      // Advancing time afterward must also produce no save —
+      // saveNow with no pending changes shouldn't reschedule anything.
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onSave).not.toHaveBeenCalled();
+    });
+  });
 });

@@ -155,8 +155,21 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   }, []);
 
   const saveNow = useCallback(() => {
-    /* implemented in later tasks */
-  }, []);
+    // Cancel any pending debounce timer regardless of guard results below,
+    // so an explicit flush always wins over the timer path.
+    clearTimer();
+    if (!hasPendingRef.current) return;
+    if (!isValidRef.current) {
+      setStatus("invalid");
+      return;
+    }
+    if (isSavingRef.current) {
+      // No-op while a save is in flight. Task 5 adds trailingSaveNeededRef
+      // so the edit is retried after the current save completes.
+      return;
+    }
+    dispatchSave();
+  }, [clearTimer, dispatchSave]);
 
   // Schedule debounced save on draft/dirty changes
   useEffect(() => {
