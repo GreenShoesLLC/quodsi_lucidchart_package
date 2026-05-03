@@ -21,6 +21,7 @@ describe("useAutoSave", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   describe("debounce", () => {
@@ -356,6 +357,66 @@ describe("useAutoSave", () => {
       unmount();
 
       expect(onSave).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("status state machine and lastSavedAt", () => {
+    it("starts in 'saved' with lastSavedAt null", () => {
+      const { result } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs() }
+      );
+
+      expect(result.current.status).toBe("saved");
+      expect(result.current.lastSavedAt).toBeNull();
+    });
+
+    it("transitions saved → saving → saved on a successful save", () => {
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+
+      // Debounce expires → dispatchSave sets status='saving'
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(result.current.status).toBe("saving");
+
+      // Parent reflects in-flight save
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isSaving: true }));
+      expect(result.current.status).toBe("saving");
+
+      // Save completes — parent sets isSaving=false AND useSaveCompletionDetector
+      // clears hasPendingChanges. In real usage these arrive in separate renders;
+      // combining them here is safe because the transition effect reads hasPendingRef
+      // (updated synchronously per render) rather than isSaving's React state.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: false, isSaving: false }));
+      expect(result.current.status).toBe("saved");
+      expect(result.current.lastSavedAt).not.toBeNull();
+    });
+
+    it("updates lastSavedAt timestamp after successful save", () => {
+      const onSave = jest.fn();
+      const fixedNow = 1_700_000_000_000;
+      jest.spyOn(Date, "now").mockReturnValue(fixedNow);
+
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isSaving: true }));
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: false, isSaving: false }));
+
+      expect(result.current.lastSavedAt).toBe(fixedNow);
     });
   });
 });

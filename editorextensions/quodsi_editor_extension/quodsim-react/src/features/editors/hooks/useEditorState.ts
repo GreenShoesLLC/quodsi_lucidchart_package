@@ -117,16 +117,17 @@ export interface UseAutoSaveResult {
 /**
  * Auto-save hook for inline panel editors.
  *
- * Debounces saves: when hasPendingChanges + isValid + !isSaving, schedules
- * onSave(draft) after debounceMs. Subsequent tasks add saveNow, validation
- * gating, in-flight coalescing, element-switch flush, unmount flush, and
- * error handling.
+ * Debounces onSave(draft) after debounceMs when hasPendingChanges + isValid
+ * + !isSaving. Also provides saveNow() for imperative flush, coalesces edits
+ * during in-flight saves into a single trailing save, flushes pending edits on
+ * element switch, and flushes on unmount. Error handling (status='error') is
+ * added in Task 9.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
 
   const [status, setStatus] = useState<SaveStatus>("saved");
-  const [lastSavedAt] = useState<number | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   // Refs synced each render so timer callbacks see fresh values
   const draftRef = useRef(draft);
@@ -209,14 +210,20 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, hasPendingChanges, isValid, isSaving, debounceMs]);
 
-  // Detect saving→not-saving transition; fire trailing save if requested.
+  // Detect saving→not-saving transition; fire trailing save or report saved.
   useEffect(() => {
     if (wasSavingRef.current && !isSaving) {
       if (trailingSaveNeededRef.current) {
         trailingSaveNeededRef.current = false;
         if (hasPendingRef.current && isValidRef.current) {
           dispatchSave();
+        } else {
+          setStatus("saved");
+          setLastSavedAt(Date.now());
         }
+      } else {
+        setStatus("saved");
+        setLastSavedAt(Date.now());
       }
     }
     wasSavingRef.current = isSaving;
