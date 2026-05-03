@@ -183,4 +183,64 @@ describe("useAutoSave", () => {
       expect(result.current.status).toBe("invalid");
     });
   });
+
+  describe("in-flight coalescing", () => {
+    it("does not fire a second onSave while one is in flight", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // First save fires
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: false }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Save in flight + new edit
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1); // still just one — second is queued
+    });
+
+    it("fires one trailing save after isSaving flips false", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: true }) }
+      );
+
+      // Edit during in-flight save
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true }));
+
+      // Save completes
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: false }));
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
+    });
+
+    it("fires only ONE trailing save even if multiple edits occur during in-flight save", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: true }) }
+      );
+
+      // Multiple edits during in-flight save
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true }));
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v3" }, hasPendingChanges: true, isSaving: true }));
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v4" }, hasPendingChanges: true, isSaving: true }));
+
+      // Save completes
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v4" }, hasPendingChanges: true, isSaving: false }));
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v4" });
+    });
+  });
 });

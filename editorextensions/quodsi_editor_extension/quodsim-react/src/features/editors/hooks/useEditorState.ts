@@ -141,6 +141,8 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   isSavingRef.current = isSaving;
 
   const timerRef = useRef<number | null>(null);
+  const wasSavingRef = useRef(isSaving);
+  const trailingSaveNeededRef = useRef(false);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -182,16 +184,42 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
       return;
     }
     if (isSaving) {
-      return; // handled in later task
+      trailingSaveNeededRef.current = true;
+      setStatus("saving");
+      return;
     }
     clearTimer();
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
+      if (!hasPendingRef.current || !isValidRef.current) {
+        // State changed between schedule and fire — bail.
+        return;
+      }
+      if (isSavingRef.current) {
+        // Save raced into flight between schedule and timer firing.
+        // setStatus("saving") omitted — status is already "saving" because
+        // dispatchSave() set it before the in-flight save started.
+        trailingSaveNeededRef.current = true;
+        return;
+      }
       dispatchSave();
     }, debounceMs);
     return clearTimer;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft, hasPendingChanges, isValid, isSaving, debounceMs]);
+
+  // Detect saving→not-saving transition; fire trailing save if requested.
+  useEffect(() => {
+    if (wasSavingRef.current && !isSaving) {
+      if (trailingSaveNeededRef.current) {
+        trailingSaveNeededRef.current = false;
+        if (hasPendingRef.current && isValidRef.current) {
+          dispatchSave();
+        }
+      }
+    }
+    wasSavingRef.current = isSaving;
+  }, [isSaving, dispatchSave]);
 
   return { status, lastSavedAt, saveNow };
 }
