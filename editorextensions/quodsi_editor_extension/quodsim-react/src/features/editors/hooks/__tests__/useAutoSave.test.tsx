@@ -316,4 +316,46 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenCalledTimes(1); // no extra fire from old timer
     });
   });
+
+  describe("unmount flush", () => {
+    it("fires onSave when unmounted with pending edits", () => {
+      const onSave = jest.fn();
+      const { rerender, unmount } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+      // Unmount before debounce expires
+      unmount();
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
+    });
+
+    it("does not fire onSave on unmount when no pending edits", () => {
+      const onSave = jest.fn();
+      const { unmount } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      unmount();
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("does not fire onSave on unmount when invalid", () => {
+      const onSave = jest.fn();
+      const { rerender, unmount } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
+      unmount();
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+  });
 });

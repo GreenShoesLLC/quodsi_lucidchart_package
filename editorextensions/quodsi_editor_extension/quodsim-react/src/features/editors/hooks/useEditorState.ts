@@ -244,5 +244,26 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     }
   }, [elementId, clearTimer, dispatchSave]);
 
+  // Unmount flush
+  useEffect(() => {
+    return () => {
+      // Inline rather than calling clearTimer() to avoid adding a dep to the [] array.
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
+        try {
+          onSaveRef.current(draftRef.current);
+        } catch (err) {
+          // Cannot update React state during unmount — log for diagnosability.
+          // (dispatchSave's own try/catch in Task 9 handles non-unmount errors.)
+          console.error("[useAutoSave] unmount flush failed:", err);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return { status, lastSavedAt, saveNow };
 }
