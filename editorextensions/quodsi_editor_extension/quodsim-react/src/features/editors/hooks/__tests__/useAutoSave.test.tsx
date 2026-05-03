@@ -243,4 +243,77 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v4" });
     });
   });
+
+  describe("element-switch flush", () => {
+    it("flushes pending edit when elementId changes", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Pending edit on element e1
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, elementId: "e1" }));
+      // Note: do NOT advance timers — switch happens before debounce expires
+
+      // Switch to element e2 — useFormSync's setLocalDraft is queued for next
+      // render, so this render still carries the old draft. The flush effect
+      // captures it via draftRef.current.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
+
+      // Simulate the next render after useFormSync replaces the draft with e2's
+      // data. The flush should NOT fire again — there's nothing pending on e2.
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(1); // still just the one flush
+      expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
+    });
+
+    it("does not flush when elementId changes with no pending changes", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, elementId: "e1" }) }
+      );
+
+      rerender(baseArgs({ onSave, elementId: "e2" }));
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("does not flush when elementId changes while invalid", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false, elementId: "e1" }));
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false, elementId: "e2" }));
+
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("cancels any pending debounce timer on element switch", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave, elementId: "e1" }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, elementId: "e1" }));
+      // Switch before timer expires
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(1); // flush only
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1); // no extra fire from old timer
+    });
+  });
 });

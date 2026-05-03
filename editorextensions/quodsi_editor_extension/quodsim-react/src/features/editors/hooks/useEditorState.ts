@@ -123,7 +123,7 @@ export interface UseAutoSaveResult {
  * error handling.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
-  const { draft, hasPendingChanges, isValid, onSave, isSaving, debounceMs = 500 } = args;
+  const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
 
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [lastSavedAt] = useState<number | null>(null);
@@ -143,6 +143,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const timerRef = useRef<number | null>(null);
   const wasSavingRef = useRef(isSaving);
   const trailingSaveNeededRef = useRef(false);
+  const prevElementIdRef = useRef(elementId);
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -220,6 +221,28 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     }
     wasSavingRef.current = isSaving;
   }, [isSaving, dispatchSave]);
+
+  // Element switch flush — see spec section "Edge cases" for ordering rationale.
+  // useFormSync's setLocalDraft is queued for the next render, so draftRef.current
+  // still holds the previous element's draft when this effect runs.
+  //
+  // KNOWN GAP (Phase 1 TODO): when isSaving=true at switch time AND there are
+  // edits made during the in-flight save (trailingSaveNeededRef=true), this
+  // effect skips the flush and clears the trailing flag, dropping those edits.
+  // The fix requires either dispatching a second save (Redux concurrent-save
+  // behavior must be verified) or capturing the pending draft into a separate
+  // ref to be consumed by the saving-transition effect after the in-flight save
+  // completes. Address before Phase 1 (any editor importing this hook).
+  useEffect(() => {
+    if (prevElementIdRef.current !== elementId) {
+      clearTimer();
+      if (hasPendingRef.current && isValidRef.current && !isSavingRef.current) {
+        dispatchSave();
+      }
+      trailingSaveNeededRef.current = false;
+      prevElementIdRef.current = elementId;
+    }
+  }, [elementId, clearTimer, dispatchSave]);
 
   return { status, lastSavedAt, saveNow };
 }
