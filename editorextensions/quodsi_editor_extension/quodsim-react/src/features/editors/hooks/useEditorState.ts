@@ -173,8 +173,16 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
 
   // Schedule debounced save on draft/dirty changes
   useEffect(() => {
-    if (!hasPendingChanges || !isValid || isSaving) {
+    if (!hasPendingChanges) {
       return;
+    }
+    if (!isValid) {
+      clearTimer();
+      setStatus("invalid");
+      return;
+    }
+    if (isSaving) {
+      return; // handled in later task
     }
     clearTimer();
     timerRef.current = window.setTimeout(() => {

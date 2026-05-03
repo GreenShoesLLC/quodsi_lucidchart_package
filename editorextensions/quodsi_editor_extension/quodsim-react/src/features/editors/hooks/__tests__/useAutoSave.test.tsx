@@ -114,4 +114,73 @@ describe("useAutoSave", () => {
       expect(onSave).not.toHaveBeenCalled();
     });
   });
+
+  describe("validation gate", () => {
+    it("does not fire onSave when draft is invalid", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onSave).not.toHaveBeenCalled();
+    });
+
+    it("reports status='invalid' when dirty + invalid", () => {
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs() }
+      );
+
+      expect(result.current.status).toBe("saved");
+
+      rerender(baseArgs({ draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
+
+      expect(result.current.status).toBe("invalid");
+    });
+
+    it("schedules and fires save when draft becomes valid again", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Become invalid
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(onSave).not.toHaveBeenCalled();
+
+      // Become valid
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+    });
+
+    it("saveNow reports status='invalid' instead of saving when invalid", () => {
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
+
+      act(() => {
+        result.current.saveNow();
+      });
+
+      expect(onSave).not.toHaveBeenCalled();
+      expect(result.current.status).toBe("invalid");
+    });
+  });
 });
