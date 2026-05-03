@@ -10,7 +10,8 @@ import {
 } from "@quodsi/shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 
 // ============================================================================
 // TYPES
@@ -68,8 +69,7 @@ const TAB_CONFIG = [
  * Features:
  * - Two-tab interface: Basic properties and State definitions
  * - Controlled component with immediate UI updates
- * - Manual save for basic fields (name)
- * - Auto-save for state definitions (handled by StatesEditor)
+ * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush)
  *
  * State Management:
  * - Maintains local draft state (localEntityDraft) for immediate UI updates
@@ -77,10 +77,13 @@ const TAB_CONFIG = [
  * - Uses custom hooks for entity switching and save completion detection
  *
  * Save Behavior:
- * - Basic tab: Requires Save button click to persist changes
- * - States tab: Auto-saves immediately (Save/Cancel buttons hidden)
+ * - Name field: debounced auto-save on edit; immediate save on blur or
+ *   element switch. Status surfaced via SaveStatusLine ("Saved" / "Saving…" /
+ *   "Fix errors to save" / "Save failed — keep typing to retry"). Native
+ *   LucidChart Ctrl+Z reverses saved changes.
+ * - States tab: Auto-saves immediately (handled by StatesEditor)
  *
- * @param props - Component props
+ * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
  * @returns Rendered entity editor component
  */
 const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onStatesChange, referenceData }) => {
@@ -192,6 +195,15 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
+  const { status, lastSavedAt, saveNow } = useAutoSave<Entity>({
+    draft: localEntityDraft,
+    hasPendingChanges,
+    isValid: nameError === null,
+    onSave,
+    isSaving,
+    elementId: localEntityDraft.id,
+  });
+
   // Reset nameError when entity changes
   useEffect(() => {
     setNameError(null);
@@ -210,7 +222,8 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
    * Handles changes to the entity name input field.
    *
    * Updates are applied immediately to localEntityDraft for responsive UI,
-   * and marked as pending (requiring Save button click to persist).
+   * validates the name, and marks the draft as pending (auto-save will fire
+   * after debounce or on blur).
    *
    * @param e - Input change event
    */
@@ -221,37 +234,6 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
     const error = validateName(value);
     setNameError(error);
     setHasPendingChanges(true);
-  };
-
-  /**
-   * Saves the current entity draft state.
-   *
-   * Invokes the parent onSave callback with the current localEntityDraft.
-   * Redux manages the isSaving state automatically.
-   *
-   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
-   * save completion detector to avoid race conditions.
-   */
-  const handleSave = () => {
-    // Save the current draft state directly
-    onSave(localEntityDraft);
-    // Note: isSaving state is now managed by Redux through elementOpsState
-  };
-
-  /**
-   * Cancels editing and closes the editor.
-   *
-   * Discards all pending changes by:
-   * - Re-extracting fresh data from entity prop
-   * - Clearing hasPendingChanges flag (disables Save button)
-   * - Calling onCancel prop to close the editor panel
-   *
-   * Note: State definition changes were already auto-saved, so they can't be canceled.
-   */
-  const handleCancel = () => {
-    setLocalEntityDraft(extractEntityData(entity));
-    setHasPendingChanges(false);
-    onCancel(); // Close the editor
   };
 
   // ============================================================================
@@ -304,6 +286,7 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
                   className="w-full px-2 py-1.5 text-xs border rounded"
                   value={localEntityDraft.name}
                   onChange={handleInputChange}
+                  onBlur={saveNow}
                   placeholder="Enter entity name"
                 />
                 {nameError && (
@@ -324,31 +307,8 @@ const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onSta
         */}
       </div>
 
-      {/* Save/Cancel Buttons */}
-      <div className="flex justify-end gap-2 pt-2 border-t">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className={`px-3 py-1.5 text-xs border rounded ${
-              isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-            }`}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!hasPendingChanges || isSaving || nameError !== null}
-            className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && !isSaving && nameError === null
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-      </div>
+      {/* Auto-save status */}
+      <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
     </div>
   );
 };
