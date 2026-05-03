@@ -119,9 +119,20 @@ export interface UseAutoSaveResult {
  *
  * Debounces onSave(draft) after debounceMs when hasPendingChanges + isValid
  * + !isSaving. Also provides saveNow() for imperative flush, coalesces edits
- * during in-flight saves into a single trailing save, flushes pending edits on
- * element switch, and flushes on unmount. Error handling (status='error') is
- * added in Task 9.
+ * during in-flight saves into a single trailing save, captures pending edits
+ * on element switch (drained when the in-flight save completes), flushes on
+ * unmount, and reports status="error" when onSave throws.
+ *
+ * Contract — REQUIRED of consumers:
+ *   onSave MUST trigger a Redux-mediated isSaving transition (false → true →
+ *   false). The hook uses the saving→not-saving transition to clear the
+ *   "saving" status, fire trailing saves, and drain captured pending flushes.
+ *   If onSave is synchronous and never causes isSaving to flip, status will
+ *   stay at "saving" forever and trailing/captured saves will never fire.
+ *
+ *   In practice, every editor consumer routes onSave through Redux's
+ *   elementOpsState, which dispatches ELEMENT_SAVE_START (sets isSaving=true)
+ *   and ELEMENT_SAVE_SUCCESS/ERROR (sets isSaving=false). Honor that pattern.
  */
 export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   const { draft, hasPendingChanges, isValid, onSave, isSaving, elementId, debounceMs = 500 } = args;
