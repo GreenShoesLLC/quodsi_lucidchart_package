@@ -117,15 +117,60 @@ export interface UseAutoSaveResult {
 /**
  * Auto-save hook for inline panel editors.
  *
- * Phase 0 stub — types and signature only; no save fires yet. Subsequent tasks
- * implement debounce, saveNow, validation gating, in-flight coalescing,
- * element-switch flush, unmount flush, and error handling.
+ * Debounces saves: when hasPendingChanges + isValid + !isSaving, schedules
+ * onSave(draft) after debounceMs. Subsequent tasks add saveNow, validation
+ * gating, in-flight coalescing, element-switch flush, unmount flush, and
+ * error handling.
  */
-export function useAutoSave<T>(_args: UseAutoSaveArgs<T>): UseAutoSaveResult {
-  const [status] = useState<SaveStatus>("saved");
+export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
+  const { draft, hasPendingChanges, isValid, onSave, isSaving, debounceMs = 500 } = args;
+
+  const [status, setStatus] = useState<SaveStatus>("saved");
   const [lastSavedAt] = useState<number | null>(null);
+
+  // Refs synced each render so timer callbacks see fresh values
+  const draftRef = useRef(draft);
+  const onSaveRef = useRef(onSave);
+  const hasPendingRef = useRef(hasPendingChanges);
+  const isValidRef = useRef(isValid);
+  const isSavingRef = useRef(isSaving);
+  draftRef.current = draft;
+  onSaveRef.current = onSave;
+  hasPendingRef.current = hasPendingChanges;
+  isValidRef.current = isValid;
+  isSavingRef.current = isSaving;
+
+  const timerRef = useRef<number | null>(null);
+
+  const clearTimer = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const dispatchSave = useCallback(() => {
+    setStatus("saving");
+    onSaveRef.current(draftRef.current);
+  }, []);
+
   const saveNow = useCallback(() => {
     /* implemented in later tasks */
   }, []);
+
+  // Schedule debounced save on draft/dirty changes
+  useEffect(() => {
+    if (!hasPendingChanges || !isValid || isSaving) {
+      return;
+    }
+    clearTimer();
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      dispatchSave();
+    }, debounceMs);
+    return clearTimer;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, hasPendingChanges, isValid, isSaving, debounceMs]);
+
   return { status, lastSavedAt, saveNow };
 }
