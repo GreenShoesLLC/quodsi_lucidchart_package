@@ -349,6 +349,48 @@ describe("useAutoSave", () => {
       });
       expect(onSave).toHaveBeenCalledTimes(1); // no extra fire from old timer
     });
+
+    // C1 — element-switch + in-flight save + trailing edit must not lose data
+    it("captures and drains pending flush when element switches mid-save", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Step 1: User edits element e1 → debounce expires → save fires
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v1" });
+
+      // Step 2: Save in flight (parent set isSaving=true). User edits e1 again.
+      // Debounce effect sets trailingSaveNeededRef=true, no second dispatch.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e1" }));
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Step 3: User clicks element e2 BEFORE the in-flight save completes.
+      // The element-switch effect should capture the pending draft for the previous
+      // element so it can be drained later. (In real usage useFormSync's
+      // setLocalDraft is queued for the NEXT render; on this render draftRef.current
+      // is still the OLD draft.)
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e2" }));
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Step 4: useFormSync now updates localDraft to e2's data on the next render.
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: true, elementId: "e2" }));
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Step 5: In-flight save completes (parent sets isSaving=false).
+      // The saving-transition effect should drain the captured pending flush →
+      // onSave fires with the OLD element's pending edit ({ id: "e1", name: "v2" }).
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: false, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(2);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
+    });
   });
 
   describe("unmount flush", () => {
