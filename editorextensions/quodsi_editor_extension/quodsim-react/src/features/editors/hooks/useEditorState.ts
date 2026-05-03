@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Custom hook that syncs form state when the element ID changes.
@@ -79,4 +79,53 @@ export function useSaveCompletionDetector(
     // Update ref for next render
     previousSavingStateRef.current = isSaving;
   }, [isSaving, setHasPendingChanges]);
+}
+
+/**
+ * Status reported by useAutoSave for rendering in the SaveStatusLine.
+ * - "saved": idle; no pending edits, last save (if any) succeeded.
+ * - "saving": save is in flight, or about to fire from a debounce timer.
+ * - "invalid": pending edits exist but draft fails validation; no save will fire.
+ * - "error": last save threw. The next edit retriggers debounce → automatic retry.
+ */
+export type SaveStatus = "saved" | "saving" | "invalid" | "error";
+
+export interface UseAutoSaveArgs<T> {
+  /** Current local draft. */
+  draft: T;
+  /** Whether the user has unsaved changes (existing dirty flag — kept). */
+  hasPendingChanges: boolean;
+  /** Whether the draft passes validation. When false, no save fires. */
+  isValid: boolean;
+  /** Existing save callback — receives the draft when auto-save fires. */
+  onSave: (draft: T) => void;
+  /** True while a save is in flight (from Redux elementOpsState). */
+  isSaving: boolean;
+  /** ID of the currently selected element. Switching this flushes pending edits. */
+  elementId: string;
+  /** Debounce delay in ms. Defaults to 500. */
+  debounceMs?: number;
+}
+
+export interface UseAutoSaveResult {
+  status: SaveStatus;
+  lastSavedAt: number | null;
+  /** Imperative flush — bypasses debounce. Use from onBlur and discrete-event handlers. */
+  saveNow: () => void;
+}
+
+/**
+ * Auto-save hook for inline panel editors.
+ *
+ * Phase 0 stub — types and signature only; no save fires yet. Subsequent tasks
+ * implement debounce, saveNow, validation gating, in-flight coalescing,
+ * element-switch flush, unmount flush, and error handling.
+ */
+export function useAutoSave<T>(_args: UseAutoSaveArgs<T>): UseAutoSaveResult {
+  const [status] = useState<SaveStatus>("saved");
+  const [lastSavedAt] = useState<number | null>(null);
+  const saveNow = useCallback(() => {
+    /* implemented in later tasks */
+  }, []);
+  return { status, lastSavedAt, saveNow };
 }
