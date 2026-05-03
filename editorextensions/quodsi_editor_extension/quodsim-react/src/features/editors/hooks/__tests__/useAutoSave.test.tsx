@@ -391,6 +391,89 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenCalledTimes(2);
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
     });
+
+    // C1 — captured flush failure path (silent fire-and-forget for previous element)
+    it("logs to console.error and recovers when the captured flush throws", () => {
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      // First call (the regular save) succeeds; second call (the captured flush) throws.
+      const onSave = jest
+        .fn()
+        .mockImplementationOnce(() => { /* success */ })
+        .mockImplementationOnce(() => {
+          throw new Error("captured flush boom");
+        });
+
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Trigger a normal save → success.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // In-flight + edit + element switch → captured flush queued.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e1" }));
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e2" }));
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: true, elementId: "e2" }));
+
+      // Save completes → captured flush drains, onSave throws, console.error logs.
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: false, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(2); // both attempts ran
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "[useAutoSave] pending flush failed:",
+        expect.any(Error)
+      );
+      // Status reflects the new element, not the failed captured flush.
+      expect(result.current.status).toBe("saved");
+
+      void consoleErrorSpy; // afterEach restores via jest.restoreAllMocks()
+    });
+
+    // C1 — simultaneous case: isSaving=true AND trailingSaveNeededRef=true at switch time.
+    // The capture path uses draftRef.current (which holds the LATEST trailing edit), so
+    // the captured save subsumes the trailing one. trailingSaveNeededRef is cleared on
+    // switch to prevent double-fire after drain.
+    it("captures the latest draft when trailing flag is set and element switches mid-save", () => {
+      const onSave = jest.fn();
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // Step 1: User edits e1 → debounce fires → first save dispatched (call count 1).
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v1" });
+
+      // Step 2: Save in flight; user edits e1 again → trailingSaveNeededRef=true.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e1" }));
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Step 3: User clicks e2 BEFORE the in-flight save completes.
+      // Capture branch fires AND trailingSaveNeededRef is cleared. draftRef.current
+      // holds the latest trailing edit ({ id: "e1", name: "v2" }), so capturing it
+      // subsumes the trailing edit.
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true, elementId: "e2" }));
+
+      // Step 4: useFormSync delivers e2's data on next render.
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: true, elementId: "e2" }));
+
+      // Step 5: In-flight save completes → drain branch fires (priority 1), trailing branch skipped.
+      // Exactly ONE additional save fires with the latest pending draft for e1.
+      rerender(baseArgs({ onSave, draft: { id: "e2", name: "fresh" }, hasPendingChanges: false, isSaving: false, elementId: "e2" }));
+
+      expect(onSave).toHaveBeenCalledTimes(2); // 1 from Step 1 + 1 captured drain
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
+    });
   });
 
   describe("unmount flush", () => {
