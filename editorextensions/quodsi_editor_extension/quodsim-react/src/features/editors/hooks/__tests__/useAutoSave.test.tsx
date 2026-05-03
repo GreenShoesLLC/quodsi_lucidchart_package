@@ -419,4 +419,66 @@ describe("useAutoSave", () => {
       expect(result.current.lastSavedAt).toBe(fixedNow);
     });
   });
+
+  describe("error handling", () => {
+    it("transitions to 'error' when onSave throws", () => {
+      // Suppress console.error noise: dispatchSave (and the unmount flush on
+      // test cleanup) intentionally log when onSave throws. afterEach restores
+      // the spy via jest.restoreAllMocks().
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const onSave = jest.fn().mockImplementation(() => {
+        throw new Error("save failed");
+      });
+      const { result, rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe("error");
+      expect(consoleErrorSpy).toHaveBeenCalled(); // verify the diagnostic logging fired
+    });
+
+    it("retries on next edit after a thrown save", () => {
+      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+      const onSave = jest
+        .fn()
+        .mockImplementationOnce(() => {
+          throw new Error("save failed");
+        })
+        .mockImplementationOnce(() => {
+          /* success */
+        });
+
+      const { rerender } = renderHook(
+        (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
+        { initialProps: baseArgs({ onSave }) }
+      );
+
+      // First edit → fails
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+
+      // Second edit → succeeds
+      rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true }));
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(2);
+      expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
+
+      // Suppression spy is auto-restored by afterEach's jest.restoreAllMocks()
+      void consoleErrorSpy;
+    });
+  });
 });

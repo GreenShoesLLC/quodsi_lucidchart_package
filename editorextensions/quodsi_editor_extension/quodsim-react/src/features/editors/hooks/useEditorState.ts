@@ -155,7 +155,12 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
 
   const dispatchSave = useCallback(() => {
     setStatus("saving");
-    onSaveRef.current(draftRef.current);
+    try {
+      onSaveRef.current(draftRef.current);
+    } catch (err) {
+      console.error("[useAutoSave] save failed:", err);
+      setStatus("error");
+    }
   }, []);
 
   const saveNow = useCallback(() => {
