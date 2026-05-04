@@ -576,6 +576,71 @@ describe("useAutoSave", () => {
 
       expect(result.current.lastSavedAt).toBe(fixedNow);
     });
+
+    it("does not flicker to 'saved' if validation became invalid mid-save", async () => {
+      jest.useFakeTimers();
+      const onSave = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ draft, hasPendingChanges, isValid, isSaving }) =>
+          useAutoSave({
+            draft,
+            hasPendingChanges,
+            isValid,
+            onSave,
+            isSaving,
+            elementId: "el-1",
+          }),
+        {
+          initialProps: {
+            draft: { name: "valid" },
+            hasPendingChanges: true,
+            isValid: true,
+            isSaving: false,
+          },
+        }
+      );
+
+      // 1. Trigger debounce → save dispatched (isValid=true, hasPendingChanges=true).
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
+      expect(onSave).toHaveBeenCalledTimes(1);
+      expect(result.current.status).toBe("saving");
+
+      // 2. Parent flips isSaving=true (Redux).
+      rerender({
+        draft: { name: "valid" },
+        hasPendingChanges: true,
+        isValid: true,
+        isSaving: true,
+      });
+      expect(result.current.status).toBe("saving");
+
+      // 3. Mid-save, user introduces a validation error (e.g., types an invalid name).
+      // hasPendingChanges remains true; isValid flips false.
+      rerender({
+        draft: { name: "" }, // invalid (empty)
+        hasPendingChanges: true,
+        isValid: false,
+        isSaving: true,
+      });
+      expect(result.current.status).toBe("invalid");
+
+      // 4. In-flight save completes (Redux flips isSaving=false).
+      // BUG WAS: saving-transition effect would set status="saved" here, briefly
+      // overwriting "invalid" before the schedule effect re-evaluates.
+      // FIX: saving-transition effect must NOT set "saved" while
+      // (hasPendingRef.current && !isValidRef.current).
+      rerender({
+        draft: { name: "" },
+        hasPendingChanges: true,
+        isValid: false,
+        isSaving: false,
+      });
+      expect(result.current.status).toBe("invalid");
+
+      jest.useRealTimers();
+    });
   });
 
   describe("error handling", () => {

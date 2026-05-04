@@ -232,6 +232,15 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
   // 2. Trailing save needed (edits during in-flight save) — fire it.
   // 3. Default — mark the current element saved.
   useEffect(() => {
+    // Helper: only set "saved" when the post-save state is actually clean.
+    // If the user introduced invalid edits during the in-flight save, the
+    // schedule effect has already set status="invalid"; do NOT overwrite that.
+    const finalizeSavedStatus = () => {
+      if (hasPendingRef.current && !isValidRef.current) return;
+      setStatus("saved");
+      setLastSavedAt(Date.now());
+    };
+
     if (wasSavingRef.current && !isSaving) {
       if (pendingFlushDraftRef.current !== null) {
         // Drain the captured flush for the PREVIOUS element. Fire-and-forget:
@@ -251,12 +260,10 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
         if (hasPendingRef.current && isValidRef.current) {
           dispatchSave();
         } else {
-          setStatus("saved");
-          setLastSavedAt(Date.now());
+          finalizeSavedStatus();
         }
       } else {
-        setStatus("saved");
-        setLastSavedAt(Date.now());
+        finalizeSavedStatus();
       }
     }
     wasSavingRef.current = isSaving;
