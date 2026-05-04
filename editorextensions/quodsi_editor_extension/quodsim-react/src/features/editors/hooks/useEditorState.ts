@@ -314,3 +314,32 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
 
   return { status, lastSavedAt, saveNow };
 }
+
+/**
+ * Fire saveNow on the next render where `value` differs from the previously seen value.
+ *
+ * Designed for "decisive" UI controls that have no useful blur event (checkboxes,
+ * selects). Wraps the prevRef-compare-and-fire pattern used in editor migrations
+ * (Phase 1C/1D).
+ *
+ * Behavior:
+ * - Does NOT fire on initial mount.
+ * - Fires saveNow exactly once per change (then resets the ref).
+ * - Does NOT fire when the value is the same across renders.
+ *
+ * Safe across element switches: useAutoSave's saveNow internally early-returns
+ * when hasPendingChanges is false, so a stale prevRef-vs-new-draft mismatch on
+ * a fresh element is suppressed.
+ *
+ * @param value - The value to watch (typically a primitive or stable reference)
+ * @param saveNow - The flush callback returned by useAutoSave
+ */
+export function useFlushOnChange<T>(value: T, saveNow: () => void): void {
+  const prevRef = useRef<T>(value);
+  useEffect(() => {
+    if (prevRef.current !== value) {
+      prevRef.current = value;
+      saveNow();
+    }
+  }, [value, saveNow]);
+}

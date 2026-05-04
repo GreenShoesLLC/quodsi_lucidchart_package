@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Duration,
   Generator,
@@ -23,7 +23,7 @@ import StateModificationsEditor from "./StateModificationsEditor";
 import TimePatternEditorModal from "./TimePatternEditorModal";
 import TimeDistributedConfigEditorModal from "./TimeDistributedConfigEditorModal";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector, useAutoSave } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
@@ -418,33 +418,11 @@ const GeneratorEditor: React.FC<Props> = ({
     setNameError(null);
   }, [localGeneratorDraft.id]);
 
-  // Fire saveNow when entity selection changes.
-  // Selects have no useful onBlur; this runs after the state update commits so
-  // draftRef inside useAutoSave reflects the new entityId.
-  const prevEntityIdRef = useRef<string | undefined>(
-    localGeneratorDraft.generationConfig.entityId
-  );
-  useEffect(() => {
-    const current = localGeneratorDraft.generationConfig.entityId;
-    if (prevEntityIdRef.current !== current) {
-      prevEntityIdRef.current = current;
-      saveNow();
-    }
-  }, [localGeneratorDraft.generationConfig.entityId, saveNow]);
+  // Fire saveNow when entity selection changes (no onBlur on selects).
+  useFlushOnChange(localGeneratorDraft.generationConfig.entityId, saveNow);
 
-  // Fire saveNow when generator type changes (FREQUENCY <-> TIME_DISTRIBUTED).
-  // Currently TIME_DISTRIBUTED is UI-disabled but the watcher costs nothing and
-  // is ready when the feature ships.
-  const prevGeneratorTypeRef = useRef<GeneratorType | undefined>(
-    localGeneratorDraft.generationConfig.generatorType
-  );
-  useEffect(() => {
-    const current = localGeneratorDraft.generationConfig.generatorType;
-    if (prevGeneratorTypeRef.current !== current) {
-      prevGeneratorTypeRef.current = current;
-      saveNow();
-    }
-  }, [localGeneratorDraft.generationConfig.generatorType, saveNow]);
+  // Fire saveNow when generator type changes (TIME_DISTRIBUTED is UI-disabled today; no-op until shipped).
+  useFlushOnChange(localGeneratorDraft.generationConfig.generatorType, saveNow);
 
   const entities = referenceData.entities || [];
 

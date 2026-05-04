@@ -63,7 +63,8 @@ import {
 } from "../../utils/resourceRequirementConverter";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 
 // ============================================================================
 // SORTABLE ACTION ITEM WRAPPER
@@ -260,6 +261,7 @@ type ActivityTab =
  * - Basic: Name, capacity, queue sizes
  * - Actions: Processing durations and resource requirements
  * - Financial: Cost tracking properties
+ * - Failure: MTBF/MTTR breakdown simulation
  * - Connectors: Routing rules for outgoing connectors
  * - States: State definitions for the activity
  *
@@ -267,12 +269,31 @@ type ActivityTab =
  * - Maintains local draft state (localActivityDraft) for immediate UI updates
  * - Syncs with Redux for save state tracking (isSaving, optimisticData)
  * - Uses custom hooks for activity switching and save completion detection
- * - Only persists changes when user clicks Save button
+ * - Single save path: all field changes route through useAutoSave (debounced)
+ *
+ * Save Behavior:
+ * - Typed inputs (name, capacity, queue capacities, 5 financial cost fields):
+ *   debounced auto-save on edit; immediate save on blur or element switch.
+ * - Decisive controls (financialEnabled, failureEnabled, failureClockMode,
+ *   repairResourceRequirementId, connectType): immediate save via
+ *   useFlushOnChange — selects/checkboxes have no useful onBlur.
+ * - Sub-component-driven changes (ActionEditor, EnhancedDurationEditor,
+ *   RoutingConfigurationContent): debounced auto-save — sub-components fire
+ *   onChange per keystroke, debounce coalesces.
+ * - Validation: name uniqueness + 4 action validation checks (Split needs
+ *   destination, Create needs entityTemplate+destination, Join needs
+ *   matchState+destination, Branch needs condition). Save is gated when
+ *   any validation fails; the 4 red banners describe what to fix while
+ *   SaveStatusLine summarizes status ("Fix errors to save").
+ * - Status surfaced via SaveStatusLine. Native LucidChart Ctrl+Z reverses
+ *   saved changes.
  *
  * Key Features:
- * - Dirty state tracking (hasPendingChanges) enables/disables Save button
+ * - Auto-save for all fields via useAutoSave hook
  * - Guard conditions prevent data loss when switching activities
  * - Immutable updates via updateActivityImmutably helper
+ *
+ * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
  */
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
@@ -583,6 +604,26 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const hasActionValidationError = hasSplitValidationError || hasCreateValidationError || hasJoinValidationError || hasBranchValidationError;
 
   // ============================================================================
+  // AUTO-SAVE
+  // ============================================================================
+
+  const { status, lastSavedAt, saveNow } = useAutoSave<Activity>({
+    draft: localActivityDraft,
+    hasPendingChanges,
+    isValid: nameError === null && !hasActionValidationError,
+    onSave,
+    isSaving,
+    elementId: localActivityDraft.id,
+  });
+
+  // Decisive controls (no onBlur): flush save on change.
+  useFlushOnChange(localActivityDraft.financialProperties?.enabled, saveNow);
+  useFlushOnChange(localActivityDraft.failureProperties?.enabled, saveNow);
+  useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveNow);
+  useFlushOnChange(localActivityDraft.failureProperties?.repairResourceRequirementId, saveNow);
+  useFlushOnChange(localActivityDraft.connectType, saveNow);
+
+  // ============================================================================
   // EVENT HANDLERS
   // ============================================================================
 
@@ -590,10 +631,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Handles changes to basic input fields (name, capacity, queue capacities).
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
-   * but not persisted until user clicks Save button.
+   * validates the name, and marks the draft as pending. Auto-save fires after
+   * debounce or on blur.
    *
-   * Special handling for queue capacities: Converts display values (999999)
-   * back to internal format (Infinity) using displayToBuffer helper.
+   * Queue capacity values are stored as-is (999999 represents unlimited; passed
+   * through to JSON serialization without conversion).
    */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -624,58 +666,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     });
 
     setHasPendingChanges(true);
-  };
-
-  /**
-   * Saves the current activity draft to the model.
-   *
-   * Key responsibilities:
-   * - Converts display values back to internal format (999999 → Infinity)
-   * - Triggers Redux save action via onSave callback
-   * - Redux manages isSaving state and optimistic updates
-   * - useSaveCompletionDetector hook clears hasPendingChanges when save completes
-   *
-   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
-   * save completion detector to avoid race conditions.
-   */
-  const handleSave = () => {
-    const activityToSave = new Activity(
-      localActivityDraft.id,
-      localActivityDraft.name,
-      localActivityDraft.capacity,
-      displayToBuffer(localActivityDraft.inboundQueueCapacity),
-      displayToBuffer(localActivityDraft.outboundQueueCapacity),
-      localActivityDraft.actions,
-      localActivityDraft.x,
-      localActivityDraft.y
-    );
-
-    // Preserve connectType
-    activityToSave.connectType = localActivityDraft.connectType;
-
-    // Preserve financialProperties
-    activityToSave.financialProperties = localActivityDraft.financialProperties;
-
-    // Preserve failureProperties
-    activityToSave.failureProperties = localActivityDraft.failureProperties;
-
-    // Save is handled through Redux - modelOpsSender will dispatch ELEMENT_SAVE_START
-    onSave(activityToSave);
-    // Note: isSaving state is now managed by Redux through elementOpsState
-  };
-
-  /**
-   * Cancels editing and resets form to original activity data.
-   *
-   * Discards all pending changes by:
-   * - Re-extracting fresh data from activity prop
-   * - Clearing hasPendingChanges flag (disables Save button)
-   *
-   * Note: Does NOT close the editor - that's handled by parent component.
-   */
-  const handleCancel = () => {
-    setLocalActivityDraft(extractActivityData(activity));
-    setHasPendingChanges(false);
   };
 
   /**
@@ -865,9 +855,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * - Resource cost multipliers
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
-   * but NOT persisted until user clicks Save button.
-   *
-   * Sets hasPendingChanges to enable the Save button.
+   * and marked as pending. Auto-save fires after debounce or on blur (cost
+   * fields), or immediately via useFlushOnChange (the financial-enabled
+   * checkbox).
    *
    * @param field - The financial property field to update
    * @param value - The new value for the field
@@ -901,7 +891,10 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    *
    * Creates a new FailureProperties instance with the updated field,
    * preserving all other failure properties. Failure configuration enables
-   * MTBF/MTTR simulation for activity breakdowns.
+   * MTBF/MTTR simulation for activity breakdowns. Auto-save fires after
+   * debounce (MTBF/MTTR durations via EnhancedDurationEditor) or
+   * immediately via useFlushOnChange (failure-enabled checkbox,
+   * failureClockMode select, repairResourceRequirementId select).
    */
   const handleFailureChange = (
     field: keyof FailureProperties,
@@ -931,9 +924,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * - EntityType: Route based on entity template
    *
    * Updates are applied immediately to localActivityDraft for responsive UI,
-   * but NOT persisted until user clicks Save button.
-   *
-   * Sets hasPendingChanges to enable the Save button.
+   * and marked as pending. Save fires immediately via useFlushOnChange watching
+   * connectType (selects have no useful onBlur).
    *
    * @param e - Change event from select or input element
    */
@@ -1109,6 +1101,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     value={localActivityDraft.name}
                     onChange={handleInputChange}
                     placeholder="Enter activity name"
+                    onBlur={saveNow}
                   />
                   {nameError && (
                     <p className="text-xs text-red-500 mt-1">{nameError}</p>
@@ -1132,6 +1125,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     value={localActivityDraft.capacity}
                     onChange={handleInputChange}
                     min="1"
+                    onBlur={saveNow}
                   />
                 </div>
 
@@ -1170,6 +1164,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
+                          onBlur={saveNow}
                         />
                       </div>
 
@@ -1191,6 +1186,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
+                          onBlur={saveNow}
                         />
                       </div>
                     </div>
@@ -1308,6 +1304,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           min="0"
                           step="0.01"
                           placeholder="0.00"
+                          onBlur={saveNow}
                         />
                       </div>
                       <div>
@@ -1335,6 +1332,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           min="0"
                           step="0.01"
                           placeholder="0.00"
+                          onBlur={saveNow}
                         />
                       </div>
                       <div>
@@ -1362,6 +1360,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           min="0"
                           step="0.01"
                           placeholder="0.00"
+                          onBlur={saveNow}
                         />
                       </div>
                       <div>
@@ -1389,6 +1388,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           min="0"
                           step="0.01"
                           placeholder="0.00"
+                          onBlur={saveNow}
                         />
                       </div>
                     </div>
@@ -1419,6 +1419,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                         min="0"
                         step="0.1"
                         placeholder="1.0"
+                        onBlur={saveNow}
                       />
                     </div>
                   </>
@@ -1658,12 +1659,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           */}
         </div>
 
-        {/* Save/Cancel Buttons */}
+        {/* Validation banners + auto-save status */}
         <div className="pt-2 border-t">
             {/* Validation Error Messages */}
             {hasSplitValidationError && (
               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                <strong>Cannot save:</strong> Split action requires a destination activity.
+                <strong>Fix to save:</strong> Split action requires a destination activity.
                 {splitActionsWithoutDestination.length > 1 && (
                   <span> ({splitActionsWithoutDestination.length} actions need destinations)</span>
                 )}
@@ -1671,7 +1672,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
             {hasCreateValidationError && (
               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                <strong>Cannot save:</strong> Create action requires entity template and destination.
+                <strong>Fix to save:</strong> Create action requires entity template and destination.
                 {createActionsWithMissingFields.length > 1 && (
                   <span> ({createActionsWithMissingFields.length} actions need configuration)</span>
                 )}
@@ -1679,7 +1680,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
             {hasJoinValidationError && (
               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                <strong>Cannot save:</strong> Join action requires match state and destination.
+                <strong>Fix to save:</strong> Join action requires match state and destination.
                 {joinActionsWithMissingFields.length > 1 && (
                   <span> ({joinActionsWithMissingFields.length} actions need configuration)</span>
                 )}
@@ -1687,36 +1688,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
             )}
             {hasBranchValidationError && (
               <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                <strong>Cannot save:</strong> Branch action requires a condition to be set.
+                <strong>Fix to save:</strong> Branch action requires a condition to be set.
                 {branchActionsWithMissingCondition.length > 1 && (
                   <span> ({branchActionsWithMissingCondition.length} actions need configuration)</span>
                 )}
               </div>
             )}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={isSaving}
-                className={`px-3 py-1.5 text-xs border rounded ${
-                  isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={!hasPendingChanges || isSaving || hasActionValidationError || nameError !== null}
-                className={`px-3 py-1.5 text-xs rounded ${
-                  hasPendingChanges && !isSaving && !hasActionValidationError && nameError === null
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                {isSaving ? "Saving..." : "Save"}
-              </button>
-            </div>
+            {/* Auto-save status (validation banners above provide details on what to fix) */}
+            <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
           </div>
       </div>
 
