@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, DollarSign, Hash, Info } from "lucide-react";
 import {
   Resource,
@@ -11,7 +11,7 @@ import {
 } from "@quodsi/shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector, useAutoSave } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
 
 // ============================================================================
@@ -249,19 +249,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
     setNameError(null);
   }, [localResourceDraft.id]);
 
-  // Fire saveNow when financial-enabled checkbox toggles.
-  // Checkbox has no onBlur; this runs after the state update commits so
-  // draftRef inside useAutoSave reflects the new value.
-  const prevFinancialEnabledRef = useRef<boolean | undefined>(
-    localResourceDraft.financialProperties?.enabled
-  );
-  useEffect(() => {
-    const current = localResourceDraft.financialProperties?.enabled;
-    if (prevFinancialEnabledRef.current !== current) {
-      prevFinancialEnabledRef.current = current;
-      saveNow();
-    }
-  }, [localResourceDraft.financialProperties?.enabled, saveNow]);
+  // Fire saveNow when the financial-enabled checkbox toggles (no onBlur on checkboxes).
+  useFlushOnChange(localResourceDraft.financialProperties?.enabled, saveNow);
 
   // Guard against invalid resource data
   if (!localResourceDraft?.id) {
