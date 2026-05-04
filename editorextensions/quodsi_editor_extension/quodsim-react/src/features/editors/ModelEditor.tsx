@@ -26,7 +26,8 @@ import { useSimulationRunSender } from "../../messaging/senders/simulationRunSen
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 import {
   extractModelData,
   updateModelImmutably,
@@ -546,8 +547,8 @@ const ScenariosAndRunsPanel: React.FC<{
  * Features:
  * - Five-tab interface: Basic Settings, State Definitions, Resource Requirements, Scenarios, and Validation
  * - Controlled component with immediate UI updates
- * - Manual save for basic fields (name, reps, seed, time settings)
- * - Auto-save for states, requirements, and scenarios (handled by sub-editors)
+ * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush;
+ *   useFlushOnChange flush for select dropdowns)
  *
  * Tabs:
  * - Basic: Model name, simulation parameters (reps, seed), and time configuration
@@ -560,14 +561,27 @@ const ScenariosAndRunsPanel: React.FC<{
  * - Maintains local draft state (localModelDraft) for immediate UI updates
  * - Syncs with Redux for save state tracking (isSaving)
  * - Uses custom hooks for model switching and save completion detection
+ * - Single save path: all Basic-tab field changes route through useAutoSave (debounced)
  *
  * Save Behavior:
- * - Basic tab: Requires Save button click to persist changes
- * - States tab: Auto-saves immediately (Save/Cancel buttons hidden)
- * - Requirements tab: Auto-saves immediately
- * - Scenarios tab: Auto-saves immediately
+ * - Basic tab — Typed inputs (name, reps, runClockPeriod, warmupClockPeriod,
+ *   startDateTime, finishDateTime, warmupDateTime): debounced auto-save on edit;
+ *   immediate save on blur or element switch.
+ * - Basic tab — Selects (simulationTimeType, runClockPeriodUnit, oneClockUnit,
+ *   warmupClockPeriodUnit): immediate save via useFlushOnChange (selects have no
+ *   useful onBlur).
+ * - Save defaulting: onSave is wrapped in onSaveWithDefaults that applies fallbacks
+ *   for falsy fields (DEFAULT_RANDOM_SEED for seed, PeriodUnit.HOURS for unit
+ *   selectors, etc.) so every saved Model is fully populated even if the user
+ *   blanked optional fields.
+ * - States tab: Auto-saves immediately via parent onStatesChange.
+ * - Requirements tab: Auto-saves immediately via updateResourceRequirements.
+ * - Scenarios tab: Auto-saves immediately via updateScenarioDefinitions.
+ * - Validation tab: Read-only.
+ * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
+ *   keep typing to retry"). Native LucidChart Ctrl+Z reverses saved changes.
  *
- * @param props - Component props
+ * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
  * @returns Rendered model editor component
  */
 const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
@@ -616,6 +630,46 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
+  // Wrap onSave with defaulting logic preserved from the deleted handleSave.
+  // Auto-save dispatches the raw draft; this callback applies fallbacks for
+  // fields that may be falsy (e.g., seed has no UI input — always defaults).
+  const onSaveWithDefaults = useCallback(
+    (draft: Model) => {
+      const modelToSave: Model = {
+        ...draft,
+        type: "Model" as any, // Cast: SimulationObjectType.Model is enum; type field expects string literal
+        reps: draft.reps || 1,
+        seed: draft.seed || DEFAULT_RANDOM_SEED,
+        simulationTimeType: draft.simulationTimeType || SimulationTimeType.Clock,
+        oneClockUnit: draft.oneClockUnit || PeriodUnit.HOURS,
+        warmupClockPeriod: draft.warmupClockPeriod || 0,
+        warmupClockPeriodUnit: draft.warmupClockPeriodUnit || PeriodUnit.HOURS,
+        runClockPeriod: draft.runClockPeriod || 0,
+        runClockPeriodUnit: draft.runClockPeriodUnit || PeriodUnit.HOURS,
+        warmupDateTime: draft.warmupDateTime || null,
+        startDateTime: draft.startDateTime || null,
+        finishDateTime: draft.finishDateTime || null,
+      };
+      onSave(modelToSave);
+    },
+    [onSave]
+  );
+
+  const { status, lastSavedAt, saveNow } = useAutoSave<Model>({
+    draft: localModelDraft,
+    hasPendingChanges,
+    isValid: true,
+    onSave: onSaveWithDefaults,
+    isSaving,
+    elementId: localModelDraft.id,
+  });
+
+  // Decisive selects (no useful onBlur): flush save on change.
+  useFlushOnChange(localModelDraft.simulationTimeType, saveNow);
+  useFlushOnChange(localModelDraft.runClockPeriodUnit, saveNow);
+  useFlushOnChange(localModelDraft.oneClockUnit, saveNow);
+  useFlushOnChange(localModelDraft.warmupClockPeriodUnit, saveNow);
+
   // Trigger validation when validation tab is selected
   useEffect(() => {
     if (activeTab === 'validation' && onValidate) {
@@ -641,7 +695,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
    * Handles changes to form input fields with automatic type conversion.
    *
    * Updates are applied immediately to localModelDraft for responsive UI,
-   * and marked as pending (requiring Save button click to persist).
+   * and marked as pending. Auto-save fires after debounce (typed inputs),
+   * on blur (typed inputs), or via useFlushOnChange (selects).
    *
    * Type conversion:
    * - number inputs: Parsed as float with fallback to 0 for invalid values
@@ -664,54 +719,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
 
     setLocalModelDraft(prev => updateModelImmutably(prev, { [name]: convertedValue } as Partial<Model>));
     setHasPendingChanges(true);
-  };
-
-  /**
-   * Saves the current model draft state.
-   *
-   * Constructs a complete Model object with all required properties and defaults,
-   * then invokes the parent onSave callback. Redux manages the isSaving state automatically.
-   *
-   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
-   * save completion detector to avoid race conditions.
-   */
-  const handleSave = () => {
-    const modelToSave: Model = {
-      ...localModelDraft,
-      type: "Model" as any, // Cast needed: SimulationObjectType.Model is enum, type field expects string literal
-      // Ensure all properties have defaults
-      reps: localModelDraft.reps || 1,
-      seed: localModelDraft.seed || DEFAULT_RANDOM_SEED,
-      simulationTimeType: localModelDraft.simulationTimeType || SimulationTimeType.Clock,
-      oneClockUnit: localModelDraft.oneClockUnit || PeriodUnit.HOURS,
-      warmupClockPeriod: localModelDraft.warmupClockPeriod || 0,
-      warmupClockPeriodUnit: localModelDraft.warmupClockPeriodUnit || PeriodUnit.HOURS,
-      runClockPeriod: localModelDraft.runClockPeriod || 0,
-      runClockPeriodUnit: localModelDraft.runClockPeriodUnit || PeriodUnit.HOURS,
-      warmupDateTime: localModelDraft.warmupDateTime || null,
-      startDateTime: localModelDraft.startDateTime || null,
-      finishDateTime: localModelDraft.finishDateTime || null,
-    };
-
-    onSave(modelToSave);
-    // Note: isSaving state is now managed by Redux through elementOpsState
-  };
-
-  /**
-   * Cancels editing and closes the editor.
-   *
-   * Discards all pending changes by:
-   * - Re-extracting fresh data from model prop
-   * - Clearing hasPendingChanges flag (disables Save button)
-   * - Calling onCancel prop to close the editor panel
-   *
-   * Note: State, requirement, and scenario changes were already auto-saved,
-   * so they can't be canceled.
-   */
-  const handleCancel = () => {
-    setLocalModelDraft(extractModelData(model));
-    setHasPendingChanges(false);
-    onCancel();
   };
 
   // ============================================================================
@@ -744,9 +751,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
       </div>
 
       {activeTab === "basic" && (
-        <>
-          <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="w-full">
-            <div className="space-y-2">
+        <div className="w-full">
+          <div className="space-y-2">
               {/* Model Name - Always Visible WITH LABEL */}
                   <div>
                     <div className="flex items-center gap-1 mb-1">
@@ -764,6 +770,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                       value={localModelDraft.name}
                       placeholder="Enter model name"
                       onChange={handleChange}
+                      onBlur={saveNow}
                     />
                 </div>
 
@@ -786,6 +793,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                         value={localModelDraft.runClockPeriod || 0}
                         onChange={handleChange}
                         min="0"
+                        onBlur={saveNow}
                       />
                       <select
                         name="runClockPeriodUnit"
@@ -827,6 +835,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                         value={localModelDraft.reps}
                         onChange={handleChange}
                         min="1"
+                        onBlur={saveNow}
                       />
                     </div>
 
@@ -899,6 +908,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                               value={localModelDraft.warmupClockPeriod || 0}
                               onChange={handleChange}
                               min="0"
+                              onBlur={saveNow}
                             />
                             <select
                               name="warmupClockPeriodUnit"
@@ -935,6 +945,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                             className="w-full px-2 py-1 text-xs border rounded"
                             value={localModelDraft.startDateTime?.toISOString().slice(0, 16) || ""}
                             onChange={handleChange}
+                            onBlur={saveNow}
                           />
                         </div>
                         <div>
@@ -952,6 +963,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                             className="w-full px-2 py-1 text-xs border rounded"
                             value={localModelDraft.finishDateTime?.toISOString().slice(0, 16) || ""}
                             onChange={handleChange}
+                            onBlur={saveNow}
                           />
                         </div>
                         <div>
@@ -969,6 +981,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                             className="w-full px-2 py-1 text-xs border rounded"
                             value={localModelDraft.warmupDateTime?.toISOString().slice(0, 16) || ""}
                             onChange={handleChange}
+                            onBlur={saveNow}
                           />
                         </div>
                       </>
@@ -977,32 +990,9 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                 </AccordionSection>
               </div>
 
-              {/* Save/Cancel Buttons */}
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  className={`px-3 py-1.5 text-xs border rounded ${
-                    isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!hasPendingChanges || isSaving}
-                  className={`px-3 py-1.5 text-xs rounded ${
-                    hasPendingChanges && !isSaving
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  }`}
-                >
-                  {isSaving ? "Saving..." : "Save"}
-                </button>
-              </div>
-            </form>
-        </>
+              {/* Auto-save status */}
+              <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+          </div>
       )}
       {activeTab === "states" && (
         <StatesEditor
