@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Activity,
   ConnectType,
@@ -8,6 +8,9 @@ import {
 } from "@quodsi/shared";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { useModelOpsSender } from "../../messaging/senders";
+import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 
 // ============================================================================
 // TYPES
@@ -29,11 +32,22 @@ interface ConnectorsEditorProps {
 /**
  * ConnectorsEditor - Dedicated editor for Activity routing configuration
  *
- * Can be used:
- * 1. Standalone when a Connector/Line is selected (shows source Activity's routing)
- * 2. Embedded in ActivityEditor's "connectors" tab
+ * Used standalone when a Connector/Line is selected (shows source Activity's
+ * routing). When selectedConnectorId is provided, highlights that connector
+ * in the list.
  *
- * When selectedConnectorId is provided, highlights that connector in the list
+ * NOTE: ActivityEditor's "connectors" tab uses RoutingConfigurationContent
+ * directly (not this component); ActivityEditor handles its own auto-save
+ * for connectType.
+ *
+ * Save Behavior:
+ * - Routing type (connectType) change: immediate save via useFlushOnChange
+ *   (selects have no useful onBlur). Status surfaced via SaveStatusLine
+ *   ("Saved" / "Saving…" / "Save failed — keep typing to retry"). Native
+ *   LucidChart Ctrl+Z reverses saved changes.
+ * - Per-connector configuration (probabilities, conditions, entity mappings):
+ *   handled by RoutingConfigurationPanel via its own messaging path —
+ *   outside this editor's auto-save scope.
  */
 const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   activity,
@@ -95,11 +109,44 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   const [localActivityDraft, setLocalActivityDraft] = useState<Activity>(() =>
     extractActivityData(activity)
   );
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
-  // Sync local draft when activity prop changes (e.g., user selects a different connector)
-  useEffect(() => {
-    setLocalActivityDraft(extractActivityData(activity));
-  }, [activity?.id]);
+  // Get element operations state from Redux
+  const elementOpsState = useElementOpsState();
+  const isSaving = localActivityDraft.id
+    ? elementOpsState.isSaving(localActivityDraft.id)
+    : false;
+
+  // Sync local draft when activity prop changes — guards against overwriting in-flight edits.
+  useFormSync(
+    activity.id,
+    hasPendingChanges,
+    () => extractActivityData(activity),
+    setLocalActivityDraft,
+    setHasPendingChanges
+  );
+
+  useSaveCompletionDetector(isSaving, setHasPendingChanges);
+
+  // Wrap updateElementData in the onSave shape the hook expects.
+  const onSave = useCallback(
+    (updated: Activity) => {
+      updateElementData(updated.id, "Activity", updated);
+    },
+    [updateElementData]
+  );
+
+  const { status, lastSavedAt, saveNow } = useAutoSave<Activity>({
+    draft: localActivityDraft,
+    hasPendingChanges,
+    isValid: true,
+    onSave,
+    isSaving,
+    elementId: localActivityDraft.id,
+  });
+
+  // Fire saveNow when routing type changes (no debounce — connectType is decisive).
+  useFlushOnChange(localActivityDraft.connectType, saveNow);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -107,7 +154,10 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
   /**
    * Handles changes to the activity's routing type (ConnectType).
-   * Auto-saves immediately by sending the updated Activity to the extension.
+   *
+   * Updates local draft and marks pending — useFlushOnChange watching connectType
+   * fires saveNow on the next render, which dispatches the save through useAutoSave.
+   * Status surfaced via SaveStatusLine.
    */
   const handleConnectTypeChange = (
     e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>
@@ -127,7 +177,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
     updatedActivity.financialProperties = localActivityDraft.financialProperties;
 
     setLocalActivityDraft(updatedActivity);
-    updateElementData(updatedActivity.id, "Activity", updatedActivity);
+    setHasPendingChanges(true);
   };
 
   // ============================================================================
@@ -144,6 +194,9 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
         referenceData={referenceData}
         states={states}
       />
+
+      {/* Auto-save status */}
+      <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
     </div>
   );
 };
