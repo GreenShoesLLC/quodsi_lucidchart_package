@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
 import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
@@ -278,6 +278,20 @@ export const ModelPanel: React.FC = () => {
       ? SimulationObjectType.Model
       : (currentElement.metadata?.type as SimulationObjectType) || SimulationObjectType.Model;
 
+  // Memoize onElementUpdate-bound callback so child editors' useAutoSave
+  // hooks see a stable reference. Without this, the parent's inline arrow
+  // produces a new function each render, cascading to all 6 editors and
+  // re-attaching their internal effects (the value-equality guards
+  // suppress spurious save fires, but the effects still re-run).
+  const handleElementSave = useCallback(
+    (data: any) => {
+      if (currentElement) {
+        onElementUpdate(currentElement.id, data);
+      }
+    },
+    [onElementUpdate, currentElement?.id]
+  );
+
   // Main content render
   return (
     <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
@@ -307,7 +321,7 @@ export const ModelPanel: React.FC = () => {
               currentElement,
               currentElement.data
             )}
-            onSave={data => onElementUpdate(currentElement.id, data)}
+            onSave={handleElementSave}
             onRemoveModel={onRemoveModel}
             onValidate={onValidate}
             referenceData={referenceData}
