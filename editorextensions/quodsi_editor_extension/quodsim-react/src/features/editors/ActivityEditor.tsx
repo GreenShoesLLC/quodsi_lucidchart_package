@@ -4,7 +4,6 @@ import {
   Plus,
   Layers,
   DollarSign,
-  Hash,
   ArrowRightLeft,
   Info,
   ChevronDown,
@@ -231,8 +230,6 @@ interface ActivityEditorProps {
   activity: ActivityInput;
   /** Callback when user clicks Save - receives the updated Activity */
   onSave: (activity: Activity) => void;
-  /** Callback when user clicks Cancel */
-  onCancel: () => void;
   /** Reference data for dropdowns (resources, requirements, etc.) */
   referenceData?: EditorReferenceData;
   /** State manager for model-level states */
@@ -267,7 +264,7 @@ type ActivityTab =
  *
  * State Management:
  * - Maintains local draft state (localActivityDraft) for immediate UI updates
- * - Syncs with Redux for save state tracking (isSaving, optimisticData)
+ * - Syncs with Redux for save state tracking (isSaving)
  * - Uses custom hooks for activity switching and save completion detection
  * - Single save path: all field changes route through useAutoSave (debounced)
  *
@@ -293,12 +290,11 @@ type ActivityTab =
  * - Guard conditions prevent data loss when switching activities
  * - Immutable updates via updateActivityImmutably helper
  *
- * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
+ * @param props - Component props
  */
 const ActivityEditor: React.FC<ActivityEditorProps> = ({
   activity,
   onSave,
-  onCancel,
   referenceData,
   states,
   onStatesChange,
@@ -348,18 +344,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const queueToDisplay = (value: number | null | undefined): number =>
     value === null || value === undefined ? INFINITY_DISPLAY_VALUE : value;
-
-  /**
-   * Converts display values from the UI back to internal queue capacity values.
-   *
-   * Values are passed through as-is. The value 999999 represents unlimited
-   * capacity and is stored directly (not converted to Infinity) to ensure
-   * proper serialization to JSON.
-   *
-   * @param value - Display value from UI
-   * @returns The same value (999999 represents unlimited)
-   */
-  const displayToBuffer = (value: number): number => value;
 
   /**
    * Extracts and normalizes activity data from props into a clean Activity instance.
@@ -501,8 +485,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Local draft of the activity being edited.
    *
    * This is the single source of truth for form state. All inputs read from
-   * and write to this state. Changes are applied immediately for responsive UI,
-   * but only persisted to model when user clicks Save.
+   * and write to this state. Changes are applied immediately for responsive UI;
+   * auto-save persists them after debounce or on blur.
    *
    * Initialized with extractActivityData() to normalize incoming props.
    */
@@ -514,11 +498,11 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Flag indicating whether user has made changes that haven't been saved.
    *
    * Controls:
-   * - Save button enabled/disabled state
-   * - Guard condition for activity switching (prevents data loss)
+   * - useFormSync guard: prevents overwriting in-flight edits when activity prop changes
+   * - useAutoSave debounce trigger: when true, the hook schedules a save
    *
    * Set to true: When any field changes
-   * Set to false: When save completes (via useSaveCompletionDetector) or Cancel clicked
+   * Set to false: When save completes (via useSaveCompletionDetector)
    */
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
@@ -526,17 +510,13 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    * Redux-managed state for save operation tracking.
    *
    * isSaving: true when save is in progress (shows loading state)
-   * optimisticData: Optimistically updated data (shown during save)
    *
-   * These are managed by Redux elementOpsState to coordinate saves across
+   * Managed by Redux elementOpsState to coordinate saves across
    * multiple editor instances.
    */
   const isSaving = localActivityDraft.id
     ? elementOpsState.isSaving(localActivityDraft.id)
     : false;
-  const optimisticData = localActivityDraft.id
-    ? elementOpsState.getOptimisticData(localActivityDraft.id)
-    : null;
 
   // Custom hooks for state synchronization
   useFormSync(
@@ -657,9 +637,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       } else if (name === "capacity") {
         updates.capacity = parseInt(value) || 1;
       } else if (name === "inboundQueueCapacity") {
-        updates.inboundQueueCapacity = displayToBuffer(parseInt(value) || 0);
+        updates.inboundQueueCapacity = parseInt(value) || 0;
       } else if (name === "outboundQueueCapacity") {
-        updates.outboundQueueCapacity = displayToBuffer(parseInt(value) || 0);
+        updates.outboundQueueCapacity = parseInt(value) || 0;
       }
 
       return updateActivityImmutably(prev, updates);

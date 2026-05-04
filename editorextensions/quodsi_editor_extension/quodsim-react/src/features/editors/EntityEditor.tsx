@@ -25,8 +25,6 @@ interface Props {
   entity: Entity;
   /** Callback invoked when user saves changes */
   onSave: (entity: Entity) => void;
-  /** Callback invoked when user cancels editing (closes the editor) */
-  onCancel: () => void;
   /** State variables associated with this entity template */
   states: StateListManager;
   /** Callback invoked when state definitions change */
@@ -83,10 +81,10 @@ const TAB_CONFIG = [
  *   LucidChart Ctrl+Z reverses saved changes.
  * - States tab: Auto-saves immediately (handled by StatesEditor)
  *
- * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
+ * @param props - Component props
  * @returns Rendered entity editor component
  */
-const EntityEditor: React.FC<Props> = ({ entity, onSave, onCancel, states, onStatesChange, referenceData }) => {
+const EntityEditor: React.FC<Props> = ({ entity, onSave, states, onStatesChange, referenceData }) => {
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================

@@ -31,8 +31,6 @@ interface Props {
   resource: Resource;
   /** Callback invoked when user saves changes */
   onSave: (resource: Resource) => void;
-  /** Callback invoked when user cancels editing (closes the editor) */
-  onCancel: () => void;
   /** State variables associated with this resource */
   states: StateListManager;
   /** Callback invoked when state definitions change */
@@ -106,10 +104,10 @@ const TAB_CONFIG = [
  *   save" / "Save failed — keep typing to retry"). Native LucidChart Ctrl+Z
  *   reverses saved changes.
  *
- * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
+ * @param props - Component props
  * @returns Rendered resource editor component
  */
-const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, onStatesChange, referenceData }) => {
+const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesChange, referenceData }) => {
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================

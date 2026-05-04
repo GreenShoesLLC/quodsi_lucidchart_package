@@ -71,8 +71,6 @@ interface Props {
   generator: Generator;
   /** Callback when user clicks Save or when auto-save triggers - receives the updated Generator */
   onSave: (generator: Generator) => void;
-  /** Callback when user clicks Cancel */
-  onCancel: () => void;
   /** Reference data for dropdowns (entities, etc.) - includes timePatterns and timeDistributedConfigs */
   referenceData: EditorReferenceData;
   /** State manager for model-level states */
@@ -129,12 +127,11 @@ type GeneratorTab = "settings" | "events" | "states";
  * - Guard conditions prevent data loss when switching generators
  * - Immutable updates via updateGeneratorImmutably helper
  *
- * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
+ * @param props - Component props
  */
 const GeneratorEditor: React.FC<Props> = ({
   generator,
   onSave,
-  onCancel,
   referenceData,
   states,
   onStatesChange,
@@ -325,8 +322,8 @@ const GeneratorEditor: React.FC<Props> = ({
    * Local draft of the generator being edited.
    *
    * This is the single source of truth for form state. All inputs read from
-   * and write to this state. Changes are applied immediately for responsive UI,
-   * but only persisted when user clicks Save (except state modifications which auto-save).
+   * and write to this state. Changes are applied immediately for responsive UI;
+   * auto-save persists them after debounce.
    *
    * Initialized with extractGeneratorData() to normalize incoming props.
    */
@@ -336,13 +333,11 @@ const GeneratorEditor: React.FC<Props> = ({
    * Flag indicating whether user has made changes that haven't been saved.
    *
    * Controls:
-   * - Save button enabled/disabled state
-   * - Guard condition for generator switching (prevents data loss)
+   * - useFormSync guard: prevents overwriting in-flight edits when generator prop changes
+   * - useAutoSave debounce trigger: when true, the hook schedules a save
    *
    * Set to true: When any field changes (name, entity, durations, occurrences, etc.)
-   * Set to false: When save completes (via useSaveCompletionDetector) or Cancel clicked
-   *
-   * Note: State modification changes auto-save and don't set this flag.
+   * Set to false: When save completes (via useSaveCompletionDetector)
    */
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
 

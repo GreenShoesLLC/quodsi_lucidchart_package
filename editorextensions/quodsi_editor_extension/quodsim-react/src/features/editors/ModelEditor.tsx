@@ -46,7 +46,6 @@ import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 interface Props {
   model: Model;
   onSave: (model: Model) => void;
-  onCancel: () => void;
   onRemoveModel?: () => void;
   onValidate?: () => void;
   states: StateListManager;
@@ -581,10 +580,10 @@ const ScenariosAndRunsPanel: React.FC<{
  * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
  *   keep typing to retry"). Native LucidChart Ctrl+Z reverses saved changes.
  *
- * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
+ * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -658,7 +657,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
   const { status, lastSavedAt, saveNow } = useAutoSave<Model>({
     draft: localModelDraft,
     hasPendingChanges,
-    isValid: true,
+    isValid: true, // No validation: only one Model per document, no name-uniqueness check needed.
     onSave: onSaveWithDefaults,
     isSaving,
     elementId: localModelDraft.id,
@@ -988,10 +987,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onCancel, onRemoveModel, 
                     )}
                   </div>
                 </AccordionSection>
-              </div>
 
-              {/* Auto-save status */}
-              <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+                {/* Auto-save status */}
+                <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
+              </div>
           </div>
       )}
       {activeTab === "states" && (
