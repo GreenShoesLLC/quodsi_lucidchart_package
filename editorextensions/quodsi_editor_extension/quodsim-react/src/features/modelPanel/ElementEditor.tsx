@@ -187,6 +187,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onCancel={handleCancel}
             states={states}
             onStatesChange={onStatesChange}
+            referenceData={referenceData}
           />
         );
 

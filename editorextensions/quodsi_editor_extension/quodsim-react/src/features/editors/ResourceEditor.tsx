@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Settings, DollarSign, Hash, Info } from "lucide-react";
 import {
   Resource,
@@ -11,7 +11,8 @@ import {
 } from "@quodsi/shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 
 // ============================================================================
 // TYPES
@@ -82,8 +83,8 @@ const TAB_CONFIG = [
  * Features:
  * - Three-tab interface: Basic properties, Financial tracking, and State definitions
  * - Controlled component with immediate UI updates
- * - Manual save for basic and finance tabs
- * - Auto-save for state definitions (handled by StatesEditor)
+ * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush;
+ *   useEffect flush for the financial-enabled checkbox)
  *
  * Tabs:
  * - Basic: Resource name and capacity (max concurrent uses)
@@ -96,11 +97,16 @@ const TAB_CONFIG = [
  * - Uses custom hooks for resource switching and save completion detection
  *
  * Save Behavior:
- * - Basic tab: Requires Save button click to persist changes
- * - Finance tab: Requires Save button click to persist changes
- * - States tab: Auto-saves immediately (Save/Cancel buttons hidden)
+ * - Basic tab (name, capacity): debounced auto-save on edit; immediate save on
+ *   blur or element switch.
+ * - Finance tab (enabled, 3 cost fields): cost fields auto-save on edit/blur;
+ *   the enabled checkbox triggers saveNow via a useEffect since it has no blur.
+ * - States tab: Auto-saves immediately (handled by StatesEditor).
+ * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Fix errors to
+ *   save" / "Save failed — keep typing to retry"). Native LucidChart Ctrl+Z
+ *   reverses saved changes.
  *
- * @param props - Component props
+ * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
  * @returns Rendered resource editor component
  */
 const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, onStatesChange, referenceData }) => {
@@ -229,10 +235,33 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
+  const { status, lastSavedAt, saveNow } = useAutoSave<Resource>({
+    draft: localResourceDraft,
+    hasPendingChanges,
+    isValid: nameError === null,
+    onSave,
+    isSaving,
+    elementId: localResourceDraft.id,
+  });
+
   // Reset nameError when resource changes
   useEffect(() => {
     setNameError(null);
   }, [localResourceDraft.id]);
+
+  // Fire saveNow when financial-enabled checkbox toggles.
+  // Checkbox has no onBlur; this runs after the state update commits so
+  // draftRef inside useAutoSave reflects the new value.
+  const prevFinancialEnabledRef = useRef<boolean | undefined>(
+    localResourceDraft.financialProperties?.enabled
+  );
+  useEffect(() => {
+    const current = localResourceDraft.financialProperties?.enabled;
+    if (prevFinancialEnabledRef.current !== current) {
+      prevFinancialEnabledRef.current = current;
+      saveNow();
+    }
+  }, [localResourceDraft.financialProperties?.enabled, saveNow]);
 
   // Guard against invalid resource data
   if (!localResourceDraft?.id) {
@@ -252,7 +281,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
    * Handles changes to basic input fields (name, capacity).
    *
    * Updates are applied immediately to localResourceDraft for responsive UI,
-   * and marked as pending (requiring Save button click to persist).
+   * validates the name, and marks the draft as pending (auto-save will fire
+   * after debounce or on blur).
    *
    * Special handling:
    * - capacity: Parsed as integer with minimum value of 1
@@ -279,7 +309,9 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
    *
    * Creates a new ResourceFinancialProperties instance with the updated field value,
    * preserving all other financial properties. Updates are applied immediately to
-   * localResourceDraft for responsive UI, and marked as pending.
+   * localResourceDraft for responsive UI, and marked as pending. Auto-save fires
+   * after debounce or on blur (cost fields), or via the enabled-watching useEffect
+   * (the enabled checkbox).
    *
    * Supports fields:
    * - enabled: Boolean to enable/disable financial tracking
@@ -304,37 +336,6 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
       return updateResourceImmutably(prev, { financialProperties: updatedFinancial });
     });
     setHasPendingChanges(true);
-  };
-
-  /**
-   * Saves the current resource draft state.
-   *
-   * Invokes the parent onSave callback with the current localResourceDraft.
-   * Redux manages the isSaving state automatically.
-   *
-   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
-   * save completion detector to avoid race conditions.
-   */
-  const handleSave = () => {
-    // Save the current draft state directly
-    onSave(localResourceDraft);
-    // Note: isSaving state is now managed by Redux through elementOpsState
-  };
-
-  /**
-   * Cancels editing and closes the editor.
-   *
-   * Discards all pending changes by:
-   * - Re-extracting fresh data from resource prop
-   * - Clearing hasPendingChanges flag (disables Save button)
-   * - Calling onCancel prop to close the editor panel
-   *
-   * Note: State definition changes were already auto-saved, so they can't be canceled.
-   */
-  const handleCancel = () => {
-    setLocalResourceDraft(extractResourceData(resource));
-    setHasPendingChanges(false);
-    onCancel(); // Close the editor
   };
 
   // ============================================================================
@@ -388,6 +389,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                   value={localResourceDraft.name}
                   onChange={handleInputChange}
                   placeholder="Enter resource name"
+                  onBlur={saveNow}
                 />
                 {nameError && (
                   <p className="text-xs text-red-500 mt-1">{nameError}</p>
@@ -412,6 +414,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                   onChange={handleInputChange}
                   min="1"
                   placeholder="1"
+                  onBlur={saveNow}
                 />
               </div>
           </div>
@@ -456,6 +459,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      onBlur={saveNow}
                     />
                   </div>
                   <div>
@@ -478,6 +482,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      onBlur={saveNow}
                     />
                   </div>
                   <div>
@@ -497,6 +502,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
                       min="0"
                       step="0.01"
                       placeholder="0.00"
+                      onBlur={saveNow}
                     />
                   </div>
                 </div>
@@ -515,31 +521,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, onCancel, states, o
         */}
       </div>
 
-      {/* Save/Cancel Buttons */}
-      <div className="flex justify-end gap-2 pt-2 border-t">
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={isSaving}
-            className={`px-3 py-1.5 text-xs border rounded ${
-              isSaving ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50"
-            }`}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!hasPendingChanges || isSaving || nameError !== null}
-            className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && !isSaving && nameError === null
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {isSaving ? "Saving..." : "Save"}
-          </button>
-      </div>
+      {/* Auto-save status */}
+      <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
     </div>
   );
 };
