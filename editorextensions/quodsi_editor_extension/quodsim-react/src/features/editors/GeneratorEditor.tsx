@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Duration,
   Generator,
@@ -23,7 +23,8 @@ import StateModificationsEditor from "./StateModificationsEditor";
 import TimePatternEditorModal from "./TimePatternEditorModal";
 import TimeDistributedConfigEditorModal from "./TimeDistributedConfigEditorModal";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
-import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
+import { useFormSync, useSaveCompletionDetector, useAutoSave } from "./hooks/useEditorState";
+import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 
 // ============================================================================
@@ -103,16 +104,32 @@ type GeneratorTab = "settings" | "events" | "states";
  * - Maintains local draft state (localGeneratorDraft) for immediate UI updates
  * - Syncs with Redux for save state tracking (isSaving)
  * - Uses custom hooks for generator switching and save completion detection
- * - Mixed save behavior: Most fields use Save button, state modifications auto-save
+ * - Single save path: all field changes route through useAutoSave (debounced)
+ *
+ * Save Behavior:
+ * - Text/number inputs (name, periodicOccurrences, entitiesPerCreation,
+ *   maxEntities): debounced auto-save on edit; immediate save on blur or
+ *   element switch.
+ * - Select dropdowns (entityId, generatorType): immediate save via watcher
+ *   useEffects (selects have no useful onBlur).
+ * - Duration editors (interarrival time, start delay): debounced auto-save —
+ *   EnhancedDurationEditor fires onChange per keystroke with no buffering, so
+ *   the debounce timer resets naturally.
+ * - State modifications: routed through debounce (unified with all other
+ *   fields; replaces previous direct-onSave path).
+ * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Fix errors to
+ *   save" / "Save failed — keep typing to retry"). Native LucidChart Ctrl+Z
+ *   reverses saved changes.
  *
  * Key Features:
  * - Generator type selector determines which tabs are visible (FREQUENCY vs TIME_DISTRIBUTED)
  * - Automatic tab switching when generator type changes
- * - Dirty state tracking (hasPendingChanges) enables/disables Save button
+ * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush
+ *   on typed inputs; useEffect flush for select dropdowns)
  * - Guard conditions prevent data loss when switching generators
  * - Immutable updates via updateGeneratorImmutably helper
- * - Manual save for basic fields and durations (requires Save button click)
- * - Auto-save for state modifications only (immediate persistence)
+ *
+ * @param props - Component props (onCancel kept as vestigial; see Phase 0 spec)
  */
 const GeneratorEditor: React.FC<Props> = ({
   generator,
@@ -387,10 +404,47 @@ const GeneratorEditor: React.FC<Props> = ({
 
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
+  const { status, lastSavedAt, saveNow } = useAutoSave<Generator>({
+    draft: localGeneratorDraft,
+    hasPendingChanges,
+    isValid: nameError === null,
+    onSave,
+    isSaving,
+    elementId: localGeneratorDraft.id,
+  });
+
   // Reset nameError when generator changes
   useEffect(() => {
     setNameError(null);
   }, [localGeneratorDraft.id]);
+
+  // Fire saveNow when entity selection changes.
+  // Selects have no useful onBlur; this runs after the state update commits so
+  // draftRef inside useAutoSave reflects the new entityId.
+  const prevEntityIdRef = useRef<string | undefined>(
+    localGeneratorDraft.generationConfig.entityId
+  );
+  useEffect(() => {
+    const current = localGeneratorDraft.generationConfig.entityId;
+    if (prevEntityIdRef.current !== current) {
+      prevEntityIdRef.current = current;
+      saveNow();
+    }
+  }, [localGeneratorDraft.generationConfig.entityId, saveNow]);
+
+  // Fire saveNow when generator type changes (FREQUENCY <-> TIME_DISTRIBUTED).
+  // Currently TIME_DISTRIBUTED is UI-disabled but the watcher costs nothing and
+  // is ready when the feature ships.
+  const prevGeneratorTypeRef = useRef<GeneratorType | undefined>(
+    localGeneratorDraft.generationConfig.generatorType
+  );
+  useEffect(() => {
+    const current = localGeneratorDraft.generationConfig.generatorType;
+    if (prevGeneratorTypeRef.current !== current) {
+      prevGeneratorTypeRef.current = current;
+      saveNow();
+    }
+  }, [localGeneratorDraft.generationConfig.generatorType, saveNow]);
 
   const entities = referenceData.entities || [];
 
@@ -426,9 +480,9 @@ const GeneratorEditor: React.FC<Props> = ({
    * Handles changes to basic input fields (name, entity, occurrences, etc.).
    *
    * Updates are applied immediately to localGeneratorDraft for responsive UI,
-   * but NOT persisted until user clicks Save button.
-   *
-   * Sets hasPendingChanges to enable the Save button.
+   * validates the name, and marks the draft as pending. Auto-save fires after
+   * debounce (typed inputs and durations), on blur (typed inputs), or via the
+   * select-watching useEffects (entityId, generatorType).
    */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -466,9 +520,9 @@ const GeneratorEditor: React.FC<Props> = ({
    * Handles changes to duration fields (interarrival time, start delay).
    *
    * Updates are applied immediately to localGeneratorDraft for responsive UI,
-   * but NOT persisted until user clicks Save button (consistent with ActivityEditor).
-   *
-   * Sets hasPendingChanges to enable the Save button.
+   * and marked as pending. EnhancedDurationEditor fires onChange per keystroke
+   * with no buffering, so the auto-save debounce timer resets naturally and
+   * fires once the user pauses for 500ms.
    */
   const handleDurationChange = (
     name: "periodIntervalDuration" | "periodicStartDuration",
@@ -501,16 +555,14 @@ const GeneratorEditor: React.FC<Props> = ({
   /**
    * Handles changes to initial state modifications.
    *
-   * IMPORTANT: This handler AUTO-SAVES IMMEDIATELY (different from basic fields).
-   * State modifications are considered "committed" as soon as they're changed.
+   * Routed through the auto-save hook (single save path). The change is applied
+   * to localGeneratorDraft and marked as pending; the debounce timer dispatches
+   * the save after 500ms idle, or immediately on element switch / unmount.
    *
    * Flow:
    * 1. Filter out state modifications that reference deleted states (defensive cleanup)
-   * 2. Create updated generator with valid state modifications
-   * 3. Trigger immediate save via onSave (Redux manages save state)
-   * 4. Update local state to match
-   *
-   * This bypasses the Save button workflow - changes are persisted immediately.
+   * 2. Apply the cleaned modifications to localGeneratorDraft
+   * 3. Mark draft as pending — useAutoSave handles dispatch
    */
   const handleStateModificationsChange = (mods: any[]) => {
     // Defensive: Filter out state modifications that reference deleted states
@@ -518,57 +570,10 @@ const GeneratorEditor: React.FC<Props> = ({
       mod => states.getByUniqueId(mod.stateUniqueId) !== undefined
     );
 
-    const updatedGenerator = updateGeneratorImmutably(localGeneratorDraft, {
+    setLocalGeneratorDraft(prev => updateGeneratorImmutably(prev, {
       initialStateModifications: validModifications
-    });
-
-    // Auto-save immediately (Redux manages isSaving state)
-    onSave(updatedGenerator);
-    // Update local state to match
-    setLocalGeneratorDraft(updatedGenerator);
-  };
-
-  /**
-   * Saves the current generator draft to the model (manual save for basic fields).
-   *
-   * Key responsibilities:
-   * - Filters out orphaned state modifications referencing deleted states (defensive cleanup)
-   * - Triggers Redux save action via onSave callback
-   * - Redux manages isSaving state and optimistic updates
-   * - useSaveCompletionDetector hook clears hasPendingChanges when save completes
-   *
-   * Note: Does NOT directly modify hasPendingChanges - that's handled by the
-   * save completion detector to avoid race conditions.
-   */
-  const handleSave = () => {
-    // Defensive: Filter out state modifications that reference deleted states
-    const currentModifications = localGeneratorDraft.generationConfig.initialStateModifications || [];
-    const validModifications = currentModifications.filter(
-      mod => states.getByUniqueId(mod.stateUniqueId) !== undefined
-    );
-
-    // Only create updated generator if modifications were filtered out
-    const generatorToSave = validModifications.length !== currentModifications.length
-      ? updateGeneratorImmutably(localGeneratorDraft, { initialStateModifications: validModifications })
-      : localGeneratorDraft;
-
-    onSave(generatorToSave);
-    // Note: isSaving state is now managed by Redux through elementOpsState
-  };
-
-  /**
-   * Cancels editing and resets form to original generator data.
-   *
-   * Discards all pending changes by:
-   * - Re-extracting fresh data from generator prop
-   * - Clearing hasPendingChanges flag (disables Save button)
-   *
-   * Note: Does NOT close the editor - that's handled by parent component.
-   * Note: State modification changes were already auto-saved, so they can't be canceled.
-   */
-  const handleCancel = () => {
-    setLocalGeneratorDraft(extractGeneratorData(generator));
-    setHasPendingChanges(false);
+    }));
+    setHasPendingChanges(true);
   };
 
   /**
@@ -745,6 +750,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 value={localGeneratorDraft.name}
                 onChange={handleInputChange}
                 placeholder="Enter generator name"
+                onBlur={saveNow}
               />
               {nameError && (
                 <p className="text-xs text-red-500 mt-1">{nameError}</p>
@@ -866,6 +872,7 @@ const GeneratorEditor: React.FC<Props> = ({
                           value={localGeneratorDraft.generationConfig.periodicOccurrences}
                           onChange={handleInputChange}
                           min="0"
+                          onBlur={saveNow}
                         />
                       </div>
 
@@ -917,6 +924,7 @@ const GeneratorEditor: React.FC<Props> = ({
                               value={localGeneratorDraft.generationConfig.entitiesPerCreation}
                               onChange={handleInputChange}
                               min="1"
+                              onBlur={saveNow}
                             />
                           </div>
                           <div>
@@ -935,6 +943,7 @@ const GeneratorEditor: React.FC<Props> = ({
                               value={localGeneratorDraft.generationConfig.maxEntities}
                               onChange={handleInputChange}
                               min="1"
+                              onBlur={saveNow}
                             />
                           </div>
                         </div>
@@ -1103,28 +1112,8 @@ const GeneratorEditor: React.FC<Props> = ({
         */}
       </div>
 
-      {/* Save/Cancel Buttons */}
-      <div className="flex justify-end gap-2 pt-2 border-t">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="px-3 py-1.5 text-xs border rounded hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!hasPendingChanges || nameError !== null}
-            className={`px-3 py-1.5 text-xs rounded ${
-              hasPendingChanges && nameError === null
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            Save
-          </button>
-      </div>
+      {/* Auto-save status */}
+      <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
 
       {/* Modals */}
       {patternModalState.isOpen && (
