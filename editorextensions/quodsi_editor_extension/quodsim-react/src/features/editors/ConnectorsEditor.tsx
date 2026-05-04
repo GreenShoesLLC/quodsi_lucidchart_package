@@ -139,7 +139,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   const { status, lastSavedAt, saveNow } = useAutoSave<Activity>({
     draft: localActivityDraft,
     hasPendingChanges,
-    isValid: true,
+    isValid: true, // No validation surface in this editor (connectType is enum-bounded).
     onSave,
     isSaving,
     elementId: localActivityDraft.id,

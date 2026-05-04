@@ -208,11 +208,6 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
     });
   }, [activeMapping, activeLaneIndex, swimlaneData, elementData.blockId, sendMessage]);
 
-  // Cancel just resets local state — doesn't navigate away from swimlane
-  const handleResourceCancel = useCallback(() => {
-    // No-op: stays on the swimlane editor, ResourceEditor resets internally
-  }, []);
-
   // Empty states — lane resources don't support custom state variables
   const emptyStates = useMemo(() => new StateListManager(), []);
   const noopStatesChange = useCallback((_states: StateListManager) => {}, []);
@@ -324,7 +319,6 @@ const SwimLaneEditor: React.FC<SwimLaneEditorProps> = ({
               <ResourceEditor
                 resource={resourceFromMapping}
                 onSave={handleResourceSave}
-                onCancel={handleResourceCancel}
                 states={emptyStates}
                 onStatesChange={noopStatesChange}
                 referenceData={referenceData}

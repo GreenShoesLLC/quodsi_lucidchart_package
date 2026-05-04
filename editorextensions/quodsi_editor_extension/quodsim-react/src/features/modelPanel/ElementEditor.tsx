@@ -86,11 +86,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
     }
   }, [isTransitioning, currentEditorType]);
 
-  // Simple cancel handler - no accordion state to manage
-  const handleCancel = () => {
-    // Editors handle their own cancel behavior
-  };
-
   // Renders the appropriate editor component based on element type
   const renderEditor = () => {
     // Check for SwimLane type before SimulationObjectType normalization
@@ -135,7 +130,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           <ModelEditor
             model={safeElementData}
             onSave={onSave}
-            onCancel={handleCancel}
             onRemoveModel={onRemoveModel}
             onValidate={onValidate}
             states={states}
@@ -155,7 +149,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           <ActivityEditor
             activity={safeElementData}
             onSave={onSave}
-            onCancel={handleCancel}
             referenceData={referenceData}
             states={states}
             onStatesChange={onStatesChange}
@@ -169,7 +162,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           <GeneratorEditor
             generator={safeElementData}
             onSave={onSave}
-            onCancel={handleCancel}
             referenceData={referenceData}
             states={states}
             onStatesChange={onStatesChange}
@@ -184,7 +176,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           <ResourceEditor
             resource={safeElementData}
             onSave={onSave}
-            onCancel={handleCancel}
             states={states}
             onStatesChange={onStatesChange}
             referenceData={referenceData}
@@ -197,7 +188,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
           <EntityEditor
             entity={safeElementData}
             onSave={onSave}
-            onCancel={handleCancel}
             states={states}
             onStatesChange={onStatesChange}
             referenceData={referenceData}
