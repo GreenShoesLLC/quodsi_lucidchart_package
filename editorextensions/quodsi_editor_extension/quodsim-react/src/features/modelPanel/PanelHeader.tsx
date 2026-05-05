@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, User, LogOut, ExternalLink } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -11,14 +11,6 @@ import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
-import { useAuth, useEntitlements } from "../../messaging/MessageContext";
-import { useAuthSender } from "../../messaging/senders/authSender";
-import { usePortalSender } from "../../messaging/senders/portalSender";
-import {
-  planDisplayLabel,
-  simulationsRemaining,
-  trialDaysRemaining,
-} from "../../messaging/state/entitlementsSlice";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -55,25 +47,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
-  const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const authDropdownRef = useRef<HTMLDivElement>(null);
-  const auth = useAuth();
-  const entitlements = useEntitlements();
-  const authSender = useAuthSender();
-
-  // Click-outside handler for auth dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (authDropdownRef.current && !authDropdownRef.current.contains(event.target as Node)) {
-        setAuthDropdownOpen(false);
-      }
-    };
-    if (authDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [authDropdownOpen]);
 
   // Check for developer tools flag on mount and when about modal closes
   useEffect(() => {
@@ -153,156 +127,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 
     return { activities, resources, entities };
   };
-
-  // Plan badge — shows resolved plan + trial countdown. Hidden until
-  // entitlements have loaded so we don't flash "Free plan" during sign-in.
-  const PlanBadge = () => {
-    if (!auth.isAuthenticated || !entitlements.loaded) return null;
-
-    const label = planDisplayLabel(entitlements);
-    const trialDays = trialDaysRemaining(entitlements);
-    const remaining = simulationsRemaining(entitlements);
-
-    const isTrial = trialDays !== null;
-    const isLow = remaining !== null && remaining > 0 && remaining <= 2;
-    const isExhausted = remaining !== null && remaining <= 0;
-
-    const parts = [label];
-    if (isTrial) parts.push(`Trial: ${trialDays}d`);
-
-    const tone = isExhausted
-      ? "bg-red-50 text-red-700 border-red-200"
-      : isLow
-      ? "bg-amber-50 text-amber-700 border-amber-200"
-      : isTrial
-      ? "bg-blue-50 text-blue-700 border-blue-200"
-      : "bg-gray-50 text-gray-600 border-gray-200";
-
-    const title = [
-      `Plan: ${label}`,
-      remaining !== null ? `Simulations remaining this month: ${remaining}` : null,
-      isTrial ? `${trialDays} day${trialDays === 1 ? "" : "s"} left in trial` : null,
-    ]
-      .filter(Boolean)
-      .join(" — ");
-
-    return (
-      <span
-        className={`px-2 py-0.5 text-[10px] font-medium rounded border ${tone}`}
-        title={title}
-      >
-        {parts.join(" • ")}
-      </span>
-    );
-  };
-
-  // Auth status indicator
-  const AuthStatusIndicator = () => {
-    if (!auth.isAuthenticated) {
-      return (
-        <button
-          onClick={() => authSender.requestAuth()}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-        >
-          <User className="w-3 h-3" />
-          Sign In
-        </button>
-      );
-    }
-
-    return (
-      <div className="relative" ref={authDropdownRef}>
-        <button
-          onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors max-w-[200px]"
-          title={auth.user?.email || "Signed in"}
-        >
-          <User className="w-3 h-3 flex-shrink-0" />
-          <span className="truncate">
-            {auth.user?.displayName || auth.user?.email || "Signed in"}
-          </span>
-        </button>
-        {authDropdownOpen && (
-          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[160px]">
-            {auth.user?.email && (
-              <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100 truncate">
-                {auth.user.email}
-              </div>
-            )}
-            <button
-              onClick={() => {
-                setAuthDropdownOpen(false);
-                authSender.logout();
-              }}
-              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
-            >
-              <LogOut className="w-3 h-3 text-gray-500" />
-              Sign Out
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Upgrade link — opens Kinde's hosted plan-management portal in a new
-  // tab. Mints the one-time signed URL via the data-connector RPC so the
-  // resulting tab carries the same Kinde identity as the panel (rather
-  // than whatever Kinde session happens to be in the user's browser).
-  // Hidden until entitlements load so we don't flash the prompt during
-  // auth bootstrap.
-  const UpgradeLink = () => {
-    const { requestPortalUrl } = usePortalSender();
-    const [requesting, setRequesting] = useState(false);
-
-    if (!auth.isAuthenticated || !entitlements.loaded) return null;
-
-    const onClick = async () => {
-      if (requesting) return;
-      setRequesting(true);
-      try {
-        const url = await requestPortalUrl(
-          "organization_plan_details",
-          "https://lucid.app",
-        );
-        window.open(url, "_blank", "noopener");
-      } catch (err) {
-        // Soft failure: log and stay on the panel; user can retry.
-        // Future: surface a toast.
-        console.error("portal_url_request_failed", err);
-      } finally {
-        setRequesting(false);
-      }
-    };
-
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={requesting}
-        className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-50 rounded border border-blue-200 bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
-        title="Pick or change your Quodsi plan (opens in a new tab)"
-      >
-        {requesting ? "Loading…" : "Upgrade"}
-        <ExternalLink className="w-3 h-3" />
-      </button>
-    );
-  };
-
-  // Account strip — renders plan badge + upgrade link (left) and sign-in /
-  // user dropdown (right) on their own row so they don't compete with the
-  // model/element title for width.
-  const AccountStrip = () => (
-    <div className="flex items-center justify-between gap-2 pb-2 border-b border-gray-200">
-      <div className="flex items-center gap-2 min-w-0">
-        <PlanBadge />
-        <UpgradeLink />
-      </div>
-      <div className="flex-shrink-0">
-        <AuthStatusIndicator />
-      </div>
-    </div>
-  );
 
   // Reusable menu button with dropdown
   const MenuButton = () => (
@@ -507,7 +331,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   return (
     <>
       <div className={`p-2 border-b bg-gray-50 shadow-sm space-y-2 border-l-[3px] ${getEditorAccentClass(editorType)}`}>
-        <AccountStrip />
         {renderAdaptiveHeader()}
       </div>
       <AboutModal

@@ -3,6 +3,7 @@ import { useModelPanel } from '../../messaging/hooks/useModelPanel';
 import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
 import { PanelHeader } from './PanelHeader';
+import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
 import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/shared';
@@ -202,29 +203,32 @@ export const ModelPanel: React.FC = () => {
   // Handle initialization state
   if (needsInitialization) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-4 bg-gray-50 overflow-auto">
-        <div className="text-center p-5 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
-          <h3 className="text-xl font-semibold text-gray-800 mb-5">
-            Transform diagram into Simulation Model
-          </h3>
-          <button
-            className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
-            onClick={applyDefaults}
-            disabled={isApplying}
-          >
-            {isApplying ? 'Converting...' : 'Convert Automatically'}
-          </button>
-          <p className="text-gray-500 text-sm mt-3">
-            Uses Quodsi's best-practice assumptions.<br />
-            You can edit everything later.
-          </p>
-          <div className="mt-5 pt-3 border-t border-gray-200">
+      <div className="flex flex-col h-full bg-gray-50">
+        <AccountStrip />
+        <div className="flex-1 min-h-0 flex items-center justify-center p-4 overflow-auto">
+          <div className="text-center p-5 bg-white rounded-lg shadow-md border border-gray-200 max-w-md">
+            <h3 className="text-xl font-semibold text-gray-800 mb-5">
+              Transform diagram into Simulation Model
+            </h3>
             <button
-              className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
-              onClick={openPreview}
+              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
+              onClick={applyDefaults}
+              disabled={isApplying}
             >
-              Review & Convert: Preview, edit and convert
+              {isApplying ? 'Converting...' : 'Convert Automatically'}
             </button>
+            <p className="text-gray-500 text-sm mt-3">
+              Uses Quodsi's best-practice assumptions.<br />
+              You can edit everything later.
+            </p>
+            <div className="mt-5 pt-3 border-t border-gray-200">
+              <button
+                className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
+                onClick={openPreview}
+              >
+                Review & Convert: Preview, edit and convert
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -234,14 +238,17 @@ export const ModelPanel: React.FC = () => {
   // Handle loading state
   if (isLoading) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
-        <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600"></div>
-            <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600 animation-delay-150"></div>
-            <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600 animation-delay-300"></div>
+      <div className="flex flex-col h-full bg-gray-50">
+        <AccountStrip />
+        <div className="flex-1 min-h-0 flex items-center justify-center p-8 overflow-auto">
+          <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600"></div>
+              <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600 animation-delay-150"></div>
+              <div className="inline-block animate-pulse rounded-full h-3 w-3 bg-blue-600 animation-delay-300"></div>
+            </div>
+            <span className="mt-3 block text-gray-600 font-medium">Initializing...</span>
           </div>
-          <span className="mt-3 block text-gray-600 font-medium">Initializing...</span>
         </div>
       </div>
     );
@@ -252,15 +259,18 @@ export const ModelPanel: React.FC = () => {
   
   if (!hasContent) {
     return (
-      <div className="h-full w-full flex items-center justify-center p-8 bg-gray-50 overflow-auto">
-        <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="text-gray-400 mb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-            </svg>
+      <div className="flex flex-col h-full bg-gray-50">
+        <AccountStrip />
+        <div className="flex-1 min-h-0 flex items-center justify-center p-8 overflow-auto">
+          <div className="text-center bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div className="text-gray-400 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+              </svg>
+            </div>
+            <span className="text-gray-600 font-medium">No model or element selected</span>
+            <p className="text-gray-500 text-sm mt-2">Select an element in the diagram to view its properties</p>
           </div>
-          <span className="text-gray-600 font-medium">No model or element selected</span>
-          <p className="text-gray-500 text-sm mt-2">Select an element in the diagram to view its properties</p>
         </div>
       </div>
     );
@@ -295,6 +305,7 @@ export const ModelPanel: React.FC = () => {
   // Main content render
   return (
     <div className="flex flex-col h-full bg-white shadow-md rounded-sm overflow-auto border border-gray-200">
+      <AccountStrip />
       {!isSwimLane && <PanelHeader
         modelName={modelName}
         validationState={validationState}
