@@ -105,13 +105,13 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "inbound_queue_stats_mean",
-    label: "Inbound Q",
+    key: "inbound_queue_utilization_mean",
+    label: "Inbound Util",
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "outbound_queue_stats_mean",
-    label: "Outbound Q",
+    key: "outbound_queue_utilization_mean",
+    label: "Outbound Util",
     format: (v) => formatDecimal(v, 2),
   },
   {
@@ -122,6 +122,16 @@ export const activityColumns: TableColumn[] = [
   {
     key: "outbound_queue_avg_contents_mean",
     label: "Outbound Avg",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "inbound_queue_max_contents_mean",
+    label: "Inbound Max",
+    format: (v) => formatDecimal(v, 2),
+  },
+  {
+    key: "outbound_queue_max_contents_mean",
+    label: "Outbound Max",
     format: (v) => formatDecimal(v, 2),
   },
   {
