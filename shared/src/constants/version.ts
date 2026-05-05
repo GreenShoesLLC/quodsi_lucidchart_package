@@ -11,6 +11,15 @@ export const QUODSI_VERSION = "2026.04.16";
 export const QUODSIM_VERSION = "2026.05.05";
 
 /**
+ * Major version of the simulation output CSV schema this build can render.
+ * Bumped only when the engine's OUTPUT_SCHEMA_VERSION major changes
+ * (column rename / remove / reorder). Additive engine changes (new
+ * columns at the end) don't require updating this — minor differences
+ * are tolerated by isOutputSchemaCompatible.
+ */
+export const EXPECTED_OUTPUT_SCHEMA_VERSION = "1.0";
+
+/**
  * Version information broken down into components
  */
 export interface VersionInfo {
