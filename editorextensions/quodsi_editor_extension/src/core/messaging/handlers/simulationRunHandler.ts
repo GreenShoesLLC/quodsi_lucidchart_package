@@ -139,6 +139,8 @@ export class SimulationRunHandler {
         startTime: latestRun?.start_time || latestRun?.submitted_at || undefined,
         endTime: latestRun?.end_time || latestRun?.completed_at || undefined,
         metrics: latestRun?.metrics || undefined,
+        outputSchemaVersion: latestRun?.output_schema_version ?? null,
+        engineVersion: latestRun?.engine_version ?? null,
       };
     });
   }

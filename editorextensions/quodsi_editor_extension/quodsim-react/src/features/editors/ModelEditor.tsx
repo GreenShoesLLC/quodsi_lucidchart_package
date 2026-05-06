@@ -230,6 +230,8 @@ const ScenariosAndRunsPanel: React.FC<{
       runClockPeriodUnit: 'Minutes',
       simulationTimeType: 'Clock',
       hasResults: false,
+      outputSchemaVersion: null,
+      engineVersion: null,
     };
     const currentRuns = simulationRunsRef.current;
     dispatch({
@@ -374,6 +376,8 @@ const ScenariosAndRunsPanel: React.FC<{
               simulationTimeType: statusData.simulationTimeType || 'Clock',
               completedAt: statusData.queuedAt,
               hasResults: false,
+              outputSchemaVersion: null,
+              engineVersion: null,
             };
             dispatch({ type: 'SIMULATION_RUNS_SUCCESS', simulationRuns: [newRun, ...currentRuns] });
             setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);

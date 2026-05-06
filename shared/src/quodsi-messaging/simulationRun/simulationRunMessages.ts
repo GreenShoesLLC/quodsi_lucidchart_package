@@ -46,6 +46,10 @@ export interface SimulationRunInfo {
   startTime?: string;  // ISO timestamp when simulation started
   endTime?: string;    // ISO timestamp when simulation completed
   metrics?: Record<string, any>;  // Performance and execution metrics
+  /** Output CSV schema version stamped by the engine into status.json. Null for legacy runs. */
+  outputSchemaVersion: string | null;
+  /** Engine __version__ at run time. Diagnostic. Null for legacy runs. */
+  engineVersion: string | null;
 }
 
 export interface SimulationRunListResultMessage extends EnvelopeBase {
