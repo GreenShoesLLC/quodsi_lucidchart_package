@@ -2,12 +2,19 @@ import React from "react";
 import { CrossRepDataType } from "./crossRepTableConfigs";
 import { formatNumber, formatPercent } from "./analysisFormatters";
 import { SummaryData } from "../../../hooks/useCrossRepData";
+import { SelectedScenario } from "../../../utils/scenarioDataMerge";
+import { isOutputSchemaCompatible } from "@quodsi/shared";
+import { StaleScenarioTakeover } from "./StaleScenarioTakeover";
 
 interface SummaryViewProps {
   summaryData: SummaryData;
   summaryLoading: boolean;
   scenarioId: string;
   onDrillDown: (dataType: CrossRepDataType, filterValue?: string) => void;
+  /** NEW — the single selected scenario's metadata (including outputSchemaVersion). */
+  selectedScenarios?: SelectedScenario[];
+  /** NEW — optional re-run handler; hides the button when omitted. */
+  onRerunScenario?: (scenarioId: string) => void;
 }
 
 const SummaryView: React.FC<SummaryViewProps> = ({
@@ -15,8 +22,30 @@ const SummaryView: React.FC<SummaryViewProps> = ({
   summaryLoading,
   scenarioId,
   onDrillDown,
+  selectedScenarios,
+  onRerunScenario,
 }) => {
   const { scenario, activities, resources } = summaryData;
+
+  // Single-scenario view: if the only scenario is incompatible with the
+  // current frontend's output schema major, replace the dashboard content
+  // with a "re-run required" takeover. SummaryView is only rendered when
+  // selectedScenarios.length === 1 (the dashboard's isComparing === false
+  // branch); the takeover therefore covers the entire single-scenario case.
+  if (
+    selectedScenarios &&
+    selectedScenarios.length === 1 &&
+    !isOutputSchemaCompatible(selectedScenarios[0].outputSchemaVersion)
+  ) {
+    const stale = selectedScenarios[0];
+    return (
+      <StaleScenarioTakeover
+        scenarioName={stale.name}
+        scenarioId={stale.id}
+        onRerun={onRerunScenario}
+      />
+    );
+  }
 
   if (summaryLoading) {
     return (
