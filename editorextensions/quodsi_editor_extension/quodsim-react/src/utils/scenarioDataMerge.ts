@@ -5,6 +5,7 @@ export interface SelectedScenario {
   id: string;
   name: string;
   color: string;
+  outputSchemaVersion?: string | null;
 }
 
 interface MergedBarData {

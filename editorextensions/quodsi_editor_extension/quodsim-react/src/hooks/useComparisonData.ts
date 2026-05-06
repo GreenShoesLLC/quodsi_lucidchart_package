@@ -7,6 +7,7 @@ import { SCENARIO_COLORS } from "../components/charts";
 interface AvailableScenario {
   id: string;
   name: string;
+  outputSchemaVersion?: string | null;
 }
 
 interface UseComparisonDataReturn {
@@ -33,6 +34,7 @@ export function useComparisonData(
       id: initialScenarioId,
       name: initialScenarioName || initialScenarioId,
       color: SCENARIO_COLORS[0],
+      outputSchemaVersion: undefined,
     },
   ]);
   const [availableScenarios, setAvailableScenarios] = useState<AvailableScenario[]>([]);
@@ -62,17 +64,21 @@ export function useComparisonData(
           message.data?.scenarios || message.data?.simulationRuns || [];
         const withResults = runs
           .filter((r) => r.hasResults)
-          .map((r) => ({ id: r.id, name: r.name }));
+          .map((r) => ({ id: r.id, name: r.name, outputSchemaVersion: r.outputSchemaVersion }));
         setAvailableScenarios(withResults);
         setAvailableScenariosLoading(false);
 
-        // Update initial scenario name if it was set to the ID
+        // Update initial scenario name and outputSchemaVersion once we have the run list
         const initialRun = runs.find((r) => r.id === initialScenarioId);
         if (initialRun) {
           setSelectedScenarios((prev) =>
             prev.map((s) =>
-              s.id === initialScenarioId && s.name === initialScenarioId
-                ? { ...s, name: initialRun.name }
+              s.id === initialScenarioId
+                ? {
+                    ...s,
+                    name: s.name === initialScenarioId ? initialRun.name : s.name,
+                    outputSchemaVersion: initialRun.outputSchemaVersion,
+                  }
                 : s
             )
           );
@@ -134,7 +140,12 @@ export function useComparisonData(
       nextColorRef.current++;
       setSelectedScenarios((prev) => [
         ...prev,
-        { id: scenarioId, name: available.name, color: SCENARIO_COLORS[colorIndex] },
+        {
+          id: scenarioId,
+          name: available.name,
+          color: SCENARIO_COLORS[colorIndex],
+          outputSchemaVersion: available.outputSchemaVersion,
+        },
       ]);
     },
     [availableScenarios]

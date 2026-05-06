@@ -23,6 +23,7 @@ interface SimulationRunAnalysisDashboardProps {
   documentId: string;
   onBackToList?: () => void;
   downloadInfo?: SimulationRunDownloadInfo;
+  onRerunScenario?: (scenarioId: string) => void;
 }
 
 const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardProps> = ({
@@ -30,6 +31,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
   documentId,
   onBackToList,
   downloadInfo,
+  onRerunScenario,
 }) => {
   // View type: summary (compact) or detailed (existing tables/charts)
   const [viewType, setViewType] = useState<"summary" | "detailed">("summary");
@@ -220,6 +222,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             getDataForType={getDataForType}
             comparisonLoading={comparisonLoading}
             onDrillDown={handleDrillDown}
+            onRerunScenario={onRerunScenario}
           />
         ) : (
           <SummaryView
@@ -241,6 +244,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             dataType={dataType}
             onDataTypeChange={setDataType}
             initialFilter={initialFilter}
+            onRerunScenario={onRerunScenario}
           />
         )}
     </div>

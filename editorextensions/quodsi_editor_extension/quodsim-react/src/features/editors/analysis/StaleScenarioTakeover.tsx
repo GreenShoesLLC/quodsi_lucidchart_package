@@ -4,7 +4,8 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 interface StaleScenarioTakeoverProps {
   scenarioName: string;
   scenarioId: string;
-  onRerun: (scenarioId: string) => void;
+  /** Optional callback to re-run the scenario. When omitted, no button renders. */
+  onRerun?: (scenarioId: string) => void;
 }
 
 /**
@@ -29,14 +30,16 @@ export const StaleScenarioTakeover: React.FC<StaleScenarioTakeoverProps> = ({
       <p className="text-sm text-gray-500 mb-4">
         This run was produced with an older simulation engine and is no longer compatible.
       </p>
-      <button
-        type="button"
-        onClick={() => onRerun(scenarioId)}
-        className="inline-flex items-center gap-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-      >
-        <RefreshCw className="w-4 h-4" />
-        Re-run scenario
-      </button>
+      {onRerun && (
+        <button
+          type="button"
+          onClick={() => onRerun(scenarioId)}
+          className="inline-flex items-center gap-1 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Re-run scenario
+        </button>
+      )}
     </div>
   </div>
 );

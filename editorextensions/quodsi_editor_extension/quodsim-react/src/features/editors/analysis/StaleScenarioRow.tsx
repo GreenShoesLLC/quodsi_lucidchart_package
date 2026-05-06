@@ -4,7 +4,10 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 interface StaleScenarioRowProps {
   scenarioName: string;
   scenarioId: string;
-  onRerun: (scenarioId: string) => void;
+  /** Optional callback to re-run the scenario. When omitted, no button renders.
+   *  This degradation lets the row stay informative in render trees that don't
+   *  yet have access to the rerun action (e.g., the modal results path). */
+  onRerun?: (scenarioId: string) => void;
 }
 
 /**
@@ -24,14 +27,16 @@ export const StaleScenarioRow: React.FC<StaleScenarioRowProps> = ({
       <span className="text-gray-700 truncate">{scenarioName}</span>
       <span className="text-gray-500 italic">stale — re-run required</span>
     </div>
-    <button
-      type="button"
-      aria-label={`Re-run scenario ${scenarioName}`}
-      onClick={() => onRerun(scenarioId)}
-      className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
-    >
-      <RefreshCw className="w-3 h-3" />
-      Re-run
-    </button>
+    {onRerun && (
+      <button
+        type="button"
+        aria-label={`Re-run scenario ${scenarioName}`}
+        onClick={() => onRerun(scenarioId)}
+        className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
+      >
+        <RefreshCw className="w-3 h-3" />
+        Re-run
+      </button>
+    )}
   </div>
 );

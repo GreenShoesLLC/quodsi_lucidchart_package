@@ -26,6 +26,10 @@ import {
   SelectedScenario,
 } from "../../../utils/scenarioDataMerge";
 import { metricOptions, getPercentFormatter } from "./analysisFormatters";
+import { isOutputSchemaCompatible } from "@quodsi/shared";
+import { StaleScenarioBanner } from "./StaleScenarioBanner";
+import { StaleScenarioRow } from "./StaleScenarioRow";
+import { StaleScenarioTakeover } from "./StaleScenarioTakeover";
 
 interface DetailedViewProps {
   data: any[];
@@ -38,6 +42,7 @@ interface DetailedViewProps {
   dataType: CrossRepDataType;
   onDataTypeChange: (type: CrossRepDataType) => void;
   initialFilter?: string;
+  onRerunScenario?: (scenarioId: string) => void;
 }
 
 const DetailedView: React.FC<DetailedViewProps> = ({
@@ -51,7 +56,16 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   dataType,
   onDataTypeChange,
   initialFilter,
+  onRerunScenario,
 }) => {
+  // Compat partition: split scenarios into compatible and incompatible
+  const compatible = selectedScenarios.filter((s) =>
+    isOutputSchemaCompatible(s.outputSchemaVersion)
+  );
+  const incompatible = selectedScenarios.filter(
+    (s) => !isOutputSchemaCompatible(s.outputSchemaVersion)
+  );
+
   const [selectedActivity, setSelectedActivity] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"table" | "chart" | "both">("both");
   const [selectedMetric, setSelectedMetric] = useState<string>("capacity_utilization_mean");
@@ -171,8 +185,8 @@ const DetailedView: React.FC<DetailedViewProps> = ({
         : "object_id";
 
     return {
-      columns: mergeTableColumns(selectedScenarios, baseColumns, nameKey),
-      data: mergeTableData(selectedScenarios, dataMap, nameKey),
+      columns: mergeTableColumns(compatible, baseColumns, nameKey),
+      data: mergeTableData(compatible, dataMap, nameKey),
     };
   }, [isComparing, dataType, selectedScenarios, getDataForType, isFilterableType, filterDataMap]);
 
@@ -306,7 +320,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
       dataType === "entity-throughput-timeseries";
 
     if (isTimeseriesType) {
-      const merged = mergeTimeseriesData(selectedScenarios, dataMap, "object_id", "period_start_clock", "mean");
+      const merged = mergeTimeseriesData(compatible, dataMap, "object_id", "period_start_clock", "mean");
 
       const comparisonObjectIds = Array.from(new Set(merged.data.map((d: any) => d.object_id).filter(Boolean))) as string[];
       const comparisonNameFormatter = buildShortNameFormatter(comparisonObjectIds);
@@ -319,10 +333,10 @@ const DetailedView: React.FC<DetailedViewProps> = ({
         const overlayColors: string[] = [];
         for (let oi = 0; oi < selectedIds.length; oi++) {
           const shortName = comparisonNameFormatter(selectedIds[oi]);
-          for (let si = 0; si < selectedScenarios.length; si++) {
-            const label = `${shortName} (${selectedScenarios[si].name})`;
+          for (let si = 0; si < compatible.length; si++) {
+            const label = `${shortName} (${compatible[si].name})`;
             overlayYKeys.push(label);
-            overlayColors.push(selectedScenarios[si].color);
+            overlayColors.push(compatible[si].color);
           }
         }
 
@@ -337,7 +351,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
           }
           const target = timeMap.get(xVal)!;
           const shortName = comparisonNameFormatter(row.object_id);
-          for (const s of selectedScenarios) {
+          for (const s of compatible) {
             const srcKey = `mean_${s.name}`;
             const destKey = `${shortName} (${s.name})`;
             target[destKey] = row[srcKey];
@@ -355,7 +369,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
           <div className="border border-gray-200 rounded bg-white p-2">
             <div className="flex items-center justify-between mb-1 px-1">
               <span className="text-xs font-semibold text-gray-700">
-                {headerLabel} across {selectedScenarios.length} scenarios
+                {headerLabel} across {compatible.length} scenarios
               </span>
               <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
                 Clear
@@ -402,7 +416,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
           : dataType === "state-summary" ? "state_name"
           : "scenario_name";
 
-      const merged = mergeBarChartData(selectedScenarios, dataMap, nameKey, selectedMetric);
+      const merged = mergeBarChartData(compatible, dataMap, nameKey, selectedMetric);
       return (
         <ChartContainer data={merged.data} loading={comparisonLoading} error={null} emptyMessage={`No ${dataType} data available`}>
           <ComparisonBarChart data={merged.data} xKey={nameKey} yKeys={merged.yKeys} colors={merged.colors} height={300} layout="vertical" valueFormatter={getPercentFormatter(selectedMetric)} />
@@ -413,8 +427,30 @@ const DetailedView: React.FC<DetailedViewProps> = ({
     return null;
   };
 
+  // Single-scenario takeover: when the one selected scenario is incompatible
+  if (selectedScenarios.length === 1 && incompatible.length === 1) {
+    const stale = incompatible[0];
+    return (
+      <StaleScenarioTakeover
+        scenarioName={stale.name}
+        scenarioId={stale.id}
+        onRerun={onRerunScenario}
+      />
+    );
+  }
+
   return (
     <>
+      {/* Stale scenario banner + per-scenario rows (shown above controls when mixed) */}
+      <StaleScenarioBanner hiddenCount={incompatible.length} />
+      {incompatible.map((s) => (
+        <StaleScenarioRow
+          key={s.id}
+          scenarioName={s.name}
+          scenarioId={s.id}
+          onRerun={onRerunScenario}
+        />
+      ))}
       {/* Consolidated Controls Row */}
       <div className="flex gap-2 items-center flex-wrap">
         {/* Data Type Selector with optgroups */}
