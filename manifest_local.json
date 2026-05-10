@@ -1,5 +1,5 @@
 {
-  "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
+  "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
   "version": "2026.04.16",
   "extensions": [
     {
@@ -34,10 +34,10 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim.kinde.com/oauth2/auth",
-      "tokenUrl": "https://quodsim.kinde.com/oauth2/token",
+      "authorizationUrl": "https://quodsim-dev.us.kinde.com/oauth2/auth",
+      "tokenUrl": "https://quodsim-dev.us.kinde.com/oauth2/token",
       "scopes": ["openid", "profile", "email"],
-      "domainWhitelist": ["https://quodsim.kinde.com"],
+      "domainWhitelist": ["https://quodsim-dev.us.kinde.com"],
       "clientAuthentication": "clientParameters",
       "usePkce": true
     }

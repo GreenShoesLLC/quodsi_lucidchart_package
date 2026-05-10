@@ -34,10 +34,10 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim.kinde.com/oauth2/auth",
-      "tokenUrl": "https://quodsim.kinde.com/oauth2/token",
+      "authorizationUrl": "https://quodsim-test.us.kinde.com/oauth2/auth",
+      "tokenUrl": "https://quodsim-test.us.kinde.com/oauth2/token",
       "scopes": ["openid", "profile", "email"],
-      "domainWhitelist": ["https://quodsim.kinde.com"],
+      "domainWhitelist": ["https://quodsim-test.us.kinde.com"],
       "clientAuthentication": "clientParameters",
       "usePkce": true
     }

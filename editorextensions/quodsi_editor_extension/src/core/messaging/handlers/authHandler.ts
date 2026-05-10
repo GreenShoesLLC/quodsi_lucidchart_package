@@ -101,22 +101,31 @@ export class AuthHandler {
       return;
     }
 
-    // Fetch user profile for email and display name
+    // Fetch user profile for email and display name. Derive the URL from the
+    // token's `iss` claim so the same build works against any Kinde tenant
+    // (prd, dev, future tenants). The manifest's `domainWhitelist` on the
+    // `kinde` OAuth provider gates the call at the Lucid SDK layer, so a
+    // spoofed `iss` is blocked there too.
     let email = '';
     let displayName: string | undefined;
     try {
-      const client = ModelManager.getClient();
-      const profileResponse = await client.oauthXhr('kinde', {
-        url: 'https://quodsim.kinde.com/oauth2/v2/user_profile',
-        method: 'GET',
-        responseFormat: 'utf8',
-      });
+      const issuer = typeof claims.iss === 'string' ? claims.iss : null;
+      if (!issuer) {
+        AuthHandler.logger.log('Token missing iss claim; skipping user profile fetch');
+      } else {
+        const client = ModelManager.getClient();
+        const profileResponse = await client.oauthXhr('kinde', {
+          url: `${issuer.replace(/\/$/, '')}/oauth2/v2/user_profile`,
+          method: 'GET',
+          responseFormat: 'utf8',
+        });
 
-      if (profileResponse) {
-        const profile = JSON.parse(profileResponse.responseText);
-        email = profile.email || '';
-        displayName = profile.name || profile.given_name || undefined;
-        AuthHandler.logger.log('User profile:', { email, displayName });
+        if (profileResponse) {
+          const profile = JSON.parse(profileResponse.responseText);
+          email = profile.email || '';
+          displayName = profile.name || profile.given_name || undefined;
+          AuthHandler.logger.log('User profile:', { email, displayName });
+        }
       }
     } catch (error) {
       AuthHandler.logger.log('Could not fetch user profile, continuing with token claims only:', error);
