@@ -34,7 +34,7 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim-test.us.kinde.com/oauth2/auth",
+      "authorizationUrl": "https://quodsim-test.us.kinde.com/oauth2/auth?is_create_org=true&plan_interest=quodsi_free",
       "tokenUrl": "https://quodsim-test.us.kinde.com/oauth2/token",
       "scopes": ["openid", "profile", "email"],
       "domainWhitelist": ["https://quodsim-test.us.kinde.com"],
