@@ -37,6 +37,12 @@ yarn-error.log*
 lucid.credentials.local
 kinde.credentials.local
 
+# Local-dev override for the AccountStrip "Create New User" Studio URL.
+# Webpack's DefinePlugin reads this file at build time and bakes the
+# contents into the extension bundle as __LOCAL_STUDIO_OVERRIDE__.
+# Each developer creates their own; cloud bundles never have this file.
+local-studio-url.txt
+
 # Azure credentials and publish profiles
 *.publishsettings
 **/PublishProfiles/
