@@ -1,5 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ExternalLink, LogOut, User } from "lucide-react";
+import {
+  ChevronDown,
+  ExternalLink,
+  LogOut,
+  User,
+} from "lucide-react";
 import { useAuth, useEntitlements } from "../../messaging/MessageContext";
 import { useAuthSender } from "../../messaging/senders/authSender";
 import { usePortalSender } from "../../messaging/senders/portalSender";
@@ -79,6 +84,24 @@ const AuthStatusIndicator: React.FC = () => {
     }
   };
 
+  const handleSignOut = () => {
+    setAuthDropdownOpen(false);
+    // Open Kinde's logout URL in a new tab to clear Kinde's session cookie.
+    // Without this, the extension-side triggerAuthFlow (in authSender.logout)
+    // silently re-auths the same user via the still-valid Kinde session and
+    // the user sees no apparent sign-out.
+    const issuer = auth.user?.kindeIssuer;
+    if (issuer) {
+      window.open(`${issuer.replace(/\/$/, "")}/logout`, "_blank", "noopener");
+    } else {
+      console.warn("Sign Out: no kindeIssuer in user info; skipping Kinde logout step");
+    }
+    // Extension-side handler clears local state + calls triggerAuthFlow to
+    // invalidate Lucid's cached OAuth token + processes whatever the OAuth
+    // flow returns. See authHandler.handleLogout.
+    authSender.logout();
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -96,13 +119,31 @@ const AuthStatusIndicator: React.FC = () => {
 
   if (!auth.isAuthenticated) {
     return (
-      <button
-        onClick={() => authSender.requestAuth()}
-        className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
-      >
-        <User className="w-3 h-3" />
-        Sign In
-      </button>
+      <div className="relative" ref={authDropdownRef}>
+        <button
+          onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors"
+        >
+          <User className="w-3 h-3" />
+          Sign In
+          <ChevronDown className="w-3 h-3" />
+        </button>
+        {authDropdownOpen && (
+          <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[180px]">
+            <button
+              onClick={() => {
+                setAuthDropdownOpen(false);
+                authSender.requestAuth();
+              }}
+              className="w-full px-3 py-2 text-left text-xs text-blue-700 hover:text-blue-900 hover:bg-blue-50 flex items-center gap-2"
+              title="Sign in to your existing Quodsi account"
+            >
+              <User className="w-3 h-3" />
+              Sign in
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -137,11 +178,9 @@ const AuthStatusIndicator: React.FC = () => {
             </button>
           )}
           <button
-            onClick={() => {
-              setAuthDropdownOpen(false);
-              authSender.logout();
-            }}
+            onClick={handleSignOut}
             className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+            title="Sign out of Quodsi"
           >
             <LogOut className="w-3 h-3 text-gray-500" />
             Sign Out

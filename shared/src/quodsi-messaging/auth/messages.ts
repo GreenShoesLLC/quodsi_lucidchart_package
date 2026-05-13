@@ -16,6 +16,28 @@ export interface QuodsiUserInfo {
 
   /** Kinde organization code (from access token org_code claim) */
   orgCode?: string;
+
+  /** Kinde tenant issuer URL (from access token iss claim). Used by the
+   *  React panel to construct the Kinde logout URL for the dev-tooling
+   *  "Sign in as different user" flow. */
+  kindeIssuer?: string;
+}
+
+/**
+ * Environment-level config broadcast to the React panel once at startup
+ * (or whenever it might change — it doesn't in practice). Keeps configurable
+ * URLs out of the React bundle so the same React build can run against any
+ * Lucid app (QuodsiDev / QuodsiTest / Quodsi prod) — the extension's
+ * authHandler looks them up at runtime from `lucid.getPackageId()`.
+ */
+export interface ExtensionConfig {
+  /** Origin of the Studio web app for this Lucid package (e.g.,
+   *  `https://dev-studio.quodsi.com`). Used by the AccountStrip's
+   *  "Create New User" menu item to open Studio's /welcome page in a new
+   *  tab for new-user signup (Studio handles the Kinde signup with
+   *  isCreateOrg + planInterest atomically, which the Lucid extension's
+   *  platform-mediated OAuth flow can't). No trailing slash. */
+  studioBaseUrl?: string;
 }
 
 /**
@@ -54,6 +76,11 @@ export interface AuthStatusMessage extends EnvelopeBase {
 
     /** User information if authenticated */
     user?: QuodsiUserInfo;
+
+    /** Environment-level config (Studio URL, etc.). Same value across calls
+     *  per running extension; piggybacking on AUTH_STATUS so it arrives
+     *  whether or not the user has signed in. */
+    config?: ExtensionConfig;
   };
 }
 

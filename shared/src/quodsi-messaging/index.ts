@@ -42,6 +42,7 @@ export {
 // Export auth messages
 export {
   QuodsiUserInfo,
+  ExtensionConfig,
   AuthLoginSuccessMessage,
   AuthLogoutMessage,
   AuthStatusMessage,

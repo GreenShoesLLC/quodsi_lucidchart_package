@@ -1,9 +1,53 @@
-import { EnvelopeBase, EnvelopeMessageType, QuodsiUserInfo } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ExtensionConfig, QuodsiUserInfo } from '@quodsi/shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+/**
+ * Map from Lucid package ID (from `lucid.getPackageId()`) to the Studio web
+ * app's origin for that environment. Used to populate ExtensionConfig in
+ * AUTH_STATUS broadcasts so the React panel can open Studio's /welcome page
+ * for the "Create New User" flow without hardcoding URLs in React.
+ *
+ * Lucid package IDs come from the `id` field of each manifest_*.json:
+ *   - 29e0d321-… = QuodsiDev (manifest.json default + manifest_dev.json + manifest_local.json)
+ *   - dcde0747-… = QuodsiTest (manifest_test.json)
+ *   - d38c7ced-… = Quodsi prod (manifest_prod.json)
+ */
+const STUDIO_URL_BY_PACKAGE_ID: Record<string, string> = {
+  '29e0d321-5cb2-4ae0-a1b6-dabd512c098c': 'https://dev-studio.quodsi.com',
+  'dcde0747-95a4-4bf8-9e17-b4cf41afa1c7': 'https://test-studio.quodsi.com',
+  'd38c7ced-35e8-4962-a622-1d3fa480ab58': 'https://studio.quodsi.com',
+};
+
+/**
+ * Build-time local-dev override for the Studio URL. Injected by webpack's
+ * DefinePlugin from `local-studio-url.txt` (gitignored). The developer
+ * creates that file once with a single line like `https://localhost:3030`
+ * and the override is baked into every local build automatically.
+ *
+ * In CI / cloud bundles the file doesn't exist → __LOCAL_STUDIO_OVERRIDE__
+ * is the empty string → no override → falls back to per-package-ID lookup
+ * (production behavior).
+ *
+ * No source-code editing per build, no remembering to revert. See
+ * webpack.config.js `readLocalStudioOverride()` for the inject logic.
+ */
+function getExtensionConfig(): ExtensionConfig {
+  if (__LOCAL_STUDIO_OVERRIDE__) {
+    return { studioBaseUrl: __LOCAL_STUDIO_OVERRIDE__ };
+  }
+  let studioBaseUrl: string | undefined;
+  try {
+    const packageId = lucid.getPackageId();
+    studioBaseUrl = STUDIO_URL_BY_PACKAGE_ID[packageId];
+  } catch {
+    // lucid global isn't available in some test contexts; leave undefined.
+  }
+  return { studioBaseUrl };
+}
 
 /**
  * Handler for Kinde authentication operations.
@@ -79,14 +123,59 @@ export class AuthHandler {
   }
 
   /**
-   * Handle AUTH_LOGOUT: clear local auth state.
+   * Handle AUTH_LOGOUT: full sign-out flow.
+   *
+   * The plain "clear local state and broadcast" version is functionally
+   * useless because Lucid platform-side caches the OAuth token; clicking
+   * "Sign In" right after a logout would just return the cached token and
+   * sign the user back in as themselves. Real sign-out requires forcing
+   * Lucid to drop its cache, which is what `triggerAuthFlow('kinde')`
+   * does (it's the SDK's documented re-auth entry point).
+   *
+   * Caller (React panel) is expected to have already opened Kinde's
+   * `/logout` URL in a new tab to clear Kinde's session cookie BEFORE
+   * sending this message. Without that, Kinde silently re-auths the
+   * same user via session cookie and triggerAuthFlow returns the same
+   * identity — net result for the user is no apparent sign-out.
+   *
+   * After this runs the user is either:
+   *   - Signed out (Lucid OAuth popup was closed by user) — common case
+   *   - Signed in as a different user (used the Kinde signup/login screen)
+   *   - Signed back in as the same user (if Kinde session somehow survived
+   *     the /logout step or the OAuth popup auto-completed)
    */
-  private static handleLogout(msg: EnvelopeBase): void {
-    AuthHandler.logger.log('Logging out, clearing auth state');
-    AuthHandler.isAuthenticated = false;
-    AuthHandler.currentUser = undefined;
-    AuthHandler.currentToken = undefined;
-    AuthHandler.broadcastAuthStatus(false);
+  private static async handleLogout(msg: EnvelopeBase): Promise<void> {
+    try {
+      AuthHandler.logger.log('Sign-out requested; clearing local state');
+      AuthHandler.isAuthenticated = false;
+      AuthHandler.currentUser = undefined;
+      AuthHandler.currentToken = undefined;
+      AuthHandler.broadcastAuthStatus(false);
+
+      const client = ModelManager.getClient();
+      AuthHandler.logger.log('Calling client.triggerAuthFlow(kinde) to invalidate Lucid cache...');
+      const result = await client.triggerAuthFlow('kinde');
+      AuthHandler.logger.log('triggerAuthFlow result:', result);
+
+      const token = await client.getOAuthToken('kinde');
+      if (token) {
+        // Lucid returned a token after the re-auth — process it (user
+        // either silently re-auth'd as themselves, signed in as someone
+        // else, or signed up fresh).
+        await AuthHandler.processToken(token);
+      } else {
+        // No token returned — user dismissed the OAuth popup. They're
+        // genuinely signed out now.
+        AuthHandler.logger.log('No token after triggerAuthFlow; user is signed out');
+        AuthHandler.broadcastAuthStatus(false);
+      }
+    } catch (error) {
+      AuthHandler.logger.error('Sign-out error:', error);
+      AuthHandler.broadcastAuthError(
+        'AUTH_FAILED',
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }
 
   /**
@@ -101,22 +190,31 @@ export class AuthHandler {
       return;
     }
 
-    // Fetch user profile for email and display name
+    // Fetch user profile for email and display name. Derive the URL from the
+    // token's `iss` claim so the same build works against any Kinde tenant
+    // (prd, dev, future tenants). The manifest's `domainWhitelist` on the
+    // `kinde` OAuth provider gates the call at the Lucid SDK layer, so a
+    // spoofed `iss` is blocked there too.
     let email = '';
     let displayName: string | undefined;
     try {
-      const client = ModelManager.getClient();
-      const profileResponse = await client.oauthXhr('kinde', {
-        url: 'https://quodsim.kinde.com/oauth2/v2/user_profile',
-        method: 'GET',
-        responseFormat: 'utf8',
-      });
+      const issuer = typeof claims.iss === 'string' ? claims.iss : null;
+      if (!issuer) {
+        AuthHandler.logger.log('Token missing iss claim; skipping user profile fetch');
+      } else {
+        const client = ModelManager.getClient();
+        const profileResponse = await client.oauthXhr('kinde', {
+          url: `${issuer.replace(/\/$/, '')}/oauth2/v2/user_profile`,
+          method: 'GET',
+          responseFormat: 'utf8',
+        });
 
-      if (profileResponse) {
-        const profile = JSON.parse(profileResponse.responseText);
-        email = profile.email || '';
-        displayName = profile.name || profile.given_name || undefined;
-        AuthHandler.logger.log('User profile:', { email, displayName });
+        if (profileResponse) {
+          const profile = JSON.parse(profileResponse.responseText);
+          email = profile.email || '';
+          displayName = profile.name || profile.given_name || undefined;
+          AuthHandler.logger.log('User profile:', { email, displayName });
+        }
       }
     } catch (error) {
       AuthHandler.logger.log('Could not fetch user profile, continuing with token claims only:', error);
@@ -127,6 +225,10 @@ export class AuthHandler {
       email,
       displayName,
       orgCode: claims.org_code || undefined,
+      // iss is the Kinde tenant URL (e.g., https://quodsim-dev.us.kinde.com).
+      // Forwarded to the React panel so the "Sign in as different user"
+      // dev-tooling button can construct the Kinde logout URL.
+      kindeIssuer: typeof claims.iss === 'string' ? claims.iss : undefined,
     };
 
     AuthHandler.isAuthenticated = true;
@@ -219,9 +321,33 @@ export class AuthHandler {
           displayName: user.displayName,
         },
         asynchronous: false,
-      });
+      }) as { status?: number; json?: any };
 
       AuthHandler.logger.log('User synced to quodsi_api:', result);
+
+      // Path A — backend may have moved this user out of the shared default
+      // org and into a personal org. The current JWT still references the
+      // old org_code; subsequent backend calls use `user.kinde_org_code`
+      // from the DB (correct value) so most things still work. The orgCode
+      // we broadcast to the React panel is stale until next token refresh,
+      // which we let happen naturally on Kinde token expiry rather than
+      // forcing a re-auth that would interrupt the just-completed sign-in.
+      if (result?.json?.tokenRefreshRequired) {
+        const newOrgCode = result.json?.user?.org_code;
+        AuthHandler.logger.log(
+          'Path A: backend personalized this user. Token refresh required.',
+          { newOrgCode }
+        );
+        // Update local state so the React panel sees the new org_code
+        // immediately without waiting for token refresh.
+        if (newOrgCode && AuthHandler.currentUser) {
+          AuthHandler.currentUser = {
+            ...AuthHandler.currentUser,
+            orgCode: newOrgCode,
+          };
+          AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
+        }
+      }
     } catch (error) {
       AuthHandler.logger.error('syncUserToDatabase error:', error);
       throw error;
@@ -267,7 +393,10 @@ export class AuthHandler {
       source: 'host',
       target: 'broadcast',
       version: '1.0',
-      data: { isAuthenticated, user },
+      // ExtensionConfig piggybacks on every AUTH_STATUS so the React panel
+      // gets it without a separate message type. Same value each time;
+      // React-side cache is fine.
+      data: { isAuthenticated, user, config: getExtensionConfig() },
     });
   }
 
