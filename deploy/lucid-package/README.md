@@ -38,10 +38,10 @@ This PowerShell script orchestrates the process of preparing environment variabl
 
 | Environment | Manifest Used | Data Connector URL |
 |-------------|---------------|-------------------|
-| Dev | manifest_dev.json | https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
-| TST | manifest_test.json | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
-| PRD | manifest_prod.json | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
-| (none) | manifest.json | http://localhost:7071/api/dataConnector/ (local dev) |
+| Dev | manifest_dev.json | https://ca-quodsi-dev-api.niceisland-1fa2af68.eastus2.azurecontainerapps.io/lucid/ (FastAPI Container App, since 2026-05-13) |
+| TST | manifest_test.json | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ (legacy Azure Functions; cutover pending) |
+| PRD | manifest_prod.json | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ (legacy Azure Functions; cutover pending) |
+| (none) | manifest.json | whatever manifest.json points at (typically the local dev FastAPI at http://localhost:8000/lucid/) |
 
 ## Parameters
 
