@@ -113,3 +113,11 @@ export function useEntitlements() {
   const { entitlements } = useMessaging();
   return entitlements;
 }
+
+/**
+ * Hook to access Sync button state (isSyncing, last sync timestamp, last error).
+ */
+export function useSync() {
+  const { sync } = useMessaging();
+  return sync;
+}
