@@ -99,7 +99,7 @@ export class SimulationRunHandler {
   /**
    * Map DB run status to the RunState values React expects
    */
-  private static mapStatusToRunState(status: string): string {
+  public static mapStatusToRunState(status: string): string {
     switch (status) {
       case 'COMPLETED': return 'RAN_SUCCESSFULLY';
       case 'FAILED': return 'RAN_WITH_ERRORS';
@@ -112,7 +112,7 @@ export class SimulationRunHandler {
   /**
    * Transform nested API response (scenarios with runs) into flat SimulationRunInfo list
    */
-  private static transformToFlatScenarioList(apiScenarios: any[]): any[] {
+  public static transformToFlatScenarioList(apiScenarios: any[]): any[] {
     return apiScenarios.map(scenario => {
       const latestRun = scenario.runs?.[0]; // runs are ordered by created_at DESC
       const runState = latestRun

@@ -10,6 +10,7 @@ import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
+import { SyncHandler } from './syncHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 import { AuthHandler } from './authHandler';
@@ -104,6 +105,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Sync All (model + scenarios + runs orchestration)
+    if (SyncHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Swimlane operations
     if (SwimLaneHandler.handleMessage(msg)) {
       return true;
@@ -138,6 +144,7 @@ export {
   TimePatternHandler,
   StorageHandler,
   SimulationRunHandler,
+  SyncHandler,
   ConversionPreviewHandler,
   ScenarioDefinitionHandler,
   DevtoolsHandler,
