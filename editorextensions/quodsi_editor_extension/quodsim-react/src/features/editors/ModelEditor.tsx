@@ -539,6 +539,7 @@ const ScenariosAndRunsPanel: React.FC<{
         <button
           onClick={handleSync}
           disabled={isSyncing || !documentId || !pageId}
+          aria-busy={isSyncing}
           className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-wait"
           title={isSyncing ? 'Syncing...' : 'Sync (push local changes, pull server updates)'}
         >
