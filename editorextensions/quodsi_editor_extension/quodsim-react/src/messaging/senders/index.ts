@@ -8,3 +8,4 @@ export { useStorageSender } from './storageSender';
 export { useConversionPreviewSender } from './conversionPreviewSender';
 export { useAnalyticsSender } from './analyticsSender';
 export { useSyncSender } from './syncSender';
+export { useScenariosSender } from './scenariosSender';

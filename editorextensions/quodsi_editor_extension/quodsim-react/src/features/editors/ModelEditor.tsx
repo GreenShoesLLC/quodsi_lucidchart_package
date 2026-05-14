@@ -25,6 +25,7 @@ import { canRunNewScenario, scenariosPerModelLimit } from "../../messaging/state
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useSyncSender } from "../../messaging/senders/syncSender";
+import { useScenariosSender } from "../../messaging/senders/scenariosSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -158,6 +159,7 @@ const ScenariosAndRunsPanel: React.FC<{
   // Messaging hooks
   const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
   const { syncAll } = useSyncSender();
+  const { listScenarios } = useScenariosSender();
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
@@ -307,22 +309,30 @@ const ScenariosAndRunsPanel: React.FC<{
   }, [scenarios, onScenariosChange]);
 
   /**
-   * Pull-only callback for refreshing canonical state from the server. Despite
-   * the name on the underlying sender (`listSimulationRuns`), the backend's
-   * data connector returns scenarios with nested runs in a single response — so
-   * this one call refreshes BOTH the scenarios list and the simulation runs.
+   * Pull-only callback for refreshing canonical state from the server.
+   * Explicitly calls both listScenarios and listSimulationRuns for code clarity,
+   * though the backend currently returns scenarios with nested runs in a single response.
    *
    * Renamed from `loadSimulationRuns` for naming honesty: it pulls everything,
    * not just runs. Manual user clicks now use `handleSync` (which does the full
    * bidirectional reconcile: UpsertModel + SyncScenarios + ListScenarios +
    * ListSimulationRuns); this callback drives the read-only pull path used by
    * the initial-load effect and is intended for the auto-refresh polling timer.
+   *
+   * The explicit listScenarios call is belt-and-suspenders: currently redundant
+   * since runs come nested in the ListScenarios response, but defensive against
+   * future backend changes that might split the responses.
    */
   const loadFromServer = useCallback(() => {
-    if (!documentId) return;
+    if (!documentId || !pageId) return;
     dispatch({ type: 'SIMULATION_RUNS_LOADING' });
+    // Pull scenarios + runs explicitly. Backend currently returns runs nested
+    // in the ListScenarios response, so this is technically belt-and-suspenders,
+    // but it makes intent visible and resilient if the backend ever splits the
+    // responses.
+    listScenarios(documentId, pageId);
     listSimulationRuns(documentId);
-  }, [documentId, listSimulationRuns, dispatch]);
+  }, [documentId, pageId, listScenarios, listSimulationRuns, dispatch]);
 
   // Sync model + scenarios with the server. Fire-and-forget — the extension
   // dispatches SYNC_ALL_SUCCESS_UPDATE / SYNC_ALL_ERROR_UPDATE via the sync
