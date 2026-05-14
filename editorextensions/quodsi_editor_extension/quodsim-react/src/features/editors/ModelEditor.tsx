@@ -143,8 +143,12 @@ type AutoRefreshMode = 'off' | 'smart' | 'on';
  * Unified panel that combines scenario management with smart polling
  * and analysis navigation. Replaces the old sub-tab (Scenarios | Runs) pattern
  * with an integrated view where each scenario shows its run status inline.
+ *
+ * Exported (named export only) for unit testing — the outer ModelEditor still
+ * remains the default export. Production code should keep using ModelEditor
+ * which renders this internally when the "scenarios" tab is active.
  */
-const ScenariosAndRunsPanel: React.FC<{
+export const ScenariosAndRunsPanel: React.FC<{
   documentId?: string;
   pageId?: string;
   modelName: string;
