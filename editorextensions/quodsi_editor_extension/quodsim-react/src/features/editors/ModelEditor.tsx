@@ -306,8 +306,19 @@ const ScenariosAndRunsPanel: React.FC<{
     onScenariosChange(scenarios.map(s => s.id === updated.id ? updated : s));
   }, [scenarios, onScenariosChange]);
 
-  // Load simulation runs
-  const loadSimulationRuns = useCallback(() => {
+  /**
+   * Pull-only callback for refreshing canonical state from the server. Despite
+   * the name on the underlying sender (`listSimulationRuns`), the backend's
+   * data connector returns scenarios with nested runs in a single response — so
+   * this one call refreshes BOTH the scenarios list and the simulation runs.
+   *
+   * Renamed from `loadSimulationRuns` for naming honesty: it pulls everything,
+   * not just runs. Manual user clicks now use `handleSync` (which does the full
+   * bidirectional reconcile: UpsertModel + SyncScenarios + ListScenarios +
+   * ListSimulationRuns); this callback drives the read-only pull path used by
+   * the initial-load effect and is intended for the auto-refresh polling timer.
+   */
+  const loadFromServer = useCallback(() => {
     if (!documentId) return;
     dispatch({ type: 'SIMULATION_RUNS_LOADING' });
     listSimulationRuns(documentId);
@@ -410,9 +421,9 @@ const ScenariosAndRunsPanel: React.FC<{
   // Initial load
   useEffect(() => {
     if (documentId) {
-      loadSimulationRuns();
+      loadFromServer();
     }
-  }, [documentId, loadSimulationRuns]);
+  }, [documentId, loadFromServer]);
 
   // Polling
   useEffect(() => {
