@@ -11,6 +11,7 @@ import { SimulationRunListRequestMessage, SimulationRunListResultMessage, Simula
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
 import { AnalyticsMessage, AnalyticsTrackMessage, ClientAnalyticsEvent } from './analytics/messages';
+import { SyncAllRequestMessage, SyncAllSuccessMessage, SyncAllErrorMessage, SyncMessage } from './sync/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -155,6 +156,17 @@ export {
   ClientAnalyticsEvent
 } from './analytics/messages';
 
+// Export sync messages
+export {
+  SyncAllRequestMessage,
+  SyncAllSuccessMessage,
+  SyncAllErrorMessage,
+  SyncAllRequestData,
+  SyncAllSuccessData,
+  SyncAllErrorData,
+  SyncMessage
+} from './sync/messages';
+
 // Define the union type of all possible messages
 export type QuodsiMessage =
   | FrameworkMessage
@@ -167,7 +179,8 @@ export type QuodsiMessage =
   | SimulationRunMessage
   | ConversionPreviewMessage
   | EntitlementMessage
-  | AnalyticsMessage;
+  | AnalyticsMessage
+  | SyncMessage;
 
 // Define payload type mapping
 export interface EnvelopMessagePayloads {
@@ -246,6 +259,10 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
 
   [EnvelopeMessageType.ANALYTICS_TRACK]: AnalyticsTrackMessage['data'];
+
+  [EnvelopeMessageType.SYNC_ALL_REQUEST]: SyncAllRequestMessage['data'];
+  [EnvelopeMessageType.SYNC_ALL_SUCCESS]: SyncAllSuccessMessage['data'];
+  [EnvelopeMessageType.SYNC_ALL_ERROR]: SyncAllErrorMessage['data'];
 }
 
 /**
