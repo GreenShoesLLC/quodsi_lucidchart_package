@@ -20,9 +20,11 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging, useSimulationRuns, useMessagingDispatch, useEntitlements } from "../../messaging/MessageProvider";
+import { useSync } from "../../messaging/MessageContext";
 import { canRunNewScenario, scenariosPerModelLimit } from "../../messaging/state/entitlementsSlice";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
+import { useSyncSender } from "../../messaging/senders/syncSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -143,20 +145,24 @@ type AutoRefreshMode = 'off' | 'smart' | 'on';
  */
 const ScenariosAndRunsPanel: React.FC<{
   documentId?: string;
+  pageId?: string;
+  modelName: string;
   referenceData?: EditorReferenceData;
   onScenariosChange: (scenarios: ISerializedScenario[]) => void;
   onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
-}> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
+}> = ({ documentId, pageId, modelName, referenceData, onScenariosChange, onSimulate }) => {
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [rerunningScenarioId, setRerunningScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   // Messaging hooks
   const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
+  const { syncAll } = useSyncSender();
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
   const simulationRunsLoading = simulationRunState.loading;
+  const { isSyncing } = useSync();
 
   // Ref to track current simulation runs without causing dependency cycles
   const simulationRunsRef = useRef(simulationRuns);
@@ -306,6 +312,18 @@ const ScenariosAndRunsPanel: React.FC<{
     dispatch({ type: 'SIMULATION_RUNS_LOADING' });
     listSimulationRuns(documentId);
   }, [documentId, listSimulationRuns, dispatch]);
+
+  // Sync model + scenarios with the server. Fire-and-forget — the extension
+  // dispatches SYNC_ALL_SUCCESS_UPDATE / SYNC_ALL_ERROR_UPDATE via the sync
+  // mapper when it sends SYNC_ALL_SUCCESS / SYNC_ALL_ERROR back, which clears
+  // isSyncing in the Redux sync slice.
+  const handleSync = useCallback(() => {
+    if (isSyncing) return;
+    if (!documentId || !pageId) return;
+    // Mark in-flight optimistically.
+    dispatch({ type: 'SYNC_ALL_START' });
+    syncAll(documentId, pageId, modelName, scenarios);
+  }, [isSyncing, dispatch, syncAll, documentId, pageId, modelName, scenarios]);
 
   // Message listener for simulation run updates
   useEffect(() => {
@@ -1040,6 +1058,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       {activeTab === "scenarios" && (
         <ScenariosAndRunsPanel
           documentId={selection.documentContext?.documentId}
+          pageId={selection.documentContext?.pageId}
+          modelName={localModelDraft.name}
           referenceData={referenceData}
           onScenariosChange={updateScenarioDefinitions}
           onSimulate={onSimulate ?? (() => {})}
