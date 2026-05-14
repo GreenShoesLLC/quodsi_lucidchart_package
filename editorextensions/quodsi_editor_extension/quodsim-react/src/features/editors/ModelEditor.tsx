@@ -537,11 +537,12 @@ const ScenariosAndRunsPanel: React.FC<{
       {/* Auto-refresh control */}
       <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-t bg-gray-50">
         <button
-          onClick={loadSimulationRuns}
-          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-          title="Refresh simulation runs"
+          onClick={handleSync}
+          disabled={isSyncing || !documentId || !pageId}
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-wait"
+          title={isSyncing ? 'Syncing...' : 'Sync (push local changes, pull server updates)'}
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
         </button>
         <select
           value={autoRefreshMode}
