@@ -8,6 +8,7 @@ import { mapElementOps } from './elementOps.mapper';
 import { mapStorage } from './storage.mapper';
 import { mapConversionPreview } from './conversionPreview.mapper';
 import { mapEntitlements } from './entitlements.mapper';
+import { mapSync } from './sync.mapper';
 import { debugService } from '../utils/debugService';
 import { MessagingAction } from '../state/types';
 
@@ -27,7 +28,8 @@ const mappers = [
   mapConversionPreview,
   mapElementOps,
   mapStorage,
-  mapEntitlements
+  mapEntitlements,
+  mapSync
 ];
 
 /**

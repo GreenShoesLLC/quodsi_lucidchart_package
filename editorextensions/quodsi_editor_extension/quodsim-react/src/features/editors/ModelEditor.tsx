@@ -20,9 +20,12 @@ import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
 import { convertStructureToRootClauses, convertRootClausesToStructure, TeamStructure } from "../../utils/resourceRequirementConverter";
 import { useMessaging, useSimulationRuns, useMessagingDispatch, useEntitlements } from "../../messaging/MessageProvider";
+import { useSync } from "../../messaging/MessageContext";
 import { canRunNewScenario, scenariosPerModelLimit } from "../../messaging/state/entitlementsSlice";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
+import { useSyncSender } from "../../messaging/senders/syncSender";
+import { useScenariosSender } from "../../messaging/senders/scenariosSender";
 import { selectSimulationRuns } from "../../messaging/state/simulationRunSlice";
 import { ISerializedScenario } from "@quodsi/shared";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -140,23 +143,32 @@ type AutoRefreshMode = 'off' | 'smart' | 'on';
  * Unified panel that combines scenario management with smart polling
  * and analysis navigation. Replaces the old sub-tab (Scenarios | Runs) pattern
  * with an integrated view where each scenario shows its run status inline.
+ *
+ * Exported (named export only) for unit testing — the outer ModelEditor still
+ * remains the default export. Production code should keep using ModelEditor
+ * which renders this internally when the "scenarios" tab is active.
  */
-const ScenariosAndRunsPanel: React.FC<{
+export const ScenariosAndRunsPanel: React.FC<{
   documentId?: string;
+  pageId?: string;
+  modelName: string;
   referenceData?: EditorReferenceData;
   onScenariosChange: (scenarios: ISerializedScenario[]) => void;
   onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
-}> = ({ documentId, referenceData, onScenariosChange, onSimulate }) => {
+}> = ({ documentId, pageId, modelName, referenceData, onScenariosChange, onSimulate }) => {
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [rerunningScenarioId, setRerunningScenarioId] = useState<string | null>(null);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   // Messaging hooks
   const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
+  const { syncAll } = useSyncSender();
+  const { listScenarios } = useScenariosSender();
   const dispatch = useMessagingDispatch();
   const simulationRunState = useSimulationRuns();
   const simulationRuns = selectSimulationRuns({ simulationRuns: simulationRunState });
   const simulationRunsLoading = simulationRunState.loading;
+  const { isSyncing } = useSync();
 
   // Ref to track current simulation runs without causing dependency cycles
   const simulationRunsRef = useRef(simulationRuns);
@@ -300,12 +312,43 @@ const ScenariosAndRunsPanel: React.FC<{
     onScenariosChange(scenarios.map(s => s.id === updated.id ? updated : s));
   }, [scenarios, onScenariosChange]);
 
-  // Load simulation runs
-  const loadSimulationRuns = useCallback(() => {
-    if (!documentId) return;
+  /**
+   * Pull-only callback for refreshing canonical state from the server.
+   * Explicitly calls both listScenarios and listSimulationRuns for code clarity,
+   * though the backend currently returns scenarios with nested runs in a single response.
+   *
+   * Renamed from `loadSimulationRuns` for naming honesty: it pulls everything,
+   * not just runs. Manual user clicks now use `handleSync` (which does the full
+   * bidirectional reconcile: UpsertModel + SyncScenarios + ListScenarios +
+   * ListSimulationRuns); this callback drives the read-only pull path used by
+   * the initial-load effect and is intended for the auto-refresh polling timer.
+   *
+   * The explicit listScenarios call is belt-and-suspenders: currently redundant
+   * since runs come nested in the ListScenarios response, but defensive against
+   * future backend changes that might split the responses.
+   */
+  const loadFromServer = useCallback(() => {
+    if (!documentId || !pageId) return;
     dispatch({ type: 'SIMULATION_RUNS_LOADING' });
+    // Pull scenarios + runs explicitly. Backend currently returns runs nested
+    // in the ListScenarios response, so this is technically belt-and-suspenders,
+    // but it makes intent visible and resilient if the backend ever splits the
+    // responses.
+    listScenarios(documentId, pageId);
     listSimulationRuns(documentId);
-  }, [documentId, listSimulationRuns, dispatch]);
+  }, [documentId, pageId, listScenarios, listSimulationRuns, dispatch]);
+
+  // Sync model + scenarios with the server. Fire-and-forget — the extension
+  // dispatches SYNC_ALL_SUCCESS_UPDATE / SYNC_ALL_ERROR_UPDATE via the sync
+  // mapper when it sends SYNC_ALL_SUCCESS / SYNC_ALL_ERROR back, which clears
+  // isSyncing in the Redux sync slice.
+  const handleSync = useCallback(() => {
+    if (isSyncing) return;
+    if (!documentId || !pageId) return;
+    // Mark in-flight optimistically.
+    dispatch({ type: 'SYNC_ALL_START' });
+    syncAll(documentId, pageId, modelName, scenarios);
+  }, [isSyncing, dispatch, syncAll, documentId, pageId, modelName, scenarios]);
 
   // Message listener for simulation run updates
   useEffect(() => {
@@ -392,9 +435,9 @@ const ScenariosAndRunsPanel: React.FC<{
   // Initial load
   useEffect(() => {
     if (documentId) {
-      loadSimulationRuns();
+      loadFromServer();
     }
-  }, [documentId, loadSimulationRuns]);
+  }, [documentId, loadFromServer]);
 
   // Polling
   useEffect(() => {
@@ -519,11 +562,13 @@ const ScenariosAndRunsPanel: React.FC<{
       {/* Auto-refresh control */}
       <div className="flex items-center justify-end gap-2 px-3 py-1.5 border-t bg-gray-50">
         <button
-          onClick={loadSimulationRuns}
-          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-          title="Refresh simulation runs"
+          onClick={handleSync}
+          disabled={isSyncing || !documentId || !pageId}
+          aria-busy={isSyncing}
+          className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-wait"
+          title={isSyncing ? 'Syncing...' : 'Sync (push local changes, pull server updates)'}
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
         </button>
         <select
           value={autoRefreshMode}
@@ -1040,6 +1085,8 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       {activeTab === "scenarios" && (
         <ScenariosAndRunsPanel
           documentId={selection.documentContext?.documentId}
+          pageId={selection.documentContext?.pageId}
+          modelName={localModelDraft.name}
           referenceData={referenceData}
           onScenariosChange={updateScenarioDefinitions}
           onSimulate={onSimulate ?? (() => {})}

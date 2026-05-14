@@ -8,3 +8,4 @@ export { mapSimulation } from './simulation.mapper';
 export { mapModelOps } from './modelOps.mapper';
 export { mapStorage } from './storage.mapper';
 export { mapEntitlements } from './entitlements.mapper';
+export { mapSync } from './sync.mapper';
