@@ -143,6 +143,7 @@ export class SimulationRunHandler {
         metrics: latestRun?.metrics || undefined,
         outputSchemaVersion: latestRun?.output_schema_version ?? null,
         engineVersion: latestRun?.engine_version ?? null,
+        orgCode: latestRun?.org_code ?? null,
       };
     });
   }

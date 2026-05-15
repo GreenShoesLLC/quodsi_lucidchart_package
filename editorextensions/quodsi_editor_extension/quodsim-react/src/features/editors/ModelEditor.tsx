@@ -244,6 +244,7 @@ export const ScenariosAndRunsPanel: React.FC<{
       hasResults: false,
       outputSchemaVersion: null,
       engineVersion: null,
+      orgCode: null,
     };
     const currentRuns = simulationRunsRef.current;
     dispatch({
@@ -421,6 +422,7 @@ export const ScenariosAndRunsPanel: React.FC<{
               hasResults: false,
               outputSchemaVersion: null,
               engineVersion: null,
+              orgCode: null,
             };
             dispatch({ type: 'SIMULATION_RUNS_SUCCESS', simulationRuns: [newRun, ...currentRuns] });
             setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);

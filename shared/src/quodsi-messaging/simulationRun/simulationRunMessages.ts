@@ -50,6 +50,13 @@ export interface SimulationRunInfo {
   outputSchemaVersion: string | null;
   /** Engine __version__ at run time. Diagnostic. Null for legacy runs. */
   engineVersion: string | null;
+  /**
+   * Org_code of the user/org that submitted this run. Used by the UI to
+   * show provenance (this run was produced by a different org) and to
+   * gate per-run actions (delete) on the requesting user's org match.
+   * Null only for legacy runs that pre-date the field.
+   */
+  orgCode: string | null;
 }
 
 export interface SimulationRunListResultMessage extends EnvelopeBase {
