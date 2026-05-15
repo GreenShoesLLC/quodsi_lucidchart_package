@@ -125,24 +125,22 @@ export class AuthHandler {
   /**
    * Handle AUTH_LOGOUT: full sign-out flow.
    *
-   * The plain "clear local state and broadcast" version is functionally
-   * useless because Lucid platform-side caches the OAuth token; clicking
-   * "Sign In" right after a logout would just return the cached token and
-   * sign the user back in as themselves. Real sign-out requires forcing
-   * Lucid to drop its cache, which is what `triggerAuthFlow('kinde')`
-   * does (it's the SDK's documented re-auth entry point).
+   * Uses Lucid SDK's `revokeOAuthToken('kinde')` to revoke the access token
+   * at Kinde's revocation endpoint and drop it from Lucid's cache in one
+   * silent call. The endpoint URL comes from the manifest's
+   * `oauthProviders.kinde.revokeTokenUrl` field.
    *
    * Caller (React panel) is expected to have already opened Kinde's
-   * `/logout` URL in a new tab to clear Kinde's session cookie BEFORE
-   * sending this message. Without that, Kinde silently re-auths the
-   * same user via session cookie and triggerAuthFlow returns the same
-   * identity — net result for the user is no apparent sign-out.
+   * `/logout` URL in a new tab to kill Kinde's SSO session cookie BEFORE
+   * sending this message. Token revocation alone does NOT end the user's
+   * authenticated session at Kinde — without the cookie kill, clicking
+   * "Sign In" right after Sign Out would silently issue a fresh token to
+   * the same user and the sign-out would appear to have no effect.
    *
-   * After this runs the user is either:
-   *   - Signed out (Lucid OAuth popup was closed by user) — common case
-   *   - Signed in as a different user (used the Kinde signup/login screen)
-   *   - Signed back in as the same user (if Kinde session somehow survived
-   *     the /logout step or the OAuth popup auto-completed)
+   * If revoke returns false (Kinde's revoke endpoint failed), we still
+   * proceed with local state clearing — the user's intent was Sign Out,
+   * and a stale token Lucid has forgotten about is the lesser evil
+   * compared to leaving the user apparently signed in.
    */
   private static async handleLogout(msg: EnvelopeBase): Promise<void> {
     try {
@@ -153,22 +151,28 @@ export class AuthHandler {
       AuthHandler.broadcastAuthStatus(false);
 
       const client = ModelManager.getClient();
-      AuthHandler.logger.log('Calling client.triggerAuthFlow(kinde) to invalidate Lucid cache...');
-      const result = await client.triggerAuthFlow('kinde');
-      AuthHandler.logger.log('triggerAuthFlow result:', result);
+      AuthHandler.logger.log('Calling client.revokeOAuthToken(kinde)...');
+      const revoked = await client.revokeOAuthToken('kinde');
+      AuthHandler.logger.log('revokeOAuthToken result:', { revoked });
 
-      const token = await client.getOAuthToken('kinde');
-      if (token) {
-        // Lucid returned a token after the re-auth — process it (user
-        // either silently re-auth'd as themselves, signed in as someone
-        // else, or signed up fresh).
-        await AuthHandler.processToken(token);
-      } else {
-        // No token returned — user dismissed the OAuth popup. They're
-        // genuinely signed out now.
-        AuthHandler.logger.log('No token after triggerAuthFlow; user is signed out');
-        AuthHandler.broadcastAuthStatus(false);
+      if (!revoked) {
+        // Kinde's revoke endpoint rejected the call. Local state is
+        // already cleared above; log and move on rather than leaving
+        // the user apparently signed in.
+        AuthHandler.logger.log(
+          'revokeOAuthToken returned false; local sign-out completed regardless'
+        );
       }
+
+      // Belt-and-suspenders: also call clearOAuthToken in case Lucid keeps
+      // any residual cache layer (e.g., refresh token, identity link) that
+      // revokeOAuthToken doesn't fully drop. Observed during smoke testing:
+      // with prompt=login in the manifest, the next Sign In still silently
+      // re-issued for the same user — suggesting some Lucid-side state
+      // survives revoke. Calling clear here forces a clean slate.
+      AuthHandler.logger.log('Calling client.clearOAuthToken(kinde)...');
+      const cleared = await client.clearOAuthToken('kinde');
+      AuthHandler.logger.log('clearOAuthToken result:', { cleared });
     } catch (error) {
       AuthHandler.logger.error('Sign-out error:', error);
       AuthHandler.broadcastAuthError(
@@ -345,6 +349,28 @@ export class AuthHandler {
             ...AuthHandler.currentUser,
             orgCode: newOrgCode,
           };
+          AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
+        }
+      }
+
+      // Backfill email/displayName from the backend's SyncUser response.
+      // Kinde's /oauth2/v2/user_profile endpoint returns 400 in some
+      // token-audience combinations (observed after the lucid-extension-sdk
+      // 1.1.x bump), leaving the JWT-derived currentUser with empty email
+      // and displayName. The backend is the authoritative source for these
+      // fields — use its response whenever the local copy is missing.
+      const backendUser = result?.json?.user;
+      if (backendUser && AuthHandler.currentUser) {
+        const patch: Partial<QuodsiUserInfo> = {};
+        if (!AuthHandler.currentUser.email && backendUser.email) {
+          patch.email = backendUser.email;
+        }
+        if (!AuthHandler.currentUser.displayName && backendUser.display_name) {
+          patch.displayName = backendUser.display_name;
+        }
+        if (Object.keys(patch).length > 0) {
+          AuthHandler.logger.log('Backfilling currentUser from backend:', patch);
+          AuthHandler.currentUser = { ...AuthHandler.currentUser, ...patch };
           AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
         }
       }

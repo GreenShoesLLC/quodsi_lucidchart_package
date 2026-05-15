@@ -18,17 +18,18 @@ export function useAuthSender() {
   }, [send]);
 
   /**
-   * Request sign-out. Caller should open Kinde's `/logout` URL in a new tab
-   * BEFORE invoking this so Kinde's session cookie is cleared too; otherwise
-   * the post-logout triggerAuthFlow silently re-auths the same user via
-   * session cookie. See AccountStrip's handleSignOut for the canonical
-   * caller pattern.
+   * Request sign-out. The kinde provider's authorizationUrl in the manifest
+   * includes `prompt=login`, so the next "Sign In" click will force a Kinde
+   * credentials prompt regardless of any cached session cookie — letting
+   * the user sign in as themselves or as a different user from a clean
+   * slate. AccountStrip's handleSignOut additionally opens Kinde's `/logout`
+   * URL in a new tab as defense-in-depth so the SSO session cookie is
+   * killed too.
    *
-   * Extension-side handler clears local state, calls
-   * `client.triggerAuthFlow('kinde')` to invalidate Lucid's cached OAuth
-   * token, then handles whatever the OAuth flow returns (a fresh token if
-   * user re-auth'd, nothing if they dismissed the popup → genuinely
-   * signed out).
+   * Extension-side handler clears local state, broadcasts AUTH_STATUS(false),
+   * then calls `client.revokeOAuthToken('kinde')` (added in Lucid SDK 1.1.x)
+   * which revokes the token at Kinde's revoke endpoint and drops Lucid's
+   * cached copy in one silent call.
    */
   const logout = useCallback(() => {
     send(EnvelopeMessageType.AUTH_LOGOUT, {});

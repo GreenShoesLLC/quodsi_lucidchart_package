@@ -34,8 +34,11 @@ yarn-error.log*
 # (infrastructure/extracted-config/ was removed 2026-04-27 — held hardcoded secrets)
 
 # Lucid credentials
-lucid.credentials.local
-kinde.credentials.local
+# Per-provider OAuth secrets used by `lucid-package test-editor-extension`.
+# Convention: <providerName>.credentials.local (e.g. lucid.credentials.local,
+# kinde.credentials.local). Wildcard pattern so new providers don't need a
+# gitignore update.
+*.credentials.local
 
 # Local-dev override for the AccountStrip "Create New User" Studio URL.
 # Webpack's DefinePlugin reads this file at build time and bakes the

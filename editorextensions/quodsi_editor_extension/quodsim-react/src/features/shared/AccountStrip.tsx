@@ -86,19 +86,20 @@ const AuthStatusIndicator: React.FC = () => {
 
   const handleSignOut = () => {
     setAuthDropdownOpen(false);
-    // Open Kinde's logout URL in a new tab to clear Kinde's session cookie.
-    // Without this, the extension-side triggerAuthFlow (in authSender.logout)
-    // silently re-auths the same user via the still-valid Kinde session and
-    // the user sees no apparent sign-out.
+    // Open Kinde's logout URL in a new tab as defense-in-depth: it kills
+    // Kinde's SSO session cookie cleanly. With prompt=login on the kinde
+    // provider's authorizationUrl in the manifest, the next "Sign In"
+    // click will force a credentials prompt regardless of session cookie
+    // state, so this step is no longer load-bearing — but kept so the
+    // user is fully signed out of Kinde, not just out of Quodsi.
     const issuer = auth.user?.kindeIssuer;
     if (issuer) {
       window.open(`${issuer.replace(/\/$/, "")}/logout`, "_blank", "noopener");
     } else {
       console.warn("Sign Out: no kindeIssuer in user info; skipping Kinde logout step");
     }
-    // Extension-side handler clears local state + calls triggerAuthFlow to
-    // invalidate Lucid's cached OAuth token + processes whatever the OAuth
-    // flow returns. See authHandler.handleLogout.
+    // Extension-side handler clears local state, broadcasts AUTH_STATUS(false),
+    // then calls client.revokeOAuthToken('kinde'). See authHandler.handleLogout.
     authSender.logout();
   };
 
