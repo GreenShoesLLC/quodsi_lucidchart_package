@@ -15,6 +15,9 @@ interface ComparisonSummaryViewProps {
   comparisonLoading: boolean;
   onDrillDown: (dataType: CrossRepDataType, filterValue?: string) => void;
   onRerunScenario?: (scenarioId: string) => void;
+  /** True while the run list (which carries outputSchemaVersion) is still
+   *  loading. Until then, version is unknown — not yet incompatible. */
+  scenarioMetaLoading?: boolean;
 }
 
 const ComparisonSummaryView: React.FC<ComparisonSummaryViewProps> = ({
@@ -23,7 +26,19 @@ const ComparisonSummaryView: React.FC<ComparisonSummaryViewProps> = ({
   comparisonLoading,
   onDrillDown,
   onRerunScenario,
+  scenarioMetaLoading,
 }) => {
+  // outputSchemaVersion arrives asynchronously with the run list. Until it
+  // loads it is undefined, which isOutputSchemaCompatible treats as
+  // incompatible — partitioning now would flash a false stale banner.
+  if (scenarioMetaLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-xs text-gray-500">Loading comparison data...</div>
+      </div>
+    );
+  }
+
   // Compat partition: split scenarios into compatible and incompatible
   const compatible = selectedScenarios.filter((s) =>
     isOutputSchemaCompatible(s.outputSchemaVersion)

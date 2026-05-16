@@ -223,6 +223,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             comparisonLoading={comparisonLoading}
             onDrillDown={handleDrillDown}
             onRerunScenario={onRerunScenario}
+            scenarioMetaLoading={availableScenariosLoading}
           />
         ) : (
           <SummaryView
@@ -248,6 +249,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             onDataTypeChange={setDataType}
             initialFilter={initialFilter}
             onRerunScenario={onRerunScenario}
+            scenarioMetaLoading={availableScenariosLoading}
           />
         )}
     </div>

@@ -43,6 +43,9 @@ interface DetailedViewProps {
   onDataTypeChange: (type: CrossRepDataType) => void;
   initialFilter?: string;
   onRerunScenario?: (scenarioId: string) => void;
+  /** True while the run list (which carries outputSchemaVersion) is still
+   *  loading. Until then, version is unknown — not yet incompatible. */
+  scenarioMetaLoading?: boolean;
 }
 
 const DetailedView: React.FC<DetailedViewProps> = ({
@@ -57,6 +60,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   onDataTypeChange,
   initialFilter,
   onRerunScenario,
+  scenarioMetaLoading,
 }) => {
   // Compat partition: split scenarios into compatible and incompatible
   const compatible = selectedScenarios.filter((s) =>
@@ -426,6 +430,18 @@ const DetailedView: React.FC<DetailedViewProps> = ({
 
     return null;
   };
+
+  // outputSchemaVersion arrives asynchronously with the run list. Until it
+  // loads it is undefined, which isOutputSchemaCompatible treats as
+  // incompatible — deciding the takeover/banner now would flash false stale UI.
+  // (Placed after all hooks so hook order stays stable.)
+  if (scenarioMetaLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-xs text-gray-500">Loading data...</div>
+      </div>
+    );
+  }
 
   // Single-scenario takeover: when the one selected scenario is incompatible
   if (selectedScenarios.length === 1 && incompatible.length === 1) {
