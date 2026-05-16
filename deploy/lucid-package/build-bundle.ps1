@@ -105,6 +105,33 @@ switch ($TargetEnvironment) {
 # Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY is set (Length: $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY.Length))"
 
 
+# --- Step 1.4: Enforce react-hooks/rules-of-hooks (fail fast) ---
+# Runs before any build so a hook-order violation aborts the bundle
+# instead of shipping a "Rendered fewer hooks than expected" crash
+# (this codebase has no CI; the bundle is the real ship gate).
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.4: Enforcing react-hooks/rules-of-hooks..."
+Write-Host "--------------------------------------------------"
+try {
+    Push-Location -Path $LucidPackageDir
+    npm run lint:hooks --workspace editorextensions/quodsi_editor_extension/quodsim-react *>&1 | Write-Host
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "react-hooks/rules-of-hooks violations detected. Aborting bundle."
+        Pop-Location
+        exit $LASTEXITCODE
+    } else {
+        Write-Host "rules-of-hooks: clean (no violations)." -ForegroundColor Green
+    }
+    Pop-Location
+}
+catch {
+    Pop-Location
+    Write-Error "An error occurred running the rules-of-hooks gate. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+
 # --- Step 1.5: Build Shared Library ---
 Write-Host "--------------------------------------------------"
 Write-Host "Step 1.5: Building Shared Library (@quodsi/shared)..."
