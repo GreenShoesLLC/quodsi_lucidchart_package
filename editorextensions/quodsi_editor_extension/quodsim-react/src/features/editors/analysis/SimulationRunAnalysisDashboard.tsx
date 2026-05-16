@@ -232,6 +232,7 @@ const SimulationRunAnalysisDashboard: React.FC<SimulationRunAnalysisDashboardPro
             onDrillDown={handleDrillDown}
             selectedScenarios={selectedScenarios}
             onRerunScenario={onRerunScenario}
+            scenarioMetaLoading={availableScenariosLoading}
           />
         ))
         : (

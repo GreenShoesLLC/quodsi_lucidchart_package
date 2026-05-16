@@ -15,6 +15,9 @@ interface SummaryViewProps {
   selectedScenarios?: SelectedScenario[];
   /** NEW — optional re-run handler; hides the button when omitted. */
   onRerunScenario?: (scenarioId: string) => void;
+  /** True while the scenario run list (which carries outputSchemaVersion) is
+   *  still loading. Until then, version is unknown — not yet incompatible. */
+  scenarioMetaLoading?: boolean;
 }
 
 const SummaryView: React.FC<SummaryViewProps> = ({
@@ -24,8 +27,21 @@ const SummaryView: React.FC<SummaryViewProps> = ({
   onDrillDown,
   selectedScenarios,
   onRerunScenario,
+  scenarioMetaLoading,
 }) => {
   const { scenario, activities, resources } = summaryData;
+
+  // outputSchemaVersion arrives asynchronously with the run list. Until it
+  // loads it is undefined, which isOutputSchemaCompatible treats as
+  // incompatible — deciding the takeover now would flash a false "re-run
+  // required". Defer the compatibility decision until metadata is known.
+  if (scenarioMetaLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-xs text-gray-500">Loading summary...</div>
+      </div>
+    );
+  }
 
   // Single-scenario view: if the only scenario is incompatible with the
   // current frontend's output schema major, replace the dashboard content
