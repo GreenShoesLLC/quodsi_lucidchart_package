@@ -26,6 +26,7 @@
   "scripts": {
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "lint:hooks": "node scripts/lint-hooks.js",
     "eject": "react-scripts eject",
     "start": "cd ../../../shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && cross-env DISABLE_ESLINT_PLUGIN=true npx react-scripts start",
     "postinstall": "cd ../../../shared && npm run build"
@@ -34,7 +35,10 @@
     "extends": [
       "react-app"
     ],
-    "root": true
+    "root": true,
+    "rules": {
+      "react-hooks/rules-of-hooks": "error"
+    }
   },
   "browserslist": {
     "production": [
