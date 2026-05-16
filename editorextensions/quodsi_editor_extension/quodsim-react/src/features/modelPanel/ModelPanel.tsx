@@ -195,6 +195,23 @@ export const ModelPanel: React.FC = () => {
     }
   }, [modelName, currentElement, diagramElementType]);
   
+  // Memoize onElementUpdate-bound callback so child editors' useAutoSave
+  // hooks see a stable reference. Without this, the parent's inline arrow
+  // produces a new function each render, cascading to all 6 editors and
+  // re-attaching their internal effects (the value-equality guards
+  // suppress spurious save fires, but the effects still re-run).
+  // Must stay above the early returns below so hook order is unconditional
+  // every render (Rules of Hooks) — opening Diagram Mapping flips
+  // isPreviewVisible and would otherwise skip this hook.
+  const handleElementSave = useCallback(
+    (data: any) => {
+      if (currentElement) {
+        onElementUpdate(currentElement.id, data);
+      }
+    },
+    [onElementUpdate, currentElement?.id]
+  );
+
   // Show conversion preview panel when visible
   if (isPreviewVisible) {
     return <ConversionPreviewPanel onRemoveModel={onRemoveModel} />;
@@ -287,20 +304,6 @@ export const ModelPanel: React.FC = () => {
     (currentElement.metadata?.type as SimulationObjectType) === SimulationObjectType.Model
       ? SimulationObjectType.Model
       : (currentElement.metadata?.type as SimulationObjectType) || SimulationObjectType.Model;
-
-  // Memoize onElementUpdate-bound callback so child editors' useAutoSave
-  // hooks see a stable reference. Without this, the parent's inline arrow
-  // produces a new function each render, cascading to all 6 editors and
-  // re-attaching their internal effects (the value-equality guards
-  // suppress spurious save fires, but the effects still re-run).
-  const handleElementSave = useCallback(
-    (data: any) => {
-      if (currentElement) {
-        onElementUpdate(currentElement.id, data);
-      }
-    },
-    [onElementUpdate, currentElement?.id]
-  );
 
   // Main content render
   return (
