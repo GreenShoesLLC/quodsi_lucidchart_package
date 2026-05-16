@@ -69,25 +69,15 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
     });
   }
 
-  // Validate activity data
-  if (!activity || !activity.id) {
-    return (
-      <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
-        <div className="font-medium">Invalid routing configuration</div>
-        <div className="text-xs mt-1">Activity data missing</div>
-      </div>
-    );
-  }
-
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
 
   const extractActivityData = (act: ActivityInput): Activity => {
-    const data = (act as any).data || act;
+    const data = (act as any)?.data || act || {};
     const safeActivity = new Activity(
-      data.id,
-      data.name,
+      data.id ?? "",
+      data.name ?? "",
       data.capacity || 1,
       data.inboundQueueCapacity || Infinity,
       data.outboundQueueCapacity || Infinity,
@@ -119,7 +109,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
   // Sync local draft when activity prop changes — guards against overwriting in-flight edits.
   useFormSync(
-    activity.id,
+    activity?.id ?? "",
     hasPendingChanges,
     () => extractActivityData(activity),
     setLocalActivityDraft,
@@ -147,6 +137,19 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
 
   // Fire saveNow when routing type changes (no debounce — connectType is decisive).
   useFlushOnChange(localActivityDraft.connectType, saveNow);
+
+  // Invalid-input guard — placed AFTER all hooks so hook order is
+  // unconditional every render (Rules of Hooks). The hooks above are
+  // null-safe (extractActivityData tolerates missing data; useFormSync
+  // gets ""), so reaching here with an invalid activity is harmless.
+  if (!activity || !activity.id) {
+    return (
+      <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
+        <div className="font-medium">Invalid routing configuration</div>
+        <div className="text-xs mt-1">Activity data missing</div>
+      </div>
+    );
+  }
 
   // ============================================================================
   // EVENT HANDLERS
