@@ -144,11 +144,11 @@ export const activityColumns: TableColumn[] = [
 // Entity Cross-Rep Summary Columns
 export const entityColumns: TableColumn[] = [
   {
-    key: "entity_name",
+    key: "entity_type",
     label: "Name",
   },
   {
-    key: "created_mean",
+    key: "total_created_mean",
     label: "Created",
     format: formatInteger,
   },

@@ -116,7 +116,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
   // Compute the filter key for the current data type
   const filterKey = React.useMemo(() => {
     if (dataType === "activity") return "activity_name";
-    if (dataType === "entity") return "entity_name";
+    if (dataType === "entity") return "entity_type";
     if (dataType === "resource") return "resource_name";
     if (dataType === "activity-entity") return "activity_name";
     return "object_id"; // timeseries types
@@ -181,7 +181,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
 
     const nameKey =
       dataType === "activity" ? "activity_name"
-        : dataType === "entity" ? "entity_name"
+        : dataType === "entity" ? "entity_type"
         : dataType === "resource" ? "resource_name"
         : dataType === "activity-entity" ? "activity_name"
         : dataType === "state-summary" ? "state_name"
@@ -280,7 +280,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
         dataType === "activity"
           ? "activity_name"
           : dataType === "entity"
-          ? "entity_name"
+          ? "entity_type"
           : dataType === "resource"
           ? "resource_name"
           : dataType === "activity-entity"
@@ -414,7 +414,7 @@ const DetailedView: React.FC<DetailedViewProps> = ({
     if (metricOptions[dataType]) {
       const nameKey =
         dataType === "activity" ? "activity_name"
-          : dataType === "entity" ? "entity_name"
+          : dataType === "entity" ? "entity_type"
           : dataType === "resource" ? "resource_name"
           : dataType === "activity-entity" ? "activity_name"
           : dataType === "state-summary" ? "state_name"
