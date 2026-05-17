@@ -295,6 +295,7 @@ export class AuthHandler {
     planKey: string;
     planStatus: string;
     trialExpiresAt?: string;
+    upgradeAvailable?: boolean;
     features: Record<string, unknown>;
   }): void {
     router.send('broadcast', {
