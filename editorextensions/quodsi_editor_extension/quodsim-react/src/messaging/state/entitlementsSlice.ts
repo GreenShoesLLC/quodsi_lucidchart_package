@@ -17,6 +17,8 @@ export interface EntitlementsState {
   trialExpiresAt: string | null;
   /** Metered features as { limit, used }; unmetered flags as `true`. Absent key = feature disabled. */
   features: Record<string, EntitlementMeteredFeature | boolean>;
+  /** Whether an upgrade is available for the current plan. null = unknown (fail-open: treat as "show"). */
+  upgradeAvailable: boolean | null;
 }
 
 export const initialEntitlementsState: EntitlementsState = {
@@ -26,6 +28,7 @@ export const initialEntitlementsState: EntitlementsState = {
   planStatus: null,
   trialExpiresAt: null,
   features: {},
+  upgradeAvailable: null,
 };
 
 export type EntitlementsAction =
@@ -58,6 +61,7 @@ export function entitlementsReducer(
         planStatus: action.planStatus,
         trialExpiresAt: action.trialExpiresAt ?? null,
         features: action.features,
+        upgradeAvailable: action.upgradeAvailable ?? null,
       };
     case 'ENTITLEMENTS_CLEAR':
       return initialEntitlementsState;
