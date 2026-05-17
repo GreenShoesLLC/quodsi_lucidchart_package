@@ -65,7 +65,7 @@ const AuthStatusIndicator: React.FC = () => {
   const [requestingUpgrade, setRequestingUpgrade] = useState(false);
   const authDropdownRef = useRef<HTMLDivElement>(null);
 
-  const showUpgrade = auth.isAuthenticated && entitlements.loaded;
+  const showUpgrade = auth.isAuthenticated && entitlements.loaded && entitlements.upgradeAvailable !== false;
 
   const handleUpgrade = async () => {
     if (requestingUpgrade) return;
