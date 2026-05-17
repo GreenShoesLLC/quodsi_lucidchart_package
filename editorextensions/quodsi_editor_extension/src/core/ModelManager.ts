@@ -602,6 +602,12 @@ export class ModelManager {
         this.modelDefinition = null;
         this.currentPage = null;
         this.currentValidationResult = null;
+        // Reset the once-per-page version/baseline gate. Without this, after a
+        // model is removed and re-created on the SAME page in the same session,
+        // the gate at ensureModelDefinition() still sees this page as "checked"
+        // and skips ensureBaselineScenario(), so the re-created model is left
+        // with no Baseline scenario.
+        this.versionCheckedPageId = null;
 
         // Reset change tracking
         this.changeTracker = {
