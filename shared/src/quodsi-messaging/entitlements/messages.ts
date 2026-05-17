@@ -54,6 +54,9 @@ export interface EntitlementsStatusMessage extends EnvelopeBase {
      *   - Absent: feature is not enabled.
      */
     features: Record<string, EntitlementMeteredFeature | boolean>;
+
+    /** From backend BILLING_MODE; false => hide Upgrade UI. Absent => show (fail-open). */
+    upgradeAvailable?: boolean;
   };
 }
 
