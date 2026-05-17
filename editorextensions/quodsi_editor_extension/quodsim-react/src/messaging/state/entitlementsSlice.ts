@@ -36,6 +36,7 @@ export type EntitlementsAction =
       planStatus: EntitlementPlanStatus;
       trialExpiresAt?: string;
       features: Record<string, EntitlementMeteredFeature | boolean>;
+      upgradeAvailable?: boolean;
     }
   | { type: 'ENTITLEMENTS_CLEAR' };
 

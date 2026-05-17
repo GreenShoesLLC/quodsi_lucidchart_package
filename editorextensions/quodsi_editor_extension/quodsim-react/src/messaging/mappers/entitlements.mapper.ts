@@ -23,6 +23,7 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     planStatus: EntitlementPlanStatus;
     trialExpiresAt?: string;
     features: Record<string, EntitlementMeteredFeature | boolean>;
+    upgradeAvailable?: boolean;
   };
 
   logger.log('ENTITLEMENTS_STATUS received:', {
@@ -41,5 +42,6 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     planStatus: data.planStatus,
     trialExpiresAt: data.trialExpiresAt,
     features: data.features,
+    upgradeAvailable: data.upgradeAvailable,
   };
 }
