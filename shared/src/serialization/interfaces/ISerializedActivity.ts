@@ -11,6 +11,8 @@ export interface ISerializedActivity {
     type: SimulationObjectType;
     x: number;
     y: number;
+    width?: number;   // Path X-lite: SVG userSpace shape size; absent for legacy models
+    height?: number;
     capacity: number;
     inboundQueueCapacity: number;
     outboundQueueCapacity: number;

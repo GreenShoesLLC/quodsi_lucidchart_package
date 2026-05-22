@@ -28,6 +28,9 @@ interface StoredResourceData {
     id: string;
     x?: number;
     y?: number;
+    // Optional shape dimensions in SVG userSpace (Path X-lite).
+    width?: number;
+    height?: number;
     name?: string;
     description?: string;
     capacity?: number;
@@ -85,9 +88,11 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
     private updatePlatformSpecificFields(resource: Resource): void {
         const block = this.element as BlockProxy;
         
-        // Update location from current platform
-        const location = block.getLocation();
-        resource.setLocation(location.x ?? resource.x, location.y ?? resource.y);
+        // Update location AND shape size from current platform (Path X-lite).
+        const box = block.getBoundingBox();
+        resource.setLocation(box.x ?? resource.x, box.y ?? resource.y);
+        resource.width = box.w;
+        resource.height = box.h;
 
         // Update name if needed
         if (!resource.name || resource.name === 'New Resource') {
@@ -97,6 +102,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
             x: resource.x,
             y: resource.y,
+            width: resource.width,
+            height: resource.height,
             name: resource.name
         });
     }
@@ -104,14 +111,16 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Resource from platform for element ID: ${this.platformElementId}`);
         
-        // Extract location from platform
-        const location = (this.element as BlockProxy).getLocation();
-        
+        // Extract location AND shape size from platform (Path X-lite).
+        const box = (this.element as BlockProxy).getBoundingBox();
+
         // Update location
         this.simObject.setLocation(
-            location.x ?? this.simObject.x, 
-            location.y ?? this.simObject.y
+            box.x ?? this.simObject.x,
+            box.y ?? this.simObject.y
         );
+        this.simObject.width = box.w;
+        this.simObject.height = box.h;
 
         // Update name if not already set
         if (!this.simObject.name) {
@@ -123,6 +132,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             id: this.platformElementId,
             x: this.simObject.x,
             y: this.simObject.y,
+            width: this.simObject.width,
+            height: this.simObject.height,
             name: this.simObject.name,
             description: this.simObject.description,
             capacity: this.simObject.capacity,
@@ -157,15 +168,17 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ResourceLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
-        // Extract location
-        const location = block.getLocation();
+        // Extract location AND shape size (Path X-lite)
+        const box = block.getBoundingBox();
 
         // Create default resource using the static method with location
         const defaultResource = Resource.createDefault(
             block.id,
-            location.x ?? 0,
-            location.y ?? 0
+            box.x ?? 0,
+            box.y ?? 0
         );
+        defaultResource.width = box.w;
+        defaultResource.height = box.h;
 
         // Get raw name and parse for structured data
         const rawName = SimObjectLucid.getNameFromBlock(block, 'Resource');
@@ -185,6 +198,8 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             name: fields.name || rawName,
             x: defaultResource.x,
             y: defaultResource.y,
+            width: defaultResource.width,
+            height: defaultResource.height,
             capacity: fields.capacity ?? defaultResource.capacity,
             financialProperties: defaultResource.financialProperties?.toJSON()
         };

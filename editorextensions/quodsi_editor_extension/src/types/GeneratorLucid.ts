@@ -37,6 +37,9 @@ interface StoredGeneratorData {
     description?: string;
     x?: number;
     y?: number;
+    // Optional shape dimensions in SVG userSpace (Path X-lite).
+    width?: number;
+    height?: number;
     generationConfig?: EntitySourceConfig;
     exitConnector?: string;
 }
@@ -110,9 +113,11 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
     private updatePlatformSpecificFields(generator: Generator): void {
         const block = this.element as BlockProxy;
 
-        // Update location from current platform
-        const location = block.getLocation();
-        generator.setLocation(location.x ?? generator.x, location.y ?? generator.y);
+        // Update location AND shape size from current platform (Path X-lite).
+        const box = block.getBoundingBox();
+        generator.setLocation(box.x ?? generator.x, box.y ?? generator.y);
+        generator.width = box.w;
+        generator.height = box.h;
 
         // Update name if needed
         if (!generator.name || generator.name === 'New Generator') {
@@ -122,6 +127,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
             x: generator.x,
             y: generator.y,
+            width: generator.width,
+            height: generator.height,
             name: generator.name
         });
     }
@@ -129,14 +136,16 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Generator from platform for element ID: ${this.platformElementId}`);
 
-        // Extract location from platform
-        const location = (this.element as BlockProxy).getLocation();
+        // Extract location AND shape size from platform (Path X-lite).
+        const box = (this.element as BlockProxy).getBoundingBox();
 
         // Update location
         this.simObject.setLocation(
-            location.x ?? this.simObject.x,
-            location.y ?? this.simObject.y
+            box.x ?? this.simObject.x,
+            box.y ?? this.simObject.y
         );
+        this.simObject.width = box.w;
+        this.simObject.height = box.h;
 
         // Update name if not already set
         if (!this.simObject.name) {
@@ -150,6 +159,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             description: this.simObject.description,
             x: this.simObject.x,
             y: this.simObject.y,
+            width: this.simObject.width,
+            height: this.simObject.height,
             generationConfig: {
                 entityId: this.simObject.generationConfig.entityId,
                 generatorType: this.simObject.generationConfig.generatorType,
@@ -194,15 +205,17 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): GeneratorLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
-        // Extract location
-        const location = block.getLocation();
+        // Extract location AND shape size (Path X-lite)
+        const box = block.getBoundingBox();
 
         // Create default generator using the static method with location
         const defaultGenerator = Generator.createDefault(
             block.id,
-            location.x ?? 0,
-            location.y ?? 0
+            box.x ?? 0,
+            box.y ?? 0
         );
+        defaultGenerator.width = box.w;
+        defaultGenerator.height = box.h;
 
         // Get raw name and parse for structured data
         const rawName = SimObjectLucid.getNameFromBlock(block, 'Generator');
@@ -241,6 +254,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             name: fields.name || rawName,
             x: defaultGenerator.x,
             y: defaultGenerator.y,
+            width: defaultGenerator.width,
+            height: defaultGenerator.height,
             generationConfig: generationConfig,
             exitConnector: defaultGenerator.exitConnector
         };

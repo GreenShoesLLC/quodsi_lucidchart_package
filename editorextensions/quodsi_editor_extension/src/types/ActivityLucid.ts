@@ -37,6 +37,10 @@ interface StoredActivityData {
     id: string;
     x?: number;
     y?: number;
+    // Optional shape dimensions in SVG userSpace (Path X-lite). Captured
+    // via block.getBoundingBox(); absent for legacy storage entries.
+    width?: number;
+    height?: number;
     name?: string;
     description?: string;
     capacity?: number;
@@ -160,9 +164,14 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     private updatePlatformSpecificFields(activity: Activity): void {
         const block = this.element as BlockProxy;
 
-        // Update location from current platform
-        const location = block.getLocation();
-        activity.setLocation(location.x ?? activity.x, location.y ?? activity.y);
+        // Update location AND shape size from current platform (Path X-lite).
+        // block.getBoundingBox() returns {x, y, w, h} in SVG userSpace —
+        // same coord system the diagram.svg export uses, so the engine
+        // can place entity dots accurately on top of activity shapes.
+        const box = block.getBoundingBox();
+        activity.setLocation(box.x ?? activity.x, box.y ?? activity.y);
+        activity.width = box.w;
+        activity.height = box.h;
 
         // Update name if needed
         if (!activity.name || activity.name === 'New Activity') {
@@ -172,6 +181,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         ComponentLogger.log(LOG_PREFIX, 'Updated platform-specific fields', {
             x: activity.x,
             y: activity.y,
+            width: activity.width,
+            height: activity.height,
             name: activity.name
         });
     }
@@ -179,14 +190,16 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     public updateFromPlatform(): void {
         ComponentLogger.log(LOG_PREFIX, `Updating Activity from platform for element ID: ${this.platformElementId}`);
 
-        // Extract location from platform
-        const location = (this.element as BlockProxy).getLocation();
+        // Extract location AND shape size from platform (Path X-lite).
+        const box = (this.element as BlockProxy).getBoundingBox();
 
         // Update location
         this.simObject.setLocation(
-            location.x ?? this.simObject.x,
-            location.y ?? this.simObject.y
+            box.x ?? this.simObject.x,
+            box.y ?? this.simObject.y
         );
+        this.simObject.width = box.w;
+        this.simObject.height = box.h;
 
         // Update name if not already set
         if (!this.simObject.name) {
@@ -198,6 +211,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             id: this.platformElementId,
             x: this.simObject.x,     // Store x coordinate
             y: this.simObject.y,     // Store y coordinate
+            width: this.simObject.width,
+            height: this.simObject.height,
             name: this.simObject.name,
             description: this.simObject.description,
             capacity: this.simObject.capacity,
@@ -237,15 +252,17 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
     static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ActivityLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
-        // Extract location
-        const location = block.getLocation();
+        // Extract location AND shape size (Path X-lite)
+        const box = block.getBoundingBox();
 
         // Create default activity using the static method with location
         const defaultActivity = Activity.createDefault(
             block.id,
-            location.x ?? 0,
-            location.y ?? 0
+            box.x ?? 0,
+            box.y ?? 0
         );
+        defaultActivity.width = box.w;
+        defaultActivity.height = box.h;
 
         // Get raw name and parse for structured data
         const rawName = SimObjectLucid.getNameFromBlock(block, 'Act');
@@ -276,6 +293,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             name: fields.name || rawName,
             x: defaultActivity.x,
             y: defaultActivity.y,
+            width: defaultActivity.width,
+            height: defaultActivity.height,
             capacity: fields.capacity ?? defaultActivity.capacity,
             inboundQueueCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundQueueCapacity,
             outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,

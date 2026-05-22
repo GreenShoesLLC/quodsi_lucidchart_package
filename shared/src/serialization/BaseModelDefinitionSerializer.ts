@@ -144,6 +144,16 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 connectors: relevantConnectors
             };
 
+            // Path X-lite: include shape dimensions when the Lucid extension
+            // captured them via block.getBoundingBox(). Absent for legacy /
+            // non-Lucid models — the engine falls back to Path Z defaults.
+            if (activity.width !== undefined) {
+                serialized.width = activity.width;
+            }
+            if (activity.height !== undefined) {
+                serialized.height = activity.height;
+            }
+
             // NEW: Serialize sourceConfig if present (self-generating activity)
             if (activity.sourceConfig) {
                 serialized.sourceConfig = this.serializeEntitySourceConfig(activity.sourceConfig);
@@ -211,6 +221,14 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.exitConnector = outgoingConnector.targetId;
             }
 
+            // Path X-lite: include shape dimensions when captured.
+            if (generator.width !== undefined) {
+                serialized.width = generator.width;
+            }
+            if (generator.height !== undefined) {
+                serialized.height = generator.height;
+            }
+
             return serialized;
         } catch (error) {
             throw new SerializationError(
@@ -240,6 +258,14 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             // Add optional properties if they exist
             if (resource.financialProperties) {
                 serialized.financialProperties = resource.financialProperties.toJSON();
+            }
+
+            // Path X-lite: include shape dimensions when captured.
+            if (resource.width !== undefined) {
+                serialized.width = resource.width;
+            }
+            if (resource.height !== undefined) {
+                serialized.height = resource.height;
             }
 
             return serialized;
