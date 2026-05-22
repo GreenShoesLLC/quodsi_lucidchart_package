@@ -14,6 +14,12 @@ export abstract class PositionedSimulationObject implements SimulationObject {
     // Location properties with default initialization
     x: number = 0;
     y: number = 0;
+    // Optional shape dimensions in SVG userSpace (populated by the Lucid
+    // extension via block.getBoundingBox()). Absent for legacy or
+    // non-Lucid models — engine's animation_layout.py falls back to Path Z
+    // defaults when these are undefined.
+    width?: number;
+    height?: number;
 
     /**
      * Sets the location of the simulation object
@@ -62,13 +68,15 @@ export abstract class PositionedSimulationObject implements SimulationObject {
 
     /**
      * Serialization helper method
-     * @returns Object representation including location
+     * @returns Object representation including location and optional dimensions
      */
     toJSON(): object {
         return {
             ...this,
             x: this.x,
-            y: this.y
+            y: this.y,
+            ...(this.width !== undefined && { width: this.width }),
+            ...(this.height !== undefined && { height: this.height })
         };
     }
 }
