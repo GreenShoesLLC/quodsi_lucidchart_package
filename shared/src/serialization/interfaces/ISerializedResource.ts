@@ -7,6 +7,8 @@ export interface ISerializedResource {
     type: SimulationObjectType;
     x: number;
     y: number;
+    width?: number;   // Path X-lite: SVG userSpace shape size; absent for legacy models
+    height?: number;
     capacity: number;
     financialProperties?: any;
 }
