@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Edit2,
   BarChart3,
+  Info,
 } from "lucide-react";
 import ChangeRequestEditor from "./ChangeRequestEditor";
 import { useEntitlements } from "../../messaging/MessageContext";
@@ -338,10 +339,10 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               <label htmlFor={`animate-${scenario.id}`} className="text-xs text-gray-700">
                 Generate animation
               </label>
+              <span title="Records the first replication for playback in the animation viewer. Adds some run time.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
             </div>
-            <p className="text-[10px] text-gray-400 mt-0.5">
-              Records the first replication for playback in the animation viewer. Adds some run time.
-            </p>
           </div>
 
           {/* A. Editing area */}
