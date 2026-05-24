@@ -6,7 +6,9 @@ import {
   ModelSerializerFactory,
   Model,
   generateUUID,
-  QUODSIM_VERSION
+  QUODSIM_VERSION,
+  parsePageTranslate,
+  offsetSerializedModelCoordinates
 } from '@quodsi/shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
@@ -332,6 +334,17 @@ export class SimulationHandler {
       console.log('[SimulationHandler] Getting SVG for the current page...');
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
       console.log('[SimulationHandler] SVG obtained successfully');
+
+      // getSvg() wraps the page in a translate() to normalize negative
+      // coordinates into a positive viewBox. layout.json uses the raw model
+      // coordinates, so align the serialized model into the SVG's frame by
+      // applying the same page-translate. Keeps the SVG and skeleton/entities
+      // in one coordinate space; a {0,0} translate is a no-op.
+      const pageTranslate = parsePageTranslate(diagramSvg);
+      if (pageTranslate.x !== 0 || pageTranslate.y !== 0) {
+        offsetSerializedModelCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
+        console.log('[SimulationHandler] Aligned model coords to SVG page-translate', pageTranslate);
+      }
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
