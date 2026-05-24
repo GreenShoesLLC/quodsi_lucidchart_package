@@ -19,6 +19,7 @@ export function useSimulationSender() {
    * @param repetitions Optional number of repetitions
    * @param parameters Additional simulation parameters
    * @param scenarioDefinitionId Optional scenario definition ID (to apply change requests)
+   * @param enableAnimation Opt-in: generate animation data (first replication only). Default off.
    */
   const requestSimulation = useCallback((
     documentId: string,
@@ -26,7 +27,8 @@ export function useSimulationSender() {
     durationDays?: number,
     repetitions?: number,
     parameters?: Record<string, unknown>,
-    scenarioDefinitionId?: string
+    scenarioDefinitionId?: string,
+    enableAnimation?: boolean
   ) => {
     send(EnvelopeMessageType.MODEL_RUN_REQUEST, {
       documentId,
@@ -34,7 +36,8 @@ export function useSimulationSender() {
       durationDays,
       repetitions,
       parameters,
-      scenarioDefinitionId
+      scenarioDefinitionId,
+      enableAnimation
     });
   }, [send]);
 

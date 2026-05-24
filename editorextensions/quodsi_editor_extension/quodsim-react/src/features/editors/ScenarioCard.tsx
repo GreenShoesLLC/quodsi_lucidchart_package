@@ -51,7 +51,7 @@ interface ScenarioCardProps {
   referenceData?: EditorReferenceData;
   expanded: boolean;
   onToggleExpand: () => void;
-  onPlay: () => void;
+  onPlay: (enableAnimation: boolean) => void;
   /**
    * True when this scenario can't be run because the
    * `scenarios_per_model` cap is full and this scenario is "new"
@@ -139,6 +139,8 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const [expiryText, setExpiryText] = useState<string | null>(null);
   const [errorExpanded, setErrorExpanded] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  // Opt-in: generate animation data for this run (first replication only). Default off.
+  const [animate, setAnimate] = useState(false);
 
   // --- Expiry countdown timer (from ScenarioDetailPanel) ---
   useEffect(() => {
@@ -233,7 +235,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
       >
         {/* Play button */}
         <button
-          onClick={(e) => { e.stopPropagation(); onPlay(); }}
+          onClick={(e) => { e.stopPropagation(); onPlay(animate); }}
           disabled={playDisabled}
           className={`flex-shrink-0 p-1 rounded transition-colors ${
             playDisabled
@@ -320,6 +322,28 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
       {/* ---- Expanded Content ---- */}
       {expanded && (
         <div className="p-3 border-t border-gray-200 space-y-3">
+          {/* Run options */}
+          <div>
+            <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+              Run Options
+            </label>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                id={`animate-${scenario.id}`}
+                checked={animate}
+                onChange={(e) => setAnimate(e.target.checked)}
+                className="w-3 h-3"
+              />
+              <label htmlFor={`animate-${scenario.id}`} className="text-xs text-gray-700">
+                Generate animation
+              </label>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-0.5">
+              Records the first replication for playback in the animation viewer. Adds some run time.
+            </p>
+          </div>
+
           {/* A. Editing area */}
           {/* Name & Description — non-Baseline only */}
           {!scenario.isBaseline && (

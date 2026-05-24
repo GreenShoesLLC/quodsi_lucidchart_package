@@ -58,7 +58,7 @@ interface Props {
   validationState?: ValidationResult | null;
   activeTab?: EditorTab;
   onTabChange?: (tab: EditorTab) => void;
-  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string) => void;
+  onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
 export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "validation";
@@ -154,11 +154,13 @@ export const ScenariosAndRunsPanel: React.FC<{
   modelName: string;
   referenceData?: EditorReferenceData;
   onScenariosChange: (scenarios: ISerializedScenario[]) => void;
-  onSimulate: (scenarioName?: string, scenarioDefinitionId?: string) => void;
+  onSimulate: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }> = ({ documentId, pageId, modelName, referenceData, onScenariosChange, onSimulate }) => {
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [rerunningScenarioId, setRerunningScenarioId] = useState<string | null>(null);
+  // Animate choice captured when a re-run confirmation is pending (see handlePlay/confirmRerun).
+  const [rerunAnimate, setRerunAnimate] = useState(false);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   // Messaging hooks
   const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
@@ -228,8 +230,8 @@ export const ScenariosAndRunsPanel: React.FC<{
     entitlements.loaded && !canRunNewScenario(entitlements, distinctRunsCount);
 
   // Execute the actual play/simulate action with optimistic update
-  const executePlay = useCallback((scenario: ISerializedScenario) => {
-    onSimulate(scenario.name, scenario.id);
+  const executePlay = useCallback((scenario: ISerializedScenario, enableAnimation: boolean) => {
+    onSimulate(scenario.name, scenario.id, enableAnimation);
 
     // Optimistic update: immediately show Queued status so the play button
     // becomes a spinner without waiting for the server round-trip.
@@ -257,14 +259,15 @@ export const ScenariosAndRunsPanel: React.FC<{
   }, [onSimulate, dispatch]);
 
   // Play button handler — confirm before re-running if results already exist
-  const handlePlay = useCallback((scenario: ISerializedScenario) => {
+  const handlePlay = useCallback((scenario: ISerializedScenario, enableAnimation: boolean) => {
     const existingRun = runStatusMap.get(scenario.id);
     if (existingRun?.hasResults) {
       setRerunningScenarioId(scenario.id);
+      setRerunAnimate(enableAnimation);
       setDeletingScenarioId(null);
       return;
     }
-    executePlay(scenario);
+    executePlay(scenario, enableAnimation);
   }, [runStatusMap, executePlay]);
 
   // Scenario management handlers
@@ -280,8 +283,8 @@ export const ScenariosAndRunsPanel: React.FC<{
 
   const confirmRerun = useCallback(() => {
     const scenario = scenarios.find(s => s.id === rerunningScenarioId);
-    if (scenario) executePlay(scenario);
-  }, [rerunningScenarioId, scenarios, executePlay]);
+    if (scenario) executePlay(scenario, rerunAnimate);
+  }, [rerunningScenarioId, scenarios, executePlay, rerunAnimate]);
 
   const cancelRerun = useCallback(() => {
     setRerunningScenarioId(null);
@@ -489,7 +492,7 @@ export const ScenariosAndRunsPanel: React.FC<{
                 onToggleExpand={() =>
                   setExpandedScenarioId(expandedScenarioId === scenario.id ? null : scenario.id)
                 }
-                onPlay={() => handlePlay(scenario)}
+                onPlay={(enableAnimation) => handlePlay(scenario, enableAnimation)}
                 runCapBlocked={runCapBlocked}
                 runCapTooltip={runCapTooltip}
                 onDelete={scenario.isBaseline ? undefined : () => handleDeleteScenario(scenario.id)}
