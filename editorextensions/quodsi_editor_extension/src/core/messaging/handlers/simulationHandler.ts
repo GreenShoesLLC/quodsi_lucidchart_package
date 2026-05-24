@@ -102,6 +102,7 @@ export class SimulationHandler {
       repetitions?: number;
       parameters?: Record<string, unknown>;
       scenarioDefinitionId?: string;
+      enableAnimation?: boolean;
     };
     
     console.log('[SimulationHandler] Simulation run requested', {
@@ -405,7 +406,10 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: QUODSIM_VERSION
+            appVersion: QUODSIM_VERSION,
+            // Opt-in animation (default off). Backend reads action_data.enableAnimation
+            // (lucid_router); engine generates animation for replication 1 only.
+            enableAnimation: data.enableAnimation ?? false
           },
           asynchronous: false
         }) as { status?: number; json?: any };

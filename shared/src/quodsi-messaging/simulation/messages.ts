@@ -77,6 +77,9 @@ export interface ModelRunRequestMessage extends EnvelopeBase {
 
     /** Additional simulation parameters */
     parameters?: Record<string, unknown>;
+
+    /** Opt-in: generate animation data for the run (first replication only). Default off. */
+    enableAnimation?: boolean;
   };
 }
 
