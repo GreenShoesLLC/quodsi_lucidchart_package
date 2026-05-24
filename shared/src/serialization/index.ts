@@ -2,6 +2,10 @@
 export { ModelSerializerFactory, SchemaVersion } from './ModelSerializerFactory';
 export { BaseModelDefinitionSerializer } from './BaseModelDefinitionSerializer';
 
+// SVG <-> layout coordinate alignment (Approach A)
+export { parsePageTranslate, offsetSerializedModelCoordinates } from './coordinateAlignment';
+export type { PageTranslate } from './coordinateAlignment';
+
 // V1 Serializer
 export { ModelDefinitionSerializerV1 } from './v1/ModelDefinitionSerializerV1';
 export { EnumMapper } from './utilities/EnumMapper'
