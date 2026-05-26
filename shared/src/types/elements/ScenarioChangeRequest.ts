@@ -1,9 +1,10 @@
 import { ScenarioObjectType } from "./ScenarioObjectType";
 import { NumericPropertyModification } from "./NumericPropertyModification";
 import { BooleanPropertyModification } from "./BooleanPropertyModification";
+import { DurationModification } from "./DurationModification";
 import { generateUUID } from "../../utils/uuidUtils";
 
-export type ModificationType = NumericPropertyModification | BooleanPropertyModification;
+export type ModificationType = NumericPropertyModification | BooleanPropertyModification | DurationModification;
 
 export interface ObjectMatchCriteria {
     name?: string;
@@ -47,7 +48,9 @@ export class ScenarioChangeRequest {
         const modData = data.modificationDetails;
         const modification = modData.type === "boolean"
             ? BooleanPropertyModification.fromJSON(modData)
-            : NumericPropertyModification.fromJSON(modData);
+            : modData.type === "duration"
+                ? DurationModification.fromJSON(modData)
+                : NumericPropertyModification.fromJSON(modData);
 
         return new ScenarioChangeRequest({
             id: data.id,

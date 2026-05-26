@@ -66,6 +66,7 @@ export * from './ScenarioPropertyName';
 export * from './ScenarioSetterType';
 export * from './NumericPropertyModification';
 export * from './BooleanPropertyModification';
+export * from './DurationModification';
 export * from './ScenarioChangeRequest';
 export * from './Scenario';
 export * from './ScenarioListManager';

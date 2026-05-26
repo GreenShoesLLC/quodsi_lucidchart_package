@@ -13,6 +13,7 @@ export enum ScenarioPropertyName {
 
     // Generator properties
     INTERVAL = "INTERVAL",
+    INTERARRIVAL_TIMING = "INTERARRIVAL_TIMING",
     MAX_ENTITIES = "MAX_ENTITIES",
     ENTITIES_PER_CREATION = "ENTITIES_PER_CREATION",
 
