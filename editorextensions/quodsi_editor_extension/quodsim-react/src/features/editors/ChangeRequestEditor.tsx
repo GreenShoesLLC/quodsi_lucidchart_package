@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ISerializedScenarioChangeRequest,
   ScenarioObjectType,
@@ -8,7 +8,13 @@ import {
   generateUUID,
   validateChangeRequestValue,
   isIntegerInput,
+  DistributionType,
+  createDefaultDistribution,
+  validateRateMultiplier,
+  Distribution,
+  PeriodUnit,
 } from "@quodsi/shared";
+import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 
 // ============================================================================
 // TYPES
@@ -39,6 +45,7 @@ const PROPERTIES_BY_OBJECT_TYPE: Record<string, ScenarioPropertyName[]> = {
     ScenarioPropertyName.CAPACITY,
   ],
   [ScenarioObjectType.GENERATOR]: [
+    ScenarioPropertyName.INTERARRIVAL_TIMING,
     ScenarioPropertyName.MAX_ENTITIES,
     ScenarioPropertyName.ENTITIES_PER_CREATION,
   ],
@@ -69,6 +76,7 @@ const PROPERTY_LABELS: Record<string, string> = {
   [ScenarioPropertyName.REPS]: "Replications",
   [ScenarioPropertyName.SEED]: "Seed",
   [ScenarioPropertyName.RUN_PERIOD]: "Run Period",
+  [ScenarioPropertyName.INTERARRIVAL_TIMING]: "Inter-arrival Timing",
 };
 
 /**
@@ -176,6 +184,28 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   const targetObjects = getTargetObjects(objectType, referenceData);
   const isModelType = objectType === ScenarioObjectType.MODEL;
 
+  const isInterarrival =
+    objectType === ScenarioObjectType.GENERATOR &&
+    propertyName === ScenarioPropertyName.INTERARRIVAL_TIMING;
+
+  const selectedGenerator = referenceData?.generators?.find((g) => g.name === targetName);
+  const currentDist = selectedGenerator?.periodIntervalDuration;
+
+  const md = changeRequest?.modificationDetails as any;
+  const [durMode, setDurMode] = useState<"scaleRate" | "setDistribution">(
+    md?.mode === "setDistribution" ? "setDistribution" : "scaleRate"
+  );
+  const [factor, setFactor] = useState<number>(
+    typeof md?.factor === "number" ? md.factor : 2
+  );
+  const [swapPeriodUnit, setSwapPeriodUnit] = useState<PeriodUnit>(
+    (md?.duration?.durationPeriodUnit ?? currentDist?.durationPeriodUnit ?? PeriodUnit.MINUTES) as PeriodUnit
+  );
+  const [swapDistribution, setSwapDistribution] = useState<Distribution>(
+    (md?.duration?.distribution ?? currentDist?.distribution ??
+      createDefaultDistribution(DistributionType.EXPONENTIAL)) as unknown as Distribution
+  );
+
   // ============================================================================
   // EFFECTS
   // ============================================================================
@@ -198,12 +228,31 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   }, [objectType]);
 
   /**
-   * When propertyName changes, reset setter type and value defaults.
+   * When propertyName changes, reset setter type and duration mode.
    */
   useEffect(() => {
     setSetterType(ScenarioSetterType.EQUAL);
+    setDurMode("scaleRate");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyName]);
+
+  /**
+   * When targetName changes, re-prefill the swap form from the selected
+   * generator's current distribution. Skip once on mount so that edit-mode
+   * initial values survive the first render.
+   */
+  const skipSwapPrefill = useRef(true);
+  useEffect(() => {
+    if (skipSwapPrefill.current) {
+      skipSwapPrefill.current = false;
+      return;
+    }
+    if (currentDist) {
+      setSwapPeriodUnit(currentDist.durationPeriodUnit as PeriodUnit);
+      setSwapDistribution(currentDist.distribution as unknown as Distribution);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetName]);
 
   // ============================================================================
   // HANDLERS
@@ -234,38 +283,54 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   };
 
   const handleSave = () => {
+    const modificationDetails = isInterarrival
+      ? (durMode === "scaleRate"
+          ? { type: "duration", propertyName, mode: "scaleRate", factor }
+          : {
+              type: "duration",
+              propertyName,
+              mode: "setDistribution",
+              duration: { durationPeriodUnit: swapPeriodUnit, distribution: swapDistribution },
+            })
+      : { type: "numeric", propertyName, setterType, newValue: numericValue };
+
     const cr: ISerializedScenarioChangeRequest = {
       id: changeRequest?.id ?? generateUUID(),
       objectType,
       objectMatchCriteria: isModelType ? { name: "*" } : { name: targetName },
-      modificationDetails: {
-        type: "numeric",
-        propertyName,
-        setterType,
-        newValue: numericValue,
-      },
+      modificationDetails: modificationDetails as any,
       description: description.trim() || undefined,
     };
     onSave(cr);
   };
 
-  // Value validation
-  const valueValidation = propertyName
-    ? validateChangeRequestValue(
-        propertyName as ScenarioPropertyName,
-        setterType as ScenarioSetterType,
-        numericValue
-      )
-    : { valid: true };
-  const useIntegerInput = propertyName
+  // Value validation — only run for scalar (non-interarrival) properties;
+  // INTERARRIVAL_TIMING has no PROPERTY_MIN_VALUE entry and can throw.
+  const valueValidation =
+    propertyName && !isInterarrival
+      ? validateChangeRequestValue(
+          propertyName as ScenarioPropertyName,
+          setterType as ScenarioSetterType,
+          numericValue
+        )
+      : { valid: true };
+
+  const rateValidation = validateRateMultiplier(
+    factor,
+    currentDist?.distribution.distributionType as DistributionType | undefined
+  );
+
+  const useIntegerInput = propertyName && !isInterarrival
     ? isIntegerInput(propertyName as ScenarioPropertyName, setterType as ScenarioSetterType)
     : false;
 
-  // Validation: require a target name for non-MODEL types + value validation
+  // Validation: require a target name for non-MODEL types + value/rate validation
   const isValid =
     propertyName !== "" &&
     (isModelType || targetName !== "") &&
-    valueValidation.valid;
+    (isInterarrival
+      ? (durMode === "scaleRate" ? rateValidation.valid : true)
+      : valueValidation.valid);
 
   // ============================================================================
   // RENDER
@@ -337,45 +402,102 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
         </select>
       </div>
 
-      {/* Value Section */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-xs font-medium text-gray-700 block mb-0.5">
-            Setter Type
-          </label>
-          <select
-            className="w-full px-2 py-1 text-xs border rounded bg-white"
-            value={setterType}
-            onChange={handleSetterTypeChange}
-          >
-            {Object.values(ScenarioSetterType).map((st) => (
-              <option key={st} value={st}>
-                {SETTER_TYPE_LABELS[st] ?? st}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-700 block mb-0.5">
-            Value
-          </label>
-          <input
-            type="number"
-            className={`w-full px-2 py-1 text-xs border rounded ${
-              valueValidation.error ? "border-red-400" : valueValidation.warning ? "border-yellow-400" : ""
-            }`}
-            value={numericValue}
-            onChange={handleNumericValueChange}
-            step={useIntegerInput ? "1" : "any"}
-          />
-          {valueValidation.error && (
-            <p className="text-xs text-red-600 mt-0.5">{valueValidation.error}</p>
+      {/* Value Section — interarrival sub-form vs scalar setter+value grid */}
+      {isInterarrival ? (
+        <div className="space-y-2">
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-0.5">Change</label>
+            <select
+              className="w-full px-2 py-1 text-xs border rounded bg-white"
+              value={durMode}
+              onChange={(e) => setDurMode(e.target.value as "scaleRate" | "setDistribution")}
+            >
+              <option value="scaleRate">Arrival rate multiplier</option>
+              <option value="setDistribution">Replace arrival distribution</option>
+            </select>
+          </div>
+          {durMode === "scaleRate" ? (
+            <div>
+              <label className="text-xs font-medium text-gray-700 block mb-0.5">
+                Arrival rate multiplier
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                min="0"
+                className={`w-full px-2 py-1 text-xs border rounded ${
+                  rateValidation.error
+                    ? "border-red-400"
+                    : rateValidation.warning
+                    ? "border-yellow-400"
+                    : ""
+                }`}
+                value={factor}
+                onChange={(e) => setFactor(parseFloat(e.target.value) || 0)}
+              />
+              <p className="text-xs text-gray-500 mt-0.5">
+                Higher = more arrivals (e.g. 2 = double the arrival rate).
+              </p>
+              {rateValidation.error && (
+                <p className="text-xs text-red-600 mt-0.5">{rateValidation.error}</p>
+              )}
+              {rateValidation.warning && !rateValidation.error && (
+                <p className="text-xs text-yellow-600 mt-0.5">{rateValidation.warning}</p>
+              )}
+            </div>
+          ) : (
+            <EnhancedDurationEditor
+              label="Arrival"
+              periodUnit={swapPeriodUnit}
+              distribution={swapDistribution}
+              onChange={(pu, dist) => {
+                setSwapPeriodUnit(pu);
+                setSwapDistribution(dist);
+              }}
+            />
           )}
-          {valueValidation.warning && !valueValidation.error && (
-            <p className="text-xs text-yellow-600 mt-0.5">{valueValidation.warning}</p>
-          )}
         </div>
-      </div>
+      ) : (
+        /* Scalar: Setter Type + Value grid */
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-0.5">
+              Setter Type
+            </label>
+            <select
+              className="w-full px-2 py-1 text-xs border rounded bg-white"
+              value={setterType}
+              onChange={handleSetterTypeChange}
+            >
+              {Object.values(ScenarioSetterType).map((st) => (
+                <option key={st} value={st}>
+                  {SETTER_TYPE_LABELS[st] ?? st}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700 block mb-0.5">
+              Value
+            </label>
+            <input
+              type="number"
+              className={`w-full px-2 py-1 text-xs border rounded ${
+                valueValidation.error ? "border-red-400" : valueValidation.warning ? "border-yellow-400" : ""
+              }`}
+              value={numericValue}
+              onChange={handleNumericValueChange}
+              step={useIntegerInput ? "1" : "any"}
+            />
+            {valueValidation.error && (
+              <p className="text-xs text-red-600 mt-0.5">{valueValidation.error}</p>
+            )}
+            {valueValidation.warning && !valueValidation.error && (
+              <p className="text-xs text-yellow-600 mt-0.5">{valueValidation.warning}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Description */}
       <div>
