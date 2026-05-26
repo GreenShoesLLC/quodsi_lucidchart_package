@@ -78,6 +78,12 @@ interface ScenarioCardProps {
   onConfirmRerun?: () => void;
   /** Cancel the pending re-run. */
   onCancelRerun?: () => void;
+  /** When true, this card shows an inline delete confirmation under its row. */
+  isPendingDelete?: boolean;
+  /** Confirm the pending delete. */
+  onConfirmDelete?: () => void;
+  /** Cancel the pending delete. */
+  onCancelDelete?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,6 +180,9 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   isPendingRerun = false,
   onConfirmRerun,
   onCancelRerun,
+  isPendingDelete = false,
+  onConfirmDelete,
+  onCancelDelete,
 }) => {
   // --- derived values ---
   const status = runStatus?.status ?? RunState.NotRun;
@@ -422,6 +431,33 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onCancelRerun?.(); }}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation — inline under this card's row, same placement as
+          the re-run prompt (visible next to the Delete button, not list-bottom). */}
+      {isPendingDelete && (
+        <div className="mx-3 mb-2 p-2 bg-red-50 border border-red-200 rounded">
+          <div className="text-xs font-medium text-red-900 mb-1">
+            Delete "{scenario.name}"?
+          </div>
+          <div className="text-[10px] text-red-700 mb-2">
+            This also removes any associated simulation results. This action cannot be undone.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onConfirmDelete?.(); }}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Delete
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onCancelDelete?.(); }}
               className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
             >
               Cancel

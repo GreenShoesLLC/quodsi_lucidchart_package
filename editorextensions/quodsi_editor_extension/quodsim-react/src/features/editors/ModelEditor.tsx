@@ -505,34 +505,16 @@ export const ScenariosAndRunsPanel: React.FC<{
                 isPendingRerun={rerunningScenarioId === scenario.id}
                 onConfirmRerun={confirmRerun}
                 onCancelRerun={cancelRerun}
+                isPendingDelete={deletingScenarioId === scenario.id}
+                onConfirmDelete={confirmDeleteScenario}
+                onCancelDelete={cancelDeleteScenario}
               />
             );
           })
         )}
-        {deletingScenarioId && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded">
-            <div className="text-xs font-medium text-red-900 mb-2">
-              Delete scenario "{scenarios.find(s => s.id === deletingScenarioId)?.name ?? deletingScenarioId}"?
-            </div>
-            <div className="text-xs text-red-700 mb-3">
-              This will also remove any associated simulation results. This action cannot be undone.
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={confirmDeleteScenario}
-                className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                Delete
-              </button>
-              <button
-                onClick={cancelDeleteScenario}
-                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Delete confirmation now renders inline within each ScenarioCard
+            (isPendingDelete / onConfirmDelete / onCancelDelete), next to the
+            Delete button instead of at the bottom of the scenario list. */}
         {/* Re-run confirmation now renders inline within each ScenarioCard
             (isPendingRerun / onConfirmRerun / onCancelRerun) so it appears next
             to the Play button instead of at the bottom of the scenario list. */}
