@@ -71,6 +71,13 @@ interface ScenarioCardProps {
   onDelete?: () => void;
   onUpdate: (updated: ISerializedScenario) => void;
   onAnalyze?: (scenarioId: string) => void;
+  /** When true, this card shows an inline re-run confirmation directly under
+   * its row (so it's visible next to the Play button, not at the list bottom). */
+  isPendingRerun?: boolean;
+  /** Confirm the pending re-run (parent re-runs the scenario). */
+  onConfirmRerun?: () => void;
+  /** Cancel the pending re-run. */
+  onCancelRerun?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +171,9 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   onDelete,
   onUpdate,
   onAnalyze,
+  isPendingRerun = false,
+  onConfirmRerun,
+  onCancelRerun,
 }) => {
   // --- derived values ---
   const status = runStatus?.status ?? RunState.NotRun;
@@ -189,7 +199,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const [errorExpanded, setErrorExpanded] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   // Opt-in: generate animation data for this run (first replication only). Default off.
-  const [animate, setAnimate] = useState(false);
+  const [animate, setAnimate] = useState(true);
 
   // --- Expiry countdown timer (from ScenarioDetailPanel) ---
   useEffect(() => {
@@ -393,59 +403,50 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
         )}
       </div>
 
+      {/* Re-run confirmation — inline under this card's row so it's visible
+          next to the Play button regardless of expand/scroll state. */}
+      {isPendingRerun && (
+        <div className="mx-3 mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+          <div className="text-xs font-medium text-yellow-900 mb-1">
+            Re-run "{scenario.name}"?
+          </div>
+          <div className="text-[10px] text-yellow-700 mb-2">
+            This replaces the existing simulation results. This action cannot be undone.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onConfirmRerun?.(); }}
+              className="px-3 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
+            >
+              Re-run
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onCancelRerun?.(); }}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ---- Expanded Content ---- */}
       {expanded && (
         <div className="p-3 border-t border-gray-200 space-y-3">
-          {/* Run options */}
-          <div>
-            <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-              Run Options
-            </label>
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="checkbox"
-                id={`animate-${scenario.id}`}
-                checked={animate}
-                onChange={(e) => setAnimate(e.target.checked)}
-                className="w-3 h-3"
-              />
-              <label htmlFor={`animate-${scenario.id}`} className="text-xs text-gray-700">
-                Generate animation
-              </label>
-              <span title="Records the first replication for playback in the animation viewer. Adds some run time.">
-                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
-              </span>
-            </div>
-          </div>
-
           {/* A. Editing area */}
-          {/* Name & Description — non-Baseline only */}
+          {/* Name — non-Baseline only */}
           {!scenario.isBaseline && (
-            <>
-              <div>
-                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={scenario.name}
-                  onChange={handleNameChange}
-                  className="w-full px-2 py-1 text-xs border rounded mt-0.5"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
-                  Description
-                </label>
-                <textarea
-                  value={scenario.description || ""}
-                  onChange={handleDescriptionChange}
-                  rows={2}
-                  className="w-full px-2 py-1 text-xs border rounded mt-0.5 resize-none"
-                  placeholder="Optional description"
-                />
-              </div>
-            </>
+            <div>
+              <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                Name
+              </label>
+              <input
+                type="text"
+                value={scenario.name}
+                onChange={handleNameChange}
+                className="w-full px-2 py-1 text-xs border rounded mt-0.5"
+              />
+            </div>
           )}
 
           {/* Change Requests — all scenarios including Baseline */}
@@ -509,6 +510,22 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               </button>
             )}
           </div>
+
+          {/* Description — non-Baseline only */}
+          {!scenario.isBaseline && (
+            <div>
+              <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+                Description
+              </label>
+              <textarea
+                value={scenario.description || ""}
+                onChange={handleDescriptionChange}
+                rows={2}
+                className="w-full px-2 py-1 text-xs border rounded mt-0.5 resize-none"
+                placeholder="Optional description"
+              />
+            </div>
+          )}
 
           {/* B. Progress bar (restored from old ScenarioCard) */}
           {status === RunState.Running && runStatus?.currentReplication && runStatus.reps && runStatus.reps > 0 && (
@@ -640,6 +657,28 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
                   {expiryText}
                 </span>
               )}
+            </div>
+          </div>
+
+          {/* Run options — moved to the bottom of the expanded card */}
+          <div>
+            <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">
+              Run Options
+            </label>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="checkbox"
+                id={`animate-${scenario.id}`}
+                checked={animate}
+                onChange={(e) => setAnimate(e.target.checked)}
+                className="w-3 h-3"
+              />
+              <label htmlFor={`animate-${scenario.id}`} className="text-xs text-gray-700">
+                Generate animation
+              </label>
+              <span title="Records the first replication for playback in the animation viewer. Adds some run time.">
+                <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+              </span>
             </div>
           </div>
         </div>

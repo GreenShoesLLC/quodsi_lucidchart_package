@@ -502,6 +502,9 @@ export const ScenariosAndRunsPanel: React.FC<{
                     openResultsModal(documentId, scenarioId);
                   }
                 }}
+                isPendingRerun={rerunningScenarioId === scenario.id}
+                onConfirmRerun={confirmRerun}
+                onCancelRerun={cancelRerun}
               />
             );
           })
@@ -530,30 +533,9 @@ export const ScenariosAndRunsPanel: React.FC<{
             </div>
           </div>
         )}
-        {rerunningScenarioId && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-            <div className="text-xs font-medium text-yellow-900 mb-2">
-              Re-run scenario "{scenarios.find(s => s.id === rerunningScenarioId)?.name ?? rerunningScenarioId}"?
-            </div>
-            <div className="text-xs text-yellow-700 mb-3">
-              This will replace the existing simulation results. This action cannot be undone.
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={confirmRerun}
-                className="px-3 py-1 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700"
-              >
-                Re-run
-              </button>
-              <button
-                onClick={cancelRerun}
-                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Re-run confirmation now renders inline within each ScenarioCard
+            (isPendingRerun / onConfirmRerun / onCancelRerun) so it appears next
+            to the Play button instead of at the bottom of the scenario list. */}
         <button
           onClick={handleAddScenario}
           className="flex items-center gap-1 w-full px-3 py-2 text-xs transition-colors rounded text-blue-600 hover:bg-blue-50"
