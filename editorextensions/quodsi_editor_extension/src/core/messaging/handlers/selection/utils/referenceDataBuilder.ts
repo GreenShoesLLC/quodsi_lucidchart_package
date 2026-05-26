@@ -50,7 +50,22 @@ export const referenceDataBuilder = {
 
         referenceData.generators = modelDef.generators.getAll().map(g => ({
           id: g.id,
-          name: g.name
+          name: g.name,
+          // Carry the inter-arrival duration so the change-request editor can pre-fill.
+          // Explicit field mapping keeps the structural type compatible (DistributionParameters
+          // is a union of specific interfaces, not directly assignable to Record<string,number>).
+          periodIntervalDuration: g.generationConfig?.periodIntervalDuration
+            ? {
+                durationPeriodUnit: g.generationConfig.periodIntervalDuration.durationPeriodUnit as string,
+                distribution: {
+                  distributionType: g.generationConfig.periodIntervalDuration.distribution.distributionType as string,
+                  // DistributionParameters is a union of specific interfaces; cast via unknown
+                  // because all concrete parameter types are plain {key: number} objects.
+                  parameters: g.generationConfig.periodIntervalDuration.distribution.parameters as unknown as Record<string, number>,
+                  description: g.generationConfig.periodIntervalDuration.distribution.description,
+                },
+              }
+            : undefined,
         }));
 
         referenceData.resources = modelDef.resources.getAll().map(r => ({

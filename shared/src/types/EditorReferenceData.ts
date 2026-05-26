@@ -22,7 +22,14 @@ export interface EditorReferenceData {
         connectType?: ConnectType,
         actionRequirementIds?: string[]  // Requirement IDs used by actions
     }>;
-    generators?: Array<{ id: string, name: string }>;
+    generators?: Array<{
+        id: string;
+        name: string;
+        periodIntervalDuration?: {
+            durationPeriodUnit: string;
+            distribution: { distributionType: string; parameters: Record<string, number>; description?: string };
+        };
+    }>;
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
     states?: any[]; // Serialized state definitions for all components
