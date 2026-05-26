@@ -79,4 +79,38 @@ describe("ChangeRequestEditor — inter-arrival timing", () => {
     // Pre-fill: the saved duration reflects the generator's CURRENT distribution.
     expect(md.duration.distribution.distributionType).toBe("exponential");
   });
+
+  it("preserves setDistribution mode when re-opening a saved change request", () => {
+    const existingCR = {
+      id: "cr1",
+      objectType: ScenarioObjectType.GENERATOR,
+      objectMatchCriteria: { name: "Arrivals" },
+      modificationDetails: {
+        type: "duration",
+        propertyName: "INTERARRIVAL_TIMING",
+        mode: "setDistribution",
+        duration: {
+          durationPeriodUnit: "MINUTES",
+          distribution: { distributionType: "constant", parameters: { value: 1 }, description: "" },
+        },
+      },
+    };
+    render(
+      <ChangeRequestEditor
+        changeRequest={existingCR as any}
+        referenceData={{ generators: [genExponential] } as any}
+        onSave={jest.fn()}
+        onCancel={jest.fn()}
+      />
+    );
+    // The "Change" mode <select> is the combobox that offers the setDistribution
+    // option (GENERATOR + INTERARRIVAL_TIMING is already active in edit mode).
+    // With the bug it reverts to 'scaleRate'; the fix keeps it 'setDistribution'.
+    const combos = screen.getAllByRole("combobox") as HTMLSelectElement[];
+    const changeModeSelect = combos.find((c) =>
+      Array.from(c.options).some((o) => o.value === "setDistribution")
+    );
+    expect(changeModeSelect).toBeDefined();
+    expect(changeModeSelect!.value).toBe("setDistribution");
+  });
 });

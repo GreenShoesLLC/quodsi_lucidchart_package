@@ -229,8 +229,15 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
 
   /**
    * When propertyName changes, reset setter type and duration mode.
+   * Skip once on mount so that edit-mode initial values (e.g. a saved
+   * setDistribution durMode) survive the first render.
    */
+  const skipPropertyReset = useRef(true);
   useEffect(() => {
+    if (skipPropertyReset.current) {
+      skipPropertyReset.current = false;
+      return;
+    }
     setSetterType(ScenarioSetterType.EQUAL);
     setDurMode("scaleRate");
     // eslint-disable-next-line react-hooks/exhaustive-deps
