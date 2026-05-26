@@ -99,6 +99,13 @@ switch ($TargetEnvironment) {
         exit 1
     }
 }
+# Cloud packages must NOT bake in the local-dev Studio URL override
+# (editorextensions/.../local-studio-url.txt). build-bundle.ps1 only ever builds
+# cloud envs (Dev/TST/PRD), so always tell webpack's readLocalStudioOverride() to
+# ignore that file — otherwise the "Open in Studio" (film) button points at
+# localhost. `npm start` (local dev) leaves this unset and still uses the file.
+$env:QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE = "1"
+
 # Verification (optional)
 # Write-Host "Verifying variables set in this session:" -ForegroundColor Yellow
 # Write-Host " REACT_APP_DATA_CONNECTOR_API_URL = $($env:REACT_APP_DATA_CONNECTOR_API_URL)"

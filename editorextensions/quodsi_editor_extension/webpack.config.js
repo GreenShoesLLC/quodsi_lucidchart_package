@@ -12,10 +12,19 @@ const reactTargets = [{ name: "quodsim-react", port: 3000 }];
 // User" menu. Reads from `local-studio-url.txt` (gitignored) if present —
 // the developer creates that file once with a single line like
 // `https://localhost:3030` to route the button at their local Studio dev
-// server during iteration. In CI / cloud bundles the file doesn't exist,
-// so the override stays empty and the extension falls back to the
-// per-package-ID mapping in authHandler.ts (production behavior).
+// server during iteration. Cloud bundles ignore it: a true CI build won't have
+// the file, and build-bundle.ps1 (local builds of cloud packages) sets
+// QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1 — either way the extension falls back to
+// the per-package-ID mapping in authHandler.ts (production behavior).
 function readLocalStudioOverride() {
+  // Cloud packages (build-bundle.ps1 for Dev/TST/PRD) set this so a LOCAL build
+  // of a cloud package ignores local-studio-url.txt — otherwise `localhost`
+  // gets baked into __LOCAL_STUDIO_OVERRIDE__ and overrides the per-package-ID
+  // Studio URL. `npm start` (local dev) leaves it unset.
+  if (process.env.QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE === "1") {
+    console.log("[webpack] __LOCAL_STUDIO_OVERRIDE__ skipped (QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE=1)");
+    return "";
+  }
   const overrideFile = path.resolve(__dirname, "local-studio-url.txt");
   try {
     const value = fs.readFileSync(overrideFile, "utf8").trim();
