@@ -227,33 +227,25 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectType]);
 
-  /**
-   * When propertyName changes, reset setter type and duration mode.
-   * Skip once on mount so that edit-mode initial values (e.g. a saved
-   * setDistribution durMode) survive the first render.
-   */
-  const skipPropertyReset = useRef(true);
+  // Reset setter + duration mode only when the property ACTUALLY changes.
+  // Prev-value compare (NOT skip-once) so it's robust to React 18 StrictMode,
+  // which double-invokes effects on mount and would otherwise run the reset on
+  // the 2nd invocation, clobbering the mode loaded from an existing change request.
+  const prevPropertyNameRef = useRef(propertyName);
   useEffect(() => {
-    if (skipPropertyReset.current) {
-      skipPropertyReset.current = false;
-      return;
-    }
+    if (prevPropertyNameRef.current === propertyName) return;
+    prevPropertyNameRef.current = propertyName;
     setSetterType(ScenarioSetterType.EQUAL);
     setDurMode("scaleRate");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyName]);
 
-  /**
-   * When targetName changes, re-prefill the swap form from the selected
-   * generator's current distribution. Skip once on mount so that edit-mode
-   * initial values survive the first render.
-   */
-  const skipSwapPrefill = useRef(true);
+  // Re-prefill the swap form only when the target ACTUALLY changes
+  // (prev-value compare, StrictMode-safe — see note above).
+  const prevTargetNameRef = useRef(targetName);
   useEffect(() => {
-    if (skipSwapPrefill.current) {
-      skipSwapPrefill.current = false;
-      return;
-    }
+    if (prevTargetNameRef.current === targetName) return;
+    prevTargetNameRef.current = targetName;
     if (currentDist) {
       setSwapPeriodUnit(currentDist.durationPeriodUnit as PeriodUnit);
       setSwapDistribution(currentDist.distribution as unknown as Distribution);

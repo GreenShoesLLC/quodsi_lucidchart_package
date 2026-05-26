@@ -1,3 +1,4 @@
+import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ScenarioObjectType } from "@quodsi/shared";
 import ChangeRequestEditor from "../ChangeRequestEditor";
@@ -96,12 +97,14 @@ describe("ChangeRequestEditor — inter-arrival timing", () => {
       },
     };
     render(
-      <ChangeRequestEditor
-        changeRequest={existingCR as any}
-        referenceData={{ generators: [genExponential] } as any}
-        onSave={jest.fn()}
-        onCancel={jest.fn()}
-      />
+      <React.StrictMode>
+        <ChangeRequestEditor
+          changeRequest={existingCR as any}
+          referenceData={{ generators: [genExponential] } as any}
+          onSave={jest.fn()}
+          onCancel={jest.fn()}
+        />
+      </React.StrictMode>
     );
     // The "Change" mode <select> is the combobox that offers the setDistribution
     // option (GENERATOR + INTERARRIVAL_TIMING is already active in edit mode).
