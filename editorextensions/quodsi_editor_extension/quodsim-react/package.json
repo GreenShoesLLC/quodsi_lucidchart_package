@@ -40,6 +40,11 @@
       "react-hooks/rules-of-hooks": "error"
     }
   },
+  "jest": {
+    "moduleNameMapper": {
+      "^axios$": "<rootDir>/src/test-stubs/axiosStub.js"
+    }
+  },
   "browserslist": {
     "production": [
       ">0.2%",
