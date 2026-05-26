@@ -14,6 +14,7 @@ export { GeneratorValidation } from './rules/GeneratorValidation';
 export { ResourceValidation } from './rules/ResourceValidation';
 export { validateChangeRequestValue, isIntegerInput } from './rules/ScenarioChangeValidation';
 export type { ChangeRequestValidationResult } from './rules/ScenarioChangeValidation';
+export { canRateScale, validateRateMultiplier } from './rules/durationRateScale';
 
 // Service exports
 export { ModelValidationService } from './services/ModelValidationService';
