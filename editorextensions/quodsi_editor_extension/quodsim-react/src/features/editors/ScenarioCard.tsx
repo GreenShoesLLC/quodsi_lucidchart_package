@@ -5,6 +5,8 @@ import {
   EditorReferenceData,
   RunState,
   SimulationRunDownloadInfo,
+  getDistributionDisplayName,
+  DistributionType,
 } from "@quodsi/shared";
 import {
   Play,
@@ -102,6 +104,49 @@ const RunStatusBadge: React.FC<{ status: RunState }> = ({ status }) => {
     </span>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Change-request read-only summary
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the human-readable, read-only summary string shown for a change
+ * request in the collapsed (not-editing) list.
+ *
+ * Numeric / boolean change requests render as:
+ *   `<ObjectType> → <propertyName>: <setterType> <newValue>`
+ *
+ * Duration change requests render based on their mode:
+ *   - scaleRate      → `<ObjectType> <TargetName>: Arrival rate ×<factor>`
+ *   - setDistribution → `<ObjectType> <TargetName>: arrival distribution → <DistributionDisplayName>`
+ */
+function formatChangeRequestSummary(cr: ISerializedScenarioChangeRequest): string {
+  const md = cr.modificationDetails;
+  const targetName = cr.objectMatchCriteria?.name;
+  const prefix = targetName ? `${cr.objectType} ${targetName}` : cr.objectType;
+
+  // Duration change requests carry a different shape (mode/factor/duration)
+  // and have no setterType/newValue — handle them first and return before
+  // the numeric/boolean logic so we never print `undefined`.
+  if (md?.type === "duration") {
+    if (md.mode === "scaleRate") {
+      const factor = md.factor;
+      return `${prefix}: Arrival rate ×${factor ?? "—"}`;
+    }
+    if (md.mode === "setDistribution") {
+      const distType = md.duration?.distribution?.distributionType;
+      const distName = distType
+        ? getDistributionDisplayName(distType as DistributionType)
+        : "—";
+      return `${prefix}: arrival distribution → ${distName}`;
+    }
+    // Unknown / incomplete duration request
+    return `${prefix}: —`;
+  }
+
+  // Numeric / boolean (unchanged behavior)
+  return `${cr.objectType} → ${md?.propertyName}: ${md?.setterType} ${md?.newValue}`;
+}
 
 // ---------------------------------------------------------------------------
 // ScenarioCard
@@ -423,7 +468,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
                 ) : (
                   <div className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-[10px]">
                     <span className="text-gray-700 truncate">
-                      {cr.objectType} → {cr.modificationDetails?.propertyName}: {cr.modificationDetails?.setterType} {cr.modificationDetails?.newValue}
+                      {formatChangeRequestSummary(cr)}
                     </span>
                     <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                       <button
