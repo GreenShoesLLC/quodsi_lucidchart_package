@@ -95,6 +95,25 @@ export interface SimulationRunResimulateRequestMessage extends EnvelopeBase {
   };
 }
 
+export interface SimulationRunCancelRequestMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST;
+  data: {
+    documentId: string;
+    pageId: string;
+    scenarioId: string;
+  };
+}
+
+export interface SimulationRunCancelResultMessage extends EnvelopeBase {
+  type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT;
+  data: {
+    success: boolean;
+    documentId: string;
+    scenarioId: string;
+    error?: string;
+  };
+}
+
 export interface CrossRepDataRequestMessage extends EnvelopeBase {
   type: EnvelopeMessageType.CROSS_REP_DATA_REQUEST;
   data: {
@@ -142,6 +161,8 @@ export type SimulationRunMessage =
   | SimulationRunDeleteMessage
   | SimulationRunDeleteResultMessage
   | SimulationRunResimulateRequestMessage
+  | SimulationRunCancelRequestMessage
+  | SimulationRunCancelResultMessage
   | CrossRepDataRequestMessage
   | CrossRepDataResultMessage
   | CrossRepBatchDataRequestMessage

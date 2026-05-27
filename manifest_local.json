@@ -58,6 +58,7 @@
         "SaveAndSubmitSimulation": "SaveAndSubmitSimulation",
         "SubmitSimulationJob": "SubmitSimulationJob",
         "DeleteScenario": "DeleteScenario",
+        "CancelSimulation": "CancelSimulation",
         "TrackEvent": "TrackEvent",
         "GetMyEntitlements": "GetMyEntitlements",
         "GeneratePortalUrl": "GeneratePortalUrl"

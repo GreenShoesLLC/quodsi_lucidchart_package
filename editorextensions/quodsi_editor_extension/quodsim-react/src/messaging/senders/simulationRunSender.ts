@@ -35,6 +35,17 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
+   * Send a SIMULATION_RUN_CANCEL_REQUEST to cancel an in-flight run.
+   */
+  const cancelSimulationRun = useCallback((documentId: string, pageId: string, scenarioId: string) => {
+    send(EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST, {
+      documentId,
+      pageId,
+      scenarioId,
+    });
+  }, [send]);
+
+  /**
    * Send a SIMULATION_RUN_RESIMULATE_REQUEST message
    *
    * @param documentId Document ID containing the simulation run
@@ -103,6 +114,7 @@ export function useSimulationRunSender() {
   return {
     listSimulationRuns,
     deleteSimulationRun,
+    cancelSimulationRun,
     resimulateSimulationRun,
     getCrossRepData,
     getCrossRepBatchData,

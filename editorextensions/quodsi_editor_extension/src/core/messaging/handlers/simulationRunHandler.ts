@@ -58,6 +58,12 @@ export class SimulationRunHandler {
         });
         return true;
 
+      case EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST:
+        SimulationRunHandler.handleSimulationRunCancel(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleSimulationRunCancel:', error);
+        });
+        return true;
+
       case EnvelopeMessageType.OPEN_RESULTS_MODAL:
         SimulationRunHandler.handleOpenResultsModal(msg);
         return true;
@@ -107,6 +113,7 @@ export class SimulationRunHandler {
       case 'FAILED': return 'RAN_WITH_ERRORS';
       case 'RUNNING': return 'RUNNING';
       case 'QUEUED': return 'QUEUED';
+      case 'CANCELLED': return 'CANCELLED';
       default: return 'NOT_RUN';
     }
   }
@@ -297,6 +304,70 @@ export class SimulationRunHandler {
       router.send('model', {
         id: msg.id,
         type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: false,
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  /**
+   * Handle simulation run cancel request
+   *
+   * @param msg SIMULATION_RUN_CANCEL_REQUEST message
+   */
+  private static async handleSimulationRunCancel(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { documentId: string; pageId: string; scenarioId: string };
+
+    SimulationRunHandler.logger.log('Simulation run cancel requested', {
+      documentId: data.documentId,
+      scenarioId: data.scenarioId
+    });
+
+    try {
+      const client = ModelManager.getClient();
+
+      const result = await LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'CancelSimulation',
+        actionData: {
+          documentId: data.documentId,
+          pageId: data.pageId,
+          scenarioId: data.scenarioId
+        },
+        asynchronous: false
+      });
+
+      const responseData = result.json || result;
+
+      if (responseData?.success) {
+        SimulationHandler.stopPollingForScenario(data.scenarioId);
+      }
+
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: {
+          success: responseData?.success || false,
+          documentId: data.documentId,
+          scenarioId: data.scenarioId,
+          error: responseData?.error
+        }
+      });
+    } catch (error) {
+      SimulationRunHandler.logger.error('Error cancelling simulation run:', error);
+      router.send('model', {
+        id: msg.id,
+        type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT,
         source: 'host',
         target: 'model-iframe',
         version: '1.0',

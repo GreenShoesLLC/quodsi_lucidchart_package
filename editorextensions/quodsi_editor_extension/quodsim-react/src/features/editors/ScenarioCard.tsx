@@ -10,6 +10,7 @@ import {
 } from "@quodsi/shared";
 import {
   Play,
+  Square,
   Trash2,
   Loader2,
   ChevronDown,
@@ -84,6 +85,14 @@ interface ScenarioCardProps {
   onConfirmDelete?: () => void;
   /** Cancel the pending delete. */
   onCancelDelete?: () => void;
+  /** Stop button click while a run is active — parent shows the cancel confirm. */
+  onRequestCancel?: () => void;
+  /** When true, show the inline "cancel this run?" confirmation. */
+  isPendingCancel?: boolean;
+  /** Confirm the pending cancel (parent terminates the run). */
+  onConfirmCancel?: () => void;
+  /** Dismiss the pending cancel. */
+  onDismissCancel?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,6 +105,7 @@ const statusDisplay: Record<string, { label: string; color: string }> = {
   [RunState.Running]: { label: "Running", color: "text-blue-600" },
   [RunState.RanSuccessfully]: { label: "Ready", color: "text-green-600" },
   [RunState.RanWithErrors]: { label: "Error", color: "text-red-600" },
+  [RunState.Cancelled]: { label: "Cancelled", color: "text-gray-500" },
 };
 
 // ---------------------------------------------------------------------------
@@ -109,6 +119,7 @@ const RunStatusBadge: React.FC<{ status: RunState }> = ({ status }) => {
     [RunState.Running]: { label: "Running", bg: "bg-blue-100", text: "text-blue-700" },
     [RunState.RanSuccessfully]: { label: "Completed", bg: "bg-green-100", text: "text-green-700" },
     [RunState.RanWithErrors]: { label: "Error", bg: "bg-red-100", text: "text-red-700" },
+    [RunState.Cancelled]: { label: "Cancelled", bg: "bg-gray-100", text: "text-gray-600" },
   };
   const c = config[status] ?? config[RunState.NotRun];
   return (
@@ -183,6 +194,10 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   isPendingDelete = false,
   onConfirmDelete,
   onCancelDelete,
+  onRequestCancel,
+  isPendingCancel = false,
+  onConfirmCancel,
+  onDismissCancel,
 }) => {
   // --- derived values ---
   const status = runStatus?.status ?? RunState.NotRun;
@@ -331,6 +346,18 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
           )}
         </button>
 
+        {/* Stop button — cancel an in-flight run. */}
+        {isActive && (
+          <button
+            data-testid="cancel-run"
+            onClick={(e) => { e.stopPropagation(); onRequestCancel?.(); }}
+            className="flex-shrink-0 p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
+            title="Cancel this run"
+          >
+            <Square className="w-3.5 h-3.5" />
+          </button>
+        )}
+
         {/* Name + badges */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1">
@@ -461,6 +488,33 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
               className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel-run confirmation — inline under the row, same placement as
+          the re-run / delete prompts. Mutually exclusive with them. */}
+      {isPendingCancel && (
+        <div className="mx-3 mb-2 p-2 bg-red-50 border border-red-200 rounded">
+          <div className="text-xs font-medium text-red-900 mb-1">
+            Cancel the run for "{scenario.name}"?
+          </div>
+          <div className="text-[10px] text-red-700 mb-2">
+            This stops the simulation. It still counts toward your monthly usage.
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onConfirmCancel?.(); }}
+              className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Stop run
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDismissCancel?.(); }}
+              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+            >
+              Keep running
             </button>
           </div>
         </div>

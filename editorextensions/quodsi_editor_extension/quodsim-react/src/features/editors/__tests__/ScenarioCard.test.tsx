@@ -76,3 +76,44 @@ describe("ScenarioCard — View animation action", () => {
     expect(mockOpen).not.toHaveBeenCalled();
   });
 });
+
+describe("ScenarioCard — cancel running run", () => {
+  const runningStatus = { scenarioId: "scn-1", status: RunState.Running, hasResults: false };
+
+  it("shows a Stop button while the run is active and calls onRequestCancel", () => {
+    const onRequestCancel = jest.fn();
+    render(
+      <ScenarioCard {...baseProps} runStatus={runningStatus} onRequestCancel={onRequestCancel} />,
+    );
+    fireEvent.click(screen.getByTestId("cancel-run"));
+    expect(onRequestCancel).toHaveBeenCalled();
+  });
+
+  it("renders the inline confirm and wires confirm/dismiss", () => {
+    const onConfirmCancel = jest.fn();
+    const onDismissCancel = jest.fn();
+    render(
+      <ScenarioCard
+        {...baseProps}
+        runStatus={runningStatus}
+        isPendingCancel
+        onConfirmCancel={onConfirmCancel}
+        onDismissCancel={onDismissCancel}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Stop run" }));
+    expect(onConfirmCancel).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Keep running" }));
+    expect(onDismissCancel).toHaveBeenCalled();
+  });
+
+  it("shows a Cancelled label for a cancelled run", () => {
+    render(
+      <ScenarioCard
+        {...baseProps}
+        runStatus={{ scenarioId: "scn-1", status: RunState.Cancelled, hasResults: false }}
+      />,
+    );
+    expect(screen.getByText("Cancelled")).toBeInTheDocument();
+  });
+});

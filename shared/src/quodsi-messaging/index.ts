@@ -7,7 +7,7 @@ import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessag
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
-import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, CrossRepBatchDataRequestMessage, CrossRepBatchDataResultMessage, CrossRepDataType, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
+import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, SimulationRunCancelRequestMessage, SimulationRunCancelResultMessage, CrossRepDataRequestMessage, CrossRepDataResultMessage, CrossRepBatchDataRequestMessage, CrossRepBatchDataResultMessage, CrossRepDataType, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { ConversionPreviewRequestMessage, ConversionPreviewResultMessage, ConversionApplyMessage, ConversionApplyResultMessage, ConversionPreviewMessage } from './conversionPreview/messages';
 import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
 import { AnalyticsMessage, AnalyticsTrackMessage, ClientAnalyticsEvent } from './analytics/messages';
@@ -123,6 +123,8 @@ export {
   SimulationRunDeleteMessage,
   SimulationRunDeleteResultMessage,
   SimulationRunResimulateRequestMessage,
+  SimulationRunCancelRequestMessage,
+  SimulationRunCancelResultMessage,
   CrossRepDataRequestMessage,
   CrossRepDataResultMessage,
   CrossRepBatchDataRequestMessage,
@@ -233,6 +235,8 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SIMULATION_RUN_DELETE]: SimulationRunDeleteMessage['data'];
   [EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT]: SimulationRunDeleteResultMessage['data'];
   [EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST]: SimulationRunResimulateRequestMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST]: SimulationRunCancelRequestMessage['data'];
+  [EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT]: SimulationRunCancelResultMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_REQUEST]: CrossRepDataRequestMessage['data'];
   [EnvelopeMessageType.CROSS_REP_DATA_RESULT]: CrossRepDataResultMessage['data'];
 

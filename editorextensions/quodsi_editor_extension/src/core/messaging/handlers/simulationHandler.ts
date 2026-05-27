@@ -682,6 +682,8 @@ export class SimulationHandler {
           return SimulationStatus.RUNNING;
         case 'QUEUED':
           return SimulationStatus.QUEUED;
+        case 'CANCELLED':
+          return SimulationStatus.CANCELLED;
         case 'NOT_RUN':
         default:
           return SimulationStatus.QUEUED;

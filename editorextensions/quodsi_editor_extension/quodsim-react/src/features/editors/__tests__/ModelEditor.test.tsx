@@ -23,6 +23,7 @@ jest.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { RunState } from "@quodsi/shared";
 import { ScenariosAndRunsPanel } from "../ModelEditor";
 
 // --- mock hook surfaces used by ScenariosAndRunsPanel ---------------------
@@ -33,6 +34,7 @@ const mockSyncAll = jest.fn();
 const mockListScenarios = jest.fn();
 const mockListSimulationRuns = jest.fn();
 const mockDeleteSimulationRun = jest.fn();
+const mockCancelSimulationRun = jest.fn();
 const mockOpenResultsModal = jest.fn();
 
 // Default sync state — overridden per-test for the disabled scenarios.
@@ -64,13 +66,15 @@ jest.mock("../../../messaging/senders/simulationRunSender", () => ({
   useSimulationRunSender: () => ({
     listSimulationRuns: mockListSimulationRuns,
     deleteSimulationRun: mockDeleteSimulationRun,
+    cancelSimulationRun: mockCancelSimulationRun,
     openResultsModal: mockOpenResultsModal,
   }),
 }));
 
-// Pass-through selector — runs are always [] in these tests.
+// Overridable run list — defaults to [] but can be set per-test.
+let mockRuns: any[] = [];
 jest.mock("../../../messaging/state/simulationRunSlice", () => ({
-  selectSimulationRuns: () => [],
+  selectSimulationRuns: () => mockRuns,
 }));
 
 // Entitlement gate is unrelated to Sync; pass-throughs are sufficient.
@@ -81,9 +85,14 @@ jest.mock("../../../messaging/state/entitlementsSlice", () => ({
 
 // ScenarioCard pulls in unrelated UI and can fire its own messaging side-effects.
 // Stub it out — the Sync button lives in the panel footer, not inside cards.
+// Exposes cancel trigger buttons for the cancel-wiring tests.
 jest.mock("../ScenarioCard", () => ({
-  ScenarioCard: ({ scenario }: any) => (
-    <div data-testid={`scenario-card-${scenario.id}`}>{scenario.name}</div>
+  ScenarioCard: ({ scenario, onRequestCancel, onConfirmCancel }: any) => (
+    <div data-testid={`scenario-card-${scenario.id}`}>
+      {scenario.name}
+      <button data-testid={`stop-${scenario.id}`} onClick={() => onRequestCancel?.()} />
+      <button data-testid={`confirm-cancel-${scenario.id}`} onClick={() => onConfirmCancel?.()} />
+    </div>
   ),
 }));
 
@@ -108,6 +117,7 @@ const baseProps = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockSyncState = { isSyncing: false, lastSyncedAt: null, lastError: null };
+  mockRuns = [];
 });
 
 describe("ScenariosAndRunsPanel — Sync button", () => {
@@ -161,6 +171,16 @@ describe("ScenariosAndRunsPanel — Sync button", () => {
     expect(mockSyncAll).not.toHaveBeenCalled();
     // And no SYNC_ALL_START dispatched either — handleSync short-circuits.
     expect(mockDispatch).not.toHaveBeenCalledWith({ type: "SYNC_ALL_START" });
+  });
+});
+
+describe("ScenariosAndRunsPanel — cancel", () => {
+  it("calls cancelSimulationRun on confirm for an active run", () => {
+    mockRuns = [{ id: "scenario-1", name: "Baseline", runState: RunState.Running, hasResults: false }];
+    render(<ScenariosAndRunsPanel {...baseProps} />);
+    fireEvent.click(screen.getByTestId("stop-scenario-1"));
+    fireEvent.click(screen.getByTestId("confirm-cancel-scenario-1"));
+    expect(mockCancelSimulationRun).toHaveBeenCalledWith("doc-1", "page-1", "scenario-1");
   });
 });
 

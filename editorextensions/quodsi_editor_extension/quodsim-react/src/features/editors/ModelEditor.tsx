@@ -132,6 +132,8 @@ function mapStatusToRunState(status: string): RunState {
     case 'failed':
     case 'error':
       return RunState.RanWithErrors;
+    case 'cancelled':
+      return RunState.Cancelled;
     default:
       return RunState.NotRun;
   }
@@ -159,11 +161,12 @@ export const ScenariosAndRunsPanel: React.FC<{
   const [expandedScenarioId, setExpandedScenarioId] = useState<string | null>(null);
   const [deletingScenarioId, setDeletingScenarioId] = useState<string | null>(null);
   const [rerunningScenarioId, setRerunningScenarioId] = useState<string | null>(null);
+  const [cancellingScenarioId, setCancellingScenarioId] = useState<string | null>(null);
   // Animate choice captured when a re-run confirmation is pending (see handlePlay/confirmRerun).
   const [rerunAnimate, setRerunAnimate] = useState(false);
   const [autoRefreshMode, setAutoRefreshMode] = useState<AutoRefreshMode>('off');
   // Messaging hooks
-  const { listSimulationRuns, deleteSimulationRun, openResultsModal } = useSimulationRunSender();
+  const { listSimulationRuns, deleteSimulationRun, cancelSimulationRun, openResultsModal } = useSimulationRunSender();
   const { syncAll } = useSyncSender();
   const { listScenarios } = useScenariosSender();
   const dispatch = useMessagingDispatch();
@@ -265,6 +268,7 @@ export const ScenariosAndRunsPanel: React.FC<{
       setRerunningScenarioId(scenario.id);
       setRerunAnimate(enableAnimation);
       setDeletingScenarioId(null);
+      setCancellingScenarioId(null);
       return;
     }
     executePlay(scenario, enableAnimation);
@@ -293,6 +297,7 @@ export const ScenariosAndRunsPanel: React.FC<{
   const handleDeleteScenario = useCallback((scenarioId: string) => {
     setDeletingScenarioId(scenarioId);
     setRerunningScenarioId(null);
+    setCancellingScenarioId(null);
   }, []);
 
   const confirmDeleteScenario = useCallback(() => {
@@ -310,6 +315,29 @@ export const ScenariosAndRunsPanel: React.FC<{
 
   const cancelDeleteScenario = useCallback(() => {
     setDeletingScenarioId(null);
+  }, []);
+
+  const handleCancelRun = useCallback((scenarioId: string) => {
+    setCancellingScenarioId(scenarioId);
+    setRerunningScenarioId(null);
+    setDeletingScenarioId(null);
+  }, []);
+
+  const confirmCancelRun = useCallback(() => {
+    if (!cancellingScenarioId || !documentId || !pageId) { setCancellingScenarioId(null); return; }
+    cancelSimulationRun(documentId, pageId, cancellingScenarioId);
+    // Optimistic: flip the run to Cancelled immediately.
+    dispatch({
+      type: 'SIMULATION_RUN_UPDATE_STATUS',
+      simulationRunId: cancellingScenarioId,
+      runState: RunState.Cancelled,
+      hasResults: false,
+    });
+    setCancellingScenarioId(null);
+  }, [cancellingScenarioId, documentId, pageId, cancelSimulationRun, dispatch]);
+
+  const dismissCancelRun = useCallback(() => {
+    setCancellingScenarioId(null);
   }, []);
 
   const handleUpdateScenario = useCallback((updated: ISerializedScenario) => {
@@ -431,6 +459,9 @@ export const ScenariosAndRunsPanel: React.FC<{
             setAutoRefreshMode(prev => prev === 'off' ? 'smart' : prev);
           }
         }
+      } else if (message.type === EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT) {
+        const docId = documentIdRef.current;
+        if (docId) listSimulationRuns(docId);
       }
     };
     window.addEventListener('message', handleMessage);
@@ -508,6 +539,10 @@ export const ScenariosAndRunsPanel: React.FC<{
                 isPendingDelete={deletingScenarioId === scenario.id}
                 onConfirmDelete={confirmDeleteScenario}
                 onCancelDelete={cancelDeleteScenario}
+                onRequestCancel={() => handleCancelRun(scenario.id)}
+                isPendingCancel={cancellingScenarioId === scenario.id}
+                onConfirmCancel={confirmCancelRun}
+                onDismissCancel={dismissCancelRun}
               />
             );
           })
