@@ -85,7 +85,12 @@ switch ($TargetEnvironment) {
         Write-Host "DEV environment variables set for this session." -ForegroundColor Green
     }
     'TST' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://tst-quodsi-func-v1.azurewebsites.net/api/"
+        # FastAPI cutover (2026-05-29): test backend moved from Azure Functions to
+        # Container App. Same pattern as dev — REACT_APP_DATA_CONNECTOR_API_URL is
+        # used by environmentDetection.ts for the "Test" label only; actual HTTP calls
+        # flow through Lucid's data connector to the manifest's callbackBaseUrl.
+        # AZURE_STATUS_FUNCTION_KEY retained as no-op for now (FastAPI ignores it).
+        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsi-test-api.thankfulground-d7c463a0.eastus2.azurecontainerapps.io/lucid/"
         $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
@@ -306,11 +311,11 @@ if ($ManifestSource) {
         $callbackUrl = $manifestContent.dataConnectors[0].callbackBaseUrl
 
         $expectedUrlPattern = switch ($TargetEnvironment) {
-            # Dev cut over to FastAPI Container App on 2026-05-13. Test and prod
-            # remain on legacy Azure Functions until their respective cutovers
-            # (tracked in _docs/kinde-environments.md).
+            # Dev cut over to FastAPI Container App on 2026-05-13.
+            # Test cut over to FastAPI Container App on 2026-05-29.
+            # Prod remains on legacy Azure Functions until its cutover.
             'Dev' { "https://ca-quodsi-dev-api" }
-            'TST' { "https://tst-quodsi-func-v1.azurewebsites.net" }
+            'TST' { "https://ca-quodsi-test-api" }
             'PRD' { "https://prd-quodsi-func-v1.azurewebsites.net" }
         }
 
