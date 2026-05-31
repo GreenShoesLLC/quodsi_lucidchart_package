@@ -13,6 +13,11 @@ import {
   JoinAction,
   LoopAction,
   BranchAction,
+  createAssignAction,
+  createSeizeAction,
+  createReleaseAction,
+  createDelayAction,
+  createDelayWithResourceAction,
   createSplitAction,
   createCreateAction,
   createDisposeAction,
@@ -285,37 +290,19 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
     switch (newType) {
       case ActionType.ASSIGN:
-        newAction = {
-          actionType: ActionType.ASSIGN,
-          modifications: [],
-        } as AssignAction;
+        newAction = createAssignAction([]);
         break;
       case ActionType.SEIZE:
-        newAction = {
-          actionType: ActionType.SEIZE,
-          resourceRequirementId: "",
-        } as SeizeAction;
+        newAction = createSeizeAction("");
         break;
       case ActionType.RELEASE:
-        newAction = {
-          actionType: ActionType.RELEASE,
-          resourceRequirementId: "",
-        } as ReleaseAction;
+        newAction = createReleaseAction("");
         break;
       case ActionType.DELAY:
-        newAction = {
-          actionType: ActionType.DELAY,
-          duration: new Duration(),
-        } as DelayAction;
+        newAction = createDelayAction(new Duration());
         break;
       case ActionType.DELAY_WITH_RESOURCE:
-        newAction = {
-          actionType: ActionType.DELAY_WITH_RESOURCE,
-          resourceRequirementId: null,
-          duration: new Duration(),
-          keepResource: false,
-          stateModifications: [],
-        } as DelayWithResourceAction;
+        newAction = createDelayWithResourceAction(new Duration());
         break;
       case ActionType.SPLIT:
         newAction = createSplitAction(1);
