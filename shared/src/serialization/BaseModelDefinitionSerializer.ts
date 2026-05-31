@@ -598,6 +598,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                     throw new InvalidModelError(`Unknown action type: ${(action as Action).actionType}`);
             }
 
+            // Carry the stable action id through to the engine (scenario-change addressing).
+            (serialized as any).id = (action as any).id;
+
             // Add optional stateCondition guard
             if ((action as any).stateCondition) {
                 const sc = (action as any).stateCondition;

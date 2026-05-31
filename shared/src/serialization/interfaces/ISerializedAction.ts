@@ -20,6 +20,8 @@ export type SerializedActionType =
  * Base interface for all serialized actions
  */
 export interface ISerializedActionBase {
+    /** Stable action identity, carried through to the engine for scenario-change addressing. */
+    id?: string;
     actionType: SerializedActionType;
     stateCondition?: any | null;
 }
