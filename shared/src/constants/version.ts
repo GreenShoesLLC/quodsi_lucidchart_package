@@ -2,7 +2,7 @@
  * Current version of Quodsi
  * Should be updated to match package.json version when making releases
  */
-export const QUODSI_VERSION = "2026.05.26";
+export const QUODSI_VERSION = "2026.05.31";
 
 /**
  * Current version of the Quodsim simulation engine

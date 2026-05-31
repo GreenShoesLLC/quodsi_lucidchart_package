@@ -1,4 +1,5 @@
 import { TransformationSet } from './TransformationTypes';
+import { generateUUID } from '../../utils/uuidUtils';
 
 /**
  * Transformations for Activity objects
@@ -40,6 +41,21 @@ export const ActivityTransforms: TransformationSet = {
                 // stateCondition added to all action types as optional field.
                 // Absence means no guard — identity transform for version hop.
             })
+        },
+        {
+            sourceVersion: '2026.05.26',
+            targetVersion: '2026.05.31',
+            // Backfill stable ids onto actions that predate action identity.
+            // Identity for activities without actions.
+            transform: (data: any) => {
+                if (!Array.isArray(data.actions)) return data;
+                return {
+                    ...data,
+                    actions: data.actions.map((a: any) =>
+                        a && !a.id ? { ...a, id: generateUUID() } : a
+                    ),
+                };
+            }
         }
     ]
 };
