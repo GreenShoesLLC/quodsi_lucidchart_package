@@ -31,6 +31,15 @@ describe('ActivityTransforms action-id backfill hop', () => {
     expect(actionIdHop().transform({ name: 'A', actions: [] }).actions).toEqual([]);
   });
 
+  it('passes null/undefined entries through without throwing', () => {
+    const out = actionIdHop().transform({
+      name: 'A', actions: [null, { actionType: 'DELAY' }],
+    });
+    expect(out.actions[0]).toBeNull();
+    expect(typeof out.actions[1].id).toBe('string');
+    expect(out.actions[1].id.length).toBeGreaterThan(0);
+  });
+
   it('is selected when upgrading any model at the prior version', () => {
     const sets = getTransformationsBetweenVersions('2026.05.26', QUODSI_VERSION);
     const activity = sets.find(s => s.objectType === 'Activity');

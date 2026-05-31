@@ -47,6 +47,8 @@ export const ActivityTransforms: TransformationSet = {
             targetVersion: '2026.05.31',
             // Backfill stable ids onto actions that predate action identity.
             // Identity for activities without actions.
+            // Note: only top-level data.actions are backfilled; nested actions inside
+            // LOOP/BRANCH action data are intentionally out of scope for this hop.
             transform: (data: any) => {
                 if (!Array.isArray(data.actions)) return data;
                 return {
