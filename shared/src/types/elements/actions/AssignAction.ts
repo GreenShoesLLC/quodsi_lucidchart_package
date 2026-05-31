@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that modifies state values.
@@ -14,6 +15,11 @@ import { StateCondition } from '../StateCondition';
  * - Recording timestamps or status changes
  */
 export interface AssignAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -33,8 +39,9 @@ export interface AssignAction {
 /**
  * Creates an AssignAction
  */
-export function createAssignAction(modifications: StateModification[], stateCondition?: StateCondition | null): AssignAction {
+export function createAssignAction(modifications: StateModification[], stateCondition?: StateCondition | null, id?: string): AssignAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.ASSIGN,
         modifications,
         stateCondition: stateCondition ?? null

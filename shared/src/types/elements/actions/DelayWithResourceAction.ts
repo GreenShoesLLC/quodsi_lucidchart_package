@@ -2,6 +2,7 @@ import { ActionType } from './ActionType';
 import { Duration } from '../Duration';
 import { StateModification } from '../StateModification';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Composite action that combines resource seizure with a delay.
@@ -20,6 +21,11 @@ import { StateCondition } from '../StateCondition';
  * - Any activity that requires holding resources during processing
  */
 export interface DelayWithResourceAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -64,9 +70,11 @@ export function createDelayWithResourceAction(
         keepResource?: boolean;
         stateModifications?: StateModification[];
         stateCondition?: StateCondition | null;
-    }
+    },
+    id?: string
 ): DelayWithResourceAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.DELAY_WITH_RESOURCE,
         duration,
         resourceRequirementId: options?.resourceRequirementId ?? null,

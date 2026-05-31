@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { Duration } from '../Duration';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that waits for a duration without resource requirements.
@@ -16,6 +17,11 @@ import { StateCondition } from '../StateCondition';
  * - Waiting periods that don't require equipment
  */
 export interface DelayAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -35,8 +41,9 @@ export interface DelayAction {
 /**
  * Creates a DelayAction
  */
-export function createDelayAction(duration: Duration, stateCondition?: StateCondition | null): DelayAction {
+export function createDelayAction(duration: Duration, stateCondition?: StateCondition | null, id?: string): DelayAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.DELAY,
         duration,
         stateCondition: stateCondition ?? null

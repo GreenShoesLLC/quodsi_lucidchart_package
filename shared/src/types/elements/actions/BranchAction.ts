@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { Action } from './Action';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that conditionally executes actions based on a state condition.
@@ -16,6 +17,11 @@ import { StateCondition } from '../StateCondition';
  * - Conditional delays (different processing times based on type)
  */
 export interface BranchAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -48,9 +54,11 @@ export interface BranchAction {
  * @param options Optional configuration for the branch action
  */
 export function createBranchAction(
-    options?: Partial<Omit<BranchAction, 'actionType'>>
+    options?: Partial<Omit<BranchAction, 'actionType' | 'id'>>,
+    id?: string
 ): BranchAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.BRANCH,
         condition: options?.condition ?? null,
         ifTrue: options?.ifTrue ?? [],

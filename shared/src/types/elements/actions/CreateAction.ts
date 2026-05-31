@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that creates a new entity while the original continues processing.
@@ -18,6 +19,11 @@ import { StateCondition } from '../StateCondition';
  * - Service creates follow-up ticket entity
  */
 export interface CreateAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -55,9 +61,11 @@ export interface CreateAction {
  * @param options Optional configuration for the create action
  */
 export function createCreateAction(
-    options?: Partial<Omit<CreateAction, 'actionType'>>
+    options?: Partial<Omit<CreateAction, 'actionType' | 'id'>>,
+    id?: string
 ): CreateAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.CREATE,
         entityTemplateId: options?.entityTemplateId ?? null,
         destinationId: options?.destinationId ?? null,

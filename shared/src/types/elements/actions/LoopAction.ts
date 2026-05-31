@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { Action } from './Action';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that repeats a set of actions a specified number of times.
@@ -21,6 +22,11 @@ import { StateCondition } from '../StateCondition';
  * - etc.
  */
 export interface LoopAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -51,9 +57,11 @@ export interface LoopAction {
 export function createLoopAction(
     count: number = 1,
     actions: Action[] = [],
-    stateCondition?: StateCondition | null
+    stateCondition?: StateCondition | null,
+    id?: string
 ): LoopAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.LOOP,
         count,
         actions,

@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that terminates an entity early, before it reaches the natural exit point.
@@ -19,6 +20,11 @@ import { StateCondition } from '../StateCondition';
  */
 export interface DisposeAction {
     /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
+    /**
      * Action type discriminator
      */
     actionType: ActionType.DISPOSE;
@@ -34,8 +40,9 @@ export interface DisposeAction {
  *
  * DisposeAction has no parameters - it simply terminates the entity.
  */
-export function createDisposeAction(stateCondition?: StateCondition | null): DisposeAction {
+export function createDisposeAction(stateCondition?: StateCondition | null, id?: string): DisposeAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.DISPOSE,
         stateCondition: stateCondition ?? null
     };

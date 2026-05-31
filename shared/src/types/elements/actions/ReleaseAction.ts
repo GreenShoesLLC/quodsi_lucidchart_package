@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that releases previously seized resource capacity.
@@ -15,6 +16,11 @@ import { StateCondition } from '../StateCondition';
  * - Releasing shared resources after a sequence of steps
  */
 export interface ReleaseAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -34,8 +40,9 @@ export interface ReleaseAction {
 /**
  * Creates a ReleaseAction
  */
-export function createReleaseAction(resourceRequirementId: string, stateCondition?: StateCondition | null): ReleaseAction {
+export function createReleaseAction(resourceRequirementId: string, stateCondition?: StateCondition | null, id?: string): ReleaseAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.RELEASE,
         resourceRequirementId,
         stateCondition: stateCondition ?? null

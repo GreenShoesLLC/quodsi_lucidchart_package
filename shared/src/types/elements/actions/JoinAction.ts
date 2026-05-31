@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that waits for entities with matching state value to join.
@@ -19,6 +20,11 @@ import { StateCondition } from '../StateCondition';
  * - Batch completion (items with same batch_id)
  */
 export interface JoinAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -71,9 +77,11 @@ export interface JoinAction {
  * @param options Optional configuration for the join action
  */
 export function createJoinAction(
-    options?: Partial<Omit<JoinAction, 'actionType'>>
+    options?: Partial<Omit<JoinAction, 'actionType' | 'id'>>,
+    id?: string
 ): JoinAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.JOIN,
         matchState: options?.matchState ?? null,
         joinCount: options?.joinCount ?? 2,

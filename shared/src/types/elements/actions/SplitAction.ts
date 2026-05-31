@@ -1,6 +1,7 @@
 import { ActionType } from './ActionType';
 import { StateModification } from '../StateModification';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that replaces the current entity with N new entities.
@@ -21,6 +22,11 @@ import { StateCondition } from '../StateCondition';
  * - Document splitting: A document splits into pages for parallel processing
  */
 export interface SplitAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -71,9 +77,11 @@ export interface SplitAction {
  */
 export function createSplitAction(
     count: number = 1,
-    options?: Partial<Omit<SplitAction, 'actionType' | 'count'>>
+    options?: Partial<Omit<SplitAction, 'actionType' | 'count' | 'id'>>,
+    id?: string
 ): SplitAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.SPLIT,
         count,
         entityTemplateId: options?.entityTemplateId ?? null,

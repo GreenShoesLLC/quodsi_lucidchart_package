@@ -1,5 +1,6 @@
 import { ActionType } from './ActionType';
 import { StateCondition } from '../StateCondition';
+import { generateUUID } from '../../../utils/uuidUtils';
 
 /**
  * Action that captures resource capacity.
@@ -16,6 +17,11 @@ import { StateCondition } from '../StateCondition';
  * - Capturing shared resources for a sequence of steps
  */
 export interface SeizeAction {
+    /**
+     * Stable unique identifier for this action instance
+     */
+    id: string;
+
     /**
      * Action type discriminator
      */
@@ -35,8 +41,9 @@ export interface SeizeAction {
 /**
  * Creates a SeizeAction
  */
-export function createSeizeAction(resourceRequirementId: string, stateCondition?: StateCondition | null): SeizeAction {
+export function createSeizeAction(resourceRequirementId: string, stateCondition?: StateCondition | null, id?: string): SeizeAction {
     return {
+        id: id ?? generateUUID(),
         actionType: ActionType.SEIZE,
         resourceRequirementId,
         stateCondition: stateCondition ?? null
