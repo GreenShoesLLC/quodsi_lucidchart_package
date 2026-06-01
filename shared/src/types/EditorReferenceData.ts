@@ -20,7 +20,18 @@ export interface EditorReferenceData {
         id: string,
         name: string,
         connectType?: ConnectType,
-        actionRequirementIds?: string[]  // Requirement IDs used by actions
+        actionRequirementIds?: string[];  // Requirement IDs used by actions
+        /** Per-action summary for the change-request editor (Action picker + resource-requirement dropdown). */
+        actions?: Array<{
+            id: string;
+            actionType: string;
+            /** Reuses the same inline serialized-duration shape as generator periodIntervalDuration. */
+            duration?: {
+                durationPeriodUnit: string;
+                distribution: { distributionType: string; parameters: Record<string, number>; description?: string };
+            };
+            resourceRequirementId?: string | null;
+        }>;
     }>;
     generators?: Array<{
         id: string;
