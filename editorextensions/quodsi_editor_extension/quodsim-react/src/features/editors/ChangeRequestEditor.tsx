@@ -258,8 +258,11 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     const objects = getTargetObjects(objectType, referenceData);
     setTargetName(objects.length > 0 ? objects[0].name : "");
     // Property will be reset by the objectType→targetName→actionId cascade.
-    const props = PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? [];
-    setPropertyName(props.length > 0 ? props[0] : "");
+    const nextProps =
+      objectType === ScenarioObjectType.ACTIVITY
+        ? activityLevelProps
+        : (PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? []);
+    setPropertyName(nextProps.length > 0 ? nextProps[0] : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectType]);
 
