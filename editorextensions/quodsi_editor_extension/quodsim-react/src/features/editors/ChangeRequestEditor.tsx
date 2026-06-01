@@ -13,6 +13,8 @@ import {
   validateRateMultiplier,
   Distribution,
   PeriodUnit,
+  PROPERTIES_BY_OBJECT_TYPE,
+  PROPERTY_DISPLAY_LABELS,
 } from "@quodsi/shared";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 
@@ -30,54 +32,6 @@ interface ChangeRequestEditorProps {
 // ============================================================================
 // CONSTANTS
 // ============================================================================
-
-/**
- * Maps each ScenarioObjectType to the ScenarioPropertyName values
- * that are valid for that object type.
- */
-const PROPERTIES_BY_OBJECT_TYPE: Record<string, ScenarioPropertyName[]> = {
-  [ScenarioObjectType.ACTIVITY]: [
-    ScenarioPropertyName.ACTIVITY_CAPACITY,
-    ScenarioPropertyName.INBOUND_QUEUE_CAPACITY,
-    ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY,
-  ],
-  [ScenarioObjectType.RESOURCE]: [
-    ScenarioPropertyName.CAPACITY,
-  ],
-  [ScenarioObjectType.GENERATOR]: [
-    ScenarioPropertyName.INTERARRIVAL_TIMING,
-    ScenarioPropertyName.MAX_ENTITIES,
-    ScenarioPropertyName.ENTITIES_PER_CREATION,
-  ],
-  [ScenarioObjectType.CONNECTOR]: [
-    ScenarioPropertyName.WEIGHT,
-  ],
-  [ScenarioObjectType.MODEL]: [
-    ScenarioPropertyName.REPS,
-    ScenarioPropertyName.SEED,
-    ScenarioPropertyName.RUN_PERIOD,
-  ],
-};
-
-/**
- * User-friendly display labels for ScenarioPropertyName enum values.
- */
-const PROPERTY_LABELS: Record<string, string> = {
-  [ScenarioPropertyName.CAPACITY]: "Capacity",
-  [ScenarioPropertyName.DURATION]: "Duration",
-  [ScenarioPropertyName.ACTIVITY_CAPACITY]: "Activity Capacity",
-  [ScenarioPropertyName.INBOUND_QUEUE_CAPACITY]: "Inbound Queue Capacity",
-  [ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY]: "Outbound Queue Capacity",
-  [ScenarioPropertyName.WEIGHT]: "Weight",
-  [ScenarioPropertyName.INTERVAL]: "Interval",
-  [ScenarioPropertyName.MAX_ENTITIES]: "Max Entities",
-  [ScenarioPropertyName.ENTITIES_PER_CREATION]: "Entities Per Creation",
-  [ScenarioPropertyName.NAME]: "Name",
-  [ScenarioPropertyName.REPS]: "Replications",
-  [ScenarioPropertyName.SEED]: "Seed",
-  [ScenarioPropertyName.RUN_PERIOD]: "Run Period",
-  [ScenarioPropertyName.INTERARRIVAL_TIMING]: "Inter-arrival Timing",
-};
 
 /**
  * User-friendly display labels for ScenarioSetterType enum values.
@@ -108,6 +62,19 @@ const OBJECT_TYPE_LABELS: Record<string, string> = {
 // ============================================================================
 
 /**
+ * Human-readable label for an action type string.
+ */
+function actionTypeLabel(t: string): string {
+  switch (t) {
+    case "DELAY": return "Delay";
+    case "DELAY_WITH_RESOURCE": return "Delay with Resource";
+    case "SEIZE": return "Seize";
+    case "RELEASE": return "Release";
+    default: return t;
+  }
+}
+
+/**
  * Returns the list of target objects from referenceData for the given object type.
  */
 function getTargetObjects(
@@ -132,7 +99,6 @@ function getTargetObjects(
   }
 }
 
-
 // ============================================================================
 // COMPONENT
 // ============================================================================
@@ -140,7 +106,7 @@ function getTargetObjects(
 /**
  * ChangeRequestEditor - Form component for adding or editing a single
  * scenario change request. Provides cascading dropdowns for object type,
- * target object, property, setter type, and value.
+ * target object, (action — activity only), property, setter type, and value.
  */
 const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   changeRequest,
@@ -161,6 +127,9 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   const [targetName, setTargetName] = useState<string>(
     changeRequest?.objectMatchCriteria?.name ?? ""
   );
+  const [actionId, setActionId] = useState<string>(
+    (changeRequest as any)?.actionId ?? ""
+  );
   const [propertyName, setPropertyName] = useState<string>(
     changeRequest?.modificationDetails?.propertyName ?? ""
   );
@@ -177,19 +146,75 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   );
 
   // ============================================================================
-  // DERIVED DATA
+  // DERIVED DATA — activity/action
   // ============================================================================
 
-  const availableProperties = PROPERTIES_BY_OBJECT_TYPE[objectType] ?? [];
-  const targetObjects = getTargetObjects(objectType, referenceData);
+  const isActivity = objectType === ScenarioObjectType.ACTIVITY;
   const isModelType = objectType === ScenarioObjectType.MODEL;
+  const targetObjects = getTargetObjects(objectType, referenceData);
+
+  /** The full activity entry (with actions) for the selected target. */
+  const selectedActivity = isActivity
+    ? (referenceData?.activities ?? []).find((a) => a.name === targetName)
+    : undefined;
+  const activityActions = selectedActivity?.actions ?? [];
+  const selectedAction = activityActions.find((a) => a.id === actionId);
+
+  /** Properties available for the selected action (if any). */
+  function actionProps(a?: typeof selectedAction): ScenarioPropertyName[] {
+    if (!a) return [];
+    const props: ScenarioPropertyName[] = [];
+    if (a.duration != null) props.push(ScenarioPropertyName.DURATION);
+    if (a.resourceRequirementId !== undefined && a.resourceRequirementId !== null)
+      props.push(ScenarioPropertyName.RESOURCE_REQUIREMENT);
+    return props;
+  }
+
+  /** Activity-level (capacity) properties — shown when no action is selected. */
+  const activityLevelProps: ScenarioPropertyName[] = [
+    ScenarioPropertyName.ACTIVITY_CAPACITY,
+    ScenarioPropertyName.INBOUND_QUEUE_CAPACITY,
+    ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY,
+  ];
+
+  /**
+   * Properties available in the property dropdown — depends on objectType and
+   * (for activities) whether an action is selected.
+   * Replaces the old local PROPERTIES_BY_OBJECT_TYPE (now imported from shared).
+   */
+  const availableProperties: ScenarioPropertyName[] = isActivity
+    ? (actionId === "" ? activityLevelProps : actionProps(selectedAction))
+    : (PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? []);
+
+  // ============================================================================
+  // DERIVED DATA — sub-form flags
+  // ============================================================================
 
   const isInterarrival =
     objectType === ScenarioObjectType.GENERATOR &&
     propertyName === ScenarioPropertyName.INTERARRIVAL_TIMING;
 
-  const selectedGenerator = referenceData?.generators?.find((g) => g.name === targetName);
-  const currentDist = selectedGenerator?.periodIntervalDuration;
+  const isActionDuration =
+    isActivity && actionId !== "" && propertyName === ScenarioPropertyName.DURATION;
+  const isActionResource =
+    isActivity && actionId !== "" && propertyName === ScenarioPropertyName.RESOURCE_REQUIREMENT;
+  /** Covers both generator interarrival and action duration sub-forms. */
+  const isDuration = isInterarrival || isActionDuration;
+
+  const selectedGenerator = (referenceData?.generators ?? []).find(
+    (g) => g.name === targetName
+  );
+  /**
+   * currentDist drives pre-filling the swap form and rate-validation.
+   * Points to the generator's interarrival duration OR the action's duration.
+   */
+  const currentDist = isInterarrival
+    ? selectedGenerator?.periodIntervalDuration
+    : (isActionDuration ? selectedAction?.duration : undefined);
+
+  // ============================================================================
+  // STATE — duration + resource swap sub-forms
+  // ============================================================================
 
   const md = changeRequest?.modificationDetails as any;
   const [durMode, setDurMode] = useState<"scaleRate" | "setDistribution">(
@@ -199,11 +224,21 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     typeof md?.factor === "number" ? md.factor : 2
   );
   const [swapPeriodUnit, setSwapPeriodUnit] = useState<PeriodUnit>(
-    (md?.duration?.durationPeriodUnit ?? currentDist?.durationPeriodUnit ?? PeriodUnit.MINUTES) as PeriodUnit
+    (md?.duration?.durationPeriodUnit ??
+      currentDist?.durationPeriodUnit ??
+      PeriodUnit.MINUTES) as PeriodUnit
   );
   const [swapDistribution, setSwapDistribution] = useState<Distribution>(
-    (md?.duration?.distribution ?? currentDist?.distribution ??
+    (md?.duration?.distribution ??
+      currentDist?.distribution ??
       createDefaultDistribution(DistributionType.EXPONENTIAL)) as unknown as Distribution
+  );
+
+  /**
+   * Resource-requirement swap: pre-filled from existing CR or action's current value.
+   */
+  const [swapRequirementId, setSwapRequirementId] = useState<string>(
+    md?.resourceRequirementId ?? (selectedAction?.resourceRequirementId ?? "")
   );
 
   // ============================================================================
@@ -211,26 +246,53 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   // ============================================================================
 
   /**
-   * When objectType changes, reset the target name and property to
-   * the first available value for the new type (unless editing).
+   * Cascading reset: objectType change resets target + property (skip-once so
+   * edit-mode initial render does NOT reset values).
    */
+  const skipObjectTypeReset = useRef(true);
   useEffect(() => {
-    if (!isEditing) {
-      // Reset target selection
-      const objects = getTargetObjects(objectType, referenceData);
-      setTargetName(objects.length > 0 ? objects[0].name : "");
-
-      // Reset property selection to first available
-      const props = PROPERTIES_BY_OBJECT_TYPE[objectType] ?? [];
-      setPropertyName(props.length > 0 ? props[0] : "");
+    if (skipObjectTypeReset.current) {
+      skipObjectTypeReset.current = false;
+      return;
     }
+    const objects = getTargetObjects(objectType, referenceData);
+    setTargetName(objects.length > 0 ? objects[0].name : "");
+    // Property will be reset by the objectType→targetName→actionId cascade.
+    const props = PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? [];
+    setPropertyName(props.length > 0 ? props[0] : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectType]);
 
-  // Reset setter + duration mode only when the property ACTUALLY changes.
-  // Prev-value compare (NOT skip-once) so it's robust to React 18 StrictMode,
-  // which double-invokes effects on mount and would otherwise run the reset on
-  // the 2nd invocation, clobbering the mode loaded from an existing change request.
+  /**
+   * targetName change: reset actionId (skip-once for edit-mode restore).
+   */
+  const skipActionReset = useRef(true);
+  useEffect(() => {
+    if (skipActionReset.current) {
+      skipActionReset.current = false;
+      return;
+    }
+    setActionId("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetName]);
+
+  /**
+   * actionId change: reset propertyName to first available (skip-once for edit-mode restore).
+   */
+  const skipActionPropReset = useRef(true);
+  useEffect(() => {
+    if (skipActionPropReset.current) {
+      skipActionPropReset.current = false;
+      return;
+    }
+    setPropertyName(availableProperties.length > 0 ? availableProperties[0] : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionId]);
+
+  /**
+   * propertyName change: reset setterType + durMode (skip-once for edit-mode restore).
+   * Prev-value compare (NOT skip-once) so it's robust to React 18 StrictMode.
+   */
   const prevPropertyNameRef = useRef(propertyName);
   useEffect(() => {
     if (prevPropertyNameRef.current === propertyName) return;
@@ -240,18 +302,36 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyName]);
 
-  // Re-prefill the swap form only when the target ACTUALLY changes
-  // (prev-value compare, StrictMode-safe — see note above).
-  const prevTargetNameRef = useRef(targetName);
+  /**
+   * Re-prefill the swap-distribution form when the selected source duration changes
+   * (target for generators; target+actionId+propertyName for actions).
+   * Skip-once so the mount render preserves the useState initializers (edit-mode restore).
+   */
+  const skipSwapPrefill = useRef(true);
   useEffect(() => {
-    if (prevTargetNameRef.current === targetName) return;
-    prevTargetNameRef.current = targetName;
+    if (skipSwapPrefill.current) {
+      skipSwapPrefill.current = false;
+      return;
+    }
     if (currentDist) {
       setSwapPeriodUnit(currentDist.durationPeriodUnit as PeriodUnit);
       setSwapDistribution(currentDist.distribution as unknown as Distribution);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetName]);
+  }, [targetName, actionId, propertyName]);
+
+  /**
+   * Re-prefill swapRequirementId when actionId changes (skip-once for edit-mode restore).
+   */
+  const skipRrPrefill = useRef(true);
+  useEffect(() => {
+    if (skipRrPrefill.current) {
+      skipRrPrefill.current = false;
+      return;
+    }
+    setSwapRequirementId(selectedAction?.resourceRequirementId ?? "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionId]);
 
   // ============================================================================
   // HANDLERS
@@ -263,6 +343,10 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
 
   const handleTargetNameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setTargetName(e.target.value);
+  };
+
+  const handleActionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setActionId(e.target.value);
   };
 
   const handlePropertyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -282,16 +366,31 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   };
 
   const handleSave = () => {
-    const modificationDetails = isInterarrival
-      ? (durMode === "scaleRate"
+    let modificationDetails: Record<string, unknown>;
+    if (isDuration) {
+      modificationDetails =
+        durMode === "scaleRate"
           ? { type: "duration", propertyName, mode: "scaleRate", factor }
           : {
               type: "duration",
               propertyName,
               mode: "setDistribution",
               duration: { durationPeriodUnit: swapPeriodUnit, distribution: swapDistribution },
-            })
-      : { type: "numeric", propertyName, setterType, newValue: numericValue };
+            };
+    } else if (isActionResource) {
+      modificationDetails = {
+        type: "reference",
+        propertyName,
+        resourceRequirementId: swapRequirementId,
+      };
+    } else {
+      modificationDetails = {
+        type: "numeric",
+        propertyName,
+        setterType,
+        newValue: numericValue,
+      };
+    }
 
     const cr: ISerializedScenarioChangeRequest = {
       id: changeRequest?.id ?? generateUUID(),
@@ -299,14 +398,27 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
       objectMatchCriteria: isModelType ? { name: "*" } : { name: targetName },
       modificationDetails: modificationDetails as any,
       description: description.trim() || undefined,
-    };
+      ...(isActivity && actionId !== "" ? { actionId } : {}),
+    } as ISerializedScenarioChangeRequest;
     onSave(cr);
   };
 
-  // Value validation — only run for scalar (non-interarrival) properties;
-  // INTERARRIVAL_TIMING has no PROPERTY_MIN_VALUE entry and can throw.
+  // ============================================================================
+  // VALIDATION
+  // ============================================================================
+
+  const rateValidation = validateRateMultiplier(
+    factor,
+    currentDist?.distribution.distributionType as DistributionType | undefined
+  );
+
+  const resourceValidation = swapRequirementId === ""
+    ? { valid: false, error: "Select a resource requirement" }
+    : { valid: true };
+
+  // Scalar validation only runs for true numeric properties (not duration/resource sub-forms).
   const valueValidation =
-    propertyName && !isInterarrival
+    propertyName && !isDuration && !isActionResource
       ? validateChangeRequestValue(
           propertyName as ScenarioPropertyName,
           setterType as ScenarioSetterType,
@@ -314,22 +426,22 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
         )
       : { valid: true };
 
-  const rateValidation = validateRateMultiplier(
-    factor,
-    currentDist?.distribution.distributionType as DistributionType | undefined
-  );
+  const useIntegerInput =
+    propertyName && !isDuration && !isActionResource
+      ? isIntegerInput(propertyName as ScenarioPropertyName, setterType as ScenarioSetterType)
+      : false;
 
-  const useIntegerInput = propertyName && !isInterarrival
-    ? isIntegerInput(propertyName as ScenarioPropertyName, setterType as ScenarioSetterType)
-    : false;
+  // Overall validity
+  const activeValidation = isDuration
+    ? (durMode === "scaleRate" ? rateValidation : { valid: true })
+    : isActionResource
+    ? resourceValidation
+    : valueValidation;
 
-  // Validation: require a target name for non-MODEL types + value/rate validation
   const isValid =
     propertyName !== "" &&
     (isModelType || targetName !== "") &&
-    (isInterarrival
-      ? (durMode === "scaleRate" ? rateValidation.valid : true)
-      : valueValidation.valid);
+    activeValidation.valid;
 
   // ============================================================================
   // RENDER
@@ -360,11 +472,15 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
       {/* Target Object (hidden for MODEL) */}
       {!isModelType && (
         <div>
-          <label className="text-xs font-medium text-gray-700 block mb-0.5">
+          <label
+            htmlFor="cr-target"
+            className="text-xs font-medium text-gray-700 block mb-0.5"
+          >
             Target Object
           </label>
           {targetObjects.length > 0 ? (
             <select
+              id="cr-target"
               className="w-full px-2 py-1 text-xs border rounded bg-white"
               value={targetName}
               onChange={handleTargetNameChange}
@@ -383,26 +499,56 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
         </div>
       )}
 
+      {/* Action picker — Activity only, when a target is selected */}
+      {isActivity && targetName !== "" && (
+        <div>
+          <label
+            htmlFor="cr-action"
+            className="text-xs font-medium text-gray-700 block mb-0.5"
+          >
+            Action
+          </label>
+          <select
+            id="cr-action"
+            className="w-full px-2 py-1 text-xs border rounded bg-white"
+            value={actionId}
+            onChange={handleActionChange}
+          >
+            <option value="">(activity-level — capacity/queues)</option>
+            {activityActions.map((a, i) => (
+              <option key={a.id} value={a.id}>
+                {`${i + 1}. ${actionTypeLabel(a.actionType)}`}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Property */}
       <div>
-        <label className="text-xs font-medium text-gray-700 block mb-0.5">
+        <label
+          htmlFor="cr-property"
+          className="text-xs font-medium text-gray-700 block mb-0.5"
+        >
           Property
         </label>
         <select
+          id="cr-property"
           className="w-full px-2 py-1 text-xs border rounded bg-white"
           value={propertyName}
           onChange={handlePropertyChange}
         >
           {availableProperties.map((prop) => (
             <option key={prop} value={prop}>
-              {PROPERTY_LABELS[prop] ?? prop}
+              {PROPERTY_DISPLAY_LABELS[prop] ?? prop}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Value Section — interarrival sub-form vs scalar setter+value grid */}
-      {isInterarrival ? (
+      {/* Value Section */}
+      {isDuration ? (
+        /* Duration sub-form: covers generator interarrival AND action duration */
         <div className="space-y-2">
           <div>
             <label className="text-xs font-medium text-gray-700 block mb-0.5">Change</label>
@@ -411,16 +557,24 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
               value={durMode}
               onChange={(e) => setDurMode(e.target.value as "scaleRate" | "setDistribution")}
             >
-              <option value="scaleRate">Arrival rate multiplier</option>
-              <option value="setDistribution">Replace arrival distribution</option>
+              <option value="scaleRate">
+                {isInterarrival ? "Arrival rate multiplier" : "Duration multiplier"}
+              </option>
+              <option value="setDistribution">
+                {isInterarrival ? "Replace arrival distribution" : "Replace duration distribution"}
+              </option>
             </select>
           </div>
           {durMode === "scaleRate" ? (
             <div>
-              <label className="text-xs font-medium text-gray-700 block mb-0.5">
-                Arrival rate multiplier
+              <label
+                htmlFor="cr-multiplier"
+                className="text-xs font-medium text-gray-700 block mb-0.5"
+              >
+                {isInterarrival ? "Arrival rate multiplier" : "Duration multiplier"}
               </label>
               <input
+                id="cr-multiplier"
                 type="number"
                 step="0.1"
                 min="0"
@@ -435,7 +589,9 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
                 onChange={(e) => setFactor(parseFloat(e.target.value) || 0)}
               />
               <p className="text-xs text-gray-500 mt-0.5">
-                Higher = more arrivals (e.g. 2 = double the arrival rate).
+                {isInterarrival
+                  ? "Higher = more arrivals (e.g. 2 = double the arrival rate)."
+                  : "Higher = longer processing (e.g. 2 = double the time)."}
               </p>
               {rateValidation.error && (
                 <p className="text-xs text-red-600 mt-0.5">{rateValidation.error}</p>
@@ -446,7 +602,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
             </div>
           ) : (
             <EnhancedDurationEditor
-              label="Arrival"
+              label={isInterarrival ? "Arrival" : "Duration"}
               periodUnit={swapPeriodUnit}
               distribution={swapDistribution}
               onChange={(pu, dist) => {
@@ -454,6 +610,32 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
                 setSwapDistribution(dist);
               }}
             />
+          )}
+        </div>
+      ) : isActionResource ? (
+        /* Resource-requirement swap sub-form */
+        <div>
+          <label
+            htmlFor="cr-rr"
+            className="text-xs font-medium text-gray-700 block mb-0.5"
+          >
+            Resource Requirement
+          </label>
+          <select
+            id="cr-rr"
+            className="w-full px-2 py-1 text-xs border rounded bg-white"
+            value={swapRequirementId}
+            onChange={(e) => setSwapRequirementId(e.target.value)}
+          >
+            <option value="">(required)</option>
+            {(referenceData?.resourceRequirements ?? []).map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+          {resourceValidation.error && (
+            <p className="text-xs text-red-600 mt-0.5">{resourceValidation.error}</p>
           )}
         </div>
       ) : (
@@ -476,13 +658,21 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-700 block mb-0.5">
+            <label
+              htmlFor="cr-value"
+              className="text-xs font-medium text-gray-700 block mb-0.5"
+            >
               Value
             </label>
             <input
+              id="cr-value"
               type="number"
               className={`w-full px-2 py-1 text-xs border rounded ${
-                valueValidation.error ? "border-red-400" : valueValidation.warning ? "border-yellow-400" : ""
+                valueValidation.error
+                  ? "border-red-400"
+                  : valueValidation.warning
+                  ? "border-yellow-400"
+                  : ""
               }`}
               value={numericValue}
               onChange={handleNumericValueChange}
