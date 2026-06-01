@@ -58,6 +58,7 @@ export class AuthHandler {
   private static isAuthenticated = false;
   private static currentUser: QuodsiUserInfo | undefined;
   private static currentToken: string | undefined;
+  private static authReadyListeners: Array<() => void> = [];
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
@@ -69,6 +70,37 @@ export class AuthHandler {
         return true;
       default:
         return false;
+    }
+  }
+
+  /**
+   * Register a callback to run once Kinde auth is established (token available,
+   * user identified). Host components whose data-connector calls need an
+   * authenticated Kinde token register here — notably the panel-init model
+   * upsert, which can fire before auth completes on a cold load and otherwise
+   * fails with a 404 on the kinde OAuth token. Listeners must guard their own
+   * re-entry (this may fire more than once across a session, e.g. token refresh).
+   * If auth is already established when registering, the callback fires
+   * immediately so late registrants don't miss the event.
+   */
+  public static registerAuthReadyListener(cb: () => void): void {
+    AuthHandler.authReadyListeners.push(cb);
+    if (AuthHandler.isAuthenticated) {
+      AuthHandler.runAuthReadyListener(cb);
+    }
+  }
+
+  private static runAuthReadyListener(cb: () => void): void {
+    try {
+      cb();
+    } catch (error) {
+      AuthHandler.logger.error('authReady listener threw:', error);
+    }
+  }
+
+  private static notifyAuthReady(): void {
+    for (const cb of AuthHandler.authReadyListeners) {
+      AuthHandler.runAuthReadyListener(cb);
     }
   }
 
@@ -253,6 +285,11 @@ export class AuthHandler {
     AuthHandler.fetchAndBroadcastEntitlements().catch((error) => {
       AuthHandler.logger.error('Failed to fetch entitlements:', error);
     });
+
+    // Kinde token is now available, so any data-connector call that raced
+    // ahead of auth on panel init (e.g. the model upsert) can now succeed.
+    // Notify listeners so they can retry. Listeners self-guard re-entry.
+    AuthHandler.notifyAuthReady();
   }
 
   /**

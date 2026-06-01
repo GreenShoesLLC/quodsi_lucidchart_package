@@ -19,6 +19,7 @@ import {
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
+import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
@@ -32,6 +33,11 @@ export class RightDockPanel extends Panel implements RoutablePanel {
     private debug = ExtensionDebugService.forComponent('RightDockPanel');
     private isReady: boolean = false;
     private modelManager: ModelManager;
+    // Tracks whether the panel-init model upsert has committed this session.
+    // The upsert can race ahead of Kinde auth on a cold load (the kinde OAuth
+    // token isn't established yet → data-sync 404). We retry once auth is ready.
+    private modelSyncSucceeded: boolean = false;
+    private lastSyncContext: { document: DocumentProxy; currentPage: PageProxy } | null = null;
 
     constructor(client: EditorClient, modelManager: ModelManager) {
         super(client, {
@@ -44,6 +50,13 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         
         this.debug.log('Constructor called with role: model');
         this.modelManager = modelManager;
+
+        // If the panel-init model upsert raced ahead of Kinde auth (cold load),
+        // retry it once auth is established. Guarded so the warm path (init
+        // upsert already succeeded) does not re-fire.
+        AuthHandler.registerAuthReadyListener(() => {
+            void this.retryModelSyncIfNeeded();
+        });
     }
 
     /**
@@ -318,6 +331,9 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         document: DocumentProxy,
         currentPage: PageProxy
     ): Promise<void> {
+        // Remember the context so retryModelSyncIfNeeded() (fired on auth-ready)
+        // can re-run this if the initial attempt raced ahead of Kinde auth.
+        this.lastSyncContext = { document, currentPage };
         try {
             await LucidDataActionUtility.performDataAction(this.client, {
                 dataConnectorName: 'quodsi_api_data_connector',
@@ -329,6 +345,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 },
                 asynchronous: false
             });
+            this.modelSyncSucceeded = true;
             this.debug.log('Model upserted in database on panel init');
         } catch (err) {
             this.debug.error('Failed to upsert model in database:', err);
@@ -375,6 +392,22 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         } catch (err) {
             this.debug.error('Failed to sync scenarios to database:', err);
         }
+    }
+
+    /**
+     * Retry the panel-init model upsert/sync once Kinde auth is established.
+     * Registered as an auth-ready listener in the constructor. No-op if the
+     * init upsert already committed this session, or if the panel never ran
+     * its init sync (no stored context). May be invoked more than once across
+     * a session, so it guards on modelSyncSucceeded.
+     */
+    private async retryModelSyncIfNeeded(): Promise<void> {
+        if (this.modelSyncSucceeded || !this.lastSyncContext) {
+            return;
+        }
+        const { document, currentPage } = this.lastSyncContext;
+        this.debug.log('Auth ready — retrying deferred model upsert/sync');
+        await this.upsertAndSyncOnPanelInit(document, currentPage);
     }
 
     /**
