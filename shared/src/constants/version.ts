@@ -2,13 +2,13 @@
  * Current version of Quodsi
  * Should be updated to match package.json version when making releases
  */
-export const QUODSI_VERSION = "2026.05.31";
+export const QUODSI_VERSION = "2026.06.01";
 
 /**
  * Current version of the Quodsim simulation engine
  * This tracks the Python simulation runner version used by Azure Batch
  */
-export const QUODSIM_VERSION = "2026.05.30";
+export const QUODSIM_VERSION = "2026.06.01";
 
 /**
  * Major version of the simulation output CSV schema this build can render.
