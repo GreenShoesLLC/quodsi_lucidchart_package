@@ -261,4 +261,48 @@ describe("ChangeRequestEditor — edit-mode restore", () => {
       mode: "setDistribution",
     });
   });
+
+  // Reproduces the real running extension, where the React root is wrapped in
+  // <React.StrictMode> (src/index.tsx). StrictMode double-invokes mount effects,
+  // which consumes skip-once `useRef(true)` cascade-reset guards on the first fire
+  // and runs the reset on the second — clobbering the restored target/property/action.
+  // This mirrors the exact CR Daniel reported (duration scaleRate ×2 on Process).
+  const existingDurScale = {
+    id: "cr-3",
+    objectType: "ACTIVITY",
+    objectMatchCriteria: { name: "Process" },
+    actionId: "act-delay",
+    modificationDetails: {
+      type: "duration",
+      propertyName: "DURATION",
+      mode: "scaleRate",
+      factor: 2,
+    },
+  };
+
+  it("restores an action duration scaleRate change request under React.StrictMode", () => {
+    const onSave = jest.fn();
+    render(
+      <React.StrictMode>
+        <ChangeRequestEditor
+          changeRequest={existingDurScale as any}
+          referenceData={referenceData as any}
+          onSave={onSave}
+          onCancel={jest.fn()}
+        />
+      </React.StrictMode>
+    );
+    expect((screen.getByLabelText("Target Object") as HTMLSelectElement).value).toBe("Process");
+    expect((screen.getByLabelText("Property") as HTMLSelectElement).value).toBe("DURATION");
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-delay");
+    fireEvent.click(screen.getByRole("button", { name: /add|update/i }));
+    const cr = onSave.mock.calls[0][0];
+    expect(cr.actionId).toBe("act-delay");
+    expect(cr.modificationDetails).toMatchObject({
+      type: "duration",
+      propertyName: "DURATION",
+      mode: "scaleRate",
+      factor: 2,
+    });
+  });
 });

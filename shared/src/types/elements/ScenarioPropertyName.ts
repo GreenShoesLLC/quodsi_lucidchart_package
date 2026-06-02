@@ -77,7 +77,7 @@ export const PROPERTY_DISPLAY_LABELS: Record<ScenarioPropertyName, string> = {
     [ScenarioPropertyName.REPS]: 'Replications',
     [ScenarioPropertyName.SEED]: 'Random Seed',
     [ScenarioPropertyName.RUN_PERIOD]: 'Run Period',
-    [ScenarioPropertyName.RESOURCE_REQUIREMENT]: 'Action Resource Requirement',
+    [ScenarioPropertyName.RESOURCE_REQUIREMENT]: 'Action Resource Req.',
 }
 
 /**

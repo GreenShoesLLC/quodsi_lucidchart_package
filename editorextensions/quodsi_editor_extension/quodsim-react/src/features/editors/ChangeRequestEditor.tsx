@@ -234,15 +234,15 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   // ============================================================================
 
   /**
-   * Cascading reset: objectType change resets target + property (skip-once so
-   * edit-mode initial render does NOT reset values).
+   * Cascading reset: objectType change resets target + property.
+   * Prev-value compare (NOT skip-once) so it's robust to React 18 StrictMode —
+   * StrictMode double-invokes mount effects, which consumes a skip-once ref on the
+   * first fire and runs the reset on the second, clobbering edit-mode restore.
    */
-  const skipObjectTypeReset = useRef(true);
+  const prevObjectTypeRef = useRef(objectType);
   useEffect(() => {
-    if (skipObjectTypeReset.current) {
-      skipObjectTypeReset.current = false;
-      return;
-    }
+    if (prevObjectTypeRef.current === objectType) return;
+    prevObjectTypeRef.current = objectType;
     const objects = getTargetObjects(objectType, referenceData);
     setTargetName(objects.length > 0 ? objects[0].name : "");
     // Reset property to first available for the new objectType.
@@ -252,14 +252,12 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   }, [objectType]);
 
   /**
-   * targetName change: reset actionId (skip-once for edit-mode restore).
+   * targetName change: reset actionId. Prev-value compare (StrictMode-safe).
    */
-  const skipActionReset = useRef(true);
+  const prevTargetNameRef = useRef(targetName);
   useEffect(() => {
-    if (skipActionReset.current) {
-      skipActionReset.current = false;
-      return;
-    }
+    if (prevTargetNameRef.current === targetName) return;
+    prevTargetNameRef.current = targetName;
     setActionId("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetName]);
@@ -282,14 +280,14 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   /**
    * Re-prefill the swap-distribution form when the selected source duration changes
    * (target for generators; target+actionId+propertyName for actions).
-   * Skip-once so the mount render preserves the useState initializers (edit-mode restore).
+   * Prev-value compare on the composite source key (StrictMode-safe) so the mount
+   * render preserves the useState initializers (edit-mode restore).
    */
-  const skipSwapPrefill = useRef(true);
+  const prevSwapKeyRef = useRef(`${targetName}|${actionId}|${propertyName}`);
   useEffect(() => {
-    if (skipSwapPrefill.current) {
-      skipSwapPrefill.current = false;
-      return;
-    }
+    const key = `${targetName}|${actionId}|${propertyName}`;
+    if (prevSwapKeyRef.current === key) return;
+    prevSwapKeyRef.current = key;
     if (currentDist) {
       setSwapPeriodUnit(currentDist.durationPeriodUnit as PeriodUnit);
       setSwapDistribution(currentDist.distribution as unknown as Distribution);
@@ -298,14 +296,12 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   }, [targetName, actionId, propertyName]);
 
   /**
-   * Re-prefill swapRequirementId when actionId changes (skip-once for edit-mode restore).
+   * Re-prefill swapRequirementId when actionId changes. Prev-value compare (StrictMode-safe).
    */
-  const skipRrPrefill = useRef(true);
+  const prevActionIdRef = useRef(actionId);
   useEffect(() => {
-    if (skipRrPrefill.current) {
-      skipRrPrefill.current = false;
-      return;
-    }
+    if (prevActionIdRef.current === actionId) return;
+    prevActionIdRef.current = actionId;
     setSwapRequirementId(selectedAction?.resourceRequirementId ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionId]);
