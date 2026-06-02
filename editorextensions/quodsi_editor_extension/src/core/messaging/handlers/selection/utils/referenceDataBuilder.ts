@@ -45,7 +45,34 @@ export const referenceDataBuilder = {
               }
               return null;
             })
-            .filter((id): id is string => id !== null)
+            .filter((id): id is string => id !== null),
+          // Carry per-action summary so the change-request editor can offer an Action
+          // picker and a resource-requirement dropdown. Mirrors how generator
+          // inter-arrival duration is threaded in (same serialized-duration shape).
+          actions: (a.actions || []).map(action => {
+            const actionAny = action as any;
+            const hasDuration = 'duration' in actionAny && actionAny.duration != null;
+            const hasRequirementId = 'resourceRequirementId' in actionAny;
+            return {
+              id: actionAny.id as string,
+              actionType: actionAny.actionType as string,
+              duration: hasDuration
+                ? {
+                    durationPeriodUnit: actionAny.duration.durationPeriodUnit as string,
+                    distribution: {
+                      distributionType: actionAny.duration.distribution.distributionType as string,
+                      // DistributionParameters is a union of specific interfaces; cast via unknown
+                      // because all concrete parameter types are plain {key: number} objects.
+                      parameters: actionAny.duration.distribution.parameters as unknown as Record<string, number>,
+                      description: actionAny.duration.distribution.description as string | undefined,
+                    },
+                  }
+                : undefined,
+              resourceRequirementId: hasRequirementId
+                ? (actionAny.resourceRequirementId as string | null)
+                : undefined,
+            };
+          }),
         }));
 
         referenceData.generators = modelDef.generators.getAll().map(g => ({
@@ -123,6 +150,7 @@ export const referenceDataBuilder = {
 
         this.debug.log('Reference data built:', {
           activities: referenceData.activities?.length || 0,
+          activityActionsTotal: referenceData.activities?.reduce((sum, a) => sum + (a.actions?.length || 0), 0) || 0,
           generators: referenceData.generators?.length || 0,
           resources: referenceData.resources?.length || 0,
           entities: referenceData.entities?.length || 0,
