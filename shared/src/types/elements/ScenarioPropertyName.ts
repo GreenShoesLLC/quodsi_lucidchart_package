@@ -64,7 +64,7 @@ export const PROPERTIES_BY_OBJECT_TYPE: Record<ScenarioObjectType, ScenarioPrope
  */
 export const PROPERTY_DISPLAY_LABELS: Record<ScenarioPropertyName, string> = {
     [ScenarioPropertyName.CAPACITY]: 'Capacity',
-    [ScenarioPropertyName.DURATION]: 'Duration',
+    [ScenarioPropertyName.DURATION]: 'Action Duration',
     [ScenarioPropertyName.ACTIVITY_CAPACITY]: 'Activity Capacity',
     [ScenarioPropertyName.INBOUND_QUEUE_CAPACITY]: 'Inbound Queue Capacity',
     [ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY]: 'Outbound Queue Capacity',
@@ -77,7 +77,7 @@ export const PROPERTY_DISPLAY_LABELS: Record<ScenarioPropertyName, string> = {
     [ScenarioPropertyName.REPS]: 'Replications',
     [ScenarioPropertyName.SEED]: 'Random Seed',
     [ScenarioPropertyName.RUN_PERIOD]: 'Run Period',
-    [ScenarioPropertyName.RESOURCE_REQUIREMENT]: 'Resource Requirement',
+    [ScenarioPropertyName.RESOURCE_REQUIREMENT]: 'Action Resource Requirement',
 }
 
 /**

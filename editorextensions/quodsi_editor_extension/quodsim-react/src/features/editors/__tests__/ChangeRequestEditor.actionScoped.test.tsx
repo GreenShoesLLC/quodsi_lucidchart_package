@@ -4,6 +4,9 @@ import ChangeRequestEditor from "../ChangeRequestEditor";
 
 // ---------------------------------------------------------------------------
 // Fixtures
+// activityWithActions:
+//   DELAY_WITH_RESOURCE (act-delay)  — has both duration AND resourceRequirementId
+//   SEIZE            (act-seize)  — has resourceRequirementId only (no duration)
 // ---------------------------------------------------------------------------
 
 const activityWithActions = {
@@ -54,55 +57,61 @@ function renderEditor(onSave: jest.Mock = jest.fn()) {
 }
 
 // ---------------------------------------------------------------------------
-// A — Action picker + property filtering
+// A — Action picker + property filtering (property-driven)
 // ---------------------------------------------------------------------------
 
-describe("ChangeRequestEditor — action picker", () => {
-  it("shows an Action picker when objectType=ACTIVITY and a target is chosen", () => {
+describe("ChangeRequestEditor — action picker (property-driven)", () => {
+  it("shows NO Action picker when Property is a capacity property (Activity Capacity)", () => {
     renderEditor();
-    // Target Object is auto-populated; change to 'Process' to be explicit.
     fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
-    expect(screen.getByLabelText("Action")).toBeInTheDocument();
-    expect(screen.getByText(/Delay with Resource/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "ACTIVITY_CAPACITY" } });
+    expect(screen.queryByLabelText("Action")).toBeNull();
   });
 
-  it("filters Property by the selected action type", () => {
+  it("shows Action picker after selecting Property=DURATION, listing only actions with duration", () => {
     renderEditor();
     fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "DURATION" } });
 
-    // Select SEIZE action (only RESOURCE_REQUIREMENT, no DURATION)
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-seize" } });
-    const opts = Array.from(
-      (screen.getByLabelText("Property") as HTMLSelectElement).options
-    )
-      .map((o) => o.value)
-      .filter(Boolean);
-    expect(opts).toContain("RESOURCE_REQUIREMENT");
-    expect(opts).not.toContain("DURATION");
+    const actionSelect = screen.getByLabelText("Action") as HTMLSelectElement;
+    expect(actionSelect).toBeInTheDocument();
 
-    // Switch to DELAY_WITH_RESOURCE action (has DURATION + RESOURCE_REQUIREMENT)
+    const opts = Array.from(actionSelect.options).map((o) => o.value).filter(Boolean);
+    // DELAY_WITH_RESOURCE has duration → eligible; SEIZE has no duration → excluded
+    expect(opts).toContain("act-delay");
+    expect(opts).not.toContain("act-seize");
+    // No "(activity-level — capacity/queues)" pseudo-item
+    const optTexts = Array.from(actionSelect.options).map((o) => o.text);
+    expect(optTexts.some((t) => t.includes("activity-level"))).toBe(false);
+  });
+
+  it("shows Action picker after selecting Property=RESOURCE_REQUIREMENT, listing only actions with resourceRequirementId", () => {
+    renderEditor();
+    fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "RESOURCE_REQUIREMENT" } });
+
+    const actionSelect = screen.getByLabelText("Action") as HTMLSelectElement;
+    expect(actionSelect).toBeInTheDocument();
+
+    const opts = Array.from(actionSelect.options).map((o) => o.value).filter(Boolean);
+    // Both actions have resourceRequirementId → both eligible
+    expect(opts).toContain("act-delay");
+    expect(opts).toContain("act-seize");
+    // No "(activity-level — capacity/queues)" pseudo-item
+    const optTexts = Array.from(actionSelect.options).map((o) => o.text);
+    expect(optTexts.some((t) => t.includes("activity-level"))).toBe(false);
+  });
+
+  it("resets Action to empty when Property changes", () => {
+    renderEditor();
+    fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
+    // Select DURATION, pick an action
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "DURATION" } });
     fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-delay" } });
-    const opts2 = Array.from(
-      (screen.getByLabelText("Property") as HTMLSelectElement).options
-    )
-      .map((o) => o.value)
-      .filter(Boolean);
-    expect(opts2).toContain("DURATION");
-    expect(opts2).toContain("RESOURCE_REQUIREMENT");
-  });
-
-  it("activity-level option offers capacity properties (no action)", () => {
-    renderEditor();
-    fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
-    // Select activity-level (empty actionId)
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "" } });
-    const opts = Array.from(
-      (screen.getByLabelText("Property") as HTMLSelectElement).options
-    )
-      .map((o) => o.value)
-      .filter(Boolean);
-    expect(opts).toContain("ACTIVITY_CAPACITY");
-    expect(opts).not.toContain("DURATION");
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-delay");
+    // Switch to RESOURCE_REQUIREMENT → action should reset
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "RESOURCE_REQUIREMENT" } });
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("");
   });
 });
 
@@ -111,11 +120,11 @@ describe("ChangeRequestEditor — action picker", () => {
 // ---------------------------------------------------------------------------
 
 describe("ChangeRequestEditor — action value sub-forms + save", () => {
-  it("saves an action duration scaleRate with actionId", () => {
+  it("saves an action duration scaleRate with actionId (Property first, then Action)", () => {
     const onSave = renderEditor();
     fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-delay" } });
     fireEvent.change(screen.getByLabelText("Property"), { target: { value: "DURATION" } });
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-delay" } });
     // The multiplier input has id cr-multiplier / label "Duration multiplier"
     fireEvent.change(screen.getByLabelText(/multiplier/i), { target: { value: "1.5" } });
     fireEvent.click(screen.getByRole("button", { name: /add|update/i }));
@@ -130,11 +139,11 @@ describe("ChangeRequestEditor — action value sub-forms + save", () => {
     });
   });
 
-  it("saves a resource-requirement swap with actionId", () => {
+  it("saves a resource-requirement swap with actionId (Property first, then Action)", () => {
     const onSave = renderEditor();
     fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-seize" } });
     fireEvent.change(screen.getByLabelText("Property"), { target: { value: "RESOURCE_REQUIREMENT" } });
+    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "act-seize" } });
     fireEvent.change(screen.getByLabelText("Resource Requirement"), { target: { value: "rr-2" } });
     fireEvent.click(screen.getByRole("button", { name: /add|update/i }));
     const cr = onSave.mock.calls[0][0];
@@ -146,16 +155,28 @@ describe("ChangeRequestEditor — action value sub-forms + save", () => {
     });
   });
 
-  it("activity-level numeric change still saves without actionId", () => {
+  it("activity-level numeric change saves without actionId (no Action picker shown)", () => {
     const onSave = renderEditor();
     fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
-    fireEvent.change(screen.getByLabelText("Action"), { target: { value: "" } });
     fireEvent.change(screen.getByLabelText("Property"), { target: { value: "ACTIVITY_CAPACITY" } });
+    // No Action picker should be visible
+    expect(screen.queryByLabelText("Action")).toBeNull();
     fireEvent.change(screen.getByLabelText("Value"), { target: { value: "5" } });
     fireEvent.click(screen.getByRole("button", { name: /add|update/i }));
     const cr = onSave.mock.calls[0][0];
     expect((cr as any).actionId).toBeUndefined();
     expect(cr.modificationDetails.type).toBe("numeric");
+  });
+
+  it("Save is disabled when an action property is chosen but no action selected yet", () => {
+    renderEditor();
+    fireEvent.change(screen.getByLabelText("Target Object"), { target: { value: "Process" } });
+    fireEvent.change(screen.getByLabelText("Property"), { target: { value: "DURATION" } });
+    // Action picker visible but no action selected
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("");
+    expect(
+      (screen.getByRole("button", { name: /add|update/i }) as HTMLButtonElement).disabled
+    ).toBe(true);
   });
 });
 
@@ -176,7 +197,7 @@ describe("ChangeRequestEditor — edit-mode restore", () => {
     },
   };
 
-  it("restores an existing reference change request and re-saves as reference", () => {
+  it("restores an existing reference change request (Property=RESOURCE_REQUIREMENT, Action=act-seize) and re-saves", () => {
     const onSave = jest.fn();
     render(
       <ChangeRequestEditor
@@ -186,10 +207,11 @@ describe("ChangeRequestEditor — edit-mode restore", () => {
         onCancel={jest.fn()}
       />
     );
-    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-seize");
+    // Property should show RESOURCE_REQUIREMENT, Action should show act-seize
     expect((screen.getByLabelText("Property") as HTMLSelectElement).value).toBe(
       "RESOURCE_REQUIREMENT"
     );
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-seize");
     expect((screen.getByLabelText("Resource Requirement") as HTMLSelectElement).value).toBe(
       "rr-2"
     );
@@ -226,9 +248,10 @@ describe("ChangeRequestEditor — edit-mode restore", () => {
         onCancel={jest.fn()}
       />
     );
-    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-delay");
+    // Property should show DURATION, Action should show act-delay
     expect((screen.getByLabelText("Property") as HTMLSelectElement).value).toBe("DURATION");
-    // Save should emit setDistribution (not the default scaleRate)
+    expect((screen.getByLabelText("Action") as HTMLSelectElement).value).toBe("act-delay");
+    // The "Change" mode select should restore to setDistribution (not the default scaleRate)
     fireEvent.click(screen.getByRole("button", { name: /add|update/i }));
     const cr = onSave.mock.calls[0][0];
     expect(cr.actionId).toBe("act-delay");

@@ -158,32 +158,11 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     ? (referenceData?.activities ?? []).find((a) => a.name === targetName)
     : undefined;
   const activityActions = selectedActivity?.actions ?? [];
-  const selectedAction = activityActions.find((a) => a.id === actionId);
 
-  /** Properties available for the selected action (if any). */
-  function actionProps(a?: typeof selectedAction): ScenarioPropertyName[] {
-    if (!a) return [];
-    const props: ScenarioPropertyName[] = [];
-    if (a.duration != null) props.push(ScenarioPropertyName.DURATION);
-    if (a.resourceRequirementId !== undefined && a.resourceRequirementId !== null)
-      props.push(ScenarioPropertyName.RESOURCE_REQUIREMENT);
-    return props;
-  }
-
-  /** Activity-level (capacity) properties — shown when no action is selected. */
-  const activityLevelProps: ScenarioPropertyName[] = [
-    ScenarioPropertyName.ACTIVITY_CAPACITY,
-    ScenarioPropertyName.INBOUND_QUEUE_CAPACITY,
-    ScenarioPropertyName.OUTBOUND_QUEUE_CAPACITY,
-  ];
-
-  /**
-   * Properties available in the property dropdown — depends on objectType and
-   * (for activities) whether an action is selected.
-   * Replaces the old local PROPERTIES_BY_OBJECT_TYPE (now imported from shared).
-   */
+  // availableProperties for ACTIVITY = the full shared list (all 5 properties).
+  // The property now drives the action picker, not the reverse.
   const availableProperties: ScenarioPropertyName[] = isActivity
-    ? (actionId === "" ? activityLevelProps : actionProps(selectedAction))
+    ? (PROPERTIES_BY_OBJECT_TYPE[ScenarioObjectType.ACTIVITY] ?? [])
     : (PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? []);
 
   // ============================================================================
@@ -194,12 +173,21 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     objectType === ScenarioObjectType.GENERATOR &&
     propertyName === ScenarioPropertyName.INTERARRIVAL_TIMING;
 
-  const isActionDuration =
-    isActivity && actionId !== "" && propertyName === ScenarioPropertyName.DURATION;
-  const isActionResource =
-    isActivity && actionId !== "" && propertyName === ScenarioPropertyName.RESOURCE_REQUIREMENT;
-  /** Covers both generator interarrival and action duration sub-forms. */
-  const isDuration = isInterarrival || isActionDuration;
+  // Action flags derived from propertyName (not actionId).
+  const isActionDuration = isActivity && propertyName === ScenarioPropertyName.DURATION;
+  const isActionResource = isActivity && propertyName === ScenarioPropertyName.RESOURCE_REQUIREMENT;
+  const isActionProperty = isActionDuration || isActionResource;
+
+  // Filter eligible actions by the chosen property.
+  const eligibleActions = !isActionProperty ? [] : activityActions.filter((a) =>
+    isActionDuration ? a.duration != null
+                     : (a.resourceRequirementId !== undefined && a.resourceRequirementId !== null)
+  );
+  const selectedAction = eligibleActions.find((a) => a.id === actionId);
+
+  /** Covers both generator interarrival and action duration sub-forms.
+   * The action duration sub-form only renders once an action is selected. */
+  const isDuration = isInterarrival || (isActionDuration && actionId !== "");
 
   const selectedGenerator = (referenceData?.generators ?? []).find(
     (g) => g.name === targetName
@@ -257,11 +245,8 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     }
     const objects = getTargetObjects(objectType, referenceData);
     setTargetName(objects.length > 0 ? objects[0].name : "");
-    // Property will be reset by the objectType→targetName→actionId cascade.
-    const nextProps =
-      objectType === ScenarioObjectType.ACTIVITY
-        ? activityLevelProps
-        : (PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? []);
+    // Reset property to first available for the new objectType.
+    const nextProps = PROPERTIES_BY_OBJECT_TYPE[objectType as ScenarioObjectType] ?? [];
     setPropertyName(nextProps.length > 0 ? nextProps[0] : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objectType]);
@@ -280,21 +265,9 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
   }, [targetName]);
 
   /**
-   * actionId change: reset propertyName to first available (skip-once for edit-mode restore).
-   */
-  const skipActionPropReset = useRef(true);
-  useEffect(() => {
-    if (skipActionPropReset.current) {
-      skipActionPropReset.current = false;
-      return;
-    }
-    setPropertyName(availableProperties.length > 0 ? availableProperties[0] : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actionId]);
-
-  /**
-   * propertyName change: reset setterType + durMode (skip-once for edit-mode restore).
+   * propertyName change: reset setterType, durMode, and actionId (skip-once for edit-mode restore).
    * Prev-value compare (NOT skip-once) so it's robust to React 18 StrictMode.
+   * Property now drives the action picker, so property change must reset actionId.
    */
   const prevPropertyNameRef = useRef(propertyName);
   useEffect(() => {
@@ -302,6 +275,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     prevPropertyNameRef.current = propertyName;
     setSetterType(ScenarioSetterType.EQUAL);
     setDurMode("scaleRate");
+    setActionId("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyName]);
 
@@ -419,9 +393,10 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
     ? { valid: false, error: "Select a resource requirement" }
     : { valid: true };
 
-  // Scalar validation only runs for true numeric properties (not duration/resource sub-forms).
+  // Scalar validation only runs for true numeric properties (not duration/resource sub-forms,
+  // and not action properties where no action has been selected yet).
   const valueValidation =
-    propertyName && !isDuration && !isActionResource
+    propertyName && !isDuration && !isActionResource && !isActionProperty
       ? validateChangeRequestValue(
           propertyName as ScenarioPropertyName,
           setterType as ScenarioSetterType,
@@ -430,12 +405,20 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
       : { valid: true };
 
   const useIntegerInput =
-    propertyName && !isDuration && !isActionResource
+    propertyName && !isDuration && !isActionResource && !isActionProperty
       ? isIntegerInput(propertyName as ScenarioPropertyName, setterType as ScenarioSetterType)
       : false;
 
+  // When an action property is chosen but no action is selected yet, block save.
+  const actionMissingValidation =
+    isActionProperty && actionId === ""
+      ? { valid: false, error: "Select an action" }
+      : { valid: true };
+
   // Overall validity
-  const activeValidation = isDuration
+  const activeValidation = !actionMissingValidation.valid
+    ? actionMissingValidation
+    : isDuration
     ? (durMode === "scaleRate" ? rateValidation : { valid: true })
     : isActionResource
     ? resourceValidation
@@ -502,31 +485,6 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
         </div>
       )}
 
-      {/* Action picker — Activity only, when a target is selected */}
-      {isActivity && targetName !== "" && (
-        <div>
-          <label
-            htmlFor="cr-action"
-            className="text-xs font-medium text-gray-700 block mb-0.5"
-          >
-            Action
-          </label>
-          <select
-            id="cr-action"
-            className="w-full px-2 py-1 text-xs border rounded bg-white"
-            value={actionId}
-            onChange={handleActionChange}
-          >
-            <option value="">(activity-level — capacity/queues)</option>
-            {activityActions.map((a, i) => (
-              <option key={a.id} value={a.id}>
-                {`${i + 1}. ${actionTypeLabel(a.actionType)}`}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       {/* Property */}
       <div>
         <label
@@ -548,6 +506,34 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
           ))}
         </select>
       </div>
+
+      {/* Action picker — Activity only, after selecting an action property, filtered */}
+      {isActionProperty && (
+        <div>
+          <label
+            htmlFor="cr-action"
+            className="text-xs font-medium text-gray-700 block mb-0.5"
+          >
+            Action
+          </label>
+          <select
+            id="cr-action"
+            className="w-full px-2 py-1 text-xs border rounded bg-white"
+            value={actionId}
+            onChange={handleActionChange}
+          >
+            <option value="">(select an action)</option>
+            {eligibleActions.map((a, i) => (
+              <option key={a.id} value={a.id}>
+                {`${i + 1}. ${actionTypeLabel(a.actionType)}`}
+              </option>
+            ))}
+          </select>
+          {actionMissingValidation.error && actionId === "" && (
+            <p className="text-xs text-red-600 mt-0.5">{actionMissingValidation.error}</p>
+          )}
+        </div>
+      )}
 
       {/* Value Section */}
       {isDuration ? (
@@ -615,7 +601,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
             />
           )}
         </div>
-      ) : isActionResource ? (
+      ) : isActionResource && actionId !== "" ? (
         /* Resource-requirement swap sub-form */
         <div>
           <label
@@ -641,7 +627,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
             <p className="text-xs text-red-600 mt-0.5">{resourceValidation.error}</p>
           )}
         </div>
-      ) : (
+      ) : !isActionProperty ? (
         /* Scalar: Setter Type + Value grid */
         <div className="grid grid-cols-2 gap-2">
           <div>
@@ -689,7 +675,7 @@ const ChangeRequestEditor: React.FC<ChangeRequestEditorProps> = ({
             )}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Description */}
       <div>
