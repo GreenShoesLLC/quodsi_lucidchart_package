@@ -6,6 +6,7 @@ import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
+import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedSpikeModal } from '../../../panels/StudioEmbedSpikeModal';
 
@@ -73,6 +74,10 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenStudioEmbedSpike(msg);
         return true;
 
+      case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
+        SimulationRunHandler.handleRequestStudioToken(msg);
+        return true;
+
       // Not a simulation run message
       default:
         return false;
@@ -112,6 +117,30 @@ export class SimulationRunHandler {
     const client = ModelManager.getClient();
     const modal = new StudioEmbedSpikeModal(client);
     modal.show();
+  }
+
+  /**
+   * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token to the
+   * studio-embed-spike modal iframe so Studio (running cross-origin inside
+   * the modal) can authenticate without third-party cookie access.
+   *
+   * Sends to 'studio-embed-spike' channel directly rather than broadcasting to
+   * all channels, because this token is only meaningful to the embed modal.
+   * The model/results panels would silently queue the message if not ready,
+   * which is harmless but wasteful — and unnecessarily exposes the token to
+   * those iframes.
+   */
+  private static handleRequestStudioToken(_msg: EnvelopeBase): void {
+    const token = AuthHandler.getToken();
+    SimulationRunHandler.logger.log('Relaying Studio token to embed iframe', { hasToken: !!token });
+    router.send('studio-embed-spike', {
+      id: `msg-${Date.now()}`,
+      type: EnvelopeMessageType.STUDIO_TOKEN,
+      source: 'host',
+      target: 'studio-embed-spike-iframe',
+      version: '1.0',
+      data: { token },
+    });
   }
 
   /**

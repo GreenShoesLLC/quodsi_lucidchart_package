@@ -8,7 +8,7 @@ import { PendingRequests } from './types';
 // State shape
 export interface AppState {
   initialized: boolean;
-  panelType?: 'auth' | 'model' | 'results';
+  panelType?: 'auth' | 'model' | 'results' | 'studio-embed-spike';
   pendingRequests: PendingRequests;
 }
 
@@ -20,8 +20,8 @@ export const initialAppState: AppState = {
 };
 
 // Action types
-export type AppAction = 
-  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' | 'results' }
+export type AppAction =
+  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' | 'results' | 'studio-embed-spike' }
   | { type: 'ADD_PENDING_REQUEST'; id: string; requestType: string }
   | { type: 'REMOVE_PENDING_REQUEST'; id: string }
   | { type: 'MODEL_CONVERSION_SUCCESS'; success: boolean }
@@ -34,7 +34,7 @@ export function appReducer(state: AppState = initialAppState, action: AppAction)
       return {
         ...state,
         initialized: true,
-        panelType: action.panelType,
+        panelType: action.panelType as AppState['panelType'],
       };
     case 'ADD_PENDING_REQUEST':
       return {

@@ -28,9 +28,11 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
 
   if (urlParams.get("view") === "studio-embed-spike") {
     return (
-      <div className="h-full w-full">
-        <StudioEmbedSpike />
-      </div>
+      <MessageProvider initialPanelType="studio-embed-spike">
+        <div className="h-full w-full">
+          <StudioEmbedSpike />
+        </div>
+      </MessageProvider>
     );
   }
 
