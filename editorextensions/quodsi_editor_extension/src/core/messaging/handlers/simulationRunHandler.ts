@@ -7,6 +7,7 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
+import { StudioEmbedSpikeModal } from '../../../panels/StudioEmbedSpikeModal';
 
 /**
  * Handler for simulation run management messages
@@ -68,6 +69,10 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenResultsModal(msg);
         return true;
 
+      case EnvelopeMessageType.OPEN_STUDIO_EMBED_SPIKE:
+        SimulationRunHandler.handleOpenStudioEmbedSpike(msg);
+        return true;
+
       // Not a simulation run message
       default:
         return false;
@@ -96,6 +101,16 @@ export class SimulationRunHandler {
 
     const client = ModelManager.getClient();
     const modal = new ResultsModal(client, data.scenarioId, data.documentId);
+    modal.show();
+  }
+
+  /**
+   * Handle OPEN_STUDIO_EMBED_SPIKE by creating and showing a StudioEmbedSpikeModal
+   */
+  private static handleOpenStudioEmbedSpike(_msg: EnvelopeBase): void {
+    SimulationRunHandler.logger.log('Opening studio embed spike modal');
+    const client = ModelManager.getClient();
+    const modal = new StudioEmbedSpikeModal(client);
     modal.show();
   }
 

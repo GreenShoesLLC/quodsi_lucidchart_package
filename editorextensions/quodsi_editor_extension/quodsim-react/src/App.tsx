@@ -3,6 +3,7 @@ import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
 import ModalResultsView from "./features/ModalResultsView";
+import { StudioEmbedSpike } from "./spikes/StudioEmbedSpike";
 
 interface AppProps {
   panelType?: "model";
@@ -22,6 +23,14 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
           <ModalResultsView scenarioId={scenarioId} documentId={documentId} />
         </div>
       </MessageProvider>
+    );
+  }
+
+  if (urlParams.get("view") === "studio-embed-spike") {
+    return (
+      <div className="h-full w-full">
+        <StudioEmbedSpike />
+      </div>
     );
   }
 

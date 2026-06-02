@@ -13,6 +13,7 @@ export class ChannelManager {
   private channels: Record<PanelRole, Channel> = {
     model: { ready: false, queue: [] },
     results: { ready: false, queue: [] },
+    'studio-embed-spike': { ready: false, queue: [] },
   };
   
   /**

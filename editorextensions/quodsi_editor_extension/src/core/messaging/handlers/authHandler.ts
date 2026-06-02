@@ -35,18 +35,36 @@ const STUDIO_URL_BY_PACKAGE_ID: Record<string, string> = {
  * No source-code editing per build, no remembering to revert. See
  * webpack.config.js `readLocalStudioOverride()` for the inject logic.
  */
-function getExtensionConfig(): ExtensionConfig {
+
+/**
+ * Resolve the Studio web app's base URL for the current environment.
+ *
+ * Resolution order:
+ *   1. `__LOCAL_STUDIO_OVERRIDE__` — build-time inject from `local-studio-url.txt`
+ *      (e.g. `https://localhost:3030`). Non-empty only in local dev builds.
+ *   2. `STUDIO_URL_BY_PACKAGE_ID[lucid.getPackageId()]` — package-ID lookup for
+ *      dev / test / prod deployments.
+ *   3. `undefined` — if the packageId is unknown or the Lucid global is not
+ *      available (e.g. unit-test context).
+ *
+ * Exported so other extension modules (e.g. modals that embed Studio iframes)
+ * can resolve the correct origin without duplicating this logic.
+ */
+export function getStudioBaseUrl(): string | undefined {
   if (__LOCAL_STUDIO_OVERRIDE__) {
-    return { studioBaseUrl: __LOCAL_STUDIO_OVERRIDE__ };
+    return __LOCAL_STUDIO_OVERRIDE__;
   }
-  let studioBaseUrl: string | undefined;
   try {
     const packageId = lucid.getPackageId();
-    studioBaseUrl = STUDIO_URL_BY_PACKAGE_ID[packageId];
+    return STUDIO_URL_BY_PACKAGE_ID[packageId];
   } catch {
     // lucid global isn't available in some test contexts; leave undefined.
+    return undefined;
   }
-  return { studioBaseUrl };
+}
+
+function getExtensionConfig(): ExtensionConfig {
+  return { studioBaseUrl: getStudioBaseUrl() };
 }
 
 /**
