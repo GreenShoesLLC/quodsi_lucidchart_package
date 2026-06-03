@@ -13,11 +13,13 @@ export class StudioEmbedModal extends RoutingModal {
     client: EditorClient,
     opts: { title: string; studioPath: string; fullScreenPath?: string },
   ) {
-    const studioOrigin = getStudioBaseUrl() ?? 'https://dev-studio.quodsi.com';
+    const studioOrigin = getStudioBaseUrl();
     let url =
       `quodsim-react/index.html?view=studio-embed` +
-      `&studioPath=${encodeURIComponent(opts.studioPath)}` +
-      `&studioOrigin=${encodeURIComponent(studioOrigin)}`;
+      `&studioPath=${encodeURIComponent(opts.studioPath)}`;
+    if (studioOrigin) {
+      url += `&studioOrigin=${encodeURIComponent(studioOrigin)}`;
+    }
     if (opts.fullScreenPath) {
       url += `&fullScreenPath=${encodeURIComponent(opts.fullScreenPath)}`;
     }

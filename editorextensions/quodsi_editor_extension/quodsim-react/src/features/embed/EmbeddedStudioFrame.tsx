@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { EnvelopeMessageType, isEnvelope } from '@quodsi/shared';
 import { useMessaging } from '../../messaging/MessageProvider';
 
-// Fix #2: no silent fallback — a missing studioOrigin is a real config error.
-const STUDIO_ORIGIN = new URLSearchParams(window.location.search).get('studioOrigin');
-
 interface Props {
   /** Studio path to embed, e.g. `/embed/scenarios/<id>/results`. `?embed=1` is appended. */
   studioPath: string;
+  /** Origin of the Studio app (e.g. `https://studio.quodsi.com`). Provided by the parent. */
+  studioOrigin: string;
 }
 
 /**
@@ -17,7 +16,7 @@ interface Props {
  * when the host replies (STUDIO_TOKEN), forward it into the iframe
  * (QUODSI_EMBED_TOKEN). Foundation for every Path 1 embed.
  */
-export function EmbeddedStudioFrame({ studioPath }: Props) {
+export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { sendMessage } = useMessaging();
   const [gotToken, setGotToken] = useState(false);
@@ -25,16 +24,7 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
   const timerRef = useRef<number | null>(null);
 
   // All hooks must come before any conditional return (Rules of Hooks).
-  // Fix #2: STUDIO_ORIGIN is a module-level constant (null when param absent).
-  // Guard the effect body so no listener is wired when origin is missing.
   useEffect(() => {
-    // Fix #2: skip the relay entirely when studioOrigin was not provided.
-    if (!STUDIO_ORIGIN) return;
-
-    // TypeScript narrowing inside the effect — safe because STUDIO_ORIGIN is
-    // a module-level constant that never changes after the module loads.
-    const studioOrigin: string = STUDIO_ORIGIN;
-
     function armTimeout() {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       // Count from when Studio actually asks for the token (it's up and only
@@ -75,20 +65,7 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
       window.removeEventListener('message', onMessage);
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     };
-  }, [sendMessage]);
-
-  // Fix #2: render a clear config error when studioOrigin is missing instead
-  // of silently embedding the dev origin (or producing a broken iframe).
-  if (!STUDIO_ORIGIN) {
-    return (
-      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', padding: 16, textAlign: 'center' }}>
-        Results viewer misconfigured (missing studioOrigin).
-      </div>
-    );
-  }
-
-  // TypeScript narrowing: STUDIO_ORIGIN is non-null from here.
-  const studioOrigin: string = STUDIO_ORIGIN;
+  }, [sendMessage, studioOrigin]);
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
