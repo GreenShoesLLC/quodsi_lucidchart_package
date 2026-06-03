@@ -113,6 +113,15 @@ export function useSimulationRunSender() {
     });
   }, [send]);
 
+  /**
+   * Send an OPEN_ANIMATION_MODAL message to open the embedded animation viewer
+   *
+   * @param scenarioId Scenario ID to view animation for
+   */
+  const openAnimationModal = useCallback((scenarioId: string) => {
+    send(EnvelopeMessageType.OPEN_ANIMATION_MODAL, { scenarioId });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
@@ -120,6 +129,7 @@ export function useSimulationRunSender() {
     resimulateSimulationRun,
     getCrossRepData,
     getCrossRepBatchData,
-    openResultsModal
+    openResultsModal,
+    openAnimationModal,
   };
 }

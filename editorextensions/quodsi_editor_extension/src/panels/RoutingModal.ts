@@ -16,7 +16,7 @@ import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
  *
  * Provides the four RoutablePanel lifecycle methods (relayToIframe,
  * messageFromFrame, frameLoaded, frameClosed) that are identical across
- * ResultsModal and StudioResultsModal, differing only by their channel role
+ * ResultsModal and StudioEmbedModal, differing only by their channel role
  * and the derived iframe-source string.
  *
  * Subclasses supply the role via the constructor and are free to add their
@@ -28,7 +28,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
     /**
      * @param client      Lucid EditorClient
      * @param options     Passed straight through to Modal's constructor
-     * @param channelRole The PanelRole this modal owns ('results' | 'studio-results')
+     * @param channelRole The PanelRole this modal owns ('results' | 'studio-embed')
      */
     protected constructor(
         client: EditorClient,
@@ -70,7 +70,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
 
         const envelope = message as EnvelopeBase;
         // The template literal `${PanelRole}-iframe` always resolves to a
-        // valid MessageSource value ('results-iframe' | 'studio-results-iframe'
+        // valid MessageSource value ('results-iframe' | 'studio-embed-iframe'
         // | 'model-iframe'). The cast is localised here to keep the assignment
         // type-safe while satisfying the strict MessageSource union.
         envelope.source = `${this.channelRole}-iframe` as MessageSource;

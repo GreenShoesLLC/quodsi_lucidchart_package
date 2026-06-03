@@ -249,6 +249,7 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.SCENARIOS_DEFINITION_RESULT]: { success: boolean; errorMessage?: string };
 
   [EnvelopeMessageType.OPEN_RESULTS_MODAL]: { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean };
+  [EnvelopeMessageType.OPEN_ANIMATION_MODAL]: { scenarioId: string };
 
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_RESULT]: import('../types/devtools/DevToolsTypes').SwimLaneScanResult;

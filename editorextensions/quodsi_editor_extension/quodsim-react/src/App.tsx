@@ -3,7 +3,7 @@ import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
 import ModalResultsView from "./features/ModalResultsView";
-import { EmbeddedStudioFrame } from "./features/embed/EmbeddedStudioFrame";
+import { StudioEmbedView } from "./features/embed/StudioEmbedView";
 
 interface AppProps {
   panelType?: "model";
@@ -26,23 +26,11 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
     );
   }
 
-  if (urlParams.get("view") === "studio-results") {
-    const scenarioId = urlParams.get("scenarioId") || "";
-    // Fix #3b: guard against a missing scenarioId which would produce a broken
-    // URL like `/embed/scenarios//results`.
-    if (!scenarioId) {
-      return (
-        <MessageProvider initialPanelType="studio-results">
-          <div className="h-full w-full flex items-center justify-center">
-            <p style={{ textAlign: "center", padding: 16 }}>Missing scenarioId.</p>
-          </div>
-        </MessageProvider>
-      );
-    }
+  if (urlParams.get("view") === "studio-embed") {
     return (
-      <MessageProvider initialPanelType="studio-results">
+      <MessageProvider initialPanelType="studio-embed">
         <div className="h-full w-full">
-          <EmbeddedStudioFrame studioPath={`/embed/scenarios/${scenarioId}/results`} />
+          <StudioEmbedView />
         </div>
       </MessageProvider>
     );

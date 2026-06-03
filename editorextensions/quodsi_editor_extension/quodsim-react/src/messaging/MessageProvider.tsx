@@ -13,7 +13,7 @@ import {
 // Create a message provider component that manages communication with the host
 interface MessageProviderProps {
   children: React.ReactNode;
-  initialPanelType?: "auth" | "model" | "results" | "studio-results";
+  initialPanelType?: "auth" | "model" | "results" | "studio-embed";
 }
 
 /**

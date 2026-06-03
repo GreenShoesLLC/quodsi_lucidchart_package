@@ -86,6 +86,7 @@ export enum EnvelopeMessageType {
 
   // Modal
   OPEN_RESULTS_MODAL = "OPEN_RESULTS_MODAL",
+  OPEN_ANIMATION_MODAL = "OPEN_ANIMATION_MODAL",
 
   // Studio Embed Token Relay
   REQUEST_STUDIO_TOKEN = "REQUEST_STUDIO_TOKEN",

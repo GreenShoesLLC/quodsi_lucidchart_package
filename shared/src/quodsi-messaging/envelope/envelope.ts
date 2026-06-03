@@ -3,12 +3,12 @@ import { EnvelopeMessageType } from './envelopeMessageTypes';
 /**
  * Source context for a message
  */
-export type MessageSource = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-results-iframe';
+export type MessageSource = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe';
 
 /**
  * Target context for a message
  */
-export type MessageTarget = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-results-iframe' | 'broadcast';
+export type MessageTarget = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe' | 'broadcast';
 
 /**
  * Base envelope interface for all Quodsi messages.
@@ -46,10 +46,10 @@ export function isEnvelope(value: unknown): value is EnvelopeBase {
     typeof msg.id === 'string' && msg.id.length > 0 &&
     typeof msg.type === 'string' && msg.type.length > 0 &&
     typeof msg.source === 'string' &&
-    (msg.source === 'host' || msg.source === 'model-iframe' || msg.source === 'auth-iframe' || msg.source === 'results-iframe' || msg.source === 'studio-results-iframe') &&
+    (msg.source === 'host' || msg.source === 'model-iframe' || msg.source === 'auth-iframe' || msg.source === 'results-iframe' || msg.source === 'studio-embed-iframe') &&
     typeof msg.target === 'string' &&
     (msg.target === 'host' || msg.target === 'model-iframe' ||
-      msg.target === 'auth-iframe' || msg.target === 'results-iframe' || msg.target === 'studio-results-iframe' || msg.target === 'broadcast') &&
+      msg.target === 'auth-iframe' || msg.target === 'results-iframe' || msg.target === 'studio-embed-iframe' || msg.target === 'broadcast') &&
     msg.version === '1.0' &&
     msg.data !== undefined
   );

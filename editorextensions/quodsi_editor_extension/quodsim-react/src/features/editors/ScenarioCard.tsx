@@ -25,7 +25,7 @@ import {
   Film,
 } from "lucide-react";
 import ChangeRequestEditor from "./ChangeRequestEditor";
-import { useOpenInStudio } from "../shared/useOpenInStudio";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useEntitlements } from "../../messaging/MessageContext";
 import {
   canSubmitSimulation,
@@ -213,7 +213,7 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
   const remaining = simulationsRemaining(entitlements);
   const quotaExhausted = !canRun && entitlements.loaded;
   const playDisabled = isActive || quotaExhausted || runCapBlocked;
-  const openInStudio = useOpenInStudio();
+  const { openAnimationModal } = useSimulationRunSender();
 
   // --- local state ---
   const [showAddCR, setShowAddCR] = useState(false);
@@ -380,25 +380,13 @@ export const ScenarioCard: React.FC<ScenarioCardProps> = ({
           )}
         </div>
 
-        {/* View animation in Studio (opens a new tab) */}
+        {/* View animation — embedded in the Lucid modal */}
         {hasResults && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (openInStudio.available) openInStudio.open(`/animation/${scenario.id}`);
-            }}
-            disabled={!openInStudio.available}
-            className={`flex-shrink-0 p-1 rounded transition-colors ${
-              openInStudio.available
-                ? "text-indigo-600 hover:bg-indigo-50"
-                : "text-gray-300 cursor-not-allowed"
-            }`}
-            title={
-              openInStudio.available
-                ? "View animation in Studio (opens a new tab)"
-                : "Open in Studio is unavailable in this build"
-            }
-            aria-label="View animation in Studio"
+            onClick={(e) => { e.stopPropagation(); openAnimationModal(scenario.id); }}
+            className="flex-shrink-0 p-1 rounded transition-colors text-indigo-600 hover:bg-indigo-50"
+            title="View animation"
+            aria-label="View animation"
             data-testid="view-animation"
           >
             <Film className="w-3.5 h-3.5" />

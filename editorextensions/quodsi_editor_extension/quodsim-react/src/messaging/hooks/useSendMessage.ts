@@ -9,7 +9,7 @@ const logger = debugService.forComponent('useSendMessage');
  * Hook for sending messages to the host application
  */
 export function useSendMessage(
-  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-results' } },
+  state: { app: { panelType?: 'auth' | 'model' | 'results' | 'studio-embed' } },
   dispatch: React.Dispatch<any>
 ) {
   return useCallback(
@@ -19,7 +19,7 @@ export function useSendMessage(
         auth: 'auth-iframe',
         model: 'model-iframe',
         results: 'results-iframe',
-        'studio-results': 'studio-results-iframe',
+        'studio-embed': 'studio-embed-iframe',
       };
       const envelope: EnvelopeBase = {
         id: uuid(),

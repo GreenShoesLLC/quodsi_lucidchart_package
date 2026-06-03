@@ -8,7 +8,7 @@ import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
-import { StudioResultsModal } from '../../../panels/StudioResultsModal';
+import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
 
 /**
  * Handler for simulation run management messages
@@ -70,6 +70,10 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenResultsModal(msg);
         return true;
 
+      case EnvelopeMessageType.OPEN_ANIMATION_MODAL:
+        SimulationRunHandler.handleOpenAnimationModal(msg);
+        return true;
+
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
         return true;
@@ -83,25 +87,29 @@ export class SimulationRunHandler {
   /**
    * Determine which channel to send a response to based on the message source.
    * Messages from 'results-iframe' are routed to the 'results' channel,
-   * messages from 'studio-results-iframe' to 'studio-results',
+   * messages from 'studio-embed-iframe' to 'studio-embed',
    * everything else goes to 'model'.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
-    if (msg.source === 'studio-results-iframe') return 'studio-results';
+    if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
   }
 
   /**
-   * Handle OPEN_RESULTS_MODAL: open StudioResultsModal when useEmbeddedStudio is
+   * Handle OPEN_RESULTS_MODAL: open StudioEmbedModal when useEmbeddedStudio is
    * true, otherwise fall back to the existing ResultsModal.
    */
   private static handleOpenResultsModal(msg: EnvelopeBase): void {
     const data = msg.data as { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean };
+    if (!data?.scenarioId) return;
     const client = ModelManager.getClient();
     if (data.useEmbeddedStudio) {
       SimulationRunHandler.logger.log('Opening embedded Studio results modal', { scenarioId: data.scenarioId });
-      new StudioResultsModal(client, data.scenarioId).show();
+      new StudioEmbedModal(client, {
+        title: 'Simulation Results',
+        studioPath: `/embed/scenarios/${data.scenarioId}/results`,
+      }).show();
       return;
     }
     SimulationRunHandler.logger.log('Opening results modal', { scenarioId: data.scenarioId, documentId: data.documentId });
@@ -109,8 +117,25 @@ export class SimulationRunHandler {
   }
 
   /**
+   * Handle OPEN_ANIMATION_MODAL: open the embedded Studio animation viewer for
+   * a scenario in the generic embed modal, with a "full screen" pop-out to the
+   * standalone /animation/:scenarioId tab.
+   */
+  private static handleOpenAnimationModal(msg: EnvelopeBase): void {
+    const data = msg.data as { scenarioId: string };
+    if (!data?.scenarioId) return;
+    SimulationRunHandler.logger.log('Opening embedded Studio animation modal', { scenarioId: data.scenarioId });
+    const client = ModelManager.getClient();
+    new StudioEmbedModal(client, {
+      title: 'Animation',
+      studioPath: `/embed/animation/${data.scenarioId}`,
+      fullScreenPath: `/animation/${data.scenarioId}`,
+    }).show();
+  }
+
+  /**
    * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token back to
-   * the 'studio-results' embed iframe. Routing is derived from msg.source so
+   * the 'studio-embed' embed iframe. Routing is derived from msg.source so
    * a single handler serves the channel.
    */
   private static handleRequestStudioToken(msg: EnvelopeBase): void {

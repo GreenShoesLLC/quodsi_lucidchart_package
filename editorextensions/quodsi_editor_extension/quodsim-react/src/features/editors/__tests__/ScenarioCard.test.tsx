@@ -8,10 +8,9 @@ jest.mock("../../../messaging/state/entitlementsSlice", () => ({
   simulationsRemaining: () => null,
 }));
 
-const mockOpen = jest.fn();
-let mockAvailable = true;
-jest.mock("../../shared/useOpenInStudio", () => ({
-  useOpenInStudio: () => ({ available: mockAvailable, open: mockOpen }),
+const mockOpenAnimationModal = jest.fn();
+jest.mock("../../../messaging/senders/simulationRunSender", () => ({
+  useSimulationRunSender: () => ({ openAnimationModal: mockOpenAnimationModal }),
 }));
 
 jest.mock("../../../messaging/MessageContext", () => ({
@@ -36,11 +35,10 @@ const baseProps = {
 
 describe("ScenarioCard — View animation action", () => {
   beforeEach(() => {
-    mockOpen.mockClear();
-    mockAvailable = true;
+    mockOpenAnimationModal.mockClear();
   });
 
-  it("shows the action for a completed run and opens the scenario animation", () => {
+  it("shows the action for a completed run and sends OPEN_ANIMATION_MODAL", () => {
     render(
       <ScenarioCard
         {...baseProps}
@@ -49,7 +47,7 @@ describe("ScenarioCard — View animation action", () => {
     );
     const btn = screen.getByTestId("view-animation");
     fireEvent.click(btn);
-    expect(mockOpen).toHaveBeenCalledWith("/animation/scn-1");
+    expect(mockOpenAnimationModal).toHaveBeenCalledWith("scn-1");
   });
 
   it("is hidden when the scenario has no results", () => {
@@ -62,8 +60,7 @@ describe("ScenarioCard — View animation action", () => {
     expect(screen.queryByTestId("view-animation")).toBeNull();
   });
 
-  it("is disabled when Open-in-Studio is unavailable", () => {
-    mockAvailable = false;
+  it("is always enabled when results exist (no Open-in-Studio availability gate)", () => {
     render(
       <ScenarioCard
         {...baseProps}
@@ -71,9 +68,9 @@ describe("ScenarioCard — View animation action", () => {
       />,
     );
     const btn = screen.getByTestId("view-animation");
-    expect(btn).toBeDisabled();
+    expect(btn).not.toBeDisabled();
     fireEvent.click(btn);
-    expect(mockOpen).not.toHaveBeenCalled();
+    expect(mockOpenAnimationModal).toHaveBeenCalledWith("scn-1");
   });
 });
 
