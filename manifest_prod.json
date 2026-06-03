@@ -1,6 +1,6 @@
 {
   "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "2026.05.27",
+  "version": "2026.06.02",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -34,7 +34,7 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim.kinde.com/oauth2/auth?prompt=login",
+      "authorizationUrl": "https://quodsim.kinde.com/oauth2/auth?prompt=login&audience=https://api.quodsi.com",
       "tokenUrl": "https://quodsim.kinde.com/oauth2/token",
       "revokeTokenUrl": "https://quodsim.kinde.com/oauth2/revoke",
       "scopes": ["openid", "profile", "email"],
