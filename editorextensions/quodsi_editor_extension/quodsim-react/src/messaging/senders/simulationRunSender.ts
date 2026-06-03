@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { EnvelopeMessageType } from '@quodsi/shared';
 import { useSender } from './useSender';
+import { isEmbeddedResultsEnabled } from '../../lib/embeddedResultsFlag';
 
 /**
  * Custom hook that provides typed functions for sending simulation run-related messages
@@ -107,7 +108,8 @@ export function useSimulationRunSender() {
   const openResultsModal = useCallback((documentId: string, scenarioId: string) => {
     send(EnvelopeMessageType.OPEN_RESULTS_MODAL, {
       scenarioId,
-      documentId
+      documentId,
+      useEmbeddedStudio: isEmbeddedResultsEnabled(),
     });
   }, [send]);
 

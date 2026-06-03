@@ -8,7 +8,7 @@ import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
-import { StudioEmbedSpikeModal } from '../../../panels/StudioEmbedSpikeModal';
+import { StudioResultsModal } from '../../../panels/StudioResultsModal';
 
 /**
  * Handler for simulation run management messages
@@ -70,10 +70,6 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenResultsModal(msg);
         return true;
 
-      case EnvelopeMessageType.OPEN_STUDIO_EMBED_SPIKE:
-        SimulationRunHandler.handleOpenStudioEmbedSpike(msg);
-        return true;
-
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
         return true;
@@ -87,57 +83,45 @@ export class SimulationRunHandler {
   /**
    * Determine which channel to send a response to based on the message source.
    * Messages from 'results-iframe' are routed to the 'results' channel,
+   * messages from 'studio-results-iframe' to 'studio-results',
    * everything else goes to 'model'.
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
+    if (msg.source === 'studio-results-iframe') return 'studio-results';
     return 'model';
   }
 
   /**
-   * Handle OPEN_RESULTS_MODAL by creating and showing a ResultsModal
+   * Handle OPEN_RESULTS_MODAL: open StudioResultsModal when useEmbeddedStudio is
+   * true, otherwise fall back to the existing ResultsModal.
    */
   private static handleOpenResultsModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string; documentId: string };
-    SimulationRunHandler.logger.log('Opening results modal', {
-      scenarioId: data.scenarioId,
-      documentId: data.documentId
-    });
-
+    const data = msg.data as { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean };
     const client = ModelManager.getClient();
-    const modal = new ResultsModal(client, data.scenarioId, data.documentId);
-    modal.show();
+    if (data.useEmbeddedStudio) {
+      SimulationRunHandler.logger.log('Opening embedded Studio results modal', { scenarioId: data.scenarioId });
+      new StudioResultsModal(client, data.scenarioId).show();
+      return;
+    }
+    SimulationRunHandler.logger.log('Opening results modal', { scenarioId: data.scenarioId, documentId: data.documentId });
+    new ResultsModal(client, data.scenarioId, data.documentId).show();
   }
 
   /**
-   * Handle OPEN_STUDIO_EMBED_SPIKE by creating and showing a StudioEmbedSpikeModal
+   * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token back to
+   * the 'studio-results' embed iframe. Routing is derived from msg.source so
+   * a single handler serves the channel.
    */
-  private static handleOpenStudioEmbedSpike(_msg: EnvelopeBase): void {
-    SimulationRunHandler.logger.log('Opening studio embed spike modal');
-    const client = ModelManager.getClient();
-    const modal = new StudioEmbedSpikeModal(client);
-    modal.show();
-  }
-
-  /**
-   * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token to the
-   * studio-embed-spike modal iframe so Studio (running cross-origin inside
-   * the modal) can authenticate without third-party cookie access.
-   *
-   * Sends to 'studio-embed-spike' channel directly rather than broadcasting to
-   * all channels, because this token is only meaningful to the embed modal.
-   * The model/results panels would silently queue the message if not ready,
-   * which is harmless but wasteful — and unnecessarily exposes the token to
-   * those iframes.
-   */
-  private static handleRequestStudioToken(_msg: EnvelopeBase): void {
+  private static handleRequestStudioToken(msg: EnvelopeBase): void {
     const token = AuthHandler.getToken();
-    SimulationRunHandler.logger.log('Relaying Studio token to embed iframe', { hasToken: !!token });
-    router.send('studio-embed-spike', {
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    SimulationRunHandler.logger.log('Relaying Studio token to embed iframe', { hasToken: !!token, channel });
+    router.send(channel, {
       id: `msg-${Date.now()}`,
       type: EnvelopeMessageType.STUDIO_TOKEN,
       source: 'host',
-      target: 'studio-embed-spike-iframe',
+      target: `${channel}-iframe`,
       version: '1.0',
       data: { token },
     });

@@ -8,7 +8,7 @@ import { PendingRequests } from './types';
 // State shape
 export interface AppState {
   initialized: boolean;
-  panelType?: 'auth' | 'model' | 'results' | 'studio-embed-spike';
+  panelType?: 'auth' | 'model' | 'results' | 'studio-results';
   pendingRequests: PendingRequests;
 }
 
@@ -21,7 +21,7 @@ export const initialAppState: AppState = {
 
 // Action types
 export type AppAction =
-  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' | 'results' | 'studio-embed-spike' }
+  | { type: 'APP_INITIALIZE'; panelType: 'auth' | 'model' | 'results' | 'studio-results' }
   | { type: 'ADD_PENDING_REQUEST'; id: string; requestType: string }
   | { type: 'REMOVE_PENDING_REQUEST'; id: string }
   | { type: 'MODEL_CONVERSION_SUCCESS'; success: boolean }

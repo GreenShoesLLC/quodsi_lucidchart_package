@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { X, Search, Loader2, KeyRound, ExternalLink } from "lucide-react";
+import { X, Search, Loader2, KeyRound } from "lucide-react";
 import { useMessaging } from "../../messaging/MessageContext";
 import {
   EnvelopeMessageType,
@@ -94,11 +94,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
     setAuthTesting(true);
     setAuthResultText(null);
     sendMessage(EnvelopeMessageType.DEVTOOLS_KINDE_AUTH_REQUEST);
-  }, [sendMessage]);
-
-  /** Spike 0/1: open the Studio Embed modal to prove cross-origin iframe hosting */
-  const handleOpenStudioEmbedSpike = useCallback(() => {
-    sendMessage(EnvelopeMessageType.OPEN_STUDIO_EMBED_SPIKE);
   }, [sendMessage]);
 
   useEffect(() => {
@@ -213,14 +208,6 @@ export const DevToolsModal: React.FC<DevToolsModalProps> = ({
               <KeyRound className="w-3.5 h-3.5" />
             )}
             {authTesting ? "Authenticating..." : "Test Kinde Auth"}
-          </button>
-          {/* Spike 0/1 — open cross-origin Studio embed modal */}
-          <button
-            onClick={handleOpenStudioEmbedSpike}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Studio Embed Spike
           </button>
         </div>
 

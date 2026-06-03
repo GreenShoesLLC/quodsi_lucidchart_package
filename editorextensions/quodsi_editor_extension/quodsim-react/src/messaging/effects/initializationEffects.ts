@@ -23,7 +23,7 @@ const logger = debugService.forComponent('InitializationEffects');
 export function usePanelTypeDetectionEffect(
   state: { app: { initialized: boolean } },
   dispatch: React.Dispatch<any>,
-  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-embed-spike'
+  initialPanelType?: 'auth' | 'model' | 'results' | 'studio-results'
 ) {
   useEffect(() => {
     if (!state.app.initialized) {
@@ -32,10 +32,10 @@ export function usePanelTypeDetectionEffect(
       const panelParam = urlParams.get("panel");
       const viewParam = urlParams.get("view");
 
-      let detectedType: "auth" | "model" | "results" | "studio-embed-spike" | undefined = initialPanelType;
+      let detectedType: "auth" | "model" | "results" | "studio-results" | undefined = initialPanelType;
 
-      if (viewParam === "studio-embed-spike") {
-        detectedType = "studio-embed-spike";
+      if (viewParam === "studio-results") {
+        detectedType = "studio-results";
       } else if (viewParam === "results") {
         // Modal mode: view=results takes precedence
         detectedType = "results";

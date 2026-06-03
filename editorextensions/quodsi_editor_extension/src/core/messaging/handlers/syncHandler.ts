@@ -53,6 +53,7 @@ export class SyncHandler {
    */
   private static getResponseChannel(msg: EnvelopeBase): PanelRole {
     if (msg.source === 'results-iframe') return 'results';
+    if (msg.source === 'studio-results-iframe') return 'studio-results';
     return 'model';
   }
 

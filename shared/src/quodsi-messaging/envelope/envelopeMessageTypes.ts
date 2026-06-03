@@ -86,9 +86,8 @@ export enum EnvelopeMessageType {
 
   // Modal
   OPEN_RESULTS_MODAL = "OPEN_RESULTS_MODAL",
-  OPEN_STUDIO_EMBED_SPIKE = "OPEN_STUDIO_EMBED_SPIKE",
 
-  // Studio Embed Token Relay (Spike 1)
+  // Studio Embed Token Relay
   REQUEST_STUDIO_TOKEN = "REQUEST_STUDIO_TOKEN",
   STUDIO_TOKEN = "STUDIO_TOKEN",
 

@@ -3,7 +3,7 @@ import { MessageProvider } from "./messaging/MessageProvider";
 import "./App.css";
 import LucidApp from "./features/LucidApp";
 import ModalResultsView from "./features/ModalResultsView";
-import { StudioEmbedSpike } from "./spikes/StudioEmbedSpike";
+import { EmbeddedStudioFrame } from "./features/embed/EmbeddedStudioFrame";
 
 interface AppProps {
   panelType?: "model";
@@ -26,11 +26,12 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
     );
   }
 
-  if (urlParams.get("view") === "studio-embed-spike") {
+  if (urlParams.get("view") === "studio-results") {
+    const scenarioId = urlParams.get("scenarioId") || "";
     return (
-      <MessageProvider initialPanelType="studio-embed-spike">
+      <MessageProvider initialPanelType="studio-results">
         <div className="h-full w-full">
-          <StudioEmbedSpike />
+          <EmbeddedStudioFrame studioPath={`/embed/scenarios/${scenarioId}/results`} />
         </div>
       </MessageProvider>
     );
