@@ -13,6 +13,7 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { SimulationRunHandler } from './simulationRunHandler';
+import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
 
 /**
  * Handler for SYNC_ALL_REQUEST. Orchestrates UpsertModel → SyncScenarios →
@@ -74,45 +75,26 @@ export class SyncHandler {
     try {
       const client = ModelManager.getClient();
 
-      // Step 1: UpsertModel — ensure server has a model row before scenarios sync.
+      // Steps 1+2: UpsertModel -> SyncScenarios (canonical helper).
       step = 'upsertModel';
-      SyncHandler.logger.log('Calling UpsertModel...');
-      await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'UpsertModel',
-        actionData: {
+      SyncHandler.logger.log('Calling UpsertModel + SyncScenarios...', {
+        scenariosCount: data.scenarios?.length ?? 0,
+      });
+      let substitutions = new Map<string, string>();
+      try {
+        const res = await upsertModelAndSyncScenarios(client, {
           documentId: data.documentId,
           pageId: data.pageId,
           modelName: data.modelName,
-        },
-        asynchronous: false,
-      });
-
-      // Step 2: SyncScenarios — push local scenarios to server, capturing any
-      // server-side id substitutions to re-write into Lucid shape data
-      // (matches the pattern in ScenarioDefinitionHandler / RightDockPanel).
-      step = 'syncScenarios';
-      SyncHandler.logger.log('Calling SyncScenarios...', {
-        scenariosCount: data.scenarios?.length ?? 0,
-      });
-      const syncResult = (await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'SyncScenarios',
-        actionData: {
-          documentId: data.documentId,
-          pageId: data.pageId,
           scenarios: data.scenarios ?? [],
-        },
-        asynchronous: false,
-      })) as { json?: { scenarios?: Array<{ id?: string; replaced_id?: string }> } };
-
-      const syncResponseData = syncResult?.json ?? (syncResult as any);
-      const substitutions = new Map<string, string>();
-      for (const s of syncResponseData?.scenarios ?? []) {
-        if (s?.replaced_id && s?.id && s.replaced_id !== s.id) {
-          substitutions.set(s.replaced_id, s.id);
-        }
+        });
+        substitutions = res.substitutions;
+      } catch (e) {
+        // If the model row never committed, the sync step never ran; report sync.
+        step = 'syncScenarios';
+        throw e;
       }
+      step = 'syncScenarios';
       if (substitutions.size > 0) {
         try {
           const viewport = new Viewport(client);

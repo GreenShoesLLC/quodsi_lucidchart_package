@@ -21,6 +21,8 @@ import {
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
+import { StorageAdapter } from '../../StorageAdapter';
+import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation-related messages
@@ -311,7 +313,7 @@ export class SimulationHandler {
       console.log('[SimulationHandler] Model serialized successfully');
 
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
-      const scenarioId = data.scenarioDefinitionId || generateUUID();
+      let scenarioId = data.scenarioDefinitionId || generateUUID();
 
       // If a scenario definition was specified, embed its change requests in the model payload
       let scenarioDefinitionName: string | undefined;
@@ -392,6 +394,59 @@ export class SimulationHandler {
         currentStep: 'Submitting simulation to Azure'
       });
       
+      // Guarantee the scenario row exists in quodsi_api before submitting.
+      // On a brand-new model the auto-created Baseline may not have synced yet;
+      // SaveAndSubmitSimulation only looks the scenario up (404 if missing).
+      // SyncScenarios is replace-all (idempotent), so this is safe to run every time.
+      try {
+        const storageAdapter = new StorageAdapter();
+        const scenarios = storageAdapter.getScenarios(activePageProxy);
+        const { substitutions } = await upsertModelAndSyncScenarios(client, {
+          documentId: documentProxy.id,
+          pageId: activePageProxy.id,
+          modelName: documentProxy.getTitle() || 'Untitled Model',
+          scenarios,
+        });
+        // If the server rewrote the Baseline id, persist it and re-target the run.
+        if (substitutions.size > 0) {
+          const updated = scenarios.map(s =>
+            substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
+          );
+          await modelManager.updateScenarios(updated, activePageProxy);
+          if (substitutions.has(scenarioId)) {
+            scenarioId = substitutions.get(scenarioId)!;
+            // Keep the optimistic job's scenarioId in sync with the re-targeted
+            // id, or reconcileWithScenarioList (which matches on job.scenarioId)
+            // would fail to find the run in the server list and silently drop it.
+            const job = SimulationHandler.activeJobs.get(jobId);
+            if (job) { job.scenarioId = scenarioId; }
+          }
+        }
+      } catch (syncErr) {
+        console.error('[SimulationHandler] Pre-run sync failed:', syncErr);
+        const job = SimulationHandler.activeJobs.get(jobId);
+        if (job) { job.status = SimulationStatus.FAILED; job.lastUpdate = new Date(); }
+        router.send('model', {
+          id: '',
+          type: EnvelopeMessageType.MODEL_RUN_STATUS,
+          source: 'host',
+          target: 'model-iframe',
+          version: '1.0',
+          data: {
+            jobId,
+            documentId: data.documentId,
+            scenarioId,
+            scenarioName,
+            status: SimulationStatus.FAILED,
+            progress: 0,
+            lastChecked: new Date().toISOString(),
+            queuedAt,
+            error: "Couldn't sync the model before running. Check your sign-in / connection and try again.",
+          },
+        });
+        return true; // do not submit into a downstream 404
+      }
+
       // Submit to data connector
       console.log('[SimulationHandler] Submitting simulation to data connector...');
 

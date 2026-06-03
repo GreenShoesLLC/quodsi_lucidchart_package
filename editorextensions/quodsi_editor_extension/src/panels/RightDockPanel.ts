@@ -20,9 +20,9 @@ import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
-import { LucidDataActionUtility } from '../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
+import { upsertModelAndSyncScenarios } from '../core/sync/scenarioSync';
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -331,56 +331,23 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         document: DocumentProxy,
         currentPage: PageProxy
     ): Promise<void> {
-        // Remember the context so retryModelSyncIfNeeded() (fired on auth-ready)
-        // can re-run this if the initial attempt raced ahead of Kinde auth.
         this.lastSyncContext = { document, currentPage };
-        try {
-            await LucidDataActionUtility.performDataAction(this.client, {
-                dataConnectorName: 'quodsi_api_data_connector',
-                actionName: 'UpsertModel',
-                actionData: {
-                    documentId: document.id,
-                    pageId: currentPage.id,
-                    modelName: document.getTitle() || 'Untitled Model'
-                },
-                asynchronous: false
-            });
-            this.modelSyncSucceeded = true;
-            this.debug.log('Model upserted in database on panel init');
-        } catch (err) {
-            this.debug.error('Failed to upsert model in database:', err);
-            // Without a binding the sync will 404; bail rather than wasting
-            // a network round-trip.
-            return;
-        }
 
         const storageAdapter = new StorageAdapter();
         const scenarios = storageAdapter.getScenarios(currentPage);
-        if (scenarios.length === 0) {
-            return;
-        }
 
         try {
-            const result = await LucidDataActionUtility.performDataAction(this.client, {
-                dataConnectorName: 'quodsi_api_data_connector',
-                actionName: 'SyncScenarios',
-                actionData: {
-                    documentId: document.id,
-                    pageId: currentPage.id,
-                    scenarios
-                },
-                asynchronous: false
-            }) as { json?: { scenarios?: Array<{ id?: string; replaced_id?: string }> } };
+            const { substitutions } = await upsertModelAndSyncScenarios(this.client, {
+                documentId: document.id,
+                pageId: currentPage.id,
+                modelName: document.getTitle() || 'Untitled Model',
+                scenarios,
+            });
+            this.modelSyncSucceeded = true;
+            this.debug.log('Model upserted + scenarios synced on panel init', {
+                count: scenarios.length,
+            });
 
-            this.debug.log('Scenarios synced to database on panel init', { count: scenarios.length });
-
-            const responseData = result?.json ?? (result as any);
-            const substitutions = new Map<string, string>();
-            for (const s of responseData?.scenarios ?? []) {
-                if (s?.replaced_id && s?.id && s.replaced_id !== s.id) {
-                    substitutions.set(s.replaced_id, s.id);
-                }
-            }
             if (substitutions.size > 0) {
                 const modelManager = ModelManager.getInstance();
                 const updated = scenarios.map(s =>
@@ -390,7 +357,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 this.debug.log('Applied server id substitutions:', Array.from(substitutions.entries()));
             }
         } catch (err) {
-            this.debug.error('Failed to sync scenarios to database:', err);
+            this.debug.error('Failed to upsert/sync on panel init:', err);
         }
     }
 

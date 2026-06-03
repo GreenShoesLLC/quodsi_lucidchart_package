@@ -27,7 +27,8 @@ import {
     ensureBaselineScenario,
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
-import { BlockProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
+import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
+import { upsertModelAndSyncScenarios } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -1717,6 +1718,43 @@ export class ModelManager {
                 this.debug.log('ensureBaselineScenario - Migrated legacy zero-UUID baseline to a real UUID');
             }
             this.storageAdapter.setScenarios(page, updated);
+
+            // Push the new/migrated Baseline to quodsi_api now, so a Run (or the
+            // Scenarios list) doesn't depend on panel-init sync timing. Fire-and-forget:
+            // never block model build on a network call; the run path also syncs.
+            void this.syncBaselineAfterCreate(page, updated);
+        }
+    }
+
+    /**
+     * Fire-and-forget sync of scenarios right after the Baseline is auto-created
+     * or migrated. Errors are logged only -- the sync-before-run guarantee covers
+     * the Run path regardless. Applies any server id substitution back to storage.
+     */
+    private async syncBaselineAfterCreate(
+        page: PageProxy,
+        scenarios: ISerializedScenario[],
+    ): Promise<void> {
+        try {
+            const client = ModelManager.getClient();
+            const documentProxy = new DocumentProxy(client);
+            const { substitutions } = await upsertModelAndSyncScenarios(client, {
+                documentId: documentProxy.id,
+                pageId: page.id,
+                modelName: documentProxy.getTitle() || 'Untitled Model',
+                scenarios,
+            });
+            if (substitutions.size > 0) {
+                const updated = scenarios.map(s =>
+                    substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
+                );
+                this.storageAdapter.setScenarios(page, updated);
+                this.debug.log('Baseline synced + id substitution applied after create');
+            } else {
+                this.debug.log('Baseline synced after create');
+            }
+        } catch (err) {
+            this.debug.error('Baseline post-create sync failed (non-fatal):', err);
         }
     }
 
