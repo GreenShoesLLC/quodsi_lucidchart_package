@@ -34,7 +34,7 @@
     {
       "name": "kinde",
       "title": "Quodsi Auth",
-      "authorizationUrl": "https://quodsim-dev.us.kinde.com/oauth2/auth?prompt=login",
+      "authorizationUrl": "https://quodsim-dev.us.kinde.com/oauth2/auth?prompt=login&audience=https://api.quodsi.com",
       "tokenUrl": "https://quodsim-dev.us.kinde.com/oauth2/token",
       "revokeTokenUrl": "https://quodsim-dev.us.kinde.com/oauth2/revoke",
       "scopes": ["openid", "profile", "email"],
