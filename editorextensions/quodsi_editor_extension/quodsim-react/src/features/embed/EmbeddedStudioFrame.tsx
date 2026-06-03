@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { EnvelopeMessageType, isEnvelope } from '@quodsi/shared';
 import { useMessaging } from '../../messaging/MessageProvider';
 
-const STUDIO_ORIGIN =
-  new URLSearchParams(window.location.search).get('studioOrigin') ||
-  'https://dev-studio.quodsi.com';
+// Fix #2: no silent fallback — a missing studioOrigin is a real config error.
+const STUDIO_ORIGIN = new URLSearchParams(window.location.search).get('studioOrigin');
 
 interface Props {
   /** Studio path to embed, e.g. `/embed/scenarios/<id>/results`. `?embed=1` is appended. */
@@ -25,7 +24,17 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
   const [timedOut, setTimedOut] = useState(false);
   const timerRef = useRef<number | null>(null);
 
+  // All hooks must come before any conditional return (Rules of Hooks).
+  // Fix #2: STUDIO_ORIGIN is a module-level constant (null when param absent).
+  // Guard the effect body so no listener is wired when origin is missing.
   useEffect(() => {
+    // Fix #2: skip the relay entirely when studioOrigin was not provided.
+    if (!STUDIO_ORIGIN) return;
+
+    // TypeScript narrowing inside the effect — safe because STUDIO_ORIGIN is
+    // a module-level constant that never changes after the module loads.
+    const studioOrigin: string = STUDIO_ORIGIN;
+
     function armTimeout() {
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
       // Count from when Studio actually asks for the token (it's up and only
@@ -34,10 +43,15 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
       timerRef.current = window.setTimeout(() => setTimedOut(true), 10000);
     }
     function onMessage(e: MessageEvent) {
+      // Fix #1 (STUDIO_TOKEN hop): only accept the host reply from window.parent.
+      // NOTE — smoke-test-sensitive: if the Lucid SDK delivers host messages
+      // from a source other than window.parent (e.g. via an intermediate frame),
+      // the relay will silently stop. Relax this check in that case.
       if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.STUDIO_TOKEN) {
+        if (e.source !== window.parent) return;
         const token = (e.data.data as { token?: string })?.token;
         iframeRef.current?.contentWindow?.postMessage(
-          { type: 'QUODSI_EMBED_TOKEN', token }, STUDIO_ORIGIN,
+          { type: 'QUODSI_EMBED_TOKEN', token }, studioOrigin,
         );
         if (token) {
           setGotToken(true);
@@ -45,7 +59,13 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
         }
         return;
       }
-      if (e.origin === STUDIO_ORIGIN && e.data?.type === 'QUODSI_EMBED_TOKEN_REFRESH') {
+      // Fix #1 (REFRESH hop): tighten to messages that actually originate from
+      // our Studio iframe, not just any window on studioOrigin.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_EMBED_TOKEN_REFRESH'
+      ) {
         sendMessage(EnvelopeMessageType.REQUEST_STUDIO_TOKEN);
         armTimeout();
       }
@@ -57,6 +77,19 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
     };
   }, [sendMessage]);
 
+  // Fix #2: render a clear config error when studioOrigin is missing instead
+  // of silently embedding the dev origin (or producing a broken iframe).
+  if (!STUDIO_ORIGIN) {
+    return (
+      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', padding: 16, textAlign: 'center' }}>
+        Results viewer misconfigured (missing studioOrigin).
+      </div>
+    );
+  }
+
+  // TypeScript narrowing: STUDIO_ORIGIN is non-null from here.
+  const studioOrigin: string = STUDIO_ORIGIN;
+
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       {timedOut && !gotToken && (
@@ -67,7 +100,7 @@ export function EmbeddedStudioFrame({ studioPath }: Props) {
       <iframe
         ref={iframeRef}
         title="embedded-studio"
-        src={`${STUDIO_ORIGIN}${studioPath}?embed=1`}
+        src={`${studioOrigin}${studioPath}?embed=1`}
         style={{ height: '100%', width: '100%', border: 'none' }}
       />
     </div>

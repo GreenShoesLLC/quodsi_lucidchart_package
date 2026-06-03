@@ -28,6 +28,17 @@ export const App: React.FC<AppProps> = ({ panelType }) => {
 
   if (urlParams.get("view") === "studio-results") {
     const scenarioId = urlParams.get("scenarioId") || "";
+    // Fix #3b: guard against a missing scenarioId which would produce a broken
+    // URL like `/embed/scenarios//results`.
+    if (!scenarioId) {
+      return (
+        <MessageProvider initialPanelType="studio-results">
+          <div className="h-full w-full flex items-center justify-center">
+            <p style={{ textAlign: "center", padding: 16 }}>Missing scenarioId.</p>
+          </div>
+        </MessageProvider>
+      );
+    }
     return (
       <MessageProvider initialPanelType="studio-results">
         <div className="h-full w-full">
