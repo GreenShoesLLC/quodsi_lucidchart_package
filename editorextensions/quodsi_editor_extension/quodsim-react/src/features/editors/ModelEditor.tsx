@@ -11,6 +11,7 @@ import {
   EnvelopeBase,
   SimulationRunInfo,
   generateUUID,
+  SCENARIOS_DB_AUTHORITATIVE,
 } from "@quodsi/shared";
 import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, RefreshCw, Loader2 } from "lucide-react";
 import StatesEditor from "./StatesEditor";
@@ -39,8 +40,6 @@ import {
   type ModelInput,
 } from "../utils/modelEditorHelpers";
 import { ValidationDashboard } from "./ValidationDashboard";
-import { isScenariosModalEnabled } from '../../lib/scenariosModalFlag';
-
 import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
 // ============================================================================
@@ -120,7 +119,7 @@ const DEFAULT_RANDOM_SEED = 12345;
 /**
  * Focused button that opens the embedded-Studio scenarios modal.
  * Exported for unit testing. Rendered by ModelEditor when
- * isScenariosModalEnabled() is true (replaces the Scenarios tab).
+ * SCENARIOS_DB_AUTHORITATIVE is true (replaces the Scenarios tab).
  */
 export function ModelEditorScenariosButton({ documentId, pageId }: { documentId?: string; pageId?: string }) {
   const { openScenariosModal } = useSimulationRunSender();
@@ -799,7 +798,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // RENDER
   // ============================================================================
 
-  const scenariosModalEnabled = isScenariosModalEnabled();
+  const scenariosModalEnabled = SCENARIOS_DB_AUTHORITATIVE;
   const visibleTabs = scenariosModalEnabled ? TAB_CONFIG.filter((t) => t.id !== 'scenarios') : TAB_CONFIG;
 
   return (
