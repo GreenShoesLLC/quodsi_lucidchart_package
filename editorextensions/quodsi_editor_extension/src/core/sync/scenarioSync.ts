@@ -14,6 +14,8 @@ export interface UpsertAndSyncResult {
   syncedCount: number;
   /** replaced_id -> canonical server id, for callers that persist back to shape data */
   substitutions: Map<string, string>;
+  /** Server model id from UpsertModel's response (`model.id`), or null if absent. */
+  serverModelId: string | null;
 }
 
 /**
@@ -42,7 +44,7 @@ export async function upsertModelAndSyncScenarios(
       modelName: params.modelName,
     },
     asynchronous: false,
-  })) as { status?: number };
+  })) as { status?: number; json?: { model?: { id?: string } } };
   // Lucid's performDataAction returns { status, json } rather than throwing on
   // 4xx (see SaveAndSubmitSimulation handling). Surface a non-2xx as a throw so
   // callers' sync-failure paths (run-abort, SYNC_ALL_ERROR, panel-init log) fire.
@@ -50,9 +52,12 @@ export async function upsertModelAndSyncScenarios(
     throw new Error(`UpsertModel failed (HTTP ${upsertResult.status})`);
   }
 
+  const upsertBody = (upsertResult as { json?: { model?: { id?: string } } })?.json ?? (upsertResult as unknown as { model?: { id?: string } });
+  const serverModelId = upsertBody?.model?.id ?? null;
+
   const substitutions = new Map<string, string>();
   if (params.scenarios.length === 0) {
-    return { upserted: true, syncedCount: 0, substitutions };
+    return { upserted: true, syncedCount: 0, substitutions, serverModelId };
   }
 
   const result = (await LucidDataActionUtility.performDataAction(client, {
@@ -75,5 +80,5 @@ export async function upsertModelAndSyncScenarios(
       substitutions.set(s.replaced_id, s.id);
     }
   }
-  return { upserted: true, syncedCount: params.scenarios.length, substitutions };
+  return { upserted: true, syncedCount: params.scenarios.length, substitutions, serverModelId };
 }
