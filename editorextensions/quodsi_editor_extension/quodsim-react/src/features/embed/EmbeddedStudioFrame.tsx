@@ -59,6 +59,24 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         sendMessage(EnvelopeMessageType.REQUEST_STUDIO_TOKEN);
         armTimeout();
       }
+      // Catalog hop (response): host sends STUDIO_CATALOG -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.STUDIO_CATALOG) {
+        if (e.source !== window.parent) return;
+        const catalog = (e.data.data as { catalog?: unknown })?.catalog;
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_EMBED_MODEL_CATALOG', catalog }, studioOrigin,
+        );
+        return;
+      }
+      // Catalog hop (request): iframe asks for the catalog -> ask the host.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_EMBED_CATALOG_REQUEST'
+      ) {
+        sendMessage(EnvelopeMessageType.REQUEST_STUDIO_CATALOG);
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => {
