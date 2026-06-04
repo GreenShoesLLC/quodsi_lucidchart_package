@@ -14,7 +14,8 @@ import {
     EnvelopeBase,
     EnvelopeMessageType,
     isEnvelope,
-    QUODSI_ICON_BASE64
+    QUODSI_ICON_BASE64,
+    SCENARIOS_DB_AUTHORITATIVE,
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
@@ -22,7 +23,7 @@ import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers'
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
-import { upsertModelAndSyncScenarios } from '../core/sync/scenarioSync';
+import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from '../core/sync/scenarioSync';
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -337,7 +338,10 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         const scenarios = storageAdapter.getScenarios(currentPage);
 
         try {
-            const { substitutions } = await upsertModelAndSyncScenarios(this.client, {
+            const sync = SCENARIOS_DB_AUTHORITATIVE
+                ? upsertModelAndSeedScenariosIfEmpty
+                : upsertModelAndSyncScenarios;
+            const { substitutions } = await sync(this.client, {
                 documentId: document.id,
                 pageId: currentPage.id,
                 modelName: document.getTitle() || 'Untitled Model',
