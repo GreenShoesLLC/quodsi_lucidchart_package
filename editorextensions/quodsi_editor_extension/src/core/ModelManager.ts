@@ -25,10 +25,11 @@ import {
     ValidationSeverity,
     ValidationIssue,
     ensureBaselineScenario,
+    SCENARIOS_DB_AUTHORITATIVE,
 } from "@quodsi/shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
-import { upsertModelAndSyncScenarios } from "./sync/scenarioSync";
+import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -1738,7 +1739,10 @@ export class ModelManager {
         try {
             const client = ModelManager.getClient();
             const documentProxy = new DocumentProxy(client);
-            const { substitutions } = await upsertModelAndSyncScenarios(client, {
+            const sync = SCENARIOS_DB_AUTHORITATIVE
+                ? upsertModelAndSeedScenariosIfEmpty
+                : upsertModelAndSyncScenarios;
+            const { substitutions } = await sync(client, {
                 documentId: documentProxy.id,
                 pageId: page.id,
                 modelName: documentProxy.getTitle() || 'Untitled Model',
