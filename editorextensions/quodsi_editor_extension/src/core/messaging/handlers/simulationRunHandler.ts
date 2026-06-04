@@ -9,7 +9,6 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
-import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
 
 /**
@@ -148,8 +147,15 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_SCENARIOS_MODAL: upsert the model and sync scenarios, then
-   * open the embedded Studio scenarios editor at /embed/models/<id>/scenarios.
+   * Handle OPEN_SCENARIOS_MODAL: ensure the model row exists in quodsi_api
+   * (UpsertModel) to resolve its server id, then open the embedded Studio
+   * scenarios editor at /embed/models/<id>/scenarios.
+   *
+   * IMPORTANT: do NOT push Lucid shapeData scenarios here. Scenarios are
+   * DB-authoritative once the embed owns them — the editor reads/writes
+   * quodsi_api directly. SyncScenarios is replace-all, so pushing shapeData
+   * (which lacks scenarios created in the embed) would soft-delete them.
+   * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
   private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string };
@@ -161,12 +167,11 @@ export class SimulationRunHandler {
       return;
     }
     const documentProxy = new DocumentProxy(client);
-    const scenarios = new StorageAdapter().getScenarios(page);
     const { serverModelId } = await upsertModelAndSyncScenarios(client, {
       documentId: data.documentId,
       pageId: data.pageId,
       modelName: documentProxy.getTitle?.() || 'Untitled Model',
-      scenarios,
+      scenarios: [],
     });
     if (!serverModelId) {
       SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: UpsertModel returned no model id');
