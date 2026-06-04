@@ -1,5 +1,5 @@
 import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
-import { Viewport } from 'lucid-extension-sdk';
+import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -9,6 +9,8 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
+import { StorageAdapter } from '../../StorageAdapter';
+import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -74,6 +76,12 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenAnimationModal(msg);
         return true;
 
+      case EnvelopeMessageType.OPEN_SCENARIOS_MODAL:
+        SimulationRunHandler.handleOpenScenariosModal(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleOpenScenariosModal failed', e),
+        );
+        return true;
+
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
         return true;
@@ -130,6 +138,37 @@ export class SimulationRunHandler {
       title: 'Animation',
       studioPath: `/embed/animation/${data.scenarioId}`,
       fullScreenPath: `/animation/${data.scenarioId}`,
+    }).show();
+  }
+
+  /**
+   * Handle OPEN_SCENARIOS_MODAL: upsert the model and sync scenarios, then
+   * open the embedded Studio scenarios editor at /embed/models/<id>/scenarios.
+   */
+  private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { documentId?: string; pageId?: string };
+    const client = ModelManager.getClient();
+    const viewport = new Viewport(client);
+    const page = viewport.getCurrentPage();
+    if (!page || !data?.documentId || !data?.pageId) {
+      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: missing page/documentId/pageId');
+      return;
+    }
+    const documentProxy = new DocumentProxy(client);
+    const scenarios = new StorageAdapter().getScenarios(page);
+    const { serverModelId } = await upsertModelAndSyncScenarios(client, {
+      documentId: data.documentId,
+      pageId: data.pageId,
+      modelName: documentProxy.getTitle?.() || 'Untitled Model',
+      scenarios,
+    });
+    if (!serverModelId) {
+      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: UpsertModel returned no model id');
+      return;
+    }
+    new StudioEmbedModal(client, {
+      title: 'Scenarios',
+      studioPath: `/embed/models/${serverModelId}/scenarios`,
     }).show();
   }
 
