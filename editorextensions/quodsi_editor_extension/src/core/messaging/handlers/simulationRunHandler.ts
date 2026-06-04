@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/shared';
 import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
@@ -84,6 +84,12 @@ export class SimulationRunHandler {
 
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
+        return true;
+
+      case EnvelopeMessageType.REQUEST_STUDIO_CATALOG:
+        SimulationRunHandler.handleRequestStudioCatalog(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRequestStudioCatalog failed', e),
+        );
         return true;
 
       // Not a simulation run message
@@ -188,6 +194,32 @@ export class SimulationRunHandler {
       target: `${channel}-iframe`,
       version: '1.0',
       data: { token },
+    });
+  }
+
+  /**
+   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, reduce it to a
+   * read-only catalog, and send STUDIO_CATALOG back to the embed iframe.
+   */
+  private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
+    const modelManager = ModelManager.getInstance();
+    const modelDefinition = await modelManager.getModelDefinition();
+    if (!modelDefinition) {
+      SimulationRunHandler.logger.error('REQUEST_STUDIO_CATALOG: no model definition available');
+      return;
+    }
+    const serializer = ModelSerializerFactory.create(modelDefinition);
+    const serializedModel = serializer.serialize(modelDefinition);
+    const catalog = reduceModelToCatalog(serializedModel as unknown as Parameters<typeof reduceModelToCatalog>[0]);
+
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: `msg-${Date.now()}`,
+      type: EnvelopeMessageType.STUDIO_CATALOG,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { catalog },
     });
   }
 
