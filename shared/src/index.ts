@@ -142,3 +142,6 @@ export * from './quodsi-messaging';
 
 // Embed utilities
 export * from './embed/reduceModelToCatalog';
+
+// Config / feature flags
+export * from './config/scenariosMode';
