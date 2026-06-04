@@ -82,7 +82,9 @@ export class SimulationRunHandler {
         return true;
 
       case EnvelopeMessageType.RUN_SCENARIO:
-        SimulationRunHandler.handleRunScenario(msg);
+        SimulationRunHandler.handleRunScenario(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRunScenario failed', e),
+        );
         return true;
 
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
@@ -190,11 +192,10 @@ export class SimulationRunHandler {
   /**
    * Handle RUN_SCENARIO from the embedded Studio editor: delegate to the
    * existing live run path (Studio can't serialize the live model or produce
-   * the page SVG). Routes a synthetic MODEL_RUN_REQUEST through
-   * SimulationHandler.handleMessage. Run status flows back to the embed via its
-   * DB poll (Phase 3a); pre-dispatch feedback (quota/sync) is Phase 3b-feedback.
+   * the page SVG). Awaits the outcome from handleRunRequest and relays a
+   * RUN_SCENARIO_RESULT back to the embed iframe.
    */
-  private static handleRunScenario(msg: EnvelopeBase): void {
+  private static async handleRunScenario(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { scenarioId?: string; enableAnimation?: boolean };
     if (!data?.scenarioId) {
       SimulationRunHandler.logger.error('RUN_SCENARIO: missing scenarioId');
@@ -202,7 +203,7 @@ export class SimulationRunHandler {
     }
     const client = ModelManager.getClient();
     const documentId = new DocumentProxy(client).id;
-    SimulationHandler.handleMessage({
+    const outcome = await SimulationHandler.handleRunRequest({
       id: `run-scenario-${Date.now()}`,
       type: EnvelopeMessageType.MODEL_RUN_REQUEST,
       source: 'host',
@@ -213,6 +214,15 @@ export class SimulationRunHandler {
         scenarioDefinitionId: data.scenarioId,
         enableAnimation: data.enableAnimation ?? false,
       },
+    });
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: `run-result-${Date.now()}`,
+      type: EnvelopeMessageType.RUN_SCENARIO_RESULT,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { scenarioId: data.scenarioId, accepted: outcome.accepted, error: outcome.error },
     });
   }
 
