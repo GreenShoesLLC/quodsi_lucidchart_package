@@ -8,7 +8,8 @@ import {
   generateUUID,
   QUODSIM_VERSION,
   parsePageTranslate,
-  offsetSerializedModelCoordinates
+  offsetSerializedModelCoordinates,
+  SCENARIOS_DB_AUTHORITATIVE
 } from '@quodsi/shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
@@ -22,7 +23,7 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
-import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation-related messages
@@ -401,7 +402,10 @@ export class SimulationHandler {
       try {
         const storageAdapter = new StorageAdapter();
         const scenarios = storageAdapter.getScenarios(activePageProxy);
-        const { substitutions } = await upsertModelAndSyncScenarios(client, {
+        const sync = SCENARIOS_DB_AUTHORITATIVE
+          ? upsertModelAndSeedScenariosIfEmpty
+          : upsertModelAndSyncScenarios;
+        const { substitutions } = await sync(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
           modelName: documentProxy.getTitle() || 'Untitled Model',
