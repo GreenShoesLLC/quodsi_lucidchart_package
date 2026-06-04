@@ -28,18 +28,20 @@ export interface EmbedModelCatalog {
   entities: Array<{ id: string; name: string }>;
 }
 
-/** Input type: all fields are optional; connectors may appear at the top level
- *  (they live inside activities in ISerializedModel but are often passed flat
- *  for convenience from the extension's model store). */
-type ModelInput = Partial<ISerializedModel> & {
-  connectors?: Array<{ id: string; name: string; [key: string]: unknown }>;
-};
+type ModelInput = Partial<ISerializedModel>;
 
 function idName(x: { id: string; name: string }): { id: string; name: string } {
   return { id: x.id, name: x.name };
 }
 
 export function reduceModelToCatalog(model: ModelInput): EmbedModelCatalog {
+  const connectorMap = new Map<string, { id: string; name: string }>();
+  for (const a of model.activities ?? []) {
+    for (const c of (a as { connectors?: Array<{ id: string; name: string }> }).connectors ?? []) {
+      if (c && c.id && !connectorMap.has(c.id)) connectorMap.set(c.id, { id: c.id, name: c.name });
+    }
+  }
+
   return {
     activities: (model.activities ?? []).map((a) => ({
       id: a.id,
@@ -72,7 +74,7 @@ export function reduceModelToCatalog(model: ModelInput): EmbedModelCatalog {
         ? { periodIntervalDuration: g.generationConfig.periodIntervalDuration }
         : undefined,
     })),
-    connectors: (model.connectors ?? []).map(idName),
+    connectors: Array.from(connectorMap.values()),
     entities: (model.entities ?? []).map(idName),
   };
 }
