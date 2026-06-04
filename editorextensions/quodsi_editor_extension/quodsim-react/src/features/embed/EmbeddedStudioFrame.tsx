@@ -77,6 +77,18 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         sendMessage(EnvelopeMessageType.REQUEST_STUDIO_CATALOG);
         return;
       }
+      // Run delegation: iframe asks to run a scenario -> forward to the extension.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_RUN_SCENARIO'
+      ) {
+        sendMessage(EnvelopeMessageType.RUN_SCENARIO, {
+          scenarioId: (e.data as { scenarioId?: string }).scenarioId,
+          enableAnimation: (e.data as { enableAnimation?: boolean }).enableAnimation ?? false,
+        });
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => {
