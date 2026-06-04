@@ -99,6 +99,7 @@ export enum EnvelopeMessageType {
 
   // Embedded scenarios editor — run delegation (Phase 3b)
   RUN_SCENARIO = "RUN_SCENARIO",
+  RUN_SCENARIO_RESULT = "RUN_SCENARIO_RESULT",
 
   // DevTools
   DEVTOOLS_SWIMLANE_SCAN_REQUEST = "DEVTOOLS_SWIMLANE_SCAN_REQUEST",
