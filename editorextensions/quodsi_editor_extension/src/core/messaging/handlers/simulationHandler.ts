@@ -25,6 +25,11 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from '../../sync/scenarioSync';
 
+export interface RunSubmitOutcome {
+  accepted: boolean;
+  error?: string;
+}
+
 /**
  * Handler for simulation-related messages
  */
@@ -97,7 +102,7 @@ export class SimulationHandler {
    * @param msg MODEL_RUN_REQUEST message
    * @returns True indicating message was handled
    */
-  private static async handleRunRequest(msg: EnvelopeBase): Promise<boolean> {
+  public static async handleRunRequest(msg: EnvelopeBase): Promise<RunSubmitOutcome> {
     const data = msg.data as {
       documentId: string;
       scenarioName?: string;
@@ -153,8 +158,12 @@ export class SimulationHandler {
           error: 'Simulation already running for this document. Please wait for it to complete.'
         }
       });
-      return true;
+      return { accepted: false, error: 'Simulation already running for this document. Please wait for it to complete.' };
     }
+
+    // Outcome locals — set below in success/error paths, returned after try/catch.
+    let runAccepted = false;
+    let runError: string | undefined;
 
     try {
       // Get necessary instances
@@ -193,7 +202,7 @@ export class SimulationHandler {
             }
           });
 
-          return true;
+          return { accepted: false, error: 'Editor client not initialized. Please try again.' };
         }
       }
       
@@ -226,9 +235,9 @@ export class SimulationHandler {
           }
         });
 
-        return true;
+        return { accepted: false, error: 'No active page found' };
       }
-      
+
       // Ensure the model is loaded for the current page
       console.log('[SimulationHandler] Ensuring model is loaded for current page...');
       try {
@@ -262,8 +271,8 @@ export class SimulationHandler {
                 error: 'Current page is not a Quodsi model. Please convert it first.'
               }
             });
-            
-            return true;
+
+            return { accepted: false, error: 'Current page is not a Quodsi model. Please convert it first.' };
           }
           
           // Try to initialize the model for the current page
@@ -300,7 +309,7 @@ export class SimulationHandler {
           }
         });
 
-        return true;
+        return { accepted: false, error: 'No model definition found. Please ensure the page contains Quodsi model elements.' };
       }
 
       // Serialize the model
@@ -448,7 +457,7 @@ export class SimulationHandler {
             error: "Couldn't sync the model before running. Check your sign-in / connection and try again.",
           },
         });
-        return true; // do not submit into a downstream 404
+        return { accepted: false, error: "Couldn't sync the model before running. Check your sign-in / connection and try again." }; // do not submit into a downstream 404
       }
 
       // Submit to data connector
@@ -532,6 +541,8 @@ export class SimulationHandler {
           }
         });
 
+        runAccepted = true;
+
         // NOTE: Pre-flight checks in SaveAndSubmitSimulation catch infrastructure errors immediately
         // (missing app package, pool not configured, etc.)
         // Status updates will come from ListScenarios reconciliation (called by ScenarioEditor every 10s)
@@ -585,6 +596,7 @@ export class SimulationHandler {
             errorType: wrappedStatus === 402 ? 'ENTITLEMENT_EXCEEDED' : undefined,
           }
         });
+        runError = errorMessage;
       }
 
     } catch (error) {
@@ -613,9 +625,10 @@ export class SimulationHandler {
           errorDetails: error instanceof Error ? error.stack : undefined
         }
       });
+      runError = `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`;
     }
-    
-    return true;
+
+    return { accepted: runAccepted, error: runError };
   }
 
   /**
