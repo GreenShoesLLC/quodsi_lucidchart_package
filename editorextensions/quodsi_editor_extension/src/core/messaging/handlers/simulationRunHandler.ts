@@ -81,6 +81,10 @@ export class SimulationRunHandler {
         );
         return true;
 
+      case EnvelopeMessageType.RUN_SCENARIO:
+        SimulationRunHandler.handleRunScenario(msg);
+        return true;
+
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
         return true;
@@ -181,6 +185,35 @@ export class SimulationRunHandler {
       title: 'Scenarios',
       studioPath: `/embed/models/${serverModelId}/scenarios`,
     }).show();
+  }
+
+  /**
+   * Handle RUN_SCENARIO from the embedded Studio editor: delegate to the
+   * existing live run path (Studio can't serialize the live model or produce
+   * the page SVG). Routes a synthetic MODEL_RUN_REQUEST through
+   * SimulationHandler.handleMessage. Run status flows back to the embed via its
+   * DB poll (Phase 3a); pre-dispatch feedback (quota/sync) is Phase 3b-feedback.
+   */
+  private static handleRunScenario(msg: EnvelopeBase): void {
+    const data = msg.data as { scenarioId?: string; enableAnimation?: boolean };
+    if (!data?.scenarioId) {
+      SimulationRunHandler.logger.error('RUN_SCENARIO: missing scenarioId');
+      return;
+    }
+    const client = ModelManager.getClient();
+    const documentId = new DocumentProxy(client).id;
+    SimulationHandler.handleMessage({
+      id: `run-scenario-${Date.now()}`,
+      type: EnvelopeMessageType.MODEL_RUN_REQUEST,
+      source: 'host',
+      target: 'model-iframe',
+      version: '1.0',
+      data: {
+        documentId,
+        scenarioDefinitionId: data.scenarioId,
+        enableAnimation: data.enableAnimation ?? false,
+      },
+    });
   }
 
   /**
