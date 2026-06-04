@@ -68,6 +68,16 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         );
         return;
       }
+      // Run result (response): host sends RUN_SCENARIO_RESULT -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.RUN_SCENARIO_RESULT) {
+        if (e.source !== window.parent) return;
+        const d = e.data.data as { scenarioId?: string; accepted?: boolean; error?: string };
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_RUN_SCENARIO_RESULT', scenarioId: d?.scenarioId, accepted: d?.accepted, error: d?.error },
+          studioOrigin,
+        );
+        return;
+      }
       // Catalog hop (request): iframe asks for the catalog -> ask the host.
       if (
         e.origin === studioOrigin &&
