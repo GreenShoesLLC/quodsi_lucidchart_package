@@ -93,15 +93,30 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
     /**
      * Called when the modal iframe is closed.
      * Resets the channel so the next modal gets a clean slate.
+     *
+     * Identity guard: only tear down the channel if WE still own it. The
+     * 'studio-embed' (and 'results') channel is a shared singleton on the
+     * router, and Lucid fires frameClosed asynchronously off iframe unload —
+     * it can be deferred. On a close-then-reopen, this modal's late frameClosed
+     * could otherwise clobber the *next* modal's already-registered, already-
+     * ready channel (ready=false, panel=undefined, queue cleared), stranding
+     * the host's STUDIO_TOKEN reply on a dead channel with no further
+     * REACT_APP_READY to flush it — the token never reaches the iframe and the
+     * embed shows "Couldn't load the results viewer …" after the 10s timeout.
+     * Skipping the wipe when another modal has taken over avoids that race.
      */
     protected frameClosed(): void {
         this.debug.log(`frameClosed - cleaning up ${this.channelRole} channel`);
         const channelManager = router.getChannelManager();
         const channel = channelManager.getChannel(this.channelRole);
-        if (channel) {
+        if (channel && channel.panel === this) {
             channel.ready = false;
             channel.panel = undefined;
             channel.queue.length = 0;
+        } else if (channel) {
+            this.debug.log(
+                `frameClosed - ${this.channelRole} channel already owned by another modal; skipping teardown`
+            );
         }
         super.frameClosed();
     }
