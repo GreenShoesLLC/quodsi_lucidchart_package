@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -11,6 +11,7 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
+import { PreferencesModal } from "../shared/PreferencesModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
 import { ScenariosLaunchButton } from "./ScenariosLaunchButton";
 
@@ -47,6 +48,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
+  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false);
   const [devToolsModalOpen, setDevToolsModalOpen] = useState(false);
   const [devToolsEnabled, setDevToolsEnabled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -182,6 +184,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
               Developer Tools
             </button>
           )}
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              setPreferencesModalOpen(true);
+            }}
+            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+          >
+            <Sliders className="w-3 h-3 text-gray-500" />
+            Preferences
+          </button>
           <button
             onClick={() => {
               setMenuOpen(false);
@@ -342,6 +354,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       <AboutModal
         isOpen={aboutModalOpen}
         onClose={() => setAboutModalOpen(false)}
+      />
+      <PreferencesModal
+        isOpen={preferencesModalOpen}
+        onClose={() => setPreferencesModalOpen(false)}
       />
       <DevToolsModal
         isOpen={devToolsModalOpen}

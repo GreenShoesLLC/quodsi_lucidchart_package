@@ -1,4 +1,5 @@
 import { EditorClient } from 'lucid-extension-sdk';
+import { ModalSize, DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/shared';
 import { RoutingModal } from './RoutingModal';
 import { getStudioBaseUrl } from '../core/messaging/handlers/authHandler';
 
@@ -11,7 +12,7 @@ import { getStudioBaseUrl } from '../core/messaging/handlers/authHandler';
 export class StudioEmbedModal extends RoutingModal {
   constructor(
     client: EditorClient,
-    opts: { title: string; studioPath: string; fullScreenPath?: string },
+    opts: { title: string; studioPath: string; fullScreenPath?: string; modalSize?: ModalSize },
   ) {
     const studioOrigin = getStudioBaseUrl();
     let url =
@@ -23,6 +24,11 @@ export class StudioEmbedModal extends RoutingModal {
     if (opts.fullScreenPath) {
       url += `&fullScreenPath=${encodeURIComponent(opts.fullScreenPath)}`;
     }
-    super(client, { title: opts.title, url, width: 1000, height: 700 }, 'studio-embed');
+    const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
+    const sizeOpts =
+      size === 'fullscreen'
+        ? { fullScreen: true as const }
+        : MODAL_SIZE_DIMENSIONS[size];
+    super(client, { title: opts.title, url, ...sizeOpts }, 'studio-embed');
   }
 }

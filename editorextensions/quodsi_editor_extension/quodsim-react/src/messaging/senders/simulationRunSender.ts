@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { EnvelopeMessageType } from '@quodsi/shared';
 import { useSender } from './useSender';
 import { isEmbeddedResultsEnabled } from '../../lib/embeddedResultsFlag';
+import { getModalSizePref } from '../../lib/modalSizePref';
 
 /**
  * Custom hook that provides typed functions for sending simulation run-related messages
@@ -110,6 +111,7 @@ export function useSimulationRunSender() {
       scenarioId,
       documentId,
       useEmbeddedStudio: isEmbeddedResultsEnabled(),
+      modalSize: getModalSizePref(),
     });
   }, [send]);
 
@@ -119,7 +121,7 @@ export function useSimulationRunSender() {
    * @param scenarioId Scenario ID to view animation for
    */
   const openAnimationModal = useCallback((scenarioId: string) => {
-    send(EnvelopeMessageType.OPEN_ANIMATION_MODAL, { scenarioId });
+    send(EnvelopeMessageType.OPEN_ANIMATION_MODAL, { scenarioId, modalSize: getModalSizePref() });
   }, [send]);
 
   /**
@@ -129,7 +131,7 @@ export function useSimulationRunSender() {
    * @param pageId Page ID
    */
   const openScenariosModal = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.OPEN_SCENARIOS_MODAL, { documentId, pageId });
+    send(EnvelopeMessageType.OPEN_SCENARIOS_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
 
   return {

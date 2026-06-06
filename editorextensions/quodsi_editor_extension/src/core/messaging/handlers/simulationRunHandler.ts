@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/shared';
 import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
@@ -120,7 +120,7 @@ export class SimulationRunHandler {
    * true, otherwise fall back to the existing ResultsModal.
    */
   private static handleOpenResultsModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean };
+    const data = msg.data as { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean; modalSize?: ModalSize };
     if (!data?.scenarioId) return;
     const client = ModelManager.getClient();
     if (data.useEmbeddedStudio) {
@@ -128,6 +128,7 @@ export class SimulationRunHandler {
       new StudioEmbedModal(client, {
         title: 'Simulation Results',
         studioPath: `/embed/scenarios/${data.scenarioId}/results`,
+        modalSize: data.modalSize,
       }).show();
       return;
     }
@@ -141,7 +142,7 @@ export class SimulationRunHandler {
    * standalone /animation/:scenarioId tab.
    */
   private static handleOpenAnimationModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string };
+    const data = msg.data as { scenarioId: string; modalSize?: ModalSize };
     if (!data?.scenarioId) return;
     SimulationRunHandler.logger.log('Opening embedded Studio animation modal', { scenarioId: data.scenarioId });
     const client = ModelManager.getClient();
@@ -149,6 +150,7 @@ export class SimulationRunHandler {
       title: 'Animation',
       studioPath: `/embed/animation/${data.scenarioId}`,
       fullScreenPath: `/animation/${data.scenarioId}`,
+      modalSize: data.modalSize,
     }).show();
   }
 
@@ -164,7 +166,7 @@ export class SimulationRunHandler {
    * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
   private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId?: string; pageId?: string };
+    const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
     const viewport = new Viewport(client);
     const page = viewport.getCurrentPage();
@@ -186,6 +188,7 @@ export class SimulationRunHandler {
     new StudioEmbedModal(client, {
       title: 'Scenarios',
       studioPath: `/embed/models/${serverModelId}/scenarios`,
+      modalSize: data.modalSize,
     }).show();
   }
 

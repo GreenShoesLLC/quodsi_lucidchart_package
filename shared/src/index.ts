@@ -145,3 +145,4 @@ export * from './embed/reduceModelToCatalog';
 
 // Config / feature flags
 export * from './config/scenariosMode';
+export * from './config/modalSize';

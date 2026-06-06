@@ -32,7 +32,10 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      */
     protected constructor(
         client: EditorClient,
-        options: { title: string; url: string; width: number; height: number },
+        // Fixed-size or fullscreen — the SDK's ModalConfig treats these as a
+        // mutually exclusive union, so subclasses pass one shape or the other.
+        options: { title: string; url: string } &
+            ({ width: number; height: number } | { fullScreen: true }),
         private readonly channelRole: PanelRole
     ) {
         super(client, options);
