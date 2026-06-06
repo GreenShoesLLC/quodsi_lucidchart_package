@@ -8,7 +8,8 @@ import {
   generateUUID,
   QUODSIM_VERSION,
   parsePageTranslate,
-  offsetSerializedModelCoordinates
+  offsetSerializedModelCoordinates,
+  SCENARIOS_DB_AUTHORITATIVE
 } from '@quodsi/shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
@@ -22,7 +23,12 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
-import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from '../../sync/scenarioSync';
+
+export interface RunSubmitOutcome {
+  accepted: boolean;
+  error?: string;
+}
 
 /**
  * Handler for simulation-related messages
@@ -96,7 +102,7 @@ export class SimulationHandler {
    * @param msg MODEL_RUN_REQUEST message
    * @returns True indicating message was handled
    */
-  private static async handleRunRequest(msg: EnvelopeBase): Promise<boolean> {
+  public static async handleRunRequest(msg: EnvelopeBase): Promise<RunSubmitOutcome> {
     const data = msg.data as {
       documentId: string;
       scenarioName?: string;
@@ -105,8 +111,15 @@ export class SimulationHandler {
       parameters?: Record<string, unknown>;
       scenarioDefinitionId?: string;
       enableAnimation?: boolean;
+      // Embed-originated runs (Studio runner via RUN_SCENARIO delegation) manage
+      // their own lifecycle (backend + Studio 10s poll) and must NOT use the legacy
+      // in-memory activeJobs concurrency tracker: it's never terminalized in the embed
+      // flow (the quodsim-react ScenarioEditor reconciliation is hidden), which would
+      // otherwise wedge runs to "once per page refresh".
+      fromEmbed?: boolean;
     };
-    
+    const fromEmbed = !!data.fromEmbed;
+
     console.log('[SimulationHandler] Simulation run requested', {
       documentId: data.documentId,
       scenario: data.scenarioName || 'Default'
@@ -132,7 +145,7 @@ export class SimulationHandler {
                     job.status === SimulationStatus.VALIDATING ||
                     job.status === SimulationStatus.QUEUED));
 
-    if (existingJob) {
+    if (existingJob && !fromEmbed) {
       console.warn('[SimulationHandler] Simulation already running for this document');
       router.send('model', {
         id: msg.id,
@@ -152,8 +165,12 @@ export class SimulationHandler {
           error: 'Simulation already running for this document. Please wait for it to complete.'
         }
       });
-      return true;
+      return { accepted: false, error: 'Simulation already running for this document. Please wait for it to complete.' };
     }
+
+    // Outcome locals — set below in success/error paths, returned after try/catch.
+    let runAccepted = false;
+    let runError: string | undefined;
 
     try {
       // Get necessary instances
@@ -192,7 +209,7 @@ export class SimulationHandler {
             }
           });
 
-          return true;
+          return { accepted: false, error: 'Editor client not initialized. Please try again.' };
         }
       }
       
@@ -225,9 +242,9 @@ export class SimulationHandler {
           }
         });
 
-        return true;
+        return { accepted: false, error: 'No active page found' };
       }
-      
+
       // Ensure the model is loaded for the current page
       console.log('[SimulationHandler] Ensuring model is loaded for current page...');
       try {
@@ -261,8 +278,8 @@ export class SimulationHandler {
                 error: 'Current page is not a Quodsi model. Please convert it first.'
               }
             });
-            
-            return true;
+
+            return { accepted: false, error: 'Current page is not a Quodsi model. Please convert it first.' };
           }
           
           // Try to initialize the model for the current page
@@ -299,7 +316,7 @@ export class SimulationHandler {
           }
         });
 
-        return true;
+        return { accepted: false, error: 'No model definition found. Please ensure the page contains Quodsi model elements.' };
       }
 
       // Serialize the model
@@ -381,8 +398,10 @@ export class SimulationHandler {
         }
       });
 
-      // Create job tracking
-      SimulationHandler.activeJobs.set(jobId, {
+      // Create job tracking. Skipped for embed runs (see fromEmbed): they're tracked
+      // server-side + by the Studio poll, so registering here only leaves a stale
+      // QUEUED entry that would block the next run until a page refresh.
+      if (!fromEmbed) SimulationHandler.activeJobs.set(jobId, {
         jobId,
         documentId: data.documentId,
         scenarioId,
@@ -401,7 +420,10 @@ export class SimulationHandler {
       try {
         const storageAdapter = new StorageAdapter();
         const scenarios = storageAdapter.getScenarios(activePageProxy);
-        const { substitutions } = await upsertModelAndSyncScenarios(client, {
+        const sync = SCENARIOS_DB_AUTHORITATIVE
+          ? upsertModelAndSeedScenariosIfEmpty
+          : upsertModelAndSyncScenarios;
+        const { substitutions } = await sync(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
           modelName: documentProxy.getTitle() || 'Untitled Model',
@@ -444,7 +466,7 @@ export class SimulationHandler {
             error: "Couldn't sync the model before running. Check your sign-in / connection and try again.",
           },
         });
-        return true; // do not submit into a downstream 404
+        return { accepted: false, error: "Couldn't sync the model before running. Check your sign-in / connection and try again." }; // do not submit into a downstream 404
       }
 
       // Submit to data connector
@@ -528,6 +550,8 @@ export class SimulationHandler {
           }
         });
 
+        runAccepted = true;
+
         // NOTE: Pre-flight checks in SaveAndSubmitSimulation catch infrastructure errors immediately
         // (missing app package, pool not configured, etc.)
         // Status updates will come from ListScenarios reconciliation (called by ScenarioEditor every 10s)
@@ -581,6 +605,7 @@ export class SimulationHandler {
             errorType: wrappedStatus === 402 ? 'ENTITLEMENT_EXCEEDED' : undefined,
           }
         });
+        runError = errorMessage;
       }
 
     } catch (error) {
@@ -609,9 +634,10 @@ export class SimulationHandler {
           errorDetails: error instanceof Error ? error.stack : undefined
         }
       });
+      runError = `Failed to start simulation: ${error instanceof Error ? error.message : String(error)}`;
     }
-    
-    return true;
+
+    return { accepted: runAccepted, error: runError };
   }
 
   /**

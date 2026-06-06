@@ -11,6 +11,7 @@ import {
   EnvelopeBase,
   SimulationRunInfo,
   generateUUID,
+  SCENARIOS_DB_AUTHORITATIVE,
 } from "@quodsi/shared";
 import { Settings, Hash, PlaySquare, Info, Users, AlertTriangle, Plus, RefreshCw, Loader2 } from "lucide-react";
 import StatesEditor from "./StatesEditor";
@@ -39,7 +40,6 @@ import {
   type ModelInput,
 } from "../utils/modelEditorHelpers";
 import { ValidationDashboard } from "./ValidationDashboard";
-
 import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
 
 // ============================================================================
@@ -115,6 +115,27 @@ const TAB_CONFIG = [
  */
 const DEFAULT_RANDOM_SEED = 12345;
 
+
+/**
+ * Focused button that opens the embedded-Studio scenarios modal.
+ * Exported for unit testing. Rendered by ModelEditor when
+ * SCENARIOS_DB_AUTHORITATIVE is true (replaces the Scenarios tab).
+ */
+export function ModelEditorScenariosButton({ documentId, pageId }: { documentId?: string; pageId?: string }) {
+  const { openScenariosModal } = useSimulationRunSender();
+  return (
+    <button
+      type="button"
+      data-testid="open-scenarios-modal"
+      title="Open the scenarios editor"
+      onClick={() => openScenariosModal(documentId ?? '', pageId ?? '')}
+      className="px-3 py-2 border-b-2 border-transparent text-gray-600 hover:text-blue-600"
+    >
+      <PlaySquare className="w-4 h-4 mr-1 inline" />
+      Scenarios
+    </button>
+  );
+}
 
 /**
  * Maps SimulationStatus string values to RunState enum values.
@@ -777,11 +798,14 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // RENDER
   // ============================================================================
 
+  const scenariosModalEnabled = SCENARIOS_DB_AUTHORITATIVE;
+  const visibleTabs = scenariosModalEnabled ? TAB_CONFIG.filter((t) => t.id !== 'scenarios') : TAB_CONFIG;
+
   return (
     <div className="flex flex-col bg-white">
       <div className="border-b bg-gray-50">
         <div className="flex">
-          {TAB_CONFIG.map((tab) => {
+          {visibleTabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
@@ -799,6 +823,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               </button>
             );
           })}
+          {scenariosModalEnabled && (
+            <ModelEditorScenariosButton
+              documentId={selection.documentContext?.documentId}
+              pageId={selection.documentContext?.pageId}
+            />
+          )}
         </div>
       </div>
 
@@ -1086,7 +1116,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             }}
           />
       )}
-      {activeTab === "scenarios" && (
+      {!scenariosModalEnabled && activeTab === "scenarios" && (
         <ScenariosAndRunsPanel
           documentId={selection.documentContext?.documentId}
           pageId={selection.documentContext?.pageId}

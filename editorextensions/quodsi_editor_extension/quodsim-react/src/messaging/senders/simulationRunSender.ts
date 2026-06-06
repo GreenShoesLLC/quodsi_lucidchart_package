@@ -122,6 +122,16 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_ANIMATION_MODAL, { scenarioId });
   }, [send]);
 
+  /**
+   * Send an OPEN_SCENARIOS_MODAL message to open the embedded-Studio Scenarios modal
+   *
+   * @param documentId Document ID
+   * @param pageId Page ID
+   */
+  const openScenariosModal = useCallback((documentId: string, pageId: string) => {
+    send(EnvelopeMessageType.OPEN_SCENARIOS_MODAL, { documentId, pageId });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
@@ -131,5 +141,6 @@ export function useSimulationRunSender() {
     getCrossRepBatchData,
     openResultsModal,
     openAnimationModal,
+    openScenariosModal,
   };
 }

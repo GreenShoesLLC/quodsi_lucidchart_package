@@ -1,5 +1,5 @@
-import { EnvelopeBase, EnvelopeMessageType, QUODSIM_VERSION } from '@quodsi/shared';
-import { Viewport } from 'lucid-extension-sdk';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/shared';
+import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -9,6 +9,7 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
+import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -74,8 +75,26 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleOpenAnimationModal(msg);
         return true;
 
+      case EnvelopeMessageType.OPEN_SCENARIOS_MODAL:
+        SimulationRunHandler.handleOpenScenariosModal(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleOpenScenariosModal failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.RUN_SCENARIO:
+        SimulationRunHandler.handleRunScenario(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRunScenario failed', e),
+        );
+        return true;
+
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
         SimulationRunHandler.handleRequestStudioToken(msg);
+        return true;
+
+      case EnvelopeMessageType.REQUEST_STUDIO_CATALOG:
+        SimulationRunHandler.handleRequestStudioCatalog(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRequestStudioCatalog failed', e),
+        );
         return true;
 
       // Not a simulation run message
@@ -134,6 +153,85 @@ export class SimulationRunHandler {
   }
 
   /**
+   * Handle OPEN_SCENARIOS_MODAL: ensure the model row exists in quodsi_api
+   * (UpsertModel) to resolve its server id, then open the embedded Studio
+   * scenarios editor at /embed/models/<id>/scenarios.
+   *
+   * IMPORTANT: do NOT push Lucid shapeData scenarios here. Scenarios are
+   * DB-authoritative once the embed owns them — the editor reads/writes
+   * quodsi_api directly. SyncScenarios is replace-all, so pushing shapeData
+   * (which lacks scenarios created in the embed) would soft-delete them.
+   * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
+   */
+  private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { documentId?: string; pageId?: string };
+    const client = ModelManager.getClient();
+    const viewport = new Viewport(client);
+    const page = viewport.getCurrentPage();
+    if (!page || !data?.documentId || !data?.pageId) {
+      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: missing page/documentId/pageId');
+      return;
+    }
+    const documentProxy = new DocumentProxy(client);
+    const { serverModelId } = await upsertModelAndSyncScenarios(client, {
+      documentId: data.documentId,
+      pageId: data.pageId,
+      modelName: documentProxy.getTitle?.() || 'Untitled Model',
+      scenarios: [],
+    });
+    if (!serverModelId) {
+      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: UpsertModel returned no model id');
+      return;
+    }
+    new StudioEmbedModal(client, {
+      title: 'Scenarios',
+      studioPath: `/embed/models/${serverModelId}/scenarios`,
+    }).show();
+  }
+
+  /**
+   * Handle RUN_SCENARIO from the embedded Studio editor: delegate to the
+   * existing live run path (Studio can't serialize the live model or produce
+   * the page SVG). Awaits the outcome from handleRunRequest and relays a
+   * RUN_SCENARIO_RESULT back to the embed iframe.
+   */
+  private static async handleRunScenario(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { scenarioId?: string; enableAnimation?: boolean };
+    if (!data?.scenarioId) {
+      SimulationRunHandler.logger.error('RUN_SCENARIO: missing scenarioId');
+      return;
+    }
+    const client = ModelManager.getClient();
+    const documentId = new DocumentProxy(client).id;
+    const outcome = await SimulationHandler.handleRunRequest({
+      id: `run-scenario-${Date.now()}`,
+      type: EnvelopeMessageType.MODEL_RUN_REQUEST,
+      source: 'host',
+      target: 'model-iframe',
+      version: '1.0',
+      data: {
+        documentId,
+        scenarioDefinitionId: data.scenarioId,
+        enableAnimation: data.enableAnimation ?? false,
+        // Embed runs manage their own lifecycle (backend + Studio 10s poll); tell
+        // handleRunRequest to skip the legacy in-memory activeJobs concurrency
+        // tracker, which never terminalizes here and would wedge runs to one per
+        // page refresh.
+        fromEmbed: true,
+      },
+    });
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: `run-result-${Date.now()}`,
+      type: EnvelopeMessageType.RUN_SCENARIO_RESULT,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { scenarioId: data.scenarioId, accepted: outcome.accepted, error: outcome.error },
+    });
+  }
+
+  /**
    * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token back to
    * the 'studio-embed' embed iframe. Routing is derived from msg.source so
    * a single handler serves the channel.
@@ -149,6 +247,32 @@ export class SimulationRunHandler {
       target: `${channel}-iframe`,
       version: '1.0',
       data: { token },
+    });
+  }
+
+  /**
+   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, reduce it to a
+   * read-only catalog, and send STUDIO_CATALOG back to the embed iframe.
+   */
+  private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
+    const modelManager = ModelManager.getInstance();
+    const modelDefinition = await modelManager.getModelDefinition();
+    if (!modelDefinition) {
+      SimulationRunHandler.logger.error('REQUEST_STUDIO_CATALOG: no model definition available');
+      return;
+    }
+    const serializer = ModelSerializerFactory.create(modelDefinition);
+    const serializedModel = serializer.serialize(modelDefinition);
+    const catalog = reduceModelToCatalog(serializedModel as unknown as Parameters<typeof reduceModelToCatalog>[0]);
+
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    router.send(channel, {
+      id: `msg-${Date.now()}`,
+      type: EnvelopeMessageType.STUDIO_CATALOG,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { catalog },
     });
   }
 

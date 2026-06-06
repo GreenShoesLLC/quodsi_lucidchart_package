@@ -22,6 +22,9 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
   const [gotToken, setGotToken] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
   const timerRef = useRef<number | null>(null);
+  // Re-arm safety: when the host replies with an empty token (auth still
+  // establishing), poll for it instead of waiting out the full timeout.
+  const retryRef = useRef<number | null>(null);
 
   // All hooks must come before any conditional return (Rules of Hooks).
   useEffect(() => {
@@ -40,12 +43,29 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
       if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.STUDIO_TOKEN) {
         if (e.source !== window.parent) return;
         const token = (e.data.data as { token?: string })?.token;
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: 'QUODSI_EMBED_TOKEN', token }, studioOrigin,
-        );
         if (token) {
+          iframeRef.current?.contentWindow?.postMessage(
+            { type: 'QUODSI_EMBED_TOKEN', token }, studioOrigin,
+          );
           setGotToken(true);
           if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+          if (retryRef.current !== null) {
+            window.clearTimeout(retryRef.current);
+            retryRef.current = null;
+          }
+        } else {
+          // Host had no cached token yet (auth still establishing on a cold
+          // load). Re-request shortly instead of forwarding an empty token and
+          // silently waiting out the timeout. The armTimeout() deadline still
+          // governs ultimate failure, so this polls at most until then — it
+          // cannot loop forever. Guard on retryRef so we keep a single pending
+          // retry regardless of how many empty replies arrive.
+          if (retryRef.current === null) {
+            retryRef.current = window.setTimeout(() => {
+              retryRef.current = null;
+              sendMessage(EnvelopeMessageType.REQUEST_STUDIO_TOKEN);
+            }, 1000);
+          }
         }
         return;
       }
@@ -59,11 +79,52 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         sendMessage(EnvelopeMessageType.REQUEST_STUDIO_TOKEN);
         armTimeout();
       }
+      // Catalog hop (response): host sends STUDIO_CATALOG -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.STUDIO_CATALOG) {
+        if (e.source !== window.parent) return;
+        const catalog = (e.data.data as { catalog?: unknown })?.catalog;
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_EMBED_MODEL_CATALOG', catalog }, studioOrigin,
+        );
+        return;
+      }
+      // Run result (response): host sends RUN_SCENARIO_RESULT -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.RUN_SCENARIO_RESULT) {
+        if (e.source !== window.parent) return;
+        const d = e.data.data as { scenarioId?: string; accepted?: boolean; error?: string };
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_RUN_SCENARIO_RESULT', scenarioId: d?.scenarioId, accepted: d?.accepted, error: d?.error },
+          studioOrigin,
+        );
+        return;
+      }
+      // Catalog hop (request): iframe asks for the catalog -> ask the host.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_EMBED_CATALOG_REQUEST'
+      ) {
+        sendMessage(EnvelopeMessageType.REQUEST_STUDIO_CATALOG);
+        return;
+      }
+      // Run delegation: iframe asks to run a scenario -> forward to the extension.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_RUN_SCENARIO'
+      ) {
+        sendMessage(EnvelopeMessageType.RUN_SCENARIO, {
+          scenarioId: (e.data as { scenarioId?: string }).scenarioId,
+          enableAnimation: (e.data as { enableAnimation?: boolean }).enableAnimation ?? false,
+        });
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => {
       window.removeEventListener('message', onMessage);
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      if (retryRef.current !== null) window.clearTimeout(retryRef.current);
     };
   }, [sendMessage, studioOrigin]);
 
