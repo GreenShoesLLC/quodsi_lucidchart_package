@@ -101,6 +101,25 @@ export class MessageRouter {
   }
   
   /**
+   * Remove a panel from the global registry.
+   *
+   * Called when a modal closes: the registry is a recovery cache for a panel
+   * that is still alive but temporarily missing from its channel. A closed
+   * modal must not be recoverable — otherwise ensureChannelHasPanel() can hand
+   * a dead panel back to the channel mid-send, and a message relayed to it
+   * (e.g. a STUDIO_TOKEN reply on a warm reopen) vanishes into the closed
+   * iframe instead of queueing for the next modal.
+   */
+  public clearFromGlobalRegistry(role: PanelRole): void {
+    if (typeof window !== 'undefined' &&
+        (window as any).quodsiExtension &&
+        (window as any).quodsiExtension.panels) {
+      delete (window as any).quodsiExtension.panels[role];
+      this.debug.log(`Cleared ${role} panel from global registry`);
+    }
+  }
+
+  /**
    * Try to retrieve a panel from the global registry
    */
   public retrieveFromGlobalRegistry(role: PanelRole): RoutablePanel | null {

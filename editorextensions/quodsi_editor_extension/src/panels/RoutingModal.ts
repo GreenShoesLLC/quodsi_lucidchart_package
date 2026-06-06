@@ -83,11 +83,31 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
     /**
      * Called when the iframe finishes loading.
      * Registers this modal as the handler for its channel role.
+     *
+     * Reopen ordering race: a channel's panel (set here, on frameLoaded) and
+     * its ready flag (set on REACT_APP_READY) can arrive in either order, but
+     * the queue is only flushed on the REACT_APP_READY path. On a warm reopen
+     * the embedded Studio iframe loads from cache and completes its token
+     * round-trip — host relays STUDIO_TOKEN — *before* Lucid fires this
+     * frameLoaded, while REACT_APP_READY was processed earlier (its flush
+     * bailed because the panel wasn't registered yet). The reply is left
+     * stranded in the queue and the embed shows "Couldn't load the results
+     * viewer …" after the 10s timeout. Now that the panel is registered, drain
+     * the queue if the channel is already ready so the late panel still
+     * delivers any reply queued before it arrived.
      */
     protected frameLoaded(): void {
         super.frameLoaded();
         this.debug.log(`frameLoaded - registering with router as "${this.channelRole}" channel`);
         router.registerChannel(this.channelRole, this);
+
+        const channelManager = router.getChannelManager();
+        if (channelManager.isChannelReady(this.channelRole)) {
+            this.debug.log(
+                `frameLoaded - ${this.channelRole} channel already ready; flushing queued messages`
+            );
+            channelManager.flushQueue(this.channelRole);
+        }
     }
 
     /**
@@ -113,6 +133,9 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
             channel.ready = false;
             channel.panel = undefined;
             channel.queue.length = 0;
+            // Drop ourselves from the recovery cache too, so a later send()
+            // can't resurrect this now-closed modal as the channel's panel.
+            router.clearFromGlobalRegistry(this.channelRole);
         } else if (channel) {
             this.debug.log(
                 `frameClosed - ${this.channelRole} channel already owned by another modal; skipping teardown`
