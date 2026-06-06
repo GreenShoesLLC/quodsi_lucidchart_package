@@ -7,13 +7,19 @@ jest.mock('../../../messaging/senders/simulationRunSender', () => ({
   useSimulationRunSender: () => ({ openScenariosModal: mockOpenScenariosModal }),
 }));
 
-import { ModelEditorScenariosButton } from '../ModelEditor';
+jest.mock('../../../messaging/MessageProvider', () => ({
+  useMessaging: () => ({
+    selection: { documentContext: { documentId: 'doc-1', pageId: 'page-1' } },
+  }),
+}));
 
-describe('ModelEditorScenariosButton', () => {
+import { ScenariosLaunchButton } from '../ScenariosLaunchButton';
+
+describe('ScenariosLaunchButton', () => {
   beforeEach(() => { jest.clearAllMocks(); });
 
-  it('renders a button that opens the scenarios modal with documentId + pageId', () => {
-    render(<ModelEditorScenariosButton documentId="doc-1" pageId="page-1" />);
+  it('opens the scenarios modal with the selection documentId + pageId', () => {
+    render(<ScenariosLaunchButton />);
     fireEvent.click(screen.getByTestId('open-scenarios-modal'));
     expect(mockOpenScenariosModal).toHaveBeenCalledWith('doc-1', 'page-1');
   });

@@ -5,12 +5,14 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
+  SCENARIOS_DB_AUTHORITATIVE,
 } from "@quodsi/shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
+import { ScenariosLaunchButton } from "./ScenariosLaunchButton";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -225,6 +227,10 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
             </>
           )}
         </div>
+
+        {/* Row 3: Scenarios launcher (primary action; replaces the old labeled
+            Scenarios "tab" in ModelEditor when the DB-authoritative modal is on) */}
+        {SCENARIOS_DB_AUTHORITATIVE && <ScenariosLaunchButton />}
       </>
     );
   };
