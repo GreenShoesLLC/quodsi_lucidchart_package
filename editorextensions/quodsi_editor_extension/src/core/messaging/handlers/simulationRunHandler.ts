@@ -213,6 +213,11 @@ export class SimulationRunHandler {
         documentId,
         scenarioDefinitionId: data.scenarioId,
         enableAnimation: data.enableAnimation ?? false,
+        // Embed runs manage their own lifecycle (backend + Studio 10s poll); tell
+        // handleRunRequest to skip the legacy in-memory activeJobs concurrency
+        // tracker, which never terminalizes here and would wedge runs to one per
+        // page refresh.
+        fromEmbed: true,
       },
     });
     const channel = SimulationRunHandler.getResponseChannel(msg);

@@ -111,8 +111,15 @@ export class SimulationHandler {
       parameters?: Record<string, unknown>;
       scenarioDefinitionId?: string;
       enableAnimation?: boolean;
+      // Embed-originated runs (Studio runner via RUN_SCENARIO delegation) manage
+      // their own lifecycle (backend + Studio 10s poll) and must NOT use the legacy
+      // in-memory activeJobs concurrency tracker: it's never terminalized in the embed
+      // flow (the quodsim-react ScenarioEditor reconciliation is hidden), which would
+      // otherwise wedge runs to "once per page refresh".
+      fromEmbed?: boolean;
     };
-    
+    const fromEmbed = !!data.fromEmbed;
+
     console.log('[SimulationHandler] Simulation run requested', {
       documentId: data.documentId,
       scenario: data.scenarioName || 'Default'
@@ -138,7 +145,7 @@ export class SimulationHandler {
                     job.status === SimulationStatus.VALIDATING ||
                     job.status === SimulationStatus.QUEUED));
 
-    if (existingJob) {
+    if (existingJob && !fromEmbed) {
       console.warn('[SimulationHandler] Simulation already running for this document');
       router.send('model', {
         id: msg.id,
@@ -391,8 +398,10 @@ export class SimulationHandler {
         }
       });
 
-      // Create job tracking
-      SimulationHandler.activeJobs.set(jobId, {
+      // Create job tracking. Skipped for embed runs (see fromEmbed): they're tracked
+      // server-side + by the Studio poll, so registering here only leaves a stale
+      // QUEUED entry that would block the next run until a page refresh.
+      if (!fromEmbed) SimulationHandler.activeJobs.set(jobId, {
         jobId,
         documentId: data.documentId,
         scenarioId,
