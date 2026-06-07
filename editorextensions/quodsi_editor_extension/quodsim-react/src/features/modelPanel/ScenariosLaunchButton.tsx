@@ -11,10 +11,7 @@ import { useMessaging } from "../../messaging/MessageProvider";
  * inline content; launching the scenarios modal is a different interaction, so it
  * reads better as a dedicated header call-to-action than as a pseudo-tab.
  *
- * Rendered by PanelHeader only when SCENARIOS_DB_AUTHORITATIVE is enabled (the
- * gate lives at the call site so this component's hooks are never invoked while
- * the flag is off). When the flag is off, the legacy in-panel Scenarios tab
- * remains the entry point.
+ * Rendered by PanelHeader as the entry point for the embedded-Studio scenarios modal.
  *
  * Exported for unit testing.
  */
