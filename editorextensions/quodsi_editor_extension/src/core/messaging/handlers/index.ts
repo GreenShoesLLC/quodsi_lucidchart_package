@@ -12,7 +12,6 @@ import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { SyncHandler } from './syncHandler';
 import { ConversionPreviewHandler } from './conversionPreviewHandler';
-import { ScenarioDefinitionHandler } from './scenarioDefinitionHandler';
 import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
 import { PortalHandler } from './portalHandler';
@@ -90,11 +89,6 @@ export class MessageHandlers {
       return true;
     }
 
-    // Scenario definition operations messages
-    if (ScenarioDefinitionHandler.handleMessage(msg)) {
-      return true;
-    }
-
     // Storage messages
     if (StorageHandler.handleMessage(msg)) {
       return true;
@@ -146,7 +140,6 @@ export {
   SimulationRunHandler,
   SyncHandler,
   ConversionPreviewHandler,
-  ScenarioDefinitionHandler,
   DevtoolsHandler,
   PortalHandler,
   SwimLaneHandler,
