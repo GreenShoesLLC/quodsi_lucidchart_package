@@ -245,9 +245,6 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.CONVERSION_APPLY]: ConversionApplyMessage['data'];
   [EnvelopeMessageType.CONVERSION_APPLY_RESULT]: ConversionApplyResultMessage['data'];
 
-  [EnvelopeMessageType.SCENARIOS_DEFINITION_UPDATE]: { scenarios: any[] };
-  [EnvelopeMessageType.SCENARIOS_DEFINITION_RESULT]: { success: boolean; errorMessage?: string };
-
   [EnvelopeMessageType.OPEN_RESULTS_MODAL]: { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean; modalSize?: import('../config/modalSize').ModalSize };
   [EnvelopeMessageType.OPEN_ANIMATION_MODAL]: { scenarioId: string; modalSize?: import('../config/modalSize').ModalSize };
   [EnvelopeMessageType.OPEN_SCENARIOS_MODAL]: { documentId: string; pageId: string; modalSize?: import('../config/modalSize').ModalSize };

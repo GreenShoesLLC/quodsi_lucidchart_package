@@ -15,7 +15,6 @@ import {
     EnvelopeMessageType,
     isEnvelope,
     QUODSI_ICON_BASE64,
-    SCENARIOS_DB_AUTHORITATIVE,
 } from '@quodsi/shared';
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
@@ -23,7 +22,7 @@ import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers'
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
-import { upsertModelAndSyncScenarios, upsertModelAndSeedScenariosIfEmpty } from '../core/sync/scenarioSync';
+import { upsertModelAndSeedScenariosIfEmpty } from '../core/sync/scenarioSync';
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -325,8 +324,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      *
      * After SyncScenarios responds, apply any server-side id
      * substitutions (`replaced_id`) back into Lucid shape data so
-     * future syncs use the canonical id. See ScenarioDefinitionHandler
-     * for the matching logic on the edit-driven sync path.
+     * future syncs use the canonical id.
      */
     private async upsertAndSyncOnPanelInit(
         document: DocumentProxy,
@@ -338,9 +336,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         const scenarios = storageAdapter.getScenarios(currentPage);
 
         try {
-            const sync = SCENARIOS_DB_AUTHORITATIVE
-                ? upsertModelAndSeedScenariosIfEmpty
-                : upsertModelAndSyncScenarios;
+            const sync = upsertModelAndSeedScenariosIfEmpty;
             const { substitutions } = await sync(this.client, {
                 documentId: document.id,
                 pageId: currentPage.id,
