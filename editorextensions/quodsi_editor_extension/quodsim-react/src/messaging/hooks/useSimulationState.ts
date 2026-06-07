@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSimulation } from '../MessageProvider';
 import { useSimulationSender } from '../senders/simulationSender';
-import { SimulationStatus } from '@quodsi/shared';
+import { SimulationStatus } from '@quodsi/lucid-shared';
 
 /**
  * Enhanced hook for simulation state that combines state, computed properties,

@@ -8,7 +8,7 @@ import {
   SelectionType, 
   SimulationObjectType, 
   ElementShape 
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 
 /**

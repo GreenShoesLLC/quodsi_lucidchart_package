@@ -6,7 +6,7 @@ import {
   DistributionType,
   createDefaultDistribution,
   ConstantDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 import "./EnhancedDurationEditor.css";
 import { DistributionTypeSelector } from "src/features/distribution/DistributionTypeSelector";

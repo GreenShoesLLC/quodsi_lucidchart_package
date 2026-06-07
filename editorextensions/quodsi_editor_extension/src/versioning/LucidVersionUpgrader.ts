@@ -1,5 +1,5 @@
-import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION } from '@quodsi/shared';
-import { getTransformationsBetweenVersions } from '@quodsi/shared';
+import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION } from '@quodsi/lucid-shared';
+import { getTransformationsBetweenVersions } from '@quodsi/lucid-shared';
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { LucidPreflightChecker } from './LucidPreflightChecker';
 

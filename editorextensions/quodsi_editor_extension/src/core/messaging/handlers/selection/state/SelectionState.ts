@@ -7,7 +7,7 @@ import {
   DiagramElementType, 
   SelectionType,
   SelectionState as SharedSelectionState
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { SelectionStateData } from '../types';
 
 /**

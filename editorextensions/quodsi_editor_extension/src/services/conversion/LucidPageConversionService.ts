@@ -16,7 +16,7 @@ import {
     SwimLaneLaneMapping,
     SwimLaneResourceData,
     generateUUID
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 

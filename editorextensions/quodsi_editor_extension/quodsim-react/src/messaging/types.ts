@@ -8,7 +8,7 @@ import {
   ConnectionStatus,
   ValidationIssue,
   ValidationSeverity
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { MessagingAction } from './state/types';
 import { MessagingState } from './state/rootReducer';
 

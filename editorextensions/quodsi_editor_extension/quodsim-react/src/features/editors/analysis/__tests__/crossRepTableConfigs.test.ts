@@ -1,4 +1,4 @@
-// @quodsi/shared may be pulled in transitively -> axios ESM, which CRA's Jest
+// @quodsi/lucid-shared may be pulled in transitively -> axios ESM, which CRA's Jest
 // transformer can't parse. (Same pattern as the sibling analysis tests.)
 jest.mock("axios", () => ({}));
 

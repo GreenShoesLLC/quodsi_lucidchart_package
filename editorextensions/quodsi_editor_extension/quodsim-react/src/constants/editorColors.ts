@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "@quodsi/shared";
+import { SimulationObjectType } from "@quodsi/lucid-shared";
 
 /**
  * Accent colors for each editor type, used for the PanelHeader left border stripe.

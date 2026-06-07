@@ -1,0 +1,1 @@
+{"version":3,"file":"ConversionResult.d.ts","sourceRoot":"","sources":["../../src/types/ConversionResult.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,WAAW,gBAAgB;IAC7B,OAAO,EAAE,OAAO,CAAC;IACjB,OAAO,EAAE,MAAM,CAAC;IAChB,YAAY,EAAE;QACV,UAAU,EAAE,MAAM,CAAC;QACnB,UAAU,EAAE,MAAM,CAAC;QACnB,SAAS,EAAE,MAAM,CAAC;QAClB,UAAU,EAAE,MAAM,CAAC;KACtB,CAAC;CACL"}

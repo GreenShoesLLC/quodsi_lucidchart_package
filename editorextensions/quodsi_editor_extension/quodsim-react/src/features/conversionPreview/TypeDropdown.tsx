@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimulationObjectType, DiagramElementKind } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementKind } from '@quodsi/lucid-shared';
 
 interface TypeDropdownProps {
     currentType: SimulationObjectType | null;

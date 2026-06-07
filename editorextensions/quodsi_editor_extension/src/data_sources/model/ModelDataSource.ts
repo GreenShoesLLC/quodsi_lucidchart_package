@@ -1,5 +1,5 @@
 import { DataProxy, JsonSerializable } from "lucid-extension-sdk";
-import { QuodsiLogger } from "@quodsi/shared";
+import { QuodsiLogger } from "@quodsi/lucid-shared";
 import { ModelDefinition, ModelDefinitionRepository } from "./repositories";
 import { DATA_SOURCE_NAMES } from "../common/constants";
 

@@ -2,7 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { useMessaging } from '../MessageProvider';
 import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
-import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData } from '@quodsi/shared';
+import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData } from '@quodsi/lucid-shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationPollState } from '../../types/SimulationStatus';

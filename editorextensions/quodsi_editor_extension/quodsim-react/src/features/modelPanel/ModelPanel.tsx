@@ -6,7 +6,7 @@ import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
 import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';

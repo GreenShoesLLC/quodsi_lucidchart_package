@@ -7,7 +7,7 @@ import {
   Check,
   List,
 } from "lucide-react";
-import { SimulationRunDownloadInfo } from "@quodsi/shared";
+import { SimulationRunDownloadInfo } from "@quodsi/lucid-shared";
 import { useSimulationRunSender } from "../../../messaging/senders/simulationRunSender";
 import { useAnalyticsSender } from "../../../messaging/senders/analyticsSender";
 import { CrossRepDataType } from "./crossRepTableConfigs";

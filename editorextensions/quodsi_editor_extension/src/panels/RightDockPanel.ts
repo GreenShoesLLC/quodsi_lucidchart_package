@@ -15,7 +15,7 @@ import {
     EnvelopeMessageType,
     isEnvelope,
     QUODSI_ICON_BASE64,
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { ModelManager } from '../core/ModelManager';
 import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';

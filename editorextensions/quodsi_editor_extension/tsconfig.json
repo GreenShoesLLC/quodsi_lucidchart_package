@@ -38,14 +38,14 @@
     ],
     "outDir": "bin",
     "paths": {
-      "@quodsi/shared": ["../../shared/dist"]
+      "@quodsi/lucid-shared": ["../../lucid-shared/dist"]
     }
   },
   "files": ["resources/resource.d.ts"],
   "include": ["src/**/*"],
   "references": [
     {
-      "path": "../../shared"
+      "path": "../../lucid-shared"
     }
   ]
 }

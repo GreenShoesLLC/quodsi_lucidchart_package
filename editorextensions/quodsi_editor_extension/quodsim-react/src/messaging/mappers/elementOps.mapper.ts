@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { debugService } from '../utils/debugService';
 import { MessagingAction } from '../state/types';
 

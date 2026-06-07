@@ -6,7 +6,7 @@
 import {
   ElementShape,
   SimulationStatus
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 
 // Re-export shared types
 export type {

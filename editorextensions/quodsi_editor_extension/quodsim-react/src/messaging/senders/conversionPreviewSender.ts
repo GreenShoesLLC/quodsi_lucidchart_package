@@ -1,4 +1,4 @@
-import { EnvelopeMessageType, ElementMappingOverride } from '@quodsi/shared';
+import { EnvelopeMessageType, ElementMappingOverride } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 

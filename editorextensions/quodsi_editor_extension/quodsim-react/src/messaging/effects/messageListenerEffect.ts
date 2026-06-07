@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { createRxMessageHandler } from '../handlers';
 import { debugService } from '../utils/debugService';
 

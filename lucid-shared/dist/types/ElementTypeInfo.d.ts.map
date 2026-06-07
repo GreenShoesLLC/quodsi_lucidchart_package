@@ -1,0 +1,1 @@
+{"version":3,"file":"ElementTypeInfo.d.ts","sourceRoot":"","sources":["../../src/types/ElementTypeInfo.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,oBAAoB,EAAE,MAAM,iCAAiC,CAAC;AAEvE;;GAEG;AACH,MAAM,MAAM,aAAa,GAAG,MAAM,GAAG,MAAM,CAAC;AAE5C;;;GAGG;AACH,MAAM,WAAW,eAAe;IAC5B,IAAI,EAAE,oBAAoB,CAAC;IAC3B,EAAE,EAAE,MAAM,CAAC;IACX,aAAa,CAAC,EAAE,aAAa,CAAC;CACjC"}

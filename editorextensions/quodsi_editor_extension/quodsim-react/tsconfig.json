@@ -17,13 +17,13 @@
     "jsx": "react-jsx",
     "baseUrl": "./",
     "paths": {
-      "@quodsi/shared": ["../../../shared/dist"]
+      "@quodsi/lucid-shared": ["../../../lucid-shared/dist"]
     }
   },
   "include": ["src"],
   "references": [
     {
-      "path": "../../../shared"
+      "path": "../../../lucid-shared"
     }
   ]
 }

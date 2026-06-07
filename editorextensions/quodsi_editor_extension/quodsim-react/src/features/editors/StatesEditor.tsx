@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Filter, Info } from "lucide-react";
-import { State, StateListManager, ComponentType } from "@quodsi/shared";
+import { State, StateListManager, ComponentType } from "@quodsi/lucid-shared";
 import StateFormDialog from "./StateFormDialog";
 import StateListItem from "./StateListItem";
 

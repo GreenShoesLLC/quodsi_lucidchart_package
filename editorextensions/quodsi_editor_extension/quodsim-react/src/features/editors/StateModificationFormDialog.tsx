@@ -8,7 +8,7 @@ import {
   StateType,
   ComponentType,
   getSupportedOperationsForType,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { SampleDistributionEditor } from "./sample";
 
 interface Props {

@@ -45,7 +45,7 @@ python -m alembic upgrade head
 
 ```bash
 cd quodsi_lucidchart_package && npm install
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 **Leave this terminal open** - build only needs to run once per session.
@@ -154,7 +154,7 @@ lsof -ti:8000 | xargs kill -9
 ### Module Not Found
 
 ```bash
-cd quodsi_lucidchart_package && npm run build -w @quodsi/shared
+cd quodsi_lucidchart_package && npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart Terminals 2, 4, and 5.
@@ -174,7 +174,7 @@ Cmd+Shift+R (Mac)
 ### Shared Library Changes
 
 ```bash
-cd quodsi_lucidchart_package && npm run build -w @quodsi/shared
+cd quodsi_lucidchart_package && npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart Terminal 2 (Function) and Terminal 5 (Extension).
@@ -217,10 +217,10 @@ killall node              # Mac/Linux
 ## Clean Restart
 
 ```bash
-rm -rf quodsi_lucidchart_package/shared/dist
+rm -rf quodsi_lucidchart_package/lucid-shared/dist
 rm -rf quodsi_lucidchart_package/editorextensions/quodsi_editor_extension/quodsim-react/build
 cd quodsi_lucidchart_package && npm install
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart all 5 terminals.
@@ -232,7 +232,7 @@ Then restart all 5 terminals.
 ```
 quodsi/                                    # ← you are here (monorepo root)
 ├── quodsi_lucidchart_package/
-│   ├── shared/                            # Core library (build first)
+│   ├── lucid-shared/                      # Core library (build first)
 │   └── editorextensions/
 │       └── quodsi_editor_extension/
 │           ├── src/                       # Extension TypeScript
@@ -265,7 +265,7 @@ quodsi/                                    # ← you are here (monorepo root)
 
 | Terminal | Command | Port | Hot Reload |
 |----------|---------|------|------------|
-| 1 | `cd quodsi_lucidchart_package && npm run build -w @quodsi/shared` | - | No (one-time) |
+| 1 | `cd quodsi_lucidchart_package && npm run build -w @quodsi/lucid-shared` | - | No (one-time) |
 | 2 | `cd quodsi_lucidchart_package/dataconnectors/... && func start` | 7071 | No |
 | 3 | `cd quodsi_lucidchart_package/editorextensions/.../quodsim-react && npx react-scripts start` | 3000 | Yes |
 | 4 | `cd quodsim/quodsi_api && python -m uvicorn app.main:app --reload --port 8000` | 8000 | Yes |

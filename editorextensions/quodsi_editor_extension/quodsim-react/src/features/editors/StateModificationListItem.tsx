@@ -1,6 +1,6 @@
 import React from "react";
 import { Edit2, Trash2, ExternalLink, Shuffle } from "lucide-react";
-import { StateModification, State, StateType, ComponentType, StateOperation } from "@quodsi/shared";
+import { StateModification, State, StateType, ComponentType, StateOperation } from "@quodsi/lucid-shared";
 
 interface Props {
   modification: StateModification;

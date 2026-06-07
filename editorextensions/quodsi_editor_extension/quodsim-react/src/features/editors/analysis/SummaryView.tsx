@@ -3,7 +3,7 @@ import { CrossRepDataType } from "./crossRepTableConfigs";
 import { formatNumber, formatPercent } from "./analysisFormatters";
 import { SummaryData } from "../../../hooks/useCrossRepData";
 import { SelectedScenario } from "../../../utils/scenarioDataMerge";
-import { isOutputSchemaCompatible } from "@quodsi/shared";
+import { isOutputSchemaCompatible } from "@quodsi/lucid-shared";
 import { StaleScenarioTakeover } from "./StaleScenarioTakeover";
 
 interface SummaryViewProps {

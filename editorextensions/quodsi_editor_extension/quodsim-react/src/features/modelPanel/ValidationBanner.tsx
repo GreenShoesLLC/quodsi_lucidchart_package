@@ -1,5 +1,5 @@
 import React from 'react';
-import { ValidationResult, ValidationIssue, ValidationSeverity } from '@quodsi/shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity } from '@quodsi/lucid-shared';
 import { AlertTriangle, XCircle, Info, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 interface ValidationBannerProps {

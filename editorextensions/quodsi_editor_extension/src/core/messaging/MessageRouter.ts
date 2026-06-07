@@ -3,7 +3,7 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   isEnvelope
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { PanelRole, LogEntry } from './types';
 import { ChannelManager } from './ChannelManager';
 import { RoutablePanel } from './RoutablePanel';

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { EnvelopeMessageType, ClientAnalyticsEvent } from '@quodsi/shared';
+import { EnvelopeMessageType, ClientAnalyticsEvent } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 
 /**

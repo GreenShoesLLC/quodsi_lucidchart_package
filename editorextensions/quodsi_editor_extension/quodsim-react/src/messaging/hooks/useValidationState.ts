@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useValidation } from '../MessageProvider';
 import { useModelOpsSender } from '../senders/modelOpsSender';
-import { ValidationSeverity } from '@quodsi/shared';
+import { ValidationSeverity } from '@quodsi/lucid-shared';
 
 /**
  * Enhanced hook for validation state that combines state and actions

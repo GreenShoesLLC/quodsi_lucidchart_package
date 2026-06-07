@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TimeDistributedConfig, TimePattern, VolumePeriodBasis } from "@quodsi/shared";
+import { TimeDistributedConfig, TimePattern, VolumePeriodBasis } from "@quodsi/lucid-shared";
 import { X, Info } from "lucide-react";
 
 /**

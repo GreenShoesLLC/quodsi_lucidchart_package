@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

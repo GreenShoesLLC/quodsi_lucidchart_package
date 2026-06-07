@@ -1,4 +1,4 @@
-// import { ModelValidationService } from "@quodsi/shared/src/validation/ModelValidationService";
+// import { ModelValidationService } from "@quodsi/lucid-shared/src/validation/ModelValidationService";
 import {
     ModelValidationService,
     Activity,
@@ -25,7 +25,7 @@ import {
     ValidationSeverity,
     ValidationIssue,
     ensureBaselineScenario,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
 import { upsertModelAndSeedScenariosIfEmpty } from "./sync/scenarioSync";
@@ -635,7 +635,7 @@ export class ModelManager {
         element: ElementProxy,
         data: any,
         type: SimulationObjectType,
-        options?: { mappingSource?: import('@quodsi/shared').MappingSource }
+        options?: { mappingSource?: import('@quodsi/lucid-shared').MappingSource }
     ): void {
         try {
             // Call storage adapter

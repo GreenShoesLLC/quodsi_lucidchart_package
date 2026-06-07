@@ -10,7 +10,7 @@ import {
     ConversionPreviewSummary,
     parseStructuredName,
     extractSimulationType
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../../core/StorageAdapter';
 
 export class LucidPageAnalyzer extends QuodsiLogger {

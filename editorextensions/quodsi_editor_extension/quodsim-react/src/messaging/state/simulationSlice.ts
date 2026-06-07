@@ -3,7 +3,7 @@
  * Manages simulation status, progress, and results
  */
 
-import { SimulationStatus } from '@quodsi/shared';
+import { SimulationStatus } from '@quodsi/lucid-shared';
 
 // State shape
 export interface SimulationState {

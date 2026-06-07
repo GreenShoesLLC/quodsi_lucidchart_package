@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/lucid-shared';
 
 /**
  * Record of skipped elements with their mapping source

@@ -5,7 +5,7 @@ import {
   EditorReferenceData,
   StateListManager,
   Connector,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { useModelOpsSender } from "../../messaging/senders";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";

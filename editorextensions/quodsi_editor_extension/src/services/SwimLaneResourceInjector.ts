@@ -1,5 +1,5 @@
 import { PageProxy } from 'lucid-extension-sdk';
-import { SwimLaneQuodsiData, ISerializedModel, ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/shared';
+import { SwimLaneQuodsiData, ISerializedModel, ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/lucid-shared';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 import { isCenterInBox } from './swimLaneGeometry';
 

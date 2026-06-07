@@ -16,7 +16,7 @@ import {
     createDelayAction,
     MappingSource,
     StateModification
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 

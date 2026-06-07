@@ -9,7 +9,7 @@ import {
   Resource,
   ResourceFinancialProperties,
   StateListManager,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useMessaging } from "../../messaging/MessageContext";
 import ResourceEditor from "./ResourceEditor";
 

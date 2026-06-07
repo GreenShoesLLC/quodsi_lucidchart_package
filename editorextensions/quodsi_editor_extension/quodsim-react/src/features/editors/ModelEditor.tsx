@@ -6,7 +6,7 @@ import {
   SimulationObjectType,
   StateListManager,
   ValidationResult,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle } from "lucide-react";
 import StatesEditor from "./StatesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
@@ -25,7 +25,7 @@ import {
   type ModelInput,
 } from "../utils/modelEditorHelpers";
 import { ValidationDashboard } from "./ValidationDashboard";
-import { EditorReferenceData, ResourceRequirement } from "@quodsi/shared";
+import { EditorReferenceData, ResourceRequirement } from "@quodsi/lucid-shared";
 
 // ============================================================================
 // TYPES

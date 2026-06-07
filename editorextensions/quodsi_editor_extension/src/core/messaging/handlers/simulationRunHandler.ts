@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/lucid-shared';
 import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';

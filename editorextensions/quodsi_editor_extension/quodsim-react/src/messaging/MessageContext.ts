@@ -4,7 +4,7 @@ import {
   MessagingState, 
   MessagingAction 
 } from './state';
-import { EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 
 // Context types
 export type MessagingContextValue = MessagingState & {

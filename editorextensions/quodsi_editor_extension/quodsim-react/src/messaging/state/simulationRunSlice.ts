@@ -4,7 +4,7 @@
  * Provides state for detecting active simulations
  */
 
-import { RunState, SimulationRunInfo } from '@quodsi/shared';
+import { RunState, SimulationRunInfo } from '@quodsi/lucid-shared';
 
 // Use SimulationRunInfo from shared package and alias as SimulationRun for backward compatibility
 export type SimulationRun = SimulationRunInfo;

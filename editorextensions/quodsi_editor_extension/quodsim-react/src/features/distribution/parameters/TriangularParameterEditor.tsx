@@ -4,7 +4,7 @@ import {
   TriangularParameters,
   TRIANGULAR_PARAMETER_METADATA,
   TriangularDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useMultiParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface TriangularParameterEditorProps {

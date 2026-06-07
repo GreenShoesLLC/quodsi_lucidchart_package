@@ -5,7 +5,7 @@ import {
   EditorReferenceData,
   StateListManager,
   Connector,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { ArrowRightLeft, Info } from "lucide-react";
 import { RoutingConfigurationPanel } from "./RoutingConfigurationPanel";
 

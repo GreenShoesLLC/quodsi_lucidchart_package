@@ -6,7 +6,7 @@ import {
   CORE_NUMERIC_DISTRIBUTIONS,
   backendStringToDistributionType,
   createDefaultDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { DistributionTypeSelector } from "../../distribution/DistributionTypeSelector";
 import { DistributionParametersEditor } from "../../distribution/DistributionParametersEditor";
 

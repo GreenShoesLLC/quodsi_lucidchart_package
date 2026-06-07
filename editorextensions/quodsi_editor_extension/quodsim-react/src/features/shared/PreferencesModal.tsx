@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { ModalSize, MODAL_SIZE_OPTIONS } from "@quodsi/shared";
+import { ModalSize, MODAL_SIZE_OPTIONS } from "@quodsi/lucid-shared";
 import { getModalSizePref, setModalSizePref } from "../../lib/modalSizePref";
 
 interface PreferencesModalProps {

@@ -1,4 +1,4 @@
-import { SimulationObjectType, DiagramElementType } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementType } from '@quodsi/lucid-shared';
 import { ExtendedModelItemData } from '../types/ModelItemData';
 
 /**

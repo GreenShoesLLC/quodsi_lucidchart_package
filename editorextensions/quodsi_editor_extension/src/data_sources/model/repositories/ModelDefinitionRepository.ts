@@ -1,7 +1,7 @@
 import { DataProxy, DataSourceProxy, CollectionProxy, SerializedFieldType } from 'lucid-extension-sdk';
 import { ModelDefinitionSchema } from '../schemas/ModelDefinitionSchema';
 import { DATA_SOURCE_NAMES, MODEL_DEFINITION_COLLECTIONS, createModelId } from '../../common/constants';
-import { QuodsiLogger } from '@quodsi/shared';
+import { QuodsiLogger } from '@quodsi/lucid-shared';
 
 export interface ModelDefinition {
     id: string;

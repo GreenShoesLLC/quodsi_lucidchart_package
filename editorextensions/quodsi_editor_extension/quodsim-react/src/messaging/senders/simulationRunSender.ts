@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { isEmbeddedResultsEnabled } from '../../lib/embeddedResultsFlag';
 import { getModalSizePref } from '../../lib/modalSizePref';

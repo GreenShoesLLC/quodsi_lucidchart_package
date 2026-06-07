@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { ResourceRequirement } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/lucid-shared';
 import { convertRootClausesToStructure, generatePreview } from '../../utils/resourceRequirementConverter';
 
 interface ResourceRequirementsManagerProps {

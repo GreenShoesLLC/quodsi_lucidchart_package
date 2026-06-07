@@ -1,0 +1,1 @@
+{"version":3,"file":"ValidationState.d.ts","sourceRoot":"","sources":["../../../src/types/accordion/ValidationState.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,yCAAyC,CAAC;AAG1E,MAAM,WAAW,eAAe;IAC5B,OAAO,EAAE;QACL,UAAU,EAAE,MAAM,CAAC;QACnB,YAAY,EAAE,MAAM,CAAC;QACrB,SAAS,EAAE,MAAM,CAAC;KACrB,CAAC;IACF,MAAM,EAAE,eAAe,EAAE,CAAC;CAC7B"}

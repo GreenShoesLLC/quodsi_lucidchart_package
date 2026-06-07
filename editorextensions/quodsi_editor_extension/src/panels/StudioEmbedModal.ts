@@ -1,5 +1,5 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ModalSize, DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/shared';
+import { ModalSize, DEFAULT_MODAL_SIZE, MODAL_SIZE_DIMENSIONS } from '@quodsi/lucid-shared';
 import { RoutingModal } from './RoutingModal';
 import { getStudioBaseUrl } from '../core/messaging/handlers/authHandler';
 

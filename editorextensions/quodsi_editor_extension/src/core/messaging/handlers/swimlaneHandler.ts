@@ -4,7 +4,7 @@ import {
   SwimLaneQuodsiData,
   SwimLaneLaneMapping,
   generateUUID,
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

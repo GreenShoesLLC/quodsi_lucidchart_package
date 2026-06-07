@@ -7,7 +7,7 @@ import {
     PlatformMetadata,
     PlatformType,
     ModelDefaults
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { SimObjectLucid } from './SimObjectLucid';
 

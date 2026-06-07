@@ -2,7 +2,7 @@ import {
   EntitlementMeteredFeature,
   EntitlementPlanStatus,
   EntitlementSubjectType,
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { debugService } from '../utils/debugService';
 
 const logger = debugService.forComponent('EntitlementsSlice');

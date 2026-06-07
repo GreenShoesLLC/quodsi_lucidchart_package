@@ -4,7 +4,7 @@ import {
   ISerializedScenario,
   SyncAllErrorData,
   SyncAllRequestData,
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';

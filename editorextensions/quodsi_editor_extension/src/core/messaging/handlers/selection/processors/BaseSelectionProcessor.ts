@@ -13,7 +13,7 @@ import {
   ValidationResult,
   ValidationMessages,
   ValidationSeverity
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { selectionTypeUtils } from '../utils/selectionTypeUtils';

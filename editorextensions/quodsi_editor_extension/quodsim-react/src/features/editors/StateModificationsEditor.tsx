@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Plus, Info, AlertTriangle } from "lucide-react";
-import { StateModification, StateListManager, ComponentType } from "@quodsi/shared";
+import { StateModification, StateListManager, ComponentType } from "@quodsi/lucid-shared";
 import StateModificationFormDialog from "./StateModificationFormDialog";
 import StateModificationListItem from "./StateModificationListItem";
 

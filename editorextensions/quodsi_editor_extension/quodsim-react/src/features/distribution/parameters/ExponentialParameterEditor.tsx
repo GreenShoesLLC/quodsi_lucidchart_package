@@ -4,7 +4,7 @@ import {
   ExponentialParameters,
   EXPONENTIAL_PARAMETER_METADATA,
   ExponentialDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface ExponentialParameterEditorProps {

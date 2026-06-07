@@ -26,7 +26,7 @@ import {
   SelectedScenario,
 } from "../../../utils/scenarioDataMerge";
 import { metricOptions, getPercentFormatter } from "./analysisFormatters";
-import { isOutputSchemaCompatible } from "@quodsi/shared";
+import { isOutputSchemaCompatible } from "@quodsi/lucid-shared";
 import { StaleScenarioBanner } from "./StaleScenarioBanner";
 import { StaleScenarioRow } from "./StaleScenarioRow";
 import { StaleScenarioTakeover } from "./StaleScenarioTakeover";

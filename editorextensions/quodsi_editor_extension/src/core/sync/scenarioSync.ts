@@ -1,5 +1,5 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ISerializedScenario } from '@quodsi/shared';
+import { ISerializedScenario } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
 
 export interface UpsertAndSyncParams {

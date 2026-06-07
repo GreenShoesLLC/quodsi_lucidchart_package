@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { EnvelopeMessageType, SimulationRunInfo } from "@quodsi/shared";
+import { EnvelopeMessageType, SimulationRunInfo } from "@quodsi/lucid-shared";
 import { useSimulationRunSender } from "../messaging/senders/simulationRunSender";
 import { SelectedScenario } from "../utils/scenarioDataMerge";
 import { SCENARIO_COLORS } from "../components/charts";

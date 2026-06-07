@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Trash2, Check, Info } from 'lucide-react';
-import { ResourceRequirement } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/lucid-shared';
 import { TeamStructure, generatePreview } from '../../utils/resourceRequirementConverter';
 
 interface ResourceRequirementModalProps {

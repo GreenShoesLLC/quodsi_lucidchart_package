@@ -6,7 +6,7 @@ import {
   DiagramElementType, 
   SelectionType,
   SelectionState
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 
 /**
  * Complete selection state data structure

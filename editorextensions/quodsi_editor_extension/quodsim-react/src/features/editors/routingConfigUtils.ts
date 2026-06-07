@@ -12,7 +12,7 @@ import {
   ComponentType,
   StateListManager,
   State
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 /**
  * Get all outgoing connectors for a specific activity

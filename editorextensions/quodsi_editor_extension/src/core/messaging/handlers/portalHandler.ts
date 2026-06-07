@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';

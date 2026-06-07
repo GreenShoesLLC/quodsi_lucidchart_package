@@ -1,0 +1,1 @@
+{"version":3,"file":"UnsupportedVersionError.d.ts","sourceRoot":"","sources":["../../../src/serialization/errors/UnsupportedVersionError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,mBAAmB,CAAC;AACpD,OAAO,EAAE,cAAc,EAAE,MAAM,8BAA8B,CAAC;AAE9D,qBAAa,uBAAwB,SAAQ,eAAe;gBAC5C,OAAO,EAAE,cAAc;CAKtC"}

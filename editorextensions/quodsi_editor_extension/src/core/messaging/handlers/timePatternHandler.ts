@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
