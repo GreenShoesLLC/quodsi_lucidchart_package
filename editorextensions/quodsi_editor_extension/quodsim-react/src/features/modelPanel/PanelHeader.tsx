@@ -5,7 +5,6 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
-  SCENARIOS_DB_AUTHORITATIVE,
 } from "@quodsi/shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
@@ -240,9 +239,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
         </div>
 
-        {/* Row 3: Scenarios launcher (primary action; replaces the old labeled
-            Scenarios "tab" in ModelEditor when the DB-authoritative modal is on) */}
-        {SCENARIOS_DB_AUTHORITATIVE && <ScenariosLaunchButton />}
+        {/* Row 3: Scenarios launcher (primary action; opens the embedded Studio modal) */}
+        <ScenariosLaunchButton />
       </>
     );
   };
