@@ -1,1 +1,0 @@
-{"version":3,"file":"ISerializedResourceRequest.d.ts","sourceRoot":"","sources":["../../../src/serialization/interfaces/ISerializedResourceRequest.ts"],"names":[],"mappings":"AAAA,MAAM,WAAW,0BAA0B;IACvC,UAAU,EAAE,MAAM,CAAC;IACnB,QAAQ,EAAE,MAAM,CAAC;IACjB,QAAQ,EAAE,MAAM,CAAC;IACjB,YAAY,EAAE,OAAO,CAAC;CACzB"}

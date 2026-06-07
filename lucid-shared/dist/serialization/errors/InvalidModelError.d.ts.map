@@ -1,1 +1,0 @@
-{"version":3,"file":"InvalidModelError.d.ts","sourceRoot":"","sources":["../../../src/serialization/errors/InvalidModelError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,mBAAmB,CAAC;AAEpD,qBAAa,iBAAkB,SAAQ,eAAe;gBACtC,OAAO,EAAE,MAAM;CAK9B"}

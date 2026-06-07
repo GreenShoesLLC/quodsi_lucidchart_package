@@ -1,1 +1,0 @@
-{"version":3,"file":"SerializationError.d.ts","sourceRoot":"","sources":["../../../src/serialization/errors/SerializationError.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,mBAAmB,CAAC;AAEpD,qBAAa,kBAAmB,SAAQ,eAAe;gBAE/C,SAAS,EAAE,MAAM,EACjB,OAAO,EAAE,MAAM,EACf,aAAa,CAAC,EAAE,KAAK;CAU5B"}
