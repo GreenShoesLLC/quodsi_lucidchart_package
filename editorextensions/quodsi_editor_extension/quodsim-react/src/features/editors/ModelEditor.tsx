@@ -102,7 +102,7 @@ const DEFAULT_RANDOM_SEED = 12345;
  * simulation scenarios, and validation. It acts as a container for specialized sub-editors.
  *
  * Features:
- * - Five-tab interface: Basic Settings, State Definitions, Resource Requirements, Scenarios, and Validation
+ * - Four-tab interface: Basic Settings, State Definitions, Resource Requirements, and Validation
  * - Controlled component with immediate UI updates
  * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush;
  *   useFlushOnChange flush for select dropdowns)
@@ -111,7 +111,6 @@ const DEFAULT_RANDOM_SEED = 12345;
  * - Basic: Model name, simulation parameters (reps, seed), and time configuration
  * - States: Model-level state variables accessible throughout the simulation
  * - Requirements: Reusable resource requirement templates for activities
- * - Scenarios: Simulation scenario configuration and management
  * - Validation: View and resolve model validation issues
  *
  * State Management:
@@ -133,7 +132,6 @@ const DEFAULT_RANDOM_SEED = 12345;
  *   blanked optional fields.
  * - States tab: Auto-saves immediately via parent onStatesChange.
  * - Requirements tab: Auto-saves immediately via updateResourceRequirements.
- * - Scenarios tab: Auto-saves immediately via updateScenarioDefinitions.
  * - Validation tab: Read-only.
  * - Status surfaced via SaveStatusLine ("Saved" / "Saving…" / "Save failed —
  *   keep typing to retry"). Native LucidChart Ctrl+Z reverses saved changes.
