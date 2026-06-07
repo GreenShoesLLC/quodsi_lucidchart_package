@@ -26,8 +26,7 @@ export class SimulationRunHandler {
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST:
-      case EnvelopeMessageType.SCENARIOS_LIST_REQUEST:
-        // Both list operations pull the same data (scenarios + nested runs)
+        // List operation pulls scenarios + nested runs
         // Handle async method - fire and forget, return true immediately
         SimulationRunHandler.handleSimulationRunsListRequest(msg).catch(error => {
           SimulationRunHandler.logger.error('Error in handleSimulationRunsListRequest:', error);
@@ -338,9 +337,7 @@ export class SimulationRunHandler {
   private static async handleSimulationRunsListRequest(msg: EnvelopeBase): Promise<void> {
     const data = msg.data as { documentId: string };
 
-    const messageType = msg.type === EnvelopeMessageType.SCENARIOS_LIST_REQUEST
-      ? 'Scenarios list'
-      : 'Simulation runs list';
+    const messageType = 'Simulation runs list';
     SimulationRunHandler.logger.log(`${messageType} requested`, {
       documentId: data.documentId
     });
