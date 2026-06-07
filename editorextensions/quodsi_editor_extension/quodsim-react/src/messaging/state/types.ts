@@ -35,7 +35,6 @@ import { ValidationAction } from './validationSlice';
 import { ElementOpsAction } from './elementOpsSlice';
 import { SimulationRunAction } from './simulationRunSlice';
 import { ConversionPreviewAction } from './conversionPreviewSlice';
-import { ScenarioDefinitionAction } from './scenarioDefinitionSlice';
 import { EntitlementsAction } from './entitlementsSlice';
 import { SyncAction } from './syncSlice';
 
@@ -49,7 +48,6 @@ export type {
   ElementOpsAction,
   SimulationRunAction,
   ConversionPreviewAction,
-  ScenarioDefinitionAction,
   EntitlementsAction,
   SyncAction
 };
@@ -64,6 +62,5 @@ export type MessagingAction =
   | ElementOpsAction
   | SimulationRunAction
   | ConversionPreviewAction
-  | ScenarioDefinitionAction
   | EntitlementsAction
   | SyncAction;

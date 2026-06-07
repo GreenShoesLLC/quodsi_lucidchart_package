@@ -12,7 +12,6 @@ import { ValidationState, initialValidationState, validationReducer, ValidationA
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
 import { SimulationRunState, initialSimulationRunState, simulationRunReducer, SimulationRunAction } from './simulationRunSlice';
 import { ConversionPreviewState, initialConversionPreviewState, conversionPreviewReducer, ConversionPreviewAction } from './conversionPreviewSlice';
-import { ScenarioDefinitionState, initialScenarioDefinitionState, scenarioDefinitionReducer, ScenarioDefinitionAction } from './scenarioDefinitionSlice';
 import { EntitlementsState, initialEntitlementsState, entitlementsReducer, EntitlementsAction } from './entitlementsSlice';
 import { SyncState, initialSyncState, syncReducer, SyncAction } from './syncSlice';
 
@@ -26,7 +25,6 @@ export interface MessagingState {
   elementOps: ElementOpsState;
   simulationRuns: SimulationRunState;
   conversionPreview: ConversionPreviewState;
-  scenarioDefinitions: ScenarioDefinitionState;
   entitlements: EntitlementsState;
   sync: SyncState;
 }
@@ -44,7 +42,6 @@ export const initialState: MessagingState = {
   elementOps: initialElementOpsState,
   simulationRuns: initialSimulationRunState,
   conversionPreview: initialConversionPreviewState,
-  scenarioDefinitions: initialScenarioDefinitionState,
   entitlements: initialEntitlementsState,
   sync: initialSyncState,
 };
@@ -63,7 +60,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
     simulationRuns: simulationRunReducer(state.simulationRuns, action as SimulationRunAction),
     conversionPreview: conversionPreviewReducer(state.conversionPreview, action as ConversionPreviewAction),
-    scenarioDefinitions: scenarioDefinitionReducer(state.scenarioDefinitions, action as ScenarioDefinitionAction),
     entitlements: entitlementsReducer(state.entitlements, action as EntitlementsAction),
     sync: syncReducer(state.sync, action as SyncAction),
   };

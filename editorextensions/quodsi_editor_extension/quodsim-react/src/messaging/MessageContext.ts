@@ -88,14 +88,6 @@ export function useConversionPreviewState() {
 }
 
 /**
- * Hook to access scenario definitions state
- */
-export function useScenarioDefinitions() {
-  const { scenarioDefinitions } = useMessaging();
-  return scenarioDefinitions;
-}
-
-/**
  * Hook to access authentication state
  */
 export function useAuth() {
