@@ -31,7 +31,7 @@ export enum ScenarioPropertyName {
 
 /**
  * Which ScenarioPropertyName values are valid for each ScenarioObjectType.
- * Drives the cascading Property dropdown in the ChangeRequestEditor.
+ * Drives the cascading Property dropdown in scenario change-request editors.
  *
  * ENTITY has no properties (no entity-level scenario fields exist yet);
  * future phases may add some.
