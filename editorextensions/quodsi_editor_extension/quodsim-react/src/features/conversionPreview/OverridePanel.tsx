@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SimulationObjectType, DiagramElementKind } from '@quodsi/shared';
+import { SimulationObjectType, DiagramElementKind } from '@quodsi/lucid-shared';
 import { MergedMapping } from '../../messaging/hooks/useConversionPreview';
 import { TypeToggleButtons, BLOCK_OVERRIDE_OPTIONS, LINE_OVERRIDE_OPTIONS } from './TypeToggleButtons';
 

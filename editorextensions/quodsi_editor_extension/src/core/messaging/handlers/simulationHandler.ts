@@ -9,7 +9,7 @@ import {
   QUODSIM_VERSION,
   parsePageTranslate,
   offsetSerializedModelCoordinates,
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
   DocumentProxy,

@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

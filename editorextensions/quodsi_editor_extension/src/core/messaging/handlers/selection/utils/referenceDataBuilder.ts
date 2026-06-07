@@ -1,4 +1,4 @@
-import { EditorReferenceData } from '@quodsi/shared';
+import { EditorReferenceData } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
 

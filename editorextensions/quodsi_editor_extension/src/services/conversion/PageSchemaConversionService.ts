@@ -6,7 +6,7 @@ import {
     SimulationObjectType,
     Model,
     QuodsiLogger
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { ModelDataSource } from '../../data_sources/model/ModelDataSource';
 import { createModelId } from '../../data_sources/common/constants';
 

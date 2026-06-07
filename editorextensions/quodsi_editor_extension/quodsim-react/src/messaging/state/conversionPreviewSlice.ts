@@ -6,7 +6,7 @@
 import {
     ConversionPreviewData,
     SimulationObjectType
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 
 // State shape
 export interface ConversionPreviewState {

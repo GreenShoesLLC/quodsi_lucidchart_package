@@ -49,7 +49,7 @@ import {
   Connector,
   ResourceRequirement,
   isNameUniqueInReferenceData,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";

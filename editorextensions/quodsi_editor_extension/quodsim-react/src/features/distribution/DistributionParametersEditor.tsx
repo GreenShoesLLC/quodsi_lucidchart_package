@@ -9,7 +9,7 @@ import {
   NormalParameters,
   ExponentialParameters,
   createDefaultDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 import { ConstantParameterEditor } from "./parameters/ConstantParameterEditor";
 import { UniformParameterEditor } from "./parameters/UniformParameterEditor";

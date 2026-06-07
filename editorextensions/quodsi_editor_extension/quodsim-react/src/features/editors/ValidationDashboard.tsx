@@ -1,5 +1,5 @@
 import React from 'react';
-import { ValidationResult, ValidationIssue, ValidationSeverity, EditorReferenceData } from '@quodsi/shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity, EditorReferenceData } from '@quodsi/lucid-shared';
 import { AlertTriangle, XCircle, Info, CheckCircle, Activity, Users, Package, Zap } from 'lucide-react';
 
 interface ValidationDashboardProps {

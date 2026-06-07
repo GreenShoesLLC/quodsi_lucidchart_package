@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 
 /**
  * Handler for framework-related messages (lifecycle, errors, logging)

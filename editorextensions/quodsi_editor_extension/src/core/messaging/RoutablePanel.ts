@@ -1,4 +1,4 @@
-import { EnvelopeBase } from '@quodsi/shared';
+import { EnvelopeBase } from '@quodsi/lucid-shared';
 
 /**
  * Interface that must be implemented by Panel classes to work with the MessageRouter.

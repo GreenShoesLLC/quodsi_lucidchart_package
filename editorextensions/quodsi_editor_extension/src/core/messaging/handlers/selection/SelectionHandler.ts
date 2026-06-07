@@ -2,7 +2,7 @@ import {
   EnvelopeBase, 
   EnvelopeMessageType, 
   SelectionType
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { 
   EditorClient, 
   ItemProxy, 

@@ -1,5 +1,5 @@
 import React from "react";
-import { DiagramElementType, SimulationObjectType } from "@quodsi/shared";
+import { DiagramElementType, SimulationObjectType } from "@quodsi/lucid-shared";
 
 interface SimulationTypeInfo {
   type: SimulationObjectType;

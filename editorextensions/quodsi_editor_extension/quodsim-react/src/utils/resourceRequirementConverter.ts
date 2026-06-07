@@ -1,4 +1,4 @@
-import { RequirementClause, RequirementMode, ResourceRequest } from '@quodsi/shared';
+import { RequirementClause, RequirementMode, ResourceRequest } from '@quodsi/lucid-shared';
 
 /**
  * UI structure for team-based resource requirements

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus, Trash2, Info } from "lucide-react";
-import { State, StateType, ComponentType, StateListManager } from "@quodsi/shared";
+import { State, StateType, ComponentType, StateListManager } from "@quodsi/lucid-shared";
 
 interface Props {
   isOpen: boolean;

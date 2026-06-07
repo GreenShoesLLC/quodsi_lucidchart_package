@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect } from "react";
-import { State, StateType, DistributionType } from "@quodsi/shared";
+import { State, StateType, DistributionType } from "@quodsi/lucid-shared";
 import CategoryProbabilityEditor from "./CategoryProbabilityEditor";
 import BooleanProbabilityEditor from "./BooleanProbabilityEditor";
 import NumberDistributionEditor from "./NumberDistributionEditor";

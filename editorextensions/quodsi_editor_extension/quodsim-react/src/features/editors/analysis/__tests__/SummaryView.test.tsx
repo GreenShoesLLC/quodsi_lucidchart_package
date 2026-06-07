@@ -1,4 +1,4 @@
-// @quodsi/shared (pulled in by SummaryView.tsx) transitively loads
+// @quodsi/lucid-shared (pulled in by SummaryView.tsx) transitively loads
 // shared/dist/services/lucidApi.js, which requires axios's ESM entry that
 // CRA's Jest transformer can't parse. We don't exercise lucidApi here.
 // (Same pattern as ModelEditor.test.tsx.)

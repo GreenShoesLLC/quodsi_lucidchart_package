@@ -1,4 +1,4 @@
-import { PageStatus, RunState } from "@quodsi/shared";
+import { PageStatus, RunState } from "@quodsi/lucid-shared";
 
 export interface SimulationStateOutput {
     buttonLabel: string;

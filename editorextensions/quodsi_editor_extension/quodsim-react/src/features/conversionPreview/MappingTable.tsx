@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/lucid-shared';
 import { MergedMapping } from '../../messaging/hooks/useConversionPreview';
 import { StatusBadge, computeStatus, MappingStatus } from './StatusBadge';
 import { TypeDropdown } from './TypeDropdown';

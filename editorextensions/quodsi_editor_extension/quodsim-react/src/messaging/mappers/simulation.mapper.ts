@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, SimulationStatus } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, SimulationStatus } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 
@@ -56,7 +56,7 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
         };
       } else {
         // All other statuses (QUEUED, PROCESSING, VALIDATING, RUNNING, CANCELLED) use PROGRESS
-        // Status is already the correct type from @quodsi/shared
+        // Status is already the correct type from @quodsi/lucid-shared
 
         return {
           type: 'SIMULATION_PROGRESS',

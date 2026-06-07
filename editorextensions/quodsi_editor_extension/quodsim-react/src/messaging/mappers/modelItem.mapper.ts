@@ -1,5 +1,5 @@
-import { ModelItemData, SimulationObjectType, DiagramElementType } from "@quodsi/shared";
-import { ElementShape } from "@quodsi/shared";
+import { ModelItemData, SimulationObjectType, DiagramElementType } from "@quodsi/lucid-shared";
+import { ElementShape } from "@quodsi/lucid-shared";
 import { debugService } from '../utils/debugService';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 

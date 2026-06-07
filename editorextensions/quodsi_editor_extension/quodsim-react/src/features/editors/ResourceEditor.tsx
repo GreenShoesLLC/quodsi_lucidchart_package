@@ -8,7 +8,7 @@ import {
   SimulationObjectType,
   EditorReferenceData,
   isNameUniqueInReferenceData,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";

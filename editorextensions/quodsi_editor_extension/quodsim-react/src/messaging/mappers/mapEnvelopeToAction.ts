@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { mapFramework } from './framework.mapper';
 import { mapAuth } from './auth.mapper';
 import { mapSelection } from './selection.mapper';

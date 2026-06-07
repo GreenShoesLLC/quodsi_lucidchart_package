@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { EnvelopeMessageType } from "@quodsi/shared";
+import { EnvelopeMessageType } from "@quodsi/lucid-shared";
 import { CrossRepDataType } from "../features/editors/analysis/crossRepTableConfigs";
 
 export interface SummaryData {

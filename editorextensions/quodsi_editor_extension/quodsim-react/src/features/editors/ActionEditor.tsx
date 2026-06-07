@@ -34,7 +34,7 @@ import {
   StateType,
   State,
   StateCondition,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { X, Edit2, Info, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StateModificationsEditor from "./StateModificationsEditor";

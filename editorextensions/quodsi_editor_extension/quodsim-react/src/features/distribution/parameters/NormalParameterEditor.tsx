@@ -4,7 +4,7 @@ import {
   NormalParameters,
   NORMAL_PARAMETER_METADATA,
   NormalDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useMultiParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface NormalParameterEditorProps {

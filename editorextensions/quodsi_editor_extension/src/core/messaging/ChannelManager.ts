@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { Channel, PanelRole } from './types';
 import { RoutablePanel } from './RoutablePanel';
 import { ExtensionDebugService } from '../logging/ExtensionDebugService';

@@ -1,5 +1,5 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { EnvelopeBase, EnvelopeMessageType, ClientAnalyticsEvent } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ClientAnalyticsEvent } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 
 /**

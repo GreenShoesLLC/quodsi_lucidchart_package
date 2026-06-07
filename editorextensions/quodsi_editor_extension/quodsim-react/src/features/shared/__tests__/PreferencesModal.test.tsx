@@ -1,4 +1,4 @@
-// @quodsi/shared transitively requires axios (ESM entry CRA's Jest can't parse).
+// @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
 jest.mock("axios", () => ({}));
 
 import React from "react";

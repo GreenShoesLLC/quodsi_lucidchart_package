@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationIssue } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationIssue } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 

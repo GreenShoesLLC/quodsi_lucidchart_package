@@ -7,7 +7,7 @@ import {
   SwimLaneScanItem,
   SwimLaneScanLane,
   SwimLaneScanLaneBlock,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 interface DevToolsModalProps {
   isOpen: boolean;

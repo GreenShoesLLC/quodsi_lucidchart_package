@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, SwimLaneScanResult, SwimLaneScanItem, SwimLaneScanLane, SwimLaneScanLaneBlock } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, SwimLaneScanResult, SwimLaneScanItem, SwimLaneScanLane, SwimLaneScanLaneBlock } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

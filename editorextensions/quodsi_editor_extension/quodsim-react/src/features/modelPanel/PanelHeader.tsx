@@ -5,7 +5,7 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
 import { AboutModal } from "../shared/AboutModal";

@@ -15,7 +15,7 @@ import {
   ModelDefaults,
   SimulationObjectType,
   isNameUniqueInReferenceData,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";

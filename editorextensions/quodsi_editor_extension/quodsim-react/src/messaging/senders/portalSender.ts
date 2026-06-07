@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
-import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/lucid-shared';
 import { useMessaging } from '../MessageProvider';
 
 // Generous to cover Lucid's data-connector relay round-trip plus the

@@ -1,4 +1,4 @@
-import { EnvelopeBase } from '@quodsi/shared';
+import { EnvelopeBase } from '@quodsi/lucid-shared';
 import { FrameworkHandler } from './frameworkHandler';
 
 import { SimulationHandler } from './simulationHandler';

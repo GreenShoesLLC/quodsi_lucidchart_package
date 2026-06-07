@@ -4,7 +4,7 @@ import {
   ComponentType,
   StateListManager,
   Connector,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { AlertCircle, Info } from "lucide-react";
 import { StateConditionEditor } from "./StateConditionEditor";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";

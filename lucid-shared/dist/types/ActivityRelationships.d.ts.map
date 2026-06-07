@@ -1,0 +1,1 @@
+{"version":3,"file":"ActivityRelationships.d.ts","sourceRoot":"","sources":["../../src/types/ActivityRelationships.ts"],"names":[],"mappings":"AAAA;;GAEG;AACH,MAAM,WAAW,qBAAqB;IAClC,kBAAkB,EAAE,GAAG,CAAC,MAAM,CAAC,CAAC;IAChC,kBAAkB,EAAE,GAAG,CAAC,MAAM,CAAC,CAAC;IAChC,iBAAiB,EAAE,GAAG,CAAC,MAAM,CAAC,CAAC;CAClC"}

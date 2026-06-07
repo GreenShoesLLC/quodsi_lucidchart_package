@@ -9,7 +9,7 @@ Quodsi is a LucidChart extension that transforms diagrams into discrete event si
 ## Architecture
 
 ### Component Structure
-1. **Shared Library** (`/shared`) - Core domain models, validation, serialization, and messaging protocol
+1. **Shared Library** (`/lucid-shared`) - Core domain models, validation, serialization, and messaging protocol
 2. **Editor Extension** (`/editorextensions/quodsi_editor_extension`) - TypeScript-based LucidChart extension that manages the model lifecycle
 3. **React UI** (`/editorextensions/quodsi_editor_extension/quodsim-react`) - Embedded React app for model editing and simulation controls
 
@@ -36,7 +36,7 @@ The project uses a postMessage-based protocol for communication between the exte
 npm install
 
 # Build shared library first (required by other components)
-cd shared && npm run build
+cd lucid-shared && npm run build
 ```
 
 ### Local Development
@@ -51,7 +51,7 @@ cd editorextensions/quodsi_editor_extension/quodsim-react && npm start
 ### Building
 ```bash
 # Build shared library
-cd shared && npm run build
+cd lucid-shared && npm run build
 
 # Build React app for production
 cd editorextensions/quodsi_editor_extension/quodsim-react && npm run build
@@ -63,10 +63,10 @@ npm run bundle
 ### Testing
 ```bash
 # Run shared library tests
-cd shared && npm test
+cd lucid-shared && npm test
 
 # Update test snapshots
-cd shared && npm run test:update-snapshots
+cd lucid-shared && npm run test:update-snapshots
 
 # Run React app tests
 cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
@@ -75,10 +75,10 @@ cd editorextensions/quodsi_editor_extension/quodsim-react && npm test
 ### Running Individual Tests
 ```bash
 # Run a specific test file
-cd shared && npm test -- ModelValidationService.test.ts
+cd lucid-shared && npm test -- ModelValidationService.test.ts
 
 # Run tests in watch mode
-cd shared && npm test -- --watch
+cd lucid-shared && npm test -- --watch
 ```
 
 ## Important Development Notes
@@ -99,7 +99,7 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 2. **Race Conditions**: Messages are queued until REACT_APP_READY is received
 3. **Authentication**: Auth state must be synchronized across all panels
 4. **Validation**: Model validation happens in shared library, not in UI
-5. **Type Safety**: Use shared types from `@quodsi/shared` package
+5. **Type Safety**: Use shared types from `@quodsi/lucid-shared` package
 
 ### Environment Configuration
 - **Local**: `http://localhost:7071/api/dataConnector/`

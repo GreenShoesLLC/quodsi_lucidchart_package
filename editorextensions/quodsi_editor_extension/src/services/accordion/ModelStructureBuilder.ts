@@ -1,5 +1,5 @@
-import { ModelStructure, ModelElement } from '@quodsi/shared';
-import { ModelDefinition, SimulationObjectType } from '@quodsi/shared';
+import { ModelStructure, ModelElement } from '@quodsi/lucid-shared';
+import { ModelDefinition, SimulationObjectType } from '@quodsi/lucid-shared';
 
 export class ModelStructureBuilder {
     public static buildModelStructure(modelData: ModelDefinition): ModelStructure {

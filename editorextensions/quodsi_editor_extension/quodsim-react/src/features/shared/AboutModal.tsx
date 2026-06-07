@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X } from "lucide-react";
-import { QUODSI_VERSION, QUODSIM_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/shared";
+import { QUODSI_VERSION, QUODSIM_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/lucid-shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
 
 interface AboutModalProps {

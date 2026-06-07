@@ -3,7 +3,7 @@ import {
   ConstantParameters,
   CONSTANT_PARAMETER_METADATA,
   ConstantDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface ConstantParameterEditorProps {

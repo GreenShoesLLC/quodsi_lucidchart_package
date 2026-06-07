@@ -14,7 +14,7 @@ import {
     SwimLaneQuodsiData,
     SwimLaneResourceData,
     ResourceFinancialProperties
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelLucid } from '../types/ModelLucid';

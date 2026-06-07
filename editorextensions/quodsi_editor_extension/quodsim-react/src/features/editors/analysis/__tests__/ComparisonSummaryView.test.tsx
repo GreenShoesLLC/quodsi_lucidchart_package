@@ -1,4 +1,4 @@
-// @quodsi/shared (pulled in by ComparisonSummaryView.tsx) transitively loads
+// @quodsi/lucid-shared (pulled in by ComparisonSummaryView.tsx) transitively loads
 // shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
 // can't parse. (Same pattern as ModelEditor.test.tsx / SummaryView.test.tsx.)
 jest.mock("axios", () => ({}));

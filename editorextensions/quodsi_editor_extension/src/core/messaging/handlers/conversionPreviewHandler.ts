@@ -5,7 +5,7 @@ import {
     ConversionApplyRequest,
     ElementMappingOverride,
     SimulationObjectType
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

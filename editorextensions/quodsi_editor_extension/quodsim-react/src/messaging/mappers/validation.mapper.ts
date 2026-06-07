@@ -1,4 +1,4 @@
-import { ValidationResult } from "@quodsi/shared";
+import { ValidationResult } from "@quodsi/lucid-shared";
 
 /**
  * Transforms validation data from the message format to the ValidationResult format

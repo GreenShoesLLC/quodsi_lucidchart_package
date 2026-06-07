@@ -7,7 +7,7 @@
 //
 // No React rendering is needed; these are pure function calls.
 
-// @quodsi/shared pulls in lucidApi.js -> axios ESM, which Jest can't parse.
+// @quodsi/lucid-shared pulls in lucidApi.js -> axios ESM, which Jest can't parse.
 jest.mock("axios", () => ({}));
 
 import {
@@ -23,7 +23,7 @@ import {
   createLoopAction,
   createBranchAction,
   Duration,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 describe("handleActionTypeChange factory wiring — id assignment", () => {
   it("ASSIGN: createAssignAction([]) produces a non-empty id", () => {

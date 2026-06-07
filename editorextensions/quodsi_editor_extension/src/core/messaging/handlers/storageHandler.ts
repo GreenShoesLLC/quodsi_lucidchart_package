@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, StorageProvider, ConnectionStatus } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, StorageProvider, ConnectionStatus } from '@quodsi/lucid-shared';
 import { router } from '../index';
 
 /**

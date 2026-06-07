@@ -1,4 +1,4 @@
-import { EnvelopeMessageType, StorageProvider } from '@quodsi/shared';
+import { EnvelopeMessageType, StorageProvider } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 
 /**

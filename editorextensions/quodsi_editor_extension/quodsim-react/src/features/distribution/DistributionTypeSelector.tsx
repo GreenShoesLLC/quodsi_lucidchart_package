@@ -3,7 +3,7 @@ import { Info } from "lucide-react";
 import {
   DistributionType,
   getDistributionDisplayName,
-  isDistributionTypeSupported } from "@quodsi/shared";
+  isDistributionTypeSupported } from "@quodsi/lucid-shared";
 
 interface DistributionTypeSelectorProps {
   distributionType: DistributionType;

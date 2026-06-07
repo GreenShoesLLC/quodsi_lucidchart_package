@@ -1,4 +1,4 @@
-import { UpgradeIssue, UpgradeIssueSeverity } from '@quodsi/shared';
+import { UpgradeIssue, UpgradeIssueSeverity } from '@quodsi/lucid-shared';
 import { PageProxy } from 'lucid-extension-sdk';
 
 /**

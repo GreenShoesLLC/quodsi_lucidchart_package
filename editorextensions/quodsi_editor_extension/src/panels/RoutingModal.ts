@@ -7,7 +7,7 @@ import {
     EnvelopeBase,
     isEnvelope,
     MessageSource
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { router, RoutablePanel, PanelRole } from '../core/messaging';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 

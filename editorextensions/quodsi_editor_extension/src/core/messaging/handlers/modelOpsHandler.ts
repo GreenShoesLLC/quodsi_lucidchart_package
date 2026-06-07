@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory } from '@quodsi/shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';

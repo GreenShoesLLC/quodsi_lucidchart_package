@@ -5,7 +5,7 @@ import {
   StateComparison,
   StateType,
   getSupportedComparisonsForType,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 interface StateConditionEditorProps {
   condition: StateCondition | null;

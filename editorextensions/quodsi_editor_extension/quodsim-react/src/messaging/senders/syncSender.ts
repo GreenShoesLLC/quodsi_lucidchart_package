@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { EnvelopeMessageType, ISerializedScenario } from '@quodsi/shared';
+import { EnvelopeMessageType, ISerializedScenario } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 
 /**

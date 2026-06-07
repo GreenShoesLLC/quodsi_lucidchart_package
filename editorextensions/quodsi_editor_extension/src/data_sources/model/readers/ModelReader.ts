@@ -1,7 +1,7 @@
 import { EditorClient, CollectionProxy, MapProxy, DataItemProxy } from 'lucid-extension-sdk';
 import { DataSourceReader } from '../../base/DataSourceReader';
 import { MODEL_COLLECTIONS } from '../schemas';
-import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/lucid-shared';
 
 // Define interfaces for the model data
 export interface ModelData {

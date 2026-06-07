@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { EnvelopeMessageType, isEnvelope } from '@quodsi/shared';
+import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
 import { useMessaging } from '../../messaging/MessageProvider';
 
 interface Props {

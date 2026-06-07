@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TimePattern, Distribution, PeriodUnit, DistributionType, UniformParameters } from "@quodsi/shared";
+import { TimePattern, Distribution, PeriodUnit, DistributionType, UniformParameters } from "@quodsi/lucid-shared";
 import { X, Info } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import {

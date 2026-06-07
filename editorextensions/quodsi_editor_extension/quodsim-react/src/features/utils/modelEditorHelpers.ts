@@ -4,7 +4,7 @@ import {
   SimulationTimeType,
   SimulationObjectType,
   ResourceRequirement,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 
 /**
  * Input type for model data - accepts various formats

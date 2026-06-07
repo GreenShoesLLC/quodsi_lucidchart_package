@@ -7,7 +7,7 @@ import {
   ISerializedTimePattern,
   ISerializedTimeDistributedConfig,
   ValidationResult,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 

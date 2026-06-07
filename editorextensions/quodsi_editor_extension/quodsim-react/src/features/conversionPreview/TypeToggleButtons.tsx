@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/lucid-shared';
 
 export interface TypeOption {
     value: SimulationObjectType | null;

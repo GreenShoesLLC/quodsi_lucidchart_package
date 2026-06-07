@@ -1,4 +1,4 @@
-import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType, ISerializedState } from '@quodsi/shared';
+import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType, ISerializedState } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
 import { debugService } from '../utils/debugService';
 import { ExtendedModelItemData } from '../../types/ModelItemData';

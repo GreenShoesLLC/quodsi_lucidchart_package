@@ -7,7 +7,7 @@ import {
     SimulationObjectType,
     ComponentLogger,
     QUODSI_VERSION
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 
 // Define a constant for the logger prefix

@@ -1,8 +1,8 @@
-import { PageStatus } from "@quodsi/shared";
+import { PageStatus } from "@quodsi/lucid-shared";
 
 /**
  * UI state for simulation polling
- * Renamed from SimulationStatus to avoid collision with SimulationStatus enum from @quodsi/shared
+ * Renamed from SimulationStatus to avoid collision with SimulationStatus enum from @quodsi/lucid-shared
  */
 export interface SimulationPollState {
     pageStatus: PageStatus | null;

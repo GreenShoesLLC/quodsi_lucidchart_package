@@ -27,7 +27,7 @@ node --version
 
 ```bash
 npm install
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 **Leave this terminal open** - build only needs to run once per session.
@@ -100,7 +100,7 @@ lsof -ti:3000 | xargs kill -9
 ### Module Not Found
 
 ```bash
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart Terminals 2 and 3.
@@ -120,7 +120,7 @@ Cmd+Shift+R (Mac)
 ### Shared Library Changes
 
 ```bash
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart Terminal 3 (Extension).
@@ -153,7 +153,7 @@ killall node              # Mac/Linux
 rm -rf shared/dist
 rm -rf editorextensions/quodsi_editor_extension/quodsim-react/build
 npm install
-npm run build -w @quodsi/shared
+npm run build -w @quodsi/lucid-shared
 ```
 
 Then restart all 4 terminals.
@@ -194,7 +194,7 @@ Simulation/data backend lives in the separate `quodsi_api` repository.
 
 | Terminal | Command | Port | Hot Reload |
 |----------|---------|------|------------|
-| 1 | `npm run build -w @quodsi/shared` | - | No (one-time) |
+| 1 | `npm run build -w @quodsi/lucid-shared` | - | No (one-time) |
 | 2 | `npx react-scripts start` | 3000 | Yes |
 | 3 | `npx lucid-package@latest test-editor-extension quodsi_editor_extension` | - | No |
 

@@ -5,7 +5,7 @@ import {
   SelectedScenario,
   mergeTableData,
 } from "../../../utils/scenarioDataMerge";
-import { isOutputSchemaCompatible } from "@quodsi/shared";
+import { isOutputSchemaCompatible } from "@quodsi/lucid-shared";
 import { StaleScenarioBanner } from "./StaleScenarioBanner";
 import { StaleScenarioRow } from "./StaleScenarioRow";
 

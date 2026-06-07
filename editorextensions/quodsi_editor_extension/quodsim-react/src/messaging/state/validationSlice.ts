@@ -3,7 +3,7 @@
  * Manages model validation state and errors
  */
 
-import { ValidationIssue } from '@quodsi/shared';
+import { ValidationIssue } from '@quodsi/lucid-shared';
 
 // State shape
 export interface ValidationState {

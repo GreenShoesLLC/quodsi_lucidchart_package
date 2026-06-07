@@ -7,7 +7,7 @@ import {
     ElementMappingOverride,
     ConversionPreviewSummary,
     DiagramElementKind
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 
 /**
  * Merged mapping that combines proposed type with any user override

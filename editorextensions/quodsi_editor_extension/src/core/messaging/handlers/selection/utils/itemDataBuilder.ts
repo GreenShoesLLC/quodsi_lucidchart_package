@@ -7,7 +7,7 @@ import {
   ModelItemData,
   ElementTypeInfo,
   SimulationObjectType
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
 

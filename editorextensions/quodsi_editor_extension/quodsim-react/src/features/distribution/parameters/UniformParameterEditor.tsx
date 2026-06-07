@@ -4,7 +4,7 @@ import {
   UniformParameters,
   UNIFORM_PARAMETER_METADATA,
   UniformDistribution,
-} from "@quodsi/shared";
+} from "@quodsi/lucid-shared";
 import { useMultiParameterEditorState } from "../../../messaging/hooks/useParameterEditorState";
 
 interface UniformParameterEditorProps {

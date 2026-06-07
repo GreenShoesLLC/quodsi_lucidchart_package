@@ -1,4 +1,4 @@
-import { EnvelopeMessageType, isEnvelope } from '@quodsi/shared';
+import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
 import { debugService } from '../utils/debugService';
 import { mapEnvelopeToAction } from '../mappers/mapEnvelopeToAction';
 

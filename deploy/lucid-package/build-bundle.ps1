@@ -146,16 +146,16 @@ catch {
 
 # --- Step 1.5: Build Shared Library ---
 Write-Host "--------------------------------------------------"
-Write-Host "Step 1.5: Building Shared Library (@quodsi/shared)..."
+Write-Host "Step 1.5: Building Shared Library (@quodsi/lucid-shared)..."
 Write-Host "--------------------------------------------------"
 
-Write-Host "Executing 'npm run build -w @quodsi/shared' in $LucidPackageDir..."
+Write-Host "Executing 'npm run build -w @quodsi/lucid-shared' in $LucidPackageDir..."
 try {
     Push-Location -Path $LucidPackageDir
-    npm run build -w @quodsi/shared *>&1 | Write-Host
+    npm run build -w @quodsi/lucid-shared *>&1 | Write-Host
 
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "'npm run build -w @quodsi/shared' command failed with exit code $LASTEXITCODE."
+        Write-Error "'npm run build -w @quodsi/lucid-shared' command failed with exit code $LASTEXITCODE."
         Pop-Location
         exit $LASTEXITCODE
     } else {
@@ -391,7 +391,7 @@ if (-not (Test-Path $PackageZipPath)) {
 }
 
 # Extract QUODSI_VERSION from version.ts
-$VersionFilePath = Join-Path $LucidPackageDir "shared\src\constants\version.ts"
+$VersionFilePath = Join-Path $LucidPackageDir "lucid-shared\src\constants\version.ts"
 $VersionFileContent = Get-Content $VersionFilePath -Raw
 if ($VersionFileContent -match 'QUODSI_VERSION\s*=\s*"([^"]+)"') {
     $QuodsiVersion = $Matches[1]

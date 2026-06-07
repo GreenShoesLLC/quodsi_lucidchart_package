@@ -1,4 +1,4 @@
-import { ModalSize, DEFAULT_MODAL_SIZE } from '@quodsi/shared';
+import { ModalSize, DEFAULT_MODAL_SIZE } from '@quodsi/lucid-shared';
 
 /**
  * Per-user preference for the embedded Studio modal size (Scenarios / Animation

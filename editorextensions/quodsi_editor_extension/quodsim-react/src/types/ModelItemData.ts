@@ -1,4 +1,4 @@
-import { ModelItemData as BaseModelItemData, SimulationObjectType, MappingSource } from '@quodsi/shared';
+import { ModelItemData as BaseModelItemData, SimulationObjectType, MappingSource } from '@quodsi/lucid-shared';
 
 /**
  * Extended metadata interface that allows string type values

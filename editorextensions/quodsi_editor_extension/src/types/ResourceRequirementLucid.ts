@@ -5,7 +5,7 @@ import {
     SimulationObjectType,
     Resource,
     MappingSource
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
 

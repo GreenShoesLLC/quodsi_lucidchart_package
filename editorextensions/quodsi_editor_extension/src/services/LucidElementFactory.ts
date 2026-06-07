@@ -4,7 +4,7 @@ import {
     Resource,
     ComponentLogger,
     MappingSource
-} from '@quodsi/shared';
+} from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import {
     SimObjectLucid,

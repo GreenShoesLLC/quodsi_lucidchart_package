@@ -1,4 +1,4 @@
-import { ExtensionConfig, QuodsiUserInfo } from '@quodsi/shared';
+import { ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { debugService } from '../utils/debugService';
 
 const logger = debugService.forComponent('AuthSlice');

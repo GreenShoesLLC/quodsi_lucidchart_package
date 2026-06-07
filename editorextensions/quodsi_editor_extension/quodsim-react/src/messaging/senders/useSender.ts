@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { EnvelopeMessageType } from '@quodsi/shared';
+import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { useMessaging } from '../MessageProvider';
 import { debugService } from '../utils/debugService';
 
