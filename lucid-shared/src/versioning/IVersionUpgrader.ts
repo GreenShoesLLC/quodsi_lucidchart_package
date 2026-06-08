@@ -1,4 +1,4 @@
-import { PreflightResult } from './PreflightResult';
+import { PreflightResult } from '@quodsi/shared';
 
 /**
  * Defines core functionality for version upgraders

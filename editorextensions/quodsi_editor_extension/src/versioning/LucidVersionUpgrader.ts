@@ -1,5 +1,5 @@
-import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION } from '@quodsi/lucid-shared';
-import { getTransformationsBetweenVersions } from '@quodsi/lucid-shared';
+import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION, upgradeElements } from '@quodsi/lucid-shared';
+import type { RawElement } from '@quodsi/lucid-shared';
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { LucidPreflightChecker } from './LucidPreflightChecker';
 
@@ -70,75 +70,57 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     }
 
     /**
-     * Performs the upgrade on all elements
+     * Performs the upgrade on all elements by delegating the per-element
+     * transform decision to the pure core engine, while keeping platform
+     * concerns (mappingSource preservation, page version stamping, which
+     * shapes to rewrite) here in the adapter.
      */
     protected async performUpgrade(page: PageProxy): Promise<void> {
         const sourceVersion = await this.getSourceVersion(page);
-        const transformations = getTransformationsBetweenVersions(sourceVersion, this.currentVersion);
 
-        // Upgrade page/model first
-        await this.upgradeElement(page, transformations, true);
-
-        // Upgrade blocks
-        for (const block of page.blocks.values()) {
-            await this.upgradeElement(block, transformations, false);
+        interface Target {
+            element: ElementProxy;
+            blob: RawElement;
+            mappingSource: any;
+            isPage: boolean;
         }
+        const targets: Target[] = [];
 
-        // Upgrade lines
-        for (const line of page.lines.values()) {
-            await this.upgradeElement(line, transformations, false);
-        }
-    }
-
-    /**
-     * Upgrades a single element's q_data
-     */
-    private async upgradeElement(
-        element: ElementProxy,
-        transformations: any[],
-        isPage: boolean
-    ): Promise<void> {
-        const dataStr = element.shapeData.get(LucidVersionUpgrader.DATA_KEY);
-
-        if (!dataStr || typeof dataStr !== 'string') return;
-
-        try {
-            const data = JSON.parse(dataStr);
-            const elementType = data.type;
-
-            if (!elementType) return;
-
-            const transform = transformations.find(t => t.objectType === elementType);
-
-            if (transform && transform.transformations.length > 0) {
-                // Apply all chained transforms in sequence, piping output into the next
-                let transformedData = data;
-                for (const t of transform.transformations) {
-                    transformedData = t.transform(transformedData);
-                }
-
-                // Preserve type info fields
-                transformedData.type = data.type;
-                transformedData.id = data.id;
-                if (data.mappingSource) {
-                    transformedData.mappingSource = data.mappingSource;
-                }
-
-                // Update version on page only
-                if (isPage) {
-                    transformedData.version = this.currentVersion;
-                }
-
-                // Save back to element
-                element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(transformedData));
-            } else if (isPage) {
-                // Even if no transform needed, update page version
-                data.version = this.currentVersion;
-                element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(data));
+        const collect = (element: ElementProxy, isPage: boolean): void => {
+            const dataStr = element.shapeData.get(LucidVersionUpgrader.DATA_KEY);
+            if (!dataStr || typeof dataStr !== 'string') return;
+            let blob: any;
+            try {
+                blob = JSON.parse(dataStr);
+            } catch {
+                throw new Error(`Failed to parse q_data for element ${element.id}`);
             }
-        } catch (error) {
-            throw new Error(`Failed to upgrade element ${element.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+            if (!blob || !blob.type) return;
+            targets.push({ element, blob, mappingSource: blob.mappingSource, isPage });
+        };
+
+        // Page/model first, then blocks, then lines
+        collect(page, true);
+        for (const block of page.blocks.values()) collect(block, false);
+        for (const line of page.lines.values()) collect(line, false);
+
+        // Pure core upgrade
+        const result = upgradeElements(targets.map(t => t.blob), sourceVersion);
+
+        // Write back, preserving platform + version concerns adapter-side.
+        result.elements.forEach((upgraded, i) => {
+            const t = targets[i];
+            const changed = upgraded !== t.blob; // engine returns same ref when untouched
+            if (!changed && !t.isPage) return;    // match prior behavior: don't rewrite untouched shapes
+
+            if (t.mappingSource !== undefined) {
+                (upgraded as any).mappingSource = t.mappingSource;
+            }
+            if (t.isPage) {
+                (upgraded as any).version = result.toVersion;
+            }
+            t.element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(upgraded));
+        });
     }
 
     /**
