@@ -2,7 +2,7 @@ import { DistributionType } from '@quodsi/shared';
 import {
     canRateScale,
     validateRateMultiplier,
-} from "../../src/validation/rules/durationRateScale";
+} from "@quodsi/shared";
 
 describe("canRateScale", () => {
     it("returns true for CONSTANT", () => {

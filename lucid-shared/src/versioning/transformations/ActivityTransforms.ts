@@ -1,5 +1,5 @@
 import { TransformationSet } from './TransformationTypes';
-import { generateUUID } from '../../utils/uuidUtils';
+import { generateUUID } from '@quodsi/shared';
 
 /**
  * Transformations for Activity objects

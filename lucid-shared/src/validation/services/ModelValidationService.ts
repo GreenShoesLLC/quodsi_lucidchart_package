@@ -3,17 +3,19 @@ import { ModelDefinition } from '@quodsi/shared';
 import { ModelDefinitionLogger } from "../../types/elements/ModelDefinitionLogger";
 import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
 import { ValidationIssue, ValidationResult, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { ValidationMessages } from "../common/ValidationMessages";
-import { ModelDefinitionState } from "../models/ModelDefinitionState";
-import { ActivityValidation } from "../rules/ActivityValidation";
-import { ConnectorValidation } from "../rules/ConnectorValidation";
-import { ElementCountsValidation } from "../rules/ElementCountsValidation";
-import { GeneratorValidation } from "../rules/GeneratorValidation";
-import { GeneratorPathValidation } from "../rules/GeneratorPathValidation";
-import { ResourceValidation } from "../rules/ResourceValidation";
-import { ValidationRule } from "../common/ValidationRule";
-import { EntityValidation } from "../rules/EntityValidation";
-import { ValidationRuleName } from "../types/ValidationRuleName";
+import {
+    ValidationMessages,
+    ModelDefinitionState,
+    ActivityValidation,
+    ConnectorValidation,
+    ElementCountsValidation,
+    GeneratorValidation,
+    GeneratorPathValidation,
+    ResourceValidation,
+    ValidationRule,
+    EntityValidation,
+    ValidationRuleName,
+} from "@quodsi/shared";
 import { ActionType } from '@quodsi/shared';
 import { SeizeAction, ReleaseAction, DelayWithResourceAction } from '@quodsi/shared';
 
