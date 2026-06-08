@@ -1,5 +1,5 @@
 import { Duration } from "./Duration";
-import { GeneratorType } from "./GeneratorType";
+import { GeneratorType } from '@quodsi/shared';
 import { StateModification } from "./StateModification";
 
 /**

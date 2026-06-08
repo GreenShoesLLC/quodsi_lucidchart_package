@@ -11,7 +11,7 @@ import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
 import { EntitySourceConfig } from '../../../../src/types/elements/EntitySourceConfig';
-import { GeneratorType } from '../../../../src/types/elements/GeneratorType';
+import { GeneratorType } from '@quodsi/lucid-shared';
 
 export function createSequentialFlowModel(): ModelDefinition {
     // Create base model

@@ -13,7 +13,7 @@ import { Resource } from '../../src/types/elements/Resource';
 import { ResourceRequirement } from '../../src/types/elements/ResourceRequirement';
 import { Generator } from '../../src/types/elements/Generator';
 import { EntitySourceConfig } from '../../src/types/elements/EntitySourceConfig';
-import { GeneratorType } from '../../src/types/elements/GeneratorType';
+import { GeneratorType } from '@quodsi/lucid-shared';
 import { Duration } from '../../src/types/elements/Duration';
 import { PeriodUnit } from '../../src/types/elements/PeriodUnit';
 import { ConstantDistribution } from '../../src/types/elements/distributions';

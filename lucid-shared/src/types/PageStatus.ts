@@ -1,4 +1,4 @@
-import { SimulationRun } from "./elements/SimulationRun";
+import { SimulationRun } from '@quodsi/shared';
 
 
 export interface PageStatus {
