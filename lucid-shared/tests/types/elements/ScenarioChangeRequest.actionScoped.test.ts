@@ -3,11 +3,11 @@ import {
     PROPERTIES_BY_OBJECT_TYPE,
     PROPERTY_DISPLAY_LABELS,
     NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
-} from '@quodsi/lucid-shared';
+} from '@quodsi/shared';
 import { ScenarioObjectType } from '@quodsi/shared';
-import { ScenarioChangeRequest, summarizeChangeRequest } from '@quodsi/lucid-shared';
-import { ResourceRequirementModification } from '@quodsi/lucid-shared';
-import { DurationModification } from '@quodsi/lucid-shared';
+import { ScenarioChangeRequest, summarizeChangeRequest } from '@quodsi/shared';
+import { ResourceRequirementModification } from '@quodsi/shared';
+import { DurationModification } from '@quodsi/shared';
 
 describe('Activity action properties wired into the property registry', () => {
     it('Activity includes DURATION and RESOURCE_REQUIREMENT', () => {

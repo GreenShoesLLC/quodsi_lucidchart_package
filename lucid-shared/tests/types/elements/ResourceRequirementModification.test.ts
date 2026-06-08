@@ -1,5 +1,5 @@
-import { ResourceRequirementModification } from '@quodsi/lucid-shared';
-import { ScenarioPropertyName } from '@quodsi/lucid-shared';
+import { ResourceRequirementModification } from '@quodsi/shared';
+import { ScenarioPropertyName } from '@quodsi/shared';
 
 describe('ResourceRequirementModification', () => {
   it('toJSON emits the reference discriminator', () => {

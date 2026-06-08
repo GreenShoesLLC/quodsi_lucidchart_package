@@ -1,4 +1,4 @@
-import { ScenarioPropertyName, ScenarioSetterType } from "../../src/types/elements";
+import { ScenarioPropertyName, ScenarioSetterType } from "@quodsi/shared";
 import {
   validateChangeRequestValue,
   isIntegerInput,
