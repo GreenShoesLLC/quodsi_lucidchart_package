@@ -1,4 +1,4 @@
-import { Model } from '../../../../src/types/elements/Model';
+import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';

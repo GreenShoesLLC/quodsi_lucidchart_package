@@ -1,5 +1,4 @@
-import { ScenarioPropertyName } from "../../types/elements/ScenarioPropertyName";
-import { ScenarioSetterType } from "../../types/elements/ScenarioSetterType";
+import { ScenarioPropertyName, ScenarioSetterType } from "@quodsi/shared";
 
 export interface ChangeRequestValidationResult {
   valid: boolean;

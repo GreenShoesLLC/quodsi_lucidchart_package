@@ -331,24 +331,6 @@ export class SimulationHandler {
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
       let scenarioId = data.scenarioDefinitionId || generateUUID();
 
-      // If a scenario definition was specified, embed its change requests in the model payload
-      let scenarioDefinitionName: string | undefined;
-      if (data.scenarioDefinitionId) {
-        const scenario = modelDefinition.scenarios.get(scenarioId);
-        if (scenario) {
-          const serializedScenario = scenario.toJSON();
-          serializedModel.scenarioChangeRequests = serializedScenario.changeRequests;
-          scenarioDefinitionName = serializedScenario.name;
-          console.log('[SimulationHandler] Added scenarioChangeRequests to model payload', {
-            scenarioId,
-            scenarioDefinitionName,
-            changeRequestCount: serializedScenario.changeRequests.length
-          });
-        } else {
-          console.warn('[SimulationHandler] Scenario definition not found:', scenarioId);
-        }
-      }
-
       // Get SVG representation of the current page
       console.log('[SimulationHandler] Getting SVG for the current page...');
       const diagramSvg = await activePageProxy.getSvg(undefined, true);

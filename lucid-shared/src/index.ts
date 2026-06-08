@@ -120,7 +120,6 @@ export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // Element types — DEFERRED (stay in lucid)
-export * from './types/elements/Model';
 export * from './types/elements/ModelUtils';
 export * from './types/elements/ModelDefinitionLogger';
 
@@ -132,13 +131,30 @@ export * from './types/elements/actions';
 // Distribution types
 export * from './types/elements/distributions';
 
-// Scenario change request types — DEFERRED
-export * from './types/elements/ScenarioPropertyName';
-export * from './types/elements/ScenarioSetterType';
-export * from './types/elements/DurationModification';
-export * from './types/elements/ResourceRequirementModification';
-export * from './types/elements/ScenarioChangeRequest';
-export * from './types/elements/Scenario';
+// Scenario cluster — now sourced from the core (Phase 3 slice 3)
+export {
+  DomainModel as Model,
+} from '@quodsi/shared';
+export {
+  DomainScenario as Scenario,
+  LEGACY_BASELINE_SCENARIO_ID,
+  ScenarioChangeRequest,
+  ObjectMatchCriteria,
+  summarizeChangeRequest,
+  DurationModification,
+  DurationModificationMode,
+  SerializedDuration,
+  ResourceRequirementModification,
+  ScenarioPropertyName,
+  PROPERTIES_BY_OBJECT_TYPE,
+  PROPERTY_DISPLAY_LABELS,
+  NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
+  ScenarioSetterType,
+} from '@quodsi/shared';
+export type {
+  ModificationType,
+  ModificationDetails,
+} from '@quodsi/shared';
 
 // Export accordion types
 export * from './types/accordion/ModelElement';

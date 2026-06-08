@@ -4,7 +4,7 @@ import { Entity } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
 import { Resource } from '@quodsi/shared';
 import { ResourceRequirement } from '@quodsi/shared';
-import { Model } from '../types/elements/Model';
+import { DomainModel as Model } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';
 import { RequirementClause } from '@quodsi/shared';
