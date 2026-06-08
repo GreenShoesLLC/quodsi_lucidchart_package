@@ -2,7 +2,7 @@ import { ScenarioPropertyName, ScenarioSetterType } from "../../src/types/elemen
 import {
   validateChangeRequestValue,
   isIntegerInput,
-} from "../../src/validation/rules/ScenarioChangeValidation";
+} from "@quodsi/shared";
 
 describe("validateChangeRequestValue", () => {
   // =========================================================================

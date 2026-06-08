@@ -1,26 +1,30 @@
-// Common exports
-export { ValidationMessages } from './common/ValidationMessages';
-export { ValidationRule } from './common/ValidationRule';
+// Re-export the 15 behavior-identical validation files from the core
+// (Phase 3 Slice 5: these files were deleted from lucid; they are now sourced from @quodsi/shared)
+export {
+    ValidationMessages,
+    ValidationRule,
+    ActivityValidation,
+    ConnectorValidation,
+    ElementCountsValidation,
+    EntityValidation,
+    GeneratorPathValidation,
+    GeneratorValidation,
+    ResourceValidation,
+    TimePatternValidation,
+    TimeDistributedConfigValidation,
+    canRateScale,
+    validateRateMultiplier,
+    validateChangeRequestValue,
+    isIntegerInput,
+    ValidationRuleName,
+} from '@quodsi/shared';
+export type {
+    ModelDefinitionState,
+    ChangeRequestValidationResult,
+} from '@quodsi/shared';
 
-// Model exports
-export { ModelDefinitionState } from './models/ModelDefinitionState';
-
-// Rule exports
-export { ActivityValidation } from './rules/ActivityValidation';
-export { ConnectorValidation } from './rules/ConnectorValidation';
-export { ElementCountsValidation } from './rules/ElementCountsValidation';
-export { EntityValidation } from './rules/EntityValidation';
-export { GeneratorValidation } from './rules/GeneratorValidation';
-export { ResourceValidation } from './rules/ResourceValidation';
-export { validateChangeRequestValue, isIntegerInput } from './rules/ScenarioChangeValidation';
-export type { ChangeRequestValidationResult } from './rules/ScenarioChangeValidation';
-export { canRateScale, validateRateMultiplier } from './rules/durationRateScale';
-
-// Service exports
+// Service export (stays in lucid — extends QuodsiLogger, a Bucket-B dependency)
 export { ModelValidationService } from './services/ModelValidationService';
-
-// Export validation rule names
-export { ValidationRuleName } from './types/ValidationRuleName';
 
 // NOTE: ValidationIssue, ValidationSeverity, and ValidationResult are exported from
 // '../quodsi-messaging' at the top level, not here, to avoid duplicate exports
