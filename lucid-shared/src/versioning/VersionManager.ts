@@ -1,6 +1,6 @@
 import { IVersionUpgrader, UpgradeOptions } from './IVersionUpgrader';
 import { PreflightResult } from './PreflightResult';
-import { PlatformType } from '../platform/PlatformType';
+import { PlatformType } from '@quodsi/shared';
 import { VersionUpgraderFactory } from './VersionUpgraderFactory';
 
 export interface VersionManagerOptions extends UpgradeOptions {
