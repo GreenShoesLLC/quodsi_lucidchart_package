@@ -120,7 +120,6 @@ export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // Element types — DEFERRED (stay in lucid)
-export * from './types/elements/ModelUtils';
 export * from './types/elements/ModelDefinitionLogger';
 
 // State management types — already covered in named block above

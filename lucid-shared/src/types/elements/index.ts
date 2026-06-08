@@ -96,7 +96,6 @@ export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // DEFERRED — stay in lucid
-export * from './ModelUtils';
 export * from './ModelDefinitionLogger';
 
 // Export distributions
