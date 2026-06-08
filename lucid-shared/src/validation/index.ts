@@ -14,13 +14,10 @@ export {
     TimeDistributedConfigValidation,
     canRateScale,
     validateRateMultiplier,
-    validateChangeRequestValue,
-    isIntegerInput,
     ValidationRuleName,
 } from '@quodsi/shared';
 export type {
     ModelDefinitionState,
-    ChangeRequestValidationResult,
 } from '@quodsi/shared';
 
 // Service export (stays in lucid — extends QuodsiLogger, a Bucket-B dependency)

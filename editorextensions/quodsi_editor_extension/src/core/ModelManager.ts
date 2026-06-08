@@ -14,7 +14,6 @@ import {
     ElementTypeInfo,
     ModelStructure,
     ModelElement,
-    ModelDefinitionLogger,
     ActivityListManager,
     ResourceRequirement,
     ValidationMessages,
@@ -191,7 +190,6 @@ export class ModelManager {
                 if (typeof newModelDefinition.activities.add !== 'function') {
                     throw new Error(`activities.add is not a function: ${typeof newModelDefinition.activities.add}`);
                 }
-                // ModelDefinitionLogger.logModelDefinition(newModelDefinition)
 
                 // Detect elements deleted from diagram and clean up orphaned references
                 if (this.modelDefinition) {
