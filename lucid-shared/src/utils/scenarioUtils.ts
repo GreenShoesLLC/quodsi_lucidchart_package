@@ -1,6 +1,6 @@
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
 import { LEGACY_BASELINE_SCENARIO_ID, DomainScenario as Scenario } from "@quodsi/shared";
-import { generateUUID } from "./uuidUtils";
+import { generateUUID } from '@quodsi/shared';
 
 /**
  * Ensure exactly one baseline scenario exists in the page's persisted

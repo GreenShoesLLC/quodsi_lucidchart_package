@@ -1,4 +1,4 @@
-import { generateUUID } from '../utils/uuidUtils';
+import { generateUUID } from '@quodsi/shared';
 import { EnvelopeMessageType, EnvelopMessagePayloads, EnvelopeBase, MessageSource, MessageTarget } from './index';
 
 /**
