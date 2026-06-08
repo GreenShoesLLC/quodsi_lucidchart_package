@@ -1,6 +1,4 @@
-import { ActivityTransforms } from '../../../src/versioning/transformations/ActivityTransforms';
-import { getTransformationsBetweenVersions } from '../../../src/versioning/transformations';
-import { QUODSI_VERSION } from '../../../src/constants/version';
+import { ActivityTransforms, getTransformationsBetweenVersions, QUODSI_VERSION } from '@quodsi/shared';
 
 // Locate the action-id backfill hop by its version bounds
 function actionIdHop() {
