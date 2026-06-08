@@ -10,10 +10,10 @@ import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { Distribution } from '@quodsi/shared';
 import { DistributionType } from '@quodsi/shared';
-import { ConstantDistribution } from '../../../../src/types/elements/distributions';
-import { UniformParameters, TriangularParameters, NormalParameters } from '../../../../src/types/elements/distributions';
-import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
-import { createDelayAction } from '../../../../src/types/elements/actions/DelayAction';
+import { ConstantDistribution } from '@quodsi/shared';
+import { UniformParameters, TriangularParameters, NormalParameters } from '@quodsi/shared';
+import { createDelayWithResourceAction } from '@quodsi/shared';
+import { createDelayAction } from '@quodsi/shared';
 import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 

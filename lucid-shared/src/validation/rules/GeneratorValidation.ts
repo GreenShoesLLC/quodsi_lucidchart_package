@@ -4,7 +4,7 @@ import { ValidationMessages } from '../common/ValidationMessages';
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
 import { Generator } from '@quodsi/shared';
 import { DistributionType } from '@quodsi/shared';
-import { ConstantParameters } from "../../types/elements/distributions/ConstantDistribution";
+import { ConstantParameters } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';
 
 

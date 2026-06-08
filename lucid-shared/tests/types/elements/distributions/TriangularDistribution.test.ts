@@ -1,8 +1,8 @@
 import { DistributionType } from '@quodsi/shared';
-import { 
-    TriangularParameters, 
-    TriangularDistribution 
-} from "../../../../src/types/elements/distributions";
+import {
+    TriangularParameters,
+    TriangularDistribution
+} from '@quodsi/shared';
 
 describe('TriangularDistribution', () => {
     describe('createDefault', () => {

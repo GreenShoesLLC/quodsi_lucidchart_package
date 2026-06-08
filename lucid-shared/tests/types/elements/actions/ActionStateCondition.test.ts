@@ -1,8 +1,8 @@
-import { ActionType } from "../../../../src/types/elements/actions/ActionType";
-import { createDelayAction } from "../../../../src/types/elements/actions/DelayAction";
-import { createDisposeAction } from "../../../../src/types/elements/actions/DisposeAction";
-import { createSeizeAction } from "../../../../src/types/elements/actions/SeizeAction";
-import { createBranchAction } from "../../../../src/types/elements/actions/BranchAction";
+import { ActionType } from '@quodsi/shared';
+import { createDelayAction } from '@quodsi/shared';
+import { createDisposeAction } from '@quodsi/shared';
+import { createSeizeAction } from '@quodsi/shared';
+import { createBranchAction } from '@quodsi/shared';
 import { StateCondition } from '@quodsi/shared';
 import { StateComparison } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';

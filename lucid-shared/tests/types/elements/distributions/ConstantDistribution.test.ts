@@ -1,8 +1,8 @@
 import { DistributionType } from '@quodsi/shared';
-import { 
-    ConstantParameters, 
-    ConstantDistribution 
-} from "../../../../src/types/elements/distributions";
+import {
+    ConstantParameters,
+    ConstantDistribution
+} from '@quodsi/shared';
 
 describe('ConstantDistribution', () => {
     describe('createDefault', () => {

@@ -1,4 +1,4 @@
-import { createSeizeAction } from '../../../../src/types/elements/actions/SeizeAction';
+import { createSeizeAction } from '@quodsi/shared';
 
 describe('action factories assign ids (lucid legacy shared)', () => {
   it('createSeizeAction generates a non-empty string id', () => {
