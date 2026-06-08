@@ -1,4 +1,4 @@
-import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 import { ISerializedAction } from './ISerializedAction';
 
 export interface ISerializedConnector {

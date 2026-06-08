@@ -2,8 +2,8 @@ import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { Generator } from "../../types/elements/Generator";
-import { Activity } from "../../types/elements/Activity";
+import { Generator } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
 
 /**
  * Validates that all paths from each Generator eventually lead to a terminal Activity.

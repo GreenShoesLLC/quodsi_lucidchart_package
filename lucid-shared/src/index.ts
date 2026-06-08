@@ -24,85 +24,121 @@ export * from './types/SelectionType';
 export * from './types/simComponentType';
 export * from './types/ElementTypeInfo';
 
-// Element types
+// Element types — sourced from monorepo core (Phase 3 slice 2)
 export { RunState } from '@quodsi/shared';
 export * from './types/DiagramElementType';
-export * from './types/elements/Activity';
-export * from './types/elements/ActivityListManager';
-export * from './types/elements/ComponentListManager';
-export * from './types/elements/Connector';
-export * from './types/elements/ConnectorListManager';
-export * from './types/elements/ConnectType';
-export * from './types/elements/Distribution';
-export * from './types/elements/DistributionType';
-export * from './types/elements/Duration';
-export * from './types/elements/DurationType';
-export * from './types/elements/Entity';
-export * from './types/elements/EntityListManager';
-export * from './types/elements/Generator';
-export * from './types/elements/GeneratorListManager';
+export {
+  Activity,
+  ActivityFinancialProperties,
+  ActivityListManager,
+  BooleanPropertyModification,
+  ComponentListManager,
+  ComponentType,
+  ConnectType,
+  ConnectTypeUtils,
+  Connector,
+  ConnectorListManager,
+  Distribution,
+  DistributionParameters,
+  DistributionType,
+  Duration,
+  DurationType,
+  Entity,
+  EntityListManager,
+  EntitySourceConfig,
+  FailureClockMode,
+  FailureProperties,
+  FlowNode,
+  Generator,
+  GeneratorListManager,
+  ModelDefaults,
+  ModelDefinition,
+  NumericPropertyModification,
+  PeriodUnit,
+  PositionedSimulationObject,
+  RequirementClause,
+  RequirementMode,
+  Resource,
+  ResourceFinancialProperties,
+  ResourceListManager,
+  ResourceRequest,
+  ResourceRequirement,
+  ResourceRequirementListManager,
+  ScenarioListManager,
+  ScenarioObjectType,
+  SimulationObject,
+  SimulationObjectType,
+  SimulationTimeType,
+  State,
+  StateComparison,
+  StateCondition,
+  StateListManager,
+  StateModification,
+  StateOperation,
+  StateType,
+  TimeDistributedConfig,
+  TimeDistributedConfigListManager,
+  TimePattern,
+  TimePatternListManager,
+  applyOperation,
+  createAssignModification,
+  createBooleanState,
+  createCategoryState,
+  createDefaultEntitySourceConfig,
+  createEqualCondition,
+  createGreaterEqualCondition,
+  createGreaterThanCondition,
+  createIncrementModification,
+  createLessEqualCondition,
+  createLessThanCondition,
+  createModelCounterIncrement,
+  createNumberState,
+  createSampleModification,
+  createStringState,
+  createTimeDistributedEntitySourceConfig,
+  evaluateComparison,
+  getComparisonDescription,
+  getComparisonSymbol,
+  getDistributionDisplayName,
+  getOperationDescription,
+  getOperationSymbol,
+  getScalingPattern,
+  getSupportedComparisonsForType,
+  getSupportedOperations,
+  getSupportedOperationsForType,
+  getTypicalUseCases,
+  isArithmeticOperation,
+  isArithmeticSupported,
+  isDistributionTypeSupported,
+  isNumericComparison,
+  validateComparisonForType,
+  validateOperationForType,
+  validateValueType,
+} from '@quodsi/shared';
 export { GeneratorType } from '@quodsi/shared';
 export { VolumePeriodBasis } from '@quodsi/shared';
-export * from './types/elements/TimePattern';
-export * from './types/elements/TimePatternListManager';
-export * from './types/elements/TimeDistributedConfig';
-export * from './types/elements/TimeDistributedConfigListManager';
-export * from './types/elements/Model';
-export * from './types/elements/ModelDefaults';
-export * from './types/elements/ModelDefinition';
-export * from './types/elements/ModelUtils';
-export * from './types/elements/PeriodUnit';
-export * from './types/elements/RequirementMode';
-export * from './types/elements/Resource';
-export * from './types/elements/ResourceListManager';
-export * from './types/elements/ResourceRequest';
-export * from './types/elements/RequirementClause';
-export * from './types/elements/ResourceRequirement';
 export { SimulationRun } from '@quodsi/shared';
-export * from './types/elements/SimulationObject';
-export * from './types/elements/SimulationObjectType';
-export * from './types/elements/SimulationTimeType';
+
+// Element types — DEFERRED (stay in lucid)
+export * from './types/elements/Model';
+export * from './types/elements/ModelUtils';
 export * from './types/elements/ModelDefinitionLogger';
 
-// State management types
-export * from './types/elements/ComponentType';
-export * from './types/elements/State';
-export * from './types/elements/StateListManager';
-export * from './types/elements/StateType';
-export * from './types/elements/StateOperation';
-export * from './types/elements/StateComparison';
-export * from './types/elements/StateCondition';
-export * from './types/elements/StateModification';
+// State management types — already covered in named block above
 
 // Action system types (replaces OperationStep)
 export * from './types/elements/actions';
 
-// Entity source configuration
-export * from './types/elements/EntitySourceConfig';
-
-// FlowNode base class
-export * from './types/elements/FlowNode';
-
-// Financial properties
-export * from './types/elements/FinancialProperties';
-
-// Failure properties
-export * from './types/elements/FailureClockMode';
-export * from './types/elements/FailureProperties';
-
 // Distribution types
 export * from './types/elements/distributions';
 
-// Scenario change request types
-export * from './types/elements/ScenarioObjectType';
+// Scenario change request types — DEFERRED
 export * from './types/elements/ScenarioPropertyName';
 export * from './types/elements/ScenarioSetterType';
-export * from './types/elements/NumericPropertyModification';
-export * from './types/elements/BooleanPropertyModification';
 export * from './types/elements/DurationModification';
+export * from './types/elements/ResourceRequirementModification';
 export * from './types/elements/ScenarioChangeRequest';
 export * from './types/elements/Scenario';
-export * from './types/elements/ScenarioListManager';
 
 // Export accordion types
 export * from './types/accordion/ModelElement';

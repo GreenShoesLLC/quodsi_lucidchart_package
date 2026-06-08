@@ -1,6 +1,6 @@
 import { ActionType } from './ActionType';
-import { Duration } from '../Duration';
-import { StateCondition } from '../StateCondition';
+import { Duration } from '@quodsi/shared';
+import { StateCondition } from '@quodsi/shared';
 import { generateUUID } from '../../../utils/uuidUtils';
 
 /**

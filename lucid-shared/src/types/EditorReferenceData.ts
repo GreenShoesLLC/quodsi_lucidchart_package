@@ -1,6 +1,6 @@
-import { ResourceRequirement } from "./elements/ResourceRequirement";
-import { Connector } from "./elements/Connector";
-import { ConnectType } from "./elements/ConnectType";
+import { ResourceRequirement } from '@quodsi/shared';
+import { Connector } from '@quodsi/shared';
+import { ConnectType } from '@quodsi/shared';
 import { ISerializedTimePattern } from "../serialization/interfaces/ISerializedTimePattern";
 import { ISerializedTimeDistributedConfig } from "../serialization/interfaces/ISerializedTimeDistributedConfig";
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";

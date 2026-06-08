@@ -1,4 +1,4 @@
-import { SimulationObjectType } from "./elements/SimulationObjectType";
+import { SimulationObjectType } from '@quodsi/shared';
 
 /**
  * Source of the mapping decision

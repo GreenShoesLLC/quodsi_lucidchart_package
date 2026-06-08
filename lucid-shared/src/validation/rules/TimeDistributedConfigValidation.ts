@@ -2,7 +2,7 @@ import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { TimeDistributedConfig } from "../../types/elements/TimeDistributedConfig";
+import { TimeDistributedConfig } from '@quodsi/shared';
 
 export class TimeDistributedConfigValidation extends ValidationRule {
     validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {

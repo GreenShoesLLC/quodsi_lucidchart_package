@@ -1,6 +1,6 @@
-import { PeriodUnit } from '../../types/elements/PeriodUnit';
-import { DurationType } from '../../types/elements/DurationType';
-import { Distribution } from '../../types/elements/Distribution';
+import { PeriodUnit } from '@quodsi/shared';
+import { DurationType } from '@quodsi/shared';
+import { Distribution } from '@quodsi/shared';
 
 export interface ISerializedDuration {
     // durationLength: number;

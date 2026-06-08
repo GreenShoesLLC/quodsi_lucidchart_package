@@ -1,4 +1,4 @@
-import { SimulationObjectType } from './elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 
 /**
  * Identifies whether a diagram element is a block (shape) or line (connector)

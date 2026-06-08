@@ -1,5 +1,5 @@
 import { ActionType } from './ActionType';
-import { StateCondition } from '../StateCondition';
+import { StateCondition } from '@quodsi/shared';
 import { generateUUID } from '../../../utils/uuidUtils';
 
 /**

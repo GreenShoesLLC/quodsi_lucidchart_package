@@ -1,6 +1,6 @@
-import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 import { ISerializedConnector } from './ISerializedConnector';
-import { ConnectType } from '../../types/elements/ConnectType';
+import { ConnectType } from '@quodsi/shared';
 import { ISerializedAction } from './ISerializedAction';
 import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
 

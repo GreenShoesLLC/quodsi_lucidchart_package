@@ -1,5 +1,5 @@
-import { SimulationObject } from 'src/types/elements/SimulationObject';
-import { SimulationObjectType } from '../types/elements/SimulationObjectType';
+import { SimulationObject } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/shared';
 
 /**
  * Interface that defines the contract for platform-specific simulation objects.

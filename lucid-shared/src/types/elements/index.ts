@@ -1,75 +1,115 @@
 // Export element-specific types
 export { RunState } from '@quodsi/shared';
-export * from './FlowNode';
-export * from './EntitySourceConfig';
-export * from './Activity';
-export * from './ActivityListManager';
-export * from './ComponentListManager';
-export * from './Connector';
-export * from './ConnectorListManager';
-export * from './ConnectType';
-export * from './Distribution';
-export * from './DistributionType';
-export * from './Duration';
-export * from './DurationType';
-export * from './Entity';
-export * from './EntityListManager';
-export * from './Generator';
-export * from './GeneratorListManager';
+
+// types/elements now sourced from the monorepo core (Phase 3 slice 2)
+export {
+  Activity,
+  ActivityFinancialProperties,
+  ActivityListManager,
+  BooleanPropertyModification,
+  ComponentListManager,
+  ComponentType,
+  ConnectType,
+  ConnectTypeUtils,
+  Connector,
+  ConnectorListManager,
+  Distribution,
+  DistributionParameters,
+  DistributionType,
+  Duration,
+  DurationType,
+  Entity,
+  EntityListManager,
+  EntitySourceConfig,
+  FailureClockMode,
+  FailureProperties,
+  FlowNode,
+  Generator,
+  GeneratorListManager,
+  ModelDefaults,
+  ModelDefinition,
+  NumericPropertyModification,
+  PeriodUnit,
+  PositionedSimulationObject,
+  RequirementClause,
+  RequirementMode,
+  Resource,
+  ResourceFinancialProperties,
+  ResourceListManager,
+  ResourceRequest,
+  ResourceRequirement,
+  ResourceRequirementListManager,
+  ScenarioListManager,
+  ScenarioObjectType,
+  SimulationObject,
+  SimulationObjectType,
+  SimulationTimeType,
+  State,
+  StateComparison,
+  StateCondition,
+  StateListManager,
+  StateModification,
+  StateOperation,
+  StateType,
+  TimeDistributedConfig,
+  TimeDistributedConfigListManager,
+  TimePattern,
+  TimePatternListManager,
+  applyOperation,
+  createAssignModification,
+  createBooleanState,
+  createCategoryState,
+  createDefaultEntitySourceConfig,
+  createEqualCondition,
+  createGreaterEqualCondition,
+  createGreaterThanCondition,
+  createIncrementModification,
+  createLessEqualCondition,
+  createLessThanCondition,
+  createModelCounterIncrement,
+  createNumberState,
+  createSampleModification,
+  createStringState,
+  createTimeDistributedEntitySourceConfig,
+  evaluateComparison,
+  getComparisonDescription,
+  getComparisonSymbol,
+  getDistributionDisplayName,
+  getOperationDescription,
+  getOperationSymbol,
+  getScalingPattern,
+  getSupportedComparisonsForType,
+  getSupportedOperations,
+  getSupportedOperationsForType,
+  getTypicalUseCases,
+  isArithmeticOperation,
+  isArithmeticSupported,
+  isDistributionTypeSupported,
+  isNumericComparison,
+  validateComparisonForType,
+  validateOperationForType,
+  validateValueType,
+} from '@quodsi/shared';
+
 export { GeneratorType } from '@quodsi/shared';
 export { VolumePeriodBasis } from '@quodsi/shared';
-export * from './TimePattern';
-export * from './TimePatternListManager';
-export * from './TimeDistributedConfig';
-export * from './TimeDistributedConfigListManager';
-export * from './Model';
-export * from './ModelDefaults';
-export * from './ModelDefinition';
-export * from './ModelUtils';
-export * from './PeriodUnit';
-export * from './RequirementMode';
-export * from './Resource';
-export * from './ResourceListManager';
-export * from './ResourceRequest';
-export * from './RequirementClause';
-export * from './ResourceRequirement';
 export { SimulationRun } from '@quodsi/shared';
-export * from './SimulationObject';
-export * from './SimulationObjectType';
-export * from './SimulationTimeType';
+
+// DEFERRED — stay in lucid
+export * from './Model';
+export * from './ModelUtils';
 export * from './ModelDefinitionLogger';
-
-// Export state management types
-export * from './ComponentType';
-export * from './State';
-export * from './StateListManager';
-export * from './StateType';
-export * from './StateOperation';
-export * from './StateComparison';
-export * from './StateCondition';
-export * from './StateModification';
-
-// Export financial properties
-export * from './FinancialProperties';
-
-// Export failure properties
-export * from './FailureClockMode';
-export * from './FailureProperties';
 
 // Export distributions
 export * from './distributions';
 
-// Scenario change request types
-export * from './ScenarioObjectType';
+// Scenario change request types — DEFERRED
 export * from './ScenarioPropertyName';
 export * from './ScenarioSetterType';
-export * from './NumericPropertyModification';
-export * from './BooleanPropertyModification';
 export * from './DurationModification';
 export * from './ResourceRequirementModification';
 export * from './ScenarioChangeRequest';
 export * from './Scenario';
-export * from './ScenarioListManager';
 
 // Export action system
 export * from './actions';

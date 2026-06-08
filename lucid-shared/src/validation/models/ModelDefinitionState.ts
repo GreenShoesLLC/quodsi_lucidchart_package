@@ -1,8 +1,8 @@
 // import { ActivityRelationships, Connector, ModelDefinition } from "@quodsi/shared";
 
 import { ActivityRelationships } from "../../types/ActivityRelationships";
-import { Connector } from "../../types/elements/Connector";
-import { ModelDefinition } from "../../types/elements/ModelDefinition";
+import { Connector } from '@quodsi/shared';
+import { ModelDefinition } from '@quodsi/shared';
 
 
 /**

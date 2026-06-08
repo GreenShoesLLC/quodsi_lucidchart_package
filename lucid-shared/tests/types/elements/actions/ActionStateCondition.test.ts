@@ -3,9 +3,9 @@ import { createDelayAction } from "../../../../src/types/elements/actions/DelayA
 import { createDisposeAction } from "../../../../src/types/elements/actions/DisposeAction";
 import { createSeizeAction } from "../../../../src/types/elements/actions/SeizeAction";
 import { createBranchAction } from "../../../../src/types/elements/actions/BranchAction";
-import { StateCondition } from "../../../../src/types/elements/StateCondition";
-import { StateComparison } from "../../../../src/types/elements/StateComparison";
-import { Duration } from "../../../../src/types/elements/Duration";
+import { StateCondition } from '@quodsi/shared';
+import { StateComparison } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
 
 describe("Action stateCondition field", () => {
   const condition = new StateCondition("color", StateComparison.EQUAL, "red");

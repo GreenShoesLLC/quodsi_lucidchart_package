@@ -1,9 +1,9 @@
 // tests/validation/services/ValidModelsValidation.test.ts
 import { ModelValidationService } from '../../../src/validation/services/ModelValidationService';
-import { ModelDefinition } from '../../../src/types/elements/ModelDefinition';
-import { Duration } from '../../../src/types/elements/Duration';
-import { PeriodUnit } from '../../../src/types/elements/PeriodUnit';
-import { DurationType } from '../../../src/types/elements/DurationType';
+import { ModelDefinition } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
+import { DurationType } from '@quodsi/shared';
 import {
     createModel_def_e0_a1_r0_g1,
     createModel_def_e0_a1_r2_g1,

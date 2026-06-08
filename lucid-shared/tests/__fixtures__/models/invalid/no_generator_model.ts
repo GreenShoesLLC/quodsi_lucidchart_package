@@ -1,11 +1,11 @@
 // tests/__fixtures__/models/invalid/no_generator_model.ts
-import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
-import { Activity } from '../../../../src/types/elements/Activity';
-import { Resource } from '../../../../src/types/elements/Resource';
-import { ResourceRequirement } from '../../../../src/types/elements/ResourceRequirement';
-import { Entity } from '../../../../src/types/elements/Entity';
-import { Duration } from '../../../../src/types/elements/Duration';
-import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
+import { ModelDefinition } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { Resource } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/shared';
+import { Entity } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
 import { Model } from '../../../../src/types/elements/Model';

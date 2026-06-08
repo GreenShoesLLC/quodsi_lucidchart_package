@@ -2,9 +2,9 @@ import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { Entity } from "../../types/elements/Entity";
-import { Generator } from "../../types/elements/Generator";
-import { ModelDefaults } from "../../types/elements/ModelDefaults";
+import { Entity } from '@quodsi/shared';
+import { Generator } from '@quodsi/shared';
+import { ModelDefaults } from '@quodsi/shared';
 
 
 export class EntityValidation extends ValidationRule {

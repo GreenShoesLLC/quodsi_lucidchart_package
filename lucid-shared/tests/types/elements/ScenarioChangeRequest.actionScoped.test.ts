@@ -4,7 +4,7 @@ import {
     PROPERTY_DISPLAY_LABELS,
     NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
 } from "../../../src/types/elements/ScenarioPropertyName";
-import { ScenarioObjectType } from "../../../src/types/elements/ScenarioObjectType";
+import { ScenarioObjectType } from '@quodsi/shared';
 import { ScenarioChangeRequest, summarizeChangeRequest } from "../../../src/types/elements/ScenarioChangeRequest";
 import { ResourceRequirementModification } from "../../../src/types/elements/ResourceRequirementModification";
 import { DurationModification } from "../../../src/types/elements/DurationModification";

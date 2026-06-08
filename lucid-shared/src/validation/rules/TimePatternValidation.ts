@@ -2,7 +2,7 @@ import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { TimePattern } from "../../types/elements/TimePattern";
+import { TimePattern } from '@quodsi/shared';
 
 export class TimePatternValidation extends ValidationRule {
     validate(state: ModelDefinitionState, issues: ValidationIssue[]): void {

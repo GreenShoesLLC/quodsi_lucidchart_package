@@ -1,4 +1,4 @@
-import { RequirementMode } from '../../types/elements/RequirementMode';
+import { RequirementMode } from '@quodsi/shared';
 import { ISerializedResourceRequest } from './ISerializedResourceRequest';
 
 export interface ISerializedRequirementClause {

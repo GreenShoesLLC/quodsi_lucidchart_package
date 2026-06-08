@@ -1,12 +1,12 @@
 // shared/src/types/elements/ModelDefinitionLogger.ts
-import { ModelDefinition } from "./ModelDefinition";
-import { Activity } from "./Activity";
-import { Connector } from "./Connector";
-import { Resource } from "./Resource";
-import { Generator } from "./Generator";
-import { Entity } from "./Entity";
+import { ModelDefinition } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { Connector } from '@quodsi/shared';
+import { Resource } from '@quodsi/shared';
+import { Generator } from '@quodsi/shared';
+import { Entity } from '@quodsi/shared';
 import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
-import { ResourceRequirement } from "./ResourceRequirement";
+import { ResourceRequirement } from '@quodsi/shared';
 
 export class ModelDefinitionLogger extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[ModelDefinitionLogger]';

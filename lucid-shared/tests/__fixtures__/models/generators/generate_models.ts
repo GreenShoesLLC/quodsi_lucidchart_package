@@ -45,7 +45,7 @@ combinations.push({
 combinations.forEach((config, index) => {
     const filename = `model_def_e${config.entityCount}_a${config.activityCount}_r${config.resourceCount}_g${config.generatorCount}.ts`;
     
-    const content = `import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
+    const content = `import { ModelDefinition } from '@quodsi/shared';
 import { createModelDefinition } from './template_generator';
 
 export function create${filename.replace('.ts', '').replace(/-/g, '_')}(): ModelDefinition {

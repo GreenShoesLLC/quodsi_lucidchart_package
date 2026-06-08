@@ -1,7 +1,7 @@
-import { Distribution, DistributionParameters } from '../Distribution';
-import { DistributionType } from '../DistributionType';
-import { Duration} from '../Duration';
-import { DurationType } from '../DurationType';
+import { Distribution, DistributionParameters } from '@quodsi/shared';
+import { DistributionType } from '@quodsi/shared';
+import { Duration} from '@quodsi/shared';
+import { DurationType } from '@quodsi/shared';
 
 // Import distribution implementations
 import {

@@ -1,4 +1,4 @@
-import { ScenarioObjectType } from './ScenarioObjectType';
+import { ScenarioObjectType } from '@quodsi/shared';
 
 export enum ScenarioPropertyName {
     // Resource properties

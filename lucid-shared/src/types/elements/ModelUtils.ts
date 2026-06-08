@@ -1,7 +1,7 @@
-import { SimulationTimeType } from "./SimulationTimeType";
-import { SimulationObjectType } from "./SimulationObjectType";
+import { SimulationTimeType } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/shared';
 import { Model } from "./Model";
-import { ModelDefaults } from "./ModelDefaults";
+import { ModelDefaults } from '@quodsi/shared';
 
 declare global {
     interface Window {

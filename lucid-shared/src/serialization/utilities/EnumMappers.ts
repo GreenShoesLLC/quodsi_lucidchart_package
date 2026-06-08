@@ -1,9 +1,9 @@
 import { EnumMapper } from './EnumMapper';
-import { SimulationObjectType } from '../../types/elements/SimulationObjectType';
-import { PeriodUnit } from '../../types/elements/PeriodUnit';
-import { DurationType } from '../../types/elements/DurationType';
-import { RequirementMode } from '../../types/elements/RequirementMode';
-import { SimulationTimeType } from '../../types/elements/SimulationTimeType';
+import { SimulationObjectType } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
+import { DurationType } from '@quodsi/shared';
+import { RequirementMode } from '@quodsi/shared';
+import { SimulationTimeType } from '@quodsi/shared';
 
 // Single instance for each enum type
 export const Mappers = {

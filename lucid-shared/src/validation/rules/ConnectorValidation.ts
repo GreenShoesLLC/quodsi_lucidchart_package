@@ -1,10 +1,10 @@
 import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
-import { ConnectType } from '../../types/elements/ConnectType';
+import { ConnectType } from '@quodsi/shared';
 import { ValidationIssue, ValidationSeverity } from '../../quodsi-messaging/validation/types';
-import { Connector } from '../../types/elements/Connector';
-import { Activity } from '../../types/elements/Activity';
+import { Connector } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
 
 export class ConnectorValidation extends ValidationRule {
     private static readonly MAX_OUTGOING_CONNECTIONS = 20;

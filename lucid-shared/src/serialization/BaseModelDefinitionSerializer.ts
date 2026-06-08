@@ -1,21 +1,21 @@
-import { ModelDefinition } from '../types/elements/ModelDefinition';
-import { Activity } from '../types/elements/Activity';
-import { Entity } from '../types/elements/Entity';
-import { Generator } from '../types/elements/Generator';
-import { Resource } from '../types/elements/Resource';
-import { ResourceRequirement } from '../types/elements/ResourceRequirement';
+import { ModelDefinition } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { Entity } from '@quodsi/shared';
+import { Generator } from '@quodsi/shared';
+import { Resource } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/shared';
 import { Model } from '../types/elements/Model';
-import { Connector } from '../types/elements/Connector';
-import { Duration } from '../types/elements/Duration';
-import { RequirementClause } from '../types/elements/RequirementClause';
-import { ResourceRequest } from '../types/elements/ResourceRequest';
-import { State } from '../types/elements/State';
-import { ComponentType } from '../types/elements/ComponentType';
-import { StateType } from '../types/elements/StateType';
-import { TimePattern } from '../types/elements/TimePattern';
-import { TimeDistributedConfig } from '../types/elements/TimeDistributedConfig';
-import { EntitySourceConfig } from '../types/elements/EntitySourceConfig';
-import { StateModification } from '../types/elements/StateModification';
+import { Connector } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
+import { RequirementClause } from '@quodsi/shared';
+import { ResourceRequest } from '@quodsi/shared';
+import { State } from '@quodsi/shared';
+import { ComponentType } from '@quodsi/shared';
+import { StateType } from '@quodsi/shared';
+import { TimePattern } from '@quodsi/shared';
+import { TimeDistributedConfig } from '@quodsi/shared';
+import { EntitySourceConfig } from '@quodsi/shared';
+import { StateModification } from '@quodsi/shared';
 import {
     Action,
     ActionType,
