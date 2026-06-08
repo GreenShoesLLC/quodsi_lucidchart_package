@@ -26,6 +26,7 @@
     "typescript": "^4.9.5"
   },
   "dependencies": {
+    "@quodsi/shared": "file:../../quodsi_shared",
     "axios": "^1.7.9"
   }
 }

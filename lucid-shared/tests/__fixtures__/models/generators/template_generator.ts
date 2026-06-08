@@ -15,7 +15,7 @@ import { UniformParameters, TriangularParameters, NormalParameters } from '../..
 import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
 import { createDelayAction } from '../../../../src/types/elements/actions/DelayAction';
 import { EntitySourceConfig } from '../../../../src/types/elements/EntitySourceConfig';
-import { GeneratorType } from '../../../../src/types/elements/GeneratorType';
+import { GeneratorType } from '@quodsi/lucid-shared';
 
 interface ModelConfig {
     entityCount: number;

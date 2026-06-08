@@ -1,6 +1,6 @@
 import { SimulationObject } from './SimulationObject';
 import { SimulationObjectType } from './SimulationObjectType';
-import { VolumePeriodBasis } from './VolumePeriodBasis';
+import { VolumePeriodBasis } from '@quodsi/shared';
 
 /**
  * TimeDistributedConfig combines a TimePattern with volume and date range
