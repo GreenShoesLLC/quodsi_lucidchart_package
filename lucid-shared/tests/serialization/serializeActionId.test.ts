@@ -16,9 +16,9 @@ import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
-import { ConstantDistribution } from '../../src/types/elements/distributions';
-import { createSeizeAction } from '../../src/types/elements/actions/SeizeAction';
-import { createDelayAction } from '../../src/types/elements/actions/DelayAction';
+import { ConstantDistribution } from '@quodsi/shared';
+import { createSeizeAction } from '@quodsi/shared';
+import { createDelayAction } from '@quodsi/shared';
 import { ISerializedActionBase } from '../../src/serialization/interfaces/ISerializedAction';
 
 /** Helper: build a minimal valid ModelDefinition with the supplied actions on its one activity. */

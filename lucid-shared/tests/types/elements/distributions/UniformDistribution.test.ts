@@ -1,8 +1,8 @@
 import { DistributionType } from '@quodsi/shared';
-import { 
-    UniformParameters, 
-    UniformDistribution 
-} from "../../../../src/types/elements/distributions";
+import {
+    UniformParameters,
+    UniformDistribution
+} from '@quodsi/shared';
 
 describe('UniformDistribution', () => {
     describe('createDefault', () => {

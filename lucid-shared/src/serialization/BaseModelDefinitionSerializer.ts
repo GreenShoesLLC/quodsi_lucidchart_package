@@ -30,7 +30,7 @@ import {
     JoinAction,
     LoopAction,
     BranchAction
-} from '../types/elements/actions';
+} from '@quodsi/shared';
 
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 import { ISerializedModel } from './interfaces/ISerializedModel';

@@ -11,7 +11,7 @@ import { PeriodUnit } from '@quodsi/shared';
 import { DurationType } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
 import { EntitySourceConfig, GeneratorType } from '@quodsi/shared';
-import { ConstantDistribution } from '../../../../src/types/elements/distributions';
+import { ConstantDistribution } from '@quodsi/shared';
 
 export function createNoActivityModel(): ModelDefinition {
     // Create base model

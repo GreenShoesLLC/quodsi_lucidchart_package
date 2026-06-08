@@ -14,8 +14,8 @@ import { ResourceValidation } from "../rules/ResourceValidation";
 import { ValidationRule } from "../common/ValidationRule";
 import { EntityValidation } from "../rules/EntityValidation";
 import { ValidationRuleName } from "../types/ValidationRuleName";
-import { ActionType } from "../../types/elements/actions/ActionType";
-import { SeizeAction, ReleaseAction, DelayWithResourceAction } from "../../types/elements/actions";
+import { ActionType } from '@quodsi/shared';
+import { SeizeAction, ReleaseAction, DelayWithResourceAction } from '@quodsi/shared';
 
 /**
  * Service for validating ModelDefinition objects against business rules.

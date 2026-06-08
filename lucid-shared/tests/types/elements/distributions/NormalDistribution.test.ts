@@ -1,8 +1,8 @@
 import { DistributionType } from '@quodsi/shared';
-import { 
-    NormalParameters, 
-    NormalDistribution 
-} from "../../../../src/types/elements/distributions";
+import {
+    NormalParameters,
+    NormalDistribution
+} from '@quodsi/shared';
 
 describe('NormalDistribution', () => {
     describe('createDefault', () => {

@@ -3,8 +3,8 @@ import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue } from "../../quodsi-messaging/validation/types";
 import { Activity } from '@quodsi/shared';
-import { Action } from "../../types/elements/actions/Action";
-import { ActionType } from "../../types/elements/actions/ActionType";
+import { Action } from '@quodsi/shared';
+import { ActionType } from '@quodsi/shared';
 
 
 
