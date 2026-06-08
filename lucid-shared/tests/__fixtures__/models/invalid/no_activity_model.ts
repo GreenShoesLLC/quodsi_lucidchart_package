@@ -1,16 +1,16 @@
 // tests/__fixtures__/models/invalid/no_activity_model.ts
 
 
-import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
-import { Generator } from '../../../../src/types/elements/Generator';
-import { Resource } from '../../../../src/types/elements/Resource';
-import { ResourceRequirement } from '../../../../src/types/elements/ResourceRequirement';
-import { Entity } from '../../../../src/types/elements/Entity';
-import { Duration } from '../../../../src/types/elements/Duration';
-import { PeriodUnit } from '../../../../src/types/elements/PeriodUnit';
-import { DurationType } from '../../../../src/types/elements/DurationType';
+import { ModelDefinition } from '@quodsi/shared';
+import { Generator } from '@quodsi/shared';
+import { Resource } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/shared';
+import { Entity } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
+import { DurationType } from '@quodsi/shared';
 import { Model } from '../../../../src/types/elements/Model';
-import { EntitySourceConfig, GeneratorType } from '../../../../src/types/elements/EntitySourceConfig';
+import { EntitySourceConfig, GeneratorType } from '@quodsi/shared';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 
 export function createNoActivityModel(): ModelDefinition {

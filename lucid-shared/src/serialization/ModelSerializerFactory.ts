@@ -1,4 +1,4 @@
-import { ModelDefinition } from '../types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
 import { ModelDefinitionSerializerV1 } from './v1/ModelDefinitionSerializerV1';

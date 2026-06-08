@@ -1,5 +1,5 @@
-import { Distribution } from "../Distribution";
-import { DistributionType } from "../DistributionType";
+import { Distribution } from '@quodsi/shared';
+import { DistributionType } from '@quodsi/shared';
 
 /**
  * Parameters for a CONSTANT distribution type.

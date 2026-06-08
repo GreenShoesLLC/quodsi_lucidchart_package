@@ -1,4 +1,4 @@
-import { DistributionType } from "../../types/elements/DistributionType";
+import { DistributionType } from '@quodsi/shared';
 import { ChangeRequestValidationResult } from "./ScenarioChangeValidation";
 
 /**

@@ -2,7 +2,7 @@ import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue } from "../../quodsi-messaging/validation/types";
-import { Activity } from "../../types/elements/Activity";
+import { Activity } from '@quodsi/shared';
 import { Action } from "../../types/elements/actions/Action";
 import { ActionType } from "../../types/elements/actions/ActionType";
 

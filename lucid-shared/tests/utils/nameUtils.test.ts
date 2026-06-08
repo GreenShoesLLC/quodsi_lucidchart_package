@@ -1,8 +1,8 @@
 import { generateUniqueName, ensureUniqueName } from '../../src/utils/nameUtils';
-import { ModelDefinition } from '../../src/types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 import { Model } from '../../src/types/elements/Model';
-import { Activity } from '../../src/types/elements/Activity';
-import { SimulationObjectType } from '../../src/types/elements/SimulationObjectType';
+import { Activity } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/shared';
 
 describe('generateUniqueName', () => {
     it('appends truncated element ID as suffix', () => {

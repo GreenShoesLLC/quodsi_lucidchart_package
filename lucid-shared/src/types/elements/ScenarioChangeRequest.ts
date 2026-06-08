@@ -1,6 +1,6 @@
-import { ScenarioObjectType } from "./ScenarioObjectType";
-import { NumericPropertyModification } from "./NumericPropertyModification";
-import { BooleanPropertyModification } from "./BooleanPropertyModification";
+import { ScenarioObjectType } from '@quodsi/shared';
+import { NumericPropertyModification } from '@quodsi/shared';
+import { BooleanPropertyModification } from '@quodsi/shared';
 import { DurationModification } from "./DurationModification";
 import { ResourceRequirementModification } from "./ResourceRequirementModification";
 import { ScenarioPropertyName, PROPERTY_DISPLAY_LABELS } from "./ScenarioPropertyName";

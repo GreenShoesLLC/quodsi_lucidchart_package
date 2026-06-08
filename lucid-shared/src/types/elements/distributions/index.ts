@@ -237,10 +237,10 @@ export {
 } from './DistributionFactory';
 
 // Import DistributionType for mapping functions
-import { DistributionType } from '../DistributionType';
+import { DistributionType } from '@quodsi/shared';
 
 // Re-export getDistributionDisplayName and isDistributionTypeSupported from DistributionType
-export { getDistributionDisplayName, isDistributionTypeSupported } from '../DistributionType';
+export { getDistributionDisplayName, isDistributionTypeSupported } from '@quodsi/shared';
 
 /**
  * Core numeric distributions supported for NUMBER state SAMPLE operations.

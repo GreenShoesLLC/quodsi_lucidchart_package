@@ -2,10 +2,10 @@ import { ValidationRule } from "../common/ValidationRule";
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from "../common/ValidationMessages";
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { Resource } from "../../types/elements/Resource";
-import { ResourceRequirement } from "../../types/elements/ResourceRequirement";
-import { Activity } from "../../types/elements/Activity";
-import { RequirementMode } from "../../types/elements/RequirementMode";
+import { Resource } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { RequirementMode } from '@quodsi/shared';
 import { ActionType } from "../../types/elements/actions/ActionType";
 import { SeizeAction, ReleaseAction, DelayWithResourceAction } from "../../types/elements/actions";
 

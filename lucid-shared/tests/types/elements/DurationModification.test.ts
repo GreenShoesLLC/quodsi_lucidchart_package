@@ -1,7 +1,7 @@
 import { DurationModification, DurationModificationMode, SerializedDuration } from "../../../src/types/elements/DurationModification";
 import { ScenarioPropertyName } from "../../../src/types/elements/ScenarioPropertyName";
 import { ScenarioChangeRequest } from "../../../src/types/elements/ScenarioChangeRequest";
-import { ScenarioObjectType } from "../../../src/types/elements/ScenarioObjectType";
+import { ScenarioObjectType } from '@quodsi/shared';
 
 const PROPERTY = ScenarioPropertyName.INTERARRIVAL_TIMING;
 

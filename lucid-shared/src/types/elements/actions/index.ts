@@ -29,7 +29,7 @@ import { createDisposeAction } from './DisposeAction';
 import { createJoinAction } from './JoinAction';
 import { createLoopAction } from './LoopAction';
 import { createBranchAction } from './BranchAction';
-import { Duration } from '../Duration';
+import { Duration } from '@quodsi/shared';
 
 /**
  * Create a default action based on action type.

@@ -1,4 +1,4 @@
-import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 import { createModelDefinition } from './template_generator';
 
 export function createmodel_def_e0_a1_r0_g1(): ModelDefinition {

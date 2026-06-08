@@ -1,5 +1,5 @@
 
-import { SimulationObjectType } from './elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 /**
  * Information about a block's analysis
  */

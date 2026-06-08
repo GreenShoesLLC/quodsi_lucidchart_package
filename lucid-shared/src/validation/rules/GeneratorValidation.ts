@@ -2,10 +2,10 @@ import { ValidationRule } from '../common/ValidationRule';
 import { ModelDefinitionState } from "../models/ModelDefinitionState";
 import { ValidationMessages } from '../common/ValidationMessages';
 import { ValidationIssue, ValidationSeverity } from "../../quodsi-messaging/validation/types";
-import { Generator } from "../../types/elements/Generator";
-import { DistributionType } from "../../types/elements/DistributionType";
+import { Generator } from '@quodsi/shared';
+import { DistributionType } from '@quodsi/shared';
 import { ConstantParameters } from "../../types/elements/distributions/ConstantDistribution";
-import { Duration } from "../../types/elements/Duration";
+import { Duration } from '@quodsi/shared';
 
 
 export class GeneratorValidation extends ValidationRule {

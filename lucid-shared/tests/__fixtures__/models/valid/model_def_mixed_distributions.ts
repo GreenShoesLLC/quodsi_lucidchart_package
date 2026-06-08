@@ -1,6 +1,6 @@
-import { ModelDefinition } from '../../../../src/types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 import { createModelDefinition } from '../generators/template_generator';
-import { DistributionType } from '../../../../src/types/elements/DistributionType';
+import { DistributionType } from '@quodsi/shared';
 
 export function createModelWithMixedDistributions(): ModelDefinition {
     return createModelDefinition({

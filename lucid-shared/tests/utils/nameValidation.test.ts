@@ -1,6 +1,6 @@
 import { isNameUniqueInReferenceData } from '../../src/utils/nameValidation';
 import { EditorReferenceData } from '../../src/types/EditorReferenceData';
-import { SimulationObjectType } from '../../src/types/elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 
 describe('isNameUniqueInReferenceData', () => {
     const referenceData: EditorReferenceData = {

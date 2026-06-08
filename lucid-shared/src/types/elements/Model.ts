@@ -1,8 +1,8 @@
-import { SimulationObjectType } from './SimulationObjectType';
-import { PeriodUnit } from './PeriodUnit';
-import { SimulationTimeType } from './SimulationTimeType';
-import { SimulationObject } from './SimulationObject';
-import { ModelDefaults } from './ModelDefaults';
+import { SimulationObjectType } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
+import { SimulationTimeType } from '@quodsi/shared';
+import { SimulationObject } from '@quodsi/shared';
+import { ModelDefaults } from '@quodsi/shared';
 
 export class Model implements SimulationObject {
     type: SimulationObjectType = SimulationObjectType.Model;

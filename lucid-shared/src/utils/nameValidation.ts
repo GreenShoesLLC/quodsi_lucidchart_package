@@ -1,5 +1,5 @@
 import { EditorReferenceData } from '../types/EditorReferenceData';
-import { SimulationObjectType } from '../types/elements/SimulationObjectType';
+import { SimulationObjectType } from '@quodsi/shared';
 
 /**
  * Gets items array for a given type from reference data.

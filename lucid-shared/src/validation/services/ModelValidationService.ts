@@ -1,5 +1,5 @@
 import { ActivityRelationships } from "../../types/ActivityRelationships";
-import { ModelDefinition } from "../../types/elements/ModelDefinition";
+import { ModelDefinition } from '@quodsi/shared';
 import { ModelDefinitionLogger } from "../../types/elements/ModelDefinitionLogger";
 import { QuodsiLogger } from "../../core/logging/QuodsiLogger";
 import { ValidationIssue, ValidationResult, ValidationSeverity } from "../../quodsi-messaging/validation/types";

@@ -1,4 +1,4 @@
-import { DistributionType } from "../../../../src/types/elements/DistributionType";
+import { DistributionType } from '@quodsi/shared';
 import { 
     TriangularParameters, 
     TriangularDistribution 

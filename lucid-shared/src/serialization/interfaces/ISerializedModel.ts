@@ -1,5 +1,5 @@
-import { PeriodUnit } from '../../types/elements/PeriodUnit';
-import { SimulationTimeType } from '../../types/elements/SimulationTimeType';
+import { PeriodUnit } from '@quodsi/shared';
+import { SimulationTimeType } from '@quodsi/shared';
 import { ISerializedEntity } from './ISerializedEntity';
 import { ISerializedActivity } from './ISerializedActivity';
 import { ISerializedResource } from './ISerializedResource';

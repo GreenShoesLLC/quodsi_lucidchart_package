@@ -7,15 +7,15 @@
  */
 import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
 import { Model } from '../../src/types/elements/Model';
-import { ModelDefinition } from '../../src/types/elements/ModelDefinition';
-import { Activity } from '../../src/types/elements/Activity';
-import { Resource } from '../../src/types/elements/Resource';
-import { ResourceRequirement } from '../../src/types/elements/ResourceRequirement';
-import { Generator } from '../../src/types/elements/Generator';
-import { EntitySourceConfig } from '../../src/types/elements/EntitySourceConfig';
+import { ModelDefinition } from '@quodsi/shared';
+import { Activity } from '@quodsi/shared';
+import { Resource } from '@quodsi/shared';
+import { ResourceRequirement } from '@quodsi/shared';
+import { Generator } from '@quodsi/shared';
+import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
-import { Duration } from '../../src/types/elements/Duration';
-import { PeriodUnit } from '../../src/types/elements/PeriodUnit';
+import { Duration } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
 import { ConstantDistribution } from '../../src/types/elements/distributions';
 import { createSeizeAction } from '../../src/types/elements/actions/SeizeAction';
 import { createDelayAction } from '../../src/types/elements/actions/DelayAction';

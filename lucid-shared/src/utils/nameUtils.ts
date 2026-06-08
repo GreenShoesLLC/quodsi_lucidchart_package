@@ -2,8 +2,8 @@
  * Name utilities for ensuring unique simulation object names.
  */
 
-import { ModelDefinition } from '../types/elements/ModelDefinition';
-import { SimulationObjectType } from '../types/elements/SimulationObjectType';
+import { ModelDefinition } from '@quodsi/shared';
+import { SimulationObjectType } from '@quodsi/shared';
 
 /**
  * Generates a unique name by appending a truncated element ID suffix.

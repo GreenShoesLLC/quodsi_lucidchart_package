@@ -3,7 +3,7 @@ import { ModelValidationService } from '../../../src/validation/services/ModelVa
 // import * as invalidModels from '../../__fixtures__/models/invalid';
 
 import * as invalidModels from '../../__fixtures__/models/invalid';
-import { ModelDefinition } from '../../../src/types/elements/ModelDefinition';
+import { ModelDefinition } from '@quodsi/shared';
 
 function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nModel Structure:');
