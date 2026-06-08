@@ -391,7 +391,7 @@ if (-not (Test-Path $PackageZipPath)) {
 }
 
 # Extract QUODSI_VERSION from version.ts
-$VersionFilePath = Join-Path $LucidPackageDir "lucid-shared\src\constants\version.ts"
+$VersionFilePath = Join-Path $LucidPackageDir "..\quodsi_shared\src\constants\version.ts"
 $VersionFileContent = Get-Content $VersionFilePath -Raw
 if ($VersionFileContent -match 'QUODSI_VERSION\s*=\s*"([^"]+)"') {
     $QuodsiVersion = $Matches[1]

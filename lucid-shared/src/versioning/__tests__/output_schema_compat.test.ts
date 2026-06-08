@@ -1,5 +1,5 @@
 import { isOutputSchemaCompatible } from "../output_schema_compat";
-import { EXPECTED_OUTPUT_SCHEMA_VERSION } from "../../constants/version";
+import { EXPECTED_OUTPUT_SCHEMA_VERSION } from "@quodsi/shared";
 
 describe("isOutputSchemaCompatible", () => {
   test("returns false for null", () => {

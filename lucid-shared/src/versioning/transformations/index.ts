@@ -13,7 +13,7 @@ import { EntityTransforms } from './EntityTransforms';
 import { GeneratorTransforms } from './GeneratorTransforms';
 import { ResourceTransforms } from './ResourceTransforms';
 import { ModelTransforms } from './ModelTransforms';
-import { compareVersions } from '../../constants/version';
+import { compareVersions } from '@quodsi/shared';
 
 /**
  * Collection of all available transformations

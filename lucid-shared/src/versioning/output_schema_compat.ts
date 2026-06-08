@@ -1,4 +1,4 @@
-import { parseVersion, EXPECTED_OUTPUT_SCHEMA_VERSION } from "../constants/version";
+import { parseVersion, EXPECTED_OUTPUT_SCHEMA_VERSION } from "@quodsi/shared";
 
 /**
  * Returns true when a run's output_schema_version is compatible with

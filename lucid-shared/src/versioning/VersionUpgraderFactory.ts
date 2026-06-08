@@ -1,12 +1,12 @@
 import { IVersionUpgrader, UpgradeOptions } from './IVersionUpgrader';
-import { PlatformType } from '../platform/PlatformType';
-import { 
-    QUODSI_VERSION, 
-    isValidVersion, 
+import { PlatformType } from '@quodsi/shared';
+import {
+    QUODSI_VERSION,
+    isValidVersion,
     compareVersions,
-    VersionInfo, 
-    parseVersion 
-} from '../constants/version';
+    VersionInfo,
+    parseVersion
+} from '@quodsi/shared';
 
 /**
  * Factory for creating platform-specific version upgraders
