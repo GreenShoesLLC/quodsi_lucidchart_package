@@ -8,7 +8,7 @@ import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 import { createDelayWithResourceAction } from '../../../../src/types/elements/actions/DelayWithResourceAction';
-import { Model } from '../../../../src/types/elements/Model';
+import { Model } from '@quodsi/lucid-shared';
 
 export function createNoGeneratorModel(): ModelDefinition {
     // Create base model

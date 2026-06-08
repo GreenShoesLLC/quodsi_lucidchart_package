@@ -1,6 +1,6 @@
-import { DurationModification, DurationModificationMode, SerializedDuration } from "../../../src/types/elements/DurationModification";
-import { ScenarioPropertyName } from "../../../src/types/elements/ScenarioPropertyName";
-import { ScenarioChangeRequest } from "../../../src/types/elements/ScenarioChangeRequest";
+import { DurationModification, DurationModificationMode, SerializedDuration } from '@quodsi/lucid-shared';
+import { ScenarioPropertyName } from '@quodsi/lucid-shared';
+import { ScenarioChangeRequest } from '@quodsi/lucid-shared';
 import { ScenarioObjectType } from '@quodsi/shared';
 
 const PROPERTY = ScenarioPropertyName.INTERARRIVAL_TIMING;

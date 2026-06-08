@@ -96,20 +96,36 @@ export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // DEFERRED — stay in lucid
-export * from './Model';
 export * from './ModelUtils';
 export * from './ModelDefinitionLogger';
 
 // Export distributions
 export * from './distributions';
 
-// Scenario change request types — DEFERRED
-export * from './ScenarioPropertyName';
-export * from './ScenarioSetterType';
-export * from './DurationModification';
-export * from './ResourceRequirementModification';
-export * from './ScenarioChangeRequest';
-export * from './Scenario';
+// Scenario cluster — now sourced from the core (Phase 3 slice 3)
+export {
+  DomainModel as Model,
+} from '@quodsi/shared';
+export {
+  DomainScenario as Scenario,
+  LEGACY_BASELINE_SCENARIO_ID,
+  ScenarioChangeRequest,
+  ObjectMatchCriteria,
+  summarizeChangeRequest,
+  DurationModification,
+  DurationModificationMode,
+  SerializedDuration,
+  ResourceRequirementModification,
+  ScenarioPropertyName,
+  PROPERTIES_BY_OBJECT_TYPE,
+  PROPERTY_DISPLAY_LABELS,
+  NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
+  ScenarioSetterType,
+} from '@quodsi/shared';
+export type {
+  ModificationType,
+  ModificationDetails,
+} from '@quodsi/shared';
 
 // Export action system
 export * from './actions';

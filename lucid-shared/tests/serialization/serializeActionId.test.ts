@@ -6,7 +6,7 @@
  * DelayAction) whose id is fixed, then we assert the serialized action carries the same id.
  */
 import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerFactory';
-import { Model } from '../../src/types/elements/Model';
+import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Resource } from '@quodsi/shared';

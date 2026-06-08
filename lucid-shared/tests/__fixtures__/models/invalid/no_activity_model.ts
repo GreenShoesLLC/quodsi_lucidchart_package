@@ -9,7 +9,7 @@ import { Entity } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { DurationType } from '@quodsi/shared';
-import { Model } from '../../../../src/types/elements/Model';
+import { Model } from '@quodsi/lucid-shared';
 import { EntitySourceConfig, GeneratorType } from '@quodsi/shared';
 import { ConstantDistribution } from '../../../../src/types/elements/distributions';
 

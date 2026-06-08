@@ -1,6 +1,6 @@
 import { generateUniqueName, ensureUniqueName } from '../../src/utils/nameUtils';
 import { ModelDefinition } from '@quodsi/shared';
-import { Model } from '../../src/types/elements/Model';
+import { Model } from '@quodsi/lucid-shared';
 import { Activity } from '@quodsi/shared';
 import { SimulationObjectType } from '@quodsi/shared';
 

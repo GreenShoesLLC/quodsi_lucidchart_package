@@ -1,6 +1,6 @@
 import { SimulationTimeType } from '@quodsi/shared';
 import { SimulationObjectType } from '@quodsi/shared';
-import { Model } from "./Model";
+import { DomainModel as Model } from '@quodsi/shared';
 import { ModelDefaults } from '@quodsi/shared';
 
 declare global {
