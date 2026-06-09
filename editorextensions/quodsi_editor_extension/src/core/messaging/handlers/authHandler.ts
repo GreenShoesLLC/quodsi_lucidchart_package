@@ -498,6 +498,45 @@ export class AuthHandler {
     return AuthHandler.currentToken;
   }
 
+  /**
+   * True if the token is missing an `exp`, or expires within `bufferSec`.
+   * Unknown expiry is treated as expiring so we re-fetch a known-good token.
+   */
+  private static isTokenExpiring(token: string, bufferSec = 120): boolean {
+    const claims = AuthHandler.decodeTokenClaims(token);
+    const exp = claims && typeof claims.exp === 'number' ? claims.exp : null;
+    if (exp === null) return true;
+    return Math.floor(Date.now() / 1000) >= exp - bufferSec;
+  }
+
+  /**
+   * Get a fresh token to relay into the embedded Studio iframe.
+   *
+   * The cached `currentToken` is set once at sign-in and never re-fetched, so
+   * after its ~1h TTL the embed would receive an expired token (sync 401s,
+   * scenario create silently fails). Lucid's `getOAuthToken` refreshes the
+   * access token server-side from its stored refresh token (prompting only if
+   * the grant is truly dead), so re-calling it yields a fresh token. We only
+   * pay that round-trip when the cached token is actually expiring.
+   */
+  public static async getTokenForRelay(): Promise<string | undefined> {
+    if (AuthHandler.currentToken && !AuthHandler.isTokenExpiring(AuthHandler.currentToken)) {
+      return AuthHandler.currentToken;
+    }
+    try {
+      const client = ModelManager.getClient();
+      const token = await client.getOAuthToken('kinde');
+      if (token) {
+        AuthHandler.currentToken = token;
+        AuthHandler.logger.log('Relayed a refreshed Kinde token to the embed');
+        return token;
+      }
+    } catch (error) {
+      AuthHandler.logger.error('getTokenForRelay: refresh failed, relaying cached token', error);
+    }
+    return AuthHandler.currentToken;
+  }
+
   /** Check if user is currently authenticated */
   public static getIsAuthenticated(): boolean {
     return AuthHandler.isAuthenticated;

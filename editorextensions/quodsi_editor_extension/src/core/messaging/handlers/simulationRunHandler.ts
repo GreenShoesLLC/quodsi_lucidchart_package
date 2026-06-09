@@ -94,7 +94,9 @@ export class SimulationRunHandler {
         return true;
 
       case EnvelopeMessageType.REQUEST_STUDIO_TOKEN:
-        SimulationRunHandler.handleRequestStudioToken(msg);
+        SimulationRunHandler.handleRequestStudioToken(msg).catch(error => {
+          SimulationRunHandler.logger.error('Error in handleRequestStudioToken:', error);
+        });
         return true;
 
       case EnvelopeMessageType.REQUEST_STUDIO_CATALOG:
@@ -266,12 +268,14 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle REQUEST_STUDIO_TOKEN: relay the cached Kinde access token back to
-   * the 'studio-embed' embed iframe. Routing is derived from msg.source so
-   * a single handler serves the channel.
+   * Handle REQUEST_STUDIO_TOKEN: relay a FRESH Kinde access token back to the
+   * 'studio-embed' embed iframe. getTokenForRelay refreshes via Lucid when the
+   * cached token is expiring, so the embed never receives a dead token (which
+   * would 401 its scenario sync). Routing is derived from msg.source so a single
+   * handler serves the channel.
    */
-  private static handleRequestStudioToken(msg: EnvelopeBase): void {
-    const token = AuthHandler.getToken();
+  private static async handleRequestStudioToken(msg: EnvelopeBase): Promise<void> {
+    const token = await AuthHandler.getTokenForRelay();
     const channel = SimulationRunHandler.getResponseChannel(msg);
     SimulationRunHandler.logger.log('Relaying Studio token to embed iframe', { hasToken: !!token, channel });
     router.send(channel, {
