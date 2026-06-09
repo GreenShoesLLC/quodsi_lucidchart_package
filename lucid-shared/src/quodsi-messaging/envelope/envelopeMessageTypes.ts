@@ -81,6 +81,9 @@ export enum EnvelopeMessageType {
   // Modal
   OPEN_RESULTS_MODAL = "OPEN_RESULTS_MODAL",
   OPEN_ANIMATION_MODAL = "OPEN_ANIMATION_MODAL",
+  // Sent by a chromeless embed modal's own "Close" button to ask the host to
+  // hide the modal (chromeless modals have no native title-bar X).
+  CLOSE_MODAL = "CLOSE_MODAL",
 
   // Studio Embed Token Relay
   REQUEST_STUDIO_TOKEN = "REQUEST_STUDIO_TOKEN",

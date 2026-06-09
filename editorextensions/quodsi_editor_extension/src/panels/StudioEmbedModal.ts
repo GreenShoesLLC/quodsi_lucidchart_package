@@ -17,7 +17,10 @@ export class StudioEmbedModal extends RoutingModal {
     const studioOrigin = getStudioBaseUrl();
     let url =
       `quodsim-react/index.html?view=studio-embed` +
-      `&studioPath=${encodeURIComponent(opts.studioPath)}`;
+      `&studioPath=${encodeURIComponent(opts.studioPath)}` +
+      // Title is rendered by our own chromeless header (StudioEmbedView), not
+      // Lucid's native title bar — pass it through the URL.
+      `&title=${encodeURIComponent(opts.title)}`;
     if (studioOrigin) {
       url += `&studioOrigin=${encodeURIComponent(studioOrigin)}`;
     }
@@ -29,6 +32,8 @@ export class StudioEmbedModal extends RoutingModal {
       size === 'fullscreen'
         ? { fullScreen: true as const }
         : MODAL_SIZE_DIMENSIONS[size];
-    super(client, { title: opts.title, url, ...sizeOpts }, 'studio-embed');
+    // chromeless: drop Lucid's native header + X (users mistook the X for a
+    // sub-window close). StudioEmbedView renders our own labeled "Close".
+    super(client, { url, chromeless: true, ...sizeOpts }, 'studio-embed');
   }
 }

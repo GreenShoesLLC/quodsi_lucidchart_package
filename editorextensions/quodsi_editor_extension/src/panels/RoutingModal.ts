@@ -5,6 +5,7 @@ import {
 } from 'lucid-extension-sdk';
 import {
     EnvelopeBase,
+    EnvelopeMessageType,
     isEnvelope,
     MessageSource
 } from '@quodsi/lucid-shared';
@@ -32,9 +33,11 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      */
     protected constructor(
         client: EditorClient,
-        // Fixed-size or fullscreen — the SDK's ModalConfig treats these as a
-        // mutually exclusive union, so subclasses pass one shape or the other.
-        options: { title: string; url: string } &
+        // Title bar OR chromeless (no native header/X), and fixed-size OR
+        // fullscreen — both are mutually exclusive unions in the SDK's
+        // ModalConfig, so subclasses pass one shape from each.
+        options: { url: string } &
+            ({ title: string; chromeless?: false } | { title?: never; chromeless: true }) &
             ({ width: number; height: number } | { fullScreen: true }),
         private readonly channelRole: PanelRole
     ) {
@@ -72,6 +75,15 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
         }
 
         const envelope = message as EnvelopeBase;
+
+        // A chromeless embed modal closes itself via its own "Close" button:
+        // intercept here and hide rather than routing to the host.
+        if (envelope.type === EnvelopeMessageType.CLOSE_MODAL) {
+            this.debug.log('CLOSE_MODAL received — hiding modal');
+            this.hide();
+            return;
+        }
+
         // The template literal `${PanelRole}-iframe` always resolves to a
         // valid MessageSource value ('results-iframe' | 'studio-embed-iframe'
         // | 'model-iframe'). The cast is localised here to keep the assignment
