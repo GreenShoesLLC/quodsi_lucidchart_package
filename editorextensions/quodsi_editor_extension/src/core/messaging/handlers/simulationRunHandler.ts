@@ -18,6 +18,13 @@ export class SimulationRunHandler {
   private static logger = ExtensionDebugService.forComponent('SimulationRunHandler');
 
   /**
+   * Cache of resolved server model ids, keyed by `${documentId}:${pageId}`.
+   * UpsertModel re-resolves the same id every open; caching it lets reopens
+   * skip the HTTP round-trip and open the modal immediately.
+   */
+  private static scenarioModelIdCache = new Map<string, string>();
+
+  /**
    * Handle messages related to simulation run operations
    *
    * @param msg The received message
@@ -174,21 +181,46 @@ export class SimulationRunHandler {
       return;
     }
     const documentProxy = new DocumentProxy(client);
-    const { serverModelId } = await upsertModelAndSyncScenarios(client, {
-      documentId: data.documentId,
-      pageId: data.pageId,
-      modelName: documentProxy.getTitle?.() || 'Untitled Model',
-      scenarios: [],
-    });
+    const cacheKey = `${data.documentId}:${data.pageId}`;
+    const modelName = documentProxy.getTitle?.() || 'Untitled Model';
+
+    const openModal = (serverModelId: string): void => {
+      new StudioEmbedModal(client, {
+        title: 'Scenarios',
+        studioPath: `/embed/models/${serverModelId}/scenarios`,
+        modalSize: data.modalSize,
+      }).show();
+    };
+
+    // Fire-and-forget upsert that keeps the DB row current and refreshes the cache.
+    const refreshUpsert = (): Promise<string | null | undefined> =>
+      upsertModelAndSyncScenarios(client, {
+        documentId: data.documentId!,
+        pageId: data.pageId!,
+        modelName,
+        scenarios: [],
+      }).then(({ serverModelId }) => {
+        if (serverModelId) SimulationRunHandler.scenarioModelIdCache.set(cacheKey, serverModelId);
+        return serverModelId;
+      });
+
+    const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
+    if (cached) {
+      // Reopen: open immediately with the cached id; keep the row fresh in the
+      // background. The editor reads scenarios from quodsi_api anyway.
+      openModal(cached);
+      void refreshUpsert().catch((e) =>
+        SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: background UpsertModel failed:', e));
+      return;
+    }
+
+    // First open: must resolve the id before we can build the studio path.
+    const serverModelId = await refreshUpsert();
     if (!serverModelId) {
       SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: UpsertModel returned no model id');
       return;
     }
-    new StudioEmbedModal(client, {
-      title: 'Scenarios',
-      studioPath: `/embed/models/${serverModelId}/scenarios`,
-      modalSize: data.modalSize,
-    }).show();
+    openModal(serverModelId);
   }
 
   /**
