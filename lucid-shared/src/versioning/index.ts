@@ -1,4 +1,6 @@
-export * from './PreflightResult';
+// PreflightResult value types + the pure upgrade engine now sourced from core (versioning SP3)
+export { UpgradeIssueSeverity, upgradeElements } from '@quodsi/shared';
+export type { PreflightResult, UpgradeIssue, RawElement, UpgradeElementsResult } from '@quodsi/shared';
 export * from './IVersionUpgrader';
 export * from './BaseVersionUpgrader';
 export * from './VersionManager';

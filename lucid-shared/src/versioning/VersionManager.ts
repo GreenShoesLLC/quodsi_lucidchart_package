@@ -1,5 +1,5 @@
 import { IVersionUpgrader, UpgradeOptions } from './IVersionUpgrader';
-import { PreflightResult } from './PreflightResult';
+import { PreflightResult } from '@quodsi/shared';
 import { PlatformType } from '@quodsi/shared';
 import { VersionUpgraderFactory } from './VersionUpgraderFactory';
 

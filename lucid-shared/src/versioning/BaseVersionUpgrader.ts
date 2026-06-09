@@ -1,5 +1,5 @@
 import { IVersionUpgrader, UpgradeOptions } from './IVersionUpgrader';
-import { PreflightResult, UpgradeIssue, UpgradeIssueSeverity } from './PreflightResult';
+import { PreflightResult, UpgradeIssue, UpgradeIssueSeverity } from '@quodsi/shared';
 
 /**
  * Base implementation of version upgrader
