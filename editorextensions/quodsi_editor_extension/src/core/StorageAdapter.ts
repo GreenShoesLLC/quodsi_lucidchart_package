@@ -486,7 +486,13 @@ export class StorageAdapter {
             }
 
             const type = existing.type as SimulationObjectType;
-            const merged: any = { ...existing, ...data, type, id: existing.id };
+            // A partial update must not clobber stored values with undefined
+            // (e.g. a panel-supplied domain object whose width/height are unset).
+            const defined: any = {};
+            for (const k of Object.keys(data as any)) {
+                if ((data as any)[k] !== undefined) defined[k] = (data as any)[k];
+            }
+            const merged: any = { ...existing, ...defined, type, id: existing.id };
 
             const mappingSource: MappingSource | undefined = merged.mappingSource;
 
