@@ -8,8 +8,10 @@ interface ShapeDataBackup {
 }
 
 /**
- * Lucid-specific implementation of version upgrader.
- * Works with the single q_data key format (type, id, mappingSource, version all in q_data).
+ * Lucid-specific version upgrader. Delegates the per-element transform decision
+ * to the pure core engine (which returns element envelopes) and keeps only
+ * platform concerns here: which shapes to rewrite and stamping the page-level
+ * version marker used by the migration gate.
  */
 export class LucidVersionUpgrader extends BaseVersionUpgrader {
     private static readonly DATA_KEY = 'q_data';
@@ -69,19 +71,12 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         }
     }
 
-    /**
-     * Performs the upgrade on all elements by delegating the per-element
-     * transform decision to the pure core engine, while keeping platform
-     * concerns (mappingSource preservation, page version stamping, which
-     * shapes to rewrite) here in the adapter.
-     */
     protected async performUpgrade(page: PageProxy): Promise<void> {
         const sourceVersion = await this.getSourceVersion(page);
 
         interface Target {
             element: ElementProxy;
             blob: RawElement;
-            mappingSource: any;
             isPage: boolean;
         }
         const targets: Target[] = [];
@@ -96,7 +91,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
                 throw new Error(`Failed to parse q_data for element ${element.id}`);
             }
             if (!blob || !blob.type) return;
-            targets.push({ element, blob, mappingSource: blob.mappingSource, isPage });
+            targets.push({ element, blob, isPage });
         };
 
         // Page/model first, then blocks, then lines
@@ -104,19 +99,17 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         for (const block of page.blocks.values()) collect(block, false);
         for (const line of page.lines.values()) collect(line, false);
 
-        // Pure core upgrade
+        // Pure core upgrade — returns envelopes; mappingSource is preserved inside
+        // platform, so the adapter no longer re-attaches it.
         const result = upgradeElements(targets.map(t => t.blob), sourceVersion);
 
-        // Write back, preserving platform + version concerns adapter-side.
         result.elements.forEach((upgraded, i) => {
             const t = targets[i];
             const changed = upgraded !== t.blob; // engine returns same ref when untouched
-            if (!changed && !t.isPage) return;    // match prior behavior: don't rewrite untouched shapes
+            if (!changed && !t.isPage) return;    // don't rewrite untouched shapes
 
-            if (t.mappingSource !== undefined) {
-                (upgraded as any).mappingSource = t.mappingSource;
-            }
             if (t.isPage) {
+                // The page retains a top-level version marker for the migration gate.
                 (upgraded as any).version = result.toVersion;
             }
             t.element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(upgraded));
