@@ -346,6 +346,7 @@ export function useModelPanel() {
     simulationStatus: simulationStatusProxy,
     referenceData,
     states: referenceData?.states || [],
+    entities: referenceData?.entities || [],
     resourceRequirements: referenceData?.resourceRequirements || [],
     outgoingConnectors,
 

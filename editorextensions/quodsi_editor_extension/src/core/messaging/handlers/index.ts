@@ -5,6 +5,7 @@ import { SimulationHandler } from './simulationHandler';
 import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
 import { StatesHandler } from './statesHandler';
+import { EntitiesHandler } from './entitiesHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
@@ -79,6 +80,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Entities operations messages
+    if (EntitiesHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Resource requirements operations messages
     if (ResourceRequirementsHandler.handleMessage(msg)) {
       return true;
@@ -134,6 +140,7 @@ export {
   ModelOpsHandler,
   ElementOpsHandler,
   StatesHandler,
+  EntitiesHandler,
   ResourceRequirementsHandler,
   TimePatternHandler,
   StorageHandler,

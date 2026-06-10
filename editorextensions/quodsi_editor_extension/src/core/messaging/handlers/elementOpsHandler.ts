@@ -244,6 +244,13 @@ export class ElementOpsHandler {
     });
 
     try {
+      // Entities are no longer shape-mapped — they are defined in the Model Editor's
+      // Entities tab and stored in the page-level q_entities list. Reject any attempt
+      // to convert a shape into an Entity so a stray request can't create one.
+      if (data.newType === 'Entity' || data.newType === SimulationObjectType.Entity) {
+        throw new Error('Entities are no longer created from shapes. Use the Entities tab in the Model Editor.');
+      }
+
       // Get the client and model manager from singleton
       const client = ModelManager.getClient();
       const modelManager = ModelManager.getInstance();

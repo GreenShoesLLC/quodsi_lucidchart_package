@@ -14,11 +14,6 @@ const SIMULATION_TYPE_CONFIG: SimulationTypeInfo[] = [
     description: "Represents a process or action",
   },
   {
-    type: SimulationObjectType.Entity,
-    displayName: "Entity",
-    description: "Represents objects flowing through the system",
-  },
-  {
     type: SimulationObjectType.Generator,
     displayName: "Generator",
     description: "Creates entities in the simulation",
@@ -50,7 +45,6 @@ const VALID_DIAGRAM_TYPE_MAPPINGS: Record<
   [DiagramElementType.BLOCK]: [
     SimulationObjectType.None,
     SimulationObjectType.Activity,
-    SimulationObjectType.Entity,
     SimulationObjectType.Generator,
     SimulationObjectType.Resource,
   ],

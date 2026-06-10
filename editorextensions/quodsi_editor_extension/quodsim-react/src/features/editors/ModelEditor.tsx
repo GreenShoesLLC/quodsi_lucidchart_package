@@ -7,8 +7,9 @@ import {
   StateListManager,
   ValidationResult,
 } from "@quodsi/lucid-shared";
-import { Settings, Hash, Info, Users, AlertTriangle } from "lucide-react";
+import { Settings, Hash, Info, Users, AlertTriangle, Boxes } from "lucide-react";
 import StatesEditor from "./StatesEditor";
+import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
 import { ResourceRequirementsManager } from "./ResourceRequirementsManager";
 import { ResourceRequirementModal } from "./ResourceRequirementModal";
@@ -38,6 +39,8 @@ interface Props {
   onValidate?: () => void;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  entities: EntityRow[];
+  onEntitiesChange: (entities: EntityRow[]) => void;
   referenceData?: EditorReferenceData;
   resourceRequirements?: ResourceRequirement[];
   validationState?: ValidationResult | null;
@@ -46,7 +49,7 @@ interface Props {
   onSimulate?: (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => void;
 }
 
-export type EditorTab = "basic" | "states" | "requirements" | "scenarios" | "validation";
+export type EditorTab = "basic" | "states" | "entities" | "requirements" | "scenarios" | "validation";
 
 /**
  * Type for tracking resource requirement being edited in modal
@@ -73,6 +76,12 @@ const TAB_CONFIG = [
     title: "State Definitions",
     icon: Hash,
     tooltip: "Define model-level state variables that can be accessed and modified throughout the simulation"
+  },
+  {
+    id: "entities" as const,
+    title: "Entities",
+    icon: Boxes,
+    tooltip: "Define the entity types that flow through the simulation (e.g. customers, parts, orders)"
   },
   {
     id: "requirements" as const,
@@ -139,7 +148,7 @@ const DEFAULT_RANDOM_SEED = 12345;
  * @param props - Component props
  * @returns Rendered model editor component
  */
-const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
+const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate, states, onStatesChange, entities, onEntitiesChange, referenceData, resourceRequirements, validationState, activeTab: activeTabProp, onTabChange: onTabChangeProp, onSimulate }) => {
   // ============================================================================
   // STATE MANAGEMENT
   // ============================================================================
@@ -553,6 +562,12 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             states={states}
             onStatesChange={onStatesChange}
             defaultComponentType="ALL"
+          />
+      )}
+      {activeTab === "entities" && (
+        <EntitiesEditor
+            entities={entities}
+            onEntitiesChange={onEntitiesChange}
           />
       )}
       {activeTab === "requirements" && (

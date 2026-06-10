@@ -18,6 +18,8 @@ import {
     ResourceRequirement,
     ValidationMessages,
     ISerializedState,
+    ISerializedEntity,
+    ModelDefaults,
     ISerializedResourceRequirement,
     ISerializedScenario,
     EnvelopeMessageType,
@@ -1576,6 +1578,80 @@ export class ModelManager {
             });
         } catch (error) {
             this.debug.error('Error in updateStates:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Updates the entities array for the model.
+     *
+     * Entities are stored as a page-level list (q_entities), mirroring updateStates.
+     * Deleting an entity cascades reference cleanup (Generator.generationConfig.entityId,
+     * Activity self-gen sourceConfig.entityId, CREATE-action entityTemplateId).
+     *
+     * The default entity (ModelDefaults.DEFAULT_ENTITY_ID) is load-bearing: every new
+     * Generator defaults its entityId to it, and the model must always have at least one
+     * entity. The UI prevents its deletion; here we re-assert that invariant as defense in
+     * depth so a malformed payload cannot drop it.
+     */
+    public async updateEntities(entities: ISerializedEntity[], page: PageProxy): Promise<void> {
+        this.debug.log('updateEntities - Start', {
+            entitiesCount: entities.length,
+            pageId: page.id,
+            pageTitle: page.getTitle()
+        });
+
+        try {
+            // Defense in depth: ensure the default entity is always present.
+            let entitiesToSave = entities;
+            if (!entities.some(e => e.id === ModelDefaults.DEFAULT_ENTITY_ID)) {
+                this.debug.log('Default entity missing from payload; re-inserting it');
+                entitiesToSave = [
+                    {
+                        id: ModelDefaults.DEFAULT_ENTITY_ID,
+                        name: ModelDefaults.DEFAULT_ENTITY_NAME,
+                        description: '',
+                        type: SimulationObjectType.Entity,
+                        x: 0,
+                        y: 0
+                    },
+                    ...entities
+                ];
+            }
+
+            // Get current entities to detect deletions
+            const currentEntities = this.storageAdapter.getEntities(page) || [];
+            const newEntityIds = new Set(entitiesToSave.map(e => e.id));
+
+            // Find deleted entities
+            const deletedEntities = currentEntities.filter(e => !newEntityIds.has(e.id));
+
+            // Clean up references for each deleted entity
+            let totalAffected = 0;
+            for (const deletedEntity of deletedEntities) {
+                this.debug.log('Detected deleted entity, cleaning up references:', {
+                    entityId: deletedEntity.id,
+                    entityName: deletedEntity.name
+                });
+                const affectedCount = await this.cleanupEntityReferences(
+                    deletedEntity.id,
+                    page
+                );
+                totalAffected += affectedCount;
+            }
+
+            // Save entities to page storage
+            this.storageAdapter.setEntities(page, entitiesToSave);
+
+            // Mark model as dirty to force rebuild on next access
+            this.markModelDirty();
+
+            this.debug.log('updateEntities - Complete with cascading cleanup', {
+                deletedCount: deletedEntities.length,
+                affectedElements: totalAffected
+            });
+        } catch (error) {
+            this.debug.error('Error in updateEntities:', error);
             throw error;
         }
     }

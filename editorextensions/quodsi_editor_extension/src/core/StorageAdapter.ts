@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
 
 /**
  * Record of skipped elements with their mapping source
@@ -10,6 +10,7 @@ export class StorageAdapter {
     private static readonly DATA_KEY = 'q_data';
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly STATES_KEY = 'q_states';
+    private static readonly ENTITIES_KEY = 'q_entities';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly TIME_PATTERNS_KEY = 'q_time_patterns';
     private static readonly TIME_DISTRIBUTED_CONFIGS_KEY = 'q_time_distributed_configs';
@@ -176,6 +177,57 @@ export class StorageAdapter {
             this.log('Successfully cleared states');
         } catch (error) {
             this.logError('Error clearing states:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the entities array for a page
+     */
+    public setEntities(page: ElementProxy, entities: ISerializedEntity[]): void {
+        try {
+            this.log('Setting entities for page:', {
+                pageId: page.id,
+                entitiesCount: entities.length
+            });
+            const serializedEntities = JSON.stringify(entities);
+            page.shapeData.set(StorageAdapter.ENTITIES_KEY, serializedEntities);
+            this.log('Successfully set entities');
+        } catch (error) {
+            this.logError('Error setting entities:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the entities array for a page
+     */
+    public getEntities(page: ElementProxy): ISerializedEntity[] {
+        try {
+            this.log('Getting entities for page:', page.id);
+            const entitiesStr = page.shapeData.get(StorageAdapter.ENTITIES_KEY);
+            if (!entitiesStr || typeof entitiesStr !== 'string') {
+                this.log('No entities found, returning empty array');
+                return [];
+            }
+            const entities = JSON.parse(entitiesStr) as ISerializedEntity[];
+            this.log('Retrieved entities:', { count: entities.length });
+            return entities;
+        } catch (error) {
+            this.logError('Error getting entities:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the entities array for a page
+     */
+    public clearEntities(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.ENTITIES_KEY);
+            this.log('Successfully cleared entities');
+        } catch (error) {
+            this.logError('Error clearing entities:', error);
             throw error;
         }
     }
@@ -658,6 +710,7 @@ export class StorageAdapter {
             this.clearElementData(page);
             this.clearSimulationStatus(page);
             this.clearStates(page);
+            this.clearEntities(page);
             this.clearResourceRequirements(page);
             this.clearTimePatterns(page);
             this.clearTimeDistributedConfigs(page);

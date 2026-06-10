@@ -14,7 +14,7 @@ import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
  * ModelDefinition and is built by referenceDataBuilder.
  */
 export interface EditorReferenceData {
-    entities?: Array<{ id: string, name: string }>;
+    entities?: Array<{ id: string, name: string, description?: string }>;
     resources?: Array<{ id: string, name: string }>;
     activities?: Array<{
         id: string,

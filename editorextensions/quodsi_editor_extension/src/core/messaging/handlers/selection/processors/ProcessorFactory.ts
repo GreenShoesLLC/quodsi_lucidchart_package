@@ -4,7 +4,6 @@ import { NoneSelectionProcessor } from './NoneSelectionProcessor';
 import { MultipleSelectionProcessor } from './MultipleSelectionProcessor';
 import { ActivityProcessor } from './ActivityProcessor';
 import { ConnectorProcessor } from './ConnectorProcessor';
-import { EntityProcessor } from './EntityProcessor';
 import { ResourceProcessor } from './ResourceProcessor';
 import { GeneratorProcessor } from './GeneratorProcessor';
 import { ModelProcessor } from './ModelProcessor';
@@ -27,7 +26,6 @@ export class ProcessorFactory {
     ProcessorFactory.processors.set(SelectionType.MULTIPLE, new MultipleSelectionProcessor());
     ProcessorFactory.processors.set(SelectionType.ACTIVITY, new ActivityProcessor());
     ProcessorFactory.processors.set(SelectionType.CONNECTOR, new ConnectorProcessor());
-    ProcessorFactory.processors.set(SelectionType.ENTITY, new EntityProcessor());
     ProcessorFactory.processors.set(SelectionType.RESOURCE, new ResourceProcessor());
     ProcessorFactory.processors.set(SelectionType.GENERATOR, new GeneratorProcessor());
     ProcessorFactory.processors.set(SelectionType.MODEL, new ModelProcessor());

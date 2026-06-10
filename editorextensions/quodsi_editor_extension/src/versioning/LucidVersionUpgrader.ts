@@ -1,5 +1,5 @@
-import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION, upgradeElements } from '@quodsi/lucid-shared';
-import type { RawElement } from '@quodsi/lucid-shared';
+import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION, upgradeElements, SimulationObjectType } from '@quodsi/lucid-shared';
+import type { RawElement, ISerializedEntity } from '@quodsi/lucid-shared';
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { LucidPreflightChecker } from './LucidPreflightChecker';
 
@@ -15,9 +15,13 @@ interface ShapeDataBackup {
  */
 export class LucidVersionUpgrader extends BaseVersionUpgrader {
     private static readonly DATA_KEY = 'q_data';
+    // Mirrors StorageAdapter.ENTITIES_KEY. Entities are no longer shape-mapped; the
+    // migration below lifts legacy entity shapes into this page-level list.
+    private static readonly ENTITIES_KEY = 'q_entities';
 
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
+    private entitiesBackup: { existed: boolean; data?: string } = { existed: false };
 
     constructor(currentVersion: string, options?: UpgradeOptions) {
         super(currentVersion, options);
@@ -48,6 +52,12 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
 
         // Backup page data
         this.backupElementData('page', page);
+
+        // Backup the page-level entities list so an entity-shape lift can be rolled back
+        const entitiesData = page.shapeData.get(LucidVersionUpgrader.ENTITIES_KEY);
+        this.entitiesBackup = typeof entitiesData === 'string'
+            ? { existed: true, data: entitiesData }
+            : { existed: false };
 
         // Backup blocks
         for (const block of page.blocks.values()) {
@@ -103,8 +113,48 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         // platform, so the adapter no longer re-attaches it.
         const result = upgradeElements(targets.map(t => t.blob), sourceVersion);
 
+        // Entities are no longer shape-mapped. Lift any legacy entity shapes into the
+        // page-level q_entities list (preserving id == block.id so existing entityId
+        // references in Generators/Activities/Create-actions still resolve), then strip
+        // their q_data so the shapes become inert (kept on the canvas, ignored by the
+        // model builder). Idempotent: keyed by id, and a stripped shape is no longer
+        // collected on subsequent runs.
+        const entitiesById = new Map<string, ISerializedEntity>();
+        const existingEntitiesStr = page.shapeData.get(LucidVersionUpgrader.ENTITIES_KEY);
+        if (existingEntitiesStr && typeof existingEntitiesStr === 'string') {
+            try {
+                for (const e of JSON.parse(existingEntitiesStr) as ISerializedEntity[]) {
+                    entitiesById.set(e.id, e);
+                }
+            } catch {
+                // Corrupt list — treat as empty and rebuild from shapes.
+            }
+        }
+        let entitiesChanged = false;
+
         result.elements.forEach((upgraded, i) => {
             const t = targets[i];
+            const type = (upgraded as any)?.type;
+
+            if (!t.isPage && type === SimulationObjectType.Entity) {
+                const domain = (upgraded as any).domain ?? upgraded;
+                const id = (upgraded as any).id ?? t.element.id;
+                if (!entitiesById.has(id)) {
+                    entitiesById.set(id, {
+                        id,
+                        name: domain?.name ?? 'Entity',
+                        description: domain?.description ?? '',
+                        type: SimulationObjectType.Entity,
+                        x: 0,
+                        y: 0
+                    });
+                    entitiesChanged = true;
+                }
+                // Strip the entity binding; keep the physical shape.
+                t.element.shapeData.delete(LucidVersionUpgrader.DATA_KEY);
+                return;
+            }
+
             const changed = upgraded !== t.blob; // engine returns same ref when untouched
             if (!changed && !t.isPage) return;    // don't rewrite untouched shapes
 
@@ -114,6 +164,13 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             }
             t.element.shapeData.set(LucidVersionUpgrader.DATA_KEY, JSON.stringify(upgraded));
         });
+
+        if (entitiesChanged) {
+            page.shapeData.set(
+                LucidVersionUpgrader.ENTITIES_KEY,
+                JSON.stringify([...entitiesById.values()])
+            );
+        }
     }
 
     /**
@@ -150,6 +207,13 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const pageBackup = this.backupData.get('page');
         if (pageBackup) {
             this.restoreElementData(page, pageBackup);
+        }
+
+        // Restore the page-level entities list (delete if it didn't exist pre-upgrade)
+        if (this.entitiesBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.ENTITIES_KEY, this.entitiesBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.ENTITIES_KEY);
         }
 
         // Restore blocks
