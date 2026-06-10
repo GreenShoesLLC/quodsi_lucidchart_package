@@ -2113,11 +2113,20 @@ export class ModelManager {
                 elementId: element.id,
                 type
             });
-            this.setElementData(
-                element,
-                elementData,
-                type
-            );
+            // A field edit is a partial update: when the element already has stored
+            // data, merge into it so platform metadata (mappingSource) and stored
+            // fields the panel did not send (e.g. width/height) are preserved.
+            // Fall back to a full create when there is no prior q_data.
+            if (this.storageAdapter.getElementData(element) != null) {
+                this.storageAdapter.updateElementData(element, elementData);
+                this.markModelDirty(element.id);
+            } else {
+                this.setElementData(
+                    element,
+                    elementData,
+                    type
+                );
+            }
 
             this.debug.log('handleDataUpdate - Completed Successfully');
         } catch (error) {
