@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.0",
   "metadata": {
-    "version": "1.0",
-    "timestamp": "2026-02-07T12:50:55.146Z"
+    "version": "2026.06.10",
+    "timestamp": "2026-06-10T11:42:19.904Z"
   },
   "model": {
     "id": "model-7",
@@ -61,7 +61,8 @@
               },
               "description": ""
             }
-          }
+          },
+          "id": "9cb4fea8-d89b-4350-b7bc-6d44be790d75"
         }
       ],
       "connectors": [
@@ -107,7 +108,8 @@
               },
               "description": ""
             }
-          }
+          },
+          "id": "dc4c95b8-a2e2-4a7f-b41f-3d14fe989837"
         }
       ],
       "connectors": [],
@@ -156,5 +158,6 @@
   "resourceRequirements": [],
   "states": [],
   "timePatterns": [],
-  "timeDistributedConfigs": []
+  "timeDistributedConfigs": [],
+  "scenarios": []
 }

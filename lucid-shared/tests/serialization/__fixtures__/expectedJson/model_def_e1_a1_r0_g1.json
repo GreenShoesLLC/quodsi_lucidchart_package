@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.0",
   "metadata": {
-    "version": "1.0",
-    "timestamp": "2026-02-07T12:50:55.144Z"
+    "version": "2026.06.10",
+    "timestamp": "2026-06-10T11:42:19.901Z"
   },
   "model": {
     "id": "model-5",
@@ -61,7 +61,8 @@
               },
               "description": ""
             }
-          }
+          },
+          "id": "376c2ce9-13b1-4585-8471-e1f34f561cde"
         }
       ],
       "connectors": [],
@@ -110,5 +111,6 @@
   "resourceRequirements": [],
   "states": [],
   "timePatterns": [],
-  "timeDistributedConfigs": []
+  "timeDistributedConfigs": [],
+  "scenarios": []
 }

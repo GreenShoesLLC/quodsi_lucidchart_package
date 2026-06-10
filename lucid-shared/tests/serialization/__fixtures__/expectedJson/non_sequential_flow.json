@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.0",
   "metadata": {
-    "version": "1.0",
-    "timestamp": "2026-02-07T12:50:55.151Z"
+    "version": "2026.06.10",
+    "timestamp": "2026-06-10T11:42:19.910Z"
   },
   "model": {
     "id": "model-non-sequential",
@@ -63,7 +63,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "de9e6c98-83af-4ea2-8776-623ce6e5c9f2"
         }
       ],
       "connectors": [
@@ -128,7 +129,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "de9e6c98-83af-4ea2-8776-623ce6e5c9f2"
         }
       ],
       "connectors": [],
@@ -158,7 +160,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "de9e6c98-83af-4ea2-8776-623ce6e5c9f2"
         }
       ],
       "connectors": [],
@@ -238,5 +241,6 @@
   ],
   "states": [],
   "timePatterns": [],
-  "timeDistributedConfigs": []
+  "timeDistributedConfigs": [],
+  "scenarios": []
 }

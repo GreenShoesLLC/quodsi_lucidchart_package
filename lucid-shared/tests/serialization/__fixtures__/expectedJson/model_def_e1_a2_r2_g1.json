@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.0",
   "metadata": {
-    "version": "1.0",
-    "timestamp": "2026-02-07T12:50:55.147Z"
+    "version": "2026.06.10",
+    "timestamp": "2026-06-10T11:42:19.905Z"
   },
   "model": {
     "id": "model-8",
@@ -63,7 +63,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "2765b564-5f98-4695-a8dd-ca81a2528685"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -78,7 +79,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "6cee8056-bdf7-41c1-b6ed-a5fd2d318514"
         }
       ],
       "connectors": [
@@ -126,7 +128,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "99ae5577-6d5a-44b2-be8a-52ed80ac52cd"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -141,7 +144,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "600ceef7-aca4-4144-b0ad-51101360f350"
         }
       ],
       "connectors": [],
@@ -250,5 +254,6 @@
   ],
   "states": [],
   "timePatterns": [],
-  "timeDistributedConfigs": []
+  "timeDistributedConfigs": [],
+  "scenarios": []
 }

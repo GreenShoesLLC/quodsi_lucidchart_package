@@ -1,8 +1,8 @@
 {
   "formatVersion": "1.0",
   "metadata": {
-    "version": "1.0",
-    "timestamp": "2026-02-07T12:50:55.153Z"
+    "version": "2026.06.10",
+    "timestamp": "2026-06-10T11:42:19.911Z"
   },
   "model": {
     "id": "model-100",
@@ -72,7 +72,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "78692d0d-200e-4fef-b01a-670c60793bd1"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -88,7 +89,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "b810d522-e657-453b-8975-85df8572f6c0"
         }
       ],
       "connectors": [
@@ -138,7 +140,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "256334a5-5dd2-46f0-a21f-6db02a8fc8e9"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -155,7 +158,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "93183952-4ece-499b-8867-58b3920e6e27"
         }
       ],
       "connectors": [
@@ -203,7 +207,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "a8bf68b5-84b4-4311-a7a6-5517edc32fc1"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -218,7 +223,8 @@
               "description": ""
             }
           },
-          "keepResource": false
+          "keepResource": false,
+          "id": "a552f7fb-aff1-4bfd-868f-176b3d1fdad5"
         }
       ],
       "connectors": [],
@@ -328,5 +334,6 @@
   ],
   "states": [],
   "timePatterns": [],
-  "timeDistributedConfigs": []
+  "timeDistributedConfigs": [],
+  "scenarios": []
 }

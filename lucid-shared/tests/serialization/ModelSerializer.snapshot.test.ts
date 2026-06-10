@@ -2,6 +2,8 @@ import { ModelSerializerFactory } from '../../src/serialization/ModelSerializerF
 import * as fs from 'fs';
 import * as path from 'path';
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // Import all model definitions
 
 import {
@@ -53,6 +55,13 @@ function normalizeForComparison(obj: any): any {
             if (key === 'version') continue;
             
             normalized[key] = normalizeForComparison(value);
+        }
+        // Action ids are non-deterministic (generateUUID()); canonicalize them so
+        // structural snapshots don't depend on the random value. Action objects are
+        // identified by `actionType`; element ids (deterministic) are left intact.
+        // serializeActionId.test.ts separately verifies explicit action-id round-tripping.
+        if (normalized.actionType !== undefined && typeof normalized.id === 'string' && UUID_RE.test(normalized.id)) {
+            normalized.id = '<UUID>';
         }
         return normalized;
     }
