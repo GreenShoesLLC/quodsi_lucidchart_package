@@ -48,6 +48,8 @@ function normalizeForComparison(obj: any): any {
             // Skip certain dynamic fields
             if (key === 'timestamp') continue;
             if (key === 'parentClauseId') continue;
+            // metadata.version carries QUODSI_VERSION (changes every release); it's
+            // asserted in ModelSerializerFactory.test.ts, so skip it in structural snapshots.
             if (key === 'version') continue;
             
             normalized[key] = normalizeForComparison(value);

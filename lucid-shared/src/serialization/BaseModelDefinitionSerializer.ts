@@ -54,6 +54,12 @@ import { SerializationError } from './errors/SerializationError';
 import { InvalidModelError } from './errors/InvalidModelError';
 
 export abstract class BaseModelDefinitionSerializer implements IModelDefinitionSerializer {
+    /**
+     * The serializer's wire-format version, used by ModelSerializerFactory for
+     * serializer selection and emitted as top-level `formatVersion`. NOTE: this no
+     * longer feeds `metadata.version`, which now carries QUODSI_VERSION (the
+     * model-definition schema version).
+     */
     abstract getVersion(): ISchemaVersion;
 
     abstract serialize(modelDefinition: ModelDefinition): ISerializedModel;
