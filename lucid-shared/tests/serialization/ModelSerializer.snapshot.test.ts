@@ -48,6 +48,7 @@ function normalizeForComparison(obj: any): any {
             // Skip certain dynamic fields
             if (key === 'timestamp') continue;
             if (key === 'parentClauseId') continue;
+            if (key === 'version') continue;
             
             normalized[key] = normalizeForComparison(value);
         }

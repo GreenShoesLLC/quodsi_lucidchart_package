@@ -1,4 +1,5 @@
 import { ModelDefinition } from '@quodsi/shared';
+import { QUODSI_VERSION } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Entity } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
@@ -660,7 +661,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
     protected getMetadata(): { version: string; timestamp: string } {
         try {
             return {
-                version: this.getVersion().toString(),
+                // `version` is the model-definition schema version (QUODSI_VERSION).
+                // The serializer's own wire-format version lives in top-level `formatVersion`.
+                version: QUODSI_VERSION,
                 timestamp: new Date().toISOString()
             };
         } catch (error) {

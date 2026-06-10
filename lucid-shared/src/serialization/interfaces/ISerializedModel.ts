@@ -12,6 +12,7 @@ import { ISerializedScenarioChangeRequest } from './ISerializedScenarioChangeReq
 import { ISerializedScenario } from './ISerializedScenario';
 
 export interface ISerializedMetadata {
+    /** Model-definition schema version the model was written under (QUODSI_VERSION). */
     version: string;
     timestamp: string;
 }
