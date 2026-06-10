@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { EnvelopeMessageType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -128,6 +128,18 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
+   * Send a request to update the entities array
+   *
+   * @param entities Array of serialized entity definitions
+   */
+  const updateEntities = useCallback((entities: ISerializedEntity[]) => {
+    // Use ENTITIES_UPDATE for updating entities
+    send(EnvelopeMessageType.ENTITIES_UPDATE, {
+      entities
+    });
+  }, [send]);
+
+  /**
    * Send a request to update the resource requirements array
    *
    * @param resourceRequirements Array of serialized resource requirement definitions
@@ -181,7 +193,7 @@ export function useModelOpsSender() {
    * @param elementId Optional element ID to select. If 'model' or undefined, clears selection to show Model Editor.
    * @param options Optional configuration including targetTab for Model Editor navigation
    */
-  const selectElement = useCallback((elementId?: string, options?: { targetTab?: 'basic' | 'states' | 'requirements' | 'scenarios' | 'validation' }) => {
+  const selectElement = useCallback((elementId?: string, options?: { targetTab?: 'basic' | 'states' | 'entities' | 'requirements' | 'scenarios' | 'validation' }) => {
     // If a target tab is specified, store it for the Model Editor to consume
     if (options?.targetTab) {
       const { setPendingModelEditorTab } = require('../../utils/pendingNavigation');
@@ -202,6 +214,7 @@ export function useModelOpsSender() {
     convertElement,
     convertPage,
     updateStates,
+    updateEntities,
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,
@@ -215,6 +228,7 @@ export function useModelOpsSender() {
     convertElement,
     convertPage,
     updateStates,
+    updateEntities,
     updateResourceRequirements,
     updateTimePatterns,
     updateTimeDistributedConfigs,

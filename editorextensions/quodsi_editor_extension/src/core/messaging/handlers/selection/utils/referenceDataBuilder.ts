@@ -102,7 +102,8 @@ export const referenceDataBuilder = {
 
         referenceData.entities = modelDef.entities.getAll().map(e => ({
           id: e.id,
-          name: e.name
+          name: e.name,
+          description: e.description
         }));
 
         referenceData.resourceRequirements = modelDef.resourceRequirements.getAll();

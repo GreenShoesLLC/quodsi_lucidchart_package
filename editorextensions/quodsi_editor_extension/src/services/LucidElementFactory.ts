@@ -10,7 +10,6 @@ import {
     SimObjectLucid,
     ActivityLucid,
     ConnectorLucid,
-    EntityLucid,
     GeneratorLucid,
     ResourceLucid,
     ResourceRequirementLucid,
@@ -84,17 +83,6 @@ export class LucidElementFactory {
                             : new ConnectorLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a LineProxy for Connector`);
-                    break;
-
-                case SimulationObjectType.Entity:
-                    ComponentLogger.log(LOG_PREFIX, `Checking BlockProxy for Entity`);
-                    if (this.isBlockProxy(element)) {
-                        ComponentLogger.log(LOG_PREFIX, `Creating EntityLucid`);
-                        return isConversion
-                            ? EntityLucid.createFromConversion(element, this.storageAdapter, mappingSource)
-                            : new EntityLucid(element, this.storageAdapter);
-                    }
-                    ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Entity`);
                     break;
 
                 case SimulationObjectType.Generator:

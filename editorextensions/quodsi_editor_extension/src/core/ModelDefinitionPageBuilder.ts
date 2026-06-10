@@ -6,6 +6,7 @@ import {
     ResourceRequirement,
     RequirementClause,
     State,
+    Entity,
     TimePattern,
     TimeDistributedConfig,
     Scenario,
@@ -129,9 +130,11 @@ export class ModelDefinitionPageBuilder {
                     return null;
                 }
             }
+            // NOTE: Entity is intentionally NOT in this list. Entities are no longer
+            // shape-mapped; they are stored as a page-level list (q_entities) and loaded
+            // via loadEntities() below — mirroring States / Resource Requirements.
             const processingOrder: SimulationObjectType[] = [
                 SimulationObjectType.Resource,        // Process resources first to create requirements
-                SimulationObjectType.Entity,          // Then entities as they might be referenced
                 SimulationObjectType.Activity,        // Activities that use resources and entities
                 SimulationObjectType.Generator        // Generators that reference entities
             ];
@@ -179,11 +182,6 @@ export class ModelDefinitionPageBuilder {
                                 modelDefinition.generators.add(simObject);
                                 this.log(`Added generator: ${simObject.name}`);
                                 break;
-
-                            case SimulationObjectType.Entity:
-                                modelDefinition.entities.add(simObject);
-                                this.log(`Added entity: ${simObject.name}`);
-                                break;
                         }
                     } catch (error) {
                         this.log(`Error processing block of type ${type}: ${error}`, 'error');
@@ -196,6 +194,9 @@ export class ModelDefinitionPageBuilder {
 
             // Load states from storage
             this.loadStates(page, modelDefinition);
+
+            // Load entities from storage
+            this.loadEntities(page, modelDefinition);
 
             // Load time patterns from storage
             this.loadTimePatterns(page, modelDefinition);
@@ -352,6 +353,42 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final states count: ${modelDefinition.states.size()}`);
+    }
+
+    /**
+     * Loads entity definitions from storage and adds them to the model definition.
+     *
+     * Entities are stored as a page-level list (q_entities), mirroring States.
+     * The ModelDefinition constructor pre-seeds a single default entity
+     * (ModelDefaults.DEFAULT_ENTITY_ID); since ComponentListManager.add keys by id
+     * and overwrites on duplicate, a stored entry whose id equals the default id
+     * cleanly replaces the seeded default. Other ids are added alongside.
+     */
+    private loadEntities(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading entities from storage');
+
+        // Get entities from page storage
+        const serializedEntities = this.storageAdapter.getEntities(page);
+        this.log(`Found ${serializedEntities.length} entities in storage`);
+
+        // Deserialize and add each entity to the model definition
+        for (const serializedEntity of serializedEntities) {
+            try {
+                const entity = new Entity(
+                    serializedEntity.id,
+                    serializedEntity.name,
+                    serializedEntity.x ?? 0,
+                    serializedEntity.y ?? 0
+                );
+                entity.description = serializedEntity.description ?? '';
+                modelDefinition.entities.add(entity);
+                this.log(`Added entity: ${entity.name}`);
+            } catch (error) {
+                this.log(`Error deserializing entity: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final entities count: ${modelDefinition.entities.size()}`);
     }
 
     /**

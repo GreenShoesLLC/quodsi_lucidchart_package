@@ -12,10 +12,10 @@ import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
 
 import ModelEditor, { EditorTab } from "../editors/ModelEditor";
+import { EntityRow } from "../editors/EntitiesEditor";
 import ActivityEditor from "../editors/ActivityEditor";
 import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
-import EntityEditor from "../editors/EntityEditor";
 import ConnectorsEditor from "../editors/ConnectorsEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
 
@@ -29,6 +29,8 @@ interface ElementEditorProps {
   currentElement?: ExtendedModelItemData;
   states: StateListManager;
   onStatesChange: (states: StateListManager) => void;
+  entities: EntityRow[];
+  onEntitiesChange: (entities: EntityRow[]) => void;
   onTimePatternsChange?: (patterns: ISerializedTimePattern[]) => void;
   onTimeDistributedConfigsChange?: (configs: ISerializedTimeDistributedConfig[]) => void;
   resourceRequirements?: any[];
@@ -52,6 +54,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   currentElement,
   states,
   onStatesChange,
+  entities,
+  onEntitiesChange,
   onTimePatternsChange = () => {},
   onTimeDistributedConfigsChange = () => {},
   resourceRequirements,
@@ -134,6 +138,8 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             onValidate={onValidate}
             states={states}
             onStatesChange={onStatesChange}
+            entities={entities}
+            onEntitiesChange={onEntitiesChange}
             referenceData={referenceData}
             resourceRequirements={resourceRequirements}
             validationState={validationState}
@@ -175,18 +181,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         return (
           <ResourceEditor
             resource={safeElementData}
-            onSave={onSave}
-            states={states}
-            onStatesChange={onStatesChange}
-            referenceData={referenceData}
-          />
-        );
-
-      case SimulationObjectType.Entity:
-      case "Entity":
-        return (
-          <EntityEditor
-            entity={safeElementData}
             onSave={onSave}
             states={states}
             onStatesChange={onStatesChange}

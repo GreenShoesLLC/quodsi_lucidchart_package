@@ -6,7 +6,8 @@ import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
 import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedEntity, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
+import { EntityRow } from '../editors/EntitiesEditor';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
 import { EditorTab } from '../editors/ModelEditor';
@@ -31,6 +32,7 @@ export const ModelPanel: React.FC = () => {
     referenceData,
     simulationStatus,
     states: serializedStates,
+    entities: serializedEntities,
     resourceRequirements: serializedResourceRequirements,
     outgoingConnectors,
     // Actions
@@ -45,6 +47,7 @@ export const ModelPanel: React.FC = () => {
   // Get message senders
   const {
     updateStates: sendStatesUpdate,
+    updateEntities: sendEntitiesUpdate,
     updateTimePatterns: sendTimePatternsUpdate,
     updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate,
     requestModelJson
@@ -165,6 +168,21 @@ export const ModelPanel: React.FC = () => {
     }));
 
     sendStatesUpdate(serializedStates);
+  };
+
+  const handleEntitiesChange = (updatedEntities: EntityRow[]) => {
+    // Map entity rows to the serialized format and send to the extension.
+    // x/y are meaningless for list-based entities; persist them as 0.
+    const serialized: ISerializedEntity[] = updatedEntities.map(entity => ({
+      id: entity.id,
+      name: entity.name,
+      description: entity.description,
+      type: SimulationObjectType.Entity,
+      x: 0,
+      y: 0
+    }));
+
+    sendEntitiesUpdate(serialized);
   };
 
   const handleTimePatternsChange = (updatedTimePatterns: ISerializedTimePattern[]) => {
@@ -342,6 +360,8 @@ export const ModelPanel: React.FC = () => {
             currentElement={currentElement}
             states={states}
             onStatesChange={handleStatesChange}
+            entities={serializedEntities}
+            onEntitiesChange={handleEntitiesChange}
             resourceRequirements={serializedResourceRequirements}
             outgoingConnectors={outgoingConnectors}
             validationState={validationState}

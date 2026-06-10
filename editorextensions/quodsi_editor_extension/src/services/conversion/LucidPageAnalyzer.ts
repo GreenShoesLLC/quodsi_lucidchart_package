@@ -364,9 +364,10 @@ export class LucidPageAnalyzer extends QuodsiLogger {
                     case 'generator':
                         analysis.elementType = SimulationObjectType.Generator;
                         break;
-                    case 'entity':
-                        analysis.elementType = SimulationObjectType.Entity;
-                        break;
+                    // 'entity' is intentionally not mapped: entities are no longer
+                    // shape-mapped (they live in the Model Editor's Entities tab /
+                    // q_entities). An explicitly entity-named shape is left unconverted
+                    // (elementType stays undefined → proposedType null → skipped).
                 }
                 this.log(`Block ${blockId} set as ${explicitType} based on explicit type field`, {
                     blockName,
