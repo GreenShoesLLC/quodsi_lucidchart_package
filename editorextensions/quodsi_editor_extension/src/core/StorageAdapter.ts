@@ -448,12 +448,8 @@ export class StorageAdapter {
         options: { mappingSource?: MappingSource; version?: string } = {}
     ): void {
         try {
-            const { id, ...rest } = data as any;
-            const domain: any = { ...rest };
-            // Identity/platform/version never live in domain.
-            delete domain.type;
-            delete domain.mappingSource;
-            delete domain.version;
+            // Strip identity/platform/version/schemaVersion; whatever remains is domain.
+            const { id, type: _type, mappingSource: _ms, version: _ver, schemaVersion: _sv, ...domain } = data as any;
 
             const platform: { mappingSource?: MappingSource } = {};
             if (options.mappingSource) platform.mappingSource = options.mappingSource;
@@ -494,14 +490,10 @@ export class StorageAdapter {
 
             const mappingSource: MappingSource | undefined = merged.mappingSource;
 
-            // Preserve the page version marker (Model only) from the raw stored blob.
-            let pageVersion: string | undefined;
-            if (type === SimulationObjectType.Model) {
-                const rawStr = element.shapeData.get(StorageAdapter.DATA_KEY);
-                if (typeof rawStr === 'string') {
-                    try { pageVersion = JSON.parse(rawStr).version; } catch { /* ignore */ }
-                }
-            }
+            // flattenEnvelope already surfaces the page version marker into `existing`.
+            const pageVersion: string | undefined = type === SimulationObjectType.Model
+                ? (existing.version as string | undefined)
+                : undefined;
 
             const { id, type: _t, mappingSource: _m, version: _v, schemaVersion: _s, ...domain } = merged;
             const platform: { mappingSource?: MappingSource } = {};
