@@ -48,46 +48,15 @@ describe('TriangularDistribution', () => {
             // Right is less than mode
             expect(TriangularDistribution.validateParameters({ left: 0, mode: 5, right: 3 })).toBe(false);
             
-            // Values are not numbers
-            expect(TriangularDistribution.validateParameters({ 
-                // @ts-ignore - Testing with invalid parameter type
-                left: "0", 
-                mode: 5, 
-                right: 10
-            })).toBe(false);
-            
-            expect(TriangularDistribution.validateParameters({ 
-                left: 0, 
-                // @ts-ignore - Testing with invalid parameter type
-                mode: "5", 
-                right: 10 
-            })).toBe(false);
-            
-            expect(TriangularDistribution.validateParameters({ 
-                left: 0, 
-                mode: 5, 
-                // @ts-ignore - Testing with invalid parameter type
-                right: "10" 
-            })).toBe(false);
-            
+            // Values are not numbers (deliberately invalid input → cast as any)
+            expect(TriangularDistribution.validateParameters({ left: "0", mode: 5, right: 10 } as any)).toBe(false);
+            expect(TriangularDistribution.validateParameters({ left: 0, mode: "5", right: 10 } as any)).toBe(false);
+            expect(TriangularDistribution.validateParameters({ left: 0, mode: 5, right: "10" } as any)).toBe(false);
+
             // Missing parameters
-            expect(TriangularDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameters
-                left: 0, 
-                mode: 5 
-            })).toBe(false);
-            
-            expect(TriangularDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameters
-                mode: 5, 
-                right: 10 
-            })).toBe(false);
-            
-            expect(TriangularDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameters
-                left: 0, 
-                right: 10 
-            })).toBe(false);
+            expect(TriangularDistribution.validateParameters({ left: 0, mode: 5 } as any)).toBe(false);
+            expect(TriangularDistribution.validateParameters({ mode: 5, right: 10 } as any)).toBe(false);
+            expect(TriangularDistribution.validateParameters({ left: 0, right: 10 } as any)).toBe(false);
         });
     });
     

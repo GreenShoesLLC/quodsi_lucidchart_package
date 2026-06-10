@@ -43,29 +43,13 @@ describe('UniformDistribution', () => {
             expect(UniformDistribution.validateParameters({ low: 10, high: 5 })).toBe(false);
             expect(UniformDistribution.validateParameters({ low: 5, high: 5 })).toBe(false);
             
-            // Values are not numbers
-            expect(UniformDistribution.validateParameters({ 
-                // @ts-ignore - Testing with invalid parameter type
-                low: "0", 
-                high: 10 
-            })).toBe(false);
-            
-            expect(UniformDistribution.validateParameters({ 
-                low: 0, 
-                // @ts-ignore - Testing with invalid parameter type
-                high: "10" 
-            })).toBe(false);
-            
+            // Values are not numbers (deliberately invalid input → cast as any)
+            expect(UniformDistribution.validateParameters({ low: "0", high: 10 } as any)).toBe(false);
+            expect(UniformDistribution.validateParameters({ low: 0, high: "10" } as any)).toBe(false);
+
             // Missing parameters
-            expect(UniformDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameter
-                low: 0 
-            })).toBe(false);
-            
-            expect(UniformDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameter
-                high: 10 
-            })).toBe(false);
+            expect(UniformDistribution.validateParameters({ low: 0 } as any)).toBe(false);
+            expect(UniformDistribution.validateParameters({ high: 10 } as any)).toBe(false);
         });
     });
     

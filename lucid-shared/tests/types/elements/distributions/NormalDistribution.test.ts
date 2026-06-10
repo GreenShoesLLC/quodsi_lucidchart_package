@@ -43,29 +43,13 @@ describe('NormalDistribution', () => {
             expect(NormalDistribution.validateParameters({ mean: 5, std: 0 })).toBe(false);
             expect(NormalDistribution.validateParameters({ mean: 5, std: -1 })).toBe(false);
             
-            // Values are not numbers
-            expect(NormalDistribution.validateParameters({ 
-                // @ts-ignore - Testing with invalid parameter type
-                mean: "5", 
-                std: 1 
-            })).toBe(false);
-            
-            expect(NormalDistribution.validateParameters({ 
-                mean: 5, 
-                // @ts-ignore - Testing with invalid parameter type
-                std: "1" 
-            })).toBe(false);
-            
+            // Values are not numbers (deliberately invalid input → cast as any)
+            expect(NormalDistribution.validateParameters({ mean: "5", std: 1 } as any)).toBe(false);
+            expect(NormalDistribution.validateParameters({ mean: 5, std: "1" } as any)).toBe(false);
+
             // Missing parameters
-            expect(NormalDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameter
-                mean: 5 
-            })).toBe(false);
-            
-            expect(NormalDistribution.validateParameters({ 
-                // @ts-ignore - Testing with missing parameter
-                std: 1 
-            })).toBe(false);
+            expect(NormalDistribution.validateParameters({ mean: 5 } as any)).toBe(false);
+            expect(NormalDistribution.validateParameters({ std: 1 } as any)).toBe(false);
         });
     });
     
