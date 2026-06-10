@@ -1875,7 +1875,8 @@ export class ModelManager {
             const platformObject = factory.createPlatformObject(
                 element,
                 newType,
-                true // isConversion flag
+                true, // isConversion flag
+                'user' // manual map/convert via UI → tag as user-created
             );
 
             // Get the simulation object
