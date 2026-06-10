@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
 
 /**
  * Record of skipped elements with their mapping source
@@ -448,29 +448,28 @@ export class StorageAdapter {
         options: { mappingSource?: MappingSource; version?: string } = {}
     ): void {
         try {
-            // Build the merged data object: type info + component data
-            const mergedData: any = {
-                type,
-                ...data
-            };
+            const { id, ...rest } = data as any;
+            const domain: any = { ...rest };
+            // Identity/platform/version never live in domain.
+            delete domain.type;
+            delete domain.mappingSource;
+            delete domain.version;
 
-            // Include mappingSource if provided
-            if (options.mappingSource) {
-                mergedData.mappingSource = options.mappingSource;
-            }
+            const platform: { mappingSource?: MappingSource } = {};
+            if (options.mappingSource) platform.mappingSource = options.mappingSource;
 
-            // For Model type, include version
+            const envelope: any = makeEnvelope(type, id, domain, platform, QUODSI_VERSION);
+            // The page (Model) keeps a top-level version marker for the migration gate.
             if (type === SimulationObjectType.Model) {
-                mergedData.version = options.version || QUODSI_VERSION;
+                envelope.version = options.version || QUODSI_VERSION;
             }
 
-            const serializedData = JSON.stringify(mergedData);
-            element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
+            element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));
 
             this.log('Successfully set element data:', {
-                elementId: data.id,
+                elementId: id,
                 type: type,
-                dataKeys: Object.keys(mergedData)
+                dataKeys: Object.keys(domain)
             });
         } catch (error) {
             this.logError('Error setting element data:', error);
@@ -484,36 +483,40 @@ export class StorageAdapter {
      */
     public updateElementData<T extends { id: string }>(element: ElementProxy, data: T): void {
         try {
+            // getElementData returns a flattened view of either an envelope or a legacy blob.
             const existing = this.getElementData<any>(element);
             if (!existing) {
                 throw new Error('No existing data found for element');
             }
 
-            // Merge: preserve type/id/mappingSource/version from existing, overlay new data
-            const merged = {
-                ...existing,
-                ...data,
-                // Always preserve the type info fields from existing
-                type: existing.type,
-                id: existing.id,
-            };
+            const type = existing.type as SimulationObjectType;
+            const merged: any = { ...existing, ...data, type, id: existing.id };
 
-            // Preserve mappingSource if it exists in existing and not in new data
-            if (existing.mappingSource && !(data as any).mappingSource) {
-                merged.mappingSource = existing.mappingSource;
+            const mappingSource: MappingSource | undefined = merged.mappingSource;
+
+            // Preserve the page version marker (Model only) from the raw stored blob.
+            let pageVersion: string | undefined;
+            if (type === SimulationObjectType.Model) {
+                const rawStr = element.shapeData.get(StorageAdapter.DATA_KEY);
+                if (typeof rawStr === 'string') {
+                    try { pageVersion = JSON.parse(rawStr).version; } catch { /* ignore */ }
+                }
             }
 
-            // Preserve version if it exists (only on Model/page)
-            if (existing.version) {
-                merged.version = existing.version;
+            const { id, type: _t, mappingSource: _m, version: _v, schemaVersion: _s, ...domain } = merged;
+            const platform: { mappingSource?: MappingSource } = {};
+            if (mappingSource) platform.mappingSource = mappingSource;
+
+            const envelope: any = makeEnvelope(type, existing.id, domain, platform, QUODSI_VERSION);
+            if (type === SimulationObjectType.Model) {
+                envelope.version = pageVersion || QUODSI_VERSION;
             }
 
-            const serializedData = JSON.stringify(merged);
-            element.shapeData.set(StorageAdapter.DATA_KEY, serializedData);
+            element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));
 
             this.log('Successfully updated element data:', {
-                elementId: data.id,
-                type: existing.type
+                elementId: existing.id,
+                type
             });
         } catch (error) {
             this.logError('Error updating element data:', error);
@@ -534,10 +537,13 @@ export class StorageAdapter {
             const data = JSON.parse(dataStr);
             if (!data.type) return null;
 
+            // mappingSource lives in platform on an envelope, top-level on a legacy blob.
+            const mappingSource = data.platform ? data.platform.mappingSource : data.mappingSource;
+
             return {
                 type: data.type as SimulationObjectType,
                 id: data.id || element.id,
-                mappingSource: data.mappingSource
+                mappingSource
             };
         } catch (error) {
             this.logError('Error getting element type:', error);
@@ -572,7 +578,7 @@ export class StorageAdapter {
                 return null;
             }
 
-            const parsedData = JSON.parse(dataStr) as T;
+            const parsedData = flattenEnvelope(JSON.parse(dataStr)) as T;
 
             this.log('Successfully parsed element data:', {
                 elementId: element.id,
