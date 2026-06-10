@@ -1,5 +1,6 @@
 // tests/validation/services/ValidModelsValidation.test.ts
 import { ModelValidationService } from '../../../src/validation/services/ModelValidationService';
+import { ValidationSeverity } from '../../../src/quodsi-messaging/validation/types';
 import { ModelDefinition } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
@@ -42,9 +43,9 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nGenerators:', modelDefinition.generators.getAll().map(g => ({
         id: g.id,
         name: g.name,
-        entityId: g.entityId,
-        maxEntities: g.maxEntities,
-        periodicStartDuration: g.periodicStartDuration,
+        entityId: g.generationConfig.entityId,
+        maxEntities: g.generationConfig.maxEntities,
+        periodicStartDuration: g.generationConfig.periodicStartDuration,
         type: g.type
     })));
 
@@ -53,8 +54,7 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
         name: c.name,
         sourceId: c.sourceId,
         targetId: c.targetId,
-        probability: c.probability,
-        connectType: c.connectType
+        weight: c.weight
     })));
 }
 
@@ -148,14 +148,14 @@ describe('Valid Models Validation', () => {
                     console.error(`\nValidation failed for model: ${name}`);
                     logModelDefinition(modelDefinition);
                     console.error('\nValidation Errors:',
-                        result.messages.filter(m => m.type === 'error')
+                        result.issues.filter(i => i.severity === ValidationSeverity.ERROR)
                     );
                 }
 
                 // Assertions
                 expect(result.isValid).toBe(true);
-                expect(result.errorCount).toBe(0);
-                expect(result.messages.filter(m => m.type === 'error')).toHaveLength(0);
+                expect(result.summary.errorCount).toBe(0);
+                expect(result.issues.filter(i => i.severity === ValidationSeverity.ERROR)).toHaveLength(0);
             }
         );
     });
@@ -169,12 +169,12 @@ describe('Valid Models Validation', () => {
                 console.error('\nValidation failed for complex model');
                 logModelDefinition(modelDefinition);
                 console.error('\nValidation Errors:',
-                    result.messages.filter(m => m.type === 'error')
+                    result.issues.filter(i => i.severity === ValidationSeverity.ERROR)
                 );
             }
 
             expect(result.isValid).toBe(true);
-            expect(result.errorCount).toBe(0);
+            expect(result.summary.errorCount).toBe(0);
         });
 
         it('validates model with custom entity and resources', () => {
@@ -185,12 +185,12 @@ describe('Valid Models Validation', () => {
                 console.error('\nValidation failed for model with custom entity');
                 logModelDefinition(modelDefinition);
                 console.error('\nValidation Errors:',
-                    result.messages.filter(m => m.type === 'error')
+                    result.issues.filter(i => i.severity === ValidationSeverity.ERROR)
                 );
             }
 
             expect(result.isValid).toBe(true);
-            expect(result.errorCount).toBe(0);
+            expect(result.summary.errorCount).toBe(0);
         });
     });
 
@@ -200,10 +200,9 @@ describe('Valid Models Validation', () => {
             const generator = modelDefinition.generators.getAll()[0];
 
             // Verify generator configuration
-            expect(generator.periodicStartDuration).toBeDefined();
-            expect(generator.periodicStartDuration.durationLength).not.toBeLessThan(0);
-            expect(generator.periodicStartDuration.durationPeriodUnit).toBeDefined();
-            expect(generator.periodicStartDuration.durationType).toBeDefined();
+            expect(generator.generationConfig.periodicStartDuration).toBeDefined();
+            expect(generator.generationConfig.periodicStartDuration!.durationPeriodUnit).toBeDefined();
+            expect(generator.generationConfig.periodicStartDuration!.distribution).toBeDefined();
 
             const result = validationService.validate(modelDefinition);
 
@@ -211,15 +210,15 @@ describe('Valid Models Validation', () => {
                 console.error('\nGenerator validation failed');
                 console.error('Generator configuration:', {
                     id: generator.id,
-                    periodicStartDuration: generator.periodicStartDuration
+                    periodicStartDuration: generator.generationConfig.periodicStartDuration
                 });
                 console.error('\nValidation Errors:',
-                    result.messages.filter(m => m.type === 'error')
+                    result.issues.filter(i => i.severity === ValidationSeverity.ERROR)
                 );
             }
 
             expect(result.isValid).toBe(true);
-            expect(result.errorCount).toBe(0);
+            expect(result.summary.errorCount).toBe(0);
         });
     });
 });

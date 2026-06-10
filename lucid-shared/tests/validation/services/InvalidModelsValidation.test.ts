@@ -1,5 +1,6 @@
 // tests/validation/services/InvalidModelsValidation.test.ts
 import { ModelValidationService } from '../../../src/validation/services/ModelValidationService';
+import { ValidationSeverity } from '../../../src/quodsi-messaging/validation/types';
 // import * as invalidModels from '../../__fixtures__/models/invalid';
 
 import * as invalidModels from '../../__fixtures__/models/invalid';
@@ -26,9 +27,9 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nGenerators:', modelDefinition.generators.getAll().map(g => ({
         id: g.id,
         name: g.name,
-        entityId: g.entityId,
-        maxEntities: g.maxEntities,
-        periodicStartDuration: g.periodicStartDuration,
+        entityId: g.generationConfig.entityId,
+        maxEntities: g.generationConfig.maxEntities,
+        periodicStartDuration: g.generationConfig.periodicStartDuration,
         type: g.type
     })));
 
@@ -37,8 +38,7 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
         name: c.name,
         sourceId: c.sourceId,
         targetId: c.targetId,
-        probability: c.probability,
-        connectType: c.connectType
+        weight: c.weight
     })));
 }
 
@@ -69,12 +69,12 @@ describe('Invalid Models Validation', () => {
                 }
 
                 expect(result.isValid).toBe(false);
-                expect(result.errorCount).toBeGreaterThan(0);
-                expect(result.messages.filter(m => m.type === 'error')).not.toHaveLength(0);
+                expect(result.summary.errorCount).toBeGreaterThan(0);
+                expect(result.issues.filter(i => i.severity === ValidationSeverity.ERROR)).not.toHaveLength(0);
 
                 // Log the validation errors (helpful for debugging)
                 console.log(`\nExpected validation errors for ${name}:`,
-                    result.messages.filter(m => m.type === 'error')
+                    result.issues.filter(i => i.severity === ValidationSeverity.ERROR)
                 );
             }
         );
@@ -87,9 +87,9 @@ describe('Invalid Models Validation', () => {
             const result = validationService.validate(modelDefinition);
 
             expect(result.isValid).toBe(false);
-            expect(result.messages.some(m =>
-                m.type === 'error' &&
-                m.message.includes('activity')
+            expect(result.issues.some(i =>
+                i.severity === ValidationSeverity.ERROR &&
+                i.message.includes('activity')
             )).toBe(true);
         });
     });
@@ -100,9 +100,9 @@ describe('Invalid Models Validation', () => {
             const result = validationService.validate(modelDefinition);
 
             expect(result.isValid).toBe(false);
-            expect(result.messages.some(m =>
-                m.type === 'error' &&
-                m.message.includes('generator')
+            expect(result.issues.some(i =>
+                i.severity === ValidationSeverity.ERROR &&
+                i.message.includes('generator')
             )).toBe(true);
         });
     });
