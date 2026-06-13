@@ -15,7 +15,10 @@ import {
   ModelDefaults,
   SimulationObjectType,
   isNameUniqueInReferenceData,
+  ScenarioObjectType,
+  type ScenarioLever,
 } from "@quodsi/lucid-shared";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { Settings, Hash, Zap, Info, ChevronDown, ChevronRight } from "lucide-react";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -251,7 +254,7 @@ const GeneratorEditor: React.FC<Props> = ({
         : (data.initialStateModifications ? [...data.initialStateModifications] : [])
     };
 
-    return new Generator(
+    const extractedGenerator = new Generator(
       data.id || "",
       data.name || "New Generator",
       generationConfig,
@@ -259,6 +262,11 @@ const GeneratorEditor: React.FC<Props> = ({
       data.x || 0,
       data.y || 0
     );
+
+    // Preserve scenario levers (additive optional field, not a constructor param).
+    extractedGenerator.levers = data.levers ?? [];
+
+    return extractedGenerator;
   };
 
   /**
@@ -289,6 +297,7 @@ const GeneratorEditor: React.FC<Props> = ({
       maxEntities: number;
       initialStateModifications: any[];
       timeDistributedConfigIds: string[];
+      levers: ScenarioLever[];
     }>
   ): Generator => {
     // Build updated generationConfig
@@ -304,7 +313,7 @@ const GeneratorEditor: React.FC<Props> = ({
       initialStateModifications: updates.initialStateModifications ?? base.generationConfig.initialStateModifications
     };
 
-    return new Generator(
+    const updated = new Generator(
       base.id,
       updates.name ?? base.name,
       updatedConfig,
@@ -312,6 +321,11 @@ const GeneratorEditor: React.FC<Props> = ({
       base.x,
       base.y
     );
+
+    // Preserve scenario levers (not a constructor param — must be copied forward).
+    updated.levers = updates.levers ?? base.levers ?? [];
+
+    return updated;
   };
 
   // ============================================================================
@@ -1060,6 +1074,18 @@ const GeneratorEditor: React.FC<Props> = ({
                 </div>
               </div>
             )}
+
+            <LeverAuthoringSection
+              objectType={ScenarioObjectType.GENERATOR}
+              componentName={localGeneratorDraft.name}
+              levers={localGeneratorDraft.levers ?? []}
+              onChange={(next) => {
+                setLocalGeneratorDraft((prev) =>
+                  updateGeneratorImmutably(prev, { levers: next })
+                );
+                setHasPendingChanges(true);
+              }}
+            />
           </div>
         )}
 

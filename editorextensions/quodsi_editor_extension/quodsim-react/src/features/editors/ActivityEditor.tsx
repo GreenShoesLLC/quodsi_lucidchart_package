@@ -49,7 +49,10 @@ import {
   Connector,
   ResourceRequirement,
   isNameUniqueInReferenceData,
+  ScenarioObjectType,
+  type ScenarioLever,
 } from "@quodsi/lucid-shared";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -407,6 +410,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? FailureProperties.fromJSON(data.failureProperties)
       : new FailureProperties();
 
+    // Preserve scenario levers (additive optional field, not a constructor param).
+    activity.levers = data.levers ?? [];
+
     return activity;
   };
 
@@ -434,6 +440,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
       failureProperties: FailureProperties;
+      levers: ScenarioLever[];
     }>
   ): Activity => {
     const updated = new Activity(
@@ -453,6 +460,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       updates.financialProperties ?? base.financialProperties;
     updated.failureProperties =
       updates.failureProperties ?? base.failureProperties;
+    // Preserve scenario levers (not a constructor param — must be copied forward).
+    updated.levers = updates.levers ?? base.levers ?? [];
 
     return updated;
   };
@@ -1172,6 +1181,18 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     </div>
                   )}
                 </div>
+
+                <LeverAuthoringSection
+                  objectType={ScenarioObjectType.ACTIVITY}
+                  componentName={localActivityDraft.name}
+                  levers={localActivityDraft.levers ?? []}
+                  onChange={(next) => {
+                    setLocalActivityDraft((prev) =>
+                      updateActivityImmutably(prev, { levers: next })
+                    );
+                    setHasPendingChanges(true);
+                  }}
+                />
             </div>
           )}
 
