@@ -1079,6 +1079,7 @@ const GeneratorEditor: React.FC<Props> = ({
               objectType={ScenarioObjectType.GENERATOR}
               componentName={localGeneratorDraft.name}
               levers={localGeneratorDraft.levers ?? []}
+              currentDistributionType={localGeneratorDraft.generationConfig.periodIntervalDuration?.distribution?.distributionType}
               onChange={(next) => {
                 setLocalGeneratorDraft((prev) =>
                   updateGeneratorImmutably(prev, { levers: next })

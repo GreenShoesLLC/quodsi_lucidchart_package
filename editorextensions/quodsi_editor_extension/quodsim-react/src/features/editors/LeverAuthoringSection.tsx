@@ -5,14 +5,17 @@ import {
 } from '@quodsi/lucid-shared';
 import { leverFor, toggleLever, patchLever, patchRange } from './leverEditing';
 
+const RATE_SCALABLE = new Set(['constant', 'uniform', 'triangular', 'normal', 'exponential', 'gamma', 'lognormal']);
+
 interface Props {
   objectType: ScenarioObjectType;
   componentName: string;
   levers: ScenarioLever[];
   onChange: (next: ScenarioLever[]) => void;
+  currentDistributionType?: string; // for the rate-scalability warning (Generator only)
 }
 
-export function LeverAuthoringSection({ objectType, componentName, levers, onChange }: Props) {
+export function LeverAuthoringSection({ objectType, componentName, levers, onChange, currentDistributionType }: Props) {
   const eligible = [
     ...(NUMERIC_PROPERTIES_BY_OBJECT_TYPE[objectType] ?? []),
     ...(objectType === ScenarioObjectType.GENERATOR ? [ScenarioPropertyName.INTERARRIVAL_TIMING] : []),
@@ -60,6 +63,11 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                     </label>
                   ))}
                 </div>
+                {isRate && currentDistributionType && !RATE_SCALABLE.has(currentDistributionType.toLowerCase()) && (
+                  <div className="text-xs text-amber-600 mt-1">
+                    This generator's “{currentDistributionType}” distribution can't be rate-scaled — these runs won't change. Use a swappable distribution (e.g. exponential) or a distribution-swap change.
+                  </div>
+                )}
               </div>
             )}
           </div>
