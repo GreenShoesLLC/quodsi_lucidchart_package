@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ScenarioObjectType, ScenarioPropertyName, NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
-  PROPERTY_DISPLAY_LABELS, type ScenarioLever,
+  PROPERTY_DISPLAY_LABELS, isRateScaleProperty, type ScenarioLever,
 } from '@quodsi/lucid-shared';
 import { leverFor, toggleLever, patchLever, patchRange } from './leverEditing';
 
@@ -13,7 +13,10 @@ interface Props {
 }
 
 export function LeverAuthoringSection({ objectType, componentName, levers, onChange }: Props) {
-  const eligible = NUMERIC_PROPERTIES_BY_OBJECT_TYPE[objectType] ?? [];
+  const eligible = [
+    ...(NUMERIC_PROPERTIES_BY_OBJECT_TYPE[objectType] ?? []),
+    ...(objectType === ScenarioObjectType.GENERATOR ? [ScenarioPropertyName.INTERARRIVAL_TIMING] : []),
+  ];
   if (eligible.length === 0) return null;
 
   return (
@@ -21,6 +24,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
       <div className="text-sm font-medium mb-1">Scenario levers</div>
       {eligible.map((pn: ScenarioPropertyName) => {
         const lever = leverFor(levers, pn);
+        const isRate = isRateScaleProperty(objectType, pn);
         return (
           <div key={pn} className="mb-2">
             <label className="flex items-center gap-2 text-sm">
@@ -40,12 +44,15 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
                   value={lever.label}
                   onChange={(e) => onChange(patchLever(levers, pn, { label: e.target.value }))}
                 />
+                <div className="text-xs text-gray-500">
+                  {isRate ? 'Rate multiplier sweep (×2 = double the arrivals; ×1 = unchanged)' : 'Value range to sweep'}
+                </div>
                 <div className="flex gap-2">
                   {(['min', 'max', 'step'] as const).map((k) => (
                     <label key={k} className="flex flex-col text-xs">
                       {k}
                       <input
-                        type="number" aria-label={k}
+                        type="number" aria-label={k} step={isRate ? 0.1 : undefined}
                         className="border rounded px-2 py-1 text-sm w-16"
                         value={lever.range?.[k] ?? ''}
                         onChange={(e) => onChange(patchRange(levers, pn, k, parseFloat(e.target.value)))}
