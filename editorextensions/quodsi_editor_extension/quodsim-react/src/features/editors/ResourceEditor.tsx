@@ -8,8 +8,10 @@ import {
   SimulationObjectType,
   EditorReferenceData,
   isNameUniqueInReferenceData,
+  ScenarioObjectType,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
@@ -422,6 +424,18 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesCha
                   onBlur={saveNow}
                 />
               </div>
+
+              <LeverAuthoringSection
+                objectType={ScenarioObjectType.RESOURCE}
+                componentName={localResourceDraft.name}
+                levers={localResourceDraft.levers ?? []}
+                onChange={(next) => {
+                  setLocalResourceDraft((prev) =>
+                    updateResourceImmutably(prev, { levers: next })
+                  );
+                  setHasPendingChanges(true);
+                }}
+              />
           </div>
         )}
 
