@@ -1,4 +1,4 @@
-import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationObjectType, ScenarioLever } from '@quodsi/shared';
 
 export interface ISerializedResource {
     id: string;
@@ -11,4 +11,7 @@ export interface ISerializedResource {
     height?: number;
     capacity: number;
     financialProperties?: any;
+    // Scenario-lever authoring metadata; only present when the component declares
+    // levers (conditional inclusion => no churn for lever-less models).
+    levers?: ScenarioLever[];
 }
