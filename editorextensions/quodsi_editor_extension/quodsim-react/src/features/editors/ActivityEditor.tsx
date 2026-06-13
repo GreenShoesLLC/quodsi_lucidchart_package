@@ -1182,17 +1182,29 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                   )}
                 </div>
 
-                <LeverAuthoringSection
-                  objectType={ScenarioObjectType.ACTIVITY}
-                  componentName={localActivityDraft.name}
-                  levers={localActivityDraft.levers ?? []}
-                  onChange={(next) => {
-                    setLocalActivityDraft((prev) =>
-                      updateActivityImmutably(prev, { levers: next })
-                    );
-                    setHasPendingChanges(true);
-                  }}
-                />
+                {(() => {
+                  const durationActions = localActivityDraft.actions
+                    .filter((a) => a.actionType === ActionType.DELAY || a.actionType === ActionType.DELAY_WITH_RESOURCE)
+                    .map((a, i) => ({
+                      id: a.id,
+                      label: `${a.actionType === ActionType.DELAY_WITH_RESOURCE ? 'Process' : 'Delay'} (${i + 1})`,
+                      distributionType: (a as any).duration?.distribution?.distributionType,
+                    }));
+                  return (
+                    <LeverAuthoringSection
+                      objectType={ScenarioObjectType.ACTIVITY}
+                      componentName={localActivityDraft.name}
+                      levers={localActivityDraft.levers ?? []}
+                      actions={durationActions}
+                      onChange={(next) => {
+                        setLocalActivityDraft((prev) =>
+                          updateActivityImmutably(prev, { levers: next })
+                        );
+                        setHasPendingChanges(true);
+                      }}
+                    />
+                  );
+                })()}
             </div>
           )}
 
