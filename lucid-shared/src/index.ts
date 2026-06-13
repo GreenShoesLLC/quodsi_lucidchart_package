@@ -292,6 +292,7 @@ export {
 export {
   createScenarioLever,
   isRangeableProperty,
+  isRateScaleProperty,
   isLeverableProperty,
   enumerateLeverValues,
   PROPERTY_DISPLAY_LABELS,
