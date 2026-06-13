@@ -19,3 +19,21 @@ it('warns when the action distribution is not rate-scalable', () => {
     actions={[{ id: 'act-9', label: 'Delay (1)', distributionType: 'beta' }]} />);
   expect(screen.getByText(/can't be rate-scaled/i)).toBeInTheDocument();
 });
+
+it('no warning renders when an action distribution is rate-scalable (e.g. exponential)', () => {
+  const levers = [{ leverId: 'l2', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-7', enabled: true, label: 'Service', range: { min: 1, max: 3, step: 1 } }];
+  render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={() => {}}
+    actions={[{ id: 'act-7', label: 'Process (1)', distributionType: 'exponential' }]} />);
+  expect(screen.queryByText(/can't be rate-scaled/i)).toBeNull();
+});
+
+it('editing the max input calls onChange with the lever range max updated', () => {
+  const onChange = jest.fn();
+  const levers = [{ leverId: 'l3', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-7', enabled: true, label: 'Service', range: { min: 1, max: 3, step: 1 } }];
+  render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={onChange}
+    actions={actions} />);
+  const maxInput = screen.getByLabelText('max');
+  fireEvent.change(maxInput, { target: { value: '5' } });
+  const next = onChange.mock.calls[0][0];
+  expect(next[0].range.max).toBe(5);
+});

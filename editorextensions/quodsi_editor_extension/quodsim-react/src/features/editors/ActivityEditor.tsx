@@ -50,6 +50,8 @@ import {
   ResourceRequirement,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
+  isDelayAction,
+  isDelayWithResourceAction,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
@@ -1188,7 +1190,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     .map((a, i) => ({
                       id: a.id,
                       label: `${a.actionType === ActionType.DELAY_WITH_RESOURCE ? 'Process' : 'Delay'} (${i + 1})`,
-                      distributionType: (a as any).duration?.distribution?.distributionType,
+                      distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
+                        ? a.duration?.distribution?.distributionType
+                        : undefined,
                     }));
                   return (
                     <LeverAuthoringSection
