@@ -25,3 +25,27 @@ export function patchRange(levers: ScenarioLever[], propertyName: ScenarioProper
   const range: LeverRange = { ...DEFAULT_RANGE, ...(l?.range ?? {}), [key]: value };
   return patchLever(levers, propertyName, { range });
 }
+
+/** The action-scoped DURATION lever for an action id, if any. */
+export function leverForAction(levers: ScenarioLever[], actionId: string): ScenarioLever | undefined {
+  return levers.find((l) => l.actionId === actionId && l.propertyName === ScenarioPropertyName.DURATION);
+}
+
+/** Toggle an action-scoped DURATION lever: add (default range, given label) or remove. */
+export function toggleActionLever(levers: ScenarioLever[], actionId: string, label: string): ScenarioLever[] {
+  const existing = leverForAction(levers, actionId);
+  if (existing) return levers.filter((l) => l !== existing);
+  return [...levers, createScenarioLever({ propertyName: ScenarioPropertyName.DURATION, actionId, label, enabled: true, range: { ...DEFAULT_RANGE } })];
+}
+
+/** Patch an action lever (label and/or range). */
+export function patchActionLever(levers: ScenarioLever[], actionId: string, patch: Partial<Pick<ScenarioLever, 'label' | 'range'>>): ScenarioLever[] {
+  return levers.map((l) => (l.actionId === actionId && l.propertyName === ScenarioPropertyName.DURATION ? { ...l, ...patch } : l));
+}
+
+/** Patch one bound of an action lever's range. */
+export function patchActionRange(levers: ScenarioLever[], actionId: string, key: keyof LeverRange, value: number): ScenarioLever[] {
+  const l = leverForAction(levers, actionId);
+  const range: LeverRange = { ...DEFAULT_RANGE, ...(l?.range ?? {}), [key]: value };
+  return patchActionLever(levers, actionId, { range });
+}
