@@ -8,6 +8,7 @@ import {
   SimulationObjectType,
   EditorReferenceData,
   isNameUniqueInReferenceData,
+  type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import StatesEditor from "./StatesEditor";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
@@ -70,6 +71,35 @@ const TAB_CONFIG = [
   // },
 ];
 
+/**
+ * Extracts and normalizes resource data from props into a clean Resource instance.
+ * Module-scoped + exported so the lever-persistence guard can unit-test it.
+ *
+ * Preserves the optional `levers[]` authoring field additively — the Resource
+ * constructor does not accept levers (defaults to []), so it must be copied here
+ * or authored levers would be silently dropped before save.
+ */
+export const extractResourceDataPure = (res: ResourceInput): Resource => {
+  const data = (res as any).data || res;
+  const extractedResource = new Resource(
+    data.id || "",
+    data.name || "New Resource",
+    data.capacity || 1,
+    data.x || 0,
+    data.y || 0
+  );
+
+  // Initialize financialProperties if it doesn't exist
+  extractedResource.financialProperties = data.financialProperties
+    ? ResourceFinancialProperties.fromJSON(data.financialProperties)
+    : new ResourceFinancialProperties();
+
+  // Preserve scenario levers (additive optional field, not a constructor param).
+  extractedResource.levers = data.levers ?? [];
+
+  return extractedResource;
+};
+
 
 /**
  * ResourceEditor - Component for editing resource properties
@@ -124,23 +154,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesCha
    * @param res - Resource data in various formats
    * @returns Normalized Resource instance with initialized financial properties
    */
-  const extractResourceData = (res: ResourceInput): Resource => {
-    const data = (res as any).data || res;
-    const extractedResource = new Resource(
-      data.id || "",
-      data.name || "New Resource",
-      data.capacity || 1,
-      data.x || 0,
-      data.y || 0
-    );
-
-    // Initialize financialProperties if it doesn't exist
-    extractedResource.financialProperties = data.financialProperties
-      ? ResourceFinancialProperties.fromJSON(data.financialProperties)
-      : new ResourceFinancialProperties();
-
-    return extractedResource;
-  };
+  const extractResourceData = (res: ResourceInput): Resource =>
+    extractResourceDataPure(res);
 
   /**
    * Creates a new Resource instance with updated values while preserving immutability.
@@ -162,6 +177,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesCha
       name: string;
       capacity: number;
       financialProperties: ResourceFinancialProperties;
+      levers: ScenarioLever[];
     }>
   ): Resource => {
     const updated = new Resource(
@@ -173,6 +189,8 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesCha
     );
 
     updated.financialProperties = updates.financialProperties ?? base.financialProperties;
+    // Preserve scenario levers (not a constructor param — must be copied forward).
+    updated.levers = updates.levers ?? base.levers ?? [];
 
     return updated;
   };
