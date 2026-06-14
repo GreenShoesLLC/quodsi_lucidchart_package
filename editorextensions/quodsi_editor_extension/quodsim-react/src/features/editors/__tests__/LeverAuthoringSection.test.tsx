@@ -2,13 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { LeverAuthoringSection } from '../LeverAuthoringSection';
 import { ScenarioObjectType, ScenarioPropertyName, type ScenarioLever } from '@quodsi/lucid-shared';
 
-it('checking an eligible property adds an enabled lever with the component name as label + a default range', () => {
+it('checking an eligible property adds an enabled lever with a "Component — Property" default label + a default range', () => {
   const onChange = jest.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[]} onChange={onChange} />);
   fireEvent.click(screen.getByLabelText(/use Capacity as a scenario lever/i));
   const next: ScenarioLever[] = onChange.mock.calls.at(-1)![0];
   expect(next).toHaveLength(1);
-  expect(next[0]).toMatchObject({ propertyName: ScenarioPropertyName.CAPACITY, label: 'Nurse', enabled: true });
+  expect(next[0]).toMatchObject({ propertyName: ScenarioPropertyName.CAPACITY, label: 'Nurse — Capacity', enabled: true });
   expect(next[0].range).toEqual({ min: 1, max: 5, step: 1 });
   expect(next[0].leverId).toBeTruthy();
 });

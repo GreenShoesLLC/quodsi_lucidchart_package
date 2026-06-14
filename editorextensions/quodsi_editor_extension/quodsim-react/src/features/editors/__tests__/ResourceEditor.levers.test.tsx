@@ -58,7 +58,7 @@ describe("ResourceEditor — scenario lever authoring", () => {
       (screen.getByLabelText(/use Capacity as a scenario lever/i) as HTMLInputElement)
         .checked
     ).toBe(true);
-    // the lever label input (defaulted to the component name) is now visible
-    expect(screen.getByLabelText(/lever label/i)).toHaveValue("Nurse");
+    // the lever label input (defaulted to "Component — Property") is now visible
+    expect(screen.getByLabelText(/lever label/i)).toHaveValue("Nurse — Capacity");
   });
 });

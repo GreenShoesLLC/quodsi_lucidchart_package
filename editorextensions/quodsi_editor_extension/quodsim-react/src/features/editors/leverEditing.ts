@@ -1,17 +1,24 @@
-import { createScenarioLever, type ScenarioLever, type LeverRange, ScenarioPropertyName } from '@quodsi/lucid-shared';
+import { createScenarioLever, type ScenarioLever, type LeverRange, ScenarioPropertyName, PROPERTY_DISPLAY_LABELS } from '@quodsi/lucid-shared';
 
 const DEFAULT_RANGE: LeverRange = { min: 1, max: 5, step: 1 };
+
+/** Distinguishable default label so two levers on the same component don't both
+ *  read as just the component name (e.g. "Start — Inter-arrival Timing"). */
+function defaultLeverLabel(componentName: string, propertyName: ScenarioPropertyName): string {
+  const prop = PROPERTY_DISPLAY_LABELS[propertyName] ?? propertyName;
+  return `${componentName} — ${prop}`;
+}
 
 /** The component-level (no actionId) lever for a property, if any. */
 export function leverFor(levers: ScenarioLever[], propertyName: ScenarioPropertyName): ScenarioLever | undefined {
   return levers.find((l) => l.propertyName === propertyName && !l.actionId);
 }
 
-/** Toggle a property's lever: add (default range, label = componentName) or remove. */
+/** Toggle a property's lever: add (default range, label = "Component — Property") or remove. */
 export function toggleLever(levers: ScenarioLever[], propertyName: ScenarioPropertyName, componentName: string): ScenarioLever[] {
   const existing = leverFor(levers, propertyName);
   if (existing) return levers.filter((l) => l !== existing);
-  return [...levers, createScenarioLever({ propertyName, label: componentName, enabled: true, range: { ...DEFAULT_RANGE } })];
+  return [...levers, createScenarioLever({ propertyName, label: defaultLeverLabel(componentName, propertyName), enabled: true, range: { ...DEFAULT_RANGE } })];
 }
 
 /** Patch the property's lever (label and/or range). */

@@ -29,6 +29,11 @@ describe('actionId-keyed lever editing', () => {
     expect(both).toHaveLength(2);
     const patched = patchActionLever(both, 'act-7', { label: 'renamed' });
     const cap = patched.find((l: ScenarioLever) => l.propertyName === ScenarioPropertyName.ACTIVITY_CAPACITY);
-    expect(cap?.label).toBe('Triage');
+    expect(cap?.label).toBe('Triage — Activity Capacity');
+  });
+
+  it('toggleLever defaults the label to "Component — Property" so same-component levers are distinguishable', () => {
+    const levers = toggleLever([], ScenarioPropertyName.INTERARRIVAL_TIMING, 'Start');
+    expect(levers[0].label).toBe('Start — Inter-arrival Timing');
   });
 });
