@@ -627,6 +627,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             // Carry the stable action id through to the engine (scenario-change addressing).
             (serialized as any).id = (action as any).id;
 
+            // Carry the optional user-facing name (authoring metadata).
+            if ((action as any).name) {
+                (serialized as any).name = (action as any).name;
+            }
+
             // Add optional stateCondition guard
             if ((action as any).stateCondition) {
                 const sc = (action as any).stateCondition;

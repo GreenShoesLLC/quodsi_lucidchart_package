@@ -24,6 +24,8 @@ export interface ISerializedActionBase {
     id?: string;
     actionType: SerializedActionType;
     stateCondition?: any | null;
+    /** Optional user-facing action name (authoring metadata). */
+    name?: string;
 }
 
 /**
