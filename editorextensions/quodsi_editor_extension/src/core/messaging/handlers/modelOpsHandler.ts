@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationSeverity, ValidationIssue, Model, SimulationObjectType, ModelSerializerFactory, resolveModelName } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
@@ -284,7 +284,7 @@ export class ModelOpsHandler {
           // Send context refresh messages using SelectionHandler for proper modelItemData & referenceData
           Promise.resolve().then(async () => {
             const documentId = document.id;
-            const title = document.getTitle() || 'Untitled Document';
+            const title = resolveModelName(document.getTitle(), new Date());
 
             ModelOpsHandler.logger.log('Sending context refresh messages after conversion:', {
               documentId,
@@ -456,7 +456,7 @@ export class ModelOpsHandler {
         const client = ModelManager.getClient();
         const document = new DocumentProxy(client);
         const documentId = document.id;
-        const title = document.getTitle() || 'Untitled Document';
+        const title = resolveModelName(document.getTitle(), new Date());
         const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
         
         ModelOpsHandler.logger.log('Sending context refresh messages after removal:', {
