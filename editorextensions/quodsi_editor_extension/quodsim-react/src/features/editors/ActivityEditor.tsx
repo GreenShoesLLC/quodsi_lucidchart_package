@@ -55,6 +55,7 @@ import {
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
+import { actionDurationLeverLabel } from "./leverEditing";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -1187,9 +1188,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                 {(() => {
                   const durationActions = localActivityDraft.actions
                     .filter((a) => a.actionType === ActionType.DELAY || a.actionType === ActionType.DELAY_WITH_RESOURCE)
-                    .map((a, i) => ({
+                    .map((a) => ({
                       id: a.id,
-                      label: `${a.actionType === ActionType.DELAY_WITH_RESOURCE ? 'Process' : 'Delay'} (${i + 1})`,
+                      label: actionDurationLeverLabel(a),
                       distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
                         ? a.duration?.distribution?.distributionType
                         : undefined,

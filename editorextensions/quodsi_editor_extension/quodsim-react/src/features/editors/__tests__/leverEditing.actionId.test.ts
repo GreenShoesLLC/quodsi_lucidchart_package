@@ -1,5 +1,5 @@
-import { leverForAction, toggleActionLever, patchActionLever, patchActionRange, toggleLever } from '../leverEditing';
-import { ScenarioPropertyName, type ScenarioLever } from '@quodsi/lucid-shared';
+import { leverForAction, toggleActionLever, patchActionLever, patchActionRange, toggleLever, actionDurationLeverLabel } from '../leverEditing';
+import { ScenarioPropertyName, ActionType, type ScenarioLever } from '@quodsi/lucid-shared';
 
 describe('actionId-keyed lever editing', () => {
   it('toggles an action-scoped DURATION lever on and off', () => {
@@ -35,5 +35,15 @@ describe('actionId-keyed lever editing', () => {
   it('toggleLever defaults the label to "Component — Property" so same-component levers are distinguishable', () => {
     const levers = toggleLever([], ScenarioPropertyName.INTERARRIVAL_TIMING, 'Start');
     expect(levers[0].label).toBe('Start — Inter-arrival Timing');
+  });
+});
+
+describe('actionDurationLeverLabel', () => {
+  it("uses the action name when present", () => {
+    expect(actionDurationLeverLabel({ name: 'Triage', actionType: ActionType.DELAY_WITH_RESOURCE })).toBe("Triage's duration rate");
+  });
+  it('falls back to the type when unnamed', () => {
+    expect(actionDurationLeverLabel({ actionType: ActionType.DELAY_WITH_RESOURCE })).toBe('Process — duration rate');
+    expect(actionDurationLeverLabel({ name: '  ', actionType: ActionType.DELAY })).toBe('Delay — duration rate');
   });
 });

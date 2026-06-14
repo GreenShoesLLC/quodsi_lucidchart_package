@@ -1,4 +1,4 @@
-import { createScenarioLever, type ScenarioLever, type LeverRange, ScenarioPropertyName, PROPERTY_DISPLAY_LABELS } from '@quodsi/lucid-shared';
+import { createScenarioLever, type ScenarioLever, type LeverRange, ScenarioPropertyName, PROPERTY_DISPLAY_LABELS, ActionType } from '@quodsi/lucid-shared';
 
 const DEFAULT_RANGE: LeverRange = { min: 1, max: 5, step: 1 };
 
@@ -31,6 +31,15 @@ export function patchRange(levers: ScenarioLever[], propertyName: ScenarioProper
   const l = leverFor(levers, propertyName);
   const range: LeverRange = { ...DEFAULT_RANGE, ...(l?.range ?? {}), [key]: value };
   return patchLever(levers, propertyName, { range });
+}
+
+/** Default label for an Activity action-duration lever: the action's name when
+ *  set, else a type-based fallback ("Process — duration rate" / "Delay — duration rate"). */
+export function actionDurationLeverLabel(action: { name?: string; actionType: ActionType }): string {
+  const named = action.name?.trim();
+  if (named) return `${named}'s duration rate`;
+  const typeLabel = action.actionType === ActionType.DELAY_WITH_RESOURCE ? 'Process' : 'Delay';
+  return `${typeLabel} — duration rate`;
 }
 
 /** The action-scoped DURATION lever for an action id, if any. */
