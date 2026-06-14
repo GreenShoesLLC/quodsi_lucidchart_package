@@ -9,7 +9,7 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
-import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, canonicalModelName } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -182,9 +182,8 @@ export class SimulationRunHandler {
       SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: missing page/documentId/pageId');
       return;
     }
-    const documentProxy = new DocumentProxy(client);
     const cacheKey = `${data.documentId}:${data.pageId}`;
-    const modelName = documentProxy.getTitle?.() || 'Untitled Model';
+    const modelName = await canonicalModelName(ModelManager.getInstance());
 
     const openModal = (serverModelId: string): void => {
       new StudioEmbedModal(client, {

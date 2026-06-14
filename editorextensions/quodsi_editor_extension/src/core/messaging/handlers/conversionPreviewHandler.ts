@@ -16,6 +16,7 @@ import { LucidPageConversionService } from '../../../services/conversion/LucidPa
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SelectionHandler } from './selection';
+import { canonicalModelName } from '../../sync/scenarioSync';
 
 // Simple ID generator for extension context
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -231,13 +232,14 @@ export class ConversionPreviewHandler {
                 ConversionPreviewHandler.logger.log('Sent context refresh messages after conversion');
 
                 // Register model in quodsi_api database (fire-and-forget)
+                const modelName = await canonicalModelName(modelManager);
                 LucidDataActionUtility.performDataAction(client, {
                     dataConnectorName: 'quodsi_api_data_connector',
                     actionName: 'UpsertModel',
                     actionData: {
                         documentId,
                         pageId: currentPage.id,
-                        modelName: title || 'Untitled Model'
+                        modelName
                     },
                     asynchronous: false
                 }).then(() => {

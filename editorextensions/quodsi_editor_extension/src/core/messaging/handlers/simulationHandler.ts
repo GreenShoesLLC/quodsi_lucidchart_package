@@ -22,7 +22,7 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
-import { upsertModelAndSeedScenariosIfEmpty } from '../../sync/scenarioSync';
+import { upsertModelAndSeedScenariosIfEmpty, canonicalModelName } from '../../sync/scenarioSync';
 
 export interface RunSubmitOutcome {
   accepted: boolean;
@@ -405,7 +405,7 @@ export class SimulationHandler {
         const { substitutions } = await sync(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
-          modelName: documentProxy.getTitle() || 'Untitled Model',
+          modelName: await canonicalModelName(modelManager),
           scenarios,
         });
         // If the server rewrote the Baseline id, persist it and re-target the run.

@@ -13,7 +13,7 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { SimulationRunHandler } from './simulationRunHandler';
-import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, canonicalModelName } from '../../sync/scenarioSync';
 
 /**
  * Handler for SYNC_ALL_REQUEST. Orchestrates UpsertModel → SyncScenarios →
@@ -65,10 +65,14 @@ export class SyncHandler {
 
     let step: SyncAllErrorData['step'] = 'upsertModel';
 
+    // Sync the canonical model name (domain.name via resolveModelName), not the
+    // client-supplied data.modelName (which is the document title).
+    const modelName = await canonicalModelName(ModelManager.getInstance());
+
     SyncHandler.logger.log('SYNC_ALL requested', {
       documentId: data.documentId,
       pageId: data.pageId,
-      modelName: data.modelName,
+      modelName,
       scenariosCount: data.scenarios?.length ?? 0,
     });
 
@@ -85,7 +89,7 @@ export class SyncHandler {
         const res = await upsertModelAndSyncScenarios(client, {
           documentId: data.documentId,
           pageId: data.pageId,
-          modelName: data.modelName,
+          modelName,
           scenarios: data.scenarios ?? [],
         });
         substitutions = res.substitutions;
