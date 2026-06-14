@@ -376,7 +376,7 @@ const ResourceEditor: React.FC<Props> = ({ resource, onSave, states, onStatesCha
       </div>
 
       {/* Tab Content */}
-      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+      <div className="space-y-2 max-h-[calc(100vh-150px)] overflow-y-auto pr-1">
         {activeTab === "basic" && (
           <div className="space-y-4">
             {/* Name Section */}
