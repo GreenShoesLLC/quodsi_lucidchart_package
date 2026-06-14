@@ -12,7 +12,7 @@ import { AboutModal } from "../shared/AboutModal";
 import { DevToolsModal } from "../shared/DevToolsModal";
 import { PreferencesModal } from "../shared/PreferencesModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
-import { ScenariosLaunchButton } from "./ScenariosLaunchButton";
+import { StudiesLaunchButton } from "./StudiesLaunchButton";
 
 interface PanelHeaderProps {
   modelName: string;
@@ -239,8 +239,8 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           )}
         </div>
 
-        {/* Row 3: Scenarios launcher (primary action; opens the embedded Studio modal) */}
-        <ScenariosLaunchButton />
+        {/* Row 3: Studies launcher (primary action; opens the embedded Studio modal) */}
+        <StudiesLaunchButton />
       </>
     );
   };

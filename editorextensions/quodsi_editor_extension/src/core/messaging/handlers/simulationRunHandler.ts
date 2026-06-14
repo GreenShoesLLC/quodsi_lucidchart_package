@@ -9,7 +9,7 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
-import { upsertModelAndSyncScenarios } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, canonicalModelName } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -84,6 +84,12 @@ export class SimulationRunHandler {
       case EnvelopeMessageType.OPEN_SCENARIOS_MODAL:
         SimulationRunHandler.handleOpenScenariosModal(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleOpenScenariosModal failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.OPEN_STUDIES_MODAL:
+        SimulationRunHandler.handleOpenStudiesModal(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e),
         );
         return true;
 
@@ -163,9 +169,9 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_SCENARIOS_MODAL: ensure the model row exists in quodsi_api
-   * (UpsertModel) to resolve its server id, then open the embedded Studio
-   * scenarios editor at /embed/models/<id>/scenarios.
+   * Shared embed-modal opener for the Scenarios/Studies surfaces: ensure the
+   * model row exists in quodsi_api (UpsertModel) to resolve its server id, then
+   * open the embedded Studio at /embed/models/<serverModelId>/<surface>.
    *
    * IMPORTANT: do NOT push Lucid shapeData scenarios here. Scenarios are
    * DB-authoritative once the embed owns them — the editor reads/writes
@@ -173,23 +179,24 @@ export class SimulationRunHandler {
    * (which lacks scenarios created in the embed) would soft-delete them.
    * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
-  private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
+  private static async openEmbedSurfaceModal(
+    msg: EnvelopeBase, surface: 'scenarios' | 'studies', title: string,
+  ): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
     const viewport = new Viewport(client);
     const page = viewport.getCurrentPage();
     if (!page || !data?.documentId || !data?.pageId) {
-      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: missing page/documentId/pageId');
+      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: missing page/documentId/pageId`);
       return;
     }
-    const documentProxy = new DocumentProxy(client);
     const cacheKey = `${data.documentId}:${data.pageId}`;
-    const modelName = documentProxy.getTitle?.() || 'Untitled Model';
+    const modelName = await canonicalModelName(ModelManager.getInstance());
 
     const openModal = (serverModelId: string): void => {
       new StudioEmbedModal(client, {
-        title: 'Scenarios',
-        studioPath: `/embed/models/${serverModelId}/scenarios`,
+        title,
+        studioPath: `/embed/models/${serverModelId}/${surface}`,
         modalSize: data.modalSize,
       }).show();
     };
@@ -212,17 +219,33 @@ export class SimulationRunHandler {
       // background. The editor reads scenarios from quodsi_api anyway.
       openModal(cached);
       void refreshUpsert().catch((e) =>
-        SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: background UpsertModel failed:', e));
+        SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: background UpsertModel failed:`, e));
       return;
     }
 
     // First open: must resolve the id before we can build the studio path.
     const serverModelId = await refreshUpsert();
     if (!serverModelId) {
-      SimulationRunHandler.logger.error('OPEN_SCENARIOS_MODAL: UpsertModel returned no model id');
+      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel returned no model id`);
       return;
     }
     openModal(serverModelId);
+  }
+
+  /**
+   * Handle OPEN_SCENARIOS_MODAL: open the embedded Studio scenarios editor at
+   * /embed/models/<id>/scenarios. (Dormant — the panel button now opens Studies.)
+   */
+  private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
+    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'scenarios', 'Scenarios');
+  }
+
+  /**
+   * Handle OPEN_STUDIES_MODAL: open the embedded Studio Studies surface at
+   * /embed/models/<id>/studies.
+   */
+  private static async handleOpenStudiesModal(msg: EnvelopeBase): Promise<void> {
+    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'studies', 'Studies');
   }
 
   /**

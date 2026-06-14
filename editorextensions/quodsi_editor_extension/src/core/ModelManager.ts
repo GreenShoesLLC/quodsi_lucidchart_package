@@ -29,7 +29,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
-import { upsertModelAndSeedScenariosIfEmpty } from "./sync/scenarioSync";
+import { upsertModelAndSeedScenariosIfEmpty, canonicalModelName } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -1816,7 +1816,7 @@ export class ModelManager {
             const { substitutions } = await sync(client, {
                 documentId: documentProxy.id,
                 pageId: page.id,
-                modelName: documentProxy.getTitle() || 'Untitled Model',
+                modelName: await canonicalModelName(this),
                 scenarios,
             });
             if (substitutions.size > 0) {

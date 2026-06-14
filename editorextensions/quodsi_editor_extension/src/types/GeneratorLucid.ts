@@ -13,7 +13,8 @@ import {
     EntitySourceConfig,
     createDefaultEntitySourceConfig,
     GeneratorType,
-    MappingSource
+    MappingSource,
+    ScenarioLever
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -42,6 +43,7 @@ interface StoredGeneratorData {
     height?: number;
     generationConfig?: EntitySourceConfig;
     exitConnector?: string;
+    levers?: ScenarioLever[];
 }
 
 /**
@@ -102,6 +104,13 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             generationConfig.initialStateModifications = generationConfig.initialStateModifications.map(
                 (mod: any) => mod instanceof StateModification ? mod : StateModification.fromJSON(mod)
             );
+        }
+
+        // Carry forward scenario-lever authoring metadata. `levers` is a class
+        // field (not a constructor param) defaulting to [], so reconstruction
+        // drops it unless copied here -> published model.json loses levers.
+        if (storedData?.levers) {
+            generator.levers = storedData.levers;
         }
 
         // Update platform-specific fields after creation

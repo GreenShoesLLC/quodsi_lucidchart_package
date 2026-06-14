@@ -287,6 +287,21 @@ export {
   isCoreNumericDistribution,
 } from '@quodsi/shared';
 
+// Scenario levers (Phase 1 authoring) — re-exported from @quodsi/shared.
+// NOTE: ScenarioObjectType is already re-exported in the element-types block above.
+export {
+  createScenarioLever,
+  isRangeableProperty,
+  isRateScaleProperty,
+  isLeverableProperty,
+  enumerateLeverValues,
+  PROPERTY_DISPLAY_LABELS,
+  NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
+  PROPERTIES_BY_OBJECT_TYPE,
+  ScenarioPropertyName,
+} from '@quodsi/shared';
+export type { ScenarioLever, LeverRange } from '@quodsi/shared';
+
 // Scenario cluster — now sourced from the core (Phase 3 slice 3)
 export {
   DomainModel as Model,
@@ -315,6 +330,7 @@ export { generateUUID } from '@quodsi/shared';
 export * from './utils/NameParser';
 export * from './utils/nameUtils';
 export * from './utils/nameValidation';
+export * from './utils/resolveModelName';
 export * from './utils/scenarioUtils';
 
 // Serialization exports

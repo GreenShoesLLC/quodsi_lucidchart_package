@@ -49,7 +49,13 @@ import {
   Connector,
   ResourceRequirement,
   isNameUniqueInReferenceData,
+  ScenarioObjectType,
+  isDelayAction,
+  isDelayWithResourceAction,
+  type ScenarioLever,
 } from "@quodsi/lucid-shared";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
+import { actionDurationLeverLabel } from "./leverEditing";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
@@ -407,6 +413,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       ? FailureProperties.fromJSON(data.failureProperties)
       : new FailureProperties();
 
+    // Preserve scenario levers (additive optional field, not a constructor param).
+    activity.levers = data.levers ?? [];
+
     return activity;
   };
 
@@ -434,6 +443,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       connectType: ConnectType;
       financialProperties: ActivityFinancialProperties;
       failureProperties: FailureProperties;
+      levers: ScenarioLever[];
     }>
   ): Activity => {
     const updated = new Activity(
@@ -453,6 +463,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       updates.financialProperties ?? base.financialProperties;
     updated.failureProperties =
       updates.failureProperties ?? base.failureProperties;
+    // Preserve scenario levers (not a constructor param — must be copied forward).
+    updated.levers = updates.levers ?? base.levers ?? [];
 
     return updated;
   };
@@ -1061,7 +1073,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
         </div>
 
         {/* Tab Content */}
-        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[calc(100vh-150px)] overflow-y-auto pr-1">
           {activeTab === "basic" && (
             <div className="space-y-2">
               {/* Name Section */}
@@ -1172,6 +1184,32 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     </div>
                   )}
                 </div>
+
+                {(() => {
+                  const durationActions = localActivityDraft.actions
+                    .filter((a) => a.actionType === ActionType.DELAY || a.actionType === ActionType.DELAY_WITH_RESOURCE)
+                    .map((a) => ({
+                      id: a.id,
+                      label: actionDurationLeverLabel(a),
+                      distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
+                        ? a.duration?.distribution?.distributionType
+                        : undefined,
+                    }));
+                  return (
+                    <LeverAuthoringSection
+                      objectType={ScenarioObjectType.ACTIVITY}
+                      componentName={localActivityDraft.name}
+                      levers={localActivityDraft.levers ?? []}
+                      actions={durationActions}
+                      onChange={(next) => {
+                        setLocalActivityDraft((prev) =>
+                          updateActivityImmutably(prev, { levers: next })
+                        );
+                        setHasPendingChanges(true);
+                      }}
+                    />
+                  );
+                })()}
             </div>
           )}
 

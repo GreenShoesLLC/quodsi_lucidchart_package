@@ -1307,6 +1307,23 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             </p>
           </div>
 
+          {/* Optional Name (authoring metadata; flows into the duration-lever label) */}
+          <div>
+            <label className="block text-xs text-gray-600">
+              Name
+              <input
+                type="text"
+                aria-label="Action name"
+                placeholder="Optional name, e.g. Triage"
+                className="mt-0.5 w-full px-2 py-1 text-xs border rounded"
+                value={(action as any).name ?? ""}
+                onChange={(e) =>
+                  onChange({ ...action, name: e.target.value || undefined } as Action)
+                }
+              />
+            </label>
+          </div>
+
           {/* State Condition Guard */}
           {renderStateConditionGuard()}
 

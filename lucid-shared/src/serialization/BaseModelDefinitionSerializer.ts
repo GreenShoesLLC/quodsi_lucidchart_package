@@ -179,6 +179,13 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.connectType = activity.connectType;
             }
 
+            // Scenario-lever authoring metadata. Conditional inclusion (mirrors
+            // width/sourceConfig) keeps lever-less models byte-identical -> no
+            // model_definition_snapshot churn.
+            if (activity.levers?.length) {
+                serialized.levers = activity.levers;
+            }
+
             return serialized;
         } catch (error) {
             throw new SerializationError(
@@ -238,6 +245,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.height = generator.height;
             }
 
+            // Scenario-lever authoring metadata (conditional inclusion).
+            if (generator.levers?.length) {
+                serialized.levers = generator.levers;
+            }
+
             return serialized;
         } catch (error) {
             throw new SerializationError(
@@ -275,6 +287,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             }
             if (resource.height !== undefined) {
                 serialized.height = resource.height;
+            }
+
+            // Scenario-lever authoring metadata (conditional inclusion).
+            if (resource.levers?.length) {
+                serialized.levers = resource.levers;
             }
 
             return serialized;
@@ -609,6 +626,11 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             // Carry the stable action id through to the engine (scenario-change addressing).
             (serialized as any).id = (action as any).id;
+
+            // Carry the optional user-facing name (authoring metadata).
+            if ((action as any).name) {
+                (serialized as any).name = (action as any).name;
+            }
 
             // Add optional stateCondition guard
             if ((action as any).stateCondition) {

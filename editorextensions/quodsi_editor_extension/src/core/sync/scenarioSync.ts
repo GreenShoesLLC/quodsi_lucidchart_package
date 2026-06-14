@@ -1,6 +1,14 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ISerializedScenario } from '@quodsi/lucid-shared';
+import { ISerializedScenario, resolveModelName } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
+import { ModelManager } from '../ModelManager';
+
+/** The canonical model name to sync to the DB: the model-definition name
+ *  (domain.name) run through resolveModelName (generic/empty → timestamp). */
+export async function canonicalModelName(modelManager: ModelManager): Promise<string> {
+  const def = await modelManager.getModelDefinition();
+  return resolveModelName((def as { name?: string } | null)?.name ?? '', new Date());
+}
 
 export interface UpsertAndSyncParams {
   documentId: string;

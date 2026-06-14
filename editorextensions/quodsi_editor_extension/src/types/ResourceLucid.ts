@@ -6,7 +6,8 @@ import {
     ResourceFinancialProperties,
     parseStructuredName,
     extractResourceFields,
-    MappingSource
+    MappingSource,
+    ScenarioLever
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -35,6 +36,7 @@ interface StoredResourceData {
     description?: string;
     capacity?: number;
     financialProperties?: any;
+    levers?: ScenarioLever[];
 }
 
 /**
@@ -77,6 +79,13 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         // Deserialize financial properties
         if (storedData?.financialProperties) {
             resource.financialProperties = ResourceFinancialProperties.fromJSON(storedData.financialProperties);
+        }
+
+        // Carry forward scenario-lever authoring metadata. `levers` is a class
+        // field (not a constructor param) defaulting to [], so reconstruction
+        // drops it unless copied here -> published model.json loses levers.
+        if (storedData?.levers) {
+            resource.levers = storedData.levers;
         }
 
         // Update platform-specific fields after creation

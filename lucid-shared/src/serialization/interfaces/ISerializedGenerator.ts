@@ -1,4 +1,4 @@
-import { SimulationObjectType } from '@quodsi/shared';
+import { SimulationObjectType, ScenarioLever } from '@quodsi/shared';
 import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
 
 export interface ISerializedGenerator {
@@ -16,4 +16,8 @@ export interface ISerializedGenerator {
 
     // Optional exit destination (activity ID)
     exitConnector?: string;
+
+    // Scenario-lever authoring metadata; only present when the component declares
+    // levers (conditional inclusion => no churn for lever-less models).
+    levers?: ScenarioLever[];
 }

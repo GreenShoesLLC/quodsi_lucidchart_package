@@ -134,6 +134,11 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_SCENARIOS_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
 
+  /** Send an OPEN_STUDIES_MODAL message to open the embedded-Studio Studies surface. */
+  const openStudiesModal = useCallback((documentId: string, pageId: string) => {
+    send(EnvelopeMessageType.OPEN_STUDIES_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
@@ -144,5 +149,6 @@ export function useSimulationRunSender() {
     openResultsModal,
     openAnimationModal,
     openScenariosModal,
+    openStudiesModal,
   };
 }
