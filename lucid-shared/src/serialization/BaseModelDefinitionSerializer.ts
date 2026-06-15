@@ -396,6 +396,10 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.destinationPriority = connector.destinationPriority;
             }
 
+            if (connector.levers?.length) {
+                serialized.levers = connector.levers;
+            }
+
             return serialized;
         } catch (error) {
             throw new SerializationError(
