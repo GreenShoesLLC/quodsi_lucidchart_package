@@ -29,12 +29,12 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
   if (eligible.length === 0 && (!actions || actions.length === 0)) return null;
 
   return (
-    <div className="pt-3 border-t" data-testid="lever-authoring">
+    <div className="pt-2 border-t" data-testid="lever-authoring">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        className="flex items-center gap-1 w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+        className="flex items-center gap-1 w-full text-left text-xs font-medium text-gray-700 hover:text-gray-900"
       >
         <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
         <span>Scenario levers</span>
