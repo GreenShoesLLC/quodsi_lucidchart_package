@@ -4,9 +4,11 @@ import {
   ComponentType,
   StateListManager,
   Connector,
+  ScenarioObjectType,
 } from "@quodsi/lucid-shared";
 import { AlertCircle, Info } from "lucide-react";
 import { StateConditionEditor } from "./StateConditionEditor";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector } from "./hooks/useEditorState";
@@ -141,6 +143,9 @@ export const RoutingConfigurationPanel: React.FC<
     } else {
       updated.stateModifications = base.stateModifications;
     }
+
+    // Preserve scenario levers (not a constructor param — must be copied forward).
+    updated.levers = updates.levers ?? base.levers ?? [];
 
     return updated;
   };
@@ -310,6 +315,14 @@ export const RoutingConfigurationPanel: React.FC<
                         onBlur={() => handleWeightBlur(connector.id)}
                         min="0.1"
                         step="0.1"
+                      />
+                    </div>
+                    <div className="mt-3 border-t pt-3">
+                      <LeverAuthoringSection
+                        objectType={ScenarioObjectType.CONNECTOR}
+                        componentName={connector.name}
+                        levers={connector.levers ?? []}
+                        onChange={(next) => handleConnectorChange(connector.id, { levers: next })}
                       />
                     </div>
                   </div>
