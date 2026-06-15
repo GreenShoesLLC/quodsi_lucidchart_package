@@ -5,7 +5,8 @@ import {
     ComponentLogger,
     StateCondition,
     StateModification,
-    MappingSource
+    MappingSource,
+    ScenarioLever
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -39,6 +40,7 @@ interface StoredConnectorData {
     entityTemplateUniqueId?: string;
     stateCondition?: any;
     stateModifications?: any[];
+    levers?: ScenarioLever[];
 }
 
 /**
@@ -101,6 +103,13 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         // Restore entity template unique ID
         if (storedData?.entityTemplateUniqueId) {
             connector.entityTemplateUniqueId = storedData.entityTemplateUniqueId;
+        }
+
+        // Carry forward scenario-lever authoring metadata. `levers` is a class
+        // field (not a constructor param) defaulting to [], so reconstruction
+        // drops it unless copied here -> published model.json loses levers.
+        if (storedData?.levers) {
+            connector.levers = storedData.levers;
         }
 
         // Update platform-specific fields after creation
