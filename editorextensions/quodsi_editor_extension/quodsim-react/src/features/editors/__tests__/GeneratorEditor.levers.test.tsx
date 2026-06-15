@@ -3,7 +3,7 @@
 jest.mock("axios", () => ({}));
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
 
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -43,6 +43,7 @@ describe("GeneratorEditor — scenario lever authoring", () => {
   it("renders the lever-authoring section with the Generator numeric properties", () => {
     render(<GeneratorEditor {...baseProps} />);
     expect(screen.getByTestId("lever-authoring")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     expect(
       screen.getByLabelText(/use Max Entities as a scenario lever/i)
     ).toBeInTheDocument();

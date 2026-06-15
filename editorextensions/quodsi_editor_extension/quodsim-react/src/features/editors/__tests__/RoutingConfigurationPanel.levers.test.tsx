@@ -9,6 +9,8 @@ import {
   Connector,
   ConnectType,
   StateListManager,
+  createScenarioLever,
+  ScenarioPropertyName,
 } from "@quodsi/lucid-shared";
 import { RoutingConfigurationPanel } from "../RoutingConfigurationPanel";
 
@@ -61,10 +63,48 @@ describe("RoutingConfigurationPanel — connector WEIGHT lever authoring", () =>
     mockUpdateElementData.mockClear();
   });
 
+  it("is collapsed by default — toggle present, inner WEIGHT checkbox hidden", () => {
+    render(<RoutingConfigurationPanel {...baseProps} />);
+    // The disclosure toggle is present (one per connector card)...
+    expect(
+      screen.getAllByRole("button", { name: /scenario levers/i }).length
+    ).toBe(2);
+    // ...but the inner WEIGHT checkbox is not rendered while collapsed.
+    expect(
+      screen.queryByLabelText(/use Weight as a scenario lever/i)
+    ).toBeNull();
+  });
+
+  it("shows an enabled-lever count badge while collapsed", () => {
+    const connectorWithLever = makeConnector("c1", "Conn One", 1);
+    (connectorWithLever as any).levers = [
+      createScenarioLever({
+        propertyName: ScenarioPropertyName.WEIGHT,
+        label: "Conn One — Weight",
+        enabled: true,
+      }),
+    ];
+    render(
+      <RoutingConfigurationPanel
+        {...baseProps}
+        outgoingConnectors={[connectorWithLever, makeConnector("c2", "Conn Two", 1)]}
+      />
+    );
+    // Still collapsed (no inner checkbox), but the badge surfaces the enabled lever.
+    expect(
+      screen.queryByLabelText(/use Weight as a scenario lever/i)
+    ).toBeNull();
+    expect(screen.getByTestId("lever-count")).toHaveTextContent("1");
+  });
+
   it("renders the WEIGHT lever-authoring section for connectors (2+ connectors)", () => {
     render(<RoutingConfigurationPanel {...baseProps} />);
     // One section per connector
     expect(screen.getAllByTestId("lever-authoring").length).toBe(2);
+    // Expand both sections to reveal the inner controls.
+    screen
+      .getAllByRole("button", { name: /scenario levers/i })
+      .forEach((btn) => fireEvent.click(btn));
     // WEIGHT property display label = "Weight"
     expect(
       screen.getAllByLabelText(/use Weight as a scenario lever/i).length
@@ -73,6 +113,9 @@ describe("RoutingConfigurationPanel — connector WEIGHT lever authoring", () =>
 
   it("enabling the WEIGHT lever writes a connector with a non-empty levers array", () => {
     render(<RoutingConfigurationPanel {...baseProps} />);
+    screen
+      .getAllByRole("button", { name: /scenario levers/i })
+      .forEach((btn) => fireEvent.click(btn));
     const checkbox = screen.getAllByLabelText(
       /use Weight as a scenario lever/i
     )[0] as HTMLInputElement;

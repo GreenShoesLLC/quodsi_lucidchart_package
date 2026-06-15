@@ -3,7 +3,7 @@
 jest.mock("axios", () => ({}));
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import ActivityEditor from "../ActivityEditor";
 
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -42,6 +42,7 @@ describe("ActivityEditor — scenario lever authoring", () => {
   it("renders the lever-authoring section with the Activity numeric properties", () => {
     render(<ActivityEditor {...baseProps} />);
     expect(screen.getByTestId("lever-authoring")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     expect(
       screen.getByLabelText(/use Activity Capacity as a scenario lever/i)
     ).toBeInTheDocument();

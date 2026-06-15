@@ -5,6 +5,7 @@ import { ScenarioObjectType, ScenarioPropertyName, type ScenarioLever } from '@q
 it('offers Inter-arrival Timing for a Generator and authors a rate-multiplier lever', () => {
   const onChange = jest.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.GENERATOR} componentName="Start" levers={[]} onChange={onChange} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   // the inter-arrival property appears as an eligible lever
   fireEvent.click(screen.getByLabelText(/use Inter-arrival Timing as a scenario lever/i));
   const next: ScenarioLever[] = onChange.mock.calls.at(-1)![0];
@@ -15,22 +16,26 @@ it('offers Inter-arrival Timing for a Generator and authors a rate-multiplier le
 it('labels the inter-arrival range as a rate multiplier', () => {
   const lever: ScenarioLever = { leverId: 'lv1', propertyName: ScenarioPropertyName.INTERARRIVAL_TIMING, enabled: true, label: 'Arrival rate', range: { min: 1, max: 4, step: 1 } };
   render(<LeverAuthoringSection objectType={ScenarioObjectType.GENERATOR} componentName="Start" levers={[lever]} onChange={jest.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.getByText(/rate multiplier/i)).toBeInTheDocument();
 });
 
 it('does not offer Inter-arrival Timing for a Resource', () => {
   render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[]} onChange={jest.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.queryByLabelText(/inter-arrival/i)).toBeNull();
 });
 
 it('warns (non-blocking) when the current distribution is not rate-scalable', () => {
   const lever: ScenarioLever = { leverId: 'lv1', propertyName: ScenarioPropertyName.INTERARRIVAL_TIMING, enabled: true, label: 'Arrival rate', range: { min: 1, max: 4, step: 1 } };
   render(<LeverAuthoringSection objectType={ScenarioObjectType.GENERATOR} componentName="Start" levers={[lever]} onChange={jest.fn()} currentDistributionType="beta" />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.getByText(/can't be rate-scaled/i)).toBeInTheDocument();
 });
 
 it('no warning for a rate-scalable distribution', () => {
   const lever: ScenarioLever = { leverId: 'lv1', propertyName: ScenarioPropertyName.INTERARRIVAL_TIMING, enabled: true, label: 'Arrival rate', range: { min: 1, max: 4, step: 1 } };
   render(<LeverAuthoringSection objectType={ScenarioObjectType.GENERATOR} componentName="Start" levers={[lever]} onChange={jest.fn()} currentDistributionType="exponential" />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.queryByText(/can't be rate-scaled/i)).toBeNull();
 });

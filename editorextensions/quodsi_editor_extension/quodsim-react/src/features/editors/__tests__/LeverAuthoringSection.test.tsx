@@ -5,6 +5,7 @@ import { ScenarioObjectType, ScenarioPropertyName, type ScenarioLever } from '@q
 it('checking an eligible property adds an enabled lever with a "Component — Property" default label + a default range', () => {
   const onChange = jest.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[]} onChange={onChange} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   fireEvent.click(screen.getByLabelText(/use Capacity as a scenario lever/i));
   const next: ScenarioLever[] = onChange.mock.calls.at(-1)![0];
   expect(next).toHaveLength(1);
@@ -17,6 +18,7 @@ it('unchecking removes the lever; editing label/range patches it', () => {
   const lever: ScenarioLever = { leverId: 'lv1', propertyName: ScenarioPropertyName.CAPACITY, enabled: true, label: 'Nurses', range: { min: 7, max: 9, step: 1 } };
   const onChange = jest.fn();
   const { rerender } = render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[lever]} onChange={onChange} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   // label shows the existing range + label
   expect(screen.getByLabelText(/lever label/i)).toHaveValue('Nurses');
   fireEvent.change(screen.getByLabelText(/^max$/i), { target: { value: '12' } });

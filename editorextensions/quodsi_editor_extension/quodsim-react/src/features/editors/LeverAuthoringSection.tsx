@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 import {
   ScenarioObjectType, ScenarioPropertyName, NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
   PROPERTY_DISPLAY_LABELS, isRateScaleProperty, type ScenarioLever,
@@ -18,6 +19,9 @@ interface Props {
 }
 
 export function LeverAuthoringSection({ objectType, componentName, levers, onChange, currentDistributionType, actions }: Props) {
+  const [expanded, setExpanded] = React.useState(false);
+  const enabledCount = (levers ?? []).filter((l) => l.enabled !== false).length;
+
   const eligible = [
     ...(NUMERIC_PROPERTIES_BY_OBJECT_TYPE[objectType] ?? []),
     ...(objectType === ScenarioObjectType.GENERATOR ? [ScenarioPropertyName.INTERARRIVAL_TIMING] : []),
@@ -26,7 +30,22 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
 
   return (
     <div className="pt-3 border-t" data-testid="lever-authoring">
-      <div className="text-sm font-medium mb-1">Scenario levers</div>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        aria-expanded={expanded}
+        className="flex items-center gap-1 w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+      >
+        <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+        <span>Scenario levers</span>
+        {enabledCount > 0 && (
+          <span className="ml-1 text-xs font-normal bg-blue-100 text-blue-700 rounded-full px-2 py-0.5" data-testid="lever-count">
+            {enabledCount}
+          </span>
+        )}
+      </button>
+      {expanded && (
+        <div className="mt-2">
       {eligible.map((pn: ScenarioPropertyName) => {
         const lever = leverFor(levers, pn);
         const isRate = isRateScaleProperty(objectType, pn);
@@ -124,6 +143,8 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
               </div>
             );
           })}
+        </div>
+      )}
         </div>
       )}
     </div>

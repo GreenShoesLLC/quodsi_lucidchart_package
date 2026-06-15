@@ -42,6 +42,7 @@ describe("ResourceEditor — scenario lever authoring", () => {
   it("renders the lever-authoring section in the basic tab", () => {
     render(<ResourceEditor {...baseProps} />);
     expect(screen.getByTestId("lever-authoring")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     expect(
       screen.getByLabelText(/use Capacity as a scenario lever/i)
     ).toBeInTheDocument();
@@ -49,6 +50,7 @@ describe("ResourceEditor — scenario lever authoring", () => {
 
   it("toggling the Capacity lever checkbox updates the visible draft (checkbox becomes checked, label appears)", () => {
     render(<ResourceEditor {...baseProps} />);
+    fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     const checkbox = screen.getByLabelText(
       /use Capacity as a scenario lever/i
     ) as HTMLInputElement;

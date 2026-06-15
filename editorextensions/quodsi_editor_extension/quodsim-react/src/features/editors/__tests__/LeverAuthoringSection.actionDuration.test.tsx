@@ -7,6 +7,7 @@ const actions = [{ id: 'act-7', label: 'Process (1)', distributionType: 'exponen
 it('renders a duration-lever row per action and authors a DURATION lever', () => {
   const onChange = jest.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={[]} onChange={onChange} actions={actions} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   const cb = screen.getByLabelText(/Use Process \(1\) duration as a scenario lever/i);
   fireEvent.click(cb);
   const next = onChange.mock.calls[0][0];
@@ -17,6 +18,7 @@ it('warns when the action distribution is not rate-scalable', () => {
   const levers = [{ leverId: 'l1', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-9', enabled: true, label: 'x', range: { min: 1, max: 3, step: 1 } }];
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={() => {}}
     actions={[{ id: 'act-9', label: 'Delay (1)', distributionType: 'beta' }]} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.getByText(/can't be rate-scaled/i)).toBeInTheDocument();
 });
 
@@ -24,6 +26,7 @@ it('no warning renders when an action distribution is rate-scalable (e.g. expone
   const levers = [{ leverId: 'l2', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-7', enabled: true, label: 'Service', range: { min: 1, max: 3, step: 1 } }];
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={() => {}}
     actions={[{ id: 'act-7', label: 'Process (1)', distributionType: 'exponential' }]} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   expect(screen.queryByText(/can't be rate-scaled/i)).toBeNull();
 });
 
@@ -32,6 +35,7 @@ it('editing the max input calls onChange with the lever range max updated', () =
   const levers = [{ leverId: 'l3', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-7', enabled: true, label: 'Service', range: { min: 1, max: 3, step: 1 } }];
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={onChange}
     actions={actions} />);
+  fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   const maxInput = screen.getByLabelText('max');
   fireEvent.change(maxInput, { target: { value: '5' } });
   const next = onChange.mock.calls[0][0];
