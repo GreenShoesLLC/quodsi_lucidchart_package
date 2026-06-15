@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Info } from 'lucide-react';
 import {
   ScenarioObjectType, ScenarioPropertyName, NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
   PROPERTY_DISPLAY_LABELS, isRateScaleProperty, type ScenarioLever,
@@ -38,6 +38,9 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
       >
         <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? '' : '-rotate-90'}`} />
         <span>Scenario levers</span>
+        <span title="Mark a property as a scenario lever — a value range a Study can sweep across its design points to compare what-if scenarios.">
+          <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
+        </span>
         {enabledCount > 0 && (
           <span className="ml-1 text-xs font-normal bg-blue-100 text-blue-700 rounded-full px-2 py-0.5" data-testid="lever-count">
             {enabledCount}
@@ -51,7 +54,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
         const isRate = isRateScaleProperty(objectType, pn);
         return (
           <div key={pn} className="mb-2">
-            <label className="flex items-center gap-2 text-sm">
+            <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
               <input
                 type="checkbox"
                 checked={!!lever}
@@ -102,7 +105,7 @@ export function LeverAuthoringSection({ objectType, componentName, levers, onCha
             const notScalable = !!a.distributionType && !RATE_SCALABLE.has(a.distributionType.toLowerCase());
             return (
               <div key={a.id} className="mb-2">
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-xs font-medium text-gray-700">
                   <input
                     type="checkbox"
                     checked={!!lever}
