@@ -9,7 +9,7 @@ import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
-import { upsertModelAndSyncScenarios, canonicalModelName } from '../../sync/scenarioSync';
+import { upsertModelAndSyncScenarios, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -213,11 +213,22 @@ export class SimulationRunHandler {
         return serverModelId;
       });
 
+    // For the Studies surface only, push the live model definition snapshot
+    // (envelope-level modelDefinitionSnapshot → models.model_definition_snapshot)
+    // fire-and-forget AFTER the modal opens — never block the Studies button on
+    // the serialize+sync.
+    const pushSnapshotIfStudies = (): void => {
+      if (surface !== 'studies') return;
+      void pushModelDefinitionSnapshot(client, { documentId: data.documentId!, pageId: data.pageId!, modelName })
+        .catch((e) => SimulationRunHandler.logger.error('OPEN_STUDIES_MODAL: snapshot push failed', e));
+    };
+
     const cached = SimulationRunHandler.scenarioModelIdCache.get(cacheKey);
     if (cached) {
       // Reopen: open immediately with the cached id; keep the row fresh in the
       // background. The editor reads scenarios from quodsi_api anyway.
       openModal(cached);
+      pushSnapshotIfStudies();
       void refreshUpsert().catch((e) =>
         SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: background UpsertModel failed:`, e));
       return;
@@ -230,6 +241,7 @@ export class SimulationRunHandler {
       return;
     }
     openModal(serverModelId);
+    pushSnapshotIfStudies();
   }
 
   /**

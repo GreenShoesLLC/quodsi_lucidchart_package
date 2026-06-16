@@ -1,5 +1,5 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ISerializedScenario, resolveModelName } from '@quodsi/lucid-shared';
+import { ISerializedScenario, resolveModelName, ModelSerializerFactory } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
 import { ModelManager } from '../ModelManager';
 
@@ -15,6 +15,10 @@ export interface UpsertAndSyncParams {
   pageId: string;
   modelName: string;
   scenarios: ISerializedScenario[];
+  /** Envelope-level "current model definition" snapshot. When defined, it is
+   *  forwarded on the SyncScenarios action and lands on
+   *  models.model_definition_snapshot in the backend. */
+  modelDefinitionSnapshot?: unknown;
 }
 
 export interface UpsertAndSyncResult {
@@ -64,7 +68,11 @@ export async function upsertModelAndSyncScenarios(
   const serverModelId = upsertBody?.model?.id ?? null;
 
   const substitutions = new Map<string, string>();
-  if (params.scenarios.length === 0) {
+  // Skip SyncScenarios only when there is nothing to push: no scenarios AND no
+  // envelope-level model snapshot. When a snapshot IS provided we still run
+  // SyncScenarios (even with scenarios === []) so the snapshot reaches the
+  // backend and lands on models.model_definition_snapshot.
+  if (params.scenarios.length === 0 && params.modelDefinitionSnapshot === undefined) {
     return { upserted: true, syncedCount: 0, substitutions, serverModelId };
   }
 
@@ -75,6 +83,9 @@ export async function upsertModelAndSyncScenarios(
       documentId: params.documentId,
       pageId: params.pageId,
       scenarios: params.scenarios,
+      ...(params.modelDefinitionSnapshot !== undefined
+        ? { modelDefinitionSnapshot: params.modelDefinitionSnapshot }
+        : {}),
     },
     asynchronous: false,
   })) as { status?: number; json?: { scenarios?: Array<{ id?: string; replaced_id?: string }> } };
@@ -89,6 +100,19 @@ export async function upsertModelAndSyncScenarios(
     }
   }
   return { upserted: true, syncedCount: params.scenarios.length, substitutions, serverModelId };
+}
+
+/** Serialize the live model and push it as the envelope-level model snapshot
+ *  (lands on models.model_definition_snapshot in the backend). Fire-and-forget
+ *  friendly — callers `void` it; it must never throw into the caller. */
+export async function pushModelDefinitionSnapshot(
+  client: EditorClient,
+  params: { documentId: string; pageId: string; modelName: string },
+): Promise<void> {
+  const def = await ModelManager.getInstance().getModelDefinition();
+  if (!def) return;
+  const snapshot = ModelSerializerFactory.create(def).serialize(def);
+  await upsertModelAndSyncScenarios(client, { ...params, scenarios: [], modelDefinitionSnapshot: snapshot });
 }
 
 /**
