@@ -1,5 +1,11 @@
-import { EditorClient } from 'lucid-extension-sdk';
-import { ISerializedScenario, resolveModelName, ModelSerializerFactory } from '@quodsi/lucid-shared';
+import { EditorClient, Viewport } from 'lucid-extension-sdk';
+import {
+  ISerializedScenario,
+  resolveModelName,
+  ModelSerializerFactory,
+  parsePageTranslate,
+  offsetSerializedModelCoordinates,
+} from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
 import { ModelManager } from '../ModelManager';
 
@@ -19,6 +25,10 @@ export interface UpsertAndSyncParams {
    *  forwarded on the SyncScenarios action and lands on
    *  models.model_definition_snapshot in the backend. */
   modelDefinitionSnapshot?: unknown;
+  /** The page SVG paired with modelDefinitionSnapshot (its visual twin). When
+   *  defined, forwarded on SyncScenarios and lands on models.model_diagram_svg;
+   *  studies read it to give their animation a background diagram. */
+  modelDiagramSvg?: string;
 }
 
 export interface UpsertAndSyncResult {
@@ -86,6 +96,9 @@ export async function upsertModelAndSyncScenarios(
       ...(params.modelDefinitionSnapshot !== undefined
         ? { modelDefinitionSnapshot: params.modelDefinitionSnapshot }
         : {}),
+      ...(params.modelDiagramSvg !== undefined
+        ? { modelDiagramSvg: params.modelDiagramSvg }
+        : {}),
     },
     asynchronous: false,
   })) as { status?: number; json?: { scenarios?: Array<{ id?: string; replaced_id?: string }> } };
@@ -112,7 +125,30 @@ export async function pushModelDefinitionSnapshot(
   const def = await ModelManager.getInstance().getModelDefinition();
   if (!def) return;
   const snapshot = ModelSerializerFactory.create(def).serialize(def);
-  await upsertModelAndSyncScenarios(client, { ...params, scenarios: [], modelDefinitionSnapshot: snapshot });
+  // Capture the page SVG paired with this snapshot (its visual twin) so studies
+  // get a background diagram. Best-effort: a getSvg failure must not block the
+  // snapshot push — we just omit the SVG (animation renders without a diagram).
+  let modelDiagramSvg: string | undefined;
+  try {
+    const page = new Viewport(client).getCurrentPage();
+    if (page) modelDiagramSvg = await page.getSvg(undefined, true);
+  } catch {
+    modelDiagramSvg = undefined;
+  }
+  // Align the snapshot to the SVG's coordinate frame. getSvg() wraps the page in
+  // translate(Tx Ty) to normalize negative coords into a positive viewBox, but
+  // the serialized model (→ engine layout.json) uses raw coords — so without
+  // this shift the background SVG and the animated entities are offset by (Tx,Ty)
+  // in the viewer. Mirrors the single-scenario run path (simulationHandler). A
+  // {0,0} translate is a no-op. The shift is uniform, so the simulation is
+  // unchanged; only the layout coordinates move to share the SVG's frame.
+  if (modelDiagramSvg) {
+    const t = parsePageTranslate(modelDiagramSvg);
+    offsetSerializedModelCoordinates(snapshot, t.x, t.y);
+  }
+  await upsertModelAndSyncScenarios(client, {
+    ...params, scenarios: [], modelDefinitionSnapshot: snapshot, modelDiagramSvg,
+  });
 }
 
 /**
