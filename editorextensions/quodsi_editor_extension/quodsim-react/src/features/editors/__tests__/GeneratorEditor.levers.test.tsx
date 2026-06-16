@@ -45,10 +45,11 @@ describe("GeneratorEditor — scenario lever authoring", () => {
     expect(screen.getByTestId("lever-authoring")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));
     expect(
-      screen.getByLabelText(/use Max Entities as a scenario lever/i)
-    ).toBeInTheDocument();
-    expect(
       screen.getByLabelText(/use Entities Per Creation as a scenario lever/i)
     ).toBeInTheDocument();
+    // Max Entities was removed as a generator scenario lever (per request).
+    expect(
+      screen.queryByLabelText(/use Max Entities as a scenario lever/i)
+    ).not.toBeInTheDocument();
   });
 });
