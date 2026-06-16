@@ -16,7 +16,7 @@ import { LucidPageConversionService } from '../../../services/conversion/LucidPa
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SelectionHandler } from './selection';
-import { canonicalModelName } from '../../sync/scenarioSync';
+import { canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
 // Simple ID generator for extension context
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -244,6 +244,16 @@ export class ConversionPreviewHandler {
                     asynchronous: false
                 }).then(() => {
                     ConversionPreviewHandler.logger.log('Model registered in database after conversion');
+                    // Seed the model-definition snapshot so a freshly-converted model
+                    // has a lever/study catalog before the user ever clicks Studies.
+                    // Best-effort; must not block or throw into the convert flow.
+                    void pushModelDefinitionSnapshot(client, {
+                        documentId,
+                        pageId: currentPage.id,
+                        modelName,
+                    }).catch(err => {
+                        ConversionPreviewHandler.logger.error('Failed to seed model snapshot after conversion:', err);
+                    });
                 }).catch(err => {
                     ConversionPreviewHandler.logger.error('Failed to register model in database:', err);
                 });
