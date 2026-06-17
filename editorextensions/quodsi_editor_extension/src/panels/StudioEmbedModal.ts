@@ -12,12 +12,17 @@ import { getStudioBaseUrl } from '../core/messaging/handlers/authHandler';
 export class StudioEmbedModal extends RoutingModal {
   constructor(
     client: EditorClient,
-    opts: { title: string; studioPath: string; fullScreenPath?: string; modalSize?: ModalSize },
+    // Either `studioPath` (concrete — open straight to it) OR `pending: true`
+    // (open INSTANTLY in a loading state; StudioEmbedView then pulls the
+    // resolved path via REQUEST_STUDIO_EMBED_PATH once its channel registers).
+    opts: { title: string; studioPath?: string; pending?: boolean; fullScreenPath?: string; modalSize?: ModalSize },
   ) {
     const studioOrigin = getStudioBaseUrl();
     let url =
       `quodsim-react/index.html?view=studio-embed` +
-      `&studioPath=${encodeURIComponent(opts.studioPath)}` +
+      (opts.studioPath
+        ? `&studioPath=${encodeURIComponent(opts.studioPath)}`
+        : `&pending=1`) +
       // Title is rendered by our own chromeless header (StudioEmbedView), not
       // Lucid's native title bar — pass it through the URL.
       `&title=${encodeURIComponent(opts.title)}`;

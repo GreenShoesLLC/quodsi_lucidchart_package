@@ -1,4 +1,5 @@
-import { EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { useEffect, useState } from 'react';
+import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { EmbeddedStudioFrame } from './EmbeddedStudioFrame';
 
@@ -8,16 +9,49 @@ import { EmbeddedStudioFrame } from './EmbeddedStudioFrame';
  * this view renders its own header: the title on the left and, on the right, an
  * optional "↗ Open full screen" plus an unambiguous "✕ Close" that asks the
  * host to hide the modal. Used by scenarios, results, and animation callers.
+ *
+ * Pending opens: the host can open the modal INSTANTLY (before the server model
+ * id is resolved) by passing `pending=1` instead of `studioPath`. In that case
+ * we render the header + a busy spinner immediately and PULL the resolved path
+ * from the host (REQUEST_STUDIO_EMBED_PATH → STUDIO_EMBED_PATH). Pulling AFTER
+ * mount guarantees our channel is registered first, so the reply isn't dropped.
  */
 export function StudioEmbedView() {
   const { sendMessage } = useMessaging();
   const params = new URLSearchParams(window.location.search);
   const studioOrigin = params.get('studioOrigin');
-  const studioPath = params.get('studioPath');
+  const initialPath = params.get('studioPath');
+  const pending = params.get('pending') === '1';
   const fullScreenPath = params.get('fullScreenPath');
   const title = params.get('title') ?? '';
 
-  if (!studioPath || !studioOrigin) {
+  // Concrete opens carry studioPath up front; pending opens resolve it via pull.
+  const [resolvedPath, setResolvedPath] = useState<string | null>(initialPath);
+  const [pathError, setPathError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!pending) return;
+    function onMessage(e: MessageEvent) {
+      if (e.source !== window.parent) return;
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.STUDIO_EMBED_PATH) {
+        const d = (e.data.data ?? {}) as { studioPath?: string | null; error?: string };
+        if (d.studioPath) {
+          setResolvedPath(d.studioPath);
+          setPathError(null);
+        } else {
+          setPathError(d.error ?? 'Could not load this view.');
+        }
+      }
+    }
+    window.addEventListener('message', onMessage);
+    // Pull the resolved path. Runs on mount (after the channel registers), so
+    // the host's reply lands — no push-before-ready race. Idempotent under
+    // StrictMode double-mount (the host answers each request from one promise).
+    sendMessage(EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH);
+    return () => window.removeEventListener('message', onMessage);
+  }, [pending, sendMessage]);
+
+  if (!studioOrigin || (!pending && !initialPath)) {
     return (
       <div className="h-full w-full flex items-center justify-center">
         <p style={{ textAlign: 'center', padding: 16 }}>Results viewer misconfigured (missing studioPath/studioOrigin).</p>
@@ -51,7 +85,19 @@ export function StudioEmbedView() {
         </div>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
-        <EmbeddedStudioFrame studioPath={studioPath} studioOrigin={studioOrigin} />
+        {resolvedPath ? (
+          <EmbeddedStudioFrame studioPath={resolvedPath} studioOrigin={studioOrigin} />
+        ) : pathError ? (
+          <div className="h-full w-full flex items-center justify-center" style={{ padding: 16, textAlign: 'center', color: '#6b7280' }}>
+            {pathError} Try closing and reopening.
+          </div>
+        ) : (
+          <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#6b7280' }}>
+            <span style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid #d1d5db', borderTopColor: '#6b7280', borderRadius: '50%', animation: 'quodsi-spin 0.8s linear infinite' }} />
+            <span style={{ fontSize: 13 }}>Loading…</span>
+            <style>{'@keyframes quodsi-spin { to { transform: rotate(360deg); } }'}</style>
+          </div>
+        )}
       </div>
     </div>
   );
