@@ -91,6 +91,13 @@ export enum EnvelopeMessageType {
   REQUEST_STUDIO_TOKEN = "REQUEST_STUDIO_TOKEN",
   STUDIO_TOKEN = "STUDIO_TOKEN",
 
+  // Studio Embed deferred-path relay. The modal opens INSTANTLY in a "pending"
+  // state (before the server model id is resolved); the embed view PULLS the
+  // resolved studioPath (REQUEST → reply) once its channel is registered — pull,
+  // not push, to avoid the channel-registration race that drops pushed messages.
+  REQUEST_STUDIO_EMBED_PATH = "REQUEST_STUDIO_EMBED_PATH",
+  STUDIO_EMBED_PATH = "STUDIO_EMBED_PATH",
+
   // Embedded scenarios editor (Phase 2)
   OPEN_SCENARIOS_MODAL = "OPEN_SCENARIOS_MODAL",
   OPEN_STUDIES_MODAL = "OPEN_STUDIES_MODAL",

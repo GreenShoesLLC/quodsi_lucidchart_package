@@ -25,6 +25,16 @@ export class SimulationRunHandler {
   private static scenarioModelIdCache = new Map<string, string>();
 
   /**
+   * Context for the most recent pending (uncached) embed open: the surface and
+   * the in-flight UpsertModel promise. The embed view pulls the resolved path
+   * via REQUEST_STUDIO_EMBED_PATH, which awaits this promise. One studio-embed
+   * modal is open at a time, so a single slot suffices.
+   */
+  private static pendingEmbedResolve:
+    | { surface: 'scenarios' | 'studies'; idPromise: Promise<string | null | undefined> }
+    | null = null;
+
+  /**
    * Handle messages related to simulation run operations
    *
    * @param msg The received message
@@ -108,6 +118,12 @@ export class SimulationRunHandler {
       case EnvelopeMessageType.REQUEST_STUDIO_CATALOG:
         SimulationRunHandler.handleRequestStudioCatalog(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleRequestStudioCatalog failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.REQUEST_STUDIO_EMBED_PATH:
+        SimulationRunHandler.handleRequestStudioEmbedPath(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleRequestStudioEmbedPath failed', e),
         );
         return true;
 
@@ -234,14 +250,50 @@ export class SimulationRunHandler {
       return;
     }
 
-    // First open: must resolve the id before we can build the studio path.
-    const serverModelId = await refreshUpsert();
-    if (!serverModelId) {
-      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel returned no model id`);
-      return;
-    }
-    openModal(serverModelId);
+    // First (uncached) open: DON'T block the modal on UpsertModel. Open the modal
+    // INSTANTLY in a pending state, resolve the server model id in the background,
+    // and hand it to the embed view when it pulls REQUEST_STUDIO_EMBED_PATH. The
+    // upsert runs concurrently with the iframe + quodsim-react boot, so by the
+    // time the view asks, the id is usually already resolved.
+    const idPromise = refreshUpsert();
+    idPromise.catch((e) => // never let it become an unhandled rejection
+      SimulationRunHandler.logger.error(`OPEN_${surface.toUpperCase()}_MODAL: UpsertModel failed:`, e));
+    SimulationRunHandler.pendingEmbedResolve = { surface, idPromise };
+    new StudioEmbedModal(client, { title, pending: true, modalSize: data.modalSize }).show();
     pushSnapshotIfStudies();
+  }
+
+  /**
+   * Handle REQUEST_STUDIO_EMBED_PATH: the embed view (opened in pending mode)
+   * pulls the resolved studio path once its channel has registered. Await the
+   * in-flight UpsertModel, then reply STUDIO_EMBED_PATH with
+   * /embed/models/<id>/<surface> (or an error). Pull (not push) sidesteps the
+   * channel-registration race that drops messages sent before the view is ready.
+   */
+  private static async handleRequestStudioEmbedPath(msg: EnvelopeBase): Promise<void> {
+    const ctx = SimulationRunHandler.pendingEmbedResolve;
+    const channel = SimulationRunHandler.getResponseChannel(msg);
+    let studioPath: string | null = null;
+    let error: string | undefined;
+    if (!ctx) {
+      error = 'no pending embed open';
+    } else {
+      try {
+        const id = await ctx.idPromise;
+        if (id) studioPath = `/embed/models/${id}/${ctx.surface}`;
+        else error = 'model id unresolved';
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+    }
+    router.send(channel, {
+      id: `msg-${Date.now()}`,
+      type: EnvelopeMessageType.STUDIO_EMBED_PATH,
+      source: 'host',
+      target: `${channel}-iframe`,
+      version: '1.0',
+      data: { studioPath, error },
+    });
   }
 
   /**
