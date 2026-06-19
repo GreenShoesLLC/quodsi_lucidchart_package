@@ -146,8 +146,21 @@ export async function pushModelDefinitionSnapshot(
     const t = parsePageTranslate(modelDiagramSvg);
     offsetSerializedModelCoordinates(snapshot, t.x, t.y);
   }
-  await upsertModelAndSyncScenarios(client, {
-    ...params, scenarios: [], modelDefinitionSnapshot: snapshot, modelDiagramSvg,
+  // Push the snapshot + SVG via UpsertModel ONLY — never SyncScenarios. The
+  // extension is not scenario-authoritative (scenarios live in the DB / embed),
+  // so it must not send a scenario list: a replace-all with an empty list would
+  // soft-delete + purge the embed's study-less scenarios (data loss).
+  await LucidDataActionUtility.performDataAction(client, {
+    dataConnectorName: 'quodsi_api_data_connector',
+    actionName: 'UpsertModel',
+    actionData: {
+      documentId: params.documentId,
+      pageId: params.pageId,
+      modelName: params.modelName,
+      modelDefinitionSnapshot: snapshot,
+      ...(modelDiagramSvg !== undefined ? { modelDiagramSvg } : {}),
+    },
+    asynchronous: false,
   });
 }
 
