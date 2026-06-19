@@ -125,12 +125,12 @@ export const activityColumns: TableColumn[] = [
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "inbound_queue_max_contents_mean",
+    key: "inbound_queue_max_contents_max",
     label: "Inbound Max",
     format: (v) => formatDecimal(v, 2),
   },
   {
-    key: "outbound_queue_max_contents_mean",
+    key: "outbound_queue_max_contents_max",
     label: "Outbound Max",
     format: (v) => formatDecimal(v, 2),
   },

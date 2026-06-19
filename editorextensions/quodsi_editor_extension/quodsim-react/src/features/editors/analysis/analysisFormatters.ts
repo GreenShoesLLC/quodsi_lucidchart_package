@@ -62,8 +62,8 @@ export const metricOptions: Record<string, { value: string; label: string }[]> =
     { value: "outbound_queue_utilization_mean", label: "Outbound Queue Utilization" },
     { value: "inbound_queue_avg_contents_mean", label: "Inbound Queue Avg Contents" },
     { value: "outbound_queue_avg_contents_mean", label: "Outbound Queue Avg Contents" },
-    { value: "inbound_queue_max_contents_mean", label: "Inbound Queue Max Contents" },
-    { value: "outbound_queue_max_contents_mean", label: "Outbound Queue Max Contents" },
+    { value: "inbound_queue_max_contents_max", label: "Inbound Queue Max Contents" },
+    { value: "outbound_queue_max_contents_max", label: "Outbound Queue Max Contents" },
     { value: "total_avg_contents_mean", label: "Total Avg Contents" },
   ],
   entity: [
