@@ -66,40 +66,6 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
-   * Send a CROSS_REP_DATA_REQUEST message
-   *
-   * @param documentId Document ID containing the simulation run
-   * @param scenarioId Scenario ID to fetch data for
-   * @param dataType Type of cross-rep data to fetch (scenario, activity, entity, resource, activity-contents-timeseries, state-summary, activity-inbound-queue-timeseries, activity-outbound-queue-timeseries, or state-values-timeseries)
-   */
-  const getCrossRepData = useCallback((
-    documentId: string,
-    scenarioId: string,
-    dataType: 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries'
-  ) => {
-    send(EnvelopeMessageType.CROSS_REP_DATA_REQUEST, {
-      documentId,
-      scenarioId,
-      dataType
-    });
-  }, [send]);
-
-  /**
-   * Send a CROSS_REP_BATCH_DATA_REQUEST message to fetch multiple data types in one round trip
-   */
-  const getCrossRepBatchData = useCallback((
-    documentId: string,
-    scenarioId: string,
-    dataTypes: string[]
-  ) => {
-    send(EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST, {
-      documentId,
-      scenarioId,
-      dataTypes
-    });
-  }, [send]);
-
-  /**
    * Send an OPEN_ANIMATION_MODAL message to open the embedded animation viewer
    *
    * @param scenarioId Scenario ID to view animation for
@@ -128,8 +94,6 @@ export function useSimulationRunSender() {
     deleteSimulationRun,
     cancelSimulationRun,
     resimulateSimulationRun,
-    getCrossRepData,
-    getCrossRepBatchData,
     openAnimationModal,
     openScenariosModal,
     openStudiesModal,

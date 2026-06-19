@@ -114,47 +114,6 @@ export interface SimulationRunCancelResultMessage extends EnvelopeBase {
   };
 }
 
-export interface CrossRepDataRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.CROSS_REP_DATA_REQUEST;
-  data: {
-    documentId: string;
-    scenarioId: string;
-    dataType: 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'entity-throughput-timeseries';
-  };
-}
-
-export interface CrossRepDataResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.CROSS_REP_DATA_RESULT;
-  data: {
-    success: boolean;
-    data: any[];
-    recordCount: number;
-    dataType: 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'entity-throughput-timeseries';
-    scenarioId: string;
-    error?: string;
-  };
-}
-
-export type CrossRepDataType = 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries';
-
-export interface CrossRepBatchDataRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST;
-  data: {
-    documentId: string;
-    scenarioId: string;
-    dataTypes: CrossRepDataType[];
-  };
-}
-
-export interface CrossRepBatchDataResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT;
-  data: {
-    success: boolean;
-    results: Record<string, { success: boolean; data: any[]; recordCount: number; error?: string }>;
-    scenarioId: string;
-  };
-}
-
 export type SimulationRunMessage =
   | SimulationRunListRequestMessage
   | SimulationRunListResultMessage
@@ -162,8 +121,4 @@ export type SimulationRunMessage =
   | SimulationRunDeleteResultMessage
   | SimulationRunResimulateRequestMessage
   | SimulationRunCancelRequestMessage
-  | SimulationRunCancelResultMessage
-  | CrossRepDataRequestMessage
-  | CrossRepDataResultMessage
-  | CrossRepBatchDataRequestMessage
-  | CrossRepBatchDataResultMessage;
+  | SimulationRunCancelResultMessage;

@@ -56,19 +56,6 @@ export class SimulationRunHandler {
         });
         return true;
 
-      case EnvelopeMessageType.CROSS_REP_DATA_REQUEST:
-        // Handle async method - fire and forget, return true immediately
-        SimulationRunHandler.handleCrossRepDataRequest(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleCrossRepDataRequest:', error);
-        });
-        return true;
-
-      case EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST:
-        SimulationRunHandler.handleCrossRepBatchDataRequest(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleCrossRepBatchDataRequest:', error);
-        });
-        return true;
-
       case EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST:
         // Handle async method - fire and forget, return true immediately
         SimulationRunHandler.handleResimulateRequest(msg).catch(error => {
@@ -80,10 +67,6 @@ export class SimulationRunHandler {
         SimulationRunHandler.handleSimulationRunCancel(msg).catch(error => {
           SimulationRunHandler.logger.error('Error in handleSimulationRunCancel:', error);
         });
-        return true;
-
-      case EnvelopeMessageType.OPEN_RESULTS_MODAL:
-        SimulationRunHandler.handleOpenResultsModal(msg);
         return true;
 
       case EnvelopeMessageType.OPEN_ANIMATION_MODAL:
@@ -142,23 +125,6 @@ export class SimulationRunHandler {
     if (msg.source === 'results-iframe') return 'results';
     if (msg.source === 'studio-embed-iframe') return 'studio-embed';
     return 'model';
-  }
-
-  /**
-   * Handle OPEN_RESULTS_MODAL: open the embedded Studio results viewer.
-   * (The legacy in-extension results dashboard was removed; results are now
-   * served exclusively by the embedded Studio app.)
-   */
-  private static handleOpenResultsModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string; modalSize?: ModalSize };
-    if (!data?.scenarioId) return;
-    const client = ModelManager.getClient();
-    SimulationRunHandler.logger.log('Opening embedded Studio results modal', { scenarioId: data.scenarioId });
-    new StudioEmbedModal(client, {
-      title: 'Simulation Results',
-      studioPath: `/embed/scenarios/${data.scenarioId}/results`,
-      modalSize: data.modalSize,
-    }).show();
   }
 
   /**
@@ -671,160 +637,6 @@ export class SimulationRunHandler {
           documentId: data.documentId,
           scenarioId: data.scenarioId,
           error: error instanceof Error ? error.message : String(error)
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle cross-rep data request
-   *
-   * @param msg CROSS_REP_DATA_REQUEST message
-   */
-  private static async handleCrossRepDataRequest(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as {
-      documentId: string;
-      scenarioId: string;
-      dataType: 'scenario' | 'activity' | 'entity' | 'resource' | 'activity-entity' | 'activity-contents-timeseries' | 'state-summary' | 'activity-inbound-queue-timeseries' | 'activity-outbound-queue-timeseries' | 'state-values-timeseries' | 'entity-throughput-timeseries'
-    };
-
-    SimulationRunHandler.logger.log('Cross-rep data requested', {
-      documentId: data.documentId,
-      scenarioId: data.scenarioId,
-      dataType: data.dataType
-    });
-
-    try {
-      const client = ModelManager.getClient();
-
-      SimulationRunHandler.logger.log(`Calling GetResultsData for ${data.dataType}...`);
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'GetResultsData',
-        actionData: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          dataTypes: [data.dataType]
-        },
-        asynchronous: false
-      });
-
-      const responseData = result.json || result;
-      const typeResult = responseData.results?.[data.dataType] || {
-        success: false,
-        data: [],
-        recordCount: 0,
-        error: 'No data returned'
-      };
-
-      SimulationRunHandler.logger.log(`GetResultsData completed for ${data.dataType}`, {
-        success: typeResult?.success,
-        recordCount: typeResult?.recordCount || 0
-      });
-
-      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(responseChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.CROSS_REP_DATA_RESULT,
-        source: 'host',
-        target: `${responseChannel}-iframe`,
-        version: '1.0',
-        data: {
-          ...typeResult,
-          dataType: data.dataType,
-          scenarioId: data.scenarioId
-        }
-      });
-
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error fetching cross-rep data:', error);
-
-      // Send error response
-      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(errorChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.ERROR,
-        source: 'host',
-        target: `${errorChannel}-iframe`,
-        version: '1.0',
-        data: {
-          code: 'CROSS_REP_DATA_FAILED',
-          message: error instanceof Error ? error.message : String(error),
-          relatedTo: EnvelopeMessageType.CROSS_REP_DATA_REQUEST,
-          dataType: data.dataType,
-          scenarioId: data.scenarioId
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle batch cross-rep data request — fetches multiple data types in a single API call.
-   */
-  private static async handleCrossRepBatchDataRequest(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as {
-      documentId: string;
-      scenarioId: string;
-      dataTypes: string[];
-    };
-
-    SimulationRunHandler.logger.log('Batch cross-rep data requested', {
-      documentId: data.documentId,
-      scenarioId: data.scenarioId,
-      dataTypes: data.dataTypes
-    });
-
-    try {
-      const client = ModelManager.getClient();
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'GetResultsData',
-        actionData: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          dataTypes: data.dataTypes
-        },
-        asynchronous: false
-      });
-
-      const responseData = result.json || result;
-
-      SimulationRunHandler.logger.log('Batch GetResultsData completed', {
-        success: responseData?.success,
-        dataTypes: data.dataTypes
-      });
-
-      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(responseChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.CROSS_REP_BATCH_DATA_RESULT,
-        source: 'host',
-        target: `${responseChannel}-iframe`,
-        version: '1.0',
-        data: {
-          success: responseData?.success ?? false,
-          results: responseData?.results ?? {},
-          scenarioId: data.scenarioId
-        }
-      });
-
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error fetching batch cross-rep data:', error);
-
-      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(errorChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.ERROR,
-        source: 'host',
-        target: `${errorChannel}-iframe`,
-        version: '1.0',
-        data: {
-          code: 'CROSS_REP_BATCH_DATA_FAILED',
-          message: error instanceof Error ? error.message : String(error),
-          relatedTo: EnvelopeMessageType.CROSS_REP_BATCH_DATA_REQUEST,
-          scenarioId: data.scenarioId
         }
       });
     }
