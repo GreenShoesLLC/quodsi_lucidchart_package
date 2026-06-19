@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
-import { isEmbeddedResultsEnabled } from '../../lib/embeddedResultsFlag';
 import { getModalSizePref } from '../../lib/modalSizePref';
 
 /**
@@ -101,21 +100,6 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
-   * Send an OPEN_RESULTS_MODAL message to open simulation results in a full-width modal
-   *
-   * @param documentId Document ID
-   * @param scenarioId Scenario ID to view results for
-   */
-  const openResultsModal = useCallback((documentId: string, scenarioId: string) => {
-    send(EnvelopeMessageType.OPEN_RESULTS_MODAL, {
-      scenarioId,
-      documentId,
-      useEmbeddedStudio: isEmbeddedResultsEnabled(),
-      modalSize: getModalSizePref(),
-    });
-  }, [send]);
-
-  /**
    * Send an OPEN_ANIMATION_MODAL message to open the embedded animation viewer
    *
    * @param scenarioId Scenario ID to view animation for
@@ -146,7 +130,6 @@ export function useSimulationRunSender() {
     resimulateSimulationRun,
     getCrossRepData,
     getCrossRepBatchData,
-    openResultsModal,
     openAnimationModal,
     openScenariosModal,
     openStudiesModal,
