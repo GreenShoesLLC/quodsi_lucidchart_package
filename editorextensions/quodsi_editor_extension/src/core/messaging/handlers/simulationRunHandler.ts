@@ -7,7 +7,6 @@ import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
-import { ResultsModal } from '../../../panels/ResultsModal';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
 import { upsertModelAndSyncScenarios, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
@@ -146,24 +145,20 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_RESULTS_MODAL: open StudioEmbedModal when useEmbeddedStudio is
-   * true, otherwise fall back to the existing ResultsModal.
+   * Handle OPEN_RESULTS_MODAL: open the embedded Studio results viewer.
+   * (The legacy in-extension results dashboard was removed; results are now
+   * served exclusively by the embedded Studio app.)
    */
   private static handleOpenResultsModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string; documentId: string; useEmbeddedStudio?: boolean; modalSize?: ModalSize };
+    const data = msg.data as { scenarioId: string; modalSize?: ModalSize };
     if (!data?.scenarioId) return;
     const client = ModelManager.getClient();
-    if (data.useEmbeddedStudio) {
-      SimulationRunHandler.logger.log('Opening embedded Studio results modal', { scenarioId: data.scenarioId });
-      new StudioEmbedModal(client, {
-        title: 'Simulation Results',
-        studioPath: `/embed/scenarios/${data.scenarioId}/results`,
-        modalSize: data.modalSize,
-      }).show();
-      return;
-    }
-    SimulationRunHandler.logger.log('Opening results modal', { scenarioId: data.scenarioId, documentId: data.documentId });
-    new ResultsModal(client, data.scenarioId, data.documentId).show();
+    SimulationRunHandler.logger.log('Opening embedded Studio results modal', { scenarioId: data.scenarioId });
+    new StudioEmbedModal(client, {
+      title: 'Simulation Results',
+      studioPath: `/embed/scenarios/${data.scenarioId}/results`,
+      modalSize: data.modalSize,
+    }).show();
   }
 
   /**
