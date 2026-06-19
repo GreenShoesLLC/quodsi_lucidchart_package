@@ -22,7 +22,7 @@ import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
-import { upsertModelAndSeedScenariosIfEmpty, canonicalModelName } from '../../sync/scenarioSync';
+import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
 
 export interface RunSubmitOutcome {
   accepted: boolean;
@@ -401,12 +401,10 @@ export class SimulationHandler {
       try {
         const storageAdapter = new StorageAdapter();
         const scenarios = storageAdapter.getScenarios(activePageProxy);
-        const sync = upsertModelAndSeedScenariosIfEmpty;
-        const { substitutions } = await sync(client, {
+        const { substitutions } = await upsertModel(client, {
           documentId: documentProxy.id,
           pageId: activePageProxy.id,
           modelName: await canonicalModelName(modelManager),
-          scenarios,
         });
         // If the server rewrote the Baseline id, persist it and re-target the run.
         if (substitutions.size > 0) {

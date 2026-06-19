@@ -13,7 +13,6 @@ import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsA
 import { SimulationRunState, initialSimulationRunState, simulationRunReducer, SimulationRunAction } from './simulationRunSlice';
 import { ConversionPreviewState, initialConversionPreviewState, conversionPreviewReducer, ConversionPreviewAction } from './conversionPreviewSlice';
 import { EntitlementsState, initialEntitlementsState, entitlementsReducer, EntitlementsAction } from './entitlementsSlice';
-import { SyncState, initialSyncState, syncReducer, SyncAction } from './syncSlice';
 
 // Combined state type
 export interface MessagingState {
@@ -26,7 +25,6 @@ export interface MessagingState {
   simulationRuns: SimulationRunState;
   conversionPreview: ConversionPreviewState;
   entitlements: EntitlementsState;
-  sync: SyncState;
 }
 
 // Export RootState as an alias for MessagingState (common Redux pattern)
@@ -43,7 +41,6 @@ export const initialState: MessagingState = {
   simulationRuns: initialSimulationRunState,
   conversionPreview: initialConversionPreviewState,
   entitlements: initialEntitlementsState,
-  sync: initialSyncState,
 };
 
 /**
@@ -61,6 +58,5 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     simulationRuns: simulationRunReducer(state.simulationRuns, action as SimulationRunAction),
     conversionPreview: conversionPreviewReducer(state.conversionPreview, action as ConversionPreviewAction),
     entitlements: entitlementsReducer(state.entitlements, action as EntitlementsAction),
-    sync: syncReducer(state.sync, action as SyncAction),
   };
 }

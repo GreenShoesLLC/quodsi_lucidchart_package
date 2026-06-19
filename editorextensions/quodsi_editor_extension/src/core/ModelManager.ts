@@ -29,7 +29,7 @@ import {
 } from "@quodsi/lucid-shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
-import { upsertModelAndSeedScenariosIfEmpty, canonicalModelName } from "./sync/scenarioSync";
+import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
@@ -1812,12 +1812,10 @@ export class ModelManager {
         try {
             const client = ModelManager.getClient();
             const documentProxy = new DocumentProxy(client);
-            const sync = upsertModelAndSeedScenariosIfEmpty;
-            const { substitutions } = await sync(client, {
+            const { substitutions } = await upsertModel(client, {
                 documentId: documentProxy.id,
                 pageId: page.id,
                 modelName: await canonicalModelName(this),
-                scenarios,
             });
             if (substitutions.size > 0) {
                 const updated = scenarios.map(s =>

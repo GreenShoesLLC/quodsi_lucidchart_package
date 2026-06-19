@@ -8,7 +8,7 @@ import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
-import { upsertModelAndSyncScenarios, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
+import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
 
 /**
  * Handler for simulation run management messages
@@ -180,11 +180,10 @@ export class SimulationRunHandler {
 
     // Fire-and-forget upsert that keeps the DB row current and refreshes the cache.
     const refreshUpsert = (): Promise<string | null | undefined> =>
-      upsertModelAndSyncScenarios(client, {
+      upsertModel(client, {
         documentId: data.documentId!,
         pageId: data.pageId!,
         modelName,
-        scenarios: [],
       }).then(({ serverModelId }) => {
         if (serverModelId) SimulationRunHandler.scenarioModelIdCache.set(cacheKey, serverModelId);
         return serverModelId;

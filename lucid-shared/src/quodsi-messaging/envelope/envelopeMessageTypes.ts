@@ -71,11 +71,6 @@ export enum EnvelopeMessageType {
   SIMULATION_RUN_CANCEL_REQUEST = "SIMULATION_RUN_CANCEL_REQUEST",
   SIMULATION_RUN_CANCEL_RESULT = "SIMULATION_RUN_CANCEL_RESULT",
 
-  // Sync All (model + scenarios + runs)
-  SYNC_ALL_REQUEST = "SYNC_ALL_REQUEST",
-  SYNC_ALL_SUCCESS = "SYNC_ALL_SUCCESS",
-  SYNC_ALL_ERROR = "SYNC_ALL_ERROR",
-
   // Modal
   OPEN_ANIMATION_MODAL = "OPEN_ANIMATION_MODAL",
   // Sent by a chromeless embed modal's own "Close" button to ask the host to

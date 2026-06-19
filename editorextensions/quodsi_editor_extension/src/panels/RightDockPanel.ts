@@ -22,7 +22,7 @@ import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers'
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
-import { upsertModelAndSeedScenariosIfEmpty } from '../core/sync/scenarioSync';
+import { upsertModel } from '../core/sync/scenarioSync';
 
 /**
  * RightDockPanel is responsible for displaying the model editor UI.
@@ -336,12 +336,10 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         const scenarios = storageAdapter.getScenarios(currentPage);
 
         try {
-            const sync = upsertModelAndSeedScenariosIfEmpty;
-            const { substitutions } = await sync(this.client, {
+            const { substitutions } = await upsertModel(this.client, {
                 documentId: document.id,
                 pageId: currentPage.id,
                 modelName: document.getTitle() || 'Untitled Model',
-                scenarios,
             });
             this.modelSyncSucceeded = true;
             this.debug.log('Model upserted + scenarios synced on panel init', {

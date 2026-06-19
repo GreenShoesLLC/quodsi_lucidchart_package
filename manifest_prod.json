@@ -1,6 +1,6 @@
 {
   "id": "d38c7ced-35e8-4962-a622-1d3fa480ab58",
-  "version": "2026.06.07",
+  "version": "2026.06.17",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -53,7 +53,6 @@
         "GetResultsData": "GetResultsData",
         "UpsertModel": "UpsertModel",
         "RemoveModel": "RemoveModel",
-        "SyncScenarios": "SyncScenarios",
         "ListScenarios": "ListScenarios",
         "SaveAndSubmitSimulation": "SaveAndSubmitSimulation",
         "SubmitSimulationJob": "SubmitSimulationJob",
