@@ -144,6 +144,38 @@ catch {
 }
 
 
+# --- Step 1.45: Build Monorepo Shared Library (@quodsi/shared) ---
+# @quodsi/lucid-shared re-exports @quodsi/shared (the monorepo package), consumed
+# via the `file:../../quodsi_shared` symlink through its BUILT dist/. If that dist
+# is stale, the bundle ships an outdated QUODSIM_VERSION — the engine appVersion
+# Lucid submits — so Batch pulls the wrong runner image (silent stale-pin failure).
+# Build @quodsi/shared first so the Step 1.5 lucid-shared build picks up fresh dist.
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.45: Building Monorepo Shared Library (@quodsi/shared)..."
+Write-Host "--------------------------------------------------"
+
+$MonorepoRoot = Split-Path $LucidPackageDir -Parent
+Write-Host "Executing 'npm run build -w @quodsi/shared' in $MonorepoRoot..."
+try {
+    Push-Location -Path $MonorepoRoot
+    npm run build -w @quodsi/shared *>&1 | Write-Host
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "'npm run build -w @quodsi/shared' command failed with exit code $LASTEXITCODE."
+        Pop-Location
+        exit $LASTEXITCODE
+    } else {
+        Write-Host "Monorepo shared library build completed successfully." -ForegroundColor Green
+    }
+    Pop-Location
+}
+catch {
+    Pop-Location
+    Write-Error "An error occurred while building @quodsi/shared. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+
 # --- Step 1.5: Build Shared Library ---
 Write-Host "--------------------------------------------------"
 Write-Host "Step 1.5: Building Shared Library (@quodsi/lucid-shared)..."
