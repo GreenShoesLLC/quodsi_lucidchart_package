@@ -9,6 +9,7 @@ jest.mock("../../../messaging/senders", () => ({
 }));
 
 const mockLocateElement = jest.fn();
+const mockOnGoToModelSettings = jest.fn();
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -27,6 +28,7 @@ function makeResult(overrides: Partial<ValidationResult> = {}): ValidationResult
 
 beforeEach(() => {
   mockLocateElement.mockClear();
+  mockOnGoToModelSettings.mockClear();
 });
 
 describe("ValidationDashboard", () => {
@@ -63,7 +65,7 @@ describe("ValidationDashboard", () => {
     expect(mockLocateElement).toHaveBeenCalledWith("elem-abc");
   });
 
-  it("does NOT render 'Go to source' for an issue without elementId", () => {
+  it("does NOT render 'Go to source' for an issue without elementId and not model-level", () => {
     const result = makeResult({
       issues: [
         {
@@ -129,5 +131,63 @@ describe("ValidationDashboard", () => {
 
     // Big green "Model is Valid" card must be absent when there ARE issues
     expect(screen.queryByText(/Model is Valid/i)).toBeNull();
+  });
+
+  // ── Model-level issue routing ─────────────────────────────────────────────
+
+  it("model-level issue: 'Go to source' calls onGoToModelSettings, not locateElement", () => {
+    const result = makeResult({
+      issues: [
+        {
+          id: "issue-ml-1",
+          severity: ValidationSeverity.ERROR,
+          message: "Run clock period must be greater than zero",
+          code: "invalid_run_clock_period",
+          // no elementId — model-level issues have none
+        },
+      ],
+      summary: { errorCount: 1, warningCount: 0, infoCount: 0 },
+    });
+    render(
+      <ValidationDashboard
+        validationState={result}
+        onGoToModelSettings={mockOnGoToModelSettings}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: /Go to source/i });
+    expect(btn).toBeInTheDocument();
+
+    fireEvent.click(btn);
+    expect(mockOnGoToModelSettings).toHaveBeenCalledTimes(1);
+    expect(mockLocateElement).not.toHaveBeenCalled();
+  });
+
+  it("shape-level issue: 'Go to source' calls locateElement, not onGoToModelSettings", () => {
+    const result = makeResult({
+      issues: [
+        {
+          id: "issue-shape-1",
+          severity: ValidationSeverity.ERROR,
+          message: "Activity has no outgoing connectors",
+          elementId: "shape-xyz",
+          code: "activity_no_connectors",
+        },
+      ],
+      summary: { errorCount: 1, warningCount: 0, infoCount: 0 },
+    });
+    render(
+      <ValidationDashboard
+        validationState={result}
+        onGoToModelSettings={mockOnGoToModelSettings}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: /Go to source/i });
+    expect(btn).toBeInTheDocument();
+
+    fireEvent.click(btn);
+    expect(mockLocateElement).toHaveBeenCalledWith("shape-xyz");
+    expect(mockOnGoToModelSettings).not.toHaveBeenCalled();
   });
 });

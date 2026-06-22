@@ -27,5 +27,8 @@ export { ModelValidationService } from './services/ModelValidationService';
 export { evaluateValidationGate, getIssueTitle, wrapProjectionAsModelDefinition } from '@quodsi/shared';
 export type { ValidationGateResult, SourceResolver } from '@quodsi/shared';
 
+// Model-level issue classifier — re-exported so quodsim-react can import from @quodsi/lucid-shared
+export { isModelLevelIssue, MODEL_LEVEL_ISSUE_CODES } from '@quodsi/shared';
+
 // NOTE: ValidationIssue, ValidationSeverity, and ValidationResult are exported from
 // '../quodsi-messaging' at the top level, not here, to avoid duplicate exports

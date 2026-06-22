@@ -1,19 +1,27 @@
 import React from 'react';
-import { ValidationResult, ValidationIssue, ValidationSeverity } from '@quodsi/lucid-shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity, isModelLevelIssue } from '@quodsi/lucid-shared';
 import { AlertTriangle, XCircle, Info, CheckCircle, MapPin } from 'lucide-react';
 import { useModelOpsSender } from '../../messaging/senders';
 
 interface ValidationDashboardProps {
   validationState: ValidationResult | null;
+  /** Called when the user clicks "Go to source" on a model-level issue.
+   *  Typically switches ModelEditor to its Settings ("basic") tab. */
+  onGoToModelSettings?: () => void;
 }
 
 /**
  * Validation dashboard shown in ModelEditor.
  * Shows errors and warnings in a simple list.  INFO-severity issues are
  * intentionally omitted (same policy as the shared ValidationPanel).
+ *
+ * "Go to source" behaviour:
+ *  - Model-level issues (timing/run-length codes) → calls onGoToModelSettings
+ *  - Shape-level issues (have an elementId) → calls locateElement to select the shape
  */
 export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   validationState,
+  onGoToModelSettings,
 }) => {
   const { locateElement } = useModelOpsSender();
 
@@ -52,18 +60,24 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
       ? <XCircle className="h-4 w-4 text-red-500" />
       : <AlertTriangle className="h-4 w-4 text-yellow-500" />;
 
+    // Determine whether and how "Go to source" should work for this issue
+    const hasGoToSource = isModelLevelIssue(issue) || Boolean(issue.elementId);
+    const handleGoToSource = isModelLevelIssue(issue)
+      ? () => onGoToModelSettings?.()
+      : () => locateElement(issue.elementId!);
+
     return (
       <div key={`issue-${index}`} className={containerCls}>
         <div className="flex items-start gap-2">
           <div className="flex-shrink-0 mt-0.5">{icon}</div>
           <div className="flex-1 min-w-0">
             <p className={`text-sm ${textCls} leading-snug`}>{issue.message}</p>
-            {issue.elementId && (
+            {hasGoToSource && (
               <div className="flex items-center gap-2 mt-2">
                 <button
-                  onClick={() => locateElement(issue.elementId!)}
+                  onClick={handleGoToSource}
                   className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer"
-                  title="Select this shape on the canvas"
+                  title={isModelLevelIssue(issue) ? "Open model settings" : "Select this shape on the canvas"}
                 >
                   <MapPin className="h-3 w-3" />
                   Go to source
