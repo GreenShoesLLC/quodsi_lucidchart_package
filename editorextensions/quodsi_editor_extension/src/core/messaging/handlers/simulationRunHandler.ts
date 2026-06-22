@@ -1,4 +1,5 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION } from '@quodsi/lucid-shared';
+import type { ISerializedModel } from '@quodsi/lucid-shared';
 import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
@@ -336,8 +337,9 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, reduce it to a
-   * read-only catalog, and send STUDIO_CATALOG back to the embed iframe.
+   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, build the full
+   * model catalog (model block + per-record fields), and send STUDIO_CATALOG
+   * back to the embed iframe for validation.
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
     const modelManager = ModelManager.getInstance();
@@ -347,8 +349,8 @@ export class SimulationRunHandler {
       return;
     }
     const serializer = ModelSerializerFactory.create(modelDefinition);
-    const serializedModel = serializer.serialize(modelDefinition);
-    const catalog = reduceModelToCatalog(serializedModel as unknown as Parameters<typeof reduceModelToCatalog>[0]);
+    const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
+    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel);
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -359,6 +361,96 @@ export class SimulationRunHandler {
       version: '1.0',
       data: { catalog },
     });
+  }
+
+  /**
+   * Build the full relay catalog from a serialized model. Populates the `model`
+   * block (timing fields) and all per-record optional fields (capacity, weight,
+   * generationConfig, rootClauses, etc.) so the embedded Studio can validate the
+   * full model without a separate API round-trip.
+   *
+   * The returned shape is structurally compatible with
+   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`.
+   * Connectors are flattened from activity.connectors into a top-level array
+   * (deduplicated by id) and carry sourceId/targetId/weight.
+   */
+  private static buildStudioCatalog(model: ISerializedModel) {
+    const m = model.model;
+
+    // Flatten + deduplicate connectors from all activities
+    const connectorMap = new Map<string, {
+      id: string; name: string; sourceId?: string; targetId?: string; weight?: number;
+    }>();
+    for (const a of model.activities ?? []) {
+      for (const c of a.connectors ?? []) {
+        if (c && c.id && !connectorMap.has(c.id)) {
+          connectorMap.set(c.id, {
+            id: c.id,
+            name: c.name,
+            sourceId: c.sourceId,
+            targetId: c.targetId,
+            weight: c.weight,
+          });
+        }
+      }
+    }
+
+    return {
+      model: {
+        id: m.id,
+        name: m.name,
+        simulationTimeType: m.simulationTimeType,
+        runClockPeriod: m.runClockPeriod,
+        startDateTime: m.startDateTime ?? null,
+        finishDateTime: m.finishDateTime ?? null,
+      },
+      activities: (model.activities ?? []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        capacity: a.capacity,
+        inboundQueueCapacity: a.inboundQueueCapacity,
+        outboundQueueCapacity: a.outboundQueueCapacity,
+        connectType: a.connectType,
+        actions: (a.actions ?? []).map((ac) => {
+          const base: {
+            id?: string;
+            actionType: string;
+            duration?: unknown;
+            resourceRequirementId?: string | null;
+          } = { id: ac.id, actionType: ac.actionType };
+          if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
+          if ('resourceRequirementId' in ac) {
+            base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
+          }
+          return base;
+        }),
+      })),
+      resources: (model.resources ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        capacity: r.capacity,
+      })),
+      resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
+        id: rq.id,
+        name: rq.name,
+        rootClauses: rq.rootClauses,
+      })),
+      generators: (model.generators ?? []).map((g) => ({
+        id: g.id,
+        name: g.name,
+        generationConfig: g.generationConfig
+          ? {
+              entityId: g.generationConfig.entityId,
+              entitiesPerCreation: g.generationConfig.entitiesPerCreation,
+              periodicOccurrences: g.generationConfig.periodicOccurrences,
+              maxEntities: g.generationConfig.maxEntities,
+              periodIntervalDuration: g.generationConfig.periodIntervalDuration,
+            }
+          : undefined,
+      })),
+      connectors: Array.from(connectorMap.values()),
+      entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
+    };
   }
 
   /**
