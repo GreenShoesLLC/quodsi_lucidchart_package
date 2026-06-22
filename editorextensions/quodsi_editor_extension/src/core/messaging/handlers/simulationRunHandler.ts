@@ -388,7 +388,7 @@ export class SimulationRunHandler {
             id: c.id,
             name: c.name,
             sourceId: c.sourceId,
-            targetId: c.targetId,
+            targetId: c.targetId || c.destinationUniqueId,
             weight: c.weight,
           });
         }
@@ -413,11 +413,11 @@ export class SimulationRunHandler {
         connectType: a.connectType,
         actions: (a.actions ?? []).map((ac) => {
           const base: {
-            id?: string;
+            id: string;
             actionType: string;
             duration?: unknown;
             resourceRequirementId?: string | null;
-          } = { id: ac.id, actionType: ac.actionType };
+          } = { id: ac.id ?? '', actionType: ac.actionType };
           if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
           if ('resourceRequirementId' in ac) {
             base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
@@ -453,11 +453,6 @@ export class SimulationRunHandler {
     };
   }
 
-  /**
-   * Handle simulation runs list request
-   *
-   * @param msg SIMULATION_RUNS_LIST_REQUEST message
-   */
   /**
    * Map DB run status to the RunState values React expects
    */
