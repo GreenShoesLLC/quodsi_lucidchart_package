@@ -606,7 +606,6 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       {activeTab === "validation" && (
         <ValidationDashboard
           validationState={validationState || null}
-          referenceData={referenceData}
         />
       )}
 

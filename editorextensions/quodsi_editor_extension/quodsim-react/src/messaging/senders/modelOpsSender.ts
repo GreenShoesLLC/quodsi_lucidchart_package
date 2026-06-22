@@ -205,6 +205,16 @@ export function useModelOpsSender() {
     });
   }, [send]);
 
+  /**
+   * Send a LOCATE_ELEMENT message so the extension selects and focuses the
+   * corresponding shape on the Lucid canvas.
+   *
+   * @param elementId The Lucid element ID to locate
+   */
+  const locateElement = useCallback((elementId: string) => {
+    send(EnvelopeMessageType.LOCATE_ELEMENT, { elementId });
+  }, [send]);
+
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
     validateModel,
@@ -219,7 +229,8 @@ export function useModelOpsSender() {
     updateTimePatterns,
     updateTimeDistributedConfigs,
     requestModelJson,
-    selectElement
+    selectElement,
+    locateElement
   }), [
     validateModel,
     convertModel,
@@ -233,6 +244,7 @@ export function useModelOpsSender() {
     updateTimePatterns,
     updateTimeDistributedConfigs,
     requestModelJson,
-    selectElement
+    selectElement,
+    locateElement
   ]);
 }
