@@ -119,6 +119,17 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         });
         return;
       }
+      // Locate element: iframe asks the host to select a diagram element on the canvas.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_LOCATE_ELEMENT'
+      ) {
+        sendMessage(EnvelopeMessageType.LOCATE_ELEMENT, {
+          elementId: (e.data as { elementId?: string }).elementId,
+        });
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => {

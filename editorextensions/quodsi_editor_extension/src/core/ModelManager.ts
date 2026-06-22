@@ -491,7 +491,7 @@ export class ModelManager {
     }
 
     // Other helper methods remain the same...
-    private findElementProxy(elementId: string): ElementProxy | null {
+    public findElementProxy(elementId: string): ElementProxy | null {
         if (!this.currentPage) return null;
         return this.currentPage.allBlocks.get(elementId) ||
             this.currentPage.allLines.get(elementId);

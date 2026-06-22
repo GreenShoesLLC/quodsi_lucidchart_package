@@ -1,6 +1,6 @@
 import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION } from '@quodsi/lucid-shared';
 import type { ISerializedModel } from '@quodsi/lucid-shared';
-import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
+import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -89,6 +89,12 @@ export class SimulationRunHandler {
       case EnvelopeMessageType.RUN_SCENARIO:
         SimulationRunHandler.handleRunScenario(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleRunScenario failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.LOCATE_ELEMENT:
+        SimulationRunHandler.handleLocateElement(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleLocateElement failed', e),
         );
         return true;
 
@@ -313,6 +319,35 @@ export class SimulationRunHandler {
       version: '1.0',
       data: { scenarioId: data.scenarioId, accepted: outcome.accepted, error: outcome.error },
     });
+  }
+
+  /**
+   * Handle LOCATE_ELEMENT from the embedded Studio iframe: select the
+   * corresponding block or line on the Lucid canvas so the user can see it.
+   */
+  private static async handleLocateElement(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { elementId?: string };
+    if (!data?.elementId) {
+      SimulationRunHandler.logger.error('LOCATE_ELEMENT: missing elementId');
+      return;
+    }
+    const { elementId } = data;
+    try {
+      const client = ModelManager.getClient();
+      const proxy = ModelManager.getInstance().findElementProxy(elementId);
+      if (!proxy) {
+        SimulationRunHandler.logger.error('LOCATE_ELEMENT: element not found', { elementId });
+        return;
+      }
+      const viewport = new Viewport(client);
+      // BlockProxy and LineProxy both extend ItemProxy; findElementProxy returns
+      // ElementProxy (the common base), so we cast to the narrower ItemProxy type
+      // that setSelectedItems expects.
+      viewport.setSelectedItems([proxy as ItemProxy]);
+      SimulationRunHandler.logger.log('LOCATE_ELEMENT: selected element', { elementId });
+    } catch (e) {
+      SimulationRunHandler.logger.error('LOCATE_ELEMENT: error selecting element', e);
+    }
   }
 
   /**
