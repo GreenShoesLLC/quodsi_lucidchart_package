@@ -344,6 +344,9 @@ export class SimulationRunHandler {
       // ElementProxy (the common base), so we cast to the narrower ItemProxy type
       // that setSelectedItems expects.
       viewport.setSelectedItems([proxy as ItemProxy]);
+      // Pan and zoom the canvas so the selected shape is visible. focusCameraOnItems
+      // also handles page-switching if the shape is on a different page.
+      viewport.focusCameraOnItems([proxy as ItemProxy]);
       SimulationRunHandler.logger.log('LOCATE_ELEMENT: selected element', { elementId });
     } catch (e) {
       SimulationRunHandler.logger.error('LOCATE_ELEMENT: error selecting element', e);
@@ -480,6 +483,8 @@ export class SimulationRunHandler {
               periodicOccurrences: g.generationConfig.periodicOccurrences,
               maxEntities: g.generationConfig.maxEntities,
               periodIntervalDuration: g.generationConfig.periodIntervalDuration,
+              periodicStartDuration: g.generationConfig.periodicStartDuration,
+              generatorType: g.generationConfig.generatorType,
             }
           : undefined,
       })),
