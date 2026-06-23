@@ -1,6 +1,6 @@
 // import { ModelValidationService } from "@quodsi/lucid-shared/src/validation/ModelValidationService";
 import {
-    ModelValidationService,
+    evaluateValidationGate,
     Activity,
     Connector,
     Generator,
@@ -52,7 +52,6 @@ export class ModelManager {
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
-    private validationService: ModelValidationService;
     private currentValidationResult: ValidationResult | null = null;
     private versionManager: LucidVersionManager;
     private versionCheckedPageId: string | null = null;
@@ -113,7 +112,6 @@ export class ModelManager {
 
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
-        this.validationService = new ModelValidationService();
         this.versionManager = new LucidVersionManager();
         this.debug.log('ModelManager instance created');
     }
@@ -445,10 +443,10 @@ export class ModelManager {
             return this.currentValidationResult;
         }
 
-        const result = await this.validationService.validate(modelDef);
+        const gate = evaluateValidationGate(modelDef);
 
-        // Result already has the correct structure with issues and summary
-        this.currentValidationResult = result;
+        // gate.result is a ValidationResult — same shape the dashboard already consumes
+        this.currentValidationResult = gate.result;
 
         this.changeTracker.validationDirty = false;
         this.changeTracker.lastValidationUpdate = Date.now();
@@ -491,7 +489,7 @@ export class ModelManager {
     }
 
     // Other helper methods remain the same...
-    private findElementProxy(elementId: string): ElementProxy | null {
+    public findElementProxy(elementId: string): ElementProxy | null {
         if (!this.currentPage) return null;
         return this.currentPage.allBlocks.get(elementId) ||
             this.currentPage.allLines.get(elementId);

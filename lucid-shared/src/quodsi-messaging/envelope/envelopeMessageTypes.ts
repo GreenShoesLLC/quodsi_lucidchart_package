@@ -98,6 +98,9 @@ export enum EnvelopeMessageType {
   RUN_SCENARIO = "RUN_SCENARIO",
   RUN_SCENARIO_RESULT = "RUN_SCENARIO_RESULT",
 
+  // Canvas navigation — locate/select a diagram element from the embedded Studio iframe
+  LOCATE_ELEMENT = "LOCATE_ELEMENT",
+
   // DevTools
   DEVTOOLS_SWIMLANE_SCAN_REQUEST = "DEVTOOLS_SWIMLANE_SCAN_REQUEST",
   DEVTOOLS_SWIMLANE_SCAN_RESULT = "DEVTOOLS_SWIMLANE_SCAN_RESULT",

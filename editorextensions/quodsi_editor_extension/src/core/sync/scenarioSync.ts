@@ -4,6 +4,7 @@ import {
   ModelSerializerFactory,
   parsePageTranslate,
   offsetSerializedModelCoordinates,
+  evaluateValidationGate,
 } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../utils/LucidDataActionUtility';
 import { ModelManager } from '../ModelManager';
@@ -98,6 +99,7 @@ export async function pushModelDefinitionSnapshot(
       pageId: params.pageId,
       modelName: params.modelName,
       modelDefinitionSnapshot: snapshot,
+      modelIsValid: evaluateValidationGate(def).canSimulate,
       ...(modelDiagramSvg !== undefined ? { modelDiagramSvg } : {}),
     },
     asynchronous: false,

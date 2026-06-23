@@ -1,5 +1,6 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, reduceModelToCatalog } from '@quodsi/lucid-shared';
-import { DocumentProxy, Viewport } from 'lucid-extension-sdk';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, buildRelayConnectors } from '@quodsi/lucid-shared';
+import type { ISerializedModel } from '@quodsi/lucid-shared';
+import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
@@ -88,6 +89,12 @@ export class SimulationRunHandler {
       case EnvelopeMessageType.RUN_SCENARIO:
         SimulationRunHandler.handleRunScenario(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleRunScenario failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.LOCATE_ELEMENT:
+        SimulationRunHandler.handleLocateElement(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleLocateElement failed', e),
         );
         return true;
 
@@ -315,6 +322,38 @@ export class SimulationRunHandler {
   }
 
   /**
+   * Handle LOCATE_ELEMENT from the embedded Studio iframe: select the
+   * corresponding block or line on the Lucid canvas so the user can see it.
+   */
+  private static async handleLocateElement(msg: EnvelopeBase): Promise<void> {
+    const data = msg.data as { elementId?: string };
+    if (!data?.elementId) {
+      SimulationRunHandler.logger.error('LOCATE_ELEMENT: missing elementId');
+      return;
+    }
+    const { elementId } = data;
+    try {
+      const client = ModelManager.getClient();
+      const proxy = ModelManager.getInstance().findElementProxy(elementId);
+      if (!proxy) {
+        SimulationRunHandler.logger.error('LOCATE_ELEMENT: element not found', { elementId });
+        return;
+      }
+      const viewport = new Viewport(client);
+      // BlockProxy and LineProxy both extend ItemProxy; findElementProxy returns
+      // ElementProxy (the common base), so we cast to the narrower ItemProxy type
+      // that setSelectedItems expects.
+      viewport.setSelectedItems([proxy as ItemProxy]);
+      // Pan and zoom the canvas so the selected shape is visible. focusCameraOnItems
+      // also handles page-switching if the shape is on a different page.
+      viewport.focusCameraOnItems([proxy as ItemProxy]);
+      SimulationRunHandler.logger.log('LOCATE_ELEMENT: selected element', { elementId });
+    } catch (e) {
+      SimulationRunHandler.logger.error('LOCATE_ELEMENT: error selecting element', e);
+    }
+  }
+
+  /**
    * Handle REQUEST_STUDIO_TOKEN: relay a FRESH Kinde access token back to the
    * 'studio-embed' embed iframe. getTokenForRelay refreshes via Lucid when the
    * cached token is expiring, so the embed never receives a dead token (which
@@ -336,8 +375,9 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, reduce it to a
-   * read-only catalog, and send STUDIO_CATALOG back to the embed iframe.
+   * Handle REQUEST_STUDIO_CATALOG: serialize the live model, build the full
+   * model catalog (model block + per-record fields), and send STUDIO_CATALOG
+   * back to the embed iframe for validation.
    */
   private static async handleRequestStudioCatalog(msg: EnvelopeBase): Promise<void> {
     const modelManager = ModelManager.getInstance();
@@ -347,8 +387,8 @@ export class SimulationRunHandler {
       return;
     }
     const serializer = ModelSerializerFactory.create(modelDefinition);
-    const serializedModel = serializer.serialize(modelDefinition);
-    const catalog = reduceModelToCatalog(serializedModel as unknown as Parameters<typeof reduceModelToCatalog>[0]);
+    const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
+    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel);
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -362,10 +402,85 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle simulation runs list request
+   * Build the full relay catalog from a serialized model. Populates the `model`
+   * block (timing fields) and all per-record optional fields (capacity, weight,
+   * generationConfig, rootClauses, etc.) so the embedded Studio can validate the
+   * full model without a separate API round-trip.
    *
-   * @param msg SIMULATION_RUNS_LIST_REQUEST message
+   * The returned shape is structurally compatible with
+   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`.
+   * Connectors are flattened from activity.connectors into a top-level array
+   * (deduplicated by id) and carry sourceId/targetId/weight.
    */
+  private static buildStudioCatalog(model: ISerializedModel) {
+    const m = model.model;
+
+    // Flatten + deduplicate connectors from all activities AND synthesize
+    // generator exit connectors (ISerializedGenerator.exitConnector is only a
+    // bare target activity id, not a full connector object — buildRelayConnectors
+    // adds synthetic entries so the embed's validation finds the connectivity).
+    const connectors = buildRelayConnectors(model);
+
+    return {
+      model: {
+        id: m.id,
+        name: m.name,
+        simulationTimeType: m.simulationTimeType,
+        runClockPeriod: m.runClockPeriod,
+        startDateTime: m.startDateTime ?? null,
+        finishDateTime: m.finishDateTime ?? null,
+      },
+      activities: (model.activities ?? []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        capacity: a.capacity,
+        inboundQueueCapacity: a.inboundQueueCapacity,
+        outboundQueueCapacity: a.outboundQueueCapacity,
+        connectType: a.connectType,
+        actions: (a.actions ?? []).map((ac) => {
+          const base: {
+            id: string;
+            actionType: string;
+            duration?: unknown;
+            resourceRequirementId?: string | null;
+          } = { id: ac.id ?? '', actionType: ac.actionType };
+          if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
+          if ('resourceRequirementId' in ac) {
+            base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
+          }
+          return base;
+        }),
+      })),
+      resources: (model.resources ?? []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        capacity: r.capacity,
+      })),
+      resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
+        id: rq.id,
+        name: rq.name,
+        rootClauses: rq.rootClauses,
+      })),
+      generators: (model.generators ?? []).map((g) => ({
+        id: g.id,
+        name: g.name,
+        generationConfig: g.generationConfig
+          ? {
+              entityId: g.generationConfig.entityId,
+              entitiesPerCreation: g.generationConfig.entitiesPerCreation,
+              periodicOccurrences: g.generationConfig.periodicOccurrences,
+              maxEntities: g.generationConfig.maxEntities,
+              periodIntervalDuration: g.generationConfig.periodIntervalDuration,
+              periodicStartDuration: g.generationConfig.periodicStartDuration,
+              generatorType: g.generationConfig.generatorType,
+            }
+          : undefined,
+      })),
+      connectors,
+      entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
+    };
+  }
+
   /**
    * Map DB run status to the RunState values React expects
    */
