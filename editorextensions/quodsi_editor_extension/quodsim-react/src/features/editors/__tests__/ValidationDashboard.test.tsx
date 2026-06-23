@@ -10,6 +10,7 @@ jest.mock("../../../messaging/senders", () => ({
 
 const mockLocateElement = jest.fn();
 const mockOnGoToModelSettings = jest.fn();
+const mockOnGoToEntities = jest.fn();
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -29,6 +30,7 @@ function makeResult(overrides: Partial<ValidationResult> = {}): ValidationResult
 beforeEach(() => {
   mockLocateElement.mockClear();
   mockOnGoToModelSettings.mockClear();
+  mockOnGoToEntities.mockClear();
 });
 
 describe("ValidationDashboard", () => {
@@ -189,5 +191,82 @@ describe("ValidationDashboard", () => {
     fireEvent.click(btn);
     expect(mockLocateElement).toHaveBeenCalledWith("shape-xyz");
     expect(mockOnGoToModelSettings).not.toHaveBeenCalled();
+  });
+
+  // ─ Entity issue routing ───────────────────────────────────────────
+
+  it("entity issue: 'Go to source' calls onGoToEntities, not locateElement or onGoToModelSettings", () => {
+    const result = makeResult({
+      issues: [
+        {
+          id: "issue-ent-1",
+          severity: ValidationSeverity.ERROR,
+          message: "Entity must have a unique name",
+          code: "entity_duplicate_name",
+          context: { objectType: "Entity" },
+        },
+      ],
+      summary: { errorCount: 1, warningCount: 0, infoCount: 0 },
+    });
+    render(
+      <ValidationDashboard
+        validationState={result}
+        onGoToModelSettings={mockOnGoToModelSettings}
+        onGoToEntities={mockOnGoToEntities}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: /Go to source/i });
+    expect(btn).toBeInTheDocument();
+
+    fireEvent.click(btn);
+    expect(mockOnGoToEntities).toHaveBeenCalledTimes(1);
+    expect(mockLocateElement).not.toHaveBeenCalled();
+    expect(mockOnGoToModelSettings).not.toHaveBeenCalled();
+  });
+
+  it("entity issue: 'Go to source' button is shown (hasGoToSource is true)", () => {
+    const result = makeResult({
+      issues: [
+        {
+          id: "issue-ent-2",
+          severity: ValidationSeverity.WARNING,
+          message: "Entity has no generator",
+          code: "entity_no_generator",
+          context: { objectType: "Entity" },
+        },
+      ],
+      summary: { errorCount: 0, warningCount: 1, infoCount: 0 },
+    });
+    render(<ValidationDashboard validationState={result} onGoToEntities={mockOnGoToEntities} />);
+
+    expect(screen.getByRole("button", { name: /Go to source/i })).toBeInTheDocument();
+  });
+
+  it("model-level issue still routes to onGoToModelSettings (not onGoToEntities or locateElement)", () => {
+    const result = makeResult({
+      issues: [
+        {
+          id: "issue-ml-2",
+          severity: ValidationSeverity.ERROR,
+          message: "Run clock period must be greater than zero",
+          code: "invalid_run_clock_period",
+        },
+      ],
+      summary: { errorCount: 1, warningCount: 0, infoCount: 0 },
+    });
+    render(
+      <ValidationDashboard
+        validationState={result}
+        onGoToModelSettings={mockOnGoToModelSettings}
+        onGoToEntities={mockOnGoToEntities}
+      />
+    );
+
+    const btn = screen.getByRole("button", { name: /Go to source/i });
+    fireEvent.click(btn);
+    expect(mockOnGoToModelSettings).toHaveBeenCalledTimes(1);
+    expect(mockOnGoToEntities).not.toHaveBeenCalled();
+    expect(mockLocateElement).not.toHaveBeenCalled();
   });
 });

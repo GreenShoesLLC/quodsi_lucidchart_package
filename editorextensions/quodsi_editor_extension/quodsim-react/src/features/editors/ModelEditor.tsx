@@ -607,6 +607,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
         <ValidationDashboard
           validationState={validationState || null}
           onGoToModelSettings={() => setActiveTab("basic")}
+          onGoToEntities={() => setActiveTab("entities")}
         />
       )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ValidationResult, ValidationIssue, ValidationSeverity, isModelLevelIssue } from '@quodsi/lucid-shared';
+import { ValidationResult, ValidationIssue, ValidationSeverity, isModelLevelIssue, isEntityIssue } from '@quodsi/lucid-shared';
 import { AlertTriangle, XCircle, Info, CheckCircle, MapPin } from 'lucide-react';
 import { useModelOpsSender } from '../../messaging/senders';
 
@@ -8,6 +8,9 @@ interface ValidationDashboardProps {
   /** Called when the user clicks "Go to source" on a model-level issue.
    *  Typically switches ModelEditor to its Settings ("basic") tab. */
   onGoToModelSettings?: () => void;
+  /** Called when the user clicks "Go to source" on an entity issue.
+   *  Typically switches ModelEditor to its Entities tab. */
+  onGoToEntities?: () => void;
 }
 
 /**
@@ -17,11 +20,13 @@ interface ValidationDashboardProps {
  *
  * "Go to source" behaviour:
  *  - Model-level issues (timing/run-length codes) → calls onGoToModelSettings
+ *  - Entity issues (context.objectType === 'Entity') → calls onGoToEntities
  *  - Shape-level issues (have an elementId) → calls locateElement to select the shape
  */
 export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
   validationState,
   onGoToModelSettings,
+  onGoToEntities,
 }) => {
   const { locateElement } = useModelOpsSender();
 
@@ -61,9 +66,11 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
       : <AlertTriangle className="h-4 w-4 text-yellow-500" />;
 
     // Determine whether and how "Go to source" should work for this issue
-    const hasGoToSource = isModelLevelIssue(issue) || Boolean(issue.elementId);
+    const hasGoToSource = isModelLevelIssue(issue) || isEntityIssue(issue) || Boolean(issue.elementId);
     const handleGoToSource = isModelLevelIssue(issue)
       ? () => onGoToModelSettings?.()
+      : isEntityIssue(issue)
+      ? () => onGoToEntities?.()
       : () => locateElement(issue.elementId!);
 
     return (
@@ -77,7 +84,7 @@ export const ValidationDashboard: React.FC<ValidationDashboardProps> = ({
                 <button
                   onClick={handleGoToSource}
                   className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 cursor-pointer"
-                  title={isModelLevelIssue(issue) ? "Open model settings" : "Select this shape on the canvas"}
+                  title={isModelLevelIssue(issue) ? "Open model settings" : isEntityIssue(issue) ? "Open entities tab" : "Select this shape on the canvas"}
                 >
                   <MapPin className="h-3 w-3" />
                   Go to source
