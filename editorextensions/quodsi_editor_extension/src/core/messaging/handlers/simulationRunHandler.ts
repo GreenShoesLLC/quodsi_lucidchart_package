@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, buildRelayConnectors } from '@quodsi/lucid-shared';
 import type { ISerializedModel } from '@quodsi/lucid-shared';
 import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
@@ -415,23 +415,11 @@ export class SimulationRunHandler {
   private static buildStudioCatalog(model: ISerializedModel) {
     const m = model.model;
 
-    // Flatten + deduplicate connectors from all activities
-    const connectorMap = new Map<string, {
-      id: string; name: string; sourceId?: string; targetId?: string; weight?: number;
-    }>();
-    for (const a of model.activities ?? []) {
-      for (const c of a.connectors ?? []) {
-        if (c && c.id && !connectorMap.has(c.id)) {
-          connectorMap.set(c.id, {
-            id: c.id,
-            name: c.name,
-            sourceId: c.sourceId,
-            targetId: c.targetId || c.destinationUniqueId,
-            weight: c.weight,
-          });
-        }
-      }
-    }
+    // Flatten + deduplicate connectors from all activities AND synthesize
+    // generator exit connectors (ISerializedGenerator.exitConnector is only a
+    // bare target activity id, not a full connector object — buildRelayConnectors
+    // adds synthetic entries so the embed's validation finds the connectivity).
+    const connectors = buildRelayConnectors(model);
 
     return {
       model: {
@@ -488,7 +476,7 @@ export class SimulationRunHandler {
             }
           : undefined,
       })),
-      connectors: Array.from(connectorMap.values()),
+      connectors,
       entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
     };
   }

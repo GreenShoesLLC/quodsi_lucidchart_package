@@ -348,6 +348,7 @@ export * from './quodsi-messaging';
 
 // Embed utilities
 export * from './embed/reduceModelToCatalog';
+export * from './embed/buildRelayConnectors';
 
 // Config / feature flags
 export * from './config/modalSize';
