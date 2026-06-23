@@ -130,6 +130,18 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         });
         return;
       }
+      // Close embed: iframe asks the host to close the Studies modal (e.g. after
+      // "Go to source" so the located shape is visible on the canvas). Re-uses the
+      // existing CLOSE_MODAL path which RoutingModal.messageFromFrame intercepts and
+      // calls this.hide() — no new message type or extension-side handler needed.
+      if (
+        e.origin === studioOrigin &&
+        e.source === iframeRef.current?.contentWindow &&
+        e.data?.type === 'QUODSI_CLOSE_EMBED'
+      ) {
+        sendMessage(EnvelopeMessageType.CLOSE_MODAL);
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => {
