@@ -693,7 +693,11 @@ export class ModelManager {
             if (type === SimulationObjectType.None) {
                 const existingElement = this.getElementById(element.id);
                 if (existingElement) {
-                    this.removeElement(element.id);
+                    // Must await: removeElement is async (clears q_data via
+                    // clearElementData + cascades). Without the await, saveElementData
+                    // returns and the caller's validateModel()/selection refresh race
+                    // ahead of the removal, leaving the panel showing the stale type.
+                    await this.removeElement(element.id);
                 }
                 return;
             }
