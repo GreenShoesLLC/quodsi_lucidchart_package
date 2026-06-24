@@ -1,4 +1,4 @@
-import { Viewport, DocumentProxy } from 'lucid-extension-sdk';
+import { Viewport, DocumentProxy, EditorClient } from 'lucid-extension-sdk';
 import {
   EnvelopeBase,
   EnvelopeMessageType,
@@ -182,6 +182,12 @@ export class DiagramMappingRelayHandler {
 
       DiagramMappingRelayHandler.logger.log('APPLY_SHAPE_CHANGES complete', { requestId, result });
 
+      // Refresh the main editor: re-broadcast the selection/context so a shape
+      // that's still selected behind the modal reflects its new mapping (without
+      // this, the panel stays stale until the user reselects), and keep the DB
+      // model snapshot current.
+      DiagramMappingRelayHandler.postConvertRefresh(client, page.id, modelManager);
+
       router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.APPLY_SHAPE_CHANGES_RESULT,
@@ -220,7 +226,6 @@ export class DiagramMappingRelayHandler {
       const modelManager = ModelManager.getInstance();
       const viewport = new Viewport(client);
       const page = viewport.getCurrentPage();
-      const document = new DocumentProxy(client);
 
       if (!page) throw new Error('No current page available');
 
@@ -247,72 +252,75 @@ export class DiagramMappingRelayHandler {
 
       DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE: conversion complete, refreshing UI');
 
-      // Post-convert refresh — recovered from ConversionPreviewHandler.handleApplyConversion
-      // (git ce884d4). Sends MODEL_CONTEXT, updates SelectionHandler context (triggers
-      // SELECTION_CHANGED → panel transitions to model editor), registers model in DB,
-      // and seeds the model-definition snapshot for the Studies catalog.
-      Promise.resolve().then(async () => {
-        const documentId = document.id;
-        const title = document.getTitle() || 'Untitled Document';
-
-        // Send MODEL_CONTEXT message so the panel knows the page is now a model
-        router.send('model', {
-          id: generateId(),
-          type: EnvelopeMessageType.MODEL_CONTEXT,
-          source: 'host',
-          target: 'model-iframe',
-          version: '1.0',
-          data: {
-            documentId,
-            title,
-            pageId: page.id,
-            isQuodsiModel: true,
-            hasValidModel: true,
-          },
-        });
-
-        // Use SelectionHandler to send a proper SELECTION_CHANGED with
-        // modelItemData & referenceData so the panel transitions correctly
-        SelectionHandler.setDocumentContext(
-          documentId,
-          page.id,
-          title,
-          true,
-        );
-
-        DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE: sent context refresh messages');
-
-        // Register model in quodsi_api database (fire-and-forget)
-        const modelName = await canonicalModelName(modelManager);
-        LucidDataActionUtility.performDataAction(client, {
-          dataConnectorName: 'quodsi_api_data_connector',
-          actionName: 'UpsertModel',
-          actionData: {
-            documentId,
-            pageId: page.id,
-            modelName,
-          },
-          asynchronous: false,
-        }).then(() => {
-          DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE: model registered in database');
-          // Seed the model-definition snapshot so the Studies catalog is ready
-          void pushModelDefinitionSnapshot(client, {
-            documentId,
-            pageId: page.id,
-            modelName,
-          }).catch(err => {
-            DiagramMappingRelayHandler.logger.error('AUTO_CONVERT_PAGE: failed to seed model snapshot:', err);
-          });
-        }).catch(err => {
-          DiagramMappingRelayHandler.logger.error('AUTO_CONVERT_PAGE: failed to register model in database:', err);
-        });
-      }).catch(error => {
-        DiagramMappingRelayHandler.logger.error('AUTO_CONVERT_PAGE: error in post-convert refresh:', error);
-      });
+      DiagramMappingRelayHandler.postConvertRefresh(client, page.id, modelManager);
 
     } catch (error) {
       DiagramMappingRelayHandler.logger.error('AUTO_CONVERT_PAGE error:', error);
       // Fire-and-forget — no error message sent to the panel
     }
+  }
+
+  /**
+   * Post-convert UI + DB refresh, shared by the embed apply (handleApply) and the
+   * one-click auto-convert (handleAutoConvert). Recovered from the deleted
+   * ConversionPreviewHandler.handleApplyConversion (git ce884d4): broadcasts
+   * MODEL_CONTEXT and re-runs SelectionHandler context (sends a fresh
+   * SELECTION_CHANGED so the editor panel — including a shape that's still
+   * selected behind the modal — reflects the new mapping), registers the model
+   * row, and seeds the model-definition snapshot for the Studies catalog.
+   * Best-effort and fire-and-forget; never throws into the caller.
+   */
+  private static postConvertRefresh(
+    client: EditorClient,
+    pageId: string,
+    modelManager: ModelManager,
+  ): void {
+    const document = new DocumentProxy(client);
+    Promise.resolve().then(async () => {
+      const documentId = document.id;
+      const title = document.getTitle() || 'Untitled Document';
+
+      router.send('model', {
+        id: generateId(),
+        type: EnvelopeMessageType.MODEL_CONTEXT,
+        source: 'host',
+        target: 'model-iframe',
+        version: '1.0',
+        data: { documentId, title, pageId, isQuodsiModel: true, hasValidModel: true },
+      });
+
+      // Document-level context (transitions a freshly-converted page to "is a model").
+      SelectionHandler.setDocumentContext(documentId, pageId, title, true);
+
+      // Re-process the current selection so a shape that's still selected behind the
+      // modal refreshes its element editor to the new mapping. setDocumentContext
+      // alone does NOT re-broadcast the selected element's data — this mirrors
+      // elementOpsHandler's post-save SELECTION refresh.
+      try {
+        const selectedItems = new Viewport(client).getSelectedItems();
+        await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
+      } catch (e) {
+        DiagramMappingRelayHandler.logger.error('postConvertRefresh: selection refresh failed', e);
+      }
+
+      DiagramMappingRelayHandler.logger.log('postConvertRefresh: sent context refresh messages');
+
+      const modelName = await canonicalModelName(modelManager);
+      LucidDataActionUtility.performDataAction(client, {
+        dataConnectorName: 'quodsi_api_data_connector',
+        actionName: 'UpsertModel',
+        actionData: { documentId, pageId, modelName },
+        asynchronous: false,
+      }).then(() => {
+        DiagramMappingRelayHandler.logger.log('postConvertRefresh: model registered in database');
+        void pushModelDefinitionSnapshot(client, { documentId, pageId, modelName }).catch(err => {
+          DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to seed model snapshot:', err);
+        });
+      }).catch(err => {
+        DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to register model in database:', err);
+      });
+    }).catch(error => {
+      DiagramMappingRelayHandler.logger.error('postConvertRefresh: error in refresh:', error);
+    });
   }
 }
