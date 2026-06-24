@@ -98,6 +98,22 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
         );
         return;
       }
+      // Page analysis result (response): host sends PAGE_ANALYSIS_RESULT -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.PAGE_ANALYSIS_RESULT) {
+        if (e.source !== window.parent) return;
+        const d = e.data.data as { requestId?: number; data?: unknown; error?: string };
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_PAGE_ANALYSIS_RESULT', requestId: d?.requestId, data: d?.data, error: d?.error }, studioOrigin);
+        return;
+      }
+      // Apply shape changes result (response): host sends APPLY_SHAPE_CHANGES_RESULT -> forward into the iframe.
+      if (isEnvelope(e.data) && e.data.type === EnvelopeMessageType.APPLY_SHAPE_CHANGES_RESULT) {
+        if (e.source !== window.parent) return;
+        const d = e.data.data as { requestId?: number; success?: boolean; error?: string };
+        iframeRef.current?.contentWindow?.postMessage(
+          { type: 'QUODSI_APPLY_CHANGES_RESULT', requestId: d?.requestId, success: d?.success, error: d?.error }, studioOrigin);
+        return;
+      }
       // Catalog hop (request): iframe asks for the catalog -> ask the host.
       if (
         e.origin === studioOrigin &&
@@ -127,6 +143,21 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
       ) {
         sendMessage(EnvelopeMessageType.LOCATE_ELEMENT, {
           elementId: (e.data as { elementId?: string }).elementId,
+        });
+        return;
+      }
+      // Analyze page: iframe asks the host to analyze the diagram page for shape mapping.
+      if (e.origin === studioOrigin && e.source === iframeRef.current?.contentWindow
+          && e.data?.type === 'QUODSI_ANALYZE_PAGE') {
+        sendMessage(EnvelopeMessageType.ANALYZE_PAGE, { requestId: (e.data as { requestId?: number }).requestId });
+        return;
+      }
+      // Apply shape changes: iframe asks the host to apply shape changes to the diagram.
+      if (e.origin === studioOrigin && e.source === iframeRef.current?.contentWindow
+          && e.data?.type === 'QUODSI_APPLY_CHANGES') {
+        sendMessage(EnvelopeMessageType.APPLY_SHAPE_CHANGES, {
+          requestId: (e.data as { requestId?: number }).requestId,
+          changes: (e.data as { changes?: unknown }).changes,
         });
         return;
       }
