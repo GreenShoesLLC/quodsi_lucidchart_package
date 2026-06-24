@@ -255,7 +255,7 @@ export const ModelPanel: React.FC = () => {
                   selection.documentContext?.pageId ?? ''
                 )}
               >
-                Review &amp; Convert: Preview, edit and convert
+                Review & Convert: Preview, edit and convert
               </button>
             </div>
           </div>
