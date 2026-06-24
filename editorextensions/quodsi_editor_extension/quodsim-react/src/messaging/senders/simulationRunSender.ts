@@ -94,6 +94,15 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
 
+  /**
+   * Send an AUTO_CONVERT_PAGE message to trigger a one-click auto-convert.
+   * The extension analyzes the page, applies proposed types (skipping null +
+   * Entity), converts, and refreshes the model panel — no modal opened.
+   */
+  const autoConvertPage = useCallback((documentId: string, pageId: string) => {
+    send(EnvelopeMessageType.AUTO_CONVERT_PAGE, { documentId, pageId });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
@@ -103,5 +112,6 @@ export function useSimulationRunSender() {
     openScenariosModal,
     openStudiesModal,
     openDiagramMappingModal,
+    autoConvertPage,
   };
 }

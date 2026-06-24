@@ -1,5 +1,5 @@
 // editorextensions/quodsi_editor_extension/tests/relay/diagramMappingRelayHandler.test.ts
-import { buildFinalMappings } from '../../src/core/messaging/handlers/diagramMappingRelayHandler';
+import { buildFinalMappings, buildAutoMappings } from '../../src/core/messaging/handlers/diagramMappingRelayHandler';
 import { SimulationObjectType } from '@quodsi/lucid-shared';
 
 describe('buildFinalMappings (Entity guard)', () => {
@@ -12,5 +12,36 @@ describe('buildFinalMappings (Entity guard)', () => {
     expect(map.get('b1')).toBe(SimulationObjectType.Resource);
     expect(map.has('b2')).toBe(false);
     expect(map.get('l1')).toBe(null);
+  });
+});
+
+describe('buildAutoMappings (auto-convert helper)', () => {
+  it('applies proposed types, skips null + Entity', () => {
+    const map = buildAutoMappings({ mappings: [
+      { elementId: 'b1', proposedType: SimulationObjectType.Activity },
+      { elementId: 'b2', proposedType: SimulationObjectType.Entity },
+      { elementId: 'b3', proposedType: null },
+    ] });
+    expect(map.get('b1')).toBe(SimulationObjectType.Activity);
+    expect(map.has('b2')).toBe(false);
+    expect(map.has('b3')).toBe(false);
+  });
+
+  it('includes Resource and Connector proposed types', () => {
+    const map = buildAutoMappings({ mappings: [
+      { elementId: 'r1', proposedType: SimulationObjectType.Resource },
+      { elementId: 'c1', proposedType: SimulationObjectType.Connector },
+    ] });
+    expect(map.get('r1')).toBe(SimulationObjectType.Resource);
+    expect(map.get('c1')).toBe(SimulationObjectType.Connector);
+    expect(map.size).toBe(2);
+  });
+
+  it('returns empty map when all entries are null or Entity', () => {
+    const map = buildAutoMappings({ mappings: [
+      { elementId: 'x1', proposedType: null },
+      { elementId: 'x2', proposedType: SimulationObjectType.Entity },
+    ] });
+    expect(map.size).toBe(0);
   });
 });

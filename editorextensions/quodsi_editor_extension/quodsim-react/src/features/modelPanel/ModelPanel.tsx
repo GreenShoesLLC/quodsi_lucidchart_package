@@ -55,8 +55,8 @@ export const ModelPanel: React.FC = () => {
   // Get selection context for documentId
   const { selection } = useMessaging();
 
-  // Get simulation run senders (for diagram mapping modal)
-  const { openDiagramMappingModal } = useSimulationRunSender();
+  // Get simulation run senders (for diagram mapping modal and auto-convert)
+  const { openDiagramMappingModal, autoConvertPage } = useSimulationRunSender();
 
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
@@ -236,7 +236,7 @@ export const ModelPanel: React.FC = () => {
             </h3>
             <button
               className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium"
-              onClick={() => openDiagramMappingModal(
+              onClick={() => autoConvertPage(
                 selection.documentContext?.documentId ?? '',
                 selection.documentContext?.pageId ?? ''
               )}
@@ -244,8 +244,8 @@ export const ModelPanel: React.FC = () => {
               Convert Automatically
             </button>
             <p className="text-gray-500 text-sm mt-3">
-              Uses Quodsi's best-practice assumptions.<br />
-              You can edit everything later.
+              Instantly applies Quodsi's best-practice mapping.<br />
+              No questions asked — you can edit everything later.
             </p>
             <div className="mt-5 pt-3 border-t border-gray-200">
               <button
@@ -255,7 +255,7 @@ export const ModelPanel: React.FC = () => {
                   selection.documentContext?.pageId ?? ''
                 )}
               >
-                Review & Convert: Preview, edit and convert
+                Review &amp; Convert: Preview, edit and convert
               </button>
             </div>
           </div>
