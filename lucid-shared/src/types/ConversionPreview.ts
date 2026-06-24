@@ -6,6 +6,4 @@ export {
   type ElementMappingPreview,
   type ConversionPreviewData,
   type ConversionPreviewSummary,
-  type ElementMappingOverride,
-  type ConversionApplyRequest,
 } from '@quodsi/shared';
