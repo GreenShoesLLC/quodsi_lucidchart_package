@@ -31,7 +31,7 @@ export class SimulationRunHandler {
    * modal is open at a time, so a single slot suffices.
    */
   private static pendingEmbedResolve:
-    | { surface: 'scenarios' | 'studies'; idPromise: Promise<string | null | undefined> }
+    | { surface: 'scenarios' | 'studies' | 'diagram-mapping'; idPromise: Promise<string | null | undefined> }
     | null = null;
 
   /**
@@ -83,6 +83,12 @@ export class SimulationRunHandler {
       case EnvelopeMessageType.OPEN_STUDIES_MODAL:
         SimulationRunHandler.handleOpenStudiesModal(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e),
+        );
+        return true;
+
+      case EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL:
+        SimulationRunHandler.handleOpenDiagramMappingModal(msg).catch((e) =>
+          SimulationRunHandler.logger.error('handleOpenDiagramMappingModal failed', e),
         );
         return true;
 
@@ -164,7 +170,7 @@ export class SimulationRunHandler {
    * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
   private static async openEmbedSurfaceModal(
-    msg: EnvelopeBase, surface: 'scenarios' | 'studies', title: string,
+    msg: EnvelopeBase, surface: 'scenarios' | 'studies' | 'diagram-mapping', title: string,
   ): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
@@ -277,6 +283,14 @@ export class SimulationRunHandler {
    */
   private static async handleOpenStudiesModal(msg: EnvelopeBase): Promise<void> {
     return SimulationRunHandler.openEmbedSurfaceModal(msg, 'studies', 'Studies');
+  }
+
+  /**
+   * Handle OPEN_DIAGRAM_MAPPING_MODAL: open the embedded Studio Diagram Mapping
+   * surface at /embed/models/<id>/diagram-mapping.
+   */
+  private static async handleOpenDiagramMappingModal(msg: EnvelopeBase): Promise<void> {
+    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'diagram-mapping', 'Diagram Mapping');
   }
 
   /**

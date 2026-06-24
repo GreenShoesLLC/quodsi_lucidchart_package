@@ -4,12 +4,10 @@
 jest.mock("axios", () => ({}));
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { ModelPanel } from "../ModelPanel";
 
 // --- controllable hook state ---------------------------------------------
-let mockPreviewVisible = false;
-
 const mockUseModelPanel = {
   modelName: "Test Model",
   currentElement: null,
@@ -32,16 +30,6 @@ const mockUseModelPanel = {
 
 jest.mock("../../../messaging/hooks/useModelPanel", () => ({
   useModelPanel: () => mockUseModelPanel,
-}));
-
-jest.mock("../../../messaging/hooks/useConversionPreview", () => ({
-  // Closure reads mockPreviewVisible fresh each render so a rerender can flip it.
-  useConversionPreview: () => ({
-    isVisible: mockPreviewVisible,
-    isApplying: false,
-    openPreview: jest.fn(),
-    applyDefaults: jest.fn(),
-  }),
 }));
 
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -67,9 +55,6 @@ jest.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
 jest.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
 jest.mock("../ElementEditor", () => ({ ElementEditor: () => <div /> }));
 jest.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
-jest.mock("../../conversionPreview/ConversionPreviewPanel", () => ({
-  ConversionPreviewPanel: () => <div data-testid="conversion-preview" />,
-}));
 jest.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
 }));
@@ -77,21 +62,20 @@ jest.mock("../../../utils/pendingSubmission", () => ({
   setPendingSubmission: () => {},
 }));
 
-beforeEach(() => {
-  mockPreviewVisible = false;
-});
+// Mock simulationRunSender since ModelPanel now uses openDiagramMappingModal from it
+jest.mock("../../../messaging/senders/simulationRunSender", () => ({
+  useSimulationRunSender: () => ({
+    openDiagramMappingModal: jest.fn(),
+  }),
+}));
 
-describe("ModelPanel — hook order is stable when Diagram Mapping opens", () => {
-  it("does not throw a Rules-of-Hooks error when isPreviewVisible flips true on rerender", () => {
-    // First render: preview hidden -> reaches the bottom (all hooks run).
+describe("ModelPanel — renders without errors", () => {
+  it("renders without throwing when model is loaded", () => {
+    expect(() => render(<ModelPanel />)).not.toThrow();
+  });
+
+  it("rerenders without throwing (hook order is stable)", () => {
     const { rerender } = render(<ModelPanel />);
-
-    // "Diagram Mapping" => openPreview() => isPreviewVisible becomes true.
-    // Before the fix, the early return fires before a useCallback further
-    // down, so this rerender throws "Rendered fewer hooks than expected."
-    mockPreviewVisible = true;
     expect(() => rerender(<ModelPanel />)).not.toThrow();
-
-    expect(screen.getByTestId("conversion-preview")).toBeInTheDocument();
   });
 });

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
-import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
+import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender';
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { ConversionPreviewPanel } from '../conversionPreview/ConversionPreviewPanel';
 import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedEntity, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
 import { EntityRow } from '../editors/EntitiesEditor';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
@@ -56,13 +55,8 @@ export const ModelPanel: React.FC = () => {
   // Get selection context for documentId
   const { selection } = useMessaging();
 
-  // Get conversion preview state and actions
-  const {
-    isVisible: isPreviewVisible,
-    isApplying,
-    openPreview,
-    applyDefaults
-  } = useConversionPreview();
+  // Get simulation run senders (for diagram mapping modal and auto-convert)
+  const { openDiagramMappingModal, autoConvertPage } = useSimulationRunSender();
 
   // Tab state management for ModelEditor
   const [activeTab, setActiveTab] = useState<EditorTab>("basic");
@@ -230,11 +224,6 @@ export const ModelPanel: React.FC = () => {
     [onElementUpdate, currentElement?.id]
   );
 
-  // Show conversion preview panel when visible
-  if (isPreviewVisible) {
-    return <ConversionPreviewPanel onRemoveModel={onRemoveModel} />;
-  }
-
   // Handle initialization state
   if (needsInitialization) {
     return (
@@ -246,20 +235,25 @@ export const ModelPanel: React.FC = () => {
               Transform diagram into Simulation Model
             </h3>
             <button
-              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium disabled:opacity-50"
-              onClick={applyDefaults}
-              disabled={isApplying}
+              className="px-5 py-2.5 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors shadow-sm font-medium"
+              onClick={() => autoConvertPage(
+                selection.documentContext?.documentId ?? '',
+                selection.documentContext?.pageId ?? ''
+              )}
             >
-              {isApplying ? 'Converting...' : 'Convert Automatically'}
+              Convert Automatically
             </button>
             <p className="text-gray-500 text-sm mt-3">
-              Uses Quodsi's best-practice assumptions.<br />
-              You can edit everything later.
+              Instantly applies Quodsi's best-practice mapping.<br />
+              No questions asked — you can edit everything later.
             </p>
             <div className="mt-5 pt-3 border-t border-gray-200">
               <button
                 className="text-blue-600 hover:text-blue-800 text-sm hover:underline"
-                onClick={openPreview}
+                onClick={() => openDiagramMappingModal(
+                  selection.documentContext?.documentId ?? '',
+                  selection.documentContext?.pageId ?? ''
+                )}
               >
                 Review & Convert: Preview, edit and convert
               </button>
@@ -333,7 +327,10 @@ export const ModelPanel: React.FC = () => {
         currentElement={currentElement}
         editorType={editorType}
         onRemoveModel={onRemoveModel}
-        onOpenDiagramMapping={openPreview}
+        onOpenDiagramMapping={() => openDiagramMappingModal(
+          selection.documentContext?.documentId ?? '',
+          selection.documentContext?.pageId ?? '',
+        )}
         onElementTypeChange={onElementTypeChange}
         diagramElementType={diagramElementType}
         referenceData={referenceData}

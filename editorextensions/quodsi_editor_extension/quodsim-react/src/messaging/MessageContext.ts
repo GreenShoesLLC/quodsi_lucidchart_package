@@ -80,14 +80,6 @@ export function useSimulationRuns() {
 }
 
 /**
- * Hook to access conversion preview state
- */
-export function useConversionPreviewState() {
-  const { conversionPreview } = useMessaging();
-  return conversionPreview;
-}
-
-/**
  * Hook to access authentication state
  */
 export function useAuth() {

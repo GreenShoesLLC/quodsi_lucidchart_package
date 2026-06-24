@@ -11,7 +11,7 @@ import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
-import { ConversionPreviewHandler } from './conversionPreviewHandler';
+import { DiagramMappingRelayHandler } from './diagramMappingRelayHandler';
 import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
 import { PortalHandler } from './portalHandler';
@@ -64,8 +64,8 @@ export class MessageHandlers {
       return true;
     }
 
-    // Conversion preview messages
-    if (ConversionPreviewHandler.handleMessage(msg)) {
+    // Diagram-mapping relay messages (embedded Studio 2B)
+    if (DiagramMappingRelayHandler.handleMessage(msg)) {
       return true;
     }
 
@@ -139,7 +139,7 @@ export {
   TimePatternHandler,
   StorageHandler,
   SimulationRunHandler,
-  ConversionPreviewHandler,
+  DiagramMappingRelayHandler,
   DevtoolsHandler,
   PortalHandler,
   SwimLaneHandler,
