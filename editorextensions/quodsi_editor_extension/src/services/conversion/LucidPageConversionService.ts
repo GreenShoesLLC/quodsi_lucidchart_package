@@ -145,17 +145,18 @@ export class LucidPageConversionService extends QuodsiLogger {
             const isReconversion = this.storageAdapter.isQuodsiModel(page);
 
             if (isReconversion) {
-                this.log('Re-conversion: applying partial updates');
-                // For re-conversion, only clear data for elements that are in the mappings
-                // This allows updating specific elements without affecting others
-                for (const [blockId, block] of page.allBlocks) {
+                this.log('Re-conversion: removing changed elements before re-adding');
+                for (const [blockId] of page.allBlocks) {
                     if (mappings.has(blockId)) {
-                        this.storageAdapter.clearElementData(block);
+                        // removeElement clears q_data AND removes from every collection
+                        // (Activity/Resource/etc.) with cascade cleanup — so a type change
+                        // can't leave the old element behind. (Bug 2)
+                        await this.modelManager.removeElement(blockId);
                     }
                 }
-                for (const [lineId, line] of page.allLines) {
+                for (const [lineId] of page.allLines) {
                     if (mappings.has(lineId)) {
-                        this.storageAdapter.clearElementData(line);
+                        await this.modelManager.removeElement(lineId);
                     }
                 }
             } else {
