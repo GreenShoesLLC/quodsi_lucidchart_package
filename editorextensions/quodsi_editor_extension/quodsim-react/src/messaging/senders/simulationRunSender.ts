@@ -89,6 +89,11 @@ export function useSimulationRunSender() {
     send(EnvelopeMessageType.OPEN_STUDIES_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
   }, [send]);
 
+  /** Send an OPEN_DIAGRAM_MAPPING_MODAL message to open the embedded Studio Diagram Mapping surface. */
+  const openDiagramMappingModal = useCallback((documentId: string, pageId: string) => {
+    send(EnvelopeMessageType.OPEN_DIAGRAM_MAPPING_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
+  }, [send]);
+
   return {
     listSimulationRuns,
     deleteSimulationRun,
@@ -97,5 +102,6 @@ export function useSimulationRunSender() {
     openAnimationModal,
     openScenariosModal,
     openStudiesModal,
+    openDiagramMappingModal,
   };
 }

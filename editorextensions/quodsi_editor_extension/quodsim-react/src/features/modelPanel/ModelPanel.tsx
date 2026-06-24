@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useModelPanel } from '../../messaging/hooks/useModelPanel';
 import { useConversionPreview } from '../../messaging/hooks/useConversionPreview';
 import { useModelOpsSender } from '../../messaging/senders/modelOpsSender';
+import { useSimulationRunSender } from '../../messaging/senders/simulationRunSender';
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
@@ -55,6 +56,9 @@ export const ModelPanel: React.FC = () => {
 
   // Get selection context for documentId
   const { selection } = useMessaging();
+
+  // Get simulation run senders (for diagram mapping modal)
+  const { openDiagramMappingModal } = useSimulationRunSender();
 
   // Get conversion preview state and actions
   const {
@@ -333,7 +337,10 @@ export const ModelPanel: React.FC = () => {
         currentElement={currentElement}
         editorType={editorType}
         onRemoveModel={onRemoveModel}
-        onOpenDiagramMapping={openPreview}
+        onOpenDiagramMapping={() => openDiagramMappingModal(
+          selection.documentContext?.documentId ?? '',
+          selection.documentContext?.pageId ?? '',
+        )}
         onElementTypeChange={onElementTypeChange}
         diagramElementType={diagramElementType}
         referenceData={referenceData}
