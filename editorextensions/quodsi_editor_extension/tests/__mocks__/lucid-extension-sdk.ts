@@ -6,3 +6,6 @@ export class LineProxy {}
 export class PageProxy {}
 export class Viewport {}
 export class DocumentProxy {}
+export class Modal {}
+export class Panel {}
+export class EditorClient {}
