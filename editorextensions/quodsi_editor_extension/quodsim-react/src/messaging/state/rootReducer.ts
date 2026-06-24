@@ -11,7 +11,6 @@ import { SimulationState, initialSimulationState, simulationReducer, SimulationA
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
 import { SimulationRunState, initialSimulationRunState, simulationRunReducer, SimulationRunAction } from './simulationRunSlice';
-import { ConversionPreviewState, initialConversionPreviewState, conversionPreviewReducer, ConversionPreviewAction } from './conversionPreviewSlice';
 import { EntitlementsState, initialEntitlementsState, entitlementsReducer, EntitlementsAction } from './entitlementsSlice';
 
 // Combined state type
@@ -23,7 +22,6 @@ export interface MessagingState {
   validation: ValidationState;
   elementOps: ElementOpsState;
   simulationRuns: SimulationRunState;
-  conversionPreview: ConversionPreviewState;
   entitlements: EntitlementsState;
 }
 
@@ -39,7 +37,6 @@ export const initialState: MessagingState = {
   validation: initialValidationState,
   elementOps: initialElementOpsState,
   simulationRuns: initialSimulationRunState,
-  conversionPreview: initialConversionPreviewState,
   entitlements: initialEntitlementsState,
 };
 
@@ -56,7 +53,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     validation: validationReducer(state.validation, action as ValidationAction),
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
     simulationRuns: simulationRunReducer(state.simulationRuns, action as SimulationRunAction),
-    conversionPreview: conversionPreviewReducer(state.conversionPreview, action as ConversionPreviewAction),
     entitlements: entitlementsReducer(state.entitlements, action as EntitlementsAction),
   };
 }

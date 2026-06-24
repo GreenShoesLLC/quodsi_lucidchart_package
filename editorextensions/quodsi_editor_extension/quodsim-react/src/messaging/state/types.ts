@@ -34,7 +34,6 @@ import { SimulationAction } from './simulationSlice';
 import { ValidationAction } from './validationSlice';
 import { ElementOpsAction } from './elementOpsSlice';
 import { SimulationRunAction } from './simulationRunSlice';
-import { ConversionPreviewAction } from './conversionPreviewSlice';
 import { EntitlementsAction } from './entitlementsSlice';
 
 // Re-export the action types
@@ -46,7 +45,6 @@ export type {
   ValidationAction,
   ElementOpsAction,
   SimulationRunAction,
-  ConversionPreviewAction,
   EntitlementsAction,
 };
 
@@ -59,6 +57,5 @@ export type MessagingAction =
   | ValidationAction
   | ElementOpsAction
   | SimulationRunAction
-  | ConversionPreviewAction
   | EntitlementsAction
 ;

@@ -11,7 +11,6 @@ import { TimePatternHandler } from './timePatternHandler';
 import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
-import { ConversionPreviewHandler } from './conversionPreviewHandler';
 import { DiagramMappingRelayHandler } from './diagramMappingRelayHandler';
 import { AuthHandler } from './authHandler';
 import { DevtoolsHandler } from './devtoolsHandler';
@@ -62,11 +61,6 @@ export class MessageHandlers {
     
     // Model operations messages
     if (ModelOpsHandler.handleMessage(msg)) {
-      return true;
-    }
-
-    // Conversion preview messages
-    if (ConversionPreviewHandler.handleMessage(msg)) {
       return true;
     }
 
@@ -145,7 +139,6 @@ export {
   TimePatternHandler,
   StorageHandler,
   SimulationRunHandler,
-  ConversionPreviewHandler,
   DiagramMappingRelayHandler,
   DevtoolsHandler,
   PortalHandler,
