@@ -6,10 +6,9 @@ export type { PreflightResult, UpgradeIssue, RawElement, UpgradeElementsResult }
 // quodsi-messaging isEnvelope (which guards message envelopes, a different concept).
 export { flattenEnvelope, makeEnvelope, flatToDomain, flatToPlatform, PLATFORM_KEYS } from '@quodsi/shared';
 export type { RawEnvelope } from '@quodsi/shared';
-export * from './IVersionUpgrader';
-export * from './BaseVersionUpgrader';
-export * from './VersionManager';
-export * from './VersionUpgraderFactory';
+// Version-upgrade framework now sourced from core (versioning Phase 1)
+export { BaseVersionUpgrader, VersionManager, VersionUpgraderFactory } from '@quodsi/shared';
+export type { IVersionUpgrader, UpgradeOptions, VersionManagerOptions } from '@quodsi/shared';
 // Transforms now sourced from the monorepo core (versioning SP2)
 export type {
     VersionTransformation,
@@ -28,7 +27,4 @@ export {
     getTransformationsBetweenVersions,
 } from '@quodsi/shared';
 export * from './output_schema_compat';
-// Re-export common types
-export type { VersionManagerOptions } from './VersionManager';
-export type { UpgradeOptions } from './IVersionUpgrader';
 
