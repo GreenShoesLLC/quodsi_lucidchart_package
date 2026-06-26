@@ -42,6 +42,7 @@ export const extractModelData = (mod: ModelInput): Model => {
     startDateTime: data.startDateTime || null,
     finishDateTime: data.finishDateTime || null,
     description: data.description || "",
+    levers: data.levers ?? [],
   };
 
   return result;

@@ -6,8 +6,11 @@ import {
   SimulationObjectType,
   StateListManager,
   ValidationResult,
+  ScenarioObjectType,
+  type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { Settings, Hash, Info, Users, AlertTriangle, Boxes } from "lucide-react";
+import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import StatesEditor from "./StatesEditor";
 import EntitiesEditor, { EntityRow } from "./EntitiesEditor";
 import { AccordionSection } from "../shared/AccordionSection";
@@ -551,6 +554,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     )}
                   </div>
                 </AccordionSection>
+
+                {/* Study levers */}
+                <LeverAuthoringSection
+                  objectType={ScenarioObjectType.MODEL}
+                  componentName={localModelDraft.name}
+                  levers={localModelDraft.levers ?? []}
+                  onChange={(next: ScenarioLever[]) => {
+                    setLocalModelDraft((prev) =>
+                      updateModelImmutably(prev, { levers: next })
+                    );
+                    setHasPendingChanges(true);
+                  }}
+                />
 
                 {/* Auto-save status */}
                 <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
