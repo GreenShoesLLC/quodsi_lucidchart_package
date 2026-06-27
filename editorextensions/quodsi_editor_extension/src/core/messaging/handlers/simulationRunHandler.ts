@@ -443,6 +443,10 @@ export class SimulationRunHandler {
         runClockPeriod: m.runClockPeriod,
         startDateTime: m.startDateTime ?? null,
         finishDateTime: m.finishDateTime ?? null,
+        // Opt-in model-level levers (reps/seed) so the live-relay embed path
+        // surfaces them in the New-Study roster (the receiver — RelayedCatalog.
+        // model.levers + composeModelDefinition — is already wired).
+        levers: m.levers ?? [],
       },
       activities: (model.activities ?? []).map((a) => ({
         id: a.id,
