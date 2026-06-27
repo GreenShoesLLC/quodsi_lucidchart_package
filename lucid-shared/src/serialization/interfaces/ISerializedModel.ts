@@ -1,5 +1,6 @@
 import { PeriodUnit } from '@quodsi/shared';
 import { SimulationTimeType } from '@quodsi/shared';
+import { ScenarioLever } from '@quodsi/shared';
 import { ISerializedEntity } from './ISerializedEntity';
 import { ISerializedActivity } from './ISerializedActivity';
 import { ISerializedResource } from './ISerializedResource';
@@ -34,6 +35,9 @@ export interface ISerializedModel {
         warmupDateTime: string | null;
         startDateTime: string | null;
         finishDateTime: string | null;
+        // Opt-in model-level levers (reps/seed). Conditionally included so
+        // lever-less models produce no churn.
+        levers?: ScenarioLever[];
     };
     entities: ISerializedEntity[];
     activities: ISerializedActivity[];

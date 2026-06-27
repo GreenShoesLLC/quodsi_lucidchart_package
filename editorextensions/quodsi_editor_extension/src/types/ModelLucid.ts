@@ -6,7 +6,8 @@ import {
     SimulationTimeType,
     PlatformMetadata,
     PlatformType,
-    ModelDefaults
+    ModelDefaults,
+    ScenarioLever
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
 import { SimObjectLucid } from './SimObjectLucid';
@@ -26,6 +27,7 @@ interface StoredModelData {
     warmupDateTime?: Date | null;
     startDateTime?: Date | null;
     finishDateTime?: Date | null;
+    levers?: ScenarioLever[];
 }
 
 export class ModelLucid extends SimObjectLucid<Model> {
@@ -74,6 +76,7 @@ export class ModelLucid extends SimObjectLucid<Model> {
             model.warmupDateTime = storedData.warmupDateTime ?? null;
             model.startDateTime = storedData.startDateTime ?? null;
             model.finishDateTime = storedData.finishDateTime ?? null;
+            model.levers = storedData.levers ?? [];
         } else {
             model.name = this.getElementName();
         }
@@ -103,7 +106,8 @@ export class ModelLucid extends SimObjectLucid<Model> {
             runClockPeriodUnit: this.simObject.runClockPeriodUnit,
             warmupDateTime: this.simObject.warmupDateTime,
             startDateTime: this.simObject.startDateTime,
-            finishDateTime: this.simObject.finishDateTime
+            finishDateTime: this.simObject.finishDateTime,
+            levers: this.simObject.levers
         };
 
         this.storageAdapter.updateElementData(page, dataToStore);

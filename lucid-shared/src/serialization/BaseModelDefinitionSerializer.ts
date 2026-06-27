@@ -86,7 +86,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('Model must have id and name');
             }
 
-            return {
+            const serialized: ISerializedModel['model'] = {
                 id: model.id,
                 name: model.name,
                 description: model.description,
@@ -102,6 +102,12 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 startDateTime: model.startDateTime?.toISOString() ?? null,
                 finishDateTime: model.finishDateTime?.toISOString() ?? null
             };
+            // Opt-in model-level levers (reps/seed) — conditional, like component
+            // levers, so lever-less models stay byte-identical.
+            if (model.levers?.length) {
+                serialized.levers = model.levers;
+            }
+            return serialized;
         } catch (error) {
             throw new SerializationError('Model', 'Failed to serialize model properties', error instanceof Error ? error : undefined);
         }
