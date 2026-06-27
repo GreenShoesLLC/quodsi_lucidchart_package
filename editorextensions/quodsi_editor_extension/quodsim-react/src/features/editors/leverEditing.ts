@@ -1,4 +1,4 @@
-import { createScenarioLever, type ScenarioLever, type LeverRange, ScenarioPropertyName, PROPERTY_DISPLAY_LABELS, ActionType } from '@quodsi/lucid-shared';
+import { createScenarioLever, defaultRangeForProperty, type ScenarioLever, type LeverRange, ScenarioPropertyName, PROPERTY_DISPLAY_LABELS, ActionType } from '@quodsi/lucid-shared';
 
 const DEFAULT_RANGE: LeverRange = { min: 1, max: 5, step: 1 };
 
@@ -23,7 +23,7 @@ export function leverFor(levers: ScenarioLever[], propertyName: ScenarioProperty
 export function toggleLever(levers: ScenarioLever[], propertyName: ScenarioPropertyName, componentName: string): ScenarioLever[] {
   const existing = leverFor(levers, propertyName);
   if (existing) return levers.filter((l) => l !== existing);
-  return [...levers, createScenarioLever({ propertyName, label: defaultLeverLabel(componentName, propertyName), enabled: true, range: { ...DEFAULT_RANGE } })];
+  return [...levers, createScenarioLever({ propertyName, label: defaultLeverLabel(componentName, propertyName), enabled: true, range: defaultRangeForProperty(propertyName) })];
 }
 
 /** Patch the property's lever (label and/or range). */
@@ -56,7 +56,7 @@ export function leverForAction(levers: ScenarioLever[], actionId: string): Scena
 export function toggleActionLever(levers: ScenarioLever[], actionId: string, label: string): ScenarioLever[] {
   const existing = leverForAction(levers, actionId);
   if (existing) return levers.filter((l) => l !== existing);
-  return [...levers, createScenarioLever({ propertyName: ScenarioPropertyName.DURATION, actionId, label, enabled: true, range: { ...DEFAULT_RANGE } })];
+  return [...levers, createScenarioLever({ propertyName: ScenarioPropertyName.DURATION, actionId, label, enabled: true, range: defaultRangeForProperty(ScenarioPropertyName.DURATION) })];
 }
 
 /** Patch an action lever (label and/or range). */

@@ -291,6 +291,7 @@ export {
 // NOTE: ScenarioObjectType is already re-exported in the element-types block above.
 export {
   createScenarioLever,
+  defaultRangeForProperty,
   isRangeableProperty,
   isRateScaleProperty,
   isLeverableProperty,
