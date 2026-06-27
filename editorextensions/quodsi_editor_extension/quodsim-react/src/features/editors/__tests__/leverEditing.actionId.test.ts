@@ -1,4 +1,4 @@
-import { leverForAction, toggleActionLever, patchActionLever, patchActionRange, toggleLever, actionDurationLeverLabel } from '../leverEditing';
+import { leverForAction, toggleActionLever, patchActionLever, patchActionRange, toggleLever, actionDurationLeverLabel } from '@quodsi/lucid-shared';
 import { ScenarioPropertyName, ActionType, type ScenarioLever } from '@quodsi/lucid-shared';
 
 describe('actionId-keyed lever editing', () => {

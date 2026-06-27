@@ -4,7 +4,7 @@ import {
   ScenarioObjectType, ScenarioPropertyName, NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
   PROPERTY_DISPLAY_LABELS, isRateScaleProperty, type ScenarioLever,
 } from '@quodsi/lucid-shared';
-import { leverFor, toggleLever, patchLever, patchRange, leverForAction, toggleActionLever, patchActionLever, patchActionRange } from './leverEditing';
+import { leverFor, toggleLever, patchLever, patchRange, leverForAction, toggleActionLever, patchActionLever, patchActionRange } from '@quodsi/lucid-shared';
 
 const RATE_SCALABLE = new Set(['constant', 'uniform', 'triangular', 'normal', 'exponential', 'gamma', 'lognormal']);
 

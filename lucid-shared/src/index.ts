@@ -300,6 +300,15 @@ export {
   NUMERIC_PROPERTIES_BY_OBJECT_TYPE,
   PROPERTIES_BY_OBJECT_TYPE,
   ScenarioPropertyName,
+  leverFor,
+  toggleLever,
+  patchLever,
+  patchRange,
+  actionDurationLeverLabel,
+  leverForAction,
+  toggleActionLever,
+  patchActionLever,
+  patchActionRange,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
 
