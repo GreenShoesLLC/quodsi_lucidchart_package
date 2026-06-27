@@ -6,6 +6,11 @@ const DEFAULT_RANGE: LeverRange = { min: 1, max: 5, step: 1 };
  *  read as just the component name (e.g. "Start — Inter-arrival Timing"). */
 function defaultLeverLabel(componentName: string, propertyName: ScenarioPropertyName): string {
   const prop = PROPERTY_DISPLAY_LABELS[propertyName] ?? propertyName;
+  // MODEL singleton levers (reps/seed) read generically — "Model Replications" /
+  // "Model Random Seed" — rather than embedding the model's own name.
+  if (propertyName === ScenarioPropertyName.REPS || propertyName === ScenarioPropertyName.SEED) {
+    return `Model ${prop}`;
+  }
   return `${componentName} — ${prop}`;
 }
 
