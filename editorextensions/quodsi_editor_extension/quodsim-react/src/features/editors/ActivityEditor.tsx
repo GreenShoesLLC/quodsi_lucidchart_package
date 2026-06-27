@@ -55,7 +55,7 @@ import {
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
-import { actionDurationLeverLabel } from "./leverEditing";
+import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
 import StatesEditor from "./StatesEditor";
