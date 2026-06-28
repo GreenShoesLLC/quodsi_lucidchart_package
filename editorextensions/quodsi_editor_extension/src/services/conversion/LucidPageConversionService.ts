@@ -276,7 +276,7 @@ export class LucidPageConversionService extends QuodsiLogger {
 
                 // Check if name is already used in this conversion session
                 if (typeNames.has(element.name)) {
-                    element.name = generateUniqueName(element.name, blockId);
+                    element.name = generateUniqueName(element.name, (n) => typeNames!.has(n));
                     // Update storage with the unique name (createFromConversion already wrote the original)
                     this.storageAdapter.updateElementData(block, element);
                 }
@@ -427,7 +427,7 @@ export class LucidPageConversionService extends QuodsiLogger {
 
                 // Check if name is already used in this conversion session
                 if (typeNames.has(element.name)) {
-                    element.name = generateUniqueName(element.name, blockId);
+                    element.name = generateUniqueName(element.name, (n) => typeNames!.has(n));
                     // Update storage with the unique name (createFromConversion already wrote the original)
                     this.storageAdapter.updateElementData(block, element);
                 }
@@ -622,7 +622,7 @@ export class LucidPageConversionService extends QuodsiLogger {
 
             // Ensure unique name before registration using local tracking
             if (resourceNames.has(resource.name)) {
-                resource.name = generateUniqueName(resource.name, newBlock.id);
+                resource.name = generateUniqueName(resource.name, (n) => resourceNames!.has(n));
                 // Update storage with the unique name (createFromConversion already wrote the original)
                 this.storageAdapter.updateElementData(newBlock, resource);
             }
@@ -684,10 +684,7 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const laneTitle = lane.getTitle() || `Lane ${i}`;
                 const resourceId = generateUUID();
 
-                let resourceName = laneTitle;
-                if (resourceNames.has(resourceName)) {
-                    resourceName = `${laneTitle} (${blockId.substring(0, 6)}-${i})`;
-                }
+                const resourceName = generateUniqueName(laneTitle, (n) => resourceNames!.has(n));
                 resourceNames.add(resourceName);
 
                 const bb = block.getBoundingBox();
