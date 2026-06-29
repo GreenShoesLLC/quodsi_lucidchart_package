@@ -1,10 +1,9 @@
-import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, QUODSIM_VERSION, buildRelayConnectors } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ModelSerializerFactory, ModalSize, buildRelayConnectors } from '@quodsi/lucid-shared';
 import type { ISerializedModel } from '@quodsi/lucid-shared';
 import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
-import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
@@ -31,7 +30,7 @@ export class SimulationRunHandler {
    * modal is open at a time, so a single slot suffices.
    */
   private static pendingEmbedResolve:
-    | { surface: 'scenarios' | 'studies' | 'diagram-mapping'; idPromise: Promise<string | null | undefined> }
+    | { surface: 'studies' | 'diagram-mapping'; idPromise: Promise<string | null | undefined> }
     | null = null;
 
   /**
@@ -42,44 +41,6 @@ export class SimulationRunHandler {
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
-      case EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST:
-        // List operation pulls scenarios + nested runs
-        // Handle async method - fire and forget, return true immediately
-        SimulationRunHandler.handleSimulationRunsListRequest(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleSimulationRunsListRequest:', error);
-        });
-        return true;
-
-      case EnvelopeMessageType.SIMULATION_RUN_DELETE:
-        // Handle async method - fire and forget, return true immediately
-        SimulationRunHandler.handleSimulationRunDelete(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleSimulationRunDelete:', error);
-        });
-        return true;
-
-      case EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST:
-        // Handle async method - fire and forget, return true immediately
-        SimulationRunHandler.handleResimulateRequest(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleResimulateRequest:', error);
-        });
-        return true;
-
-      case EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST:
-        SimulationRunHandler.handleSimulationRunCancel(msg).catch(error => {
-          SimulationRunHandler.logger.error('Error in handleSimulationRunCancel:', error);
-        });
-        return true;
-
-      case EnvelopeMessageType.OPEN_ANIMATION_MODAL:
-        SimulationRunHandler.handleOpenAnimationModal(msg);
-        return true;
-
-      case EnvelopeMessageType.OPEN_SCENARIOS_MODAL:
-        SimulationRunHandler.handleOpenScenariosModal(msg).catch((e) =>
-          SimulationRunHandler.logger.error('handleOpenScenariosModal failed', e),
-        );
-        return true;
-
       case EnvelopeMessageType.OPEN_STUDIES_MODAL:
         SimulationRunHandler.handleOpenStudiesModal(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleOpenStudiesModal failed', e),
@@ -141,25 +102,7 @@ export class SimulationRunHandler {
   }
 
   /**
-   * Handle OPEN_ANIMATION_MODAL: open the embedded Studio animation viewer for
-   * a scenario in the generic embed modal, with a "full screen" pop-out to the
-   * standalone /animation/:scenarioId tab.
-   */
-  private static handleOpenAnimationModal(msg: EnvelopeBase): void {
-    const data = msg.data as { scenarioId: string; modalSize?: ModalSize };
-    if (!data?.scenarioId) return;
-    SimulationRunHandler.logger.log('Opening embedded Studio animation modal', { scenarioId: data.scenarioId });
-    const client = ModelManager.getClient();
-    new StudioEmbedModal(client, {
-      title: 'Animation',
-      studioPath: `/embed/animation/${data.scenarioId}`,
-      fullScreenPath: `/animation/${data.scenarioId}`,
-      modalSize: data.modalSize,
-    }).show();
-  }
-
-  /**
-   * Shared embed-modal opener for the Scenarios/Studies surfaces: ensure the
+   * Shared embed-modal opener for the Studies surfaces: ensure the
    * model row exists in quodsi_api (UpsertModel) to resolve its server id, then
    * open the embedded Studio at /embed/models/<serverModelId>/<surface>.
    *
@@ -170,7 +113,7 @@ export class SimulationRunHandler {
    * Passing an empty list makes the helper skip SyncScenarios (UpsertModel only).
    */
   private static async openEmbedSurfaceModal(
-    msg: EnvelopeBase, surface: 'scenarios' | 'studies' | 'diagram-mapping', title: string,
+    msg: EnvelopeBase, surface: 'studies' | 'diagram-mapping', title: string,
   ): Promise<void> {
     const data = msg.data as { documentId?: string; pageId?: string; modalSize?: ModalSize };
     const client = ModelManager.getClient();
@@ -267,14 +210,6 @@ export class SimulationRunHandler {
       version: '1.0',
       data: { studioPath, error },
     });
-  }
-
-  /**
-   * Handle OPEN_SCENARIOS_MODAL: open the embedded Studio scenarios editor at
-   * /embed/models/<id>/scenarios. (Dormant — the panel button now opens Studies.)
-   */
-  private static async handleOpenScenariosModal(msg: EnvelopeBase): Promise<void> {
-    return SimulationRunHandler.openEmbedSurfaceModal(msg, 'scenarios', 'Scenarios');
   }
 
   /**
@@ -497,376 +432,6 @@ export class SimulationRunHandler {
       connectors,
       entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),
     };
-  }
-
-  /**
-   * Map DB run status to the RunState values React expects
-   */
-  public static mapStatusToRunState(status: string): string {
-    switch (status) {
-      case 'COMPLETED': return 'RAN_SUCCESSFULLY';
-      case 'FAILED': return 'RAN_WITH_ERRORS';
-      case 'RUNNING': return 'RUNNING';
-      case 'QUEUED': return 'QUEUED';
-      case 'CANCELLED': return 'CANCELLED';
-      default: return 'NOT_RUN';
-    }
-  }
-
-  /**
-   * Transform nested API response (scenarios with runs) into flat SimulationRunInfo list
-   */
-  public static transformToFlatScenarioList(apiScenarios: any[]): any[] {
-    return apiScenarios.map(scenario => {
-      const latestRun = scenario.runs?.[0]; // runs are ordered by created_at DESC
-      const runState = latestRun
-        ? SimulationRunHandler.mapStatusToRunState(latestRun.status)
-        : 'NOT_RUN';
-      const hasResults = runState === 'RAN_SUCCESSFULLY';
-
-      return {
-        id: scenario.id,
-        name: scenario.name,
-        isBaseline: scenario.isBaseline === true,
-        runState,
-        hasResults,
-        reps: 0,
-        runClockPeriod: 0,
-        runClockPeriodUnit: 'MINUTES',
-        simulationTimeType: 'Clock',
-        completedAt: latestRun?.completed_at || undefined,
-        currentReplication: latestRun?.current_replication || undefined,
-        error: latestRun?.error || undefined,
-        errorType: latestRun?.error_type || undefined,
-        errorDetails: latestRun?.error_details || undefined,
-        errorSuggestions: latestRun?.error_suggestions || undefined,
-        startTime: latestRun?.start_time || latestRun?.submitted_at || undefined,
-        endTime: latestRun?.end_time || latestRun?.completed_at || undefined,
-        metrics: latestRun?.metrics || undefined,
-        outputSchemaVersion: latestRun?.output_schema_version ?? null,
-        engineVersion: latestRun?.engine_version ?? null,
-        orgCode: latestRun?.org_code ?? null,
-      };
-    });
-  }
-
-  private static async handleSimulationRunsListRequest(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId: string };
-
-    const messageType = 'Simulation runs list';
-    SimulationRunHandler.logger.log(`${messageType} requested`, {
-      documentId: data.documentId
-    });
-
-    try {
-      const client = ModelManager.getClient();
-      const viewport = new Viewport(client);
-      const currentPage = viewport.getCurrentPage();
-      const pageId = currentPage?.id || '';
-
-      SimulationRunHandler.logger.log('Calling quodsi_api ListScenarios...');
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'ListScenarios',
-        actionData: {
-          documentId: data.documentId,
-          pageId
-        },
-        asynchronous: false
-      });
-
-      const responseData = result.json || result;
-
-      // Transform nested scenarios+runs into flat SimulationRunInfo list
-      const flatScenarios = responseData?.scenarios
-        ? SimulationRunHandler.transformToFlatScenarioList(responseData.scenarios)
-        : [];
-
-      SimulationRunHandler.logger.log('ListScenarios completed', {
-        scenarioCount: flatScenarios.length
-      });
-
-      // Reconcile active simulation jobs with scenario list
-      if (flatScenarios.length > 0) {
-        SimulationHandler.reconcileWithScenarioList(
-          data.documentId,
-          flatScenarios
-        );
-      }
-
-      // Send success response in the shape React expects
-      const responseChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(responseChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT,
-        source: 'host',
-        target: `${responseChannel}-iframe`,
-        version: '1.0',
-        data: {
-          success: true,
-          documentId: data.documentId,
-          scenarios: flatScenarios,
-          generatedAt: responseData?.generatedAt || new Date().toISOString()
-        }
-      });
-
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error listing simulation runs:', error);
-
-      // Send error response
-      const errorChannel = SimulationRunHandler.getResponseChannel(msg);
-      router.send(errorChannel, {
-        id: msg.id,
-        type: EnvelopeMessageType.ERROR,
-        source: 'host',
-        target: `${errorChannel}-iframe`,
-        version: '1.0',
-        data: {
-          code: 'SIMULATION_RUNS_LIST_FAILED',
-          message: error instanceof Error ? error.message : String(error),
-          relatedTo: EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle simulation run deletion request
-   *
-   * @param msg SIMULATION_RUN_DELETE message
-   */
-  private static async handleSimulationRunDelete(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId: string; scenarioId: string };
-
-    SimulationRunHandler.logger.log('Simulation run deletion requested', {
-      documentId: data.documentId,
-      scenarioId: data.scenarioId
-    });
-
-    try {
-      // Get the EditorClient
-      const client = ModelManager.getClient();
-
-      SimulationRunHandler.logger.log('Calling data connector DeleteScenario action...');
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'DeleteScenario',
-        actionData: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId
-        },
-        asynchronous: false
-      });
-
-      // Extract the actual data from the Lucid SDK wrapper
-      const responseData = result.json || result;
-
-      SimulationRunHandler.logger.log('DeleteScenario action completed', {
-        success: responseData?.success,
-        documentId: data.documentId,
-        scenarioId: data.scenarioId
-      });
-
-      // Clean up any active simulation jobs for this scenario
-      if (responseData?.success) {
-        SimulationRunHandler.logger.log('Cleaning up job tracking for deleted simulation run');
-        SimulationHandler.stopPollingForScenario(data.scenarioId);
-      }
-
-      // Send success response
-      router.send('model', {
-        id: msg.id, // Use same ID for correlation
-        type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: responseData?.success || false,
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          error: responseData?.error
-        }
-      });
-
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error deleting simulation run:', error);
-
-      // Send error response
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: false,
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle simulation run cancel request
-   *
-   * @param msg SIMULATION_RUN_CANCEL_REQUEST message
-   */
-  private static async handleSimulationRunCancel(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId: string; pageId: string; scenarioId: string };
-
-    SimulationRunHandler.logger.log('Simulation run cancel requested', {
-      documentId: data.documentId,
-      scenarioId: data.scenarioId
-    });
-
-    try {
-      const client = ModelManager.getClient();
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'CancelSimulation',
-        actionData: {
-          documentId: data.documentId,
-          pageId: data.pageId,
-          scenarioId: data.scenarioId
-        },
-        asynchronous: false
-      });
-
-      const responseData = result.json || result;
-
-      if (responseData?.success) {
-        SimulationHandler.stopPollingForScenario(data.scenarioId);
-      }
-
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: responseData?.success || false,
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          error: responseData?.error
-        }
-      });
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error cancelling simulation run:', error);
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          success: false,
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          error: error instanceof Error ? error.message : String(error)
-        }
-      });
-    }
-  }
-
-  /**
-   * Handle simulation run resimulate request
-   *
-   * @param msg SIMULATION_RUN_RESIMULATE_REQUEST message
-   */
-  private static async handleResimulateRequest(msg: EnvelopeBase): Promise<void> {
-    const data = msg.data as { documentId: string; scenarioId: string; scenarioName: string };
-
-    SimulationRunHandler.logger.log('Simulation run resimulate requested', {
-      documentId: data.documentId,
-      scenarioId: data.scenarioId,
-      scenarioName: data.scenarioName
-    });
-
-    try {
-      const client = ModelManager.getClient();
-      const viewport = new Viewport(client);
-      const currentPage = viewport.getCurrentPage();
-      const pageId = currentPage?.id || '';
-
-      SimulationRunHandler.logger.log('Calling SubmitSimulationJob action...');
-
-      const result = await LucidDataActionUtility.performDataAction(client, {
-        dataConnectorName: 'quodsi_api_data_connector',
-        actionName: 'SubmitSimulationJob',
-        actionData: {
-          documentId: data.documentId,
-          pageId,
-          scenarioId: data.scenarioId,
-          scenarioName: data.scenarioName,
-          appVersion: QUODSIM_VERSION
-        },
-        asynchronous: false
-      });
-
-      // Extract the actual data from the Lucid SDK wrapper
-      const responseData = result.json || result;
-
-      SimulationRunHandler.logger.log('SubmitSimulationJob action completed', {
-        success: responseData?.success,
-        documentId: data.documentId,
-        scenarioId: data.scenarioId
-      });
-
-      if (responseData?.success) {
-        // Job submitted successfully
-        // Note: Status updates will come from ListScenarios reconciliation
-        // (called by ScenarioEditor periodically) using scenarioId
-        const timestamp = new Date().toISOString();
-
-        // Send initial MODEL_RUN_STATUS with PROCESSING state
-        router.send('model', {
-          id: msg.id,
-          type: EnvelopeMessageType.MODEL_RUN_STATUS,
-          source: 'host',
-          target: 'model-iframe',
-          version: '1.0',
-          data: {
-            documentId: data.documentId,
-            scenarioId: data.scenarioId,
-            scenarioName: data.scenarioName,
-            status: 'PROCESSING',
-            progress: 10,
-            currentStep: 'Simulation resubmitted to backend',
-            lastChecked: timestamp,
-            queuedAt: timestamp
-          }
-        });
-      } else {
-        // Job submission failed
-        throw new Error(responseData?.error || 'Failed to submit simulation job');
-      }
-
-    } catch (error) {
-      SimulationRunHandler.logger.error('Error resimulating:', error);
-
-      // Send MODEL_RUN_STATUS with FAILED status
-      router.send('model', {
-        id: msg.id,
-        type: EnvelopeMessageType.MODEL_RUN_STATUS,
-        source: 'host',
-        target: 'model-iframe',
-        version: '1.0',
-        data: {
-          documentId: data.documentId,
-          scenarioId: data.scenarioId,
-          scenarioName: data.scenarioName,
-          status: 'FAILED',
-          error: error instanceof Error ? error.message : String(error),
-          message: 'Failed to start resimulation'
-        }
-      });
-    }
   }
 
 }

@@ -1,4 +1,4 @@
-import { AuthErrorMessage, AuthLoginSuccessMessage, AuthLogoutMessage, AuthMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
+import { AuthErrorMessage, AuthLogoutMessage, AuthMessage, AuthRequiredMessage, AuthStatusMessage } from './auth/messages';
 import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
@@ -6,10 +6,9 @@ import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, Mod
 import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage, TimePatternsUpdateMessage, TimePatternsUpdateResultMessage, TimeDistributedConfigsUpdateMessage, TimeDistributedConfigsUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
-import { StorageConnectRequestMessage, StorageConnectResultMessage, StorageDisconnectMessage, StorageMessage, StorageStatusMessage } from './storage/messages';
-import { SimulationRunListRequestMessage, SimulationRunListResultMessage, SimulationRunDeleteMessage, SimulationRunDeleteResultMessage, SimulationRunResimulateRequestMessage, SimulationRunCancelRequestMessage, SimulationRunCancelResultMessage, SimulationRunMessage, SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
+import { SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
 import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
-import { AnalyticsMessage, AnalyticsTrackMessage, ClientAnalyticsEvent } from './analytics/messages';
+import { ClientAnalyticsEvent } from './analytics/messages';
 
 // Export message types enum
 export { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
@@ -42,7 +41,6 @@ export {
 export {
   QuodsiUserInfo,
   ExtensionConfig,
-  AuthLoginSuccessMessage,
   AuthLogoutMessage,
   AuthStatusMessage,
   AuthRequiredMessage,
@@ -101,29 +99,11 @@ export {
   ElementOpsMessage
 } from './elementOps/messages';
 
-// Export storage messages
-export {
-  StorageProvider,
-  ConnectionStatus,
-  StorageConnectRequestMessage,
-  StorageConnectResultMessage,
-  StorageDisconnectMessage,
-  StorageStatusMessage,
-  StorageMessage
-} from './storage/messages';
 
 // Export simulation run messages
 export {
   SimulationRunInfo,
-  SimulationRunDownloadInfo,
-  SimulationRunListRequestMessage,
-  SimulationRunListResultMessage,
-  SimulationRunDeleteMessage,
-  SimulationRunDeleteResultMessage,
-  SimulationRunResimulateRequestMessage,
-  SimulationRunCancelRequestMessage,
-  SimulationRunCancelResultMessage,
-  SimulationRunMessage
+  SimulationRunDownloadInfo
 } from './simulationRun/simulationRunMessages';
 
 // Export entitlement messages
@@ -137,8 +117,6 @@ export {
 
 // Export analytics messages
 export {
-  AnalyticsMessage,
-  AnalyticsTrackMessage,
   ClientAnalyticsEvent
 } from './analytics/messages';
 
@@ -150,10 +128,7 @@ export type QuodsiMessage =
   | SimulationMessage
   | ModelOpsMessage
   | ElementOpsMessage
-  | StorageMessage
-  | SimulationRunMessage
   | EntitlementMessage
-  | AnalyticsMessage
 ;
 
 // Define payload type mapping
@@ -162,7 +137,6 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.ERROR]: ErrorMessage['data'];
   [EnvelopeMessageType.LOG]: LogMessage['data'];
 
-  [EnvelopeMessageType.AUTH_LOGIN_SUCCESS]: AuthLoginSuccessMessage['data'];
   [EnvelopeMessageType.AUTH_LOGOUT]: AuthLogoutMessage['data'];
   [EnvelopeMessageType.AUTH_STATUS]: AuthStatusMessage['data'];
   [EnvelopeMessageType.AUTH_REQUIRED]: AuthRequiredMessage['data'];
@@ -197,21 +171,6 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE]: TimeDistributedConfigsUpdateMessage['data'];
   [EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE_RESULT]: TimeDistributedConfigsUpdateResultMessage['data'];
 
-  [EnvelopeMessageType.STORAGE_CONNECT_REQUEST]: StorageConnectRequestMessage['data'];
-  [EnvelopeMessageType.STORAGE_CONNECT_RESULT]: StorageConnectResultMessage['data'];
-  [EnvelopeMessageType.STORAGE_DISCONNECT]: StorageDisconnectMessage['data'];
-  [EnvelopeMessageType.STORAGE_STATUS]: StorageStatusMessage['data'];
-
-  [EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST]: SimulationRunListRequestMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT]: SimulationRunListResultMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUN_DELETE]: SimulationRunDeleteMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT]: SimulationRunDeleteResultMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST]: SimulationRunResimulateRequestMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST]: SimulationRunCancelRequestMessage['data'];
-  [EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT]: SimulationRunCancelResultMessage['data'];
-
-  [EnvelopeMessageType.OPEN_ANIMATION_MODAL]: { scenarioId: string; modalSize?: import('../config/modalSize').ModalSize };
-  [EnvelopeMessageType.OPEN_SCENARIOS_MODAL]: { documentId: string; pageId: string; modalSize?: import('../config/modalSize').ModalSize };
 
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_RESULT]: import('../types/devtools/DevToolsTypes').SwimLaneScanResult;
@@ -225,7 +184,6 @@ export interface EnvelopMessagePayloads {
 
   [EnvelopeMessageType.ENTITLEMENTS_STATUS]: EntitlementsStatusMessage['data'];
 
-  [EnvelopeMessageType.ANALYTICS_TRACK]: AnalyticsTrackMessage['data'];
 
 }
 

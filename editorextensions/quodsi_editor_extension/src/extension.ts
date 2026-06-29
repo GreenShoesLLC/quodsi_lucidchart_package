@@ -26,7 +26,7 @@ console.info('[EXT][extension] Using new messaging system with RightDockPanel');
 // Initialize messaging system with logging enabled
 initializeMessaging(true);
 
-// Initialize analytics handler so ANALYTICS_TRACK messages can be forwarded
+// Initialize the analytics handler so host code can fire telemetry events
 AnalyticsHandler.initialize(client);
 
 let rightDockPanel;

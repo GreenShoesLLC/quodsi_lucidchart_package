@@ -72,14 +72,6 @@ export function useElementOps() {
 }
 
 /**
- * Hook to access simulation runs state
- */
-export function useSimulationRuns() {
-  const { simulationRuns } = useMessaging();
-  return simulationRuns;
-}
-
-/**
  * Hook to access authentication state
  */
 export function useAuth() {

@@ -17,8 +17,7 @@ export {
 export {
   useSender,
   useSimulationSender,
-  useModelOpsSender,
-  useStorageSender
+  useModelOpsSender
 } from './senders';
 
 // Export mapping functions
@@ -29,7 +28,6 @@ export { mapFramework } from './mappers/framework.mapper';
 export { mapSelection } from './mappers/selection.mapper';
 export { mapSimulation } from './mappers/simulation.mapper';
 export { mapModelOps } from './mappers/modelOps.mapper';
-export { mapStorage } from './mappers/storage.mapper';
 
 // Export the reducer
 export { messagingReducer, initialState } from './state';

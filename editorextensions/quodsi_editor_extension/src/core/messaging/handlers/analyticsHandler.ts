@@ -1,13 +1,11 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { EnvelopeBase, EnvelopeMessageType, ClientAnalyticsEvent } from '@quodsi/lucid-shared';
+import { ClientAnalyticsEvent } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 
 /**
- * Handles analytics events originating from inside the extension + React.
- *
- * React sends ANALYTICS_TRACK postMessages -> handleMessage() picks them up
- * and forwards via performDataAction("TrackEvent"). Extension code can call
- * AnalyticsHandler.fire(event, props) directly without routing through React.
+ * Fires product-telemetry events from the extension host to the backend
+ * TrackEvent data action. Extension code calls AnalyticsHandler.fire(event, props)
+ * directly (e.g. model_opened, first_model_created).
  */
 export class AnalyticsHandler {
   private static client: EditorClient | null = null;
@@ -22,15 +20,6 @@ export class AnalyticsHandler {
     if (!modelId || AnalyticsHandler.lastModelOpenedId === modelId) return;
     AnalyticsHandler.lastModelOpenedId = modelId;
     AnalyticsHandler.fire('model_opened', { model_id: modelId });
-  }
-
-  public static handleMessage(msg: EnvelopeBase): boolean {
-    if (msg.type !== EnvelopeMessageType.ANALYTICS_TRACK) {
-      return false;
-    }
-    const data = msg.data as { event: ClientAnalyticsEvent; properties?: Record<string, unknown> };
-    AnalyticsHandler.fire(data.event, data.properties);
-    return true;
   }
 
   /** Fire-and-forget. Never throws. */

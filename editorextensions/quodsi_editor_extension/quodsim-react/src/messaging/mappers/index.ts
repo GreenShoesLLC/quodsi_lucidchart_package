@@ -6,5 +6,4 @@ export { mapFramework } from './framework.mapper';
 export { mapSelection } from './selection.mapper';
 export { mapSimulation } from './simulation.mapper';
 export { mapModelOps } from './modelOps.mapper';
-export { mapStorage } from './storage.mapper';
 export { mapEntitlements } from './entitlements.mapper';

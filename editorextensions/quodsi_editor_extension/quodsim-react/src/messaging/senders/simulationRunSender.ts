@@ -11,79 +11,6 @@ import { getModalSizePref } from '../../lib/modalSizePref';
 export function useSimulationRunSender() {
   const send = useSender();
 
-  /**
-   * Send a SIMULATION_RUNS_LIST_REQUEST message
-   *
-   * @param documentId Document ID to list simulation runs for
-   */
-  const listSimulationRuns = useCallback((documentId: string) => {
-    send(EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST, {
-      documentId
-    });
-  }, [send]);
-
-  /**
-   * Send a SIMULATION_RUN_DELETE message
-   *
-   * @param documentId Document ID containing the simulation run
-   * @param simulationRunId Simulation run ID to delete
-   */
-  const deleteSimulationRun = useCallback((documentId: string, scenarioId: string) => {
-    send(EnvelopeMessageType.SIMULATION_RUN_DELETE, {
-      documentId,
-      scenarioId
-    });
-  }, [send]);
-
-  /**
-   * Send a SIMULATION_RUN_CANCEL_REQUEST to cancel an in-flight run.
-   */
-  const cancelSimulationRun = useCallback((documentId: string, pageId: string, scenarioId: string) => {
-    send(EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST, {
-      documentId,
-      pageId,
-      scenarioId,
-    });
-  }, [send]);
-
-  /**
-   * Send a SIMULATION_RUN_RESIMULATE_REQUEST message
-   *
-   * @param documentId Document ID containing the simulation run
-   * @param simulationRunId Simulation run ID to resimulate
-   * @param simulationRunName Simulation run name for display
-   */
-  const resimulateSimulationRun = useCallback((
-    documentId: string,
-    simulationRunId: string,
-    simulationRunName: string
-  ) => {
-    send(EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST, {
-      documentId,
-      simulationRunId,
-      simulationRunName
-    });
-  }, [send]);
-
-  /**
-   * Send an OPEN_ANIMATION_MODAL message to open the embedded animation viewer
-   *
-   * @param scenarioId Scenario ID to view animation for
-   */
-  const openAnimationModal = useCallback((scenarioId: string) => {
-    send(EnvelopeMessageType.OPEN_ANIMATION_MODAL, { scenarioId, modalSize: getModalSizePref() });
-  }, [send]);
-
-  /**
-   * Send an OPEN_SCENARIOS_MODAL message to open the embedded-Studio Scenarios modal
-   *
-   * @param documentId Document ID
-   * @param pageId Page ID
-   */
-  const openScenariosModal = useCallback((documentId: string, pageId: string) => {
-    send(EnvelopeMessageType.OPEN_SCENARIOS_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
-  }, [send]);
-
   /** Send an OPEN_STUDIES_MODAL message to open the embedded-Studio Studies surface. */
   const openStudiesModal = useCallback((documentId: string, pageId: string) => {
     send(EnvelopeMessageType.OPEN_STUDIES_MODAL, { documentId, pageId, modalSize: getModalSizePref() });
@@ -104,12 +31,6 @@ export function useSimulationRunSender() {
   }, [send]);
 
   return {
-    listSimulationRuns,
-    deleteSimulationRun,
-    cancelSimulationRun,
-    resimulateSimulationRun,
-    openAnimationModal,
-    openScenariosModal,
     openStudiesModal,
     openDiagramMappingModal,
     autoConvertPage,

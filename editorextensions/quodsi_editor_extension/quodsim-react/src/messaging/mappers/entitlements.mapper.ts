@@ -12,7 +12,7 @@ const logger = debugService.forComponent('EntitlementsMapper');
 
 /**
  * Maps ENTITLEMENTS_STATUS envelope messages into Redux actions.
- * Hosts send this after AUTH_LOGIN_SUCCESS and whenever the cache is refreshed.
+ * Hosts send this after login completes and whenever the cache is refreshed.
  */
 export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
   if (msg.type !== EnvelopeMessageType.ENTITLEMENTS_STATUS) return null;

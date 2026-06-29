@@ -41,23 +41,6 @@ export interface ExtensionConfig {
 }
 
 /**
- * Sent after Kinde sign-in or sign-up finishes via Lucid platform OAuth.
- */
-export interface AuthLoginSuccessMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.AUTH_LOGIN_SUCCESS;
-  data: {
-    /** JWT token from Kinde authentication */
-    idToken: string;
-
-    /** User information */
-    user: QuodsiUserInfo;
-
-    /** Flag indicating if this is a new user registration */
-    newUser: boolean;
-  };
-}
-
-/**
  * Sent when user clicks "Sign Out" or when silent token refresh fails.
  */
 export interface AuthLogoutMessage extends EnvelopeBase {
@@ -111,7 +94,6 @@ export interface AuthErrorMessage extends EnvelopeBase {
 
 /** Union type of all auth messages */
 export type AuthMessage =
-  | AuthLoginSuccessMessage
   | AuthLogoutMessage
   | AuthStatusMessage
   | AuthRequiredMessage

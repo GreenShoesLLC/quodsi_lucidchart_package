@@ -96,27 +96,6 @@ export function createLogMessage(
 // Auth message builders
 
 /**
- * Create an AUTH_LOGIN_SUCCESS message
- * 
- * @param idToken JWT token from authentication
- * @param user User information
- * @param newUser Flag indicating if this is a new user
- * @returns A properly formatted AUTH_LOGIN_SUCCESS message
- */
-export function createAuthLoginSuccessMessage(
-  idToken: string,
-  user: EnvelopMessagePayloads[EnvelopeMessageType.AUTH_LOGIN_SUCCESS]['user'],
-  newUser: boolean
-) {
-  return createBaseMessage(
-    EnvelopeMessageType.AUTH_LOGIN_SUCCESS,
-    'auth-iframe',
-    'host',
-    { idToken, user, newUser }
-  );
-}
-
-/**
  * Create an AUTH_LOGOUT message
  * 
  * @returns A properly formatted AUTH_LOGOUT message

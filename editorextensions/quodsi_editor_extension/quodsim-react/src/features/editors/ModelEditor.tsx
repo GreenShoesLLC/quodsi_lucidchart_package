@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Model,
+  ModelDefaults,
   PeriodUnit,
   SimulationTimeType,
   SimulationObjectType,
@@ -104,7 +105,13 @@ const TAB_CONFIG = [
  * Default random seed value used when no seed is specified.
  * This provides reproducible simulation results for testing and debugging.
  */
-const DEFAULT_RANDOM_SEED = 12345;
+const DEFAULT_RANDOM_SEED = ModelDefaults.DEFAULT_SEED;
+
+/**
+ * Maximum replications a model may run — single-sourced from @quodsi/shared
+ * (re-exported via @quodsi/lucid-shared). Enforced in the UI and the backend.
+ */
+const MAX_REPS = ModelDefaults.MAX_REPS;
 
 /**
  * ModelEditor - Component for editing model-level simulation settings
@@ -279,6 +286,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
     if (type === 'number') {
       const numValue = parseFloat(value);
       convertedValue = isNaN(numValue) ? 0 : numValue;
+      // Replications are clamped to [1, MAX_REPS] via the shared single-source rule.
+      if (name === 'reps') {
+        convertedValue = ModelDefaults.clampReps(numValue);
+      }
     } else if (type === 'datetime-local') {
       convertedValue = value ? new Date(value) : null;
     }
@@ -390,17 +401,19 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         <label className="text-xs font-medium text-gray-700">
                           Replications
                         </label>
-                        <span title="The number of independent simulation runs to perform. Multiple replications help account for randomness and provide statistical confidence in the results.">
+                        <span title="The number of independent simulation runs to perform. Multiple replications help account for randomness and provide statistical confidence in the results. Capped at 100.">
                           <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                         </span>
                       </div>
                       <input
                         type="number"
                         name="reps"
+                        data-testid="reps-input"
                         className="w-full px-2 py-1 text-xs border rounded"
                         value={localModelDraft.reps}
                         onChange={handleChange}
                         min="1"
+                        max={MAX_REPS}
                         onBlur={saveNow}
                       />
                     </div>

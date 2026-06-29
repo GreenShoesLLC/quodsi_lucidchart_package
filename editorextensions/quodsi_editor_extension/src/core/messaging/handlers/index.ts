@@ -8,7 +8,6 @@ import { StatesHandler } from './statesHandler';
 import { EntitiesHandler } from './entitiesHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { TimePatternHandler } from './timePatternHandler';
-import { StorageHandler } from './storageHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { DiagramMappingRelayHandler } from './diagramMappingRelayHandler';
@@ -32,11 +31,6 @@ export class MessageHandlers {
     console.log(`[MessageHandlers] Handling message type: ${msg.type}`);
     
     // Try each handler in order of priority
-
-    // Analytics (fire-and-forget, check first for cheap short-circuit)
-    if (AnalyticsHandler.handleMessage(msg)) {
-      return true;
-    }
 
     // Framework messages have highest priority
     if (FrameworkHandler.handleMessage(msg)) {
@@ -94,11 +88,6 @@ export class MessageHandlers {
       return true;
     }
 
-    // Storage messages
-    if (StorageHandler.handleMessage(msg)) {
-      return true;
-    }
-
     // Simulation run messages
     if (SimulationRunHandler.handleMessage(msg)) {
       return true;
@@ -137,7 +126,6 @@ export {
   EntitiesHandler,
   ResourceRequirementsHandler,
   TimePatternHandler,
-  StorageHandler,
   SimulationRunHandler,
   DiagramMappingRelayHandler,
   DevtoolsHandler,

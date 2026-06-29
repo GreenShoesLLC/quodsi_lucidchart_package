@@ -1,13 +1,4 @@
-import { EnvelopeBase } from '../envelope/envelope';
-import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 import { RunState } from '../../types/elements';
-
-export interface SimulationRunListRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUNS_LIST_REQUEST;
-  data: {
-    documentId: string;
-  };
-}
 
 export interface SimulationRunDownloadInfo {
   zipUrl: string;
@@ -59,66 +50,3 @@ export interface SimulationRunInfo {
   orgCode: string | null;
 }
 
-export interface SimulationRunListResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUNS_LIST_RESULT;
-  data: {
-    documentId: string;
-    simulationRuns: SimulationRunInfo[];
-    generatedAt: string;
-  };
-}
-
-export interface SimulationRunDeleteMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUN_DELETE;
-  data: {
-    documentId: string;
-    simulationRunId: string;
-  };
-}
-
-export interface SimulationRunDeleteResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUN_DELETE_RESULT;
-  data: {
-    success: boolean;
-    documentId: string;
-    simulationRunId: string;
-    error?: string;
-  };
-}
-
-export interface SimulationRunResimulateRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUN_RESIMULATE_REQUEST;
-  data: {
-    documentId: string;
-    simulationRunId: string;
-    simulationRunName: string;
-  };
-}
-
-export interface SimulationRunCancelRequestMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_REQUEST;
-  data: {
-    documentId: string;
-    pageId: string;
-    scenarioId: string;
-  };
-}
-
-export interface SimulationRunCancelResultMessage extends EnvelopeBase {
-  type: EnvelopeMessageType.SIMULATION_RUN_CANCEL_RESULT;
-  data: {
-    success: boolean;
-    documentId: string;
-    scenarioId: string;
-    error?: string;
-  };
-}
-
-export type SimulationRunMessage =
-  | SimulationRunListRequestMessage
-  | SimulationRunListResultMessage
-  | SimulationRunDeleteMessage
-  | SimulationRunDeleteResultMessage
-  | SimulationRunResimulateRequestMessage
-  | SimulationRunCancelRequestMessage
-  | SimulationRunCancelResultMessage;

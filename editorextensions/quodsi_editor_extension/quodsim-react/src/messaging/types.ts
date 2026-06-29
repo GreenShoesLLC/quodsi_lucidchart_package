@@ -4,8 +4,6 @@ import {
   QuodsiUserInfo,
   ElementShape,
   SimulationStatus,
-  StorageProvider,
-  ConnectionStatus,
   ValidationIssue,
   ValidationSeverity
 } from '@quodsi/lucid-shared';
@@ -124,22 +122,6 @@ export interface ValidationState {
   infos: ValidationIssue[];
   getIssuesForElement: (elementId: string) => ValidationIssue[];
   validate: (documentId: string) => void;
-}
-
-/**
- * Storage state 
- */
-export interface StorageState {
-  googleDrive: {
-    status: ConnectionStatus;
-    user?: string;
-  };
-  oneDrive: {
-    status: ConnectionStatus;
-    user?: string;
-  };
-  connectStorage: (provider: StorageProvider, params?: Record<string, unknown>) => void;
-  disconnectStorage: (provider: StorageProvider) => void;
 }
 
 /**

@@ -4,5 +4,3 @@ export { useSender } from './useSender';
 // Export category-specific sender hooks
 export { useSimulationSender } from './simulationSender';
 export { useModelOpsSender } from './modelOpsSender';
-export { useStorageSender } from './storageSender';
-export { useAnalyticsSender } from './analyticsSender';

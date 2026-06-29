@@ -10,7 +10,6 @@ import { SelectionState, initialSelectionState, selectionReducer, SelectionActio
 import { SimulationState, initialSimulationState, simulationReducer, SimulationAction } from './simulationSlice';
 import { ValidationState, initialValidationState, validationReducer, ValidationAction } from './validationSlice';
 import { ElementOpsState, initialElementOpsState, elementOpsReducer, ElementOpsAction } from './elementOpsSlice';
-import { SimulationRunState, initialSimulationRunState, simulationRunReducer, SimulationRunAction } from './simulationRunSlice';
 import { EntitlementsState, initialEntitlementsState, entitlementsReducer, EntitlementsAction } from './entitlementsSlice';
 
 // Combined state type
@@ -21,7 +20,6 @@ export interface MessagingState {
   simulation: SimulationState;
   validation: ValidationState;
   elementOps: ElementOpsState;
-  simulationRuns: SimulationRunState;
   entitlements: EntitlementsState;
 }
 
@@ -36,7 +34,6 @@ export const initialState: MessagingState = {
   simulation: initialSimulationState,
   validation: initialValidationState,
   elementOps: initialElementOpsState,
-  simulationRuns: initialSimulationRunState,
   entitlements: initialEntitlementsState,
 };
 
@@ -52,7 +49,6 @@ export function messagingReducer(state: MessagingState = initialState, action: M
     simulation: simulationReducer(state.simulation, action as SimulationAction),
     validation: validationReducer(state.validation, action as ValidationAction),
     elementOps: elementOpsReducer(state.elementOps, action as ElementOpsAction),
-    simulationRuns: simulationRunReducer(state.simulationRuns, action as SimulationRunAction),
     entitlements: entitlementsReducer(state.entitlements, action as EntitlementsAction),
   };
 }

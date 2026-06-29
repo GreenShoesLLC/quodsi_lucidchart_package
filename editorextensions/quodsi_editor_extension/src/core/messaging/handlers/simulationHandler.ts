@@ -415,8 +415,7 @@ export class SimulationHandler {
           if (substitutions.has(scenarioId)) {
             scenarioId = substitutions.get(scenarioId)!;
             // Keep the optimistic job's scenarioId in sync with the re-targeted
-            // id, or reconcileWithScenarioList (which matches on job.scenarioId)
-            // would fail to find the run in the server list and silently drop it.
+            // id so the active-jobs tracker matches on the correct scenarioId.
             const job = SimulationHandler.activeJobs.get(jobId);
             if (job) { job.scenarioId = scenarioId; }
           }
@@ -668,29 +667,6 @@ export class SimulationHandler {
   }
 
   /**
-   * Stop polling for a specific scenario by scenarioId
-   * Called when a scenario is deleted
-   */
-  public static stopPollingForScenario(scenarioId: string): void {
-    console.log('[SimulationHandler] Stopping polling for scenario', scenarioId);
-
-    // Find and stop all jobs for this scenario
-    for (const [jobId, job] of SimulationHandler.activeJobs.entries()) {
-      if (job.scenarioId === scenarioId) {
-        // Stop polling if active
-        if (job.pollInterval) {
-          clearInterval(job.pollInterval);
-          job.pollInterval = undefined;
-        }
-
-        // Remove from active jobs
-        SimulationHandler.activeJobs.delete(jobId);
-        console.log('[SimulationHandler] Cleaned up job for deleted scenario', jobId);
-      }
-    }
-  }
-
-  /**
    * Stop all polling for a specific document
    */
   public static stopAllPollingForDocument(documentId: string): void {
@@ -705,149 +681,5 @@ export class SimulationHandler {
     });
   }
 
-  /**
-   * Reconcile active simulation jobs with scenario list from Azure
-   * Called whenever ListScenarios returns data (every 10s during auto-refresh)
-   * This eliminates need for separate GetDocumentStatus polling
-   *
-   * @param documentId Document ID to reconcile jobs for
-   * @param scenarios Array of scenarios from ListScenarios action
-   */
-  public static reconcileWithScenarioList(
-    documentId: string,
-    scenarios: Array<{
-      id: string;
-      name: string;
-      runState: string;  // RunState enum values: 'NOT_RUN', 'RUNNING', 'RAN_SUCCESSFULLY', 'RAN_WITH_ERRORS'
-      hasResults: boolean;
-      completedAt?: string;
-    }>
-  ): void {
-    console.log('[SimulationHandler] Reconciling active jobs with scenario list', {
-      documentId,
-      scenarioCount: scenarios.length,
-      activeJobCount: SimulationHandler.activeJobs.size
-    });
 
-    // Helper function to map Azure RunState to SimulationStatus
-    const mapRunStateToStatus = (runState: string): SimulationStatus => {
-      switch (runState) {
-        case 'RAN_SUCCESSFULLY':
-          return SimulationStatus.COMPLETED;
-        case 'RAN_WITH_ERRORS':
-          return SimulationStatus.FAILED;
-        case 'RUNNING':
-          return SimulationStatus.RUNNING;
-        case 'QUEUED':
-          return SimulationStatus.QUEUED;
-        case 'CANCELLED':
-          return SimulationStatus.CANCELLED;
-        case 'NOT_RUN':
-        default:
-          return SimulationStatus.QUEUED;
-      }
-    };
-
-    // Reconcile each active job with Azure state
-    for (const [jobId, job] of SimulationHandler.activeJobs.entries()) {
-      // Only process jobs for this document
-      if (job.documentId !== documentId) continue;
-
-      // Find matching scenario in Azure
-      const scenario = scenarios.find(s => s.id === job.scenarioId);
-
-      if (!scenario) {
-        // Scenario was deleted in Azure, clean up
-        console.log('[SimulationHandler] Scenario deleted in Azure, cleaning up job', {
-          jobId,
-          scenarioId: job.scenarioId
-        });
-
-        if (job.pollInterval) {
-          clearInterval(job.pollInterval);
-          job.pollInterval = undefined;
-        }
-
-        SimulationHandler.activeJobs.delete(jobId);
-        continue;
-      }
-
-      // Map Azure RunState to SimulationStatus
-      const newStatus = mapRunStateToStatus(scenario.runState);
-
-      // Check if status changed
-      if (job.status !== newStatus) {
-        console.log('[SimulationHandler] Status changed for job', {
-          jobId,
-          scenarioId: job.scenarioId,
-          oldStatus: job.status,
-          newStatus,
-          runState: scenario.runState
-        });
-
-        // Update job status
-        job.status = newStatus;
-        job.lastUpdate = new Date();
-
-        // Calculate progress based on status
-        const progress = newStatus === SimulationStatus.COMPLETED ? 100 :
-                        newStatus === SimulationStatus.RUNNING ? 70 :
-                        newStatus === SimulationStatus.FAILED ? 0 : 10;
-
-        // Send status update to React
-        router.send('model', {
-          id: '',
-          type: EnvelopeMessageType.MODEL_RUN_STATUS,
-          source: 'host',
-          target: 'model-iframe',
-          version: '1.0',
-          data: {
-            jobId,
-            documentId,
-            scenarioId: job.scenarioId,
-            scenarioName: scenario.name,
-            status: newStatus,
-            progress,
-            currentStep: newStatus === SimulationStatus.COMPLETED ? 'Simulation complete' :
-                        newStatus === SimulationStatus.RUNNING ? 'Running simulation' :
-                        newStatus === SimulationStatus.FAILED ? 'Simulation failed' :
-                        'Simulation queued',
-            lastChecked: new Date().toISOString(),
-            queuedAt: job.startTime.toISOString(),
-            hasResults: scenario.hasResults
-          }
-        });
-
-        // Stop polling and clean up if terminal state
-        if (newStatus === SimulationStatus.COMPLETED || newStatus === SimulationStatus.FAILED) {
-          console.log('[SimulationHandler] Terminal state reached, cleaning up job', jobId);
-
-          if (job.pollInterval) {
-            clearInterval(job.pollInterval);
-            job.pollInterval = undefined;
-          }
-
-          SimulationHandler.activeJobs.delete(jobId);
-        }
-      }
-    }
-  }
-
-  /**
-   * Get all active simulation jobs
-   */
-  public static getActiveJobs() {
-    return Array.from(SimulationHandler.activeJobs.entries()).map(([id, job]) => ({
-      ...job,
-      jobId: id
-    }));
-  }
-  
-  /**
-   * Get a specific job by ID
-   */
-  public static getJob(jobId: string) {
-    const job = SimulationHandler.activeJobs.get(jobId);
-    return job ? { ...job, jobId } : null;
-  }
 }
