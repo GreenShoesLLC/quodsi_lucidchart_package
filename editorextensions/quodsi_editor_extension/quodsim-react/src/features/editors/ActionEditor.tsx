@@ -70,7 +70,10 @@ const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   [ActionType.SEIZE]: "Seize Resource",
   [ActionType.RELEASE]: "Release Resource",
   [ActionType.DELAY]: "Delay",
-  [ActionType.DELAY_WITH_RESOURCE]: "Delay with Resource",
+  // Consolidated: the resource-capable action IS the one "Delay" (resource
+  // optional). Plain DELAY is grandfathered but no longer offered in the picker
+  // (ClickUp 86e1uh9n4).
+  [ActionType.DELAY_WITH_RESOURCE]: "Delay",
   [ActionType.SPLIT]: "Split Entity",
   [ActionType.CREATE]: "Create Entity",
   [ActionType.DISPOSE]: "Dispose Entity",
@@ -84,7 +87,7 @@ const ACTION_TYPE_SHORT_LABELS: Record<ActionType, string> = {
   [ActionType.SEIZE]: "Seize Res",
   [ActionType.RELEASE]: "Release Res",
   [ActionType.DELAY]: "Delay",
-  [ActionType.DELAY_WITH_RESOURCE]: "Process",
+  [ActionType.DELAY_WITH_RESOURCE]: "Delay", // consolidated (86e1uh9n4)
   [ActionType.SPLIT]: "Split",
   [ActionType.CREATE]: "Create",
   [ActionType.DISPOSE]: "Dispose",
@@ -98,7 +101,7 @@ const ACTION_TYPE_DESCRIPTIONS: Record<ActionType, string> = {
   [ActionType.SEIZE]: "Acquire resources (waits until available)",
   [ActionType.RELEASE]: "Release previously seized resources",
   [ActionType.DELAY]: "Wait for a duration (no resources)",
-  [ActionType.DELAY_WITH_RESOURCE]: "Classic operation: seize, delay, release",
+  [ActionType.DELAY_WITH_RESOURCE]: "Wait for a duration; optionally hold a resource while delaying",
   [ActionType.SPLIT]: "Replace entity with multiple new entities",
   [ActionType.CREATE]: "Spawn a new entity (original continues)",
   [ActionType.DISPOSE]: "Terminates the entity immediately. The entity will be removed from the simulation and will not continue to subsequent activities. Use for quality control, conditional termination, or canceling work items.",
@@ -1295,7 +1298,11 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               className="w-full px-1 py-0.5 text-xs border rounded bg-white"
             >
               {(Object.values(ActionType) as ActionType[])
-                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH))
+                // DELAY collapsed into DELAY_WITH_RESOURCE (both labeled "Delay",
+                // resource optional — 86e1uh9n4). LOOP/BRANCH aren't authorable.
+                // The leading `type === action.actionType` clause grandfathers a
+                // legacy DELAY action so it stays selectable on its own card.
+                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY))
                 .map((type) => (
                 <option key={type} value={type}>
                   {ACTION_TYPE_LABELS[type]}
