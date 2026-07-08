@@ -22,6 +22,14 @@ export function useSimulationRunSender() {
   }, [send]);
 
   /**
+   * Send an OPEN_STATUS_MODAL message to open the embedded-Studio public /status
+   * page. Status is model-agnostic, so no documentId/pageId is needed.
+   */
+  const openStatusModal = useCallback(() => {
+    send(EnvelopeMessageType.OPEN_STATUS_MODAL, { modalSize: getModalSizePref() });
+  }, [send]);
+
+  /**
    * Send an AUTO_CONVERT_PAGE message to trigger a one-click auto-convert.
    * The extension analyzes the page, applies proposed types (skipping null +
    * Entity), converts, and refreshes the model panel — no modal opened.
@@ -33,6 +41,7 @@ export function useSimulationRunSender() {
   return {
     openStudiesModal,
     openDiagramMappingModal,
+    openStatusModal,
     autoConvertPage,
   };
 }

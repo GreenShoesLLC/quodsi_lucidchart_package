@@ -24,6 +24,9 @@ export function StudioEmbedView() {
   const pending = params.get('pending') === '1';
   const fullScreenPath = params.get('fullScreenPath');
   const title = params.get('title') ?? '';
+  // Public Studio pages (e.g. /status under PublicLayout) don't run the token
+  // relay; tell the frame not to gate its "Loading…" overlay on a token.
+  const isPublic = params.get('public') === '1';
 
   // Concrete opens carry studioPath up front; pending opens resolve it via pull.
   const [resolvedPath, setResolvedPath] = useState<string | null>(initialPath);
@@ -86,7 +89,7 @@ export function StudioEmbedView() {
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         {resolvedPath ? (
-          <EmbeddedStudioFrame studioPath={resolvedPath} studioOrigin={studioOrigin} />
+          <EmbeddedStudioFrame studioPath={resolvedPath} studioOrigin={studioOrigin} requiresToken={!isPublic} />
         ) : pathError ? (
           <div className="h-full w-full flex items-center justify-center" style={{ padding: 16, textAlign: 'center', color: '#6b7280' }}>
             {pathError} Try closing and reopening.

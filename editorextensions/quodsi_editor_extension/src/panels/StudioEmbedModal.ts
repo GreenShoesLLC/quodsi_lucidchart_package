@@ -15,7 +15,10 @@ export class StudioEmbedModal extends RoutingModal {
     // Either `studioPath` (concrete — open straight to it) OR `pending: true`
     // (open INSTANTLY in a loading state; StudioEmbedView then pulls the
     // resolved path via REQUEST_STUDIO_EMBED_PATH once its channel registers).
-    opts: { title: string; studioPath?: string; pending?: boolean; fullScreenPath?: string; modalSize?: ModalSize },
+    // `isPublic`: the embedded page is a public Studio route (e.g. /status under
+    // PublicLayout) that does NOT run the token relay. Passed through so the
+    // embed frame doesn't gate its "Loading…" overlay on a token that never comes.
+    opts: { title: string; studioPath?: string; pending?: boolean; fullScreenPath?: string; modalSize?: ModalSize; isPublic?: boolean },
   ) {
     const studioOrigin = getStudioBaseUrl();
     let url =
@@ -31,6 +34,9 @@ export class StudioEmbedModal extends RoutingModal {
     }
     if (opts.fullScreenPath) {
       url += `&fullScreenPath=${encodeURIComponent(opts.fullScreenPath)}`;
+    }
+    if (opts.isPublic) {
+      url += `&public=1`;
     }
     const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
     const sizeOpts =

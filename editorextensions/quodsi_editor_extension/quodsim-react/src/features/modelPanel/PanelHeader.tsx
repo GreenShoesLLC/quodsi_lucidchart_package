@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders } from "lucide-react";
+import { Factory, Wrench, Users, Package, Zap, ArrowRight, AlertTriangle, MoreVertical, Network, Map, Info, FileJson, Sliders, Activity } from "lucide-react";
 import {
   ValidationState,
   DiagramElementType,
@@ -28,6 +28,7 @@ interface PanelHeaderProps {
   diagramElementType?: DiagramElementType;
   referenceData?: EditorReferenceData;
   onViewModelJson?: () => void;
+  onOpenStatus?: () => void;
 }
 
 /**
@@ -44,6 +45,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   diagramElementType,
   referenceData,
   onViewModelJson,
+  onOpenStatus,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
@@ -192,6 +194,16 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
           >
             <Sliders className="w-3 h-3 text-gray-500" />
             Preferences
+          </button>
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              onOpenStatus?.();
+            }}
+            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center gap-2"
+          >
+            <Activity className="w-3 h-3 text-gray-500" />
+            Status
           </button>
           <button
             onClick={() => {

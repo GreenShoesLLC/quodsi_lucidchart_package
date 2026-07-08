@@ -7,6 +7,15 @@ interface Props {
   studioPath: string;
   /** Origin of the Studio app (e.g. `https://studio.quodsi.com`). Provided by the parent. */
   studioOrigin: string;
+  /**
+   * Whether this embedded Studio page participates in the auth token relay.
+   * Authed surfaces (Studies, Diagram Mapping — under Studio's EmbeddedLayout)
+   * request a token via QUODSI_EMBED_TOKEN_REFRESH, and we cover the iframe with
+   * a "Loading…" overlay until STUDIO_TOKEN arrives. Public pages (e.g. /status
+   * under PublicLayout) never do that handshake, so gating on it would spin
+   * forever — pass `false` to show the iframe immediately. Defaults to `true`.
+   */
+  requiresToken?: boolean;
 }
 
 /**
@@ -16,7 +25,7 @@ interface Props {
  * when the host replies (STUDIO_TOKEN), forward it into the iframe
  * (QUODSI_EMBED_TOKEN). Foundation for every Path 1 embed.
  */
-export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
+export function EmbeddedStudioFrame({ studioPath, studioOrigin, requiresToken = true }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { sendMessage } = useMessaging();
   const [gotToken, setGotToken] = useState(false);
@@ -184,14 +193,14 @@ export function EmbeddedStudioFrame({ studioPath, studioOrigin }: Props) {
 
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%' }}>
-      {!gotToken && !timedOut && (
+      {requiresToken && !gotToken && !timedOut && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 16, textAlign: 'center', background: '#fff', zIndex: 1, color: '#6b7280' }}>
           <span style={{ display: 'inline-block', width: 24, height: 24, border: '3px solid #d1d5db', borderTopColor: '#6b7280', borderRadius: '50%', animation: 'quodsi-spin 0.8s linear infinite' }} />
           <span style={{ fontSize: 13 }}>Loading…</span>
           <style>{'@keyframes quodsi-spin { to { transform: rotate(360deg); } }'}</style>
         </div>
       )}
-      {timedOut && !gotToken && (
+      {requiresToken && timedOut && !gotToken && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, textAlign: 'center', background: '#fff', zIndex: 1 }}>
           Couldn't load the results viewer — make sure you're signed in to Quodsi in this panel.
         </div>

@@ -53,6 +53,10 @@ export class SimulationRunHandler {
         );
         return true;
 
+      case EnvelopeMessageType.OPEN_STATUS_MODAL:
+        SimulationRunHandler.handleOpenStatusModal(msg);
+        return true;
+
       case EnvelopeMessageType.RUN_SCENARIO:
         SimulationRunHandler.handleRunScenario(msg).catch((e) =>
           SimulationRunHandler.logger.error('handleRunScenario failed', e),
@@ -226,6 +230,22 @@ export class SimulationRunHandler {
    */
   private static async handleOpenDiagramMappingModal(msg: EnvelopeBase): Promise<void> {
     return SimulationRunHandler.openEmbedSurfaceModal(msg, 'diagram-mapping', 'Diagram Mapping');
+  }
+
+  /**
+   * Handle OPEN_STATUS_MODAL: open the public Studio /status health page in the
+   * generic embed modal. Unlike Studies/Diagram Mapping, /status is model-agnostic
+   * and public (no UpsertModel, no server model id, no token relay needed).
+   */
+  private static handleOpenStatusModal(msg: EnvelopeBase): void {
+    const data = msg.data as { modalSize?: ModalSize };
+    new StudioEmbedModal(ModelManager.getClient(), {
+      title: 'Status',
+      studioPath: '/status',
+      fullScreenPath: '/status', // enables the "↗ open full screen" pop-out
+      modalSize: data?.modalSize,
+      isPublic: true, // /status is public (PublicLayout) — no token relay/overlay
+    }).show();
   }
 
   /**
