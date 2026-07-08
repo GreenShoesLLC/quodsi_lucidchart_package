@@ -80,6 +80,9 @@ const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   [ActionType.JOIN]: "Join Entities",
   [ActionType.LOOP]: "Loop",
   [ActionType.BRANCH]: "Branch",
+  // SCRIPT is authored in Quodsi Studio (no editor in the Lucid extension);
+  // present here to satisfy the exhaustive map, excluded from the picker below.
+  [ActionType.SCRIPT]: "Script",
 };
 
 const ACTION_TYPE_SHORT_LABELS: Record<ActionType, string> = {
@@ -94,6 +97,7 @@ const ACTION_TYPE_SHORT_LABELS: Record<ActionType, string> = {
   [ActionType.JOIN]: "Join",
   [ActionType.LOOP]: "Loop",
   [ActionType.BRANCH]: "Branch",
+  [ActionType.SCRIPT]: "Script",
 };
 
 const ACTION_TYPE_DESCRIPTIONS: Record<ActionType, string> = {
@@ -108,6 +112,7 @@ const ACTION_TYPE_DESCRIPTIONS: Record<ActionType, string> = {
   [ActionType.JOIN]: "Wait for entities with matching state to combine",
   [ActionType.LOOP]: "Repeat a set of actions multiple times",
   [ActionType.BRANCH]: "Conditionally execute actions based on state",
+  [ActionType.SCRIPT]: "Run a custom script (authored in Quodsi Studio)",
 };
 
 const PERIOD_UNIT_SHORT: Record<PeriodUnit, string> = {
@@ -1299,10 +1304,11 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             >
               {(Object.values(ActionType) as ActionType[])
                 // DELAY collapsed into DELAY_WITH_RESOURCE (both labeled "Delay",
-                // resource optional — 86e1uh9n4). LOOP/BRANCH aren't authorable.
-                // The leading `type === action.actionType` clause grandfathers a
+                // resource optional — 86e1uh9n4). LOOP/BRANCH/SCRIPT aren't
+                // authorable in the Lucid editor (SCRIPT is Studio-only). The
+                // leading `type === action.actionType` clause grandfathers a
                 // legacy DELAY action so it stays selectable on its own card.
-                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY))
+                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY && type !== ActionType.SCRIPT))
                 .map((type) => (
                 <option key={type} value={type}>
                   {ACTION_TYPE_LABELS[type]}
