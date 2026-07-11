@@ -1,5 +1,12 @@
 # Authentication: Adding Kinde to Censio
 
+> **⚠️ SUPERSEDED / HISTORICAL** (banner added 2026-07-10). This is the original *planning* doc
+> (pre-rename "Censio") for adding Kinde auth; the migration is long since implemented. Current
+> state lives in the **quodsi monorepo**: `_docs/kinde-environments.md` (live tenants / apps /
+> plans / webhooks), `_docs/kinde-entitlements.md` (entitlement features as implemented in code),
+> and the `working-with-kinde` skill (verified Kinde API payload shapes). Kept for historical
+> architecture context only — do not treat details below as current.
+
 **Status**: Planning
 **Date**: 2025-03-24
 **Goal**: Implement user authentication using Kinde across all Censio surfaces

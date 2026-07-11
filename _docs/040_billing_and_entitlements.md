@@ -1,5 +1,13 @@
 # 040 — Billing & Entitlements (Kinde)
 
+> **⚠️ PARTIALLY SUPERSEDED** (banner added 2026-07-10). For the current implementation state of
+> Kinde billing/entitlements, see the **quodsi monorepo** docs `_docs/kinde-entitlements.md`
+> (audited 2026-07-10) and `_docs/kinde-environments.md` (tenants / plans). This runbook keeps
+> useful operator how-to (plan CRUD, webhook debugging), but some specifics below are stale — e.g.
+> legacy plan names and the removed `scenario_studies` feature (replaced by the metered
+> `scenarios_per_model` on 2026-05-01). Verify against the monorepo docs + code before relying on
+> details here.
+
 Operator runbook for Quodsi's Kinde-backed billing and feature entitlements.
 
 ## What this covers
