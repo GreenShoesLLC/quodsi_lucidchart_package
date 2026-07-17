@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, EntitlementPlanSource, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
@@ -352,6 +352,18 @@ export class AuthHandler {
     trialExpiresAt?: string;
     upgradeAvailable?: boolean;
     features: Record<string, unknown>;
+    // Flat fields from quodsi_api's GET-my-entitlements REST response
+    // (snake_case, matching the shared `Entitlements` REST convention).
+    // Optional here so this tolerates older backends that don't send them
+    // yet; the envelope re-exposes them camelCased below.
+    plan_source?: EntitlementPlanSource;
+    org_name?: string | null;
+    studies_used?: number;
+    studies_per_org_limit?: number | null;
+    scenarios_per_study_limit?: number | null;
+    replications_per_scenario_limit?: number | null;
+    tradeoff_analysis?: boolean;
+    chart_export?: boolean;
   }): void {
     router.send('broadcast', {
       id: generateId(),
@@ -359,7 +371,24 @@ export class AuthHandler {
       source: 'host',
       target: 'broadcast',
       version: '1.0',
-      data,
+      data: {
+        subjectType: data.subjectType,
+        planKey: data.planKey,
+        planStatus: data.planStatus,
+        trialExpiresAt: data.trialExpiresAt,
+        features: data.features,
+        upgradeAvailable: data.upgradeAvailable,
+        // Pass-through camelCase mapping of the new flat REST fields. All
+        // are optional/undefined when the backend hasn't shipped them yet.
+        planSource: data.plan_source,
+        orgName: data.org_name,
+        studiesUsed: data.studies_used,
+        studiesPerOrgLimit: data.studies_per_org_limit,
+        scenariosPerStudyLimit: data.scenarios_per_study_limit,
+        replicationsPerScenarioLimit: data.replications_per_scenario_limit,
+        tradeoffAnalysis: data.tradeoff_analysis,
+        chartExport: data.chart_export,
+      },
     });
   }
 
