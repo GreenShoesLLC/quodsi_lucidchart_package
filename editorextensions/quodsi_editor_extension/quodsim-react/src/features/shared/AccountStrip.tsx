@@ -8,35 +8,107 @@ import {
 import { useAuth, useEntitlements } from "../../messaging/MessageContext";
 import { useAuthSender } from "../../messaging/senders/authSender";
 import { usePortalSender } from "../../messaging/senders/portalSender";
+import { useUpgradeInterestSender } from "../../messaging/senders/upgradeInterestSender";
 import {
   planDisplayLabel,
   simulationsRemaining,
+  simulationsUsage,
   trialDaysRemaining,
 } from "../../messaging/state/entitlementsSlice";
 
+const DEFAULT_SALES_EMAIL = "sales@quodsi.com";
+const COPIED_RESET_MS = 1500;
+
+type Tone = "danger" | "warning" | "info" | "neutral";
+
+const TONE_CLASSES: Record<Tone, string> = {
+  danger: "bg-red-50 text-red-700 border-red-200",
+  warning: "bg-amber-50 text-amber-700 border-amber-200",
+  info: "bg-blue-50 text-blue-700 border-blue-200",
+  neutral: "bg-gray-50 text-gray-600 border-gray-200",
+};
+
+function formatUsage(used: number, limit: number | null): string {
+  return limit === null ? "Unlimited" : `${used} of ${limit}`;
+}
+
+function formatLimit(limit: number | null): string {
+  return limit === null ? "Unlimited" : `${limit}`;
+}
+
+// Ported from Studio's PlanBadge / drawio's PlanChip so all three surfaces
+// agree on what counts as "exhausted" / "near limit" for a metered quota.
+function isQuotaExhausted(used: number, limit: number | null): boolean {
+  return limit !== null && used >= limit;
+}
+
+function isQuotaNearLimit(used: number, limit: number | null): boolean {
+  return limit !== null && limit > 0 && used / limit >= 0.8;
+}
+
+/**
+ * Plan visibility chip. Preserves the existing label/trial/tone behavior
+ * (built from `simulationsRemaining` — the ≤2-remaining "low" threshold is
+ * intentionally NOT changed here) and layers in a click-to-open dropdown
+ * with the fuller entitlements breakdown from Task 7's envelope fields.
+ * Each new-field row is rendered only when its value is present, so this
+ * degrades gracefully against a backend that hasn't started sending them
+ * yet (see entitlementsSlice.ts's doc comments on the optional fields).
+ */
 const PlanBadge: React.FC = () => {
   const auth = useAuth();
   const entitlements = useEntitlements();
-  if (!auth.isAuthenticated || !entitlements.loaded) return null;
+  const { pingUpgradeInterest } = useUpgradeInterestSender();
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const addressRef = useRef<HTMLSpanElement>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  // Fail-closed on purpose (unlike AuthStatusIndicator's Upgrade menu item):
+  // nothing billing-related may render before entitlements have loaded, and
+  // upgradeAvailable === false means billing is dark for this environment.
+  if (!auth.isAuthenticated || !entitlements.loaded || entitlements.upgradeAvailable === false) {
+    return null;
+  }
 
   const label = planDisplayLabel(entitlements);
   const trialDays = trialDaysRemaining(entitlements);
   const remaining = simulationsRemaining(entitlements);
+  const runsUsage = simulationsUsage(entitlements);
 
   const isTrial = trialDays !== null;
-  const isLow = remaining !== null && remaining > 0 && remaining <= 2;
-  const isExhausted = remaining !== null && remaining <= 0;
+
+  const studiesUsed = entitlements.studiesUsed;
+  const studiesLimit = entitlements.studiesPerOrgLimit;
+  const studiesExhausted = studiesUsed !== null && isQuotaExhausted(studiesUsed, studiesLimit);
+  const studiesNear = studiesUsed !== null && isQuotaNearLimit(studiesUsed, studiesLimit);
+
+  const isExhausted = (remaining !== null && remaining <= 0) || studiesExhausted;
+  const isLow =
+    !isExhausted && ((remaining !== null && remaining > 0 && remaining <= 2) || studiesNear);
+
+  const tone: Tone = isExhausted ? "danger" : isLow ? "warning" : isTrial ? "info" : "neutral";
 
   const parts = [label];
   if (isTrial) parts.push(`Trial: ${trialDays}d`);
-
-  const tone = isExhausted
-    ? "bg-red-50 text-red-700 border-red-200"
-    : isLow
-    ? "bg-amber-50 text-amber-700 border-amber-200"
-    : isTrial
-    ? "bg-blue-50 text-blue-700 border-blue-200"
-    : "bg-gray-50 text-gray-600 border-gray-200";
 
   const title = [
     `Plan: ${label}`,
@@ -46,13 +118,130 @@ const PlanBadge: React.FC = () => {
     .filter(Boolean)
     .join(" — ");
 
+  const salesEmail = auth.config?.salesEmail || DEFAULT_SALES_EMAIL;
+  const mailtoHref = `mailto:${salesEmail}?subject=${encodeURIComponent("Quodsi plan upgrade")}`;
+
+  // Fire-and-forget: never blocks the mailto navigation or the copy action,
+  // never surfaces an error to the user. The backend seam for this ping
+  // isn't wired yet (see upgradeInterestHandler.ts's TODO), so honesty here
+  // means treating it as a courtesy signal, not a confirmed delivery.
+  const pingInterest = () => {
+    pingUpgradeInterest("upgrade").catch(() => {});
+  };
+
+  const handleCopyEmail = async () => {
+    let copySucceeded = true;
+    try {
+      await navigator.clipboard.writeText(salesEmail);
+    } catch {
+      copySucceeded = false;
+    }
+    pingInterest();
+    if (!copySucceeded) {
+      // Don't claim "Copied" when nothing was copied — select the address
+      // so a manual Ctrl/Cmd-C works instead.
+      const node = addressRef.current;
+      const sel = typeof window.getSelection === "function" ? window.getSelection() : null;
+      if (node && sel) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      return;
+    }
+    setCopied(true);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => setCopied(false), COPIED_RESET_MS);
+  };
+
   return (
-    <span
-      className={`px-2 py-0.5 text-[10px] font-medium rounded border ${tone}`}
-      title={title}
-    >
-      {parts.join(" • ")}
-    </span>
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`px-2 py-0.5 text-[10px] font-medium rounded border ${TONE_CLASSES[tone]}`}
+        title={title}
+      >
+        {parts.join(" • ")}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[220px] text-xs">
+          <div className="px-3 py-2 space-y-1.5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-gray-500">Plan</span>
+              <span className="text-gray-700">
+                {label} ({entitlements.planStatus})
+              </span>
+            </div>
+            {entitlements.planSource === "free_fallback" && (
+              <p className="text-[11px] text-amber-700">
+                No plan assigned — using default Free limits
+              </p>
+            )}
+            {runsUsage && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500">Runs this month</span>
+                <span className="text-gray-700">
+                  {formatUsage(runsUsage.used, runsUsage.limit)}
+                </span>
+              </div>
+            )}
+            {studiesUsed !== null && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500">Studies</span>
+                <span className="text-gray-700">{formatUsage(studiesUsed, studiesLimit)}</span>
+              </div>
+            )}
+            {entitlements.scenariosPerStudyLimit !== null && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500">Scenarios per study</span>
+                <span className="text-gray-700">
+                  {formatLimit(entitlements.scenariosPerStudyLimit)}
+                </span>
+              </div>
+            )}
+            {entitlements.replicationsPerScenarioLimit !== null && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500">Replications per run</span>
+                <span className="text-gray-700">
+                  {formatLimit(entitlements.replicationsPerScenarioLimit)}
+                </span>
+              </div>
+            )}
+            {entitlements.tradeoffAnalysis !== null && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-gray-500">Tradeoff Analysis</span>
+                <span className="text-gray-700">
+                  {entitlements.tradeoffAnalysis ? "✓" : "✗"}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-gray-100">
+            <a
+              href={mailtoHref}
+              onClick={pingInterest}
+              className="block px-3 py-2 text-blue-700 hover:bg-blue-50"
+            >
+              Contact us to upgrade
+            </a>
+            <div className="flex items-center gap-2 px-3 pb-2 text-gray-600">
+              <span className="select-all" ref={addressRef}>
+                {salesEmail}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyEmail}
+                className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+              >
+                {copied ? "Copied ✓" : "Copy"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

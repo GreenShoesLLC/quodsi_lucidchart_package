@@ -16,6 +16,7 @@ import { DevtoolsHandler } from './devtoolsHandler';
 import { PortalHandler } from './portalHandler';
 import { SwimLaneHandler } from './swimlaneHandler';
 import { AnalyticsHandler } from './analyticsHandler';
+import { UpgradeInterestHandler } from './upgradeInterestHandler';
 
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
@@ -108,6 +109,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // PlanBadge "contact sales" upgrade-interest ping
+    if (UpgradeInterestHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Message wasn't handled by any handler
     console.warn(`Unhandled message type: ${msg.type}`);
     return false;
@@ -131,5 +137,6 @@ export {
   DevtoolsHandler,
   PortalHandler,
   SwimLaneHandler,
-  AnalyticsHandler
+  AnalyticsHandler,
+  UpgradeInterestHandler
 };

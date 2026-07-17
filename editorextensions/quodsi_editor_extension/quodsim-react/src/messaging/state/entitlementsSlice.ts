@@ -137,6 +137,22 @@ export function simulationsRemaining(state: EntitlementsState): number | null {
 }
 
 /**
+ * Usage snapshot ({ used, limit }) for the metered `simulations_per_month`
+ * feature, for the PlanBadge dropdown's "Runs this month" row. Null when
+ * the feature is unmetered (flag `true`) or absent — the row is hidden in
+ * that case rather than guessing a display value.
+ */
+export function simulationsUsage(
+  state: EntitlementsState
+): { used: number; limit: number } | null {
+  const f = state.features['simulations_per_month'];
+  if (typeof f === 'object' && f !== null && 'limit' in f) {
+    return { used: f.used, limit: f.limit };
+  }
+  return null;
+}
+
+/**
  * Per-model RUN cap. Returns true if the user can run *a new scenario
  * for the first time* given that `distinctRunsCount` distinct scenarios
  * have already been run for this model. Re-running an already-run

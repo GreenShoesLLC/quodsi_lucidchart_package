@@ -1,4 +1,4 @@
-import { entitlementsReducer, initialEntitlementsState, planDisplayLabel } from './entitlementsSlice';
+import { entitlementsReducer, initialEntitlementsState, planDisplayLabel, simulationsUsage } from './entitlementsSlice';
 
 test('ENTITLEMENTS_STATUS_UPDATE stores upgradeAvailable=false', () => {
   const s = entitlementsReducer(initialEntitlementsState, {
@@ -88,5 +88,30 @@ describe('planDisplayLabel', () => {
     expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_pro' })).toBe('Professional');
     expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_early_adopter' })).toBe('Early Adopter');
     expect(planDisplayLabel({ ...initialEntitlementsState, loaded: true, planKey: 'quodsi_employee' })).toBe('Employee');
+  });
+});
+
+describe('simulationsUsage', () => {
+  test('returns { used, limit } for a metered simulations_per_month feature', () => {
+    const state = {
+      ...initialEntitlementsState,
+      loaded: true,
+      features: { simulations_per_month: { limit: 5, used: 2 } },
+    };
+    expect(simulationsUsage(state)).toEqual({ used: 2, limit: 5 });
+  });
+
+  test('returns null when the feature is unmetered (flag true)', () => {
+    const state = {
+      ...initialEntitlementsState,
+      loaded: true,
+      features: { simulations_per_month: true },
+    };
+    expect(simulationsUsage(state)).toBeNull();
+  });
+
+  test('returns null when the feature is absent', () => {
+    const state = { ...initialEntitlementsState, loaded: true, features: {} };
+    expect(simulationsUsage(state)).toBeNull();
   });
 });
