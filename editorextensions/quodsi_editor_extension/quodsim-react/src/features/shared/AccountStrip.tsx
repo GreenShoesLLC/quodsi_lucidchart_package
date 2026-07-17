@@ -136,9 +136,8 @@ const PlanBadge: React.FC = () => {
   const mailtoHref = `mailto:${salesEmail}?subject=${encodeURIComponent("Quodsi plan upgrade")}`;
 
   // Fire-and-forget: never blocks the mailto navigation or the copy action,
-  // never surfaces an error to the user. The backend seam for this ping
-  // isn't wired yet (see upgradeInterestHandler.ts's TODO), so honesty here
-  // means treating it as a courtesy signal, not a confirmed delivery.
+  // never surfaces an error to the user — it's a courtesy signal (see
+  // upgradeInterestHandler.ts), not a confirmed delivery.
   const pingInterest = () => {
     pingUpgradeInterest("upgrade").catch(() => {});
   };

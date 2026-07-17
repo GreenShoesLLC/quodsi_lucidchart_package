@@ -3,10 +3,10 @@ import { v4 as uuid } from 'uuid';
 import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/lucid-shared';
 import { useMessaging } from '../MessageProvider';
 
-// Short timeout: unlike the portal-URL RPC (which round-trips through Lucid's
-// data connector and Kinde), this ping does not currently reach any backend
-// at all (see upgradeInterestHandler.ts's TODO) — the host acks immediately.
-// Callers should treat this as fire-and-forget regardless (see below).
+// Short timeout: this ping round-trips through the extension host to the
+// Quodsi data connector's `UpgradeInterest` action (see
+// upgradeInterestHandler.ts) and back. Callers should treat this as
+// fire-and-forget regardless (see below).
 const UPGRADE_INTEREST_PING_TIMEOUT_MS = 15_000;
 
 const SOURCE_BY_PANEL: Record<string, MessageSource> = {
