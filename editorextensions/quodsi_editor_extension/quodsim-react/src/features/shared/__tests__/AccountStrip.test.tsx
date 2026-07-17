@@ -34,7 +34,9 @@ jest.mock("../../../messaging/senders/upgradeInterestSender", () => ({
 
 import { AccountStrip } from "../AccountStrip";
 
-const BASE_ENTITLEMENTS = {
+// Paying plan — used for row-display / fallback-note / default-tone cases.
+// Contact block must NOT show for this plan (Task 8 review fix #1).
+const PRO_ENTITLEMENTS = {
   loaded: true,
   subjectType: "organization",
   planKey: "quodsi_pro",
@@ -50,6 +52,22 @@ const BASE_ENTITLEMENTS = {
   replicationsPerScenarioLimit: 100,
   tradeoffAnalysis: true,
   chartExport: true,
+};
+
+// Free plan, same task-7 fields present — used for contact-block-visible cases.
+const FREE_ENTITLEMENTS = {
+  ...PRO_ENTITLEMENTS,
+  planKey: "quodsi_free",
+};
+
+// planSource present, but the three limit fields are explicitly null
+// (backend's way of saying "unlimited" once the seam lands).
+const FREE_ENTITLEMENTS_UNLIMITED = {
+  ...FREE_ENTITLEMENTS,
+  studiesUsed: 0,
+  studiesPerOrgLimit: null,
+  scenariosPerStudyLimit: null,
+  replicationsPerScenarioLimit: null,
 };
 
 // Simulates a backend that hasn't started sending Task 7's fields yet.
@@ -74,7 +92,7 @@ const OLD_HOST_ENTITLEMENTS = {
 const mockWriteText = jest.fn();
 
 beforeEach(() => {
-  mockEntitlementsState = BASE_ENTITLEMENTS;
+  mockEntitlementsState = PRO_ENTITLEMENTS;
   mockAuthState.config = undefined;
   mockRequestPortalUrl.mockClear();
   mockRequestAuth.mockClear();
@@ -91,13 +109,13 @@ describe("AccountStrip / PlanBadge", () => {
   });
 
   it("is hidden entirely when entitlements have not loaded", () => {
-    mockEntitlementsState = { ...BASE_ENTITLEMENTS, loaded: false };
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, loaded: false };
     render(<AccountStrip />);
     expect(screen.queryByText(/Professional/)).toBeNull();
   });
 
   it("is hidden entirely when upgradeAvailable is false", () => {
-    mockEntitlementsState = { ...BASE_ENTITLEMENTS, upgradeAvailable: false };
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, upgradeAvailable: false };
     render(<AccountStrip />);
     expect(screen.queryByText(/Professional/)).toBeNull();
   });
@@ -120,21 +138,8 @@ describe("AccountStrip / PlanBadge", () => {
     expect(screen.getByText("✓")).toBeInTheDocument();
   });
 
-  it("hides rows whose backing fields are absent (old-host compat)", () => {
-    mockEntitlementsState = OLD_HOST_ENTITLEMENTS;
-    render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
-
-    expect(screen.getByText("Plan")).toBeInTheDocument();
-    expect(screen.queryByText("Runs this month")).toBeNull();
-    expect(screen.queryByText("Studies")).toBeNull();
-    expect(screen.queryByText("Scenarios per study")).toBeNull();
-    expect(screen.queryByText("Replications per run")).toBeNull();
-    expect(screen.queryByText("Tradeoff Analysis")).toBeNull();
-  });
-
   it("shows the fallback note only when planSource is free_fallback", () => {
-    mockEntitlementsState = { ...BASE_ENTITLEMENTS, planSource: "free_fallback" };
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, planSource: "free_fallback" };
     render(<AccountStrip />);
     fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
     expect(
@@ -158,10 +163,80 @@ describe("AccountStrip / PlanBadge", () => {
       screen.queryByText("No plan assigned — using default Free limits")
     ).toBeNull();
   });
+});
+
+describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSource sentinel)", () => {
+  it("hides Studies / Scenarios per study / Replications per run when planSource is absent (old host)", () => {
+    mockEntitlementsState = OLD_HOST_ENTITLEMENTS;
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+
+    expect(screen.queryByText("Runs this month")).toBeNull();
+    expect(screen.queryByText("Studies")).toBeNull();
+    expect(screen.queryByText("Scenarios per study")).toBeNull();
+    expect(screen.queryByText("Replications per run")).toBeNull();
+    expect(screen.queryByText("Tradeoff Analysis")).toBeNull();
+  });
+
+  it("shows the three rows with real values when planSource is present and limits are finite", () => {
+    render(<AccountStrip />); // PRO_ENTITLEMENTS: planSource 'kinde_org', finite limits
+    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+
+    expect(screen.getByText("Studies")).toBeInTheDocument();
+    expect(screen.getByText("1 of 10")).toBeInTheDocument();
+    expect(screen.getByText("Scenarios per study")).toBeInTheDocument();
+    expect(screen.getByText("Replications per run")).toBeInTheDocument();
+    expect(screen.getByText("100")).toBeInTheDocument();
+    expect(screen.queryByText("Unlimited")).toBeNull();
+  });
+
+  it("shows the three rows as 'Unlimited' when planSource is present but the limit fields are explicit null", () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS_UNLIMITED;
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+
+    expect(screen.getByText("Studies")).toBeInTheDocument();
+    expect(screen.getByText("Scenarios per study")).toBeInTheDocument();
+    expect(screen.getByText("Replications per run")).toBeInTheDocument();
+    // formatUsage/formatLimit both render a bare "Unlimited" when the limit
+    // is null (matching Studio's PlanBadge — usage isn't shown alongside an
+    // unlimited quota), so all three rows collapse to the same text.
+    expect(screen.getAllByText("Unlimited")).toHaveLength(3);
+  });
+});
+
+describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan only)", () => {
+  it("shows the contact block for the quodsi_free plan", () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    expect(
+      screen.getByRole("link", { name: /Contact us to upgrade/i })
+    ).toBeInTheDocument();
+  });
+
+  it("hides the contact block for a paying plan (quodsi_pro)", () => {
+    render(<AccountStrip />); // PRO_ENTITLEMENTS
+    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    expect(
+      screen.queryByRole("link", { name: /Contact us to upgrade/i })
+    ).toBeNull();
+    expect(screen.queryByText(/^Copy$/i)).toBeNull();
+  });
+
+  it("hides the contact block for the employee plan", () => {
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, planKey: "quodsi_employee" };
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Employee/ }));
+    expect(
+      screen.queryByRole("link", { name: /Contact us to upgrade/i })
+    ).toBeNull();
+  });
 
   it("defaults the sales address to sales@quodsi.com when config.salesEmail is absent", () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     expect(screen.getByText("sales@quodsi.com")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Contact us to upgrade/i })
@@ -169,15 +244,17 @@ describe("AccountStrip / PlanBadge", () => {
   });
 
   it("uses config.salesEmail when the host provides one", () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     mockAuthState.config = { salesEmail: "biz@quodsi.com" };
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     expect(screen.getByText("biz@quodsi.com")).toBeInTheDocument();
   });
 
   it("Copy claims success only when the clipboard write succeeds", async () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
 
     await screen.findByRole("button", { name: /copied/i });
@@ -185,9 +262,10 @@ describe("AccountStrip / PlanBadge", () => {
   });
 
   it("Copy does not claim success when the clipboard write fails", async () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     mockWriteText.mockRejectedValue(new Error("clipboard blocked"));
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
 
     // Give the rejected clipboard promise a tick to settle.
@@ -199,17 +277,58 @@ describe("AccountStrip / PlanBadge", () => {
   });
 
   it("pings upgrade interest when the contact link is clicked", () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     fireEvent.click(screen.getByRole("link", { name: /Contact us to upgrade/i }));
     expect(mockPingUpgradeInterest).toHaveBeenCalledWith("upgrade");
   });
 
   it("pings upgrade interest when the Copy button is clicked", async () => {
+    mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
     await screen.findByRole("button", { name: /copied/i });
     expect(mockPingUpgradeInterest).toHaveBeenCalledWith("upgrade");
+  });
+});
+
+describe("AccountStrip / PlanBadge — tone", () => {
+  it("uses the danger tone when studies are exhausted (even though runs quota is fine)", () => {
+    mockEntitlementsState = {
+      ...PRO_ENTITLEMENTS,
+      features: { simulations_per_month: { limit: 100, used: 10 } }, // runs fine
+      studiesUsed: 10,
+      studiesPerOrgLimit: 10, // exhausted
+    };
+    render(<AccountStrip />);
+    const chip = screen.getByRole("button", { name: /Professional/ });
+    expect(chip.className).toContain("bg-red-50");
+  });
+
+  it("uses the warning tone when studies are near their limit (>=80%, runs quota fine)", () => {
+    mockEntitlementsState = {
+      ...PRO_ENTITLEMENTS,
+      features: { simulations_per_month: { limit: 100, used: 10 } }, // runs fine
+      studiesUsed: 8,
+      studiesPerOrgLimit: 10, // 80% -> near limit
+    };
+    render(<AccountStrip />);
+    const chip = screen.getByRole("button", { name: /Professional/ });
+    expect(chip.className).toContain("bg-amber-50");
+  });
+
+  it("uses the neutral tone for the employee plan (no explicit employee branch — falls through the default)", () => {
+    mockEntitlementsState = {
+      ...PRO_ENTITLEMENTS,
+      planKey: "quodsi_employee",
+      features: { simulations_per_month: { limit: 100, used: 10 } },
+      studiesUsed: 1,
+      studiesPerOrgLimit: 10,
+    };
+    render(<AccountStrip />);
+    const chip = screen.getByRole("button", { name: /Employee/ });
+    expect(chip.className).toContain("bg-gray-50");
   });
 });

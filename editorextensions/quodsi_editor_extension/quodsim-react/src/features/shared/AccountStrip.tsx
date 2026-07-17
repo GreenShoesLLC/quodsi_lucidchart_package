@@ -51,9 +51,19 @@ function isQuotaNearLimit(used: number, limit: number | null): boolean {
  * (built from `simulationsRemaining` — the ≤2-remaining "low" threshold is
  * intentionally NOT changed here) and layers in a click-to-open dropdown
  * with the fuller entitlements breakdown from Task 7's envelope fields.
- * Each new-field row is rendered only when its value is present, so this
- * degrades gracefully against a backend that hasn't started sending them
- * yet (see entitlementsSlice.ts's doc comments on the optional fields).
+ *
+ * Row visibility for the three study-keyed *limit* rows (Studies, Scenarios
+ * per study, Replications per run) is gated on `planSource !== null` rather
+ * than each field's own null-check: `planSource` is the one new field whose
+ * null can ONLY mean "old host never sent Task 7's fields" (there's no
+ * legitimate domain value of "no plan source"), whereas a bare
+ * `scenariosPerStudyLimit === null` is ambiguous — it could mean "old host"
+ * OR "new host explicitly saying this plan has no limit" (unlimited).
+ * Gating on `planSource` lets us treat an explicit `null` limit as
+ * "Unlimited" (via `formatLimit`) the moment the backend starts sending
+ * these fields, without a special case. `tradeoffAnalysis` doesn't have this
+ * ambiguity (`null` vs `true`/`false` are all distinguishable), so it keeps
+ * its own per-field check.
  */
 const PlanBadge: React.FC = () => {
   const auth = useAuth();
@@ -105,6 +115,10 @@ const PlanBadge: React.FC = () => {
   const isLow =
     !isExhausted && ((remaining !== null && remaining > 0 && remaining <= 2) || studiesNear);
 
+  // No explicit `planKey === 'quodsi_employee' → neutral` branch: Studio's
+  // ported priority order falls through to "neutral" by default whenever
+  // nothing is exhausted/near/trialing, which is exactly what an employee
+  // plan (never trialing, never metered near a limit) already gets here.
   const tone: Tone = isExhausted ? "danger" : isLow ? "warning" : isTrial ? "info" : "neutral";
 
   const parts = [label];
@@ -187,13 +201,18 @@ const PlanBadge: React.FC = () => {
                 </span>
               </div>
             )}
-            {studiesUsed !== null && (
+            {/* planSource !== null is the "new-backend fields known" sentinel — see
+                the component doc comment above for why these three rows can't
+                gate on their own (ambiguous) null limit values. */}
+            {entitlements.planSource !== null && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Studies</span>
-                <span className="text-gray-700">{formatUsage(studiesUsed, studiesLimit)}</span>
+                <span className="text-gray-700">
+                  {formatUsage(studiesUsed ?? 0, studiesLimit)}
+                </span>
               </div>
             )}
-            {entitlements.scenariosPerStudyLimit !== null && (
+            {entitlements.planSource !== null && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Scenarios per study</span>
                 <span className="text-gray-700">
@@ -201,7 +220,7 @@ const PlanBadge: React.FC = () => {
                 </span>
               </div>
             )}
-            {entitlements.replicationsPerScenarioLimit !== null && (
+            {entitlements.planSource !== null && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-gray-500">Replications per run</span>
                 <span className="text-gray-700">
@@ -218,27 +237,35 @@ const PlanBadge: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="border-t border-gray-100">
-            <a
-              href={mailtoHref}
-              onClick={pingInterest}
-              className="block px-3 py-2 text-blue-700 hover:bg-blue-50"
-            >
-              Contact us to upgrade
-            </a>
-            <div className="flex items-center gap-2 px-3 pb-2 text-gray-600">
-              <span className="select-all" ref={addressRef}>
-                {salesEmail}
-              </span>
-              <button
-                type="button"
-                onClick={handleCopyEmail}
-                className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+          {/* Contact-to-upgrade affordance only makes sense for the free plan —
+              matches Studio's PlanBadge.tsx (`ent.plan_key === PLAN_FREE`) and
+              drawio's PlanChip.tsx (same), gated on the CURRENT plan code
+              'quodsi_free' only (not the legacy 'quodsi_free_user' code —
+              neither precedent includes it). Paying plans already have the
+              "Upgrade plan" Kinde-portal item in AuthStatusIndicator. */}
+          {entitlements.planKey === "quodsi_free" && (
+            <div className="border-t border-gray-100">
+              <a
+                href={mailtoHref}
+                onClick={pingInterest}
+                className="block px-3 py-2 text-blue-700 hover:bg-blue-50"
               >
-                {copied ? "Copied ✓" : "Copy"}
-              </button>
+                Contact us to upgrade
+              </a>
+              <div className="flex items-center gap-2 px-3 pb-2 text-gray-600">
+                <span className="select-all" ref={addressRef}>
+                  {salesEmail}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleCopyEmail}
+                  className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+                >
+                  {copied ? "Copied ✓" : "Copy"}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
