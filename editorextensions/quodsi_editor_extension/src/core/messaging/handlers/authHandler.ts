@@ -311,8 +311,9 @@ export class AuthHandler {
   }
 
   /**
-   * Fetch /me/entitlements from quodsi_api via the data connector and broadcast
-   * an ENTITLEMENTS_STATUS message so the React panel can gate paid features.
+   * Fetch entitlements via the quodsi_api data connector's GetMyEntitlements
+   * action and broadcast an ENTITLEMENTS_STATUS message so the React panel
+   * can gate paid features.
    */
   private static async fetchAndBroadcastEntitlements(): Promise<void> {
     try {
@@ -352,18 +353,18 @@ export class AuthHandler {
     trialExpiresAt?: string;
     upgradeAvailable?: boolean;
     features: Record<string, unknown>;
-    // Flat fields from quodsi_api's GET-my-entitlements REST response
-    // (snake_case, matching the shared `Entitlements` REST convention).
-    // Optional here so this tolerates older backends that don't send them
-    // yet; the envelope re-exposes them camelCased below.
-    plan_source?: EntitlementPlanSource;
-    org_name?: string | null;
-    studies_used?: number;
-    studies_per_org_limit?: number | null;
-    scenarios_per_study_limit?: number | null;
-    replications_per_scenario_limit?: number | null;
-    tradeoff_analysis?: boolean;
-    chart_export?: boolean;
+    // quodsi_api's /lucid/GetMyEntitlements action is camelCase end-to-end
+    // (unlike the snake_case /me/entitlements REST endpoint) specifically so
+    // the extension can consume it directly without a field rename. Optional
+    // here so this tolerates older backends that don't send them yet.
+    planSource?: EntitlementPlanSource;
+    orgName?: string | null;
+    studiesUsed?: number;
+    studiesPerOrgLimit?: number | null;
+    scenariosPerStudyLimit?: number | null;
+    replicationsPerScenarioLimit?: number | null;
+    tradeoffAnalysis?: boolean;
+    chartExport?: boolean;
   }): void {
     router.send('broadcast', {
       id: generateId(),
@@ -378,16 +379,14 @@ export class AuthHandler {
         trialExpiresAt: data.trialExpiresAt,
         features: data.features,
         upgradeAvailable: data.upgradeAvailable,
-        // Pass-through camelCase mapping of the new flat REST fields. All
-        // are optional/undefined when the backend hasn't shipped them yet.
-        planSource: data.plan_source,
-        orgName: data.org_name,
-        studiesUsed: data.studies_used,
-        studiesPerOrgLimit: data.studies_per_org_limit,
-        scenariosPerStudyLimit: data.scenarios_per_study_limit,
-        replicationsPerScenarioLimit: data.replications_per_scenario_limit,
-        tradeoffAnalysis: data.tradeoff_analysis,
-        chartExport: data.chart_export,
+        planSource: data.planSource,
+        orgName: data.orgName,
+        studiesUsed: data.studiesUsed,
+        studiesPerOrgLimit: data.studiesPerOrgLimit,
+        scenariosPerStudyLimit: data.scenariosPerStudyLimit,
+        replicationsPerScenarioLimit: data.replicationsPerScenarioLimit,
+        tradeoffAnalysis: data.tradeoffAnalysis,
+        chartExport: data.chartExport,
       },
     });
   }
