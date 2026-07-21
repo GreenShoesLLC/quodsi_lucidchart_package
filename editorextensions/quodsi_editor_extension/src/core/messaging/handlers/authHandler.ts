@@ -1,4 +1,4 @@
-import { EnvelopeBase, EnvelopeMessageType, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, EntitlementPlanSource, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
 import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
@@ -311,8 +311,9 @@ export class AuthHandler {
   }
 
   /**
-   * Fetch /me/entitlements from quodsi_api via the data connector and broadcast
-   * an ENTITLEMENTS_STATUS message so the React panel can gate paid features.
+   * Fetch entitlements via the quodsi_api data connector's GetMyEntitlements
+   * action and broadcast an ENTITLEMENTS_STATUS message so the React panel
+   * can gate paid features.
    */
   private static async fetchAndBroadcastEntitlements(): Promise<void> {
     try {
@@ -352,6 +353,18 @@ export class AuthHandler {
     trialExpiresAt?: string;
     upgradeAvailable?: boolean;
     features: Record<string, unknown>;
+    // quodsi_api's /lucid/GetMyEntitlements action is camelCase end-to-end
+    // (unlike the snake_case /me/entitlements REST endpoint) specifically so
+    // the extension can consume it directly without a field rename. Optional
+    // here so this tolerates older backends that don't send them yet.
+    planSource?: EntitlementPlanSource;
+    orgName?: string | null;
+    studiesUsed?: number;
+    studiesPerOrgLimit?: number | null;
+    scenariosPerStudyLimit?: number | null;
+    replicationsPerScenarioLimit?: number | null;
+    tradeoffAnalysis?: boolean;
+    chartExport?: boolean;
   }): void {
     router.send('broadcast', {
       id: generateId(),
@@ -359,7 +372,22 @@ export class AuthHandler {
       source: 'host',
       target: 'broadcast',
       version: '1.0',
-      data,
+      data: {
+        subjectType: data.subjectType,
+        planKey: data.planKey,
+        planStatus: data.planStatus,
+        trialExpiresAt: data.trialExpiresAt,
+        features: data.features,
+        upgradeAvailable: data.upgradeAvailable,
+        planSource: data.planSource,
+        orgName: data.orgName,
+        studiesUsed: data.studiesUsed,
+        studiesPerOrgLimit: data.studiesPerOrgLimit,
+        scenariosPerStudyLimit: data.scenariosPerStudyLimit,
+        replicationsPerScenarioLimit: data.replicationsPerScenarioLimit,
+        tradeoffAnalysis: data.tradeoffAnalysis,
+        chartExport: data.chartExport,
+      },
     });
   }
 

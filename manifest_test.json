@@ -60,7 +60,8 @@
         "CancelSimulation": "CancelSimulation",
         "TrackEvent": "TrackEvent",
         "GetMyEntitlements": "GetMyEntitlements",
-        "GeneratePortalUrl": "GeneratePortalUrl"
+        "GeneratePortalUrl": "GeneratePortalUrl",
+        "UpgradeInterest": "UpgradeInterest"
       }
     }
   ]

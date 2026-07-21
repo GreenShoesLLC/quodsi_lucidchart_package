@@ -9,6 +9,12 @@ import { EnvelopeMessageType } from '../envelope/envelopeMessageTypes';
 export type EntitlementSubjectType = 'user' | 'organization';
 
 /**
+ * Where the active plan resolution came from, as computed by the backend's
+ * EntitlementService. Mirrors `quodsi_api`'s flat REST field `plan_source`.
+ */
+export type EntitlementPlanSource = 'kinde_org' | 'kinde_user' | 'free_fallback';
+
+/**
  * Plan status mirrors Kinde. `trialing` grants full entitlements like
  * `active` — only `expired` downgrades the user to free defaults.
  */
@@ -57,6 +63,37 @@ export interface EntitlementsStatusMessage extends EnvelopeBase {
 
     /** From backend BILLING_MODE; false => hide Upgrade UI. Absent => show (fail-open). */
     upgradeAvailable?: boolean;
+
+    /**
+     * The following fields mirror `quodsi_api`'s flat `GET /me/entitlements`
+     * REST response (camelCased). All are OPTIONAL so older extension builds
+     * (built against a prior envelope shape) keep compiling and working
+     * against newer hosts/backends that don't yet send them.
+     */
+
+    /** Whether the resolved plan came from the user's org, the user directly, or the free fallback. */
+    planSource?: EntitlementPlanSource;
+
+    /** Display name of the org whose plan is active, or null when not org-scoped. */
+    orgName?: string | null;
+
+    /** Studies used so far in the current period, for study-keyed limits. */
+    studiesUsed?: number;
+
+    /** Max studies allowed per org (null = unlimited). */
+    studiesPerOrgLimit?: number | null;
+
+    /** Max scenarios allowed per study (null = unlimited). */
+    scenariosPerStudyLimit?: number | null;
+
+    /** Max replications allowed per scenario (null = unlimited). */
+    replicationsPerScenarioLimit?: number | null;
+
+    /** Whether the Tradeoff Analysis feature is enabled for the current plan. */
+    tradeoffAnalysis?: boolean;
+
+    /** Whether chart export is enabled for the current plan. */
+    chartExport?: boolean;
   };
 }
 

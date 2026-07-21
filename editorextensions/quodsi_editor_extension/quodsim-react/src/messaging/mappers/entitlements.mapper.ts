@@ -2,6 +2,7 @@ import {
   EnvelopeBase,
   EnvelopeMessageType,
   EntitlementMeteredFeature,
+  EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementSubjectType,
 } from '@quodsi/lucid-shared';
@@ -24,6 +25,14 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     trialExpiresAt?: string;
     features: Record<string, EntitlementMeteredFeature | boolean>;
     upgradeAvailable?: boolean;
+    planSource?: EntitlementPlanSource;
+    orgName?: string | null;
+    studiesUsed?: number;
+    studiesPerOrgLimit?: number | null;
+    scenariosPerStudyLimit?: number | null;
+    replicationsPerScenarioLimit?: number | null;
+    tradeoffAnalysis?: boolean;
+    chartExport?: boolean;
   };
 
   logger.log('ENTITLEMENTS_STATUS received:', {
@@ -33,6 +42,8 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     trialExpiresAt: data.trialExpiresAt,
     features: data.features,
     featureKeys: data.features ? Object.keys(data.features) : [],
+    planSource: data.planSource,
+    orgName: data.orgName,
   });
 
   return {
@@ -43,5 +54,13 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     trialExpiresAt: data.trialExpiresAt,
     features: data.features,
     upgradeAvailable: data.upgradeAvailable,
+    planSource: data.planSource,
+    orgName: data.orgName,
+    studiesUsed: data.studiesUsed,
+    studiesPerOrgLimit: data.studiesPerOrgLimit,
+    scenariosPerStudyLimit: data.scenariosPerStudyLimit,
+    replicationsPerScenarioLimit: data.replicationsPerScenarioLimit,
+    tradeoffAnalysis: data.tradeoffAnalysis,
+    chartExport: data.chartExport,
   };
 }

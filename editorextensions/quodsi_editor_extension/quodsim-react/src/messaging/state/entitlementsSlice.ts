@@ -1,5 +1,6 @@
 import {
   EntitlementMeteredFeature,
+  EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementSubjectType,
 } from '@quodsi/lucid-shared';
@@ -19,6 +20,26 @@ export interface EntitlementsState {
   features: Record<string, EntitlementMeteredFeature | boolean>;
   /** Whether an upgrade is available for the current plan. null = unknown (fail-open: treat as "show"). */
   upgradeAvailable: boolean | null;
+
+  // ---- New study-keyed / org-context fields (all optional on the wire;
+  // safe defaults below so old hosts that don't send them still work). ----
+
+  /** Whether the active plan resolved from the user's org, the user directly, or the free fallback. */
+  planSource: EntitlementPlanSource | null;
+  /** Display name of the org whose plan is active, or null when not org-scoped / unknown. */
+  orgName: string | null;
+  /** Studies used so far in the current period. null = unknown (old host). */
+  studiesUsed: number | null;
+  /** Max studies allowed per org. null = unlimited / unknown. */
+  studiesPerOrgLimit: number | null;
+  /** Max scenarios allowed per study. null = unlimited / unknown. */
+  scenariosPerStudyLimit: number | null;
+  /** Max replications allowed per scenario. null = unlimited / unknown. */
+  replicationsPerScenarioLimit: number | null;
+  /** Whether Tradeoff Analysis is enabled for the current plan. null = unknown (old host). */
+  tradeoffAnalysis: boolean | null;
+  /** Whether chart export is enabled for the current plan. null = unknown (old host). */
+  chartExport: boolean | null;
 }
 
 export const initialEntitlementsState: EntitlementsState = {
@@ -29,6 +50,14 @@ export const initialEntitlementsState: EntitlementsState = {
   trialExpiresAt: null,
   features: {},
   upgradeAvailable: null,
+  planSource: null,
+  orgName: null,
+  studiesUsed: null,
+  studiesPerOrgLimit: null,
+  scenariosPerStudyLimit: null,
+  replicationsPerScenarioLimit: null,
+  tradeoffAnalysis: null,
+  chartExport: null,
 };
 
 export type EntitlementsAction =
@@ -40,6 +69,14 @@ export type EntitlementsAction =
       trialExpiresAt?: string;
       features: Record<string, EntitlementMeteredFeature | boolean>;
       upgradeAvailable?: boolean;
+      planSource?: EntitlementPlanSource;
+      orgName?: string | null;
+      studiesUsed?: number;
+      studiesPerOrgLimit?: number | null;
+      scenariosPerStudyLimit?: number | null;
+      replicationsPerScenarioLimit?: number | null;
+      tradeoffAnalysis?: boolean;
+      chartExport?: boolean;
     }
   | { type: 'ENTITLEMENTS_CLEAR' };
 
@@ -62,6 +99,14 @@ export function entitlementsReducer(
         trialExpiresAt: action.trialExpiresAt ?? null,
         features: action.features,
         upgradeAvailable: action.upgradeAvailable ?? null,
+        planSource: action.planSource ?? null,
+        orgName: action.orgName ?? null,
+        studiesUsed: action.studiesUsed ?? null,
+        studiesPerOrgLimit: action.studiesPerOrgLimit ?? null,
+        scenariosPerStudyLimit: action.scenariosPerStudyLimit ?? null,
+        replicationsPerScenarioLimit: action.replicationsPerScenarioLimit ?? null,
+        tradeoffAnalysis: action.tradeoffAnalysis ?? null,
+        chartExport: action.chartExport ?? null,
       };
     case 'ENTITLEMENTS_CLEAR':
       return initialEntitlementsState;
@@ -87,6 +132,22 @@ export function simulationsRemaining(state: EntitlementsState): number | null {
   const f = state.features['simulations_per_month'];
   if (typeof f === 'object' && f !== null && 'limit' in f) {
     return Math.max(0, f.limit - f.used);
+  }
+  return null;
+}
+
+/**
+ * Usage snapshot ({ used, limit }) for the metered `simulations_per_month`
+ * feature, for PlanDetails's "Runs this month" row. Null when
+ * the feature is unmetered (flag `true`) or absent — the row is hidden in
+ * that case rather than guessing a display value.
+ */
+export function simulationsUsage(
+  state: EntitlementsState
+): { used: number; limit: number } | null {
+  const f = state.features['simulations_per_month'];
+  if (typeof f === 'object' && f !== null && 'limit' in f) {
+    return { used: f.used, limit: f.limit };
   }
   return null;
 }
@@ -145,6 +206,7 @@ export function trialDaysRemaining(state: EntitlementsState): number | null {
 export function planDisplayLabel(state: EntitlementsState): string {
   if (!state.loaded || !state.planKey) return 'Free plan';
   switch (state.planKey) {
+    // Legacy plan codes.
     case 'quodsi_free_user':
       return 'Free plan';
     case 'quodsi_pro_user':
@@ -153,6 +215,15 @@ export function planDisplayLabel(state: EntitlementsState): string {
       return 'Team plan';
     case 'quodsi_enterprise_team':
       return 'Enterprise';
+    // Current plan codes.
+    case 'quodsi_free':
+      return 'Free plan';
+    case 'quodsi_pro':
+      return 'Professional';
+    case 'quodsi_early_adopter':
+      return 'Early Adopter';
+    case 'quodsi_employee':
+      return 'Employee';
     default:
       return state.planKey;
   }

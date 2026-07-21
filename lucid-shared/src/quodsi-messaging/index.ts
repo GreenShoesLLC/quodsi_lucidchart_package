@@ -7,7 +7,7 @@ import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessag
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
-import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
+import { EntitlementMessage, EntitlementsStatusMessage, EntitlementSubjectType, EntitlementPlanSource, EntitlementPlanStatus, EntitlementMeteredFeature } from './entitlements/messages';
 import { ClientAnalyticsEvent } from './analytics/messages';
 
 // Export message types enum
@@ -110,6 +110,7 @@ export {
 export {
   EntitlementsStatusMessage,
   EntitlementSubjectType,
+  EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementMeteredFeature,
   EntitlementMessage
