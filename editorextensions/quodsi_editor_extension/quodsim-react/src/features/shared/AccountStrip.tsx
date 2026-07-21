@@ -47,50 +47,16 @@ function isQuotaNearLimit(used: number, limit: number | null): boolean {
 }
 
 /**
- * Plan visibility chip. Preserves the existing label/trial/tone behavior
- * (built from `simulationsRemaining` — the ≤2-remaining "low" threshold is
- * intentionally NOT changed here) and layers in a click-to-open dropdown
- * with the fuller entitlements breakdown from Task 7's envelope fields.
- *
- * Row visibility for the three study-keyed *limit* rows (Studies, Scenarios
- * per study, Replications per run) is gated on `planSource !== null` rather
- * than each field's own null-check: `planSource` is the one new field whose
- * null can ONLY mean "old host never sent Task 7's fields" (there's no
- * legitimate domain value of "no plan source"), whereas a bare
- * `scenariosPerStudyLimit === null` is ambiguous — it could mean "old host"
- * OR "new host explicitly saying this plan has no limit" (unlimited).
- * Gating on `planSource` lets us treat an explicit `null` limit as
- * "Unlimited" (via `formatLimit`) the moment the backend starts sending
- * these fields, without a special case. `tradeoffAnalysis` doesn't have this
- * ambiguity (`null` vs `true`/`false` are all distinguishable), so it keeps
- * its own per-field check.
+ * Plan visibility chip. Inert — plan name only, no click handler, no usage
+ * numbers, no tooltip beyond `Plan: <label>`. Preserves the existing
+ * label/tone behavior (built from `simulationsRemaining` — the ≤2-remaining
+ * "low" threshold is intentionally NOT changed here). The fuller entitlements
+ * breakdown lives one step deeper, in `PlanDetails`, behind the account
+ * menu's "Plan details" disclosure.
  */
 const PlanBadge: React.FC = () => {
   const auth = useAuth();
   const entitlements = useEntitlements();
-  const { pingUpgradeInterest } = useUpgradeInterestSender();
-  const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const addressRef = useRef<HTMLSpanElement>(null);
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [open]);
 
   // Fail-closed on purpose (unlike AuthStatusIndicator's Upgrade menu item):
   // nothing billing-related may render before entitlements have loaded, and
@@ -102,7 +68,6 @@ const PlanBadge: React.FC = () => {
   const label = planDisplayLabel(entitlements);
   const trialDays = trialDaysRemaining(entitlements);
   const remaining = simulationsRemaining(entitlements);
-  const runsUsage = simulationsUsage(entitlements);
 
   const isTrial = trialDays !== null;
 
@@ -121,23 +86,62 @@ const PlanBadge: React.FC = () => {
   // plan (never trialing, never metered near a limit) already gets here.
   const tone: Tone = isExhausted ? "danger" : isLow ? "warning" : isTrial ? "info" : "neutral";
 
-  const parts = [label];
-  if (isTrial) parts.push(`Trial: ${trialDays}d`);
+  const title = `Plan: ${label}`;
 
-  const title = [
-    `Plan: ${label}`,
-    remaining !== null ? `Simulations remaining this month: ${remaining}` : null,
-    isTrial ? `${trialDays} day${trialDays === 1 ? "" : "s"} left in trial` : null,
-  ]
-    .filter(Boolean)
-    .join(" — ");
+  return (
+    <span
+      className={`inline-block px-2 py-0.5 text-[10px] font-medium rounded border ${TONE_CLASSES[tone]}`}
+      title={title}
+    >
+      {label}
+    </span>
+  );
+};
+
+/**
+ * The entitlement/usage body, moved verbatim out of PlanBadge's old dropdown.
+ * Rendered only when AuthStatusIndicator's "Plan details" disclosure is
+ * expanded — usage is deliberately two clicks deep.
+ *
+ * Row visibility for the three study-keyed *limit* rows (Studies, Scenarios
+ * per study, Replications per run) is gated on `planSource !== null` rather
+ * than each field's own null-check: `planSource` is the one new field whose
+ * null can ONLY mean "old host never sent Task 7's fields" (there's no
+ * legitimate domain value of "no plan source"), whereas a bare
+ * `scenariosPerStudyLimit === null` is ambiguous — it could mean "old host"
+ * OR "new host explicitly saying this plan has no limit" (unlimited).
+ * `tradeoffAnalysis` doesn't have this ambiguity, so it keeps its own check.
+ */
+const PlanDetails: React.FC = () => {
+  const auth = useAuth();
+  const entitlements = useEntitlements();
+  const { pingUpgradeInterest } = useUpgradeInterestSender();
+  const [copied, setCopied] = useState(false);
+  const addressRef = useRef<HTMLSpanElement>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
+
+  // Same fail-closed rule as PlanBadge.
+  if (!auth.isAuthenticated || !entitlements.loaded || entitlements.upgradeAvailable === false) {
+    return null;
+  }
+
+  const label = planDisplayLabel(entitlements);
+  const trialDays = trialDaysRemaining(entitlements);
+  const runsUsage = simulationsUsage(entitlements);
+  const studiesUsed = entitlements.studiesUsed;
+  const studiesLimit = entitlements.studiesPerOrgLimit;
 
   const salesEmail = auth.config?.salesEmail || DEFAULT_SALES_EMAIL;
   const mailtoHref = `mailto:${salesEmail}?subject=${encodeURIComponent("Quodsi plan upgrade")}`;
 
   // Fire-and-forget: never blocks the mailto navigation or the copy action,
-  // never surfaces an error to the user — it's a courtesy signal (see
-  // upgradeInterestHandler.ts), not a confirmed delivery.
+  // never surfaces an error to the user — it's a courtesy signal.
   const pingInterest = () => {
     pingUpgradeInterest("upgrade").catch(() => {});
   };
@@ -169,102 +173,85 @@ const PlanBadge: React.FC = () => {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className={`px-2 py-0.5 text-[10px] font-medium rounded border ${TONE_CLASSES[tone]}`}
-        title={title}
-      >
-        {parts.join(" • ")}
-      </button>
-      {open && (
-        <div className="absolute left-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[220px] text-xs">
-          <div className="px-3 py-2 space-y-1.5">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-gray-500">Plan</span>
-              <span className="text-gray-700">
-                {label} ({entitlements.planStatus})
-              </span>
-            </div>
-            {entitlements.planSource === "free_fallback" && (
-              <p className="text-[11px] text-amber-700">
-                No plan assigned — using default Free limits
-              </p>
-            )}
-            {runsUsage && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Runs this month</span>
-                <span className="text-gray-700">
-                  {formatUsage(runsUsage.used, runsUsage.limit)}
-                </span>
-              </div>
-            )}
-            {/* planSource !== null is the "new-backend fields known" sentinel — see
-                the component doc comment above for why these three rows can't
-                gate on their own (ambiguous) null limit values. */}
-            {entitlements.planSource !== null && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Studies</span>
-                <span className="text-gray-700">
-                  {formatUsage(studiesUsed ?? 0, studiesLimit)}
-                </span>
-              </div>
-            )}
-            {entitlements.planSource !== null && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Scenarios per study</span>
-                <span className="text-gray-700">
-                  {formatLimit(entitlements.scenariosPerStudyLimit)}
-                </span>
-              </div>
-            )}
-            {entitlements.planSource !== null && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Replications per run</span>
-                <span className="text-gray-700">
-                  {formatLimit(entitlements.replicationsPerScenarioLimit)}
-                </span>
-              </div>
-            )}
-            {entitlements.tradeoffAnalysis !== null && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-gray-500">Tradeoff Analysis</span>
-                <span className="text-gray-700">
-                  {entitlements.tradeoffAnalysis ? "✓" : "✗"}
-                </span>
-              </div>
-            )}
+    <div className="border-t border-gray-100 text-xs">
+      <div className="px-3 py-2 space-y-1.5">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-gray-500">Plan</span>
+          <span className="text-gray-700">
+            {label} ({entitlements.planStatus})
+          </span>
+        </div>
+        {trialDays !== null && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Trial</span>
+            <span className="text-gray-700">
+              {trialDays} day{trialDays === 1 ? "" : "s"} left
+            </span>
           </div>
-          {/* Contact-to-upgrade affordance only makes sense for the free plan —
-              matches Studio's PlanBadge.tsx (`ent.plan_key === PLAN_FREE`) and
-              drawio's PlanChip.tsx (same), gated on the CURRENT plan code
-              'quodsi_free' only (not the legacy 'quodsi_free_user' code —
-              neither precedent includes it). Paying plans already have the
-              "Upgrade plan" Kinde-portal item in AuthStatusIndicator. */}
-          {entitlements.planKey === "quodsi_free" && (
-            <div className="border-t border-gray-100">
-              <a
-                href={mailtoHref}
-                onClick={pingInterest}
-                className="block px-3 py-2 text-blue-700 hover:bg-blue-50"
-              >
-                Contact us to upgrade
-              </a>
-              <div className="flex items-center gap-2 px-3 pb-2 text-gray-600">
-                <span className="select-all" ref={addressRef}>
-                  {salesEmail}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleCopyEmail}
-                  className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
-                >
-                  {copied ? "Copied ✓" : "Copy"}
-                </button>
-              </div>
-            </div>
-          )}
+        )}
+        {entitlements.planSource === "free_fallback" && (
+          <p className="text-[11px] text-amber-700">
+            No plan assigned — using default Free limits
+          </p>
+        )}
+        {runsUsage && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Runs this month</span>
+            <span className="text-gray-700">{formatUsage(runsUsage.used, runsUsage.limit)}</span>
+          </div>
+        )}
+        {entitlements.planSource !== null && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Studies</span>
+            <span className="text-gray-700">{formatUsage(studiesUsed ?? 0, studiesLimit)}</span>
+          </div>
+        )}
+        {entitlements.planSource !== null && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Scenarios per study</span>
+            <span className="text-gray-700">{formatLimit(entitlements.scenariosPerStudyLimit)}</span>
+          </div>
+        )}
+        {entitlements.planSource !== null && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Replications per run</span>
+            <span className="text-gray-700">
+              {formatLimit(entitlements.replicationsPerScenarioLimit)}
+            </span>
+          </div>
+        )}
+        {entitlements.tradeoffAnalysis !== null && (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-gray-500">Tradeoff Analysis</span>
+            <span className="text-gray-700">{entitlements.tradeoffAnalysis ? "✓" : "✗"}</span>
+          </div>
+        )}
+      </div>
+      {/* Contact-to-upgrade affordance only makes sense for the free plan,
+          gated on the CURRENT plan code 'quodsi_free' only (not the legacy
+          'quodsi_free_user' code). Paying plans already have the "Upgrade
+          plan" Kinde-portal item below. */}
+      {entitlements.planKey === "quodsi_free" && (
+        <div className="border-t border-gray-100">
+          <a
+            href={mailtoHref}
+            onClick={pingInterest}
+            className="block px-3 py-2 text-blue-700 hover:bg-blue-50"
+          >
+            Contact us to upgrade
+          </a>
+          <div className="flex items-center gap-2 px-3 pb-2 text-gray-600">
+            <span className="select-all" ref={addressRef}>
+              {salesEmail}
+            </span>
+            <button
+              type="button"
+              onClick={handleCopyEmail}
+              className="rounded border border-gray-200 px-1.5 py-0.5 text-[11px] text-gray-600 hover:bg-gray-100"
+            >
+              {copied ? "Copied ✓" : "Copy"}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -277,6 +264,7 @@ const AuthStatusIndicator: React.FC = () => {
   const authSender = useAuthSender();
   const { requestPortalUrl } = usePortalSender();
   const [authDropdownOpen, setAuthDropdownOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [requestingUpgrade, setRequestingUpgrade] = useState(false);
   const authDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -302,6 +290,12 @@ const AuthStatusIndicator: React.FC = () => {
 
   const handleSignOut = () => {
     setAuthDropdownOpen(false);
+    // Lucid's sign-out opens Kinde's logout URL in a new tab and then calls
+    // authSender.logout(), which clears state in place — there is no
+    // redirect/remount here (unlike Studio's Kinde-hosted logout flow), so a
+    // stale expanded disclosure would otherwise survive into the next
+    // sign-in. Usage must always start collapsed.
+    setDetailsOpen(false);
     // Open Kinde's logout URL in a new tab as defense-in-depth: it kills
     // Kinde's SSO session cookie cleanly. With prompt=login on the kinde
     // provider's authorizationUrl in the manifest, the next "Sign In"
@@ -326,6 +320,7 @@ const AuthStatusIndicator: React.FC = () => {
         !authDropdownRef.current.contains(event.target as Node)
       ) {
         setAuthDropdownOpen(false);
+        setDetailsOpen(false);
       }
     };
     if (authDropdownOpen) {
@@ -377,12 +372,22 @@ const AuthStatusIndicator: React.FC = () => {
         </span>
       </button>
       {authDropdownOpen && (
-        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[160px]">
+        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[220px]">
           {auth.user?.email && (
             <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-100 truncate">
               {auth.user.email}
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(!detailsOpen)}
+            aria-expanded={detailsOpen}
+            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center justify-between gap-2"
+          >
+            <span>Plan details</span>
+            <span aria-hidden="true">{detailsOpen ? "▾" : "▸"}</span>
+          </button>
+          {detailsOpen && <PlanDetails />}
           {showUpgrade && (
             <button
               onClick={handleUpgrade}

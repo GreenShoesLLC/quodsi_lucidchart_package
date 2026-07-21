@@ -34,6 +34,11 @@ jest.mock("../../../messaging/senders/upgradeInterestSender", () => ({
 
 import { AccountStrip } from "../AccountStrip";
 
+function openPlanDetails() {
+  fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Plan details/ }));
+}
+
 // Paying plan — used for row-display / fallback-note / default-tone cases.
 // Contact block must NOT show for this plan (Task 8 review fix #1).
 const PRO_ENTITLEMENTS = {
@@ -105,7 +110,53 @@ beforeEach(() => {
 describe("AccountStrip / PlanBadge", () => {
   it("renders the plan display name in the chip", () => {
     render(<AccountStrip />);
-    expect(screen.getByText(/Professional/)).toBeInTheDocument();
+    expect(screen.getByText("Professional")).toBeInTheDocument();
+  });
+
+  it("shows no usage numbers on the chip face", () => {
+    // PRO_ENTITLEMENTS carries simulations 3 of 25 — a re-added suffix or
+    // tooltip would fail this substring check rather than pass vacuously.
+    const { container } = render(<AccountStrip />);
+    const chip = screen.getByText("Professional");
+    expect(chip.textContent).not.toMatch(/25/);
+    expect(chip.textContent).not.toMatch(/runs|remaining/i);
+    // And nothing on the page leaks it via a title tooltip.
+    const titled = Array.from(container.querySelectorAll("[title]"));
+    expect(titled.some((el) => /remaining|\bof\b/i.test(el.getAttribute("title") ?? ""))).toBe(false);
+  });
+
+  it("is not an interactive chip", () => {
+    render(<AccountStrip />);
+    expect(screen.getByText("Professional").tagName).toBe("SPAN");
+  });
+
+  it("keeps the trial countdown off the chip face and inside Plan details", () => {
+    mockEntitlementsState = {
+      ...PRO_ENTITLEMENTS,
+      planStatus: "trialing",
+      trialExpiresAt: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(),
+    };
+    render(<AccountStrip />);
+    expect(screen.getByText("Professional").textContent).not.toMatch(/Trial/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Plan details/ }));
+    // Exact match, not /Trial/i: planStatus "trialing" also renders as
+    // "Professional (trialing)" in the Plan row, which would otherwise
+    // ambiguously match a case-insensitive "Trial" substring too.
+    expect(screen.getByText("Trial")).toBeInTheDocument();
+  });
+
+  it("keeps usage two clicks deep", () => {
+    render(<AccountStrip />);
+    expect(screen.queryByText("Runs this month")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.getByRole("button", { name: /Plan details/ })).toBeInTheDocument();
+    expect(screen.queryByText("Runs this month")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Plan details/ }));
+    expect(screen.getByText("Runs this month")).toBeInTheDocument();
   });
 
   it("is hidden entirely when entitlements have not loaded", () => {
@@ -122,7 +173,7 @@ describe("AccountStrip / PlanBadge", () => {
 
   it("opens the dropdown with rows populated from slice values when fields are present", () => {
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    openPlanDetails();
 
     expect(screen.getByText("Plan")).toBeInTheDocument();
     expect(screen.getByText("Professional (active)")).toBeInTheDocument();
@@ -141,7 +192,7 @@ describe("AccountStrip / PlanBadge", () => {
   it("shows the fallback note only when planSource is free_fallback", () => {
     mockEntitlementsState = { ...PRO_ENTITLEMENTS, planSource: "free_fallback" };
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    openPlanDetails();
     expect(
       screen.getByText("No plan assigned — using default Free limits")
     ).toBeInTheDocument();
@@ -149,7 +200,7 @@ describe("AccountStrip / PlanBadge", () => {
 
   it("hides the fallback note when planSource is a real Kinde source", () => {
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    openPlanDetails();
     expect(
       screen.queryByText("No plan assigned — using default Free limits")
     ).toBeNull();
@@ -158,7 +209,7 @@ describe("AccountStrip / PlanBadge", () => {
   it("hides the fallback note when planSource is absent (old host)", () => {
     mockEntitlementsState = OLD_HOST_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     expect(
       screen.queryByText("No plan assigned — using default Free limits")
     ).toBeNull();
@@ -169,7 +220,7 @@ describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSou
   it("hides Studies / Scenarios per study / Replications per run when planSource is absent (old host)", () => {
     mockEntitlementsState = OLD_HOST_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
 
     expect(screen.queryByText("Runs this month")).toBeNull();
     expect(screen.queryByText("Studies")).toBeNull();
@@ -180,7 +231,7 @@ describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSou
 
   it("shows the three rows with real values when planSource is present and limits are finite", () => {
     render(<AccountStrip />); // PRO_ENTITLEMENTS: planSource 'kinde_org', finite limits
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    openPlanDetails();
 
     expect(screen.getByText("Studies")).toBeInTheDocument();
     expect(screen.getByText("1 of 10")).toBeInTheDocument();
@@ -193,7 +244,7 @@ describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSou
   it("shows the three rows as 'Unlimited' when planSource is present but the limit fields are explicit null", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS_UNLIMITED;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
 
     expect(screen.getByText("Studies")).toBeInTheDocument();
     expect(screen.getByText("Scenarios per study")).toBeInTheDocument();
@@ -209,7 +260,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
   it("shows the contact block for the quodsi_free plan", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     expect(
       screen.getByRole("link", { name: /Contact us to upgrade/i })
     ).toBeInTheDocument();
@@ -217,7 +268,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
 
   it("hides the contact block for a paying plan (quodsi_pro)", () => {
     render(<AccountStrip />); // PRO_ENTITLEMENTS
-    fireEvent.click(screen.getByRole("button", { name: /Professional/ }));
+    openPlanDetails();
     expect(
       screen.queryByRole("link", { name: /Contact us to upgrade/i })
     ).toBeNull();
@@ -227,7 +278,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
   it("hides the contact block for the employee plan", () => {
     mockEntitlementsState = { ...PRO_ENTITLEMENTS, planKey: "quodsi_employee" };
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Employee/ }));
+    openPlanDetails();
     expect(
       screen.queryByRole("link", { name: /Contact us to upgrade/i })
     ).toBeNull();
@@ -236,7 +287,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
   it("defaults the sales address to sales@quodsi.com when config.salesEmail is absent", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     expect(screen.getByText("sales@quodsi.com")).toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Contact us to upgrade/i })
@@ -247,14 +298,14 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
     mockEntitlementsState = FREE_ENTITLEMENTS;
     mockAuthState.config = { salesEmail: "biz@quodsi.com" };
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     expect(screen.getByText("biz@quodsi.com")).toBeInTheDocument();
   });
 
   it("Copy claims success only when the clipboard write succeeds", async () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
 
     await screen.findByRole("button", { name: /copied/i });
@@ -265,7 +316,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
     mockEntitlementsState = FREE_ENTITLEMENTS;
     mockWriteText.mockRejectedValue(new Error("clipboard blocked"));
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
 
     // Give the rejected clipboard promise a tick to settle.
@@ -279,7 +330,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
   it("pings upgrade interest when the contact link is clicked", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     fireEvent.click(screen.getByRole("link", { name: /Contact us to upgrade/i }));
     expect(mockPingUpgradeInterest).toHaveBeenCalledWith("upgrade");
   });
@@ -287,7 +338,7 @@ describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan 
   it("pings upgrade interest when the Copy button is clicked", async () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
-    fireEvent.click(screen.getByRole("button", { name: /Free plan/ }));
+    openPlanDetails();
     fireEvent.click(screen.getByRole("button", { name: /^copy$/i }));
     await screen.findByRole("button", { name: /copied/i });
     expect(mockPingUpgradeInterest).toHaveBeenCalledWith("upgrade");
@@ -303,7 +354,7 @@ describe("AccountStrip / PlanBadge — tone", () => {
       studiesPerOrgLimit: 10, // exhausted
     };
     render(<AccountStrip />);
-    const chip = screen.getByRole("button", { name: /Professional/ });
+    const chip = screen.getByText("Professional");
     expect(chip.className).toContain("bg-red-50");
   });
 
@@ -315,7 +366,7 @@ describe("AccountStrip / PlanBadge — tone", () => {
       studiesPerOrgLimit: 10, // 80% -> near limit
     };
     render(<AccountStrip />);
-    const chip = screen.getByRole("button", { name: /Professional/ });
+    const chip = screen.getByText("Professional");
     expect(chip.className).toContain("bg-amber-50");
   });
 
@@ -328,7 +379,28 @@ describe("AccountStrip / PlanBadge — tone", () => {
       studiesPerOrgLimit: 10,
     };
     render(<AccountStrip />);
-    const chip = screen.getByRole("button", { name: /Employee/ });
+    const chip = screen.getByText("Employee");
     expect(chip.className).toContain("bg-gray-50");
+  });
+});
+
+describe("AccountStrip / AuthStatusIndicator — Sign Out collapses Plan details", () => {
+  // Controller-directed addition (Task 2 review carryover): Lucid's Sign Out
+  // opens the Kinde logout URL in a new tab and calls authSender.logout(),
+  // which clears state IN PLACE — no redirect/remount like Studio's flow.
+  // Without resetting detailsOpen here, a sign-out followed by a sign-in
+  // would reopen the menu with Plan details already expanded.
+  it("collapses an expanded Plan details disclosure when the user signs out", () => {
+    render(<AccountStrip />);
+    openPlanDetails();
+    expect(screen.getByText("Runs this month")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Sign Out/ }));
+    expect(mockLogout).toHaveBeenCalled();
+
+    // Reopen the account menu: Plan details must start collapsed again.
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.getByRole("button", { name: /Plan details/ })).toBeInTheDocument();
+    expect(screen.queryByText("Runs this month")).toBeNull();
   });
 });
