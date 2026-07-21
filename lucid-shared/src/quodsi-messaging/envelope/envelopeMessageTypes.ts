@@ -104,7 +104,7 @@ export enum EnvelopeMessageType {
   PORTAL_URL_REQUEST = "PORTAL_URL_REQUEST",
   PORTAL_URL_RESPONSE = "PORTAL_URL_RESPONSE",
 
-  // PlanBadge contact affordance — one-shot "I'm interested in upgrading"
+  // PlanDetails contact affordance — one-shot "I'm interested in upgrading"
   // ping fired from the mailto/copy-email actions. See upgradeInterestSender.ts
   // (panel) and upgradeInterestHandler.ts (host).
   UPGRADE_INTEREST_PING = "UPGRADE_INTEREST_PING",

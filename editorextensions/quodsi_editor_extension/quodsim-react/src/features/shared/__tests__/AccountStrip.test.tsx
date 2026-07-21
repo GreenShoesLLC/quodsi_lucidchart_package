@@ -123,6 +123,10 @@ describe("AccountStrip / PlanBadge", () => {
     // And nothing on the page leaks it via a title tooltip.
     const titled = Array.from(container.querySelectorAll("[title]"));
     expect(titled.some((el) => /remaining|\bof\b/i.test(el.getAttribute("title") ?? ""))).toBe(false);
+    // Digits are the sharper signal: a re-added "23/1000 runs" suffix would
+    // pass the word-based regex above (no "of"/"remaining" substring) but
+    // must still fail here.
+    expect(chip.getAttribute("title")).not.toMatch(/\d/);
   });
 
   it("is not an interactive chip", () => {
@@ -171,6 +175,18 @@ describe("AccountStrip / PlanBadge", () => {
     expect(screen.queryByText(/Professional/)).toBeNull();
   });
 
+  it("offers no Plan details control when upgradeAvailable is false, even with the menu open", () => {
+    // Billing dark (BILLING_MODE=off in every environment today): the chip
+    // is gone (covered above), but the account menu's trigger is unrelated
+    // to the chip and still opens. Without this gate the disclosure button
+    // would render, flip its caret, and expand into nothing.
+    mockEntitlementsState = { ...PRO_ENTITLEMENTS, upgradeAvailable: false };
+    render(<AccountStrip />);
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.queryByRole("button", { name: /Plan details/ })).toBeNull();
+    expect(screen.queryByText("Runs this month")).toBeNull();
+  });
+
   it("opens the dropdown with rows populated from slice values when fields are present", () => {
     render(<AccountStrip />);
     openPlanDetails();
@@ -216,7 +232,7 @@ describe("AccountStrip / PlanBadge", () => {
   });
 });
 
-describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSource sentinel)", () => {
+describe("AccountStrip / PlanDetails — the three study-keyed limit rows (planSource sentinel)", () => {
   it("hides Studies / Scenarios per study / Replications per run when planSource is absent (old host)", () => {
     mockEntitlementsState = OLD_HOST_ENTITLEMENTS;
     render(<AccountStrip />);
@@ -256,7 +272,7 @@ describe("AccountStrip / PlanBadge — the three study-keyed limit rows (planSou
   });
 });
 
-describe("AccountStrip / PlanBadge — contact-to-upgrade affordance (free plan only)", () => {
+describe("AccountStrip / PlanDetails — contact-to-upgrade affordance (free plan only)", () => {
   it("shows the contact block for the quodsi_free plan", () => {
     mockEntitlementsState = FREE_ENTITLEMENTS;
     render(<AccountStrip />);
@@ -399,6 +415,27 @@ describe("AccountStrip / AuthStatusIndicator — Sign Out collapses Plan details
     expect(mockLogout).toHaveBeenCalled();
 
     // Reopen the account menu: Plan details must start collapsed again.
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.getByRole("button", { name: /Plan details/ })).toBeInTheDocument();
+    expect(screen.queryByText("Runs this month")).toBeNull();
+  });
+});
+
+describe("AccountStrip / AuthStatusIndicator — trigger close collapses Plan details", () => {
+  // Final-review fix wave: the trigger's own toggle used to close the menu
+  // without resetting detailsOpen — only the outside-click path (and Sign
+  // Out, covered above) did. Clicking the trigger again is the most natural
+  // way to close a dropdown, so this must reset it too.
+  it("collapses Plan details when the trigger closes the menu, not just on outside click or Sign Out", () => {
+    render(<AccountStrip />);
+    openPlanDetails();
+    expect(screen.getByText("Runs this month")).toBeInTheDocument();
+
+    // Close via the trigger itself.
+    fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
+    expect(screen.queryByText("Runs this month")).toBeNull();
+
+    // Reopening starts collapsed again.
     fireEvent.click(screen.getByRole("button", { name: /Ann B/ }));
     expect(screen.getByRole("button", { name: /Plan details/ })).toBeInTheDocument();
     expect(screen.queryByText("Runs this month")).toBeNull();

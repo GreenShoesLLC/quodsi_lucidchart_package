@@ -138,7 +138,7 @@ export function simulationsRemaining(state: EntitlementsState): number | null {
 
 /**
  * Usage snapshot ({ used, limit }) for the metered `simulations_per_month`
- * feature, for the PlanBadge dropdown's "Runs this month" row. Null when
+ * feature, for PlanDetails's "Runs this month" row. Null when
  * the feature is unmetered (flag `true`) or absent — the row is hidden in
  * that case rather than guessing a display value.
  */

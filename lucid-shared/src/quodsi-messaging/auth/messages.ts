@@ -39,8 +39,9 @@ export interface ExtensionConfig {
    *  platform-mediated OAuth flow can't). No trailing slash. */
   studioBaseUrl?: string;
 
-  /** Sales contact address for the PlanBadge dropdown's "Contact us" block
-   *  (mailto link + visible copy-to-clipboard address). Optional and
+  /** Sales contact address for PlanDetails's "Contact us" block (behind
+   *  AuthStatusIndicator's "Plan details" disclosure; mailto link + visible
+   *  copy-to-clipboard address). Optional and
    *  environment-overridable for the same reason as `studioBaseUrl` — kept
    *  out of the React bundle so one build can run against any Lucid app.
    *  Absent on older hosts (or if the host never chooses to set it); the

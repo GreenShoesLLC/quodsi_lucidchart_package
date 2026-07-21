@@ -109,7 +109,7 @@ export class MessageHandlers {
       return true;
     }
 
-    // PlanBadge "contact sales" upgrade-interest ping
+    // PlanDetails "contact sales" upgrade-interest ping
     if (UpgradeInterestHandler.handleMessage(msg)) {
       return true;
     }

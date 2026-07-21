@@ -16,8 +16,9 @@ const SOURCE_BY_PANEL: Record<string, MessageSource> = {
 };
 
 /**
- * One-shot RPC sender for the PlanBadge dropdown's "contact sales" upgrade-
- * interest ping. Mirrors usePortalSender's request/response correlation
+ * One-shot RPC sender for PlanDetails's "contact sales" upgrade-interest
+ * ping (behind AuthStatusIndicator's "Plan details" disclosure). Mirrors
+ * usePortalSender's request/response correlation
  * pattern exactly (own correlation ID, resolves/rejects a Promise on the
  * matching UPGRADE_INTEREST_PING_RESULT).
  *

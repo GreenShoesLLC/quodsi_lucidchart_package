@@ -13,7 +13,8 @@ interface UpgradeInterestPingResultPayload {
 }
 
 /**
- * Handler for the PlanBadge dropdown's "contact sales" upgrade-interest ping.
+ * Handler for PlanDetails's "contact sales" upgrade-interest ping (behind
+ * AuthStatusIndicator's "Plan details" disclosure).
  *
  * Proxies through the Quodsi data connector's `UpgradeInterest` action (see
  * `app/routers/lucid_router.py::upgrade_interest` in quodsi_api), mirroring

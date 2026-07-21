@@ -271,9 +271,32 @@ const AuthStatusIndicator: React.FC = () => {
   // upgradeAvailable: false = billing off → hide; null/true = show (fail-open — do NOT change to === true)
   const showUpgrade = auth.isAuthenticated && entitlements.loaded && entitlements.upgradeAvailable !== false;
 
+  // Same fail-closed rule PlanDetails applies internally: entitlements not
+  // yet loaded, or billing explicitly dark (upgradeAvailable === false),
+  // means the disclosure button itself must not render — otherwise the
+  // caret flips and nothing ever expands underneath it.
+  const showPlanDetails = entitlements.loaded && entitlements.upgradeAvailable !== false;
+
+  // Resets both the menu and its Plan details disclosure. Used by every path
+  // that closes the menu — outside click, the trigger's own toggle,
+  // handleUpgrade, and Sign Out — so reopening the menu always starts
+  // closed; usage must stay two deliberate clicks away, every time.
+  const closeMenu = () => {
+    setAuthDropdownOpen(false);
+    setDetailsOpen(false);
+  };
+
+  const toggleMenu = () => {
+    if (authDropdownOpen) {
+      closeMenu();
+    } else {
+      setAuthDropdownOpen(true);
+    }
+  };
+
   const handleUpgrade = async () => {
     if (requestingUpgrade) return;
-    setAuthDropdownOpen(false);
+    closeMenu();
     setRequestingUpgrade(true);
     try {
       const url = await requestPortalUrl(
@@ -289,13 +312,12 @@ const AuthStatusIndicator: React.FC = () => {
   };
 
   const handleSignOut = () => {
-    setAuthDropdownOpen(false);
     // Lucid's sign-out opens Kinde's logout URL in a new tab and then calls
     // authSender.logout(), which clears state in place — there is no
     // redirect/remount here (unlike Studio's Kinde-hosted logout flow), so a
     // stale expanded disclosure would otherwise survive into the next
-    // sign-in. Usage must always start collapsed.
-    setDetailsOpen(false);
+    // sign-in. Usage must always start collapsed — closeMenu() resets both.
+    closeMenu();
     // Open Kinde's logout URL in a new tab as defense-in-depth: it kills
     // Kinde's SSO session cookie cleanly. With prompt=login on the kinde
     // provider's authorizationUrl in the manifest, the next "Sign In"
@@ -319,8 +341,7 @@ const AuthStatusIndicator: React.FC = () => {
         authDropdownRef.current &&
         !authDropdownRef.current.contains(event.target as Node)
       ) {
-        setAuthDropdownOpen(false);
-        setDetailsOpen(false);
+        closeMenu();
       }
     };
     if (authDropdownOpen) {
@@ -362,7 +383,7 @@ const AuthStatusIndicator: React.FC = () => {
   return (
     <div className="relative" ref={authDropdownRef}>
       <button
-        onClick={() => setAuthDropdownOpen(!authDropdownOpen)}
+        onClick={toggleMenu}
         className="flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors max-w-[200px]"
         title={auth.user?.email || "Signed in"}
       >
@@ -378,16 +399,18 @@ const AuthStatusIndicator: React.FC = () => {
               {auth.user.email}
             </div>
           )}
-          <button
-            type="button"
-            onClick={() => setDetailsOpen(!detailsOpen)}
-            aria-expanded={detailsOpen}
-            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center justify-between gap-2"
-          >
-            <span>Plan details</span>
-            <span aria-hidden="true">{detailsOpen ? "▾" : "▸"}</span>
-          </button>
-          {detailsOpen && <PlanDetails />}
+          {showPlanDetails && (
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(!detailsOpen)}
+              aria-expanded={detailsOpen}
+              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-100 flex items-center justify-between gap-2"
+            >
+              <span>Plan details</span>
+              <span aria-hidden="true">{detailsOpen ? "▾" : "▸"}</span>
+            </button>
+          )}
+          {showPlanDetails && detailsOpen && <PlanDetails />}
           {showUpgrade && (
             <button
               onClick={handleUpgrade}
