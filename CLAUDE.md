@@ -102,10 +102,10 @@ The project is undergoing a messaging system refactoring on the `feature/refacto
 5. **Type Safety**: Use shared types from `@quodsi/lucid-shared` package
 
 ### Environment Configuration
-- **Local**: `http://localhost:7071/api/dataConnector/`
-- **Dev**: `https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/`
-- **Test**: `https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/`
-- **Production**: `https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/`
+- **Local**: `http://localhost:8000/lucid/` (FastAPI quodsi_api)
+- **Dev**: `https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/` (Container App, quodsim tenant)
+- **Test**: `https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/` (Container App, quodsim tenant)
+- **Production**: not deployed (legacy `prd-quodsi-func-v1` retired; prod Container App not yet provisioned)
 
 ### Key Classes and Services
 - `ModelManager`: Central coordinator for model state and operations

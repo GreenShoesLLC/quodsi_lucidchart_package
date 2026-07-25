@@ -1,5 +1,7 @@
 # 01. React Environment Variables
 
+> ⚠️ **Legacy (Azure Functions era).** The `*-quodsi-func-v1.azurewebsites.net` URLs below predate the 2026 Container App + quodsim-tenant cutover. Current hosts: `ca-quodsim-{dev,test}-api.*.westus.azurecontainerapps.io/lucid/`. `REACT_APP_DATA_CONNECTOR_API_URL` now feeds only the environment *label* (`environmentDetection.ts`); actual API calls flow through the manifest `callbackBaseUrl`. Source of truth: `manifest_{env}.json`, `deploy/lucid-package/build-bundle.ps1`, `quodsi_studio/docs/OPERATIONAL_SETUP.md`.
+
 Complete reference for all environment variables used by the React app (quodsim-react).
 
 ---

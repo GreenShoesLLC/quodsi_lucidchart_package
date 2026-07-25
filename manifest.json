@@ -1,14 +1,12 @@
 {
   "id": "29e0d321-5cb2-4ae0-a1b6-dabd512c098c",
-  "version": "2026.06.18",
+  "version": "2026.07.26",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
       "title": "Quodsim",
-      "products": [
-        "chart"
-      ],
-      "codePath": "editorextensions\\quodsi_editor_extension\\bin\\extension.js",
+      "products": ["chart"],
+      "codePath": "editorextensions/quodsi_editor_extension/bin/extension.js",
       "scopes": [
         "READ",
         "WRITE",
@@ -28,12 +26,8 @@
       "title": "Lucid",
       "authorizationUrl": "https://lucid.app/oauth2/authorize",
       "tokenUrl": "https://api.lucid.co/oauth2/token",
-      "scopes": [
-        "offline_access"
-      ],
-      "domainWhitelist": [
-        "https://api.lucid.co"
-      ],
+      "scopes": ["offline_access"],
+      "domainWhitelist": ["https://api.lucid.co"],
       "clientAuthentication": "clientParameters",
       "faviconUrl": "https://cdn-cashy-static-assets.lucidchart.com/marketing/images/LucidSoftwareFavicon.png"
     },
@@ -43,14 +37,8 @@
       "authorizationUrl": "https://quodsim-dev.us.kinde.com/oauth2/auth?prompt=login&audience=https://api.quodsi.com",
       "tokenUrl": "https://quodsim-dev.us.kinde.com/oauth2/token",
       "revokeTokenUrl": "https://quodsim-dev.us.kinde.com/oauth2/revoke",
-      "scopes": [
-        "openid",
-        "profile",
-        "email"
-      ],
-      "domainWhitelist": [
-        "https://quodsim-dev.us.kinde.com"
-      ],
+      "scopes": ["openid", "profile", "email"],
+      "domainWhitelist": ["https://quodsim-dev.us.kinde.com"],
       "clientAuthentication": "clientParameters",
       "usePkce": true
     }
@@ -59,7 +47,7 @@
     {
       "name": "quodsi_api_data_connector",
       "oauthProviderName": "kinde",
-      "callbackBaseUrl": "http://localhost:8000/lucid/",
+      "callbackBaseUrl": "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/",
       "dataActions": {
         "SyncUser": "SyncUser",
         "GetResultsData": "GetResultsData",

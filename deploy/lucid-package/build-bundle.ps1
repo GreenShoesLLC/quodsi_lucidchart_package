@@ -80,7 +80,7 @@ switch ($TargetEnvironment) {
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
         # AZURE_STATUS_FUNCTION_KEY retained as no-op (FastAPI ignores function
         # keys; safe to remove once no React code references it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsi-dev-api.niceisland-1fa2af68.eastus2.azurecontainerapps.io/lucid/"
+        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/"
         $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "zwH0vpBDPYko4QfIbNC9TjJRu4gZP9wbWu8CHuLFMrUkAzFuTazGeg=="
         Write-Host "DEV environment variables set for this session." -ForegroundColor Green
     }
@@ -90,7 +90,7 @@ switch ($TargetEnvironment) {
         # used by environmentDetection.ts for the "Test" label only; actual HTTP calls
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
         # AZURE_STATUS_FUNCTION_KEY retained as no-op for now (FastAPI ignores it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsi-test-api.thankfulground-d7c463a0.eastus2.azurecontainerapps.io/lucid/"
+        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/"
         $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
@@ -346,8 +346,8 @@ if ($ManifestSource) {
             # Dev cut over to FastAPI Container App on 2026-05-13.
             # Test cut over to FastAPI Container App on 2026-05-29.
             # Prod remains on legacy Azure Functions until its cutover.
-            'Dev' { "https://ca-quodsi-dev-api" }
-            'TST' { "https://ca-quodsi-test-api" }
+            'Dev' { "https://ca-quodsim-dev-api" }
+            'TST' { "https://ca-quodsim-test-api" }
             'PRD' { "https://prd-quodsi-func-v1.azurewebsites.net" }
         }
 

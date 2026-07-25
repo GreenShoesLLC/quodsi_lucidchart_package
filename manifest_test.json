@@ -1,6 +1,6 @@
 {
   "id": "dcde0747-95a4-4bf8-9e17-b4cf41afa1c7",
-  "version": "2026.06.18",
+  "version": "2026.07.26",
   "extensions": [
     {
       "name": "quodsi_editor_extension",
@@ -47,7 +47,7 @@
     {
       "name": "quodsi_api_data_connector",
       "oauthProviderName": "kinde",
-      "callbackBaseUrl": "https://ca-quodsi-test-api.thankfulground-d7c463a0.eastus2.azurecontainerapps.io/lucid/",
+      "callbackBaseUrl": "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/",
       "dataActions": {
         "SyncUser": "SyncUser",
         "GetResultsData": "GetResultsData",

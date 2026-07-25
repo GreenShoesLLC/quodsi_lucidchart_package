@@ -32,10 +32,10 @@ The data connector URL is controlled by manifest files, NOT React environment va
 
 | File | Environment | Data Connector URL |
 |------|-------------|-------------------|
-| `manifest.json` | Local development | http://localhost:7071/api/dataConnector/ |
-| `manifest_dev.json` | Development | https://dev-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
-| `manifest_test.json` | Test | https://tst-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
-| `manifest_prod.json` | Production | https://prd-quodsi-func-v1.azurewebsites.net/api/dataConnector/ |
+| `manifest.json` | Local development | http://localhost:8000/lucid/ |
+| `manifest_dev.json` | Development | https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/ |
+| `manifest_test.json` | Test | https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/ |
+| `manifest_prod.json` | Production | prd-quodsi-func-v1 retired; prod Container App not yet provisioned |
 
 **The Build-Lucid-Bundle.ps1 script automatically handles manifest selection.**
 

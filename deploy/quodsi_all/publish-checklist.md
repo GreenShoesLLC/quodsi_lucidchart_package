@@ -24,8 +24,8 @@
 
 - [ ] Confirm `quodsi_api/**` changes are merged to `main` — workflow `deploy-api-dev.yml` runs automatically
 - [ ] Watch the workflow: GitHub → Actions → "Deploy API (dev)"
-- [ ] Smoke test: `curl https://ca-quodsi-dev-api.<env-default-domain>.eastus2.azurecontainerapps.io/health` → expect HTTP 200
-- [ ] For test/prd: not yet provisioned — TBD
+- [ ] Smoke test: `curl https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/health` → expect HTTP 200
+- [ ] Test: `curl https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/health` → expect HTTP 200. Prd: not yet provisioned — TBD
 
 ## LucidChart extension
 

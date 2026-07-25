@@ -1,5 +1,7 @@
 # 02. Manifest Configuration
 
+> ⚠️ **Legacy (Azure Functions era).** The `callbackBaseUrl` examples below (`*-quodsi-func-v1.azurewebsites.net/api/dataConnector/`) predate the 2026 Container App + quodsim-tenant cutover. Current values are `https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/` (dev) and `https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/` (test) — see the live `manifest_{env}.json` and the build guard in `deploy/lucid-package/build-bundle.ps1`.
+
 Complete reference for extension manifest files and how they control environment-specific behavior.
 
 ---

@@ -52,15 +52,15 @@ The Lucid bundler runs the React build internally with the right env vars; you a
 
 ## Backend environment URLs
 
-The LucidChart extension manifests still point at the legacy Function App URLs (`{env}-quodsi-func-v1.azurewebsites.net`). When the extension is migrated to call `quodsi_api` directly, those manifests need to be updated to the new Container App URL:
+The LucidChart extension manifests call `quodsi_api` via the data connector `callbackBaseUrl`. Dev and test are on the quodsim-tenant Container Apps; prod is not yet provisioned:
 
-| Environment | New (Container Apps) |
+| Environment | Data connector `callbackBaseUrl` |
 |---|---|
-| Dev | `https://ca-quodsi-dev-api.<env-default-domain>.eastus2.azurecontainerapps.io` |
-| Test | TBD (test environment not yet provisioned) |
-| Prd | TBD (prd environment not yet provisioned) |
+| Dev | `https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/` |
+| Test | `https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/` |
+| Prd | TBD (prod Container App not yet provisioned) |
 
-Tracking the manifest migration as a separate, larger workstream (it touches manifest schema, data connector wiring, and the extension's own data layer).
+The value lives in each `manifest_{env}.json`; the build guard in `deploy/lucid-package/build-bundle.ps1` asserts the callback host matches the target environment.
 
 ## Lucid bundle workflow detail
 

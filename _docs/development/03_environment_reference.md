@@ -227,7 +227,7 @@ For full testing, you need Azure resources.
 ### Testing (Azure-hosted)
 
 - **React URL:** Deployed to CDN or static hosting
-- **Function URL:** `https://tst-quodsi-func-v1.azurewebsites.net`
+- **API URL:** `https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io` (Container App, quodsim tenant)
 - **Extension:** Uploaded to Lucid for testing
 - **Source Maps:** Enabled
 - **Minification:** Enabled

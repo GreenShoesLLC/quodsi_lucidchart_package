@@ -15,19 +15,35 @@ function withApiUrl(url: string | undefined, fn: () => void) {
 }
 
 describe('detectEnvironment', () => {
-  // Current backends: dev + test are Azure Container Apps
-  // (ca-quodsi-{env}-api.*.azurecontainerapps.io); prod is still legacy
-  // Azure Functions (prd-quodsi-func-v1.azurewebsites.net).
-  it('detects Test from the Container App test URL', () => {
+  // Current backends: dev + test are Azure Container Apps; prod is still legacy
+  // Azure Functions (prd-quodsi-func-v1.azurewebsites.net). Detection matches
+  // the `-{env}-api` host segment so BOTH the legacy `ca-quodsi-{env}-api`
+  // estate and the quodsim-tenant `ca-quodsim-{env}-api` estate (2026-07 tenant
+  // cutover) resolve correctly.
+  it('detects Test from the legacy Container App test URL', () => {
     withApiUrl(
       'https://ca-quodsi-test-api.thankfulground-d7c463a0.eastus2.azurecontainerapps.io/lucid/',
       () => expect(detectEnvironment()).toBe('Test'),
     );
   });
 
-  it('detects Dev from the Container App dev URL', () => {
+  it('detects Dev from the legacy Container App dev URL', () => {
     withApiUrl(
       'https://ca-quodsi-dev-api.niceisland-1fa2af68.eastus2.azurecontainerapps.io/lucid/',
+      () => expect(detectEnvironment()).toBe('Dev'),
+    );
+  });
+
+  it('detects Test from the quodsim-tenant Container App test URL', () => {
+    withApiUrl(
+      'https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/',
+      () => expect(detectEnvironment()).toBe('Test'),
+    );
+  });
+
+  it('detects Dev from the quodsim-tenant Container App dev URL', () => {
+    withApiUrl(
+      'https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/',
       () => expect(detectEnvironment()).toBe('Dev'),
     );
   });

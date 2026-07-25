@@ -1,5 +1,7 @@
 # 04. Azure Function Environment (Data Connector)
 
+> ⚠️ **Historical.** This documents the retired Azure Functions data connector (`{env}-quodsi-func-v1`). The backend is now the FastAPI `quodsi_api` Container App (dev/test on the quodsim tenant, `ca-quodsim-{dev,test}-api.*.westus.azurecontainerapps.io/lucid/`); prod is not yet provisioned. Kept for historical reference only — see `infrastructure/docs/040-deployment-runbook.md` for the current backend.
+
 Reference for Azure Function (data connector) environment variables. While this is backend configuration, it impacts extension development when running locally.
 
 **Note:** This is reference documentation. You typically only modify these variables when:

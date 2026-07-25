@@ -1,5 +1,7 @@
 # Environment Configuration
 
+> ⚠️ **Legacy (Azure Functions era).** The host URLs in this doc set (`*-quodsi-func-v1.azurewebsites.net`) and the "React calls the data connector directly at `/api/dataConnector/`" model predate the 2026 Container App + quodsim-tenant cutover. Dev/test now run on `ca-quodsim-{dev,test}-api.*.westus.azurecontainerapps.io/lucid/`, and the React app reaches the API only through the manifest's `callbackBaseUrl`. For current values see each `manifest_{env}.json`, `deploy/lucid-package/build-bundle.ps1`, and `quodsi_studio/docs/OPERATIONAL_SETUP.md`. Treat the URLs below as historical.
+
 Complete reference for environment variables, manifests, and configuration that impacts the Quodsi extension and React app.
 
 **Use this when:** Returning to the project after weeks/months away and need to remember environment setup.
