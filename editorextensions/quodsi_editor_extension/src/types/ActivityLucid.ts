@@ -258,7 +258,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ActivityLucid {
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): ActivityLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location AND shape size (Path X-lite)
@@ -274,7 +274,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         defaultActivity.height = box.h;
 
         // Get raw name and parse for structured data
-        const rawName = SimObjectLucid.getNameFromBlock(block, 'Act');
+        const rawName = SimObjectLucid.pickBlockName(block, {
+            typeLabel: 'Activity',
+            includeMasterName: true,
+            sequence: nameSequence,
+        });
         const parsed = parseStructuredName(rawName);
         const fields = extractActivityFields(parsed);
 

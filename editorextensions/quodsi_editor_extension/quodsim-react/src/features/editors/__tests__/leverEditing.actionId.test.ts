@@ -39,11 +39,16 @@ describe('actionId-keyed lever editing', () => {
 });
 
 describe('actionDurationLeverLabel', () => {
+  // Labels are owned by core (@quodsi/shared scenarios/leverEditing) and were
+  // deliberately changed after this file last ran green: "duration rate" became
+  // "speed" so that x2 reads as twice as FAST (monorepo 90ca5d62), and both delay
+  // variants now read "Delay" since the two Delay actions were consolidated
+  // (18fe8074 / ClickUp 86e1uh9n4). Expectations updated 2026-07-28 to match.
   it("uses the action name when present", () => {
-    expect(actionDurationLeverLabel({ name: 'Triage', actionType: ActionType.DELAY_WITH_RESOURCE })).toBe("Triage's duration rate");
+    expect(actionDurationLeverLabel({ name: 'Triage', actionType: ActionType.DELAY_WITH_RESOURCE })).toBe("Triage's speed");
   });
   it('falls back to the type when unnamed', () => {
-    expect(actionDurationLeverLabel({ actionType: ActionType.DELAY_WITH_RESOURCE })).toBe('Process — duration rate');
-    expect(actionDurationLeverLabel({ name: '  ', actionType: ActionType.DELAY })).toBe('Delay — duration rate');
+    expect(actionDurationLeverLabel({ actionType: ActionType.DELAY_WITH_RESOURCE })).toBe('Delay — speed');
+    expect(actionDurationLeverLabel({ name: '  ', actionType: ActionType.DELAY })).toBe('Delay — speed');
   });
 });

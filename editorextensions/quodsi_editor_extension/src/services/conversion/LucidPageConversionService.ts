@@ -15,7 +15,9 @@ import {
     SwimLaneQuodsiData,
     SwimLaneLaneMapping,
     SwimLaneResourceData,
-    generateUUID
+    generateUUID,
+    planAutoResources,
+    type ActivityResourceRef
 } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
@@ -220,19 +222,6 @@ export class LucidPageConversionService extends QuodsiLogger {
         // which doesn't include elements we've added in-memory during this conversion
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
 
-        // Calculate outgoing connections for probability calculation
-        const outgoingConnectionCounts = new Map<string, number>();
-        for (const [lineId, line] of page.allLines) {
-            const endpoint1 = line.getEndpoint1();
-            if (endpoint1?.connection) {
-                const sourceId = endpoint1.connection.id;
-                outgoingConnectionCounts.set(
-                    sourceId,
-                    (outgoingConnectionCounts.get(sourceId) || 0) + 1
-                );
-            }
-        }
-
         // Process blocks
         for (const [blockId, block] of page.allBlocks) {
             const targetType = mappings.get(blockId);
@@ -258,11 +247,17 @@ export class LucidPageConversionService extends QuodsiLogger {
                 // Remove from skipped if it was previously skipped (being converted now)
                 delete skippedElements[blockId];
 
+                // 1-based slot among same-type elements named so far, so the
+                // shared naming policy's fallback reads "Activity 2" instead of
+                // Lucid's opaque block id. Mirrors drawio (targetList.length + 1).
+                const nameSequence = (usedNamesByType.get(targetType)?.size ?? 0) + 1;
+
                 const platformObject = this.elementFactory.createPlatformObject(
                     block,
                     targetType,
                     true, // isConversion
-                    mappingSource
+                    mappingSource,
+                    nameSequence
                 );
 
                 const element = platformObject.getSimulationObject();
@@ -337,8 +332,6 @@ export class LucidPageConversionService extends QuodsiLogger {
                 delete skippedElements[lineId];
 
                 const sourceId = endpoint1.connection.id;
-                const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
-                const probability = 1.0 / outgoingCount;
 
                 const platformObject = this.elementFactory.createPlatformObject(
                     line,
@@ -350,7 +343,14 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const connector = platformObject.getSimulationObject() as Connector;
                 connector.sourceId = sourceId;
                 connector.targetId = endpoint2.connection.id;
-                connector.weight = probability;
+                // Weight stays at the default 1 -- a RELATIVE SHARE, which is
+                // what the engine normalizes and what the editor's own help text
+                // describes ("a connector with weight 2 is twice as likely as one
+                // with weight 1"). Conversion used to pre-divide it to 1/outgoing,
+                // which was self-consistent only for the connectors that existed
+                // at that moment: draw a fourth branch later and it defaults to 1
+                // against three siblings holding 0.333, silently making the new
+                // branch 3x more likely. drawio and Visio always used 1.
 
                 // Same uniqueness pass the blocks loop above applies. Connectors
                 // are named "<source> → <target>", so two lines between the same
@@ -524,19 +524,6 @@ export class LucidPageConversionService extends QuodsiLogger {
         // it has no usedNamesByType of its own. Same reason as the mapped path.
         const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
 
-        // Calculate outgoing connections per block for probability calculation
-        const outgoingConnectionCounts = new Map<string, number>();
-        for (const [lineId, line] of page.allLines) {
-            const endpoint1 = line.getEndpoint1();
-            if (endpoint1?.connection) {
-                const sourceId = endpoint1.connection.id;
-                outgoingConnectionCounts.set(
-                    sourceId,
-                    (outgoingConnectionCounts.get(sourceId) || 0) + 1
-                );
-            }
-        }
-
         for (const [lineId, line] of page.allLines) {
             try {
                 this.log(`Processing line ${lineId}`);
@@ -549,8 +536,6 @@ export class LucidPageConversionService extends QuodsiLogger {
                 }
 
                 const sourceId = endpoint1.connection.id;
-                const outgoingCount = outgoingConnectionCounts.get(sourceId) || 1;
-                const probability = 1.0 / outgoingCount;
 
                 // Create platform object using factory with conversion flag
                 const platformObject = this.elementFactory.createPlatformObject(
@@ -563,7 +548,14 @@ export class LucidPageConversionService extends QuodsiLogger {
                 const connector = platformObject.getSimulationObject() as Connector;
                 connector.sourceId = sourceId;
                 connector.targetId = endpoint2.connection.id;
-                connector.weight = probability;
+                // Weight stays at the default 1 -- a RELATIVE SHARE, which is
+                // what the engine normalizes and what the editor's own help text
+                // describes ("a connector with weight 2 is twice as likely as one
+                // with weight 1"). Conversion used to pre-divide it to 1/outgoing,
+                // which was self-consistent only for the connectors that existed
+                // at that moment: draw a fourth branch later and it defaults to 1
+                // against three siblings holding 0.333, silently making the new
+                // branch 3x more likely. drawio and Visio always used 1.
 
                 this.ensureUniqueConnectorName(connector, usedNamesByType, line);
 
@@ -601,36 +593,6 @@ export class LucidPageConversionService extends QuodsiLogger {
     ): Promise<number> {
         this.log('Processing auto-created resources from Activity resourceName fields');
 
-        // Collect unique resource names from Activities
-        const resourceNamesFromActivities = new Map<string, string[]>(); // resourceName -> blockIds
-
-        for (const [blockId, block] of page.allBlocks) {
-            const storedData = this.storageAdapter.getElementData<StoredActivityData>(block);
-            if (storedData?.resourceName) {
-                const existing = resourceNamesFromActivities.get(storedData.resourceName) || [];
-                existing.push(blockId);
-                resourceNamesFromActivities.set(storedData.resourceName, existing);
-            }
-        }
-
-        if (resourceNamesFromActivities.size === 0) {
-            this.log('No auto-resources to create');
-            return 0;
-        }
-
-        this.log(`Found ${resourceNamesFromActivities.size} unique resource names to create`);
-
-        // Calculate position for new Resource blocks (right side of diagram)
-        const rightmostX = this.findRightmostX(page);
-        let resourceY = 100;
-        const resourceSpacing = 80;
-
-        // Load block class for creating new shapes
-        const client = ModelManager.getClient();
-        await client.loadBlockClasses(['ProcessBlock']);
-
-        const createdResources = new Map<string, BlockProxy>();
-
         // Ensure we have a Set for Resource names
         let resourceNames = usedNamesByType.get(SimulationObjectType.Resource);
         if (!resourceNames) {
@@ -638,22 +600,58 @@ export class LucidPageConversionService extends QuodsiLogger {
             usedNamesByType.set(SimulationObjectType.Resource, resourceNames);
         }
 
-        // Create visual blocks for each unique resource name
-        for (const [resourceName, activityBlockIds] of resourceNamesFromActivities) {
+        // WHAT to create is decided by the shared planner (@quodsi/shared
+        // conversion/autoResources): grouping activities that named the same
+        // resource, resolving name collisions, and laying the new shapes out.
+        // Only the page.addBlock call below is Lucid-specific.
+        const refs: ActivityResourceRef[] = [];
+        for (const [blockId, block] of page.allBlocks) {
+            const storedData = this.storageAdapter.getElementData<StoredActivityData>(block);
+            if (storedData?.resourceName) {
+                refs.push({ elementId: blockId, resourceName: storedData.resourceName });
+            }
+        }
+
+        // Bail BEFORE measuring the page: findRightmostX walks every block's
+        // bounding box, which is wasted work on the overwhelmingly common page
+        // where nothing asked for a resource.
+        if (refs.length === 0) {
+            this.log('No auto-resources to create');
+            return 0;
+        }
+
+        const plan = planAutoResources(
+            refs,
+            { originX: this.findRightmostX(page) },
+            (candidate) => resourceNames!.has(candidate)
+        );
+
+        if (plan.length === 0) {
+            this.log('No auto-resources to create');
+            return 0;
+        }
+
+        this.log(`Found ${plan.length} unique resource names to create`);
+
+        // Load block class for creating new shapes
+        const client = ModelManager.getClient();
+        await client.loadBlockClasses(['ProcessBlock']);
+
+        const createdResources = new Map<string, BlockProxy>();
+
+        // Create visual blocks for each planned resource
+        for (const planned of plan) {
+            const resourceName = planned.name;
             this.log(`Creating Resource block for: ${resourceName}`);
 
             // Add new block to page
             const newBlock = page.addBlock({
                 className: 'ProcessBlock',
-                boundingBox: {
-                    x: rightmostX + 100,
-                    y: resourceY,
-                    w: 120,
-                    h: 60
-                }
+                boundingBox: planned.placement
             });
+            // The planner already de-duplicated this name, so what the block is
+            // labelled with is what the Resource ends up called.
             newBlock.textAreas.set('Text', resourceName);
-            resourceY += resourceSpacing;
 
             // Convert to Resource using existing flow
             const platformObject = this.elementFactory.createPlatformObject(

@@ -174,7 +174,7 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ResourceLucid {
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): ResourceLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location AND shape size (Path X-lite)
@@ -190,7 +190,11 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
         defaultResource.height = box.h;
 
         // Get raw name and parse for structured data
-        const rawName = SimObjectLucid.getNameFromBlock(block, 'Resource');
+        const rawName = SimObjectLucid.pickBlockName(block, {
+            typeLabel: 'Resource',
+            includeMasterName: false,
+            sequence: nameSequence,
+        });
         const parsed = parseStructuredName(rawName);
         const fields = extractResourceFields(parsed);
 

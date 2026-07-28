@@ -7,11 +7,26 @@ import {
     ConversionPreviewData,
     ElementMappingPreview,
     DiagramElementKind,
-    ConversionPreviewSummary,
     parseStructuredName,
-    extractSimulationType
+    extractSimulationType,
+    classifyByTopology,
+    ConversionNamer,
+    pickName,
+    pickConnectorName
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../../core/StorageAdapter';
+
+import { blockToNameable, lineToNameable } from '../../types/nameableShape';
+
+/**
+ * Naming metadata per simulation type, matching what conversion passes to the
+ * shared policy (see ActivityLucid / ResourceLucid / GeneratorLucid).
+ */
+const NAME_OPTS_BY_TYPE: Partial<Record<SimulationObjectType, { typeLabel: string; includeMasterName: boolean }>> = {
+    [SimulationObjectType.Activity]: { typeLabel: 'Activity', includeMasterName: true },
+    [SimulationObjectType.Generator]: { typeLabel: 'Generator', includeMasterName: true },
+    [SimulationObjectType.Resource]: { typeLabel: 'Resource', includeMasterName: false },
+};
 
 export class LucidPageAnalyzer extends QuodsiLogger {
     protected readonly LOG_PREFIX = '[LucidPageAnalyzer]';
@@ -36,9 +51,6 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         // Second pass: Determine types based on explicit type field and connection patterns
         this.determineTypesFromConnections(page, blockAnalysis);
 
-        // Third pass: Apply block-specific overrides only if needed
-        this.applyBlockSpecificLogic(page, blockAnalysis);
-
         // Log final results
         this.logFinalAnalysis(blockAnalysis);
 
@@ -62,19 +74,21 @@ export class LucidPageAnalyzer extends QuodsiLogger {
         const isAlreadyConverted = storageAdapter.isQuodsiModel(page);
 
         const mappings: ElementMappingPreview[] = [];
-        let swimlaneLaneCount = 0;
+
+        // Predict the names conversion will assign, using the SAME policy and the
+        // same per-type sequence/de-duplication bookkeeping (ConversionNamer).
+        // The preview previously invented its own display names -- a block's class
+        // ("ProcessBlock") where conversion produces "Activity 1" -- so the screen
+        // you use to choose types disagreed with the result.
+        const namer = new ConversionNamer();
+        const assignedBlockNames = new Map<string, string>();
 
         // Process all blocks
         for (const [blockId, block] of page.allBlocks) {
             // Skip swimlane container blocks — they're not simulation objects.
             // Their lanes are converted to Resources separately.
             if (block.getClassName() === 'AdvancedSwimLaneBlock') {
-                try {
-                    const lanes = (block as any).getPrimaryLanes();
-                    swimlaneLaneCount += lanes?.length ?? 0;
-                } catch {
-                    // getPrimaryLanes not available; skip lane count for this block
-                }
+                // Not a simulation object; its lanes become Resources separately.
                 continue;
             }
             const blockAnalysis = analysis.blockAnalysis.get(blockId);
@@ -94,9 +108,34 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             const outgoingCount = blockAnalysis?.outgoingCount ?? 0;
             const isIsolated = incomingCount === 0 && outgoingCount === 0;
 
+            // Name it the way conversion would. Only claim a name for shapes that
+            // will actually be converted -- an unmapped shape never reaches the
+            // naming step, so letting it consume a sequence slot would shift every
+            // later number away from what conversion produces.
+            const namingType = proposedType ?? currentType;
+            const nameOpts = namingType ? NAME_OPTS_BY_TYPE[namingType] : undefined;
+            let elementName: string;
+            if (nameOpts) {
+                elementName = namer.claim(
+                    nameOpts.typeLabel,
+                    pickName(blockToNameable(block), {
+                        typeLabel: nameOpts.typeLabel,
+                        includeMasterName: nameOpts.includeMasterName,
+                        sequence: namer.nextSequence(nameOpts.typeLabel),
+                    })
+                );
+            } else {
+                // Skipped shape: show what the user sees on the canvas.
+                elementName = pickName(blockToNameable(block), {
+                    typeLabel: 'Block',
+                    includeMasterName: true,
+                });
+            }
+            assignedBlockNames.set(blockId, elementName);
+
             mappings.push({
                 elementId: blockId,
-                elementName: this.getBlockName(block),
+                elementName,
                 elementKind: DiagramElementKind.BLOCK,
                 currentType: currentType,
                 proposedType: proposedType,
@@ -126,24 +165,28 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             let sourceBlockName: string | undefined;
             let targetBlockName: string | undefined;
 
+            // Endpoint names are the names those blocks were just ASSIGNED above,
+            // not their raw canvas text -- conversion resolves them the same way
+            // (ConnectorLucid.resolveEndpointName), which is what keeps a connector
+            // into a de-duplicated "Process_2" from being labelled "Process".
             if (endpoint1?.connection) {
-                const sourceBlock = page.allBlocks.get(endpoint1.connection.id);
-                if (sourceBlock) {
-                    sourceBlockName = this.getBlockName(sourceBlock);
-                }
+                sourceBlockName = assignedBlockNames.get(endpoint1.connection.id);
             }
 
             if (endpoint2?.connection) {
-                const targetBlock = page.allBlocks.get(endpoint2.connection.id);
-                if (targetBlock) {
-                    targetBlockName = this.getBlockName(targetBlock);
-                }
+                targetBlockName = assignedBlockNames.get(endpoint2.connection.id);
             }
 
-            // Build element name from source/target if available
-            const elementName = (sourceBlockName && targetBlockName)
-                ? `${sourceBlockName} → ${targetBlockName}`
-                : this.getLineName(line, lineId);
+            // Same policy conversion uses: the line's own label wins, else
+            // "<source> → <target>", else a friendly fallback. Only claim a name
+            // when this line will actually become a Connector.
+            const proposedConnectorName = pickConnectorName(lineToNameable(line), {
+                sourceName: sourceBlockName,
+                targetName: targetBlockName,
+            });
+            const elementName = proposedType
+                ? namer.claim('Connector', proposedConnectorName)
+                : proposedConnectorName;
 
             // Get line label from text areas
             const lineLabel = this.getLineLabel(line);
@@ -163,54 +206,11 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             });
         }
 
-        // Calculate summary
-        const summary = this.calculateSummary(mappings, swimlaneLaneCount);
-
         return {
             pageId: page.id,
             isAlreadyConverted,
-            mappings,
-            summary
+            mappings
         };
-    }
-
-    /**
-     * Gets a display name from a block's text areas or class name
-     */
-    private getBlockName(block: BlockProxy): string {
-        // Try to get name from text areas
-        if (block.textAreas && block.textAreas.size > 0) {
-            for (const text of block.textAreas.values()) {
-                if (text && text.trim()) {
-                    return text.trim();
-                }
-            }
-        }
-
-        // Fallback to class name
-        const className = block.getClassName();
-        if (className) {
-            return className;
-        }
-
-        return `Block ${block.id.substring(0, 8)}`;
-    }
-
-    /**
-     * Gets a display name for a line
-     */
-    private getLineName(line: LineProxy, lineId: string): string {
-        // Lines typically don't have text, use a generated name
-        const endpoint1 = line.getEndpoint1();
-        const endpoint2 = line.getEndpoint2();
-
-        if (endpoint1?.connection && endpoint2?.connection) {
-            const sourceId = endpoint1.connection.id.substring(0, 6);
-            const targetId = endpoint2.connection.id.substring(0, 6);
-            return `Line ${sourceId}→${targetId}`;
-        }
-
-        return `Line ${lineId.substring(0, 8)}`;
     }
 
     /**
@@ -225,56 +225,6 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             }
         }
         return undefined;
-    }
-
-    /**
-     * Calculates summary counts from the mappings
-     */
-    private calculateSummary(mappings: ElementMappingPreview[], swimlaneLaneCount: number = 0): ConversionPreviewSummary {
-        const summary: ConversionPreviewSummary = {
-            totalBlocks: 0,
-            totalLines: 0,
-            generators: 0,
-            activities: 0,
-            resources: 0,
-            entities: 0,
-            connectors: 0,
-            skipped: 0,
-            swimlaneLaneCount
-        };
-
-        for (const mapping of mappings) {
-            // Count by element kind
-            if (mapping.elementKind === DiagramElementKind.BLOCK) {
-                summary.totalBlocks++;
-            } else {
-                summary.totalLines++;
-            }
-
-            // Count by proposed type
-            switch (mapping.proposedType) {
-                case SimulationObjectType.Generator:
-                    summary.generators++;
-                    break;
-                case SimulationObjectType.Activity:
-                    summary.activities++;
-                    break;
-                case SimulationObjectType.Resource:
-                    summary.resources++;
-                    break;
-                case SimulationObjectType.Entity:
-                    summary.entities++;
-                    break;
-                case SimulationObjectType.Connector:
-                    summary.connectors++;
-                    break;
-                case null:
-                    summary.skipped++;
-                    break;
-            }
-        }
-
-        return summary;
     }
 
     private initializeBlocks(
@@ -348,7 +298,10 @@ export class LucidPageAnalyzer extends QuodsiLogger {
             if (!block) continue;
 
             // First: Check for explicit type in structured name
-            const blockName = this.getBlockName(block);
+            // RAW canvas text, deliberately — this parses structured names like
+            // "type: resource", so it must see what the user typed, not the
+            // display name the naming policy would pick.
+            const blockName = blockToNameable(block).text ?? '';
             const parsed = parseStructuredName(blockName);
             const explicitType = extractSimulationType(parsed);
 
@@ -376,54 +329,27 @@ export class LucidPageAnalyzer extends QuodsiLogger {
                 continue; // Skip connection-based logic
             }
 
-            // Fallback: Determine type based on connection patterns
-            if (analysis.incomingCount === 0 && analysis.outgoingCount > 0) {
+            // Fallback: topology decides. The rule is the SHARED one in
+            // @quodsi/shared (diagram-mapping/classifyByTopology) that drawio
+            // and Visio run through PageAnalyzer -- this used to be a private
+            // re-implementation of the same if/else, which is how the rule
+            // could drift per platform. Blocks are 2-D, so bothEndpointsResolved
+            // is irrelevant here; it only decides Connector for 1-D shapes.
+            const verdict = classifyByTopology({
+                is1D: false,
+                bothEndpointsResolved: false,
+                incomingCount: analysis.incomingCount,
+                outgoingCount: analysis.outgoingCount
+            });
+            if (verdict === 'Generator') {
                 analysis.elementType = SimulationObjectType.Generator;
-                this.log(`Block ${blockId} set as Generator based on connections`, {
-                    incomingCount: analysis.incomingCount,
-                    outgoingCount: analysis.outgoingCount
-                });
-            } else if (analysis.incomingCount > 0) {
+            } else if (verdict === 'Activity') {
                 analysis.elementType = SimulationObjectType.Activity;
-                this.log(`Block ${blockId} set as Activity based on connections`, {
+            }
+            if (verdict) {
+                this.log(`Block ${blockId} set as ${verdict} based on connections`, {
                     incomingCount: analysis.incomingCount,
                     outgoingCount: analysis.outgoingCount
-                });
-            }
-        }
-    }
-
-    private applyBlockSpecificLogic(
-        page: PageProxy,
-        blockAnalysis: Map<string, BlockAnalysis>
-    ): void {
-        this.log('Applying block-specific logic');
-
-        for (const [blockId, block] of page.allBlocks) {
-            const analysis = blockAnalysis.get(blockId);
-            if (!analysis) continue;
-
-            const blockClass = block.getClassName();
-            const previousType = analysis.elementType;
-
-            // REMOVED: Blind override that breaks connection-based logic
-            // TerminatorBlockV2 shapes should be typed based on their connections:
-            // - End/sink terminators (incoming, no outgoing) → Activity
-            // - Source terminators (no incoming, has outgoing) → Generator
-            // - Isolated terminators (no connections) → Skipped
-            //
-            // if (blockClass === 'TerminatorBlockV2') {
-            //     analysis.elementType = SimulationObjectType.Generator;
-            // }
-
-            // Add other specific overrides if needed
-            // (Only add overrides that respect connection patterns)
-
-            if (previousType !== analysis.elementType) {
-                this.log(`Block ${blockId} type changed by block-specific logic`, {
-                    blockClass,
-                    from: previousType,
-                    to: analysis.elementType
                 });
             }
         }

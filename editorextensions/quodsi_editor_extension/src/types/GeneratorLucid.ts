@@ -211,7 +211,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         return name;
     }
 
-    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): GeneratorLucid {
+    static createFromConversion(block: BlockProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource, nameSequence?: number): GeneratorLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid from conversion for block ID: ${block.id}, mappingSource: ${mappingSource}`);
 
         // Extract location AND shape size (Path X-lite)
@@ -227,7 +227,11 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         defaultGenerator.height = box.h;
 
         // Get raw name and parse for structured data
-        const rawName = SimObjectLucid.getNameFromBlock(block, 'Generator');
+        const rawName = SimObjectLucid.pickBlockName(block, {
+            typeLabel: 'Generator',
+            includeMasterName: true,
+            sequence: nameSequence,
+        });
         const parsed = parseStructuredName(rawName);
         const fields = extractGeneratorFields(parsed);
 
