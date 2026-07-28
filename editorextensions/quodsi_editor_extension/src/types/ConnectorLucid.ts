@@ -231,6 +231,31 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         return this.getBlockName(block);
     }
 
+    /**
+     * The name of the element an endpoint block was CONVERTED to — falling back
+     * to the block's canvas text when it isn't converted (or carries no name).
+     *
+     * Not `getNameFromBlock`: that reads the block's raw text, which is the
+     * right source for the block itself but the WRONG source for a connector.
+     * Blocks are converted before lines, and the blocks loop appends _2/_3 to
+     * de-duplicate same-named shapes — a suffix that lives only in the element
+     * data, never in the canvas text. Reading the text here named every
+     * connector into "Process_2" after "Process" instead, so two connectors
+     * collided on one name, DuplicateNameValidation raised an ERROR, and the
+     * user was stuck because connectors can't be renamed in the UI.
+     * (ClickUp 86e233g6f; drawio resolves the same way via resolveShapeName.)
+     */
+    private static resolveEndpointName(
+        block: BlockProxy,
+        storageAdapter: StorageAdapter,
+        defaultPrefix: string
+    ): string {
+        const converted = storageAdapter.getElementData<{ name?: string }>(block);
+        const convertedName = converted?.name?.trim();
+        if (convertedName) return convertedName;
+        return this.getNameFromBlock(block, defaultPrefix);
+    }
+
     static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ConnectorLucid {
         ComponentLogger.log(LOG_PREFIX, `Creating ConnectorLucid from conversion for line ID: ${line.id}, mappingSource: ${mappingSource}`);
 
@@ -266,8 +291,12 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             const sourceBlock = page.allBlocks.get(defaultConnector.sourceId);
             const targetBlock = page.allBlocks.get(defaultConnector.targetId);
 
-            const sourceName = sourceBlock ? this.getNameFromBlock(sourceBlock, 'Source') : 'Source';
-            const targetName = targetBlock ? this.getNameFromBlock(targetBlock, 'Target') : 'Target';
+            const sourceName = sourceBlock
+                ? this.resolveEndpointName(sourceBlock, storageAdapter, 'Source')
+                : 'Source';
+            const targetName = targetBlock
+                ? this.resolveEndpointName(targetBlock, storageAdapter, 'Target')
+                : 'Target';
 
             name = `${sourceName} → ${targetName}`;
             ComponentLogger.log(LOG_PREFIX, `Generated name for connector from endpoint names: ${name}`);

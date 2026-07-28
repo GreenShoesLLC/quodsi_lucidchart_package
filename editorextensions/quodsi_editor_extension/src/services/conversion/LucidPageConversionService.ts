@@ -352,6 +352,13 @@ export class LucidPageConversionService extends QuodsiLogger {
                 connector.targetId = endpoint2.connection.id;
                 connector.weight = probability;
 
+                // Same uniqueness pass the blocks loop above applies. Connectors
+                // are named "<source> → <target>", so two lines between the same
+                // pair (or into same-named shapes) collide — and DuplicateNameValidation
+                // makes that an ERROR the user cannot clear, because connectors
+                // have no rename UI. (86e233g6f)
+                this.ensureUniqueConnectorName(connector, usedNamesByType, line);
+
                 platformObject.updateFromPlatform();
                 await this.modelManager.registerElement(connector, line);
                 connectors++;
@@ -476,12 +483,46 @@ export class LucidPageConversionService extends QuodsiLogger {
     /**
      * Converts connections to simulation connectors
      */
+    /**
+     * Give `connector` a name no other connector in this conversion holds,
+     * appending _2/_3 on collision, and persist it.
+     *
+     * Mirrors the de-duplication the blocks loop does for Activities/Resources/
+     * Generators — connectors were the one type with no such pass, so a model
+     * with two same-named shapes (or two lines between one pair) converted to
+     * duplicate connector names. DuplicateNameValidation reports that as an
+     * ERROR, and connectors can't be renamed in the UI, so the model was stuck
+     * un-simulatable. (ClickUp 86e233g6f)
+     */
+    private ensureUniqueConnectorName(
+        connector: Connector,
+        usedNamesByType: Map<SimulationObjectType, Set<string>>,
+        line: LineProxy
+    ): void {
+        let connectorNames = usedNamesByType.get(SimulationObjectType.Connector);
+        if (!connectorNames) {
+            connectorNames = new Set<string>();
+            usedNamesByType.set(SimulationObjectType.Connector, connectorNames);
+        }
+
+        if (connectorNames.has(connector.name)) {
+            connector.name = generateUniqueName(connector.name, (n) => connectorNames!.has(n));
+            // createFromConversion already wrote the original name to storage.
+            this.storageAdapter.updateElementData(line, connector);
+        }
+
+        connectorNames.add(connector.name);
+    }
+
     private async convertConnections(
         page: PageProxy,
         analysis: ProcessAnalysisResult
     ): Promise<number> {
         this.log('Converting connections');
         let connectorCount = 0;
+        // Legacy auto-conversion path (convertPage) — its own name tracker, since
+        // it has no usedNamesByType of its own. Same reason as the mapped path.
+        const usedNamesByType = new Map<SimulationObjectType, Set<string>>();
 
         // Calculate outgoing connections per block for probability calculation
         const outgoingConnectionCounts = new Map<string, number>();
@@ -523,6 +564,8 @@ export class LucidPageConversionService extends QuodsiLogger {
                 connector.sourceId = sourceId;
                 connector.targetId = endpoint2.connection.id;
                 connector.weight = probability;
+
+                this.ensureUniqueConnectorName(connector, usedNamesByType, line);
 
                 // Update the platform object to save changes
                 platformObject.updateFromPlatform();
