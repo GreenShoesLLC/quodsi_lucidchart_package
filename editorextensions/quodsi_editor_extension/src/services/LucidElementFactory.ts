@@ -38,11 +38,18 @@ export class LucidElementFactory {
     /**
      * Creates the appropriate platform-specific simulation object based on the element type
      */
+    /**
+     * @param nameSequence 1-based position among already-named elements of this
+     *   type in the current conversion. Feeds the shared naming policy's
+     *   fallback so an unnamed shape becomes "Activity 2" rather than carrying
+     *   Lucid's long opaque block id. Omit outside conversion.
+     */
     public createPlatformObject(
         element: ElementProxy,
         type: SimulationObjectType,
         isConversion: boolean = false,
-        mappingSource?: MappingSource
+        mappingSource?: MappingSource,
+        nameSequence?: number
     ): SimObjectLucid<any> {
         ComponentLogger.log(LOG_PREFIX, `Creating platform object`, {
             elementId: element.id,
@@ -68,7 +75,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ActivityLucid`);
                         return isConversion
-                            ? ActivityLucid.createFromConversion(element, this.storageAdapter, mappingSource)
+                            ? ActivityLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new ActivityLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Activity`);
@@ -90,7 +97,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating GeneratorLucid`);
                         return isConversion
-                            ? GeneratorLucid.createFromConversion(element, this.storageAdapter, mappingSource)
+                            ? GeneratorLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new GeneratorLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Generator`);
@@ -101,7 +108,7 @@ export class LucidElementFactory {
                     if (this.isBlockProxy(element)) {
                         ComponentLogger.log(LOG_PREFIX, `Creating ResourceLucid`);
                         return isConversion
-                            ? ResourceLucid.createFromConversion(element, this.storageAdapter, mappingSource)
+                            ? ResourceLucid.createFromConversion(element, this.storageAdapter, mappingSource, nameSequence)
                             : new ResourceLucid(element, this.storageAdapter);
                     }
                     ComponentLogger.error(LOG_PREFIX, `Element is not a BlockProxy for Resource`);

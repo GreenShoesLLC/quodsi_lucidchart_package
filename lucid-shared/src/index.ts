@@ -287,6 +287,40 @@ export {
   isCoreNumericDistribution,
 } from '@quodsi/shared';
 
+// Per-pass conversion name bookkeeping — shared by conversion and its preview
+// so the mapping screen shows the names conversion will actually assign.
+export { ConversionNamer } from '@quodsi/shared';
+
+// Auto-created-resource planning ("| resource: Nurse") — re-exported from
+// @quodsi/shared so every host plans the same way; only shape creation differs.
+export { planAutoResources } from '@quodsi/shared';
+export type {
+  ActivityResourceRef,
+  AutoResourcePlacement,
+  AutoResourceLayout,
+  PlannedAutoResource,
+} from '@quodsi/shared';
+
+// Topology classification rule — re-exported from @quodsi/shared. The SAME
+// rule drawio and Visio reach through PageAnalyzer; LucidPageAnalyzer used to
+// re-implement it privately.
+export { classifyByTopology } from '@quodsi/shared';
+export type { TopologyClass, TopologyInput } from '@quodsi/shared';
+
+// Shape → element naming policy — re-exported from @quodsi/shared. The SAME
+// policy drawio and Visio use; the extension adapts its SDK proxies to
+// NameableShape (see types/nameableShape.ts) instead of forking the rules.
+export {
+  pickName,
+  pickConnectorName,
+  isDefaultLikeName,
+} from '@quodsi/shared';
+export type {
+  NameableShape,
+  NameSelectionOptions,
+  ConnectorNameOptions,
+} from '@quodsi/shared';
+
 // Scenario levers (Phase 1 authoring) — re-exported from @quodsi/shared.
 // NOTE: ScenarioObjectType is already re-exported in the element-types block above.
 export {
@@ -337,7 +371,25 @@ export {
 // Service exports
 export * from './services/lucidApi';
 export { generateUUID } from '@quodsi/shared';
-export * from './utils/NameParser';
+// Structured shape-name parsing — moved to @quodsi/shared (conversion/nameParser)
+// so drawio and Visio can use it too; re-exported here so existing
+// `@quodsi/lucid-shared` consumers keep working unchanged.
+export {
+  parseStructuredName,
+  extractActivityFields,
+  extractGeneratorFields,
+  extractResourceFields,
+  extractEntityFields,
+  extractSimulationType,
+} from '@quodsi/shared';
+export type {
+  ParsedNameData,
+  ActivityParsedFields,
+  GeneratorParsedFields,
+  ResourceParsedFields,
+  EntityParsedFields,
+  SimulationTypeName,
+} from '@quodsi/shared';
 export * from './utils/nameUtils';
 export * from './utils/nameValidation';
 export * from './utils/resolveModelName';

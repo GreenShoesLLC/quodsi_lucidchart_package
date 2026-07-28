@@ -5,5 +5,4 @@ export {
   DiagramElementKind,
   type ElementMappingPreview,
   type ConversionPreviewData,
-  type ConversionPreviewSummary,
 } from '@quodsi/shared';

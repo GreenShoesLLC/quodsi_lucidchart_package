@@ -6,10 +6,13 @@ import {
     StateCondition,
     StateModification,
     MappingSource,
-    ScenarioLever
+    ScenarioLever,
+    pickConnectorName,
+    pickName
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
+import { blockToNameable, lineToNameable } from './nameableShape';
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[ConnectorLucid]';
@@ -253,7 +256,10 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
         const converted = storageAdapter.getElementData<{ name?: string }>(block);
         const convertedName = converted?.name?.trim();
         if (convertedName) return convertedName;
-        return this.getNameFromBlock(block, defaultPrefix);
+        return pickName(blockToNameable(block), {
+            typeLabel: defaultPrefix,
+            includeMasterName: true,
+        });
     }
 
     static createFromConversion(line: LineProxy, storageAdapter: StorageAdapter, mappingSource?: MappingSource): ConnectorLucid {
@@ -298,7 +304,7 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
                 ? this.resolveEndpointName(targetBlock, storageAdapter, 'Target')
                 : 'Target';
 
-            name = `${sourceName} → ${targetName}`;
+            name = pickConnectorName(lineToNameable(line), { sourceName, targetName });
             ComponentLogger.log(LOG_PREFIX, `Generated name for connector from endpoint names: ${name}`);
         }
         defaultConnector.name = name;

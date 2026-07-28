@@ -6,9 +6,11 @@ import {
     SimulationObject,
     SimulationObjectType,
     ComponentLogger,
-    QUODSI_VERSION
+    QUODSI_VERSION,
+    pickName
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
+import { blockToNameable } from './nameableShape';
 
 // Define a constant for the logger prefix
 const LOG_PREFIX = '[SimObjectLucid]';
@@ -109,19 +111,25 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     }
     
     /**
-     * Static utility method to get name from a block's text areas
+     * Name a block being converted, using the SHARED policy (@quodsi/shared
+     * conversion/naming) that drawio and Visio run — canvas text, then the
+     * block class for the types where it means something, then a unique
+     * "<TypeLabel> <sequence|id>" fallback.
+     *
+     * Replaces a Lucid-only chain of "text, else '<prefix> <className>'".
+     * That fallback was IDENTICAL for every unnamed block of a type ("Act
+     * ProcessBlock" twice over), so duplicates were the normal case and only
+     * de-duplication cleaned up after it. See ClickUp 86e233g6f.
+     *
+     * `sequence` (1-based) makes the fallback read as "Activity 1" rather than
+     * carrying Lucid's long opaque block id; conversion supplies it from the
+     * count of same-type elements named so far.
      */
-    protected static getNameFromBlock(block: BlockProxy, defaultPrefix: string): string {
-        if (block.textAreas && block.textAreas.size > 0) {
-            for (const text of block.textAreas.values()) {
-                if (text && text.trim()) {
-                    return text.trim();
-                }
-            }
-        }
-
-        const className = block.getClassName() || 'Block';
-        const name = `${defaultPrefix} ${className}`;
+    protected static pickBlockName(
+        block: BlockProxy,
+        opts: { typeLabel: string; includeMasterName: boolean; sequence?: number }
+    ): string {
+        const name = pickName(blockToNameable(block), opts);
         ComponentLogger.log(LOG_PREFIX, `Generated name for element ID ${block.id}: ${name}`);
         return name;
     }
