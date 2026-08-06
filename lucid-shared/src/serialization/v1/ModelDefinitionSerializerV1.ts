@@ -1,4 +1,4 @@
-import { ModelDefinition } from '@quodsi/shared';
+import { ModelDefinition, MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 import { BaseModelDefinitionSerializer } from '../BaseModelDefinitionSerializer';
 import { ISerializedModel } from '../interfaces/ISerializedModel';
 import { ISchemaVersion } from '../interfaces/ISchemaVersion';
@@ -29,6 +29,7 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
             const metadata = this.getMetadata();
 
             return {
+                schemaVersion: MODEL_SCHEMA_VERSION,
                 formatVersion: '1.0',
                 metadata,
                 model: this.serializeModel(modelDefinition.model),

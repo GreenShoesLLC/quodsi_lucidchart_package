@@ -1,8 +1,9 @@
 {
+  "schemaVersion": "2026.08.10",
   "formatVersion": "1.0",
   "metadata": {
-    "version": "2026.06.10",
-    "timestamp": "2026-06-10T11:42:19.894Z"
+    "version": "2026.08.10",
+    "timestamp": "2026-08-06T03:32:05.868Z"
   },
   "model": {
     "id": "model-1",
@@ -54,7 +55,7 @@
               "description": ""
             }
           },
-          "id": "42d8fb3d-a3de-4d21-a8ce-b9069dd2059e"
+          "id": "437a8fe7-6828-4c61-a0b2-c8932f2944da"
         }
       ],
       "connectors": [],
