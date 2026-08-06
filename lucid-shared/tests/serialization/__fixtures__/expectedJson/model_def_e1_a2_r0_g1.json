@@ -1,8 +1,9 @@
 {
+  "schemaVersion": "2026.08.10",
   "formatVersion": "1.0",
   "metadata": {
-    "version": "2026.06.10",
-    "timestamp": "2026-06-10T11:42:19.904Z"
+    "version": "2026.08.10",
+    "timestamp": "2026-08-06T03:32:05.879Z"
   },
   "model": {
     "id": "model-7",
@@ -62,7 +63,7 @@
               "description": ""
             }
           },
-          "id": "9cb4fea8-d89b-4350-b7bc-6d44be790d75"
+          "id": "f99d4154-d8ad-4637-9955-086acd09b96f"
         }
       ],
       "connectors": [
@@ -109,7 +110,7 @@
               "description": ""
             }
           },
-          "id": "dc4c95b8-a2e2-4a7f-b41f-3d14fe989837"
+          "id": "83756b34-a0fe-402d-afc1-43727d45cb0e"
         }
       ],
       "connectors": [],

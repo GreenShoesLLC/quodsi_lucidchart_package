@@ -19,6 +19,8 @@ export interface ISerializedMetadata {
 }
 
 export interface ISerializedModel {
+    /** Model-document schema version (top-level stamp; spec 2026-08-06). */
+    schemaVersion: string;
     metadata: ISerializedMetadata;
     model: {
         id: string;
