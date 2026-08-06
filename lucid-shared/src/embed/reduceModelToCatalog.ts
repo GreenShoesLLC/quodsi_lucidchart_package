@@ -36,10 +36,8 @@ function idName(x: { id: string; name: string }): { id: string; name: string } {
 
 export function reduceModelToCatalog(model: ModelInput): EmbedModelCatalog {
   const connectorMap = new Map<string, { id: string; name: string }>();
-  for (const a of model.activities ?? []) {
-    for (const c of (a as { connectors?: Array<{ id: string; name: string }> }).connectors ?? []) {
-      if (c && c.id && !connectorMap.has(c.id)) connectorMap.set(c.id, { id: c.id, name: c.name });
-    }
+  for (const c of model.connectors ?? []) {
+    if (c && c.id && !connectorMap.has(c.id)) connectorMap.set(c.id, { id: c.id, name: c.name });
   }
 
   return {

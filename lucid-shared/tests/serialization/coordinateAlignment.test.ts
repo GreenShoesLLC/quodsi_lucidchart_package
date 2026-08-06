@@ -44,10 +44,10 @@ function makeModel(): ISerializedModel {
       {
         x: 540,
         y: 160,
-        connectors: [
-          { sourceX: 0, sourceY: 0, targetX: 800, targetY: 220, x: 400, y: 110 },
-        ],
       },
+    ],
+    connectors: [
+      { sourceX: 0, sourceY: 0, targetX: 800, targetY: 220, x: 400, y: 110 },
     ],
     generators: [{ x: 280, y: 160 }],
     resources: [{ x: -40, y: 260 }],
@@ -61,7 +61,7 @@ describe('offsetSerializedModelCoordinates', () => {
     offsetSerializedModelCoordinates(m, 500, 10);
     expect(m.activities[0].x).toBe(1040);
     expect(m.activities[0].y).toBe(170);
-    const c = m.activities[0].connectors[0];
+    const c = m.connectors[0];
     expect(c.sourceX).toBe(500);
     expect(c.sourceY).toBe(10);
     expect(c.targetX).toBe(1300);

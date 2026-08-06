@@ -36,7 +36,7 @@ export function parsePageTranslate(svg: string): PageTranslate {
 
 /**
  * Add (dx, dy) to every layout-bearing coordinate in the serialized model:
- * activities, generators, resources, and each activity's connectors
+ * activities, generators, resources, and the top-level connectors
  * (source/target/midpoint). Entities are not laid out as shapes and are left
  * untouched. Mutates `model` in place; a (0,0) shift is a no-op. This is a
  * uniform translation, so relative geometry — and the simulation — is unchanged.
@@ -50,14 +50,14 @@ export function offsetSerializedModelCoordinates(
   for (const a of model.activities ?? []) {
     a.x += dx;
     a.y += dy;
-    for (const c of a.connectors ?? []) {
-      c.sourceX += dx;
-      c.sourceY += dy;
-      c.targetX += dx;
-      c.targetY += dy;
-      c.x += dx;
-      c.y += dy;
-    }
+  }
+  for (const c of model.connectors ?? []) {
+    c.sourceX += dx;
+    c.sourceY += dy;
+    c.targetX += dx;
+    c.targetY += dy;
+    c.x += dx;
+    c.y += dy;
   }
   for (const g of model.generators ?? []) {
     g.x += dx;

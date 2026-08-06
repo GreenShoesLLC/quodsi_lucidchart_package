@@ -378,16 +378,13 @@ export class SimulationRunHandler {
    *
    * The returned shape is structurally compatible with
    * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`.
-   * Connectors are flattened from activity.connectors into a top-level array
-   * (deduplicated by id) and carry sourceId/targetId/weight.
+   * Connectors come from the model's top-level `connectors[]` (flat as of the
+   * 2026.08.20 canonicalization) and carry sourceId/targetId/weight.
    */
   private static buildStudioCatalog(model: ISerializedModel) {
     const m = model.model;
 
-    // Flatten + deduplicate connectors from all activities AND synthesize
-    // generator exit connectors (ISerializedGenerator.exitConnector is only a
-    // bare target activity id, not a full connector object — buildRelayConnectors
-    // adds synthetic entries so the embed's validation finds the connectivity).
+    // Map + deduplicate the top-level connectors by id.
     const connectors = buildRelayConnectors(model);
 
     return {

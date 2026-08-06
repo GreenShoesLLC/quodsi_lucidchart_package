@@ -5,6 +5,7 @@ import { ISerializedEntity } from './ISerializedEntity';
 import { ISerializedActivity } from './ISerializedActivity';
 import { ISerializedResource } from './ISerializedResource';
 import { ISerializedGenerator } from './ISerializedGenerator';
+import { ISerializedConnector } from './ISerializedConnector';
 import { ISerializedResourceRequirement } from './ISerializedResourceRequirement';
 import { ISerializedState } from './ISerializedState';
 import { ISerializedTimePattern } from './ISerializedTimePattern';
@@ -45,6 +46,7 @@ export interface ISerializedModel {
     activities: ISerializedActivity[];
     resources: ISerializedResource[];
     generators: ISerializedGenerator[];
+    connectors: ISerializedConnector[];
     resourceRequirements: ISerializedResourceRequirement[];
     states: ISerializedState[];
     timePatterns?: ISerializedTimePattern[];

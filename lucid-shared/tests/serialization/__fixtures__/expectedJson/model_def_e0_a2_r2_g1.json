@@ -1,9 +1,8 @@
 {
-  "schemaVersion": "2026.08.10",
-  "formatVersion": "1.0",
+  "schemaVersion": "2026.08.20",
   "metadata": {
-    "version": "2026.08.10",
-    "timestamp": "2026-08-06T03:32:05.875Z"
+    "version": "2026.08.20",
+    "timestamp": "2026-08-06T14:08:13.015Z"
   },
   "model": {
     "id": "model-4",
@@ -57,7 +56,7 @@
             }
           },
           "keepResource": false,
-          "id": "9cba4b71-5b84-44c8-a0ac-f5f56770ac3f"
+          "id": "0ceb3bc9-14ea-4dd5-a6d3-95f3650b2faa"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -73,26 +72,7 @@
             }
           },
           "keepResource": false,
-          "id": "dea3cf1a-a391-4d0a-bf5e-aee754be022a"
-        }
-      ],
-      "connectors": [
-        {
-          "id": "connector-1",
-          "name": "Activity1ToActivity2",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-1",
-          "targetId": "activity-2",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 1,
-          "actions": [],
-          "stateModifications": []
+          "id": "24f8a9e0-5dee-46db-b931-a5cb0564dc1b"
         }
       ],
       "connectType": "Probability"
@@ -122,7 +102,7 @@
             }
           },
           "keepResource": false,
-          "id": "0baae789-467f-4203-a32d-6170a94f7e60"
+          "id": "882941d7-ff57-468e-a945-f9c6a45015de"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -138,10 +118,9 @@
             }
           },
           "keepResource": false,
-          "id": "17c44721-d930-47d4-b1a2-56259dbed240"
+          "id": "a5192af0-7351-450f-b53d-11f685b1aa37"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     }
   ],
@@ -199,8 +178,43 @@
           }
         },
         "maxEntities": 999999
-      },
-      "exitConnector": "activity-1"
+      }
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-gen-1",
+      "name": "Generator1ToActivity1",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-1",
+      "name": "Activity1ToActivity2",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-1",
+      "targetId": "activity-2",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
     }
   ],
   "resourceRequirements": [

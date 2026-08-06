@@ -14,9 +14,6 @@ export interface ISerializedGenerator {
     // Required configuration
     generationConfig: ISerializedEntitySourceConfig;
 
-    // Optional exit destination (activity ID)
-    exitConnector?: string;
-
     // Scenario-lever authoring metadata; only present when the component declares
     // levers (conditional inclusion => no churn for lever-less models).
     levers?: ScenarioLever[];

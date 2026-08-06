@@ -1,9 +1,8 @@
 {
-  "schemaVersion": "2026.08.10",
-  "formatVersion": "1.0",
+  "schemaVersion": "2026.08.20",
   "metadata": {
-    "version": "2026.08.10",
-    "timestamp": "2026-08-06T03:32:05.888Z"
+    "version": "2026.08.20",
+    "timestamp": "2026-08-06T14:08:13.029Z"
   },
   "model": {
     "id": "model-100",
@@ -74,7 +73,7 @@
             }
           },
           "keepResource": false,
-          "id": "7e7c4b0a-58f3-4995-9912-47282d2eead1"
+          "id": "1cbd0b16-b48d-4174-b73f-be163320d60c"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -91,26 +90,7 @@
             }
           },
           "keepResource": false,
-          "id": "3402163d-6c5f-44b0-8469-f3b648eb4844"
-        }
-      ],
-      "connectors": [
-        {
-          "id": "connector-1",
-          "name": "Activity1ToActivity2",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-1",
-          "targetId": "activity-2",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 1,
-          "actions": [],
-          "stateModifications": []
+          "id": "f24fcdb2-065d-421a-a550-44bce66d18cd"
         }
       ],
       "connectType": "Probability"
@@ -142,7 +122,7 @@
             }
           },
           "keepResource": false,
-          "id": "58dc276e-83a0-4b4e-83a9-64b7636606ea"
+          "id": "c7e8e7fe-cd74-41e6-8d93-43996e65593b"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -160,26 +140,7 @@
             }
           },
           "keepResource": false,
-          "id": "d7cf75c7-1843-490e-984c-8ee66e6b4d8c"
-        }
-      ],
-      "connectors": [
-        {
-          "id": "connector-2",
-          "name": "Activity2ToActivity3",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-2",
-          "targetId": "activity-3",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 1,
-          "actions": [],
-          "stateModifications": []
+          "id": "73853f63-f86c-4fcc-86a4-b921f2e4674c"
         }
       ],
       "connectType": "Probability"
@@ -209,7 +170,7 @@
             }
           },
           "keepResource": false,
-          "id": "fa0ef053-aab2-42a1-9364-6209b8592300"
+          "id": "b90080fb-d200-4735-b76d-a40661ea2787"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -225,10 +186,9 @@
             }
           },
           "keepResource": false,
-          "id": "f8d4545b-2e4d-40c2-a02e-c7c23140607c"
+          "id": "727b30eb-a5ce-4478-ada4-a391cd45271b"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     }
   ],
@@ -287,8 +247,60 @@
           }
         },
         "maxEntities": 999999
-      },
-      "exitConnector": "activity-1"
+      }
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-gen-1",
+      "name": "Generator1ToActivity1",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-1",
+      "name": "Activity1ToActivity2",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-1",
+      "targetId": "activity-2",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-2",
+      "name": "Activity2ToActivity3",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-2",
+      "targetId": "activity-3",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
     }
   ],
   "resourceRequirements": [

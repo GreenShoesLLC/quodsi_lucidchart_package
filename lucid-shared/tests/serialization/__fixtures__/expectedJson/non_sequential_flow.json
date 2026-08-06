@@ -1,9 +1,8 @@
 {
-  "schemaVersion": "2026.08.10",
-  "formatVersion": "1.0",
+  "schemaVersion": "2026.08.20",
   "metadata": {
-    "version": "2026.08.10",
-    "timestamp": "2026-08-06T03:32:05.886Z"
+    "version": "2026.08.20",
+    "timestamp": "2026-08-06T14:08:13.027Z"
   },
   "model": {
     "id": "model-non-sequential",
@@ -65,43 +64,7 @@
             }
           },
           "keepResource": false,
-          "id": "c9da702e-9330-4556-ada0-dc14b4fb4e34"
-        }
-      ],
-      "connectors": [
-        {
-          "id": "connector-2",
-          "name": "Activity1ToActivity2",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-1",
-          "targetId": "activity-2",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 0.5,
-          "actions": [],
-          "stateModifications": []
-        },
-        {
-          "id": "connector-3",
-          "name": "Activity1ToActivity3",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-1",
-          "targetId": "activity-3",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 0.5,
-          "actions": [],
-          "stateModifications": []
+          "id": "32205b62-e4d3-4e53-ac33-ae1efcd4d967"
         }
       ],
       "connectType": "Probability"
@@ -131,10 +94,9 @@
             }
           },
           "keepResource": false,
-          "id": "c9da702e-9330-4556-ada0-dc14b4fb4e34"
+          "id": "32205b62-e4d3-4e53-ac33-ae1efcd4d967"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     },
     {
@@ -162,10 +124,9 @@
             }
           },
           "keepResource": false,
-          "id": "c9da702e-9330-4556-ada0-dc14b4fb4e34"
+          "id": "32205b62-e4d3-4e53-ac33-ae1efcd4d967"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     }
   ],
@@ -214,8 +175,60 @@
           }
         },
         "maxEntities": 999999
-      },
-      "exitConnector": "activity-1"
+      }
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-1",
+      "name": "GeneratorToActivity1",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-2",
+      "name": "Activity1ToActivity2",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-1",
+      "targetId": "activity-2",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 0.5,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-3",
+      "name": "Activity1ToActivity3",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-1",
+      "targetId": "activity-3",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 0.5,
+      "actions": [],
+      "stateModifications": []
     }
   ],
   "resourceRequirements": [
