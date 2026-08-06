@@ -4,7 +4,7 @@ export * from './core/logging/QuodsiLogger';
 export * from './core/logging/ComponentLogger';
 
 // Constants
-export { QUODSI_VERSION, QUODSIM_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
+export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
 export type { VersionInfo } from '@quodsi/shared';
 export * from './constants/branding';
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { X } from "lucide-react";
-import { QUODSI_VERSION, QUODSIM_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/lucid-shared";
+import { MODEL_SCHEMA_VERSION, ENGINE_VERSION, QUODSI_ICON_BASE64 } from "@quodsi/lucid-shared";
 import { detectEnvironment } from "../../utils/environmentDetection";
 
 interface AboutModalProps {
@@ -81,7 +81,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             className="text-xs text-gray-500 mt-3 cursor-default select-none"
             onClick={handleVersionClick}
           >
-            App: {QUODSI_VERSION}
+            App: {MODEL_SCHEMA_VERSION}
           </div>
           {devModeMessage && (
             <div className="text-xs text-green-600 mt-1 font-medium">
@@ -89,7 +89,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </div>
           )}
           <div className="text-xs text-gray-500 mt-1">
-            Simulation Engine: {QUODSIM_VERSION}
+            Simulation Engine: {ENGINE_VERSION}
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Environment: {environment}

@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, QUODSI_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
 
 /**
  * Record of skipped elements with their mapping source
@@ -506,10 +506,10 @@ export class StorageAdapter {
             const platform: { mappingSource?: MappingSource } = {};
             if (options.mappingSource) platform.mappingSource = options.mappingSource;
 
-            const envelope: any = makeEnvelope(type, id, domain, platform, QUODSI_VERSION);
+            const envelope: any = makeEnvelope(type, id, domain, platform, MODEL_SCHEMA_VERSION);
             // The page (Model) keeps a top-level version marker for the migration gate.
             if (type === SimulationObjectType.Model) {
-                envelope.version = options.version || QUODSI_VERSION;
+                envelope.version = options.version || MODEL_SCHEMA_VERSION;
             }
 
             element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));
@@ -557,9 +557,9 @@ export class StorageAdapter {
             const platform: { mappingSource?: MappingSource } = {};
             if (mappingSource) platform.mappingSource = mappingSource;
 
-            const envelope: any = makeEnvelope(type, existing.id, domain, platform, QUODSI_VERSION);
+            const envelope: any = makeEnvelope(type, existing.id, domain, platform, MODEL_SCHEMA_VERSION);
             if (type === SimulationObjectType.Model) {
-                envelope.version = pageVersion || QUODSI_VERSION;
+                envelope.version = pageVersion || MODEL_SCHEMA_VERSION;
             }
 
             element.shapeData.set(StorageAdapter.DATA_KEY, JSON.stringify(envelope));

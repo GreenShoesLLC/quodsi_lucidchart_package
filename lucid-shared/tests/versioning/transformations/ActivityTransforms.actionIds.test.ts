@@ -1,4 +1,4 @@
-import { ActivityTransforms, getTransformationsBetweenVersions, QUODSI_VERSION } from '@quodsi/shared';
+import { ActivityTransforms, getTransformationsBetweenVersions, MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 
 // Locate the action-id backfill hop by its version bounds
 function actionIdHop() {
@@ -39,7 +39,7 @@ describe('ActivityTransforms action-id backfill hop', () => {
   });
 
   it('is selected when upgrading any model at the prior version', () => {
-    const sets = getTransformationsBetweenVersions('2026.05.26', QUODSI_VERSION);
+    const sets = getTransformationsBetweenVersions('2026.05.26', MODEL_SCHEMA_VERSION);
     const activity = sets.find(s => s.objectType === 'Activity');
     expect(activity).toBeTruthy();
     expect(activity!.transformations.some(

@@ -6,7 +6,7 @@ import {
   ModelSerializerFactory,
   Model,
   generateUUID,
-  QUODSIM_VERSION,
+  ENGINE_VERSION,
   parsePageTranslate,
   offsetSerializedModelCoordinates,
 } from '@quodsi/lucid-shared';
@@ -459,7 +459,7 @@ export class SimulationHandler {
             model: serializedModel,
             scenarioName,
             diagramSvg: diagramSvg,
-            appVersion: QUODSIM_VERSION,
+            appVersion: ENGINE_VERSION,
             // Opt-in animation (default off). Backend reads action_data.enableAnimation
             // (lucid_router); engine generates animation for replication 1 only.
             enableAnimation: data.enableAnimation ?? false

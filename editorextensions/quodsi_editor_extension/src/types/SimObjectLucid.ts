@@ -6,7 +6,7 @@ import {
     SimulationObject,
     SimulationObjectType,
     ComponentLogger,
-    QUODSI_VERSION,
+    MODEL_SCHEMA_VERSION,
     pickName
 } from '@quodsi/lucid-shared';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -101,7 +101,7 @@ export abstract class SimObjectLucid<T extends SimulationObject> implements Plat
     public getMetadata(): PlatformMetadata {
         const metadata = {
             platform: PlatformType.Lucid,
-            version: QUODSI_VERSION,
+            version: MODEL_SCHEMA_VERSION,
             lastModified: new Date().toISOString(),
             elementId: this.element.id,
             elementType: this.type

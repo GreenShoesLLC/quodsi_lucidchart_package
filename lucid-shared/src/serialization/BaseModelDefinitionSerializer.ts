@@ -1,5 +1,5 @@
 import { ModelDefinition } from '@quodsi/shared';
-import { QUODSI_VERSION } from '@quodsi/shared';
+import { MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Entity } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
@@ -58,7 +58,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
      * The serializer's self-reported schema version. Currently has NO production
      * consumer: ModelSerializerFactory.create() dispatches on its `version`
      * argument (not this), `formatVersion` is a literal in each serializer's
-     * serialize(), and `metadata.version` now carries QUODSI_VERSION. Retained as
+     * serialize(), and `metadata.version` now carries MODEL_SCHEMA_VERSION. Retained as
      * part of the versioned-serializer interface (see serialization/README.md) for
      * a future schema v2; referenced only by tests today.
      */
@@ -701,9 +701,9 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
     protected getMetadata(): { version: string; timestamp: string } {
         try {
             return {
-                // `version` is the model-definition schema version (QUODSI_VERSION).
+                // `version` is the model-definition schema version (MODEL_SCHEMA_VERSION).
                 // The serializer's own wire-format version lives in top-level `formatVersion`.
-                version: QUODSI_VERSION,
+                version: MODEL_SCHEMA_VERSION,
                 timestamp: new Date().toISOString()
             };
         } catch (error) {

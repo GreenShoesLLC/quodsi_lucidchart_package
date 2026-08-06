@@ -1,7 +1,7 @@
 import { ModelSerializerFactory, SchemaVersion } from '../../src/serialization/ModelSerializerFactory';
 import { createSequentialFlowModel } from '../__fixtures__/models/valid/sequential_flow';
 import { UnsupportedVersionError } from '../../src/serialization/errors/UnsupportedVersionError';
-import { QUODSI_VERSION } from '@quodsi/shared';
+import { MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 
 describe('ModelSerializerFactory', () => {
     describe('create', () => {
@@ -39,7 +39,7 @@ describe('ModelSerializerFactory', () => {
             // Basic structure checks
             // expect(serialized.formatVersion).toBe('1.0');
             expect(serialized.metadata).toBeDefined();
-            expect(serialized.metadata.version).toBe(QUODSI_VERSION);
+            expect(serialized.metadata.version).toBe(MODEL_SCHEMA_VERSION);
             
             // Verify model components exist
             expect(serialized.activities).toHaveLength(3);

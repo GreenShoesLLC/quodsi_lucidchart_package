@@ -1,4 +1,4 @@
-import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, QUODSI_VERSION, upgradeElements, SimulationObjectType } from '@quodsi/lucid-shared';
+import { BaseVersionUpgrader, UpgradeOptions, UpgradeIssue, MODEL_SCHEMA_VERSION, upgradeElements, SimulationObjectType } from '@quodsi/lucid-shared';
 import type { RawElement, ISerializedEntity } from '@quodsi/lucid-shared';
 import { PageProxy, ElementProxy } from 'lucid-extension-sdk';
 import { LucidPreflightChecker } from './LucidPreflightChecker';
