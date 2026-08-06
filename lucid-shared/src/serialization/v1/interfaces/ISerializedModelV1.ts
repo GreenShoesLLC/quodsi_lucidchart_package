@@ -1,6 +1,6 @@
 import { ISerializedModel } from '../../interfaces/ISerializedModel';
 
-export interface ISerializedModelV1 extends ISerializedModel {
-    // Version 1-specific additions can be added here
-    formatVersion: '1.0';
-}
+// V1 currently adds nothing over the canonical flat document shape (formatVersion
+// dropped 2026.08.20 — schemaVersion/metadata.version carry the wire-format
+// stamp; see BaseModelDefinitionSerializer.getVersion() doc comment).
+export type ISerializedModelV1 = ISerializedModel;

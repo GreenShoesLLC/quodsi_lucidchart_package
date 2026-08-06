@@ -57,10 +57,10 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
     /**
      * The serializer's self-reported schema version. Currently has NO production
      * consumer: ModelSerializerFactory.create() dispatches on its `version`
-     * argument (not this), `formatVersion` is a literal in each serializer's
-     * serialize(), and `metadata.version` now carries MODEL_SCHEMA_VERSION. Retained as
-     * part of the versioned-serializer interface (see serialization/README.md) for
-     * a future schema v2; referenced only by tests today.
+     * argument (not this). `formatVersion` was dropped 2026.08.20 — `schemaVersion`
+     * / `metadata.version` (MODEL_SCHEMA_VERSION) now carry the wire-format stamp.
+     * Retained as part of the versioned-serializer interface (see
+     * serialization/README.md) for a future schema v2; referenced only by tests today.
      */
     abstract getVersion(): ISchemaVersion;
 
@@ -138,11 +138,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('Activity must have id and name');
             }
 
-            // Get all connectors where the sourceId matches the activity's id
-            const relevantConnectors = modelDefinition.connectors.getAll()
-                .filter(connector => connector.sourceId === activity.id)
-                .map(connector => this.serializeConnector(connector));
-
             const serialized: ISerializedActivity = {
                 id: activity.id,
                 name: activity.name,
@@ -155,8 +150,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 outboundQueueCapacity: activity.outboundQueueCapacity,
                 actions: activity.actions.map(action =>
                     this.serializeAction(action)
-                ),
-                connectors: relevantConnectors
+                )
             };
 
             // Path X-lite: include shape dimensions when the Lucid extension
@@ -223,11 +217,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('Generator must have generationConfig');
             }
 
-            // Compute exitConnector dynamically from connectors
-            // This ensures it always reflects the current diagram state
-            const outgoingConnector = modelDefinition.connectors.getAll()
-                .find(c => c.sourceId === generator.id);
-
             const serialized: ISerializedGenerator = {
                 id: generator.id,
                 name: generator.name,
@@ -237,11 +226,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 y: generator.y,
                 generationConfig: this.serializeEntitySourceConfig(generator.generationConfig)
             };
-
-            // Set exitConnector from actual connector (not stored value)
-            if (outgoingConnector) {
-                serialized.exitConnector = outgoingConnector.targetId;
-            }
 
             // Path X-lite: include shape dimensions when captured.
             if (generator.width !== undefined) {
@@ -376,7 +360,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 description: connector.description,
                 type: connector.type,
                 sourceId: connector.sourceId,
-                targetId: connector.targetId, // Legacy field
+                targetId: effectiveDestination, // Canonical destination (destinationUniqueId ?? legacy targetId)
                 sourceX: connector.sourceX,
                 sourceY: connector.sourceY,
                 targetX: connector.targetX,
@@ -391,11 +375,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 stateCondition: connector.stateCondition?.toJSON(),
                 stateModifications: connector.stateModifications.map(m => this.serializeModification(m))
             };
-
-            // NEW: Serialize destinationUniqueId if present
-            if (connector.destinationUniqueId) {
-                serialized.destinationUniqueId = connector.destinationUniqueId;
-            }
 
             // NEW: Serialize destinationPriority if present
             if (connector.destinationPriority !== undefined) {
@@ -701,8 +680,8 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
     protected getMetadata(): { version: string; timestamp: string } {
         try {
             return {
-                // `version` is the model-definition schema version (MODEL_SCHEMA_VERSION).
-                // The serializer's own wire-format version lives in top-level `formatVersion`.
+                // `version` is the model-definition schema version (MODEL_SCHEMA_VERSION),
+                // mirrored at top-level as `schemaVersion` (formatVersion dropped 2026.08.20).
                 version: MODEL_SCHEMA_VERSION,
                 timestamp: new Date().toISOString()
             };

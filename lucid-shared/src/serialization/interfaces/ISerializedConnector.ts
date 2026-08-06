@@ -17,10 +17,9 @@ export interface ISerializedConnector {
 
     // Action-based system
     actions: ISerializedAction[];
-    destinationUniqueId?: string;
     destinationPriority?: number;
 
-    // Legacy field
+    // Canonical destination (effective destinationUniqueId ?? legacy targetId).
     targetId: string;
 
     // Routing condition fields

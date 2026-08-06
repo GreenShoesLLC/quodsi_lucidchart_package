@@ -1,5 +1,4 @@
 import { SimulationObjectType, ScenarioLever } from '@quodsi/shared';
-import { ISerializedConnector } from './ISerializedConnector';
 import { ConnectType } from '@quodsi/shared';
 import { ISerializedAction } from './ISerializedAction';
 import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
@@ -21,7 +20,6 @@ export interface ISerializedActivity {
     actions: ISerializedAction[];
     sourceConfig?: ISerializedEntitySourceConfig;
 
-    connectors: ISerializedConnector[];
     financialProperties?: any;
     failureProperties?: any;
 

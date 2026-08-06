@@ -1,9 +1,8 @@
 {
-  "schemaVersion": "2026.08.10",
-  "formatVersion": "1.0",
+  "schemaVersion": "2026.08.20",
   "metadata": {
-    "version": "2026.08.10",
-    "timestamp": "2026-08-06T03:32:05.873Z"
+    "version": "2026.08.20",
+    "timestamp": "2026-08-06T14:08:13.013Z"
   },
   "model": {
     "id": "model-3",
@@ -55,26 +54,7 @@
               "description": ""
             }
           },
-          "id": "6137fe9e-00ad-4aec-9d58-463caa125871"
-        }
-      ],
-      "connectors": [
-        {
-          "id": "connector-1",
-          "name": "Activity1ToActivity2",
-          "description": "",
-          "type": "Connector",
-          "sourceId": "activity-1",
-          "targetId": "activity-2",
-          "sourceX": 0,
-          "sourceY": 0,
-          "targetX": 0,
-          "targetY": 0,
-          "x": 0,
-          "y": 0,
-          "weight": 1,
-          "actions": [],
-          "stateModifications": []
+          "id": "42a5058e-8b82-4fe4-8436-458af653d93e"
         }
       ],
       "connectType": "Probability"
@@ -102,10 +82,9 @@
               "description": ""
             }
           },
-          "id": "d91d3128-c98d-4ff8-b7fb-30cf00f55a77"
+          "id": "ebd02618-17b3-435a-af25-6f4302cabe43"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     }
   ],
@@ -144,8 +123,43 @@
           }
         },
         "maxEntities": 999999
-      },
-      "exitConnector": "activity-1"
+      }
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-gen-1",
+      "name": "Generator1ToActivity1",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
+    },
+    {
+      "id": "connector-1",
+      "name": "Activity1ToActivity2",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "activity-1",
+      "targetId": "activity-2",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
     }
   ],
   "resourceRequirements": [],

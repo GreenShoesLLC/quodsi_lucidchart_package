@@ -30,7 +30,6 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
 
             return {
                 schemaVersion: MODEL_SCHEMA_VERSION,
-                formatVersion: '1.0',
                 metadata,
                 model: this.serializeModel(modelDefinition.model),
                 entities: modelDefinition.entities.getAll().map(entity =>
@@ -44,6 +43,9 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 ),
                 generators: modelDefinition.generators.getAll().map(generator =>
                     this.serializeGenerator(generator, modelDefinition)
+                ),
+                connectors: modelDefinition.connectors.getAll().map(connector =>
+                    this.serializeConnector(connector)
                 ),
                 resourceRequirements: modelDefinition.resourceRequirements.getAll().map(requirement =>
                     this.serializeResourceRequirement(requirement)

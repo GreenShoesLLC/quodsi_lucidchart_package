@@ -1,9 +1,8 @@
 {
-  "schemaVersion": "2026.08.10",
-  "formatVersion": "1.0",
+  "schemaVersion": "2026.08.20",
   "metadata": {
-    "version": "2026.08.10",
-    "timestamp": "2026-08-06T03:32:05.876Z"
+    "version": "2026.08.20",
+    "timestamp": "2026-08-06T14:08:13.016Z"
   },
   "model": {
     "id": "model-5",
@@ -63,10 +62,9 @@
               "description": ""
             }
           },
-          "id": "d4e0c175-900c-4c7a-be5d-7065cf51eac1"
+          "id": "963220cd-5eff-4c13-b9da-1230725cb148"
         }
       ],
-      "connectors": [],
       "connectType": "Probability"
     }
   ],
@@ -105,8 +103,26 @@
           }
         },
         "maxEntities": 999999
-      },
-      "exitConnector": "activity-1"
+      }
+    }
+  ],
+  "connectors": [
+    {
+      "id": "connector-gen-1",
+      "name": "Generator1ToActivity1",
+      "description": "",
+      "type": "Connector",
+      "sourceId": "generator-1",
+      "targetId": "activity-1",
+      "sourceX": 0,
+      "sourceY": 0,
+      "targetX": 0,
+      "targetY": 0,
+      "x": 0,
+      "y": 0,
+      "weight": 1,
+      "actions": [],
+      "stateModifications": []
     }
   ],
   "resourceRequirements": [],
