@@ -8,7 +8,7 @@ export interface ISerializedScenarioChangeRequest {
         nameEndsWith?: string;
     };
     modificationDetails: {
-        type: "numeric" | "boolean" | "duration";
+        type: "numeric" | "boolean" | "duration" | "reference";
         propertyName: string;
         setterType?: string;
         newValue?: number | boolean;
@@ -22,6 +22,9 @@ export interface ISerializedScenarioChangeRequest {
                 description?: string;
             };
         };
+        resourceRequirementId?: string;
     };
+    /** Present only for ACTIVITY-scoped modifications targeting a specific action. */
+    actionId?: string;
     description?: string;
 }
