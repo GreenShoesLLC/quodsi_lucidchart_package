@@ -179,6 +179,13 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.connectType = activity.connectType;
             }
 
+            // Queue-ranking rule (engine 2026-08-08). Conditional inclusion
+            // (mirrors levers) — a re-save must not drop a ranked model's
+            // setting, and unranked models stay byte-identical (86e2qd9np).
+            if (activity.queueRanking) {
+                serialized.queueRanking = activity.queueRanking;
+            }
+
             // Scenario-lever authoring metadata. Conditional inclusion (mirrors
             // width/sourceConfig) keeps lever-less models byte-identical -> no
             // model_definition_snapshot churn.

@@ -1,4 +1,4 @@
-import { SimulationObjectType, ScenarioLever } from '@quodsi/shared';
+import { SimulationObjectType, ScenarioLever, QueueRanking } from '@quodsi/shared';
 import { ConnectType } from '@quodsi/shared';
 import { ISerializedAction } from './ISerializedAction';
 import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
@@ -24,6 +24,10 @@ export interface ISerializedActivity {
     failureProperties?: any;
 
     connectType?: ConnectType;
+
+    // Queue-ranking rule (engine 2026-08-08). Conditional inclusion — absent
+    // means FIFO; models without it stay byte-identical.
+    queueRanking?: QueueRanking;
 
     // Scenario-lever authoring metadata; only present when the component declares
     // levers (conditional inclusion => no churn for lever-less models).

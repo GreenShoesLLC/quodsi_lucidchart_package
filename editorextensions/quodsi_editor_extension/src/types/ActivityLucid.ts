@@ -16,7 +16,8 @@ import {
     createDelayAction,
     MappingSource,
     StateModification,
-    ScenarioLever
+    ScenarioLever,
+    QueueRanking
 } from '@quodsi/lucid-shared';
 import { SimObjectLucid } from './SimObjectLucid';
 import { StorageAdapter } from '../core/StorageAdapter';
@@ -53,6 +54,7 @@ interface StoredActivityData {
     connectType?: string;
     resourceName?: string;  // Resource name to auto-create during conversion
     levers?: ScenarioLever[];
+    queueRanking?: QueueRanking;
 }
 
 /**
@@ -164,6 +166,13 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             activity.levers = storedData.levers;
         }
 
+        // Carry forward queue ranking (engine 2026-08-08). Same drop risk as
+        // levers: field-by-field hydration loses it unless copied here
+        // (86e2qd9np).
+        if (storedData?.queueRanking) {
+            activity.queueRanking = storedData.queueRanking;
+        }
+
         // Update platform-specific fields after creation
         this.updatePlatformSpecificFields(activity);
 
@@ -230,7 +239,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             actions: this.simObject.actions,
             financialProperties: this.simObject.financialProperties?.toJSON(),
             failureProperties: this.simObject.failureProperties?.toJSON(),
-            connectType: this.simObject.connectType
+            connectType: this.simObject.connectType,
+            queueRanking: this.simObject.queueRanking
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);

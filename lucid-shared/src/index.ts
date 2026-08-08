@@ -345,6 +345,7 @@ export {
   patchActionRange,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
+export type { QueueRanking, QueueRankingOrder } from '@quodsi/shared';
 
 // Scenario cluster — now sourced from the core (Phase 3 slice 3)
 export {
