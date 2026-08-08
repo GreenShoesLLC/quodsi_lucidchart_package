@@ -146,7 +146,9 @@ export class ResourceLucid extends SimObjectLucid<Resource> {
             name: this.simObject.name,
             description: this.simObject.description,
             capacity: this.simObject.capacity,
-            financialProperties: this.simObject.financialProperties?.toJSON()
+            financialProperties: this.simObject.financialProperties?.toJSON(),
+            // Levers survive the write-back (conditional — see ActivityLucid).
+            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);

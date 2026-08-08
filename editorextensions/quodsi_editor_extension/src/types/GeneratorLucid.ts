@@ -183,7 +183,9 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
                     m => m instanceof StateModification ? m.toJSON() : m
                 )
             },
-            exitConnector: this.simObject.exitConnector
+            exitConnector: this.simObject.exitConnector,
+            // Levers survive the write-back (conditional — see ActivityLucid).
+            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);

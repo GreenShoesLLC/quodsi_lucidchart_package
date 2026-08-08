@@ -240,7 +240,11 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             financialProperties: this.simObject.financialProperties?.toJSON(),
             failureProperties: this.simObject.failureProperties?.toJSON(),
             connectType: this.simObject.connectType,
-            queueRanking: this.simObject.queueRanking
+            queueRanking: this.simObject.queueRanking,
+            // Levers survive the write-back (conditional — lever-less elements
+            // store no key; undefined drops at JSON serialization). Fixes the
+            // drop the hydration comment above warns about, on the WRITE side.
+            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);

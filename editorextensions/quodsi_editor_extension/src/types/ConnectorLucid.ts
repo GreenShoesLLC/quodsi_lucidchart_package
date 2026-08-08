@@ -177,7 +177,9 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             weight: this.simObject.weight,
             entityTemplateUniqueId: this.simObject.entityTemplateUniqueId,
             stateCondition: this.simObject.stateCondition?.toJSON(),
-            stateModifications: this.simObject.stateModifications.map(m => m.toJSON())
+            stateModifications: this.simObject.stateModifications.map(m => m.toJSON()),
+            // Levers survive the write-back (conditional — see ActivityLucid).
+            levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
