@@ -7,6 +7,7 @@ export * from './core/logging/ComponentLogger';
 export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
 export type { VersionInfo } from '@quodsi/shared';
 export * from './constants/branding';
+export * from './constants/clearedFields';
 
 // Type exports
 export * from './types/ActivityRelationships';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Settings,
   Plus,
@@ -52,6 +52,7 @@ import {
   ScenarioObjectType,
   isDelayAction,
   isDelayWithResourceAction,
+  declareClearedFields,
   type ScenarioLever,
   type QueueRanking,
 } from "@quodsi/lucid-shared";
@@ -616,11 +617,28 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // AUTO-SAVE
   // ============================================================================
 
+  /**
+   * This editor is the only surface that renders the Queue Ranking control, so
+   * it is the only one entitled to say "the modeller cleared the ranking".
+   *
+   * It has to SAY it. A cleared ranking is `queueRanking: undefined`, and JSON
+   * transport drops undefined-valued keys, so the extension receives a payload
+   * with no queueRanking key — identical to what ConnectorsEditor sends, which
+   * never mentions the field at all. The extension therefore deletes a stored
+   * ranking only on an explicit declaration; without this, clearing to FIFO
+   * would silently fail to persist.
+   */
+  const handleAutoSave = useCallback(
+    (draft: Activity) =>
+      onSave(declareClearedFields(draft, draft.queueRanking ? [] : ["queueRanking"])),
+    [onSave]
+  );
+
   const { status, lastSavedAt, saveNow } = useAutoSave<Activity>({
     draft: localActivityDraft,
     hasPendingChanges,
     isValid: nameError === null && !hasActionValidationError,
-    onSave,
+    onSave: handleAutoSave,
     isSaving,
     elementId: localActivityDraft.id,
   });

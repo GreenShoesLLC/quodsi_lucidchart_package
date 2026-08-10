@@ -58,29 +58,61 @@ interface StoredActivityData {
 }
 
 /**
- * Storage keys an Activity write-back must DELETE rather than merge.
- *
- * WHY THIS SPECIAL CASE EXISTS — the generic merge cannot express deletion.
- * StorageAdapter.updateElementData reads the stored q_data, strips
- * undefined-valued keys from the incoming update (deliberately: a partial
- * update must not clobber stored width/height), and merges the rest over what
- * is already there. Two things therefore look identical to it:
- *   - the panel never mentioned queueRanking, and
- *   - the modeller just set Queue Ranking back to "(first come, first served)".
- * The panel→extension JSON transport makes it worse: `queueRanking: undefined`
- * is dropped from the message before the extension ever sees the key.
- *
- * Result before this fix: clearing a ranking looked applied in the panel while
- * the shape kept the old ranking, reselecting the activity rehydrated it, and
- * the published model still ranked the queue in simulation.
+ * The only storage keys an Activity write-back is ever allowed to DELETE.
  *
  * queueRanking is one of the few fields where ABSENCE is the value — no key
- * means FIFO — so the Activity write-back has to say "delete this" explicitly.
- * Deliberately scoped to Activity: the strip loop itself is correct for
- * everything else, and a global null-means-delete sentinel was rejected as too
- * broad. (86e2qwvf2, final-review finding 1.)
+ * means "first come, first served" — and the generic merge cannot express that.
+ * StorageAdapter.updateElementData reads the stored q_data, strips
+ * undefined-valued keys from the incoming update (deliberately: a partial
+ * update must not clobber stored width/height) and merges the rest, so a
+ * cleared ranking would silently survive. The panel→extension JSON transport
+ * compounds it: `queueRanking: undefined` is dropped before the extension ever
+ * sees the key.
+ *
+ * Scoped to Activity on purpose: the strip loop is correct for everything else,
+ * and a global null-means-delete sentinel was rejected as too broad.
+ * (86e2qwvf2, final-review finding 1.)
+ */
+const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking'];
+
+/**
+ * Storage keys to delete, given what the writer EXPLICITLY declared cleared.
+ *
+ * This used to infer the answer from the key being absent in the incoming
+ * payload — "no queueRanking key, therefore the user cleared it". That
+ * inference was wrong and destructive. Absence also means "this panel never
+ * mentions the field", which is exactly what ConnectorsEditor sends: it rebuilds
+ * an Activity from connectType + financialProperties alone, and it is reached by
+ * selecting ANY connector whose source is an Activity. Under the old rule,
+ * clicking such a connector permanently deleted that activity's queue ranking
+ * (ElementOpsHandler.handleElementConvert had the same hazard, and before
+ * removeKeys existed the merge quietly rescued both).
+ *
+ * So deletion is now opt-in from the writer, never inferred: a payload that
+ * means to clear a field names it in CLEARED_FIELDS_KEY (see
+ * `declareClearedFields` in @quodsi/lucid-shared). Only a panel that renders the
+ * control, or a write-back built from a fully hydrated simObject, can make that
+ * declaration — a partial payload stays silent and its stored value survives.
+ *
+ * The declaration is filtered here rather than trusted: a payload cannot talk
+ * the extension into deleting arbitrary stored keys.
  */
 export function activityStorageRemoveKeys(
+    clearedFields: readonly string[] | undefined
+): readonly string[] {
+    if (!clearedFields?.length) {
+        return [];
+    }
+    return ACTIVITY_CLEARABLE_KEYS.filter(key => clearedFields.includes(key));
+}
+
+/**
+ * The cleared-field declaration an AUTHORITATIVE Activity write-back makes —
+ * one built from a fully hydrated Activity (every optional field carried
+ * forward), not from a panel's partial view. For such a writer, and only for
+ * such a writer, "no ranking on the object" really does mean FIFO.
+ */
+export function activityAuthoritativeClearedFields(
     activity: { queueRanking?: QueueRanking | null } | null | undefined
 ): readonly string[] {
     return activity?.queueRanking ? [] : ['queueRanking'];
@@ -278,8 +310,14 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
         // removeKeys, not just the undefined above: see activityStorageRemoveKeys.
+        // This write-back may declare the clear itself — dataToStore is built
+        // from this.simObject, which createSimObject hydrated from storage with
+        // every optional field (including queueRanking) carried forward. Unlike
+        // a panel payload, its silence about a field is genuine absence.
         this.storageAdapter.updateElementData(this.element, dataToStore, {
-            removeKeys: activityStorageRemoveKeys(dataToStore)
+            removeKeys: activityStorageRemoveKeys(
+                activityAuthoritativeClearedFields(this.simObject)
+            )
         });
     }
 

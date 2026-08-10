@@ -15,6 +15,7 @@ import {
   ComponentType,
   StateType,
   QUEUE_RANKING_COPY,
+  CLEARED_FIELDS_KEY,
 } from "@quodsi/lucid-shared";
 
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -99,6 +100,44 @@ describe("ActivityEditor — queueRanking preservation", () => {
     expect(draft.queueRanking).toBeUndefined();
     const afterUnrelatedEdit = updateActivityImmutably(draft, { name: "Nurse" });
     expect(afterUnrelatedEdit.queueRanking).toBeUndefined();
+  });
+});
+
+// The extension deletes a stored queueRanking only when the payload SAYS it was
+// cleared — absence alone means "this panel never mentioned the field", which is
+// exactly what ConnectorsEditor's partial Activity payload looks like. So the
+// one panel that owns the control has to speak up.
+describe("ActivityEditor — explicit cleared-field declaration", () => {
+  const ranked = {
+    id: "act-1",
+    name: "Doctor",
+    capacity: 1,
+    inboundQueueCapacity: 999999,
+    outboundQueueCapacity: 999999,
+    actions: [],
+    queueRanking: { stateName: "severity", order: "ASCENDING" },
+  } as any;
+
+  async function saveAfterRename(activity: any) {
+    const onSave = jest.fn();
+    render(<ActivityEditor activity={activity} onSave={onSave} {...baseProps} />);
+    const nameInput = screen.getByDisplayValue("Doctor");
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "Nurse");
+    fireEvent.blur(nameInput);
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    return onSave.mock.calls.at(-1)[0];
+  }
+
+  it("declares queueRanking cleared when it saves an activity with no ranking", async () => {
+    const saved = await saveAfterRename(unranked);
+    expect(saved[CLEARED_FIELDS_KEY]).toEqual(["queueRanking"]);
+  });
+
+  it("declares nothing while a ranking is set", async () => {
+    const saved = await saveAfterRename(ranked);
+    expect(saved.queueRanking).toEqual({ stateName: "severity", order: "ASCENDING" });
+    expect(CLEARED_FIELDS_KEY in saved).toBe(false);
   });
 });
 
