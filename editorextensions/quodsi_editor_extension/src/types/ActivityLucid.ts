@@ -58,6 +58,35 @@ interface StoredActivityData {
 }
 
 /**
+ * Storage keys an Activity write-back must DELETE rather than merge.
+ *
+ * WHY THIS SPECIAL CASE EXISTS — the generic merge cannot express deletion.
+ * StorageAdapter.updateElementData reads the stored q_data, strips
+ * undefined-valued keys from the incoming update (deliberately: a partial
+ * update must not clobber stored width/height), and merges the rest over what
+ * is already there. Two things therefore look identical to it:
+ *   - the panel never mentioned queueRanking, and
+ *   - the modeller just set Queue Ranking back to "(first come, first served)".
+ * The panel→extension JSON transport makes it worse: `queueRanking: undefined`
+ * is dropped from the message before the extension ever sees the key.
+ *
+ * Result before this fix: clearing a ranking looked applied in the panel while
+ * the shape kept the old ranking, reselecting the activity rehydrated it, and
+ * the published model still ranked the queue in simulation.
+ *
+ * queueRanking is one of the few fields where ABSENCE is the value — no key
+ * means FIFO — so the Activity write-back has to say "delete this" explicitly.
+ * Deliberately scoped to Activity: the strip loop itself is correct for
+ * everything else, and a global null-means-delete sentinel was rejected as too
+ * broad. (86e2qwvf2, final-review finding 1.)
+ */
+export function activityStorageRemoveKeys(
+    activity: { queueRanking?: QueueRanking | null } | null | undefined
+): readonly string[] {
+    return activity?.queueRanking ? [] : ['queueRanking'];
+}
+
+/**
  * Hydrate a single modification object to a StateModification instance.
  * This handles cases where modifications are loaded from storage as plain objects.
  */
@@ -248,7 +277,10 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
-        this.storageAdapter.updateElementData(this.element, dataToStore);
+        // removeKeys, not just the undefined above: see activityStorageRemoveKeys.
+        this.storageAdapter.updateElementData(this.element, dataToStore, {
+            removeKeys: activityStorageRemoveKeys(dataToStore)
+        });
     }
 
     protected getElementName(defaultPrefix: string): string {

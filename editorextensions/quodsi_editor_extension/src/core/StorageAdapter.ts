@@ -528,8 +528,21 @@ export class StorageAdapter {
     /**
      * Updates the data portion of an element's storage.
      * Reads existing q_data, merges updates, writes back.
+     *
+     * `options.removeKeys` is the escape hatch for fields where ABSENCE is the
+     * meaningful value. A merge cannot express deletion: the strip loop below
+     * drops undefined-valued keys on purpose (a partial update must not clobber
+     * stored width/height), and the panel→extension JSON transport has already
+     * dropped undefined-valued keys before we ever see them — so "the user
+     * cleared this" and "the panel did not mention this" arrive identical.
+     * Callers that can tell the two apart name the keys to delete outright.
+     * Opt-in: every existing caller keeps the merge-only behaviour.
      */
-    public updateElementData<T extends { id: string }>(element: ElementProxy, data: T): void {
+    public updateElementData<T extends { id: string }>(
+        element: ElementProxy,
+        data: T,
+        options: { removeKeys?: readonly string[] } = {}
+    ): void {
         try {
             // getElementData returns a flattened view of either an envelope or a legacy blob.
             const existing = this.getElementData<any>(element);
@@ -545,6 +558,10 @@ export class StorageAdapter {
                 if ((data as any)[k] !== undefined) defined[k] = (data as any)[k];
             }
             const merged: any = { ...existing, ...defined, type, id: existing.id };
+            // Deletion the merge above cannot express — see the doc comment.
+            for (const key of options.removeKeys ?? []) {
+                delete merged[key];
+            }
 
             const mappingSource: MappingSource | undefined = merged.mappingSource;
 
