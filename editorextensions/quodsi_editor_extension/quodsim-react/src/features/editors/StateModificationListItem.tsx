@@ -143,7 +143,9 @@ const StateModificationListItem: React.FC<Props> = ({
                     {modification.operation}
                   </span>
                   <span className="text-xs font-mono text-gray-900">
-                    {formatValue(modification.value)}
+                    {modification.valueExpression !== undefined
+                      ? modification.valueExpression
+                      : formatValue(modification.value as number | string | boolean)}
                   </span>
                 </>
               )}
