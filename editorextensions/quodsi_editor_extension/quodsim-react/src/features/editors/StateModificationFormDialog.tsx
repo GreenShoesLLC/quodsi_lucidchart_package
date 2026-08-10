@@ -8,8 +8,20 @@ import {
   StateType,
   ComponentType,
   getSupportedOperationsForType,
+  parseExpression,
+  collectStateNames,
+  inferExpressionType,
+  findArityError,
 } from "@quodsi/lucid-shared";
 import { SampleDistributionEditor } from "./sample";
+
+type OperandMode = "literal" | "expression";
+
+/** Expression mode is only offered for target types the parser/inferencer can
+ *  type-check an operand against: NUMBER and BOOLEAN. CATEGORY/STRING targets
+ *  never see the toggle (mirrors StateExpressionValidation step 5). */
+const supportsExpression = (dataType: StateType | undefined): boolean =>
+  dataType === StateType.NUMBER || dataType === StateType.BOOLEAN;
 
 interface Props {
   isOpen: boolean;
@@ -51,6 +63,12 @@ const StateModificationFormDialog: React.FC<Props> = ({
   const [value, setValue] = useState<string>(
     modification?.value?.toString() || ""
   );
+  const [operandMode, setOperandMode] = useState<OperandMode>(
+    modification?.valueExpression ? "expression" : "literal"
+  );
+  const [valueExpression, setValueExpression] = useState<string>(
+    modification?.valueExpression ?? ""
+  );
   const [showAdvanced, setShowAdvanced] = useState<boolean>(
     !!(modification?.componentUniqueId || modification?.targetComponentType)
   );
@@ -87,6 +105,75 @@ const StateModificationFormDialog: React.FC<Props> = ({
       setOperation(StateOperation.ASSIGN);
     }
   }, [selectedState, supportedOperations, operation]);
+
+  // Expression mode is only offered for NUMBER/BOOLEAN targets, and never for
+  // SAMPLE. Switching the target state to a CATEGORY/STRING state, or the
+  // operation to SAMPLE, must not strand the draft in expression mode —
+  // Save would otherwise emit a valueExpression the target/operation cannot
+  // accept, which StateModification.fromJSON (and three separate validators)
+  // reject.
+  const expressionSupported = supportsExpression(selectedState?.dataType);
+
+  useEffect(() => {
+    if (operandMode === "expression" && (!expressionSupported || operation === StateOperation.SAMPLE)) {
+      setOperandMode("literal");
+    }
+  }, [expressionSupported, operation, operandMode]);
+
+  // States an expression may read: ENTITY/MODEL-scoped only — mirrors
+  // StateExpressionValidation step 2 (RESOURCE/ACTIVITY states are
+  // per-instance and have no single value an expression can read). Sourced
+  // from the full model (not `availableStates`, which may be trimmed by
+  // `filterComponentType` for the *target* dropdown) since an expression may
+  // read any ENTITY/MODEL state regardless of what this dialog's target
+  // picker is scoped to.
+  const readableStates = useMemo(
+    () =>
+      states
+        .getAll()
+        .filter((s) => s.componentType === ComponentType.ENTITY || s.componentType === ComponentType.MODEL),
+    [states]
+  );
+
+  const expressionError = useMemo<string | null>(() => {
+    if (operandMode !== "expression") return null;
+    if (!valueExpression.trim()) return "Enter an expression";
+
+    const { node, issues } = parseExpression(valueExpression);
+    if (issues.length > 0) return issues[0].message;
+    if (node === null) return "Expression could not be parsed";
+
+    const typesByName = new Map(readableStates.map((s) => [s.name, s.dataType]));
+    // Array.from, not `for...of` directly over the Set — this project's
+    // tsconfig targets es5 without downlevelIteration, so iterating a Set
+    // in place fails to compile (TS2802).
+    for (const name of Array.from(collectStateNames(valueExpression))) {
+      if (typesByName.has(name)) continue;
+      const elsewhere = states.getAll().find((s) => s.name === name);
+      return elsewhere
+        ? `State '${name}' is ${elsewhere.componentType}-scoped. Only ENTITY and ` +
+            `MODEL states can be read in an expression.`
+        : `Unknown state '${name}'`;
+    }
+
+    const resultType = inferExpressionType(node, typesByName);
+    if (resultType === null) {
+      // Check findArityError before falling back to the generic message:
+      // inferExpressionType collapses a wrong-arity call to the same `null`
+      // as a genuine type mismatch, but "mixes incompatible types" actively
+      // misleads for e.g. min(qty) — the operand is fine, the real fault is
+      // the argument count.
+      const arityError = findArityError(node);
+      return arityError ?? "Expression mixes incompatible types";
+    }
+    if (selectedState && resultType !== selectedState.dataType) {
+      return (
+        `Expression produces ${resultType}, but '${selectedState.name}' is ` +
+        `${selectedState.dataType}`
+      );
+    }
+    return null;
+  }, [operandMode, valueExpression, readableStates, selectedState, states]);
 
   // Validation
   const validate = (): boolean => {
@@ -130,7 +217,17 @@ const StateModificationFormDialog: React.FC<Props> = ({
       return true;
     }
 
-    // For non-SAMPLE operations, validate value
+    // For non-SAMPLE operations in expression mode, validate the expression
+    // instead of the literal value — `value` carries no meaning here.
+    if (operandMode === "expression") {
+      if (expressionError) {
+        setError(expressionError);
+        return false;
+      }
+      return true;
+    }
+
+    // For non-SAMPLE operations in literal mode, validate value
     if (!value) {
       setError("Please enter a value");
       return false;
@@ -180,10 +277,19 @@ const StateModificationFormDialog: React.FC<Props> = ({
   const handleSave = () => {
     if (!validate() || !selectedState) return;
 
+    // Expression mode never applies to SAMPLE — even if operandMode were
+    // somehow left as "expression" from a prior state, SAMPLE must not
+    // carry a valueExpression (StateModification.fromJSON's invariant).
+    const isExpression = operation !== StateOperation.SAMPLE && operandMode === "expression";
+
     try {
-      // For SAMPLE operations, use a placeholder value (it's ignored at runtime)
+      // For SAMPLE operations, use a placeholder value (it's ignored at
+      // runtime). In expression mode, `value` carries no meaning — exactly
+      // one of value/valueExpression is emitted below.
       const parsedValue = operation === StateOperation.SAMPLE
         ? getDefaultValueForType(selectedState.dataType)
+        : isExpression
+        ? undefined
         : parseValue(value, selectedState.dataType);
 
       const newModification = new StateModification(
@@ -198,6 +304,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
             : undefined,
           distributionType: operation === StateOperation.SAMPLE ? distributionType : undefined,
           distributionParameters: operation === StateOperation.SAMPLE ? distributionParameters : undefined,
+          valueExpression: isExpression ? valueExpression : undefined,
         }
       );
 
@@ -315,8 +422,66 @@ const StateModificationFormDialog: React.FC<Props> = ({
             </div>
           )}
 
-          {/* Value Input (for non-SAMPLE operations) */}
-          {selectedState && operation !== StateOperation.SAMPLE && (
+          {/* Literal/Expression toggle — NUMBER/BOOLEAN targets only, never for SAMPLE */}
+          {selectedState && expressionSupported && operation !== StateOperation.SAMPLE && (
+            <div className="flex gap-4">
+              <label className="flex items-center gap-1 text-xs text-gray-700">
+                <input
+                  type="radio"
+                  name="operandMode"
+                  checked={operandMode === "literal"}
+                  onChange={() => setOperandMode("literal")}
+                />
+                Value
+              </label>
+              <label className="flex items-center gap-1 text-xs text-gray-700">
+                <input
+                  type="radio"
+                  name="operandMode"
+                  checked={operandMode === "expression"}
+                  onChange={() => setOperandMode("expression")}
+                />
+                Expression
+              </label>
+            </div>
+          )}
+
+          {/* Expression Input (non-SAMPLE operations, expression mode) */}
+          {selectedState && operation !== StateOperation.SAMPLE && operandMode === "expression" && (
+            <div>
+              <label
+                className="block text-xs font-medium text-gray-700 mb-1"
+                htmlFor="state-modification-expression-input"
+              >
+                Expression value
+              </label>
+              <input
+                id="state-modification-expression-input"
+                aria-label="Expression value"
+                type="text"
+                className="w-full px-2 py-1.5 text-xs border rounded font-mono"
+                list="expression-state-names"
+                value={valueExpression}
+                onChange={(e) => setValueExpression(e.target.value)}
+                placeholder="qty * unit_price"
+              />
+              <datalist id="expression-state-names">
+                {readableStates.map((s) => (
+                  <option key={s.id} value={s.name} />
+                ))}
+              </datalist>
+              {expressionError ? (
+                <p className="text-xs text-red-600 mt-1">{expressionError}</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                  Operators: + - * / and comparisons. Functions: abs, min, max, round.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Value Input (for non-SAMPLE operations, literal mode) */}
+          {selectedState && operation !== StateOperation.SAMPLE && operandMode === "literal" && (
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
                 Value *
@@ -442,7 +607,11 @@ const StateModificationFormDialog: React.FC<Props> = ({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!selectedState || (operation !== StateOperation.SAMPLE && !value)}
+            disabled={
+              !selectedState ||
+              (operation !== StateOperation.SAMPLE &&
+                (operandMode === "expression" ? expressionError !== null : !value))
+            }
             className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {isEditMode ? "Save Changes" : "Add Modification"}

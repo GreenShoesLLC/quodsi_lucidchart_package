@@ -415,3 +415,10 @@ export * from './embed/buildRelayConnectors';
 
 // Config / feature flags
 export * from './config/modalSize';
+
+// State-expression operand language — parser, state-name collection, static
+// type inference, arity checking. Backs the literal/expression toggle in
+// StateModificationFormDialog. Re-exported (not `export *`) to keep this
+// file's curated-surface convention; see quodsi_shared/src/expression for
+// the implementation.
+export { parseExpression, collectStateNames, inferExpressionType, findArityError } from '@quodsi/shared';
