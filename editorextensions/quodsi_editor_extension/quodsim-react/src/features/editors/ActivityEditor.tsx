@@ -53,6 +53,7 @@ import {
   isDelayAction,
   isDelayWithResourceAction,
   type ScenarioLever,
+  type QueueRanking,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
 import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
@@ -209,6 +210,152 @@ const TAB_CONFIG = [
   // },
 ];
 
+// ============================================================================
+// DRAFT HELPERS (module-scope, exported for direct testing)
+// ============================================================================
+
+/**
+ * Converts internal queue capacity values to display values for the UI.
+ *
+ * Queue capacities are stored as either a number or Infinity (unlimited).
+ * This converts null/undefined (representing unlimited) to a large number
+ * (999999) that's more user-friendly in input fields.
+ *
+ * @param value - Internal queue capacity (null/undefined = unlimited)
+ * @returns Display value for UI (999999 represents unlimited)
+ */
+const queueToDisplay = (value: number | null | undefined): number =>
+  value === null || value === undefined ? INFINITY_DISPLAY_VALUE : value;
+
+/**
+ * Extracts and normalizes activity data from props into a clean Activity instance.
+ *
+ * This handles multiple data formats:
+ * - Full Activity instances
+ * - Raw data objects with nested .data property
+ * - Missing/null values (creates default activity)
+ *
+ * Key responsibilities:
+ * - Normalizes queue capacities for display (null → 999999)
+ * - Ensures financialProperties are properly initialized
+ * - Creates new array references for state modifications (for change detection)
+ * - Applies sensible defaults for missing values
+ *
+ * @param act - Activity data (can be Activity instance, raw object, or null)
+ * @returns Normalized Activity instance ready for editing
+ */
+export const extractActivityData = (act: any): Activity => {
+  // Handle completely missing data case
+  if (!act) {
+    const activity = new Activity(
+      "", // Empty ID
+      "New Activity",
+      1, // Default capacity
+      queueToDisplay(null),
+      queueToDisplay(null),
+      [],
+      0,
+      0
+    );
+    activity.connectType = ConnectType.Probability; // Set default
+    return activity;
+  }
+
+  // Extract data safely
+  const data = act.data || act;
+  const id = data.id || act.id || "";
+
+  const activity = new Activity(
+    id,
+    data.name || "New Activity",
+    data.capacity || 1,
+    queueToDisplay(data.inboundQueueCapacity),
+    queueToDisplay(data.outboundQueueCapacity),
+    data.actions || [],
+    data.x || 0,
+    data.y || 0
+  );
+
+  // Preserve connectType if it exists, otherwise use default
+  activity.connectType = data.connectType || ConnectType.Probability;
+
+  // Initialize financialProperties if it doesn't exist
+  activity.financialProperties = data.financialProperties
+    ? ActivityFinancialProperties.fromJSON(data.financialProperties)
+    : new ActivityFinancialProperties();
+
+  // Initialize failureProperties if it doesn't exist
+  activity.failureProperties = data.failureProperties
+    ? FailureProperties.fromJSON(data.failureProperties)
+    : new FailureProperties();
+
+  // Preserve scenario levers (additive optional field, not a constructor param).
+  activity.levers = data.levers ?? [];
+
+  // Preserve queue ranking (additive optional field, not a constructor
+  // param). Omitting it here is what silently dropped a ranked activity's
+  // ranking on every edit — ClickUp 86e2qwv7y.
+  activity.queueRanking = data.queueRanking;
+
+  return activity;
+};
+
+/**
+ * Creates an updated Activity instance with modified fields while preserving
+ * all other properties. This ensures proper immutability and change detection.
+ *
+ * Why we need this: React state updates require new object references for change
+ * detection. Activity class instances need to be reconstructed with new references
+ * rather than mutated in place. This helper eliminates ~100 lines of duplicated
+ * reconstruction logic across 8+ handlers.
+ *
+ * @param base - The existing activity to base updates on
+ * @param updates - Partial activity fields to update
+ * @returns New Activity instance with updates applied and all other fields preserved
+ */
+export const updateActivityImmutably = (
+  base: Activity,
+  updates: Partial<{
+    name: string;
+    capacity: number;
+    inboundQueueCapacity: number;
+    outboundQueueCapacity: number;
+    actions: Action[];
+    connectType: ConnectType;
+    financialProperties: ActivityFinancialProperties;
+    failureProperties: FailureProperties;
+    levers: ScenarioLever[];
+    queueRanking: QueueRanking | undefined;
+  }>
+): Activity => {
+  const updated = new Activity(
+    base.id,
+    updates.name ?? base.name,
+    updates.capacity ?? base.capacity,
+    updates.inboundQueueCapacity ?? base.inboundQueueCapacity,
+    updates.outboundQueueCapacity ?? base.outboundQueueCapacity,
+    updates.actions ?? base.actions,
+    base.x,
+    base.y
+  );
+
+  // Preserve/update complex properties
+  updated.connectType = updates.connectType ?? base.connectType;
+  updated.financialProperties =
+    updates.financialProperties ?? base.financialProperties;
+  updated.failureProperties =
+    updates.failureProperties ?? base.failureProperties;
+  // Preserve scenario levers (not a constructor param — must be copied forward).
+  updated.levers = updates.levers ?? base.levers ?? [];
+  // Key-presence, NOT `??`: clearing passes `undefined` deliberately, and
+  // `updates.queueRanking ?? base.queueRanking` would resurrect the ranking
+  // the user just removed. `levers` can use `??` only because its empty
+  // value is [] rather than undefined.
+  updated.queueRanking =
+    'queueRanking' in updates ? updates.queueRanking : base.queueRanking;
+
+  return updated;
+};
 
 // ============================================================================
 // TYPES
@@ -337,137 +484,6 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   // ============================================================================
   // HELPER FUNCTIONS
   // ============================================================================
-
-  /**
-   * Converts internal queue capacity values to display values for the UI.
-   *
-   * Queue capacities are stored as either a number or Infinity (unlimited).
-   * This converts null/undefined (representing unlimited) to a large number
-   * (999999) that's more user-friendly in input fields.
-   *
-   * @param value - Internal queue capacity (null/undefined = unlimited)
-   * @returns Display value for UI (999999 represents unlimited)
-   */
-  const queueToDisplay = (value: number | null | undefined): number =>
-    value === null || value === undefined ? INFINITY_DISPLAY_VALUE : value;
-
-  /**
-   * Extracts and normalizes activity data from props into a clean Activity instance.
-   *
-   * This handles multiple data formats:
-   * - Full Activity instances
-   * - Raw data objects with nested .data property
-   * - Missing/null values (creates default activity)
-   *
-   * Key responsibilities:
-   * - Normalizes queue capacities for display (null → 999999)
-   * - Ensures financialProperties are properly initialized
-   * - Creates new array references for state modifications (for change detection)
-   * - Applies sensible defaults for missing values
-   *
-   * @param act - Activity data (can be Activity instance, raw object, or null)
-   * @returns Normalized Activity instance ready for editing
-   */
-  const extractActivityData = (act: any): Activity => {
-    // Handle completely missing data case
-    if (!act) {
-      const activity = new Activity(
-        "", // Empty ID
-        "New Activity",
-        1, // Default capacity
-        queueToDisplay(null),
-        queueToDisplay(null),
-        [],
-        0,
-        0
-      );
-      activity.connectType = ConnectType.Probability; // Set default
-      return activity;
-    }
-
-    // Extract data safely
-    const data = act.data || act;
-    const id = data.id || act.id || "";
-
-    const activity = new Activity(
-      id,
-      data.name || "New Activity",
-      data.capacity || 1,
-      queueToDisplay(data.inboundQueueCapacity),
-      queueToDisplay(data.outboundQueueCapacity),
-      data.actions || [],
-      data.x || 0,
-      data.y || 0
-    );
-
-    // Preserve connectType if it exists, otherwise use default
-    activity.connectType = data.connectType || ConnectType.Probability;
-
-    // Initialize financialProperties if it doesn't exist
-    activity.financialProperties = data.financialProperties
-      ? ActivityFinancialProperties.fromJSON(data.financialProperties)
-      : new ActivityFinancialProperties();
-
-    // Initialize failureProperties if it doesn't exist
-    activity.failureProperties = data.failureProperties
-      ? FailureProperties.fromJSON(data.failureProperties)
-      : new FailureProperties();
-
-    // Preserve scenario levers (additive optional field, not a constructor param).
-    activity.levers = data.levers ?? [];
-
-    return activity;
-  };
-
-  /**
-   * Creates an updated Activity instance with modified fields while preserving
-   * all other properties. This ensures proper immutability and change detection.
-   *
-   * Why we need this: React state updates require new object references for change
-   * detection. Activity class instances need to be reconstructed with new references
-   * rather than mutated in place. This helper eliminates ~100 lines of duplicated
-   * reconstruction logic across 8+ handlers.
-   *
-   * @param base - The existing activity to base updates on
-   * @param updates - Partial activity fields to update
-   * @returns New Activity instance with updates applied and all other fields preserved
-   */
-  const updateActivityImmutably = (
-    base: Activity,
-    updates: Partial<{
-      name: string;
-      capacity: number;
-      inboundQueueCapacity: number;
-      outboundQueueCapacity: number;
-      actions: Action[];
-      connectType: ConnectType;
-      financialProperties: ActivityFinancialProperties;
-      failureProperties: FailureProperties;
-      levers: ScenarioLever[];
-    }>
-  ): Activity => {
-    const updated = new Activity(
-      base.id,
-      updates.name ?? base.name,
-      updates.capacity ?? base.capacity,
-      updates.inboundQueueCapacity ?? base.inboundQueueCapacity,
-      updates.outboundQueueCapacity ?? base.outboundQueueCapacity,
-      updates.actions ?? base.actions,
-      base.x,
-      base.y
-    );
-
-    // Preserve/update complex properties
-    updated.connectType = updates.connectType ?? base.connectType;
-    updated.financialProperties =
-      updates.financialProperties ?? base.financialProperties;
-    updated.failureProperties =
-      updates.failureProperties ?? base.failureProperties;
-    // Preserve scenario levers (not a constructor param — must be copied forward).
-    updated.levers = updates.levers ?? base.levers ?? [];
-
-    return updated;
-  };
 
   /**
    * Validates that the activity name is unique among all activities.
