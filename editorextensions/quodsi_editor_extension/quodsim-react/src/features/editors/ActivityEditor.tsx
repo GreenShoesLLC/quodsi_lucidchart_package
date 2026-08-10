@@ -56,6 +56,7 @@ import {
   type QueueRanking,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
+import { QueueRankingSection } from "./QueueRankingSection";
 import { actionDurationLeverLabel } from "@quodsi/lucid-shared";
 import { ActionEditor } from "./ActionEditor";
 import { EnhancedDurationEditor } from "./EnhancedDurationEditor";
@@ -1197,6 +1198,17 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           onBlur={saveNow}
                         />
                       </div>
+
+                      <QueueRankingSection
+                        value={localActivityDraft.queueRanking}
+                        allStates={states.getAll()}
+                        onChange={(next) => {
+                          setLocalActivityDraft((prev) =>
+                            updateActivityImmutably(prev, { queueRanking: next })
+                          );
+                          setHasPendingChanges(true);
+                        }}
+                      />
                     </div>
                   )}
                 </div>

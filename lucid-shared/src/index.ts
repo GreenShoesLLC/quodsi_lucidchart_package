@@ -343,6 +343,10 @@ export {
   toggleActionLever,
   patchActionLever,
   patchActionRange,
+  eligibleRankingStates,
+  setRankingState,
+  setRankingOrder,
+  QUEUE_RANKING_COPY,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
 export type { QueueRanking, QueueRankingOrder } from '@quodsi/shared';

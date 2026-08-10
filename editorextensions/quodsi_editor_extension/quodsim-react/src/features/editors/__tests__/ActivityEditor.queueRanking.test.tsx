@@ -3,12 +3,19 @@
 jest.mock("axios", () => ({}));
 
 import React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ActivityEditor, {
   extractActivityData,
   updateActivityImmutably,
 } from "../ActivityEditor";
+import {
+  StateListManager,
+  State,
+  ComponentType,
+  StateType,
+  QUEUE_RANKING_COPY,
+} from "@quodsi/lucid-shared";
 
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
@@ -39,6 +46,21 @@ const baseProps = {
   onStatesChange: jest.fn(),
   referenceData: {} as any,
 };
+
+const unranked = {
+  id: "act-1",
+  name: "Doctor",
+  capacity: 1,
+  inboundQueueCapacity: 999999,
+  outboundQueueCapacity: 999999,
+  actions: [],
+} as any;
+
+function makeStateListManager(states: State[]): StateListManager {
+  const manager = new StateListManager();
+  for (const s of states) manager.add(s);
+  return manager;
+}
 
 describe("ActivityEditor — queueRanking preservation", () => {
   const ranked = {
@@ -77,5 +99,48 @@ describe("ActivityEditor — queueRanking preservation", () => {
     expect(draft.queueRanking).toBeUndefined();
     const afterUnrelatedEdit = updateActivityImmutably(draft, { name: "Nurse" });
     expect(afterUnrelatedEdit.queueRanking).toBeUndefined();
+  });
+});
+
+describe("ActivityEditor — queue ranking control", () => {
+  it("offers only ENTITY NUMBER states and writes the ranking on pick", async () => {
+    const onSave = jest.fn();
+    const states = makeStateListManager([
+      new State("s1", "severity", ComponentType.ENTITY, StateType.NUMBER, 0),
+      new State("s2", "globalCount", ComponentType.MODEL, StateType.NUMBER, 0),
+    ]);
+    render(
+      <ActivityEditor
+        {...baseProps}
+        activity={unranked}
+        onSave={onSave}
+        states={states}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Advanced Settings/ }));
+    const picker = screen.getByLabelText(QUEUE_RANKING_COPY.stateLabel);
+    expect(within(picker).queryByRole("option", { name: /globalCount/ })).not.toBeInTheDocument();
+    await userEvent.selectOptions(picker, "severity");
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls.at(-1)[0].queueRanking).toEqual({
+      stateName: "severity",
+      order: "ASCENDING",
+    });
+  });
+
+  it("shows the prerequisite hint when no ENTITY NUMBER state exists", async () => {
+    const states = makeStateListManager([
+      new State("s2", "globalCount", ComponentType.MODEL, StateType.NUMBER, 0),
+    ]);
+    render(
+      <ActivityEditor
+        {...baseProps}
+        activity={unranked}
+        onSave={jest.fn()}
+        states={states}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Advanced Settings/ }));
+    expect(screen.getByText(QUEUE_RANKING_COPY.noStatesHint)).toBeInTheDocument();
   });
 });
