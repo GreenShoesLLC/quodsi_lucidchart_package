@@ -135,11 +135,19 @@ const StateModificationFormDialog: React.FC<Props> = ({
     [states]
   );
 
+  // Fix round 2, Finding 1: surrounding whitespace is not part of the
+  // expression, and a LEADING space or tab is an outright engine rejection —
+  // Python parses in `eval` mode, where an indented logical line is an
+  // IndentationError reported as E_SYNTAX. Trim once, here, so a pasted
+  // `" qty * 2"` simply works rather than erroring, and so the text that is
+  // validated is exactly the text that is saved.
+  const trimmedExpression = valueExpression.trim();
+
   const expressionError = useMemo<string | null>(() => {
     if (operandMode !== "expression") return null;
-    if (!valueExpression.trim()) return "Enter an expression";
+    if (!trimmedExpression) return "Enter an expression";
 
-    const { node, issues } = parseExpression(valueExpression);
+    const { node, issues } = parseExpression(trimmedExpression);
     if (issues.length > 0) return issues[0].message;
     if (node === null) return "Expression could not be parsed";
 
@@ -147,7 +155,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
     // Array.from, not `for...of` directly over the Set — this project's
     // tsconfig targets es5 without downlevelIteration, so iterating a Set
     // in place fails to compile (TS2802).
-    for (const name of Array.from(collectStateNames(valueExpression))) {
+    for (const name of Array.from(collectStateNames(trimmedExpression))) {
       if (typesByName.has(name)) continue;
       const elsewhere = states.getAll().find((s) => s.name === name);
       return elsewhere
@@ -173,7 +181,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
       );
     }
     return null;
-  }, [operandMode, valueExpression, readableStates, selectedState, states]);
+  }, [operandMode, trimmedExpression, readableStates, selectedState, states]);
 
   // Validation
   const validate = (): boolean => {
@@ -304,7 +312,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
             : undefined,
           distributionType: operation === StateOperation.SAMPLE ? distributionType : undefined,
           distributionParameters: operation === StateOperation.SAMPLE ? distributionParameters : undefined,
-          valueExpression: isExpression ? valueExpression : undefined,
+          valueExpression: isExpression ? trimmedExpression : undefined,
         }
       );
 

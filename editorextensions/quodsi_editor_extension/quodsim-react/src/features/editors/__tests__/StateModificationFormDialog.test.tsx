@@ -143,7 +143,15 @@ describe("StateModificationFormDialog — expression mode", () => {
     expect(screen.queryByLabelText("Expression value")).not.toBeInTheDocument();
   });
 
-  it("resets to literal mode when the operation is switched to Sample from Distribution", () => {
+  // Fix round 2, Finding 4: asserting only that the expression input is gone
+  // right after the switch to SAMPLE proves nothing — the render gate is
+  // `operation !== SAMPLE && operandMode === "expression"`, and its first
+  // half alone hides the input the instant `operation` flips. That version of
+  // this test passed identically with the reset effect deleted. Switching
+  // BACK to a non-SAMPLE operation re-satisfies the first half, so the input
+  // reappears if and only if operandMode is still "expression" — which is
+  // what actually exercises the effect.
+  it("resets to literal mode when the operation is switched to Sample from Distribution, and the reset survives switching back", () => {
     render(<StateModificationFormDialog {...baseProps} onSave={jest.fn()} />);
     fireEvent.click(screen.getByLabelText("Expression"));
     fireEvent.change(screen.getByLabelText("Expression value"), {
@@ -155,5 +163,38 @@ describe("StateModificationFormDialog — expression mode", () => {
     fireEvent.change(operationSelect, { target: { value: StateOperation.SAMPLE } });
 
     expect(screen.queryByLabelText("Expression value")).not.toBeInTheDocument();
+
+    // Back to a non-SAMPLE operation: the mode must really have reset, not
+    // merely been masked — no expression input, and the toggle sitting on
+    // "Value" rather than restored with the stale expression text.
+    fireEvent.change(screen.getAllByRole("combobox")[1], {
+      target: { value: StateOperation.ASSIGN },
+    });
+
+    expect(screen.queryByLabelText("Expression value")).not.toBeInTheDocument();
+    expect((screen.getByLabelText("Expression") as HTMLInputElement).checked).toBe(false);
+  });
+
+  // Fix round 2, Finding 1: a leading space or tab is an IndentationError to
+  // the engine's `eval`-mode parse (E_SYNTAX), so an untrimmed
+  // `" qty * unit_price"` produced a green dialog and a run the engine
+  // refuses. The dialog trims on the way in AND on the way out, so pasting
+  // padded text just works.
+  it("trims surrounding whitespace off a pasted expression rather than saving it verbatim", () => {
+    const onSave = jest.fn();
+    render(<StateModificationFormDialog {...baseProps} onSave={onSave} />);
+
+    fireEvent.click(screen.getByLabelText("Expression"));
+    fireEvent.change(screen.getByLabelText("Expression value"), {
+      target: { value: "  qty * unit_price  " },
+    });
+
+    expect(screen.queryByText(/may not begin with a space or tab/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save changes/i })).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ valueExpression: "qty * unit_price", value: undefined })
+    );
   });
 });
