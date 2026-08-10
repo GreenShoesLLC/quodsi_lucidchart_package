@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from "react";
 import { Plus, Filter, Info } from "lucide-react";
-import { State, StateListManager, ComponentType } from "@quodsi/lucid-shared";
+import {
+  State,
+  StateListManager,
+  ComponentType,
+  EditorReferenceData,
+  ExpressionStateReference,
+  findExpressionsReferencingState,
+} from "@quodsi/lucid-shared";
 import StateFormDialog from "./StateFormDialog";
 import StateListItem from "./StateListItem";
 
@@ -9,6 +16,13 @@ interface Props {
   onStatesChange: (states: StateListManager) => void;
   defaultComponentType: ComponentType | "ALL";
   allowFilterChange?: boolean;
+  /**
+   * Model-wide lookup data. Used here only to feed the delete-time expression
+   * detector (activities[].actions[].modifications / generators[].initialStateModifications
+   * / connectors) — see handleDeleteState below. Optional because older callers
+   * (and tests) may not pass it; the dialog just skips the expression warning then.
+   */
+  referenceData?: EditorReferenceData;
 }
 
 const StatesEditor: React.FC<Props> = ({
@@ -16,6 +30,7 @@ const StatesEditor: React.FC<Props> = ({
   onStatesChange,
   defaultComponentType,
   allowFilterChange = true,
+  referenceData,
 }) => {
   const [filterComponentType, setFilterComponentType] = useState<ComponentType | "ALL">(
     defaultComponentType
@@ -23,6 +38,7 @@ const StatesEditor: React.FC<Props> = ({
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingState, setEditingState] = useState<State | undefined>(undefined);
   const [deletingState, setDeletingState] = useState<State | undefined>(undefined);
+  const [affectedExpressions, setAffectedExpressions] = useState<ExpressionStateReference[]>([]);
 
   // Filter states based on component type
   const filteredStates = useMemo(() => {
@@ -53,6 +69,26 @@ const StatesEditor: React.FC<Props> = ({
 
   const handleDeleteState = (state: State) => {
     setDeletingState(state);
+    // Expressions elsewhere in the model can name this state inside a formula
+    // (e.g. `qty * unit_price`) without setting it directly, so
+    // removeStateReferences-style id-matching never sees them — deleting the
+    // state would leave that formula referencing a state that no longer
+    // exists, which the engine rejects at run time. Detect and warn before the
+    // user confirms, same as Studio/drawio (ClickUp 86e2n9zy7). Read-only: this
+    // never mutates activities/generators/connectors.
+    setAffectedExpressions(
+      findExpressionsReferencingState(
+        {
+          activities: referenceData?.activities,
+          generators: referenceData?.generators,
+          // Connector is a concrete class (no index signature); StateReferenceScope
+          // is deliberately loose (Array<Record<string, unknown>>) so every host can
+          // pass its own shape — see quodsi_shared/src/conversion/stateReferences.ts.
+          connectors: referenceData?.connectors as unknown as Record<string, unknown>[] | undefined,
+        },
+        state.name
+      )
+    );
   };
 
   const confirmDelete = () => {
@@ -62,11 +98,13 @@ const StatesEditor: React.FC<Props> = ({
       updatedList.forEach((s) => updatedStates.add(s));
       onStatesChange(updatedStates);
       setDeletingState(undefined);
+      setAffectedExpressions([]);
     }
   };
 
   const cancelDelete = () => {
     setDeletingState(undefined);
+    setAffectedExpressions([]);
   };
 
   const getComponentTypeLabel = (type: ComponentType | "ALL"): string => {
@@ -145,16 +183,42 @@ const StatesEditor: React.FC<Props> = ({
           <div className="text-xs font-medium text-red-900 mb-2">
             Delete State: "{deletingState.name}"?
           </div>
+
+          {/* Modifications that SET this state directly (matched by id) are cleaned up
+              extension-side on save (ModelManager.cleanupStateReferences), not here — so
+              unlike Studio (which computes this client-side) this can't claim a count
+              without risking a number that doesn't match what save actually does. */}
           <div className="text-xs text-red-700 mb-2">
-            ⚠️ Warning: This state may be referenced in:
+            Activity and generator steps that set this state directly will have that
+            reference removed automatically when you save.
           </div>
-          <ul className="text-xs text-red-600 ml-4 mb-2 list-disc">
-            <li>Activity state modifications (pre/post processing)</li>
-            <li>Generator initial state modifications</li>
-            <li>Operation step state modifications</li>
-          </ul>
+
+          {/* Expressions that name this state inside a DIFFERENT modification's formula
+              (e.g. "qty * unit_price") are a level deeper than id-matching reaches, and are
+              never auto-fixed — reported here instead, computed live from the same
+              reference data the panel already has, so this count is reliable. */}
+          {affectedExpressions.length > 0 && (
+            <div className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2 mb-2">
+              <p className="font-medium">
+                {affectedExpressions.length} expression{affectedExpressions.length === 1 ? "" : "s"}{" "}
+                {affectedExpressions.length === 1 ? "references" : "reference"} this state inside a
+                formula and cannot be fixed automatically:
+              </p>
+              <ul className="mt-1 list-disc pl-4">
+                {affectedExpressions.map((hit, index) => (
+                  <li key={`${hit.elementId}-${index}`}>
+                    <code>{hit.stateName} = {hit.expression}</code>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1">
+                Edit these yourself first — the engine rejects a formula that names a state
+                which no longer exists.
+              </p>
+            </div>
+          )}
+
           <div className="text-xs text-red-700 mb-3">
-            These references will be automatically removed.
             This action cannot be undone.
           </div>
           <div className="flex gap-2">

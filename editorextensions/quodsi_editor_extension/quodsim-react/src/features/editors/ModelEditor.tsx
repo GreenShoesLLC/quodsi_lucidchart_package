@@ -591,6 +591,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
             states={states}
             onStatesChange={onStatesChange}
             defaultComponentType="ALL"
+            referenceData={referenceData}
           />
       )}
       {activeTab === "entities" && (

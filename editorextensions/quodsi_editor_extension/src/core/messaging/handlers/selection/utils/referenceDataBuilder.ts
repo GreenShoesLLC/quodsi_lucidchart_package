@@ -1,6 +1,79 @@
-import { EditorReferenceData } from '@quodsi/lucid-shared';
+import { EditorReferenceData, EditorReferenceActionSummary, EditorReferenceStateModification } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
+
+/**
+ * Reduce a StateModification (or any object shaped like one) to the fields the
+ * delete-state expression detector needs. `valueExpression` is included only
+ * when present, so literal-value modifications don't carry a stray `undefined`
+ * key into the summary.
+ */
+function summarizeModification(mod: any): EditorReferenceStateModification {
+  const summary: EditorReferenceStateModification = {
+    stateUniqueId: mod.stateUniqueId,
+    stateName: mod.stateName,
+    operation: mod.operation,
+  };
+  if (typeof mod.valueExpression === 'string' && mod.valueExpression.length > 0) {
+    summary.valueExpression = mod.valueExpression;
+  }
+  return summary;
+}
+
+function summarizeModifications(mods: unknown): EditorReferenceStateModification[] | undefined {
+  if (!Array.isArray(mods) || mods.length === 0) return undefined;
+  return mods.map(summarizeModification);
+}
+
+/**
+ * Build the per-action summary used by both the change-request editor (Action
+ * picker + resource-requirement dropdown) and the delete-state expression
+ * detector. Recurses into BRANCH's ifTrue/ifFalse and LOOP's actions so a
+ * modification buried in either is still visible to
+ * findExpressionsReferencingState's walk (quodsi_shared/src/conversion/stateReferences.ts).
+ */
+function summarizeAction(action: any): EditorReferenceActionSummary {
+  const hasDuration = 'duration' in action && action.duration != null;
+  const hasRequirementId = 'resourceRequirementId' in action;
+
+  const summary: EditorReferenceActionSummary = {
+    id: action.id as string,
+    actionType: action.actionType as string,
+    duration: hasDuration
+      ? {
+          durationPeriodUnit: action.duration.durationPeriodUnit as string,
+          distribution: {
+            distributionType: action.duration.distribution.distributionType as string,
+            // DistributionParameters is a union of specific interfaces; cast via unknown
+            // because all concrete parameter types are plain {key: number} objects.
+            parameters: action.duration.distribution.parameters as unknown as Record<string, number>,
+            description: action.duration.distribution.description as string | undefined,
+          },
+        }
+      : undefined,
+    resourceRequirementId: hasRequirementId
+      ? (action.resourceRequirementId as string | null)
+      : undefined,
+  };
+
+  const modifications = summarizeModifications(action.modifications);
+  if (modifications) summary.modifications = modifications;
+
+  const stateModifications = summarizeModifications(action.stateModifications);
+  if (stateModifications) summary.stateModifications = stateModifications;
+
+  if (Array.isArray(action.ifTrue) && action.ifTrue.length > 0) {
+    summary.ifTrue = action.ifTrue.map(summarizeAction);
+  }
+  if (Array.isArray(action.ifFalse) && action.ifFalse.length > 0) {
+    summary.ifFalse = action.ifFalse.map(summarizeAction);
+  }
+  if (Array.isArray(action.actions) && action.actions.length > 0) {
+    summary.actions = action.actions.map(summarizeAction);
+  }
+
+  return summary;
+}
 
 
 /**
@@ -47,32 +120,11 @@ export const referenceDataBuilder = {
             })
             .filter((id): id is string => id !== null),
           // Carry per-action summary so the change-request editor can offer an Action
-          // picker and a resource-requirement dropdown. Mirrors how generator
-          // inter-arrival duration is threaded in (same serialized-duration shape).
-          actions: (a.actions || []).map(action => {
-            const actionAny = action as any;
-            const hasDuration = 'duration' in actionAny && actionAny.duration != null;
-            const hasRequirementId = 'resourceRequirementId' in actionAny;
-            return {
-              id: actionAny.id as string,
-              actionType: actionAny.actionType as string,
-              duration: hasDuration
-                ? {
-                    durationPeriodUnit: actionAny.duration.durationPeriodUnit as string,
-                    distribution: {
-                      distributionType: actionAny.duration.distribution.distributionType as string,
-                      // DistributionParameters is a union of specific interfaces; cast via unknown
-                      // because all concrete parameter types are plain {key: number} objects.
-                      parameters: actionAny.duration.distribution.parameters as unknown as Record<string, number>,
-                      description: actionAny.duration.distribution.description as string | undefined,
-                    },
-                  }
-                : undefined,
-              resourceRequirementId: hasRequirementId
-                ? (actionAny.resourceRequirementId as string | null)
-                : undefined,
-            };
-          }),
+          // picker and a resource-requirement dropdown, AND so the States delete
+          // dialog can warn about expressions referencing the state being deleted
+          // (findExpressionsReferencingState needs modifications/stateModifications,
+          // recursively through BRANCH/LOOP — see summarizeAction above).
+          actions: (a.actions || []).map(action => summarizeAction(action as any)),
         }));
 
         referenceData.generators = modelDef.generators.getAll().map(g => ({
@@ -93,6 +145,10 @@ export const referenceDataBuilder = {
                 },
               }
             : undefined,
+          // Carry initial state modifications so the States delete dialog can warn
+          // about expressions referencing the state being deleted (same reason as
+          // activities.actions above).
+          initialStateModifications: summarizeModifications(g.generationConfig?.initialStateModifications),
         }));
 
         referenceData.resources = modelDef.resources.getAll().map(r => ({
