@@ -7,6 +7,7 @@ import {
   EditorReferenceData,
   ExpressionStateReference,
   findExpressionsReferencingState,
+  type StateReferenceScope,
 } from "@quodsi/lucid-shared";
 import StateFormDialog from "./StateFormDialog";
 import StateListItem from "./StateListItem";
@@ -81,10 +82,15 @@ const StatesEditor: React.FC<Props> = ({
         {
           activities: referenceData?.activities,
           generators: referenceData?.generators,
-          // Connector is a concrete class (no index signature); StateReferenceScope
-          // is deliberately loose (Array<Record<string, unknown>>) so every host can
-          // pass its own shape — see quodsi_shared/src/conversion/stateReferences.ts.
-          connectors: referenceData?.connectors as unknown as Record<string, unknown>[] | undefined,
+          // Connector is a concrete class (no index signature); StateReferenceScope's
+          // connectors field is deliberately loose (Array<Record<string, unknown>>) so
+          // every host can pass its own shape — see
+          // quodsi_shared/src/conversion/stateReferences.ts. Cast against the scope
+          // type's own field, not a bare Record<string, unknown>[], so that if
+          // `connectors` were ever narrowed to a stripped summary (the exact trap this
+          // whole change fixes for `activities`), this cast target would change too
+          // instead of silently continuing to typecheck.
+          connectors: referenceData?.connectors as unknown as StateReferenceScope['connectors'],
         },
         state.name
       )
@@ -185,12 +191,22 @@ const StatesEditor: React.FC<Props> = ({
           </div>
 
           {/* Modifications that SET this state directly (matched by id) are cleaned up
-              extension-side on save (ModelManager.cleanupStateReferences), not here — so
-              unlike Studio (which computes this client-side) this can't claim a count
-              without risking a number that doesn't match what save actually does. */}
+              extension-side (ModelManager.cleanupStateReferences), not here — so unlike
+              Studio (which computes this client-side) this can't claim a count without
+              risking a number that doesn't match what actually gets cleaned up.
+              Unconditional on purpose, not gated on a presence check computed from this
+              panel's referenceData snapshot: the two error directions aren't symmetric.
+              Unconditional can only ever be a false positive (promising a cleanup that
+              turns out to be a no-op — costs nothing); a presence check that disagrees
+              with what the extension sees would be a false negative (hiding this when a
+              reference WILL be removed) — worse, so never-silent wins here. Also: no
+              "when you save" — the States tab auto-saves immediately on this same click
+              (ModelEditor's onStatesChange, confirmDelete below), so that clause described
+              a step that doesn't exist on this tab and would send users looking for a Save
+              button that isn't there. */}
           <div className="text-xs text-red-700 mb-2">
             Activity and generator steps that set this state directly will have that
-            reference removed automatically when you save.
+            reference removed automatically.
           </div>
 
           {/* Expressions that name this state inside a DIFFERENT modification's formula

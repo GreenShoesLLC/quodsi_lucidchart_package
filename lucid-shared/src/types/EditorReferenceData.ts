@@ -68,6 +68,19 @@ export interface EditorReferenceData {
         actionRequirementIds?: string[];  // Requirement IDs used by actions
         /** Per-action summary for the change-request editor (Action picker + resource-requirement dropdown). */
         actions?: EditorReferenceActionSummary[];
+        /**
+         * Self-generating activity's own initial state modifications
+         * (Activity.sourceConfig.initialStateModifications on the model — a
+         * SPLIT/self-gen activity's `sourceConfig`, distinct from a Generator's
+         * `generationConfig`). No authoring UI reaches this in quodsim-react today,
+         * but the detector (findExpressionsReferencingState) and Lucid's own removal
+         * path (ModelManager.cleanupStateReferences) both already handle it, so the
+         * summary carries it too rather than being the one surface where the three
+         * disagree.
+         */
+        sourceConfig?: {
+            initialStateModifications?: EditorReferenceStateModification[];
+        };
     }>;
     generators?: Array<{
         id: string;

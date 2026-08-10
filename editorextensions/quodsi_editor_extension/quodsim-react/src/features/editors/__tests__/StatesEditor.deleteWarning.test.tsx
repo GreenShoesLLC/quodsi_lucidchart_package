@@ -73,12 +73,16 @@ describe("StatesEditor — delete-time expression warning", () => {
     expect(screen.getByText(/engine rejects a formula that names a state which no longer exists/i)).toBeInTheDocument();
 
     // The automatic-removal sentence must not claim a specific count: Lucid's
-    // cleanup runs extension-side on save (ModelManager.cleanupStateReferences),
-    // so this panel cannot verify a number matches what save will actually do.
+    // cleanup runs extension-side (ModelManager.cleanupStateReferences), so this
+    // panel cannot verify a number matches what actually gets cleaned up. It also
+    // must not say "when you save" -- the States tab auto-saves immediately on
+    // this same click, so that clause would describe a step that doesn't exist
+    // on this tab (fix round 1, Finding 2).
     const autoRemovalLine = screen.getByText(
-      /steps that set this state directly will have that reference removed automatically when you save/i
+      /steps that set this state directly will have that reference removed automatically/i
     );
     expect(autoRemovalLine.textContent).not.toMatch(/\d+\s*place/i);
+    expect(autoRemovalLine.textContent).not.toMatch(/when you save/i);
   });
 
   it("does not show the expression warning when no formula references the state", () => {

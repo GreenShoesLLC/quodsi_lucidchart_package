@@ -106,26 +106,35 @@ export const referenceDataBuilder = {
 
       if (modelDef) {
         // Build all reference data - performance is negligible for typical model sizes
-        referenceData.activities = modelDef.activities.getAll().map(a => ({
-          id: a.id,
-          name: a.name,
-          connectType: a.connectType,
-          // Extract requirement IDs from actions for usage counting
-          actionRequirementIds: (a.actions || [])
-            .map(action => {
-              if ('resourceRequirementId' in action) {
-                return (action as any).resourceRequirementId;
-              }
-              return null;
-            })
-            .filter((id): id is string => id !== null),
-          // Carry per-action summary so the change-request editor can offer an Action
-          // picker and a resource-requirement dropdown, AND so the States delete
-          // dialog can warn about expressions referencing the state being deleted
-          // (findExpressionsReferencingState needs modifications/stateModifications,
-          // recursively through BRANCH/LOOP — see summarizeAction above).
-          actions: (a.actions || []).map(action => summarizeAction(action as any)),
-        }));
+        referenceData.activities = modelDef.activities.getAll().map(a => {
+          // A self-generating activity's own initial state modifications (distinct
+          // from a Generator's generationConfig — this is Activity.sourceConfig).
+          // findExpressionsReferencingState and ModelManager.cleanupStateReferences
+          // both already look here; the summary would otherwise silently miss it.
+          const sourceConfigMods = summarizeModifications((a as any).sourceConfig?.initialStateModifications);
+
+          return {
+            id: a.id,
+            name: a.name,
+            connectType: a.connectType,
+            // Extract requirement IDs from actions for usage counting
+            actionRequirementIds: (a.actions || [])
+              .map(action => {
+                if ('resourceRequirementId' in action) {
+                  return (action as any).resourceRequirementId;
+                }
+                return null;
+              })
+              .filter((id): id is string => id !== null),
+            // Carry per-action summary so the change-request editor can offer an Action
+            // picker and a resource-requirement dropdown, AND so the States delete
+            // dialog can warn about expressions referencing the state being deleted
+            // (findExpressionsReferencingState needs modifications/stateModifications,
+            // recursively through BRANCH/LOOP — see summarizeAction above).
+            actions: (a.actions || []).map(action => summarizeAction(action as any)),
+            sourceConfig: sourceConfigMods ? { initialStateModifications: sourceConfigMods } : undefined,
+          };
+        });
 
         referenceData.generators = modelDef.generators.getAll().map(g => ({
           id: g.id,
