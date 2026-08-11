@@ -426,7 +426,7 @@ export * from './config/modalSize';
 // StateModificationFormDialog. Re-exported (not `export *`) to keep this
 // file's curated-surface convention; see quodsi_shared/src/expression for
 // the implementation.
-export { parseExpression, collectStateNames, inferExpressionType, findArityError } from '@quodsi/shared';
+export { parseExpression, collectStateNames, inferExpressionType, findArityError, expressionHint, expressionFunctionList } from '@quodsi/shared';
 
 // Delete-time expression-reference detection — shared by every host's States delete
 // dialog (Studio, drawio, Lucid) so "references this state inside a formula" stays
