@@ -7,6 +7,7 @@ export * from './core/logging/ComponentLogger';
 export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
 export type { VersionInfo } from '@quodsi/shared';
 export * from './constants/branding';
+export * from './constants/clearedFields';
 
 // Type exports
 export * from './types/ActivityRelationships';
@@ -343,6 +344,10 @@ export {
   toggleActionLever,
   patchActionLever,
   patchActionRange,
+  eligibleRankingStates,
+  setRankingState,
+  setRankingOrder,
+  QUEUE_RANKING_COPY,
 } from '@quodsi/shared';
 export type { ScenarioLever, LeverRange } from '@quodsi/shared';
 export type { QueueRanking, QueueRankingOrder } from '@quodsi/shared';
@@ -421,7 +426,7 @@ export * from './config/modalSize';
 // StateModificationFormDialog. Re-exported (not `export *`) to keep this
 // file's curated-surface convention; see quodsi_shared/src/expression for
 // the implementation.
-export { parseExpression, collectStateNames, inferExpressionType, findArityError } from '@quodsi/shared';
+export { parseExpression, collectStateNames, inferExpressionType, findArityError, expressionHint, expressionFunctionList } from '@quodsi/shared';
 
 // Delete-time expression-reference detection — shared by every host's States delete
 // dialog (Studio, drawio, Lucid) so "references this state inside a formula" stays

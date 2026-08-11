@@ -12,6 +12,7 @@ import {
   collectStateNames,
   inferExpressionType,
   findArityError,
+  expressionHint,
 } from "@quodsi/lucid-shared";
 import { SampleDistributionEditor } from "./sample";
 
@@ -478,13 +479,12 @@ const StateModificationFormDialog: React.FC<Props> = ({
                   <option key={s.id} value={s.name} />
                 ))}
               </datalist>
-              {expressionError ? (
+              {expressionError && (
                 <p className="text-xs text-red-600 mt-1">{expressionError}</p>
-              ) : (
-                <p className="text-xs text-gray-500 mt-1">
-                  Operators: + - * / and comparisons. Functions: abs, min, max, round.
-                </p>
               )}
+              {/* Shown WITH the error, not instead of it: the vocabulary is
+                  most useful exactly when the expression doesn't parse. */}
+              <p className="text-xs text-gray-500 mt-1">{expressionHint()}</p>
             </div>
           )}
 

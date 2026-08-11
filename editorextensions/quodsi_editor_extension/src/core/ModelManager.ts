@@ -26,6 +26,7 @@ import {
     ValidationSeverity,
     ValidationIssue,
     ensureBaselineScenario,
+    takeClearedFields,
 } from "@quodsi/lucid-shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
@@ -33,6 +34,7 @@ import { upsertModel, canonicalModelName } from "./sync/scenarioSync";
 import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
+import { activityStorageRemoveKeys } from "../types/ActivityLucid";
 import { ExtensionDebugService } from "./logging/ExtensionDebugService";
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
@@ -689,6 +691,16 @@ export class ModelManager {
         page: PageProxy
     ): Promise<void> {
         try {
+            // Take the explicit cleared-field declaration OFF the payload before
+            // anything else looks at it. The declaration says which fields the
+            // writer affirmatively cleared (see @quodsi/lucid-shared's
+            // clearedFields); it is metadata ABOUT the save, never model data, so
+            // it must not survive into registerElement or into shape storage —
+            // from where it would be published in model JSON. Payloads without a
+            // declaration come back byte-identical (same object reference).
+            const { data: payload, clearedFields } = takeClearedFields(data ?? {});
+            data = payload;
+
             // Handle conversion to NONE type (removing simulation data)
             if (type === SimulationObjectType.None) {
                 const existingElement = this.getElementById(element.id);
@@ -709,7 +721,7 @@ export class ModelManager {
             }
 
             // Handle regular data update
-            await this.handleDataUpdate(element, data, type, page);
+            await this.handleDataUpdate(element, data, type, page, clearedFields);
         } catch (error) {
             this.debug.error('Error in saveElementData:', error);
             throw error;
@@ -967,6 +979,19 @@ export class ModelManager {
                     );
                     elementData.actions = result.actions;
                     if (result.modified) modified = true;
+                }
+
+                // Clean queueRanking.stateName — another NAME-keyed reference, and
+                // the only one whose survival BLOCKS the model: QueueRankingValidation
+                // grades a ranking on a missing state as ERROR, so a routine state
+                // delete would leave an unrunnable activity behind. Drop the whole
+                // block rather than the name — a ranking with no state is meaningless,
+                // and no queueRanking is exactly how "first come, first served" is
+                // stored. Mirrors @quodsi/shared removeStateReferences, which does the
+                // same for drawio/Visio/Studio. (Final-review finding 2.)
+                if (elementData.queueRanking?.stateName === stateName) {
+                    delete elementData.queueRanking;
+                    modified = true;
                 }
 
                 if (modified) {
@@ -2122,7 +2147,10 @@ export class ModelManager {
         element: ElementProxy,
         updateData: any,
         type: SimulationObjectType,
-        page: PageProxy
+        page: PageProxy,
+        /** Fields the writer explicitly declared cleared; already stripped from
+         *  updateData by saveElementData. Empty for every silent/partial save. */
+        clearedFields: readonly string[] = []
     ): Promise<void> {
         this.debug.log('handleDataUpdate - Start', {
             elementId: element.id,
@@ -2193,8 +2221,26 @@ export class ModelManager {
             // data, merge into it so platform metadata (mappingSource) and stored
             // fields the panel did not send (e.g. width/height) are preserved.
             // Fall back to a full create when there is no prior q_data.
+            //
+            // Activities carry one field the merge cannot round-trip: queueRanking,
+            // where absence of the key IS the value ("first come, first served").
+            // The panel's clear arrives here as a MISSING key — JSON transport drops
+            // undefined — so it must be spelled out as a deletion or the stored
+            // ranking survives a clear.
+            //
+            // Spelled out by the WRITER, never inferred from the missing key: most
+            // Activity payloads that reach here are partial (ConnectorsEditor sends
+            // connectType + financialProperties only; handleElementConvert can send
+            // a bare stub) and would otherwise read as a clear. Only a declaration
+            // deletes. See activityStorageRemoveKeys for the full story; this is the
+            // path a panel save actually walks (the panel never reaches
+            // ActivityLucid.updateFromPlatform).
+            const removeKeys = type === SimulationObjectType.Activity
+                ? activityStorageRemoveKeys(clearedFields)
+                : undefined;
+
             if (this.storageAdapter.getElementData(element) != null) {
-                this.storageAdapter.updateElementData(element, elementData);
+                this.storageAdapter.updateElementData(element, elementData, { removeKeys });
                 this.markModelDirty(element.id);
             } else {
                 this.setElementData(

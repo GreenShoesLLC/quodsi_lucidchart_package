@@ -58,6 +58,67 @@ interface StoredActivityData {
 }
 
 /**
+ * The only storage keys an Activity write-back is ever allowed to DELETE.
+ *
+ * queueRanking is one of the few fields where ABSENCE is the value — no key
+ * means "first come, first served" — and the generic merge cannot express that.
+ * StorageAdapter.updateElementData reads the stored q_data, strips
+ * undefined-valued keys from the incoming update (deliberately: a partial
+ * update must not clobber stored width/height) and merges the rest, so a
+ * cleared ranking would silently survive. The panel→extension JSON transport
+ * compounds it: `queueRanking: undefined` is dropped before the extension ever
+ * sees the key.
+ *
+ * Scoped to Activity on purpose: the strip loop is correct for everything else,
+ * and a global null-means-delete sentinel was rejected as too broad.
+ * (86e2qwvf2, final-review finding 1.)
+ */
+const ACTIVITY_CLEARABLE_KEYS: readonly string[] = ['queueRanking'];
+
+/**
+ * Storage keys to delete, given what the writer EXPLICITLY declared cleared.
+ *
+ * This used to infer the answer from the key being absent in the incoming
+ * payload — "no queueRanking key, therefore the user cleared it". That
+ * inference was wrong and destructive. Absence also means "this panel never
+ * mentions the field", which is exactly what ConnectorsEditor sends: it rebuilds
+ * an Activity from connectType + financialProperties alone, and it is reached by
+ * selecting ANY connector whose source is an Activity. Under the old rule,
+ * clicking such a connector permanently deleted that activity's queue ranking
+ * (ElementOpsHandler.handleElementConvert had the same hazard, and before
+ * removeKeys existed the merge quietly rescued both).
+ *
+ * So deletion is now opt-in from the writer, never inferred: a payload that
+ * means to clear a field names it in CLEARED_FIELDS_KEY (see
+ * `declareClearedFields` in @quodsi/lucid-shared). Only a panel that renders the
+ * control, or a write-back built from a fully hydrated simObject, can make that
+ * declaration — a partial payload stays silent and its stored value survives.
+ *
+ * The declaration is filtered here rather than trusted: a payload cannot talk
+ * the extension into deleting arbitrary stored keys.
+ */
+export function activityStorageRemoveKeys(
+    clearedFields: readonly string[] | undefined
+): readonly string[] {
+    if (!clearedFields?.length) {
+        return [];
+    }
+    return ACTIVITY_CLEARABLE_KEYS.filter(key => clearedFields.includes(key));
+}
+
+/**
+ * The cleared-field declaration an AUTHORITATIVE Activity write-back makes —
+ * one built from a fully hydrated Activity (every optional field carried
+ * forward), not from a panel's partial view. For such a writer, and only for
+ * such a writer, "no ranking on the object" really does mean FIFO.
+ */
+export function activityAuthoritativeClearedFields(
+    activity: { queueRanking?: QueueRanking | null } | null | undefined
+): readonly string[] {
+    return activity?.queueRanking ? [] : ['queueRanking'];
+}
+
+/**
  * Hydrate a single modification object to a StateModification instance.
  * This handles cases where modifications are loaded from storage as plain objects.
  */
@@ -248,7 +309,16 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         };
 
         ComponentLogger.log(LOG_PREFIX, `Storing updated data for element ID: ${this.platformElementId}`, dataToStore);
-        this.storageAdapter.updateElementData(this.element, dataToStore);
+        // removeKeys, not just the undefined above: see activityStorageRemoveKeys.
+        // This write-back may declare the clear itself — dataToStore is built
+        // from this.simObject, which createSimObject hydrated from storage with
+        // every optional field (including queueRanking) carried forward. Unlike
+        // a panel payload, its silence about a field is genuine absence.
+        this.storageAdapter.updateElementData(this.element, dataToStore, {
+            removeKeys: activityStorageRemoveKeys(
+                activityAuthoritativeClearedFields(this.simObject)
+            )
+        });
     }
 
     protected getElementName(defaultPrefix: string): string {
