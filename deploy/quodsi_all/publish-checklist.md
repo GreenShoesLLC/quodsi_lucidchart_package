@@ -2,8 +2,14 @@
 
 ## Pre-publish
 
-- [ ] Update `QUODSI_VERSION` and `QUODSIM_VERSION` in `shared/src/constants/version.ts`
-- [ ] Update `__version__` in `quodsim/quodsim/__init__.py` to match
+- [ ] Update `MODEL_SCHEMA_VERSION` (document schema) and/or `ENGINE_VERSION` (Batch engine
+      build) in `quodsi_shared/src/constants/version.ts` — renamed from `QUODSI_VERSION` /
+      `QUODSIM_VERSION` on 2026-08-06, and the file moved to the monorepo
+  - These are now INDEPENDENT: a schema change bumps only `MODEL_SCHEMA_VERSION`; a new
+    engine image bumps only `ENGINE_VERSION`. Do not assume they move together.
+  - `build-bundle.ps1` reads `MODEL_SCHEMA_VERSION` for the package filename and git tag.
+- [ ] Update `__version__` in `quodsim/quodsim/__init__.py` to match `ENGINE_VERSION`
+      (engine only — it does not track the schema version)
 - [ ] Update `"version"` in all `manifest*.json` files to 1 day before target (Lucid auto-increments)
   - `manifest.json`, `manifest_dev.json`, `manifest_test.json`, `manifest_prod.json`, `manifest_local.json`
 - [ ] Add version transformation in `shared/src/versioning/transformations/`

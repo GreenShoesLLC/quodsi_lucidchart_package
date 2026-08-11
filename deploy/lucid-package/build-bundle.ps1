@@ -422,14 +422,20 @@ if (-not (Test-Path $PackageZipPath)) {
     exit 1
 }
 
-# Extract QUODSI_VERSION from version.ts
+# Extract MODEL_SCHEMA_VERSION from version.ts.
+# Renamed from QUODSI_VERSION in the monorepo (quodsi_shared, 2026-08-06) when the
+# version constants were split into MODEL_SCHEMA_VERSION (document schema) and
+# ENGINE_VERSION (Batch engine build). This script greps a file in the OTHER repo,
+# so the rename did not reach it and the bundle broke here. The package/tag series
+# has always tracked the document-schema version, so MODEL_SCHEMA_VERSION is the
+# direct successor: lucid/v2026.07.27 -> lucid/v2026.08.25.
 $VersionFilePath = Join-Path $LucidPackageDir "..\quodsi_shared\src\constants\version.ts"
 $VersionFileContent = Get-Content $VersionFilePath -Raw
-if ($VersionFileContent -match 'QUODSI_VERSION\s*=\s*"([^"]+)"') {
+if ($VersionFileContent -match 'MODEL_SCHEMA_VERSION\s*=\s*"([^"]+)"') {
     $QuodsiVersion = $Matches[1]
-    Write-Host "Detected QUODSI_VERSION: $QuodsiVersion" -ForegroundColor Cyan
+    Write-Host "Detected MODEL_SCHEMA_VERSION: $QuodsiVersion" -ForegroundColor Cyan
 } else {
-    Write-Error "Could not extract QUODSI_VERSION from '$VersionFilePath'."
+    Write-Error "Could not extract MODEL_SCHEMA_VERSION from '$VersionFilePath'. If the constant was renamed again, update this script to match."
     exit 1
 }
 
@@ -481,7 +487,7 @@ $existingTag = git tag -l $TagName 2>$null
 if ($existingTag) {
     Write-Host ""
     Write-Host "WARNING: Version $QuodsiVersion was already bundled for $TargetEnvironment." -ForegroundColor Yellow
-    Write-Host "Tag '$TagName' already exists. Did you forget to bump QUODSI_VERSION?" -ForegroundColor Yellow
+    Write-Host "Tag '$TagName' already exists. Did you forget to bump MODEL_SCHEMA_VERSION?" -ForegroundColor Yellow
     Write-Host ""
 }
 
