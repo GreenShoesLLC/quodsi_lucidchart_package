@@ -23,8 +23,6 @@ export type { ISerializedResourceRequest } from './interfaces/ISerializedResourc
 export type { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 export type { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
 export type { ISerializedState } from './interfaces/ISerializedState';
-export type { ISerializedTimePattern } from './interfaces/ISerializedTimePattern';
-export type { ISerializedTimeDistributedConfig } from './interfaces/ISerializedTimeDistributedConfig';
 export type {
     ISerializedAction,
     ISerializedActionBase,

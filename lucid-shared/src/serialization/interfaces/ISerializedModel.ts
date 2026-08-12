@@ -8,8 +8,6 @@ import { ISerializedGenerator } from './ISerializedGenerator';
 import { ISerializedConnector } from './ISerializedConnector';
 import { ISerializedResourceRequirement } from './ISerializedResourceRequirement';
 import { ISerializedState } from './ISerializedState';
-import { ISerializedTimePattern } from './ISerializedTimePattern';
-import { ISerializedTimeDistributedConfig } from './ISerializedTimeDistributedConfig';
 import { ISerializedScenarioChangeRequest } from './ISerializedScenarioChangeRequest';
 import { ISerializedScenario } from './ISerializedScenario';
 
@@ -49,8 +47,6 @@ export interface ISerializedModel {
     connectors: ISerializedConnector[];
     resourceRequirements: ISerializedResourceRequirement[];
     states: ISerializedState[];
-    timePatterns?: ISerializedTimePattern[];
-    timeDistributedConfigs?: ISerializedTimeDistributedConfig[];
     scenarios?: ISerializedScenario[];
     scenarioChangeRequests?: ISerializedScenarioChangeRequest[];
 }

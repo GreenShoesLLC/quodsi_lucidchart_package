@@ -13,8 +13,6 @@ import { ResourceRequest } from '@quodsi/shared';
 import { State } from '@quodsi/shared';
 import { ComponentType } from '@quodsi/shared';
 import { StateType } from '@quodsi/shared';
-import { TimePattern } from '@quodsi/shared';
-import { TimeDistributedConfig } from '@quodsi/shared';
 import { EntitySourceConfig } from '@quodsi/shared';
 import { StateModification } from '@quodsi/shared';
 import {
@@ -45,8 +43,6 @@ import { ISerializedDuration } from './interfaces/ISerializedDuration';
 import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
 import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 import { ISerializedState } from './interfaces/ISerializedState';
-import { ISerializedTimePattern } from './interfaces/ISerializedTimePattern';
-import { ISerializedTimeDistributedConfig } from './interfaces/ISerializedTimeDistributedConfig';
 import { ISerializedAction } from './interfaces/ISerializedAction';
 import { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
@@ -446,45 +442,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
-    protected serializeTimePattern(pattern: TimePattern): ISerializedTimePattern {
-        try {
-            if (!pattern.id || !pattern.name) {
-                throw new InvalidModelError('TimePattern must have id and name');
-            }
-
-            return {
-                unique_id: pattern.id,
-                name: pattern.name,
-                weeklyWeights: pattern.weeklyWeights.length > 0 ? pattern.weeklyWeights : undefined,
-                dayOfWeekWeights: pattern.dayOfWeekWeights.length > 0 ? pattern.dayOfWeekWeights : undefined,
-                dayOfWeekHourWeights: pattern.dayOfWeekHourWeights.length > 0 ? pattern.dayOfWeekHourWeights : undefined,
-                minuteDistributionDef: this.serializeDuration(pattern.minuteDistribution)
-            };
-        } catch (error) {
-            throw new SerializationError('TimePattern', `Failed to serialize time pattern ${pattern.id}`, error instanceof Error ? error : undefined);
-        }
-    }
-
-    protected serializeTimeDistributedConfig(config: TimeDistributedConfig): ISerializedTimeDistributedConfig {
-        try {
-            if (!config.id || !config.name) {
-                throw new InvalidModelError('TimeDistributedConfig must have id and name');
-            }
-
-            return {
-                unique_id: config.id,
-                name: config.name,
-                timePatternId: config.timePatternId,
-                totalVolume: config.totalVolume,
-                volumePeriodBasis: config.volumePeriodBasis,
-                startDate: config.startDate,
-                endDate: config.endDate
-            };
-        } catch (error) {
-            throw new SerializationError('TimeDistributedConfig', `Failed to serialize time distributed config ${config.id}`, error instanceof Error ? error : undefined);
-        }
-    }
-
     /**
      * Safely serialize a StateModification, handling both class instances and plain objects.
      * This provides a safety net for cases where modifications were loaded from storage
@@ -668,9 +625,25 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 serialized.maxEntities = config.maxEntities;
             }
 
-            // TIME_DISTRIBUTED mode fields
-            if (config.timeDistributedConfigIds && config.timeDistributedConfigIds.length > 0) {
-                serialized.timeDistributedConfigIds = config.timeDistributedConfigIds;
+            // PATTERN mode fields. Lucid has no Pattern editor of its own, but a
+            // generator authored as PATTERN in Studio or drawio and opened (not
+            // necessarily edited) in Lucid must still have its generationConfig
+            // serialized faithfully at this level, rather than silently reverting
+            // to a bare FREQUENCY shape.
+            //
+            // This does NOT make a Lucid-run simulation of a PATTERN generator
+            // correct: ISerializedModel carries no `arrivalPatterns` array and
+            // ModelDefinitionSerializerV1.serialize() emits none, so the engine
+            // still receives an `arrivalPatternId` pointing at a pattern that
+            // was never sent. That gap pre-dates this change — before, the
+            // engine received a PATTERN generator with no id at all — and
+            // closing it is part of the deferred ArrivalPattern-in-Lucid
+            // integration, not this task.
+            if (config.arrivalPatternId !== undefined) {
+                serialized.arrivalPatternId = config.arrivalPatternId;
+            }
+            if (config.volume !== undefined) {
+                serialized.volume = config.volume;
             }
 
             // State initialization

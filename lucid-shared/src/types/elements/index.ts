@@ -51,10 +51,6 @@ export {
   StateModification,
   StateOperation,
   StateType,
-  TimeDistributedConfig,
-  TimeDistributedConfigListManager,
-  TimePattern,
-  TimePatternListManager,
   applyOperation,
   createAssignModification,
   createBooleanState,
@@ -70,7 +66,6 @@ export {
   createNumberState,
   createSampleModification,
   createStringState,
-  createTimeDistributedEntitySourceConfig,
   evaluateComparison,
   getComparisonDescription,
   getComparisonSymbol,
@@ -92,7 +87,6 @@ export {
 } from '@quodsi/shared';
 
 export { GeneratorType } from '@quodsi/shared';
-export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // Distribution types — now sourced from the core (Phase 3 slice 4)

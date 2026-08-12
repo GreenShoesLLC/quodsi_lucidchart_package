@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedTimePattern, ISerializedTimeDistributedConfig } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
 import { useSender } from './useSender';
 import { useMessagingDispatch } from '../MessageContext';
 
@@ -152,30 +152,6 @@ export function useModelOpsSender() {
   }, [send]);
 
   /**
-   * Send a request to update the time patterns array
-   *
-   * @param timePatterns Array of serialized time pattern definitions
-   */
-  const updateTimePatterns = useCallback((timePatterns: ISerializedTimePattern[]) => {
-    // Use TIME_PATTERNS_UPDATE for updating time patterns
-    send(EnvelopeMessageType.TIME_PATTERNS_UPDATE, {
-      timePatterns
-    });
-  }, [send]);
-
-  /**
-   * Send a request to update the time distributed configs array
-   *
-   * @param timeDistributedConfigs Array of serialized time distributed config definitions
-   */
-  const updateTimeDistributedConfigs = useCallback((timeDistributedConfigs: ISerializedTimeDistributedConfig[]) => {
-    // Use TIME_DISTRIBUTED_CONFIGS_UPDATE for updating time distributed configs
-    send(EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE, {
-      timeDistributedConfigs
-    });
-  }, [send]);
-
-  /**
    * Send a request for the serialized model JSON
    *
    * @param documentId Document ID to get model JSON from
@@ -226,8 +202,6 @@ export function useModelOpsSender() {
     updateStates,
     updateEntities,
     updateResourceRequirements,
-    updateTimePatterns,
-    updateTimeDistributedConfigs,
     requestModelJson,
     selectElement,
     locateElement
@@ -241,8 +215,6 @@ export function useModelOpsSender() {
     updateStates,
     updateEntities,
     updateResourceRequirements,
-    updateTimePatterns,
-    updateTimeDistributedConfigs,
     requestModelJson,
     selectElement,
     locateElement

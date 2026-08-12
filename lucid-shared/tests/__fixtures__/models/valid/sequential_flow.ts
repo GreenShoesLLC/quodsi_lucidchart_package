@@ -59,7 +59,6 @@ export function createSequentialFlowModel(): ModelDefinition {
         entitiesPerCreation: 1,
         periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
         maxEntities: 999999,
-        timeDistributedConfigIds: [],
         initialStateModifications: []
     };
     const generator = new Generator(

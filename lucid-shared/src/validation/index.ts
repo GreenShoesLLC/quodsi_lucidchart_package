@@ -10,8 +10,6 @@ export {
     GeneratorPathValidation,
     GeneratorValidation,
     ResourceValidation,
-    TimePatternValidation,
-    TimeDistributedConfigValidation,
     canRateScale,
     validateRateMultiplier,
     ValidationRuleName,

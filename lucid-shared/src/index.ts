@@ -77,10 +77,6 @@ export {
   StateModification,
   StateOperation,
   StateType,
-  TimeDistributedConfig,
-  TimeDistributedConfigListManager,
-  TimePattern,
-  TimePatternListManager,
   applyOperation,
   createAssignModification,
   createBooleanState,
@@ -96,7 +92,6 @@ export {
   createNumberState,
   createSampleModification,
   createStringState,
-  createTimeDistributedEntitySourceConfig,
   evaluateComparison,
   getComparisonDescription,
   getComparisonSymbol,
@@ -117,7 +112,6 @@ export {
   validateValueType,
 } from '@quodsi/shared';
 export { GeneratorType } from '@quodsi/shared';
-export { VolumePeriodBasis } from '@quodsi/shared';
 export { SimulationRun } from '@quodsi/shared';
 
 // State management types — already covered in named block above

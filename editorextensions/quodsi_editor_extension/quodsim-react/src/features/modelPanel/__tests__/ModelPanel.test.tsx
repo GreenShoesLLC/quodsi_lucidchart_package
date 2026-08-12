@@ -35,8 +35,6 @@ jest.mock("../../../messaging/hooks/useModelPanel", () => ({
 jest.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
     updateStates: jest.fn(),
-    updateTimePatterns: jest.fn(),
-    updateTimeDistributedConfigs: jest.fn(),
     requestModelJson: jest.fn(),
   }),
 }));
