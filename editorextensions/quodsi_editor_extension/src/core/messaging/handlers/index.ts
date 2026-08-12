@@ -7,7 +7,6 @@ import { ElementOpsHandler } from './elementOpsHandler';
 import { StatesHandler } from './statesHandler';
 import { EntitiesHandler } from './entitiesHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
-import { TimePatternHandler } from './timePatternHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
 import { DiagramMappingRelayHandler } from './diagramMappingRelayHandler';
@@ -84,11 +83,6 @@ export class MessageHandlers {
       return true;
     }
 
-    // Time pattern operations messages
-    if (TimePatternHandler.handleMessage(msg)) {
-      return true;
-    }
-
     // Simulation run messages
     if (SimulationRunHandler.handleMessage(msg)) {
       return true;
@@ -131,7 +125,6 @@ export {
   StatesHandler,
   EntitiesHandler,
   ResourceRequirementsHandler,
-  TimePatternHandler,
   SimulationRunHandler,
   DiagramMappingRelayHandler,
   DevtoolsHandler,

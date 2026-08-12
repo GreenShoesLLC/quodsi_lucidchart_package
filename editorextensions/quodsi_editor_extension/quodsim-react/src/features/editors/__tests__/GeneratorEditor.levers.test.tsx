@@ -35,8 +35,6 @@ const baseProps = {
   states: {} as any,
   onStatesChange: jest.fn(),
   referenceData: {} as any,
-  onTimePatternsChange: jest.fn(),
-  onTimeDistributedConfigsChange: jest.fn(),
 };
 
 describe("GeneratorEditor — scenario lever authoring", () => {

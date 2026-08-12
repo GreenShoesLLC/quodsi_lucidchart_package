@@ -39,7 +39,6 @@ function buildModelWith(actions: any[]): ModelDefinition {
         entitiesPerCreation: 1,
         periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
         maxEntities: 999999,
-        timeDistributedConfigIds: [],
         initialStateModifications: []
     };
     const generator = new Generator('generator-1', 'Generator1', generationConfig, 'activity-1');
@@ -74,7 +73,6 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
             entitiesPerCreation: 1,
             periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
             maxEntities: 999999,
-            timeDistributedConfigIds: [],
             initialStateModifications: []
         };
         const generator = new Generator('generator-1', 'Generator1', generationConfig, 'activity-1');

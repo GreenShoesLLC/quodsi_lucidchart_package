@@ -13,7 +13,7 @@ export interface ISerializedEntitySourceConfig {
     entityId: string;
 
     /**
-     * Generation mode: 'FREQUENCY' or 'TIME_DISTRIBUTED'
+     * Generation mode: 'FREQUENCY' or 'PATTERN'
      */
     generatorType: string;
 
@@ -24,8 +24,12 @@ export interface ISerializedEntitySourceConfig {
     periodicStartDuration?: ISerializedDuration;
     maxEntities?: number;
 
-    // TIME_DISTRIBUTED mode fields
-    timeDistributedConfigIds?: string[];
+    // PATTERN mode fields. Lucid has no Pattern editor of its own (see
+    // GeneratorEditor.tsx's read-only notice), but a generator authored as
+    // PATTERN in Studio or drawio must still round-trip these losslessly
+    // through Lucid — carried through opaquely, never written here.
+    arrivalPatternId?: string;
+    volume?: number;
 
     // Common fields
     initialStateModifications?: any[]; // StateModification[]

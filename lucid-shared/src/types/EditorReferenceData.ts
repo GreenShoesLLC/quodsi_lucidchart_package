@@ -1,8 +1,6 @@
 import { ResourceRequirement } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { ConnectType } from '@quodsi/shared';
-import { ISerializedTimePattern } from "../serialization/interfaces/ISerializedTimePattern";
-import { ISerializedTimeDistributedConfig } from "../serialization/interfaces/ISerializedTimeDistributedConfig";
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
 import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
 
@@ -95,8 +93,6 @@ export interface EditorReferenceData {
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];
     states?: any[]; // Serialized state definitions for all components
-    timePatterns?: ISerializedTimePattern[]; // Serialized time pattern definitions
-    timeDistributedConfigs?: ISerializedTimeDistributedConfig[]; // Serialized time distributed config definitions
     scenarios?: ISerializedScenario[]; // Serialized scenario definitions
     swimLaneContainment?: SwimLaneContainment; // Swimlane lane containing the selected activity (if any)
 }

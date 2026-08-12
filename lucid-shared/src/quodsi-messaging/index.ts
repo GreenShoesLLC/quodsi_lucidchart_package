@@ -3,7 +3,7 @@ import { isEnvelope } from './envelope/envelope';
 import { EnvelopeMessageType } from './envelope/envelopeMessageTypes';
 import { ErrorMessage, FrameworkMessage, LogMessage, ReactAppReadyMessage } from './framework/messages';
 import { ModelConversionResultMessage, ModelConvertMessage, ModelOpsMessage, ModelRemoveMessage, ModelRemoveResultMessage, ModelValidateMessage, ModelValidationResultMessage, ModelJsonRequestMessage, ModelJsonResponseMessage } from './modelOps/messages';
-import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage, TimePatternsUpdateMessage, TimePatternsUpdateResultMessage, TimeDistributedConfigsUpdateMessage, TimeDistributedConfigsUpdateResultMessage } from './elementOps/messages';
+import { ElementSelectMessage, ElementConvertMessage, ElementConvertResultMessage, ElementOpsMessage, ElementUpdateMessage, ElementUpdateResultMessage, StatesUpdateMessage, StatesUpdateResultMessage, ResourceRequirementsUpdateMessage, ResourceRequirementsUpdateResultMessage } from './elementOps/messages';
 import { ModelContextMessage, SelectionChangedMessage, SelectionMessage } from './selection/messages';
 import { ModelRunRequestMessage, ModelRunStatusMessage, SimulationMessage, SimulationJob } from './simulation/messages';
 import { SimulationRunInfo, SimulationRunDownloadInfo } from './simulationRun/simulationRunMessages';
@@ -92,10 +92,6 @@ export {
   StatesUpdateResultMessage,
   ResourceRequirementsUpdateMessage,
   ResourceRequirementsUpdateResultMessage,
-  TimePatternsUpdateMessage,
-  TimePatternsUpdateResultMessage,
-  TimeDistributedConfigsUpdateMessage,
-  TimeDistributedConfigsUpdateResultMessage,
   ElementOpsMessage
 } from './elementOps/messages';
 
@@ -167,10 +163,6 @@ export interface EnvelopMessagePayloads {
   [EnvelopeMessageType.STATES_UPDATE_RESULT]: StatesUpdateResultMessage['data'];
   [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE]: ResourceRequirementsUpdateMessage['data'];
   [EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT]: ResourceRequirementsUpdateResultMessage['data'];
-  [EnvelopeMessageType.TIME_PATTERNS_UPDATE]: TimePatternsUpdateMessage['data'];
-  [EnvelopeMessageType.TIME_PATTERNS_UPDATE_RESULT]: TimePatternsUpdateResultMessage['data'];
-  [EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE]: TimeDistributedConfigsUpdateMessage['data'];
-  [EnvelopeMessageType.TIME_DISTRIBUTED_CONFIGS_UPDATE_RESULT]: TimeDistributedConfigsUpdateResultMessage['data'];
 
 
   [EnvelopeMessageType.DEVTOOLS_SWIMLANE_SCAN_REQUEST]: Record<string, never>;

@@ -5,7 +5,7 @@ import { useSimulationRunSender } from '../../messaging/senders/simulationRunSen
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedTimePattern, ISerializedTimeDistributedConfig, ISerializedEntity, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedEntity, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
 import { EntityRow } from '../editors/EntitiesEditor';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
@@ -47,8 +47,6 @@ export const ModelPanel: React.FC = () => {
   const {
     updateStates: sendStatesUpdate,
     updateEntities: sendEntitiesUpdate,
-    updateTimePatterns: sendTimePatternsUpdate,
-    updateTimeDistributedConfigs: sendTimeDistributedConfigsUpdate,
     requestModelJson
   } = useModelOpsSender();
 
@@ -177,16 +175,6 @@ export const ModelPanel: React.FC = () => {
     }));
 
     sendEntitiesUpdate(serialized);
-  };
-
-  const handleTimePatternsChange = (updatedTimePatterns: ISerializedTimePattern[]) => {
-    // Time patterns are already in serialized format, send directly to extension
-    sendTimePatternsUpdate(updatedTimePatterns);
-  };
-
-  const handleTimeDistributedConfigsChange = (updatedConfigs: ISerializedTimeDistributedConfig[]) => {
-    // Time distributed configs are already in serialized format, send directly to extension
-    sendTimeDistributedConfigsUpdate(updatedConfigs);
   };
 
   useEffect(() => {
@@ -365,8 +353,6 @@ export const ModelPanel: React.FC = () => {
             validationState={validationState}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            onTimePatternsChange={handleTimePatternsChange}
-            onTimeDistributedConfigsChange={handleTimeDistributedConfigsChange}
             onSimulate={handleSimulate}
           />
         )}

@@ -1,8 +1,8 @@
 {
-  "schemaVersion": "2026.08.25",
+  "schemaVersion": "2026.08.26",
   "metadata": {
-    "version": "2026.08.25",
-    "timestamp": "2026-08-09T22:17:58.480Z"
+    "version": "2026.08.26",
+    "timestamp": "2026-08-12T10:19:59.023Z"
   },
   "model": {
     "id": "model-100",
@@ -73,7 +73,7 @@
             }
           },
           "keepResource": false,
-          "id": "0c382922-08ee-47cc-a972-8d3cb71a6e0b"
+          "id": "ecb1e4c1-34cd-439a-ae2a-e3825119d54a"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -90,7 +90,7 @@
             }
           },
           "keepResource": false,
-          "id": "a5fcbe6f-62c6-41aa-9144-7db403d56193"
+          "id": "15010da4-3c33-4e5c-8b47-6579ef0ac93d"
         }
       ],
       "connectType": "Probability"
@@ -122,7 +122,7 @@
             }
           },
           "keepResource": false,
-          "id": "c079678a-2e02-4c2f-8d5d-a09084aee6c3"
+          "id": "5929690c-15a0-4520-b8c5-d875c08d75e4"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -140,7 +140,7 @@
             }
           },
           "keepResource": false,
-          "id": "0d0fc2f6-d4c9-44d3-92cb-4bfe0ba3884f"
+          "id": "01b1d452-b0ef-4598-b7a4-a66bfc3ac5e0"
         }
       ],
       "connectType": "Probability"
@@ -170,7 +170,7 @@
             }
           },
           "keepResource": false,
-          "id": "e0b7458c-0d45-4ac8-bbd3-78ead4038f57"
+          "id": "f851002e-c5a4-4260-ba0d-4758afe79fd2"
         },
         {
           "actionType": "DELAY_WITH_RESOURCE",
@@ -186,7 +186,7 @@
             }
           },
           "keepResource": false,
-          "id": "21d551f8-cc02-472d-b2ec-9027f576f85f"
+          "id": "816228f4-b893-47e0-94db-0240f09dbf48"
         }
       ],
       "connectType": "Probability"
@@ -346,7 +346,5 @@
     }
   ],
   "states": [],
-  "timePatterns": [],
-  "timeDistributedConfigs": [],
   "scenarios": []
 }

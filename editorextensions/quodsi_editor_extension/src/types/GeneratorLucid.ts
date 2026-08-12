@@ -170,15 +170,14 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             y: this.simObject.y,
             width: this.simObject.width,
             height: this.simObject.height,
+            // Spread the existing generationConfig rather than re-listing FREQUENCY
+            // fields by name: a generator authored as PATTERN elsewhere (Studio,
+            // drawio) carries arrivalPatternId/volume that Lucid has no editor for
+            // (see GeneratorEditor.tsx) but must not silently drop on a routine
+            // platform write-back (e.g. dragging the shape). Only
+            // initialStateModifications needs re-shaping for storage.
             generationConfig: {
-                entityId: this.simObject.generationConfig.entityId,
-                generatorType: this.simObject.generationConfig.generatorType,
-                periodicOccurrences: this.simObject.generationConfig.periodicOccurrences,
-                periodIntervalDuration: this.simObject.generationConfig.periodIntervalDuration,
-                entitiesPerCreation: this.simObject.generationConfig.entitiesPerCreation,
-                periodicStartDuration: this.simObject.generationConfig.periodicStartDuration,
-                maxEntities: this.simObject.generationConfig.maxEntities,
-                timeDistributedConfigIds: this.simObject.generationConfig.timeDistributedConfigIds,
+                ...this.simObject.generationConfig,
                 initialStateModifications: this.simObject.generationConfig.initialStateModifications?.map(
                     m => m instanceof StateModification ? m.toJSON() : m
                 )
@@ -255,7 +254,6 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             entitiesPerCreation: fields.entitiesPerCreation ?? defaultGenerator.generationConfig.entitiesPerCreation,
             periodicStartDuration: defaultGenerator.generationConfig.periodicStartDuration,
             maxEntities: fields.maxEntities ?? defaultGenerator.generationConfig.maxEntities,
-            timeDistributedConfigIds: [],
             initialStateModifications: []
         };
 

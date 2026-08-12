@@ -4,8 +4,6 @@ import {
   EditorReferenceData,
   DiagramElementType,
   StateListManager,
-  ISerializedTimePattern,
-  ISerializedTimeDistributedConfig,
   ValidationResult,
 } from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
@@ -31,8 +29,6 @@ interface ElementEditorProps {
   onStatesChange: (states: StateListManager) => void;
   entities: EntityRow[];
   onEntitiesChange: (entities: EntityRow[]) => void;
-  onTimePatternsChange?: (patterns: ISerializedTimePattern[]) => void;
-  onTimeDistributedConfigsChange?: (configs: ISerializedTimeDistributedConfig[]) => void;
   resourceRequirements?: any[];
   outgoingConnectors?: any[];
   validationState?: ValidationResult | null;
@@ -56,8 +52,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
   onStatesChange,
   entities,
   onEntitiesChange,
-  onTimePatternsChange = () => {},
-  onTimeDistributedConfigsChange = () => {},
   resourceRequirements,
   outgoingConnectors,
   validationState,
@@ -171,8 +165,6 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
             referenceData={referenceData}
             states={states}
             onStatesChange={onStatesChange}
-            onTimePatternsChange={onTimePatternsChange}
-            onTimeDistributedConfigsChange={onTimeDistributedConfigsChange}
           />
         );
 

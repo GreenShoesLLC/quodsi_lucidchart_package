@@ -53,12 +53,6 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 states: modelDefinition.states.getAll().map(state =>
                     this.serializeState(state)
                 ),
-                timePatterns: modelDefinition.timePatterns.getAll().map(pattern =>
-                    this.serializeTimePattern(pattern)
-                ),
-                timeDistributedConfigs: modelDefinition.timeDistributedConfigs.getAll().map(config =>
-                    this.serializeTimeDistributedConfig(config)
-                ),
                 scenarios: modelDefinition.scenarios.getAll().map(scenario =>
                     scenario.toJSON()
                 )

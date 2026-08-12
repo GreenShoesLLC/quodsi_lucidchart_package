@@ -1,8 +1,8 @@
 {
-  "schemaVersion": "2026.08.25",
+  "schemaVersion": "2026.08.26",
   "metadata": {
-    "version": "2026.08.25",
-    "timestamp": "2026-08-09T22:17:58.429Z"
+    "version": "2026.08.26",
+    "timestamp": "2026-08-12T10:19:59.011Z"
   },
   "model": {
     "id": "model-5",
@@ -62,7 +62,7 @@
               "description": ""
             }
           },
-          "id": "1a14886d-6064-4fcb-95c7-e0120d59ca22"
+          "id": "6dc86d06-1f8f-4330-80fc-95cfaa4f0750"
         }
       ],
       "connectType": "Probability"
@@ -127,7 +127,5 @@
   ],
   "resourceRequirements": [],
   "states": [],
-  "timePatterns": [],
-  "timeDistributedConfigs": [],
   "scenarios": []
 }
