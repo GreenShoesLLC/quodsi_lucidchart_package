@@ -627,9 +627,18 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             // PATTERN mode fields. Lucid has no Pattern editor of its own, but a
             // generator authored as PATTERN in Studio or drawio and opened (not
-            // necessarily edited) in Lucid must still serialize its pattern
-            // reference and volume faithfully — otherwise re-running the
-            // simulation from Lucid would silently drop the pattern.
+            // necessarily edited) in Lucid must still have its generationConfig
+            // serialized faithfully at this level, rather than silently reverting
+            // to a bare FREQUENCY shape.
+            //
+            // This does NOT make a Lucid-run simulation of a PATTERN generator
+            // correct: ISerializedModel carries no `arrivalPatterns` array and
+            // ModelDefinitionSerializerV1.serialize() emits none, so the engine
+            // still receives an `arrivalPatternId` pointing at a pattern that
+            // was never sent. That gap pre-dates this change — before, the
+            // engine received a PATTERN generator with no id at all — and
+            // closing it is part of the deferred ArrivalPattern-in-Lucid
+            // integration, not this task.
             if (config.arrivalPatternId !== undefined) {
                 serialized.arrivalPatternId = config.arrivalPatternId;
             }

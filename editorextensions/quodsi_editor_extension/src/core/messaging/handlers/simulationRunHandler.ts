@@ -434,16 +434,16 @@ export class SimulationRunHandler {
       generators: (model.generators ?? []).map((g) => ({
         id: g.id,
         name: g.name,
+        // Spread rather than enumerate fields by name: a hand-picked field
+        // list is exactly the shape that silently dropped PATTERN-mode fields
+        // (arrivalPatternId, volume) here — this site was missed by Task 21's
+        // grep-for-deleted-names sweep because it never referenced the
+        // deleted `timeDistributedConfigIds` field, only omitted the two
+        // fields that replaced it. Spreading means a future EntitySourceConfig
+        // field reaches this relay automatically instead of needing another
+        // enumeration site to remember it.
         generationConfig: g.generationConfig
-          ? {
-              entityId: g.generationConfig.entityId,
-              entitiesPerCreation: g.generationConfig.entitiesPerCreation,
-              periodicOccurrences: g.generationConfig.periodicOccurrences,
-              maxEntities: g.generationConfig.maxEntities,
-              periodIntervalDuration: g.generationConfig.periodIntervalDuration,
-              periodicStartDuration: g.generationConfig.periodicStartDuration,
-              generatorType: g.generationConfig.generatorType,
-            }
+          ? { ...g.generationConfig }
           : undefined,
       })),
       connectors,
