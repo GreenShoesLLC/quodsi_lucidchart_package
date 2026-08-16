@@ -82,6 +82,17 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
      * serializer always wrote unconditionally (`oneClockUnit`,
      * `runClockPeriod`/`runClockPeriodUnit`) are still always present,
      * under their new names.
+     *
+     * `timeMode` is deliberately NOT backfilled here (fix round, review
+     * F6): `Model.toJSON()`'s own sparse rule already omits it at its Clock
+     * default (`['timeMode', timeMode, SimulationTimeType.Clock]`), and an
+     * ABSENT `timeMode` on the clean wire IS "clock" — `CleanModelDocument.
+     * time_mode` defaults to `"clock"` too (`root.py`). So an incomplete
+     * `Model` with `timeMode` unset serializes to the same wire meaning
+     * (clock mode) whether or not this method intervenes; forcing the key
+     * present would just be noise, unlike `replications`/`timeUnit`/
+     * `runTime`, which have NO default on the engine schema and would
+     * otherwise fail validation outright if left absent.
      */
     protected serializeModel(model: Model): ISerializedModelRunParams {
         try {
@@ -91,14 +102,20 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
 
             const json = model.toJSON() as Record<string, unknown>;
 
+            // Each backfill below only runs when `Model.toJSON()` already
+            // omitted the key (i.e. `model.<field>` is itself already
+            // undefined/falsy — see that method's own sparse rule for each
+            // field) — so there is no live "model has a value but toJSON
+            // dropped it anyway" case to additionally guard against here;
+            // the materialized value is always the plain host-seed default.
             if (json.replications === undefined) {
                 json.replications = ModelDefaults.DEFAULT_REPS;
             }
             if (json.timeUnit === undefined) {
-                json.timeUnit = model.timeUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
+                json.timeUnit = ModelDefaults.DEFAULT_CLOCK_UNIT;
             }
             if (json.runTime === undefined) {
-                json.runTime = Duration.toJSON(model.runTime ?? Duration.constant(24, PeriodUnit.HOURS));
+                json.runTime = Duration.toJSON(Duration.constant(24, PeriodUnit.HOURS));
             }
 
             return json as unknown as ISerializedModelRunParams;
@@ -219,12 +236,15 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
      * from `destinationPriority`/`entityTemplateUniqueId`/`stateCondition`;
      * the old standalone `stateModifications` array has no clean-wire
      * equivalent (folded into an ASSIGN action in `actions` upstream, at
-     * authoring time); `description` and ALL geometry (`x`/`y` midpoint,
-     * `sourceX`/`sourceY`/`targetX`/`targetY`) are dropped unconditionally
-     * — `CleanConnectorDoc` carries no geometry at all (verified against the
-     * engine schema). `targetId` is now the sole, canonical destination
-     * field directly on the class — the old `getEffectiveDestinationUniqueId()`
-     * legacy-fallback concept is gone.
+     * authoring time); `description` and the midpoint `x`/`y` are dropped
+     * unconditionally (no slot on `CleanConnectorDoc` at all). `sourceX`/
+     * `sourceY`/`targetX`/`targetY` DO have a slot (display-only
+     * `float = Field(default=0.0, ...)` on the engine doc, `routing.py`) and
+     * are carried through, sparse-omitted at 0 — fix round F3: an earlier
+     * pass wrongly claimed the connector has no geometry at all. `targetId`
+     * is now the sole, canonical destination field directly on the class —
+     * the old `getEffectiveDestinationUniqueId()` legacy-fallback concept is
+     * gone.
      */
     protected serializeConnector(connector: Connector): ISerializedConnector {
         try {

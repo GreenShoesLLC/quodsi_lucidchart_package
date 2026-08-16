@@ -16,6 +16,7 @@ import {
     createModelWithMixedDistributions
 } from '../__fixtures__/models/valid';
 import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
+import { createSequentialFlowModel } from '../__fixtures__/models/valid/sequential_flow';
 
 // Define all model creators with their corresponding filenames
 const MODEL_CREATORS = [
@@ -29,6 +30,10 @@ const MODEL_CREATORS = [
     { create: createModel_def_e1_a2_r2_g1, name: 'model_def_e1_a2_r2_g1' },
     { create: createModel_def_e3_a30_r3_g2, name: 'model_def_e3_a30_r3_g2' },
     { create: createNonSequentialFlowModel, name: 'non_sequential_flow' },
+    // Review F7 (nit): wired into the generator script (was previously an
+    // untouched, drifting fixture — `sequential_flow.json` existed on disk
+    // but nothing regenerated it).
+    { create: createSequentialFlowModel, name: 'sequential_flow' },
     { create: createModelWithMixedDistributions, name: 'model_def_mixed_distributions' }
 ];
 

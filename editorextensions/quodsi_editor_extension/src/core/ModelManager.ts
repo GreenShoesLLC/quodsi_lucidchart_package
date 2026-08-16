@@ -956,9 +956,12 @@ export class ModelManager {
                 }
             }
 
-            // Clean stateCondition.stateName
-            if (elementData.stateCondition && elementData.stateCondition.stateName === stateName) {
-                elementData.stateCondition = null;
+            // Clean condition.stateId (routing guard, renamed from
+            // stateCondition.stateName and now id-keyed — wire-cleanup
+            // Phase B2 Task 6/9; sibling of the Activity/Generator loop
+            // above, missed in the initial conversion).
+            if (elementData.condition?.stateId === stateId) {
+                elementData.condition = null;
                 modified = true;
             }
 
@@ -1159,7 +1162,7 @@ export class ModelManager {
      * Scans all Generators, Activities, and Connectors for entity references.
      *
      * Reference cleanup strategy:
-     * - Generator.generationConfig.entityId: SET TO "" (required field, empty = unset)
+     * - Generator.entityId (flat, dissolved EntitySourceConfig): SET TO "" (required field, empty = unset)
      * - Activity.sourceConfig.entityId: SET TO "" (required field, empty = unset)
      * - CreateAction.entityTemplateId: SET TO null (already nullable)
      *
@@ -1185,11 +1188,13 @@ export class ModelManager {
 
             let modified = false;
 
-            // Process Generators - clean generationConfig.entityId
+            // Process Generators - clean entityId. Wire-cleanup Phase B2
+            // Task 5/9: EntitySourceConfig dissolved -- entityId is flat on
+            // the stored generator now (not nested under generationConfig).
             if (elementType === SimulationObjectType.Generator) {
-                if (elementData.generationConfig?.entityId === entityId) {
-                    this.debug.debug('Clearing Generator generationConfig.entityId:', entityId);
-                    elementData.generationConfig.entityId = "";
+                if (elementData.entityId === entityId) {
+                    this.debug.debug('Clearing Generator entityId:', entityId);
+                    elementData.entityId = "";
                     modified = true;
                 }
 
@@ -1543,7 +1548,7 @@ export class ModelManager {
      * Updates the entities array for the model.
      *
      * Entities are stored as a page-level list (q_entities), mirroring updateStates.
-     * Deleting an entity cascades reference cleanup (Generator.generationConfig.entityId,
+     * Deleting an entity cascades reference cleanup (Generator.entityId (flat),
      * Activity self-gen sourceConfig.entityId, CREATE-action entityTemplateId).
      *
      * The default entity (ModelDefaults.DEFAULT_ENTITY_ID) is load-bearing: every new
@@ -1746,24 +1751,28 @@ export class ModelManager {
         let cleaned = false;
 
         if (type === SimulationObjectType.Generator) {
-            const modifications = elementData.generationConfig?.initialStateModifications;
+            // Wire-cleanup Phase B2 Task 5/9: EntitySourceConfig dissolved --
+            // initialStates is flat on the stored generator now (not nested
+            // under generationConfig); StateModification.stateUniqueId ->
+            // stateId (Task 6).
+            const modifications = elementData.initialStates;
             if (modifications && Array.isArray(modifications) && modifications.length > 0) {
                 // Get valid state IDs from storage
                 const states = this.storageAdapter.getStates(page) || [];
                 const validStateIds = new Set(states.map(s => s.id));
 
                 const originalLength = modifications.length;
-                elementData.generationConfig.initialStateModifications = modifications.filter(
-                    (mod: any) => validStateIds.has(mod.stateUniqueId)
+                elementData.initialStates = modifications.filter(
+                    (mod: any) => validStateIds.has(mod.stateId)
                 );
 
-                if (elementData.generationConfig.initialStateModifications.length !== originalLength) {
+                if (elementData.initialStates.length !== originalLength) {
                     cleaned = true;
                     this.debug.log('Cleaned orphaned state modifications from Generator', {
                         elementId: elementData.id,
                         originalCount: originalLength,
-                        cleanedCount: elementData.generationConfig.initialStateModifications.length,
-                        removedCount: originalLength - elementData.generationConfig.initialStateModifications.length
+                        cleanedCount: elementData.initialStates.length,
+                        removedCount: originalLength - elementData.initialStates.length
                     });
                 }
             }

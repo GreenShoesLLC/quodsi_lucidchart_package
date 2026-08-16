@@ -18,6 +18,7 @@ import {
     createModelWithMixedDistributions
 } from '../__fixtures__/models/valid';
 import { createNonSequentialFlowModel } from '../__fixtures__/models/valid/non_sequential_flow';
+import { createSequentialFlowModel } from '../__fixtures__/models/valid/sequential_flow';
 
 
 // Define all test cases
@@ -31,6 +32,9 @@ const TEST_CASES = [
     { name: 'model_def_e1_a2_r0_g1', create: createModel_def_e1_a2_r0_g1 },
     { name: 'model_def_e1_a2_r2_g1', create: createModel_def_e1_a2_r2_g1 },
     { name: 'non_sequential_flow', create: createNonSequentialFlowModel },
+    // Review F7 (nit): wired in so the on-disk sequential_flow.json fixture
+    // is actually asserted, not left to drift untouched.
+    { name: 'sequential_flow', create: createSequentialFlowModel },
     { name: 'model_def_mixed_distributions', create: createModelWithMixedDistributions }
 ];
 
@@ -138,6 +142,7 @@ describe('ModelSerializer Snapshots', () => {
 
         describe('Flow Variations', () => {
             testFixture('non_sequential_flow', createNonSequentialFlowModel);
+            testFixture('sequential_flow', createSequentialFlowModel);
         });
 
         describe('Distribution Variations', () => {

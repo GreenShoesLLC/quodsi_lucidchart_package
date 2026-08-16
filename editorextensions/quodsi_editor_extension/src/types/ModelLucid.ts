@@ -14,28 +14,53 @@ import { StorageAdapter } from '../core/StorageAdapter';
 import { SimObjectLucid } from './SimObjectLucid';
 
 /**
- * Wire-cleanup Phase B2 Task 9: `Model`'s constructor collapsed the old
- * (reps, seed, oneClockUnit, simulationTimeType, warmupClockPeriod,
- * warmupClockPeriodUnit, runClockPeriod, runClockPeriodUnit) 8-field run
- * config into (replications, seed, timeUnit, timeMode, warmupTime: Duration,
- * runTime: Duration) — the `xClockPeriod`/`xClockPeriodUnit` pairs are now a
- * single flat `Duration` each. Storage keeps the OLD flat field names (this
- * is Lucid's own shape-data schema, orthogonal to the clean wire) — this
- * class is the translation boundary between that storage shape and the new
- * `Model` constructor/field names.
+ * Wire-cleanup Phase B2 Task 9 fix round (review F1, BLOCKER): `Model`'s
+ * constructor collapsed the old (reps, seed, oneClockUnit,
+ * simulationTimeType, warmupClockPeriod, warmupClockPeriodUnit,
+ * runClockPeriod, runClockPeriodUnit) 8-field run config into
+ * (replications, seed, timeUnit, timeMode, warmupTime: Duration, runTime:
+ * Duration). Unlike Generator's storage (flattened outright, because
+ * `GeneratorLucid` is the only writer of that shape), Model's stored page
+ * `q_data` is ALSO produced by `LucidVersionUpgrader.ts`, which feeds the
+ * page blob through the shared `upgradeElements()` core engine — and the
+ * now-live clean-era `ModelTransforms` hop (`sourceVersion: '2026.10.11'`)
+ * `dropKeys`s every old name and writes `replications`/`timeUnit`/
+ * `timeMode`/`runTime`/`warmupTime` directly. So a page that has already
+ * been through the upgrader carries CLEAN names; a page that hasn't yet
+ * (or was hand-authored/seeded with the old shape) carries OLD names. Both
+ * must be read correctly: `storedData?.replications ?? storedData?.reps`
+ * style fallbacks, clean name first. `updateFromPlatform` — the write path
+ * this class owns outright — persists ONLY the clean names from here on,
+ * so re-saving an old-shape document (opened once) migrates it in place.
  */
 interface StoredModelData {
     id: string;
     name?: string;
     description?: string;
-    reps?: number;
+    // Clean names (what LucidVersionUpgrader's clean-era hop writes, and what
+    // this class writes back).
+    replications?: number;
     seed?: number;
+    timeUnit?: PeriodUnit;
+    timeMode?: SimulationTimeType;
+    runTime?: Duration;
+    warmupTime?: Duration;
+    // Old names (fallback read only — a page that hasn't been through the
+    // clean-era upgrade hop yet still carries these; dropped by that hop
+    // with no replacement once it runs).
+    reps?: number;
     oneClockUnit?: PeriodUnit;
     simulationTimeType?: SimulationTimeType;
     warmupClockPeriod?: number;
     warmupClockPeriodUnit?: PeriodUnit;
     runClockPeriod?: number;
     runClockPeriodUnit?: PeriodUnit;
+    // Host-projection-only dates: no clean-wire equivalent at all (dropped
+    // outright by the clean-era hop, not renamed) but still meaningful
+    // in-memory (`Model.warmupDateTime`/`startDateTime`/`finishDateTime` —
+    // see that class's own doc comment) and relayed to the Studio embed
+    // catalog (buildStudioCatalog). This class keeps writing them; the
+    // clean-era hop simply never re-materializes them once dropped.
     warmupDateTime?: Date | null;
     startDateTime?: Date | null;
     finishDateTime?: Date | null;
@@ -57,23 +82,27 @@ export class ModelLucid extends SimObjectLucid<Model> {
         // Get stored custom data
         const storedData = this.storageAdapter.getElementData(page) as StoredModelData;
 
-        const reps = storedData?.reps ?? ModelDefaults.DEFAULT_REPS;
+        // Clean name first, old name fallback, then the host-seed default —
+        // matching every host's own `{...modelFieldDefaults(), ...raw}`
+        // bootstrap (see ModelTransforms.ts's clean-era hop, which
+        // materializes the SAME defaults for a document missing them).
+        const replications = storedData?.replications ?? storedData?.reps ?? ModelDefaults.DEFAULT_REPS;
         const seed = storedData?.seed ?? ModelDefaults.DEFAULT_SEED;
-        const timeUnit = storedData?.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
-        const timeMode = storedData?.simulationTimeType ?? SimulationTimeType.Clock;
-        const warmupTime = Duration.constant(
-            storedData?.warmupClockPeriod ?? 0,
-            storedData?.warmupClockPeriodUnit ?? PeriodUnit.HOURS
-        );
-        const runTime = Duration.constant(
-            storedData?.runClockPeriod ?? 24,
-            storedData?.runClockPeriodUnit ?? PeriodUnit.HOURS
-        );
+        const timeUnit = storedData?.timeUnit ?? storedData?.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
+        const timeMode = storedData?.timeMode ?? storedData?.simulationTimeType ?? SimulationTimeType.Clock;
+        const warmupTime = storedData?.warmupTime
+            ?? (storedData?.warmupClockPeriod !== undefined
+                ? Duration.constant(storedData.warmupClockPeriod, storedData.warmupClockPeriodUnit ?? PeriodUnit.HOURS)
+                : Duration.constant(0, PeriodUnit.HOURS));
+        const runTime = storedData?.runTime
+            ?? (storedData?.runClockPeriod !== undefined
+                ? Duration.constant(storedData.runClockPeriod, storedData.runClockPeriodUnit ?? PeriodUnit.HOURS)
+                : Duration.constant(24, PeriodUnit.HOURS));
 
         const model = new Model(
             this.platformElementId,
             storedData?.name || '',
-            reps,
+            replications,
             seed,
             timeUnit,
             timeMode,
@@ -104,22 +133,21 @@ export class ModelLucid extends SimObjectLucid<Model> {
             this.simObject.name = this.getElementName();
         }
 
-        // Store custom data properties. Storage keeps the OLD flat field
-        // names (warmupClockPeriod/warmupClockPeriodUnit,
-        // runClockPeriod/runClockPeriodUnit) — this write-back splits the
-        // new `Model.warmupTime`/`runTime` Durations back into that shape.
+        // Store custom data properties using the CLEAN names only — this is
+        // the migration path for an old-shape document opened once: after
+        // this write, the page no longer carries `reps`/`oneClockUnit`/
+        // `simulationTimeType`/`warmupClockPeriod(+Unit)`/
+        // `runClockPeriod(+Unit)` at all.
         const dataToStore: StoredModelData = {
             id: this.platformElementId,
             name: this.simObject.name,
             description: this.simObject.description,
-            reps: this.simObject.replications,
+            replications: this.simObject.replications,
             seed: this.simObject.seed,
-            oneClockUnit: this.simObject.timeUnit,
-            simulationTimeType: this.simObject.timeMode,
-            warmupClockPeriod: this.simObject.warmupTime?.value ?? 0,
-            warmupClockPeriodUnit: this.simObject.warmupTime?.unit ?? PeriodUnit.HOURS,
-            runClockPeriod: this.simObject.runTime?.value ?? 24,
-            runClockPeriodUnit: this.simObject.runTime?.unit ?? PeriodUnit.HOURS,
+            timeUnit: this.simObject.timeUnit,
+            timeMode: this.simObject.timeMode,
+            warmupTime: this.simObject.warmupTime,
+            runTime: this.simObject.runTime,
             warmupDateTime: this.simObject.warmupDateTime,
             startDateTime: this.simObject.startDateTime,
             finishDateTime: this.simObject.finishDateTime,

@@ -357,11 +357,19 @@ export class SimulationRunHandler {
     }
     const serializer = ModelSerializerFactory.create(modelDefinition);
     const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
-    // `modelDefinition.model.id` (the Lucid page/document id) has no
+    // `modelDefinition.model.id`/`.finishDateTime` (the Lucid page/document
+    // id, and the host-projection-only finish-date convenience) have no
     // clean-wire equivalent (wire-cleanup Phase B2 Task 9 — dropped from
-    // `ISerializedModel` entirely, per the engine schema), so it is read off
-    // the live domain `Model` instance instead of the serialized result.
-    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel, modelDefinition.model.id);
+    // `ISerializedModel` entirely, per the engine schema), so both are read
+    // off the live domain `Model` instance instead of the serialized result.
+    // Fix round (review F4): `finishDateTime` was dropped from the relay
+    // entirely, so every calendar-mode embed open hit a hard
+    // `missing_finish_datetime` validation blocker on the Studio side.
+    const catalog = SimulationRunHandler.buildStudioCatalog(
+      serializedModel,
+      modelDefinition.model.id,
+      modelDefinition.model.finishDateTime ? modelDefinition.model.finishDateTime.toISOString() : null,
+    );
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -391,9 +399,11 @@ export class SimulationRunHandler {
    * `rootClause`, flat generator core fields) — `normalizeRelayedCatalog`
    * on the Studio side can be collapsed to a no-op once this lands there.
    * Connectors come from the model's top-level `connectors[]` and carry
-   * sourceId/targetId/weight/condition/entityId/priority.
+   * ONLY id/name/sourceId/targetId/weight (see `buildRelayConnectors` —
+   * `RelayCatalogConnector`'s own field list; condition/entityId/priority
+   * are NOT relayed today, fix round F4 comment correction).
    */
-  private static buildStudioCatalog(model: ISerializedModel, modelId: string) {
+  private static buildStudioCatalog(model: ISerializedModel, modelId: string, finishDateTime: string | null) {
     // Map + deduplicate the top-level connectors by id.
     const connectors = buildRelayConnectors(model);
 
@@ -407,6 +417,10 @@ export class SimulationRunHandler {
         warmupTime: model.warmupTime,
         replications: model.replications,
         startDateTime: model.startDateTime ?? null,
+        // Host-projection-only convenience with no clean-wire slot — see
+        // the call site's comment. Every calendar-mode embed relies on this
+        // to satisfy the Studio side's `missing_finish_datetime` check.
+        finishDateTime,
         // Opt-in model-level levers (reps/seed) so the live-relay embed path
         // surfaces them in the New-Study roster (the receiver — RelayedCatalog.
         // model.levers + composeModelDefinition — is already wired).
