@@ -2,6 +2,7 @@
 import {
     evaluateValidationGate,
     Activity,
+    ActionType,
     Connector,
     Generator,
     Entity,
@@ -745,26 +746,19 @@ export class ModelManager {
         let modified = false;
 
         for (const action of actions) {
-            if (!action || !action.actionType) continue;
+            if (!action || !action.type) continue;
 
-            // Handle modifications array (ASSIGN, SPLIT, CREATE, JOIN actions)
+            // Handle modifications array (ASSIGN, SPLIT, CREATE, JOIN,
+            // DELAY_WITH_RESOURCE actions all use the unified `modifications`
+            // field since wire-cleanup Phase B2 Task 6 — the old
+            // DELAY_WITH_RESOURCE-only `stateModifications` field no longer
+            // exists).
             if (action.modifications && Array.isArray(action.modifications)) {
                 const originalLength = action.modifications.length;
                 action.modifications = action.modifications.filter(
-                    (mod: any) => mod.stateUniqueId !== deletedStateId
+                    (mod: any) => mod.stateId !== deletedStateId
                 );
                 if (action.modifications.length !== originalLength) {
-                    modified = true;
-                }
-            }
-
-            // Handle stateModifications in DELAY_WITH_RESOURCE action
-            if (action.actionType === 'DELAY_WITH_RESOURCE' && action.stateModifications) {
-                const originalLength = action.stateModifications.length;
-                action.stateModifications = action.stateModifications.filter(
-                    (mod: any) => mod.stateUniqueId !== deletedStateId
-                );
-                if (action.stateModifications.length !== originalLength) {
                     modified = true;
                 }
             }
@@ -781,7 +775,7 @@ export class ModelManager {
             }
 
             // Handle SPLIT action specific fields
-            if (action.actionType === 'SPLIT') {
+            if (action.type === ActionType.SPLIT) {
                 if (action.splitIndexState === deletedStateName) {
                     action.splitIndexState = null;
                     modified = true;
@@ -789,7 +783,7 @@ export class ModelManager {
             }
 
             // Handle JOIN action specific fields
-            if (action.actionType === 'JOIN') {
+            if (action.type === ActionType.JOIN) {
                 if (action.matchState === deletedStateName) {
                     action.matchState = null;
                     modified = true;
@@ -801,9 +795,9 @@ export class ModelManager {
             }
 
             // Handle BRANCH action - recursively clean nested actions
-            if (action.actionType === 'BRANCH') {
-                // Clean condition.stateName
-                if (action.condition && action.condition.stateName === deletedStateName) {
+            if (action.type === ActionType.BRANCH) {
+                // Clean condition.stateId (the branch's own routing selector)
+                if (action.condition && action.condition.stateId === deletedStateId) {
                     action.condition = null;
                     modified = true;
                 }
@@ -824,7 +818,7 @@ export class ModelManager {
             }
 
             // Handle LOOP action - recursively clean nested actions
-            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
                 const result = this.cleanActionsStateReferences(action.actions, deletedStateId, deletedStateName);
                 action.actions = result.actions;
                 if (result.modified) modified = true;
@@ -863,15 +857,19 @@ export class ModelManager {
 
             // Process Generators
             if (elementType === SimulationObjectType.Generator) {
-                // Clean generationConfig.initialStateModifications
-                const modifications = elementData.generationConfig?.initialStateModifications;
+                // Clean initialStates. Wire-cleanup Phase B2 Task 5/9:
+                // `EntitySourceConfig` dissolved — `initialStates` is flat
+                // on the stored generator now (not nested under
+                // `generationConfig`); `StateModification.stateUniqueId` ->
+                // `stateId` (Task 6).
+                const modifications = elementData.initialStates;
                 if (modifications && modifications.length > 0) {
                     const originalLength = modifications.length;
-                    elementData.generationConfig.initialStateModifications =
+                    elementData.initialStates =
                         modifications.filter(
-                            (mod: any) => mod.stateUniqueId !== stateId
+                            (mod: any) => mod.stateId !== stateId
                         );
-                    if (elementData.generationConfig.initialStateModifications.length !== originalLength) {
+                    if (elementData.initialStates.length !== originalLength) {
                         modified = true;
                     }
                 }
@@ -885,14 +883,15 @@ export class ModelManager {
 
             // Process Activities
             if (elementType === SimulationObjectType.Activity) {
-                // Clean sourceConfig.initialStateModifications
-                if (elementData.sourceConfig?.initialStateModifications) {
-                    const originalLength = elementData.sourceConfig.initialStateModifications.length;
-                    elementData.sourceConfig.initialStateModifications =
-                        elementData.sourceConfig.initialStateModifications.filter(
-                            (mod: any) => mod.stateUniqueId !== stateId
+                // Clean sourceConfig.initialStates (renamed from
+                // `initialStateModifications`, wire-cleanup Phase B2 Task 5/9).
+                if (elementData.sourceConfig?.initialStates) {
+                    const originalLength = elementData.sourceConfig.initialStates.length;
+                    elementData.sourceConfig.initialStates =
+                        elementData.sourceConfig.initialStates.filter(
+                            (mod: any) => mod.stateId !== stateId
                         );
-                    if (elementData.sourceConfig.initialStateModifications.length !== originalLength) {
+                    if (elementData.sourceConfig.initialStates.length !== originalLength) {
                         modified = true;
                     }
                 }
@@ -908,15 +907,21 @@ export class ModelManager {
                     if (result.modified) modified = true;
                 }
 
-                // Clean queueRanking.stateName — another NAME-keyed reference, and
-                // the only one whose survival BLOCKS the model: QueueRankingValidation
-                // grades a ranking on a missing state as ERROR, so a routine state
-                // delete would leave an unrunnable activity behind. Drop the whole
-                // block rather than the name — a ranking with no state is meaningless,
-                // and no queueRanking is exactly how "first come, first served" is
-                // stored. Mirrors @quodsi/shared removeStateReferences, which does the
-                // same for drawio/Visio/Studio. (Final-review finding 2.)
-                if (elementData.queueRanking?.stateName === stateName) {
+                // Clean queueRanking.stateId — the only reference whose
+                // survival BLOCKS the model: QueueRankingValidation grades a
+                // ranking on a missing state as ERROR, so a routine state
+                // delete would leave an unrunnable activity behind. Drop the
+                // whole block rather than the reference — a ranking with no
+                // state is meaningless, and no queueRanking is exactly how
+                // "first come, first served" is stored. Mirrors
+                // @quodsi/shared removeStateReferences, which does the same
+                // for drawio/Visio/Studio. (Final-review finding 2.)
+                //
+                // Wire-cleanup Phase B2 Task 6 fix round F1: QueueRanking
+                // references its state by ID now (`stateId`, not the old
+                // NAME-keyed `stateName`) — compared against `stateId`
+                // (this function's first parameter), not `stateName`.
+                if (elementData.queueRanking?.stateId === stateId) {
                     delete elementData.queueRanking;
                     modified = true;
                 }
@@ -996,17 +1001,17 @@ export class ModelManager {
         let modified = false;
 
         for (const action of actions) {
-            if (!action || !action.actionType) continue;
+            if (!action || !action.type) continue;
 
             // Nullify CREATE action entityTemplateId if it references the deleted entity
-            if (action.actionType === 'CREATE' && action.entityTemplateId === deletedEntityId) {
+            if (action.type === ActionType.CREATE && action.entityTemplateId === deletedEntityId) {
                 this.debug.debug('Nullifying CREATE action entityTemplateId:', deletedEntityId);
                 action.entityTemplateId = null;
                 modified = true;
             }
 
             // Handle BRANCH action - recursively clean nested actions
-            if (action.actionType === 'BRANCH') {
+            if (action.type === ActionType.BRANCH) {
                 // Recursively clean ifTrue actions
                 if (action.ifTrue && Array.isArray(action.ifTrue)) {
                     const result = this.cleanActionsEntityReferences(action.ifTrue, deletedEntityId);
@@ -1023,7 +1028,7 @@ export class ModelManager {
             }
 
             // Handle LOOP action - recursively clean nested actions
-            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
                 const result = this.cleanActionsEntityReferences(action.actions, deletedEntityId);
                 action.actions = result.actions;
                 if (result.modified) modified = true;
@@ -1053,17 +1058,17 @@ export class ModelManager {
 
         // Filter out SEIZE and RELEASE actions that reference the deleted requirement
         const filteredActions = actions.filter(action => {
-            if (!action || !action.actionType) return true;
+            if (!action || !action.type) return true;
 
             // Delete SEIZE actions referencing this requirement
-            if (action.actionType === 'SEIZE' && action.resourceRequirementId === deletedRequirementId) {
+            if (action.type === ActionType.SEIZE && action.resourceRequirementId === deletedRequirementId) {
                 this.debug.debug('Removing SEIZE action referencing deleted requirement:', deletedRequirementId);
                 modified = true;
                 return false; // Remove this action
             }
 
             // Delete RELEASE actions referencing this requirement
-            if (action.actionType === 'RELEASE' && action.resourceRequirementId === deletedRequirementId) {
+            if (action.type === ActionType.RELEASE && action.resourceRequirementId === deletedRequirementId) {
                 this.debug.debug('Removing RELEASE action referencing deleted requirement:', deletedRequirementId);
                 modified = true;
                 return false; // Remove this action
@@ -1074,17 +1079,17 @@ export class ModelManager {
 
         // Process remaining actions for DELAY_WITH_RESOURCE nullification and nested actions
         for (const action of filteredActions) {
-            if (!action || !action.actionType) continue;
+            if (!action || !action.type) continue;
 
             // Nullify DELAY_WITH_RESOURCE resourceRequirementId (still valid as pure delay)
-            if (action.actionType === 'DELAY_WITH_RESOURCE' && action.resourceRequirementId === deletedRequirementId) {
+            if (action.type === ActionType.DELAY_WITH_RESOURCE && action.resourceRequirementId === deletedRequirementId) {
                 this.debug.debug('Nullifying DELAY_WITH_RESOURCE resourceRequirementId:', deletedRequirementId);
                 action.resourceRequirementId = null;
                 modified = true;
             }
 
             // Handle BRANCH action - recursively clean nested actions
-            if (action.actionType === 'BRANCH') {
+            if (action.type === ActionType.BRANCH) {
                 // Recursively clean ifTrue actions
                 if (action.ifTrue && Array.isArray(action.ifTrue)) {
                     const result = this.cleanActionsRequirementReferences(action.ifTrue, deletedRequirementId);
@@ -1101,7 +1106,7 @@ export class ModelManager {
             }
 
             // Handle LOOP action - recursively clean nested actions
-            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
                 const result = this.cleanActionsRequirementReferences(action.actions, deletedRequirementId);
                 action.actions = result.actions;
                 if (result.modified) modified = true;
@@ -1332,20 +1337,20 @@ export class ModelManager {
         let modified = false;
 
         for (const action of actions) {
-            if (!action || !action.actionType) continue;
+            if (!action || !action.type) continue;
 
             // Nullify destinationId for SPLIT, CREATE, JOIN actions referencing the deleted activity
             if (
-                (action.actionType === 'SPLIT' || action.actionType === 'CREATE' || action.actionType === 'JOIN') &&
+                (action.type === ActionType.SPLIT || action.type === ActionType.CREATE || action.type === ActionType.JOIN) &&
                 action.destinationId === deletedActivityId
             ) {
-                this.debug.debug(`Nullifying ${action.actionType} action destinationId:`, deletedActivityId);
+                this.debug.debug(`Nullifying ${action.type} action destinationId:`, deletedActivityId);
                 action.destinationId = null;
                 modified = true;
             }
 
             // Handle BRANCH action - recursively clean nested actions
-            if (action.actionType === 'BRANCH') {
+            if (action.type === ActionType.BRANCH) {
                 if (action.ifTrue && Array.isArray(action.ifTrue)) {
                     const result = this.cleanActionsActivityDestinationReferences(action.ifTrue, deletedActivityId);
                     action.ifTrue = result.actions;
@@ -1360,7 +1365,7 @@ export class ModelManager {
             }
 
             // Handle LOOP action - recursively clean nested actions
-            if (action.actionType === 'LOOP' && action.actions && Array.isArray(action.actions)) {
+            if (action.type === ActionType.LOOP && action.actions && Array.isArray(action.actions)) {
                 const result = this.cleanActionsActivityDestinationReferences(action.actions, deletedActivityId);
                 action.actions = result.actions;
                 if (result.modified) modified = true;
@@ -1381,9 +1386,10 @@ export class ModelManager {
             }
         }
 
-        // Recursively check sub-clauses
-        if (clause.subClauses && Array.isArray(clause.subClauses)) {
-            for (const subClause of clause.subClauses) {
+        // Recursively check sub-clauses. Wire-cleanup Phase B2 Task 6:
+        // `subClauses` -> `clauses`.
+        if (clause.clauses && Array.isArray(clause.clauses)) {
+            for (const subClause of clause.clauses) {
                 if (this.clauseReferencesResource(subClause, resourceId)) {
                     return true;
                 }
@@ -1423,15 +1429,12 @@ export class ModelManager {
                 return false;
             }
 
-            // Check if any rootClauses reference this resource
-            if (req.rootClauses && Array.isArray(req.rootClauses)) {
-                for (const clause of req.rootClauses) {
-                    if (this.clauseReferencesResource(clause, resourceId)) {
-                        this.debug.log('Removing requirement that references deleted resource:', req.id);
-                        deletedRequirementIds.push(req.id);
-                        return false;
-                    }
-                }
+            // Check if the root clause (wire-cleanup Phase B2 Task 6: single
+            // required `rootClause`, not an array) references this resource
+            if (req.rootClause && this.clauseReferencesResource(req.rootClause, resourceId)) {
+                this.debug.log('Removing requirement that references deleted resource:', req.id);
+                deletedRequirementIds.push(req.id);
+                return false;
             }
 
             return true;
@@ -1563,11 +1566,7 @@ export class ModelManager {
                 entitiesToSave = [
                     {
                         id: ModelDefaults.DEFAULT_ENTITY_ID,
-                        name: ModelDefaults.DEFAULT_ENTITY_NAME,
-                        description: '',
-                        type: SimulationObjectType.Entity,
-                        x: 0,
-                        y: 0
+                        name: ModelDefaults.DEFAULT_ENTITY_NAME
                     },
                     ...entities
                 ];

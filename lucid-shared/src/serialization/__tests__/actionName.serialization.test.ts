@@ -1,34 +1,44 @@
 import { ModelDefinitionSerializerV1 } from '../v1/ModelDefinitionSerializerV1';
-import { DurationType, PeriodUnit } from '@quodsi/shared';
+import { Activity, Duration, PeriodUnit, createDelayAction } from '@quodsi/shared';
 
-// No sibling serializer test exists in lucid-shared, so we instantiate the
-// concrete V1 serializer directly and reach the protected serializeAction via
-// an `as any` cast (as the plan permits). A minimal Duration-shaped object is
-// enough because serializeDuration only reads durationPeriodUnit + distribution.
+// Wire-cleanup Phase B2 Task 9: `serializeAction` (a hand-rolled per-type
+// switch) is GONE — `Activity.toJSON()`/`Connector.toJSON()` now delegate
+// action serialization to the shared `sparsifyAction()` helper internally.
+// Exercised here via the still-protected `serializeActivity`, reached with
+// an `as any` cast, using a REAL `Activity`/`DelayAction` (not a duck-typed
+// literal — `Activity.toJSON()` requires an actual class instance).
 function makeSerializer(): any {
     return new ModelDefinitionSerializerV1() as any;
 }
 
-const minimalDuration = {
-    durationPeriodUnit: PeriodUnit.MINUTES,
-    durationLength: 1,
-    durationType: DurationType.CONSTANT,
-    distribution: null,
-};
+function makeActivityWithAction(name?: string): Activity {
+    const duration = Duration.constant(1, PeriodUnit.MINUTES);
+    const action = createDelayAction(duration, null, 'a1');
+    if (name !== undefined) {
+        (action as { name?: string }).name = name;
+    }
+    const activity = Activity.createDefault('activity-1');
+    activity.actions = [action];
+    return activity;
+}
 
-describe('serializeAction carries Action.name', () => {
+describe('serializeActivity carries Action.name', () => {
     it('carries an action name into the serialized action', () => {
         const serializer = makeSerializer();
-        const action = { id: 'a1', actionType: 'DELAY', name: 'Triage', duration: minimalDuration } as any;
-        const out = serializer.serializeAction(action);
-        expect(out.name).toBe('Triage');
-        expect(out.id).toBe('a1');
+        const activity = makeActivityWithAction('Triage');
+
+        const out = serializer.serializeActivity(activity);
+
+        expect(out.actions[0].name).toBe('Triage');
+        expect(out.actions[0].id).toBe('a1');
     });
 
     it('omits name when the action has none', () => {
         const serializer = makeSerializer();
-        const action = { id: 'a2', actionType: 'DELAY', duration: minimalDuration } as any;
-        const out = serializer.serializeAction(action);
-        expect(out.name).toBeUndefined();
+        const activity = makeActivityWithAction();
+
+        const out = serializer.serializeActivity(activity);
+
+        expect(out.actions[0].name).toBeUndefined();
     });
 });

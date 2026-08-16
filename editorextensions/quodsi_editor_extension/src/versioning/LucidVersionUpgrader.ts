@@ -144,7 +144,6 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
                         id,
                         name: domain?.name ?? 'Entity',
                         description: domain?.description ?? '',
-                        type: SimulationObjectType.Entity,
                         x: 0,
                         y: 0
                     });

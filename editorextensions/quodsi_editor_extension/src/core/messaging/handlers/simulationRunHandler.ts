@@ -357,7 +357,11 @@ export class SimulationRunHandler {
     }
     const serializer = ModelSerializerFactory.create(modelDefinition);
     const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
-    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel);
+    // `modelDefinition.model.id` (the Lucid page/document id) has no
+    // clean-wire equivalent (wire-cleanup Phase B2 Task 9 — dropped from
+    // `ISerializedModel` entirely, per the engine schema), so it is read off
+    // the live domain `Model` instance instead of the serialized result.
+    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel, modelDefinition.model.id);
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -373,53 +377,62 @@ export class SimulationRunHandler {
   /**
    * Build the full relay catalog from a serialized model. Populates the `model`
    * block (timing fields) and all per-record optional fields (capacity, weight,
-   * generationConfig, rootClauses, etc.) so the embedded Studio can validate the
+   * sourceConfig, rootClause, etc.) so the embedded Studio can validate the
    * full model without a separate API round-trip.
    *
    * The returned shape is structurally compatible with
-   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`.
-   * Connectors come from the model's top-level `connectors[]` (flat as of the
-   * 2026.08.20 canonicalization) and carry sourceId/targetId/weight.
+   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`
+   * — wire-cleanup Phase B2 Task 9: this is the sender-side half of that
+   * file's documented gap ("buildStudioCatalog itself still sends old-era
+   * key names today ... bridged at the receive boundary by
+   * normalizeRelayedCatalog.ts ... until Task 9/10 lands"). Emits the CLEAN
+   * field names directly now (`timeMode`/`timeUnit`/`runTime`/`warmupTime`,
+   * `inboundCapacity`/`outboundCapacity`/`routing`, action `type`,
+   * `rootClause`, flat generator core fields) — `normalizeRelayedCatalog`
+   * on the Studio side can be collapsed to a no-op once this lands there.
+   * Connectors come from the model's top-level `connectors[]` and carry
+   * sourceId/targetId/weight/condition/entityId/priority.
    */
-  private static buildStudioCatalog(model: ISerializedModel) {
-    const m = model.model;
-
+  private static buildStudioCatalog(model: ISerializedModel, modelId: string) {
     // Map + deduplicate the top-level connectors by id.
     const connectors = buildRelayConnectors(model);
 
     return {
       model: {
-        id: m.id,
-        name: m.name,
-        simulationTimeType: m.simulationTimeType,
-        runClockPeriod: m.runClockPeriod,
-        startDateTime: m.startDateTime ?? null,
-        finishDateTime: m.finishDateTime ?? null,
+        id: modelId,
+        name: model.name,
+        timeMode: model.timeMode,
+        timeUnit: model.timeUnit,
+        runTime: model.runTime,
+        warmupTime: model.warmupTime,
+        replications: model.replications,
+        startDateTime: model.startDateTime ?? null,
         // Opt-in model-level levers (reps/seed) so the live-relay embed path
         // surfaces them in the New-Study roster (the receiver — RelayedCatalog.
         // model.levers + composeModelDefinition — is already wired).
-        levers: m.levers ?? [],
+        levers: model.levers ?? [],
       },
       activities: (model.activities ?? []).map((a) => ({
         id: a.id,
         name: a.name,
         capacity: a.capacity,
-        inboundQueueCapacity: a.inboundQueueCapacity,
-        outboundQueueCapacity: a.outboundQueueCapacity,
-        connectType: a.connectType,
+        inboundCapacity: a.inboundCapacity,
+        outboundCapacity: a.outboundCapacity,
+        routing: a.routing,
         actions: (a.actions ?? []).map((ac) => {
           const base: {
             id: string;
-            actionType: string;
+            type: string;
             duration?: unknown;
             resourceRequirementId?: string | null;
-          } = { id: ac.id ?? '', actionType: ac.actionType };
+          } = { id: (ac as { id?: string }).id ?? '', type: (ac as { type: string }).type };
           if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
           if ('resourceRequirementId' in ac) {
             base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
           }
           return base;
         }),
+        sourceConfig: a.sourceConfig ? { ...a.sourceConfig } : undefined,
       })),
       resources: (model.resources ?? []).map((r) => ({
         id: r.id,
@@ -429,22 +442,19 @@ export class SimulationRunHandler {
       resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
         id: rq.id,
         name: rq.name,
-        rootClauses: rq.rootClauses,
+        rootClause: rq.rootClause,
       })),
       generators: (model.generators ?? []).map((g) => ({
-        id: g.id,
-        name: g.name,
         // Spread rather than enumerate fields by name: a hand-picked field
         // list is exactly the shape that silently dropped PATTERN-mode fields
-        // (arrivalPatternId, volume) here — this site was missed by Task 21's
-        // grep-for-deleted-names sweep because it never referenced the
-        // deleted `timeDistributedConfigIds` field, only omitted the two
-        // fields that replaced it. Spreading means a future EntitySourceConfig
-        // field reaches this relay automatically instead of needing another
-        // enumeration site to remember it.
-        generationConfig: g.generationConfig
-          ? { ...g.generationConfig }
-          : undefined,
+        // (arrivalPatternId, volume) here in the past — this site was missed
+        // by an earlier grep-for-deleted-names sweep because it never
+        // referenced the deleted field, only omitted the ones that replaced
+        // it. Spreading means a future generator-core field reaches this
+        // relay automatically instead of needing another enumeration site to
+        // remember it. Generator's fields are already flat (dissolved
+        // EntitySourceConfig) — no nested `generationConfig` to unwrap.
+        ...g,
       })),
       connectors,
       entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),

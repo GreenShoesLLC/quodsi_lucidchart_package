@@ -58,9 +58,10 @@ function normalizeForComparison(obj: any): any {
         }
         // Action ids are non-deterministic (generateUUID()); canonicalize them so
         // structural snapshots don't depend on the random value. Action objects are
-        // identified by `actionType`; element ids (deterministic) are left intact.
+        // identified by their `type` discriminator (wire-cleanup Phase B2 Task 9:
+        // renamed from `actionType`); element ids (deterministic) are left intact.
         // serializeActionId.test.ts separately verifies explicit action-id round-tripping.
-        if (normalized.actionType !== undefined && typeof normalized.id === 'string' && UUID_RE.test(normalized.id)) {
+        if (normalized.type !== undefined && typeof normalized.id === 'string' && UUID_RE.test(normalized.id)) {
             normalized.id = '<UUID>';
         }
         return normalized;

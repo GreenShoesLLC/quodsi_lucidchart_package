@@ -1,5 +1,6 @@
 import { PageProxy } from 'lucid-extension-sdk';
-import { SwimLaneQuodsiData, ISerializedModel, ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/lucid-shared';
+import { SwimLaneQuodsiData, ISerializedModel, ActionType, createSeizeAction, createReleaseAction } from '@quodsi/lucid-shared';
+import type { ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/lucid-shared';
 import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
 import { isCenterInBox } from './swimLaneGeometry';
 
@@ -84,7 +85,7 @@ export class SwimLaneResourceInjector {
           // (user set it up explicitly — don't double-seize)
           if (!activity.actions) activity.actions = [];
           const alreadyHasSeize = activity.actions.some(
-            (action) => action.actionType === 'SEIZE' && (action as ISerializedSeizeAction).resourceRequirementId === reqId
+            (action) => action.type === ActionType.SEIZE && (action as ISerializedSeizeAction).resourceRequirementId === reqId
           );
           if (alreadyHasSeize) {
             SwimLaneResourceInjector.logger.log(
@@ -94,19 +95,11 @@ export class SwimLaneResourceInjector {
           }
 
           // Prepend SeizeAction as first action
-          const seizeAction: ISerializedSeizeAction = {
-            actionType: 'SEIZE',
-            resourceRequirementId: reqId,
-            stateCondition: null,
-          };
+          const seizeAction: ISerializedSeizeAction = createSeizeAction(reqId);
           activity.actions.unshift(seizeAction);
 
           // Append ReleaseAction as last action
-          const releaseAction: ISerializedReleaseAction = {
-            actionType: 'RELEASE',
-            resourceRequirementId: reqId,
-            stateCondition: null,
-          };
+          const releaseAction: ISerializedReleaseAction = createReleaseAction(reqId);
           activity.actions.push(releaseAction);
 
           injectedCount++;

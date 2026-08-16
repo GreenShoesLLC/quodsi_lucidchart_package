@@ -31,7 +31,7 @@ export function createNoGeneratorModel(): ModelDefinition {
     modelDef.entities.add(entity);
 
     // Create common duration for activities
-    const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
+    const duration = Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
     // Create action template with resource requirement
     const action = createDelayWithResourceAction(duration, {

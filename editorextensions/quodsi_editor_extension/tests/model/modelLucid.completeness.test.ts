@@ -93,19 +93,25 @@ describe('ModelLucid completeness round-trip', () => {
         expect(loaded.name).toBe('ModelLucid Completeness');
         expect(loaded.description).toBe('lucid round-trip description');
 
-        // Numeric simulation parameters
-        expect(loaded.reps).toBe(77);
+        // Numeric simulation parameters. Wire-cleanup Phase B2 Task 9:
+        // `reps` -> `replications`; `oneClockUnit` -> `timeUnit`;
+        // `simulationTimeType` -> `timeMode`; the `warmupClockPeriod`/
+        // `warmupClockPeriodUnit` and `runClockPeriod`/`runClockPeriodUnit`
+        // pairs each collapsed into a single flat `Duration`
+        // (`warmupTime`/`runTime`). Storage (FULL_MODEL_DATA above) keeps
+        // the old flat field names — ModelLucid is the translation boundary.
+        expect(loaded.replications).toBe(77);
         expect(loaded.seed).toBe(8888);
 
         // Enum fields
-        expect(loaded.oneClockUnit).toBe(PeriodUnit.MINUTES);
-        expect(loaded.simulationTimeType).toBe(SimulationTimeType.CalendarDate);
+        expect(loaded.timeUnit).toBe(PeriodUnit.MINUTES);
+        expect(loaded.timeMode).toBe(SimulationTimeType.CalendarDate);
 
-        // Clock-period fields
-        expect(loaded.warmupClockPeriod).toBe(3);
-        expect(loaded.warmupClockPeriodUnit).toBe(PeriodUnit.DAYS);
-        expect(loaded.runClockPeriod).toBe(360);
-        expect(loaded.runClockPeriodUnit).toBe(PeriodUnit.MINUTES);
+        // Clock-period fields (now flat Durations)
+        expect(loaded.warmupTime?.value).toBe(3);
+        expect(loaded.warmupTime?.unit).toBe(PeriodUnit.DAYS);
+        expect(loaded.runTime?.value).toBe(360);
+        expect(loaded.runTime?.unit).toBe(PeriodUnit.MINUTES);
 
         // Date fields — stored as ISO strings through JSON, so non-null is the key check
         expect(loaded.warmupDateTime).not.toBeNull();

@@ -4,18 +4,20 @@ import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService
 
 /**
  * Reduce a StateModification (or any object shaped like one) to the fields the
- * delete-state expression detector needs. `valueExpression` is included only
+ * delete-state expression detector needs. `expression` is included only
  * when present, so literal-value modifications don't carry a stray `undefined`
  * key into the summary.
+ *
+ * Wire-cleanup Phase B2 Task 6/9: `stateUniqueId`/`stateName` collapsed to
+ * `stateId`; `valueExpression` renamed to `expression`.
  */
 function summarizeModification(mod: any): EditorReferenceStateModification {
   const summary: EditorReferenceStateModification = {
-    stateUniqueId: mod.stateUniqueId,
-    stateName: mod.stateName,
+    stateId: mod.stateId,
     operation: mod.operation,
   };
-  if (typeof mod.valueExpression === 'string' && mod.valueExpression.length > 0) {
-    summary.valueExpression = mod.valueExpression;
+  if (typeof mod.expression === 'string' && mod.expression.length > 0) {
+    summary.expression = mod.expression;
   }
   return summary;
 }
@@ -31,6 +33,13 @@ function summarizeModifications(mods: unknown): EditorReferenceStateModification
  * detector. Recurses into BRANCH's ifTrue/ifFalse and LOOP's actions so a
  * modification buried in either is still visible to
  * findExpressionsReferencingState's walk (quodsi_shared/src/conversion/stateReferences.ts).
+ *
+ * Wire-cleanup Phase B2 Task 9: `actionType` renamed to `type`; `duration`
+ * is the flat clean-wire shape (`{value, unit}` or `{distribution, ...params,
+ * unit}`) carried through as-is rather than translated into the old nested
+ * `{durationPeriodUnit, distribution: {...}}` wrapper. The old
+ * `stateModifications` field (Seize/DelayWithResource) was unified into
+ * `modifications` at Task 6 — a single summarizeModifications call covers it.
  */
 function summarizeAction(action: any): EditorReferenceActionSummary {
   const hasDuration = 'duration' in action && action.duration != null;
@@ -38,19 +47,8 @@ function summarizeAction(action: any): EditorReferenceActionSummary {
 
   const summary: EditorReferenceActionSummary = {
     id: action.id as string,
-    actionType: action.actionType as string,
-    duration: hasDuration
-      ? {
-          durationPeriodUnit: action.duration.durationPeriodUnit as string,
-          distribution: {
-            distributionType: action.duration.distribution.distributionType as string,
-            // DistributionParameters is a union of specific interfaces; cast via unknown
-            // because all concrete parameter types are plain {key: number} objects.
-            parameters: action.duration.distribution.parameters as unknown as Record<string, number>,
-            description: action.duration.distribution.description as string | undefined,
-          },
-        }
-      : undefined,
+    type: action.type as string,
+    duration: hasDuration ? action.duration : undefined,
     resourceRequirementId: hasRequirementId
       ? (action.resourceRequirementId as string | null)
       : undefined,
@@ -58,9 +56,6 @@ function summarizeAction(action: any): EditorReferenceActionSummary {
 
   const modifications = summarizeModifications(action.modifications);
   if (modifications) summary.modifications = modifications;
-
-  const stateModifications = summarizeModifications(action.stateModifications);
-  if (stateModifications) summary.stateModifications = stateModifications;
 
   if (Array.isArray(action.ifTrue) && action.ifTrue.length > 0) {
     summary.ifTrue = action.ifTrue.map(summarizeAction);
@@ -108,15 +103,15 @@ export const referenceDataBuilder = {
         // Build all reference data - performance is negligible for typical model sizes
         referenceData.activities = modelDef.activities.getAll().map(a => {
           // A self-generating activity's own initial state modifications (distinct
-          // from a Generator's generationConfig — this is Activity.sourceConfig).
+          // from a Generator's own flat fields — this is Activity.sourceConfig).
           // findExpressionsReferencingState and ModelManager.cleanupStateReferences
           // both already look here; the summary would otherwise silently miss it.
-          const sourceConfigMods = summarizeModifications((a as any).sourceConfig?.initialStateModifications);
+          const sourceConfigMods = summarizeModifications((a as any).sourceConfig?.initialStates);
 
           return {
             id: a.id,
             name: a.name,
-            connectType: a.connectType,
+            routing: a.routing,
             // Extract requirement IDs from actions for usage counting
             actionRequirementIds: (a.actions || [])
               .map(action => {
@@ -129,10 +124,10 @@ export const referenceDataBuilder = {
             // Carry per-action summary so the change-request editor can offer an Action
             // picker and a resource-requirement dropdown, AND so the States delete
             // dialog can warn about expressions referencing the state being deleted
-            // (findExpressionsReferencingState needs modifications/stateModifications,
-            // recursively through BRANCH/LOOP — see summarizeAction above).
+            // (findExpressionsReferencingState needs modifications, recursively
+            // through BRANCH/LOOP — see summarizeAction above).
             actions: (a.actions || []).map(action => summarizeAction(action as any)),
-            sourceConfig: sourceConfigMods ? { initialStateModifications: sourceConfigMods } : undefined,
+            sourceConfig: sourceConfigMods ? { initialStates: sourceConfigMods } : undefined,
           };
         });
 
@@ -140,24 +135,17 @@ export const referenceDataBuilder = {
           id: g.id,
           name: g.name,
           // Carry the inter-arrival duration so the change-request editor can pre-fill.
-          // Explicit field mapping keeps the structural type compatible (DistributionParameters
-          // is a union of specific interfaces, not directly assignable to Record<string,number>).
-          periodIntervalDuration: g.generationConfig?.periodIntervalDuration
-            ? {
-                durationPeriodUnit: g.generationConfig.periodIntervalDuration.durationPeriodUnit as string,
-                distribution: {
-                  distributionType: g.generationConfig.periodIntervalDuration.distribution.distributionType as string,
-                  // DistributionParameters is a union of specific interfaces; cast via unknown
-                  // because all concrete parameter types are plain {key: number} objects.
-                  parameters: g.generationConfig.periodIntervalDuration.distribution.parameters as unknown as Record<string, number>,
-                  description: g.generationConfig.periodIntervalDuration.distribution.description,
-                },
-              }
-            : undefined,
+          // Wire-cleanup Phase B2 Task 5/9: `EntitySourceConfig` dissolved —
+          // `interarrivalTime` is flat on the Generator now; already the
+          // clean-wire flat Duration shape, carried through as-is.
+          interarrivalTime: g.interarrivalTime,
           // Carry initial state modifications so the States delete dialog can warn
           // about expressions referencing the state being deleted (same reason as
-          // activities.actions above).
-          initialStateModifications: summarizeModifications(g.generationConfig?.initialStateModifications),
+          // activities.actions above). Named `initialStates` (not
+          // `initialStateModifications`) to match `StateReferenceScope`'s own field
+          // name — `findExpressionsReferencingState` reads this key directly off
+          // this same summary object.
+          initialStates: summarizeModifications(g.initialStates),
         }));
 
         referenceData.resources = modelDef.resources.getAll().map(r => ({

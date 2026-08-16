@@ -1,5 +1,4 @@
 import { ModelDefinition } from '@quodsi/shared';
-import { MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Entity } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
@@ -8,28 +7,12 @@ import { ResourceRequirement } from '@quodsi/shared';
 import { DomainModel as Model } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { Duration } from '@quodsi/shared';
-import { RequirementClause } from '@quodsi/shared';
-import { ResourceRequest } from '@quodsi/shared';
+import { PeriodUnit } from '@quodsi/shared';
+import { ModelDefaults } from '@quodsi/shared';
 import { State } from '@quodsi/shared';
 import { ComponentType } from '@quodsi/shared';
 import { StateType } from '@quodsi/shared';
-import { EntitySourceConfig } from '@quodsi/shared';
-import { StateModification } from '@quodsi/shared';
-import {
-    Action,
-    ActionType,
-    AssignAction,
-    SeizeAction,
-    ReleaseAction,
-    DelayAction,
-    DelayWithResourceAction,
-    SplitAction,
-    CreateAction,
-    DisposeAction,
-    JoinAction,
-    LoopAction,
-    BranchAction
-} from '@quodsi/shared';
+import { MODEL_SCHEMA_VERSION } from '@quodsi/shared';
 
 import { IModelDefinitionSerializer } from './interfaces/IModelDefinitionSerializer';
 import { ISerializedModel } from './interfaces/ISerializedModel';
@@ -39,15 +22,20 @@ import { ISerializedGenerator } from './interfaces/ISerializedGenerator';
 import { ISerializedResource } from './interfaces/ISerializedResource';
 import { ISerializedResourceRequirement } from './interfaces/ISerializedResourceRequirement';
 import { ISerializedConnector } from './interfaces/ISerializedConnector';
-import { ISerializedDuration } from './interfaces/ISerializedDuration';
-import { ISerializedRequirementClause } from './interfaces/ISerializedRequirementClause';
-import { ISerializedResourceRequest } from './interfaces/ISerializedResourceRequest';
 import { ISerializedState } from './interfaces/ISerializedState';
-import { ISerializedAction } from './interfaces/ISerializedAction';
-import { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
 import { ISchemaVersion } from './interfaces/ISchemaVersion';
 import { SerializationError } from './errors/SerializationError';
 import { InvalidModelError } from './errors/InvalidModelError';
+
+/** The model-root run-parameter slice of `ISerializedModel` (name/
+ *  replications/seed/timeUnit/timeMode/runTime/warmupTime/startDateTime/
+ *  levers/description) — everything `serializeModel` produces, spread onto
+ *  the document root by the concrete serializer alongside the element
+ *  arrays and the `schemaVersion`/`metadata` stamp. */
+export type ISerializedModelRunParams = Pick<
+    ISerializedModel,
+    'name' | 'description' | 'replications' | 'seed' | 'timeUnit' | 'timeMode' | 'runTime' | 'warmupTime' | 'startDateTime' | 'levers'
+>;
 
 export abstract class BaseModelDefinitionSerializer implements IModelDefinitionSerializer {
     /**
@@ -76,120 +64,82 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
-    protected serializeModel(model: Model) {
+    /**
+     * Wire-cleanup Phase B2 Task 9: `CleanModelDocument` (engine
+     * `document/clean/root.py`) puts the model's run parameters FLAT ON THE
+     * DOCUMENT ROOT — no nested `model` sub-object, and `model.id` has NO
+     * clean-wire equivalent at all (dropped, not renamed — see that
+     * module's own note to translators). Delegates to `Model.toJSON()`
+     * (already clean-shaped and sparse per Task 7) for everything except
+     * the CONTAINMENT guarantee `Model.toJSON()` deliberately does not
+     * provide: `replications`/`timeUnit`/`runTime` are required, NEVER
+     * omitted on the wire, but `Model.toJSON()` only ever omits an
+     * `undefined` value — it does not materialize a default. The Lucid host
+     * has no `modelFieldDefaults()` spread (unlike drawio/Visio), so a
+     * `Model` instance built directly from stored data can genuinely reach
+     * this method with `timeUnit`/`runTime` unset. This method is the
+     * containment boundary: it guarantees the same three fields the OLD
+     * serializer always wrote unconditionally (`oneClockUnit`,
+     * `runClockPeriod`/`runClockPeriodUnit`) are still always present,
+     * under their new names.
+     */
+    protected serializeModel(model: Model): ISerializedModelRunParams {
         try {
             if (!model.id || !model.name) {
                 throw new InvalidModelError('Model must have id and name');
             }
 
-            const serialized: ISerializedModel['model'] = {
-                id: model.id,
-                name: model.name,
-                description: model.description,
-                reps: model.reps,
-                seed: model.seed,
-                oneClockUnit: model.oneClockUnit,
-                simulationTimeType: model.simulationTimeType,
-                warmupClockPeriod: model.warmupClockPeriod,
-                warmupClockPeriodUnit: model.warmupClockPeriodUnit,
-                runClockPeriod: model.runClockPeriod,
-                runClockPeriodUnit: model.runClockPeriodUnit,
-                warmupDateTime: model.warmupDateTime?.toISOString() ?? null,
-                startDateTime: model.startDateTime?.toISOString() ?? null,
-                finishDateTime: model.finishDateTime?.toISOString() ?? null
-            };
-            // Opt-in model-level levers (reps/seed) — conditional, like component
-            // levers, so lever-less models stay byte-identical.
-            if (model.levers?.length) {
-                serialized.levers = model.levers;
+            const json = model.toJSON() as Record<string, unknown>;
+
+            if (json.replications === undefined) {
+                json.replications = ModelDefaults.DEFAULT_REPS;
             }
-            return serialized;
+            if (json.timeUnit === undefined) {
+                json.timeUnit = model.timeUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
+            }
+            if (json.runTime === undefined) {
+                json.runTime = Duration.toJSON(model.runTime ?? Duration.constant(24, PeriodUnit.HOURS));
+            }
+
+            return json as unknown as ISerializedModelRunParams;
         } catch (error) {
             throw new SerializationError('Model', 'Failed to serialize model properties', error instanceof Error ? error : undefined);
         }
     }
 
+    /**
+     * Wire-cleanup Phase B2 Task 9: `CleanEntityDoc` has no `type` class-tag
+     * and sparse-omits `x`/`y`/`description` at their defaults — all handled
+     * by `Entity.toJSON()`. Nothing Lucid-specific to add.
+     */
     protected serializeEntity(entity: Entity): ISerializedEntity {
         try {
             if (!entity.id || !entity.name) {
                 throw new InvalidModelError('Entity must have id and name');
             }
 
-            return {
-                id: entity.id,
-                name: entity.name,
-                description: entity.description,
-                type: entity.type,
-                x: entity.x,
-                y: entity.y
-            };
+            return entity.toJSON() as ISerializedEntity;
         } catch (error) {
             throw new SerializationError('Entity', `Failed to serialize entity "${entity.name}" (ID: ${entity.id})`, error instanceof Error ? error : undefined);
         }
     }
 
-    protected serializeActivity(activity: Activity, modelDefinition: ModelDefinition): ISerializedActivity {
+    /**
+     * Wire-cleanup Phase B2 Task 9: `Activity.toJSON()` already produces the
+     * full clean, sparse shape — capacity/inboundCapacity/outboundCapacity/
+     * routing/actions (each passed through `sparsifyAction`)/sourceConfig/
+     * financialProperties/failureProperties/queueRanking/levers/x/y/width/
+     * height. No Lucid-specific concern left to layer on top; the entire
+     * hand-rolled action-type switch this method used to contain is gone —
+     * `sparsifyAction` (shared) is what the class delegates to internally.
+     */
+    protected serializeActivity(activity: Activity): ISerializedActivity {
         try {
             if (!activity.id || !activity.name) {
                 throw new InvalidModelError('Activity must have id and name');
             }
 
-            const serialized: ISerializedActivity = {
-                id: activity.id,
-                name: activity.name,
-                description: activity.description,
-                type: activity.type,
-                x: activity.x,
-                y: activity.y,
-                capacity: activity.capacity,
-                inboundQueueCapacity: activity.inboundQueueCapacity,
-                outboundQueueCapacity: activity.outboundQueueCapacity,
-                actions: activity.actions.map(action =>
-                    this.serializeAction(action)
-                )
-            };
-
-            // Path X-lite: include shape dimensions when the Lucid extension
-            // captured them via block.getBoundingBox(). Absent for legacy /
-            // non-Lucid models — the engine falls back to Path Z defaults.
-            if (activity.width !== undefined) {
-                serialized.width = activity.width;
-            }
-            if (activity.height !== undefined) {
-                serialized.height = activity.height;
-            }
-
-            // NEW: Serialize sourceConfig if present (self-generating activity)
-            if (activity.sourceConfig) {
-                serialized.sourceConfig = this.serializeEntitySourceConfig(activity.sourceConfig);
-            }
-
-            // Add optional properties if they exist
-            if (activity.financialProperties) {
-                serialized.financialProperties = activity.financialProperties.toJSON();
-            }
-            if (activity.failureProperties) {
-                serialized.failureProperties = activity.failureProperties.toJSON();
-            }
-            if (activity.connectType) {
-                serialized.connectType = activity.connectType;
-            }
-
-            // Queue-ranking rule (engine 2026-08-08). Conditional inclusion
-            // (mirrors levers) — a re-save must not drop a ranked model's
-            // setting, and unranked models stay byte-identical (86e2qd9np).
-            if (activity.queueRanking) {
-                serialized.queueRanking = activity.queueRanking;
-            }
-
-            // Scenario-lever authoring metadata. Conditional inclusion (mirrors
-            // width/sourceConfig) keeps lever-less models byte-identical -> no
-            // model_definition_snapshot churn.
-            if (activity.levers?.length) {
-                serialized.levers = activity.levers;
-            }
-
-            return serialized;
+            return activity.toJSON() as ISerializedActivity;
         } catch (error) {
             throw new SerializationError(
                 'Activity',
@@ -199,51 +149,22 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
-    protected serializeDuration(duration: Duration): ISerializedDuration {
-        try {
-            return {
-                durationPeriodUnit: duration.durationPeriodUnit,
-                distribution: duration.distribution
-            };
-        } catch (error) {
-            throw new SerializationError('Duration', 'Failed to serialize duration', error instanceof Error ? error : undefined);
-        }
-    }
-
-    protected serializeGenerator(generator: Generator, modelDefinition: ModelDefinition): ISerializedGenerator {
+    /**
+     * Wire-cleanup Phase B2 Task 9: `Generator.toJSON()` already produces the
+     * full clean, sparse, MODE-SCOPED shape (dissolved `generationConfig` —
+     * Task 5 — flat on the class since; field groups gated by `mode` inside
+     * `generatorCoreEntries`, shared with `Activity.sourceConfig`). No
+     * `generationConfig` presence check needed any more — the concept no
+     * longer exists. `width`/`height` are dropped unconditionally by the
+     * class (no slot on `CleanGeneratorDoc`), so nothing to add here either.
+     */
+    protected serializeGenerator(generator: Generator): ISerializedGenerator {
         try {
             if (!generator.id || !generator.name) {
                 throw new InvalidModelError('Generator must have id and name');
             }
 
-            if (!generator.generationConfig) {
-                throw new InvalidModelError('Generator must have generationConfig');
-            }
-
-            const serialized: ISerializedGenerator = {
-                id: generator.id,
-                name: generator.name,
-                description: generator.description,
-                type: generator.type,
-                x: generator.x,
-                y: generator.y,
-                generationConfig: this.serializeEntitySourceConfig(generator.generationConfig)
-            };
-
-            // Path X-lite: include shape dimensions when captured.
-            if (generator.width !== undefined) {
-                serialized.width = generator.width;
-            }
-            if (generator.height !== undefined) {
-                serialized.height = generator.height;
-            }
-
-            // Scenario-lever authoring metadata (conditional inclusion).
-            if (generator.levers?.length) {
-                serialized.levers = generator.levers;
-            }
-
-            return serialized;
+            return generator.toJSON() as ISerializedGenerator;
         } catch (error) {
             throw new SerializationError(
                 'Generator',
@@ -253,142 +174,68 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
         }
     }
 
+    /**
+     * Wire-cleanup Phase B2 Task 9: `Resource.toJSON()` already produces the
+     * full clean, sparse shape.
+     */
     protected serializeResource(resource: Resource): ISerializedResource {
         try {
             if (!resource.id || !resource.name) {
                 throw new InvalidModelError('Resource must have id and name');
             }
 
-            const serialized: ISerializedResource = {
-                id: resource.id,
-                name: resource.name,
-                description: resource.description,
-                type: resource.type,
-                x: resource.x,
-                y: resource.y,
-                capacity: resource.capacity
-            };
-
-            // Add optional properties if they exist
-            if (resource.financialProperties) {
-                serialized.financialProperties = resource.financialProperties.toJSON();
-            }
-
-            // Path X-lite: include shape dimensions when captured.
-            if (resource.width !== undefined) {
-                serialized.width = resource.width;
-            }
-            if (resource.height !== undefined) {
-                serialized.height = resource.height;
-            }
-
-            // Scenario-lever authoring metadata (conditional inclusion).
-            if (resource.levers?.length) {
-                serialized.levers = resource.levers;
-            }
-
-            return serialized;
+            return resource.toJSON() as ISerializedResource;
         } catch (error) {
             throw new SerializationError('Resource', `Failed to serialize resource "${resource.name}" (ID: ${resource.id})`, error instanceof Error ? error : undefined);
         }
     }
 
+    /**
+     * Wire-cleanup Phase B2 Task 9: `CleanResourceRequirementDoc.rootClause`
+     * is a single required clause (Task 6 — the old `rootClauses[]` array's
+     * "exactly one root" rule is now structural). `ResourceRequirement.
+     * toJSON()` already carries `rootClause` through (as the live
+     * `RequirementClause` instance — its own `toJSON()` applies recursively
+     * when the whole document is finally stringified).
+     */
     protected serializeResourceRequirement(requirement: ResourceRequirement): ISerializedResourceRequirement {
         try {
             if (!requirement.id || !requirement.name) {
                 throw new InvalidModelError('ResourceRequirement must have id and name');
             }
+            if (!requirement.rootClause) {
+                throw new InvalidModelError('ResourceRequirement must have a rootClause');
+            }
 
-            return {
-                id: requirement.id,
-                name: requirement.name,
-                type: requirement.type,
-                rootClauses: requirement.rootClauses.map(clause => this.serializeRequirementClause(clause))
-            };
+            return requirement.toJSON() as unknown as ISerializedResourceRequirement;
         } catch (error) {
             throw new SerializationError('ResourceRequirement', `Failed to serialize resource requirement ${requirement.id}`, error instanceof Error ? error : undefined);
         }
     }
 
-    protected serializeRequirementClause(clause: RequirementClause): ISerializedRequirementClause {
-        try {
-            if (!clause.clauseId) {
-                throw new InvalidModelError('RequirementClause must have a clauseId');
-            }
-
-            return {
-                clauseId: clause.clauseId,
-                mode: clause.mode,
-                parentClauseId: clause.parentClauseId,
-                requests: clause.requests.map(request => this.serializeResourceRequest(request)),
-                subClauses: clause.subClauses.map(subClause => this.serializeRequirementClause(subClause))
-            };
-        } catch (error) {
-            throw new SerializationError('RequirementClause', `Failed to serialize requirement clause ${clause.clauseId}`, error instanceof Error ? error : undefined);
-        }
-    }
-
-    protected serializeResourceRequest(request: ResourceRequest): ISerializedResourceRequest {
-        try {
-            if (!request.resourceId) {
-                throw new InvalidModelError('ResourceRequest must have a resourceId');
-            }
-
-            return {
-                resourceId: request.resourceId,
-                quantity: request.quantity,
-                priority: request.priority,
-                keepResource: request.keepResource
-            };
-        } catch (error) {
-            throw new SerializationError('ResourceRequest', `Failed to serialize resource request for resource ${request.resourceId}`, error instanceof Error ? error : undefined);
-        }
-    }
-
+    /**
+     * Wire-cleanup Phase B2 Task 9: `Connector.toJSON()` already produces the
+     * full clean, sparse shape — `priority`/`entityId`/`condition` renamed
+     * from `destinationPriority`/`entityTemplateUniqueId`/`stateCondition`;
+     * the old standalone `stateModifications` array has no clean-wire
+     * equivalent (folded into an ASSIGN action in `actions` upstream, at
+     * authoring time); `description` and ALL geometry (`x`/`y` midpoint,
+     * `sourceX`/`sourceY`/`targetX`/`targetY`) are dropped unconditionally
+     * — `CleanConnectorDoc` carries no geometry at all (verified against the
+     * engine schema). `targetId` is now the sole, canonical destination
+     * field directly on the class — the old `getEffectiveDestinationUniqueId()`
+     * legacy-fallback concept is gone.
+     */
     protected serializeConnector(connector: Connector): ISerializedConnector {
         try {
             if (!connector.id || !connector.sourceId) {
                 throw new InvalidModelError('Connector must have id and sourceId');
             }
-
-            // Get effective destination (new field or legacy targetId)
-            const effectiveDestination = connector.getEffectiveDestinationUniqueId();
-            if (!effectiveDestination) {
-                throw new InvalidModelError('Connector must have destinationUniqueId or targetId');
+            if (!connector.targetId) {
+                throw new InvalidModelError('Connector must have a targetId');
             }
 
-            const serialized: ISerializedConnector = {
-                id: connector.id,
-                name: connector.name,
-                description: connector.description,
-                type: connector.type,
-                sourceId: connector.sourceId,
-                targetId: effectiveDestination, // Canonical destination (destinationUniqueId ?? legacy targetId)
-                sourceX: connector.sourceX,
-                sourceY: connector.sourceY,
-                targetX: connector.targetX,
-                targetY: connector.targetY,
-                x: connector.x,  // Midpoint x
-                y: connector.y,  // Midpoint y
-                weight: connector.weight,
-                actions: connector.actions.map(action =>
-                    this.serializeAction(action)
-                ),
-                entityTemplateUniqueId: connector.entityTemplateUniqueId,
-                stateCondition: connector.stateCondition?.toJSON(),
-                stateModifications: connector.stateModifications.map(m => this.serializeModification(m))
-            };
-
-            // NEW: Serialize destinationPriority if present
-            if (connector.destinationPriority !== undefined) {
-                serialized.destinationPriority = connector.destinationPriority;
-            }
-
-            if (connector.levers?.length) {
-                serialized.levers = connector.levers;
-            }
-
-            return serialized;
+            return connector.toJSON() as ISerializedConnector;
         } catch (error) {
             throw new SerializationError(
                 'Connector',
@@ -404,16 +251,7 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
                 throw new InvalidModelError('State must have id and name');
             }
 
-            return {
-                id: state.id,
-                name: state.name,
-                componentType: state.componentType,
-                dataType: state.dataType,
-                initialValue: state.initialValue,
-                categoryValues: state.categoryValues,
-                description: state.description,
-                collectStatistics: state.collectStatistics
-            };
+            return state.toJSON() as ISerializedState;
         } catch (error) {
             throw new SerializationError('State', `Failed to serialize state ${state.id}`, error instanceof Error ? error : undefined);
         }
@@ -439,221 +277,6 @@ export abstract class BaseModelDefinitionSerializer implements IModelDefinitionS
             );
         } catch (error) {
             throw new SerializationError('State', `Failed to deserialize state ${data.id}`, error instanceof Error ? error : undefined);
-        }
-    }
-
-    /**
-     * Safely serialize a StateModification, handling both class instances and plain objects.
-     * This provides a safety net for cases where modifications were loaded from storage
-     * as plain objects without being hydrated back to StateModification instances.
-     */
-    private serializeModification(m: StateModification | object): object {
-        if (typeof (m as any).toJSON === 'function') {
-            return (m as StateModification).toJSON();
-        }
-        // Already a plain object, return as-is
-        return m;
-    }
-
-    protected serializeAction(action: Action): ISerializedAction {
-        try {
-            let serialized: ISerializedAction;
-
-            switch (action.actionType) {
-                case ActionType.ASSIGN:
-                    serialized = {
-                        actionType: ActionType.ASSIGN,
-                        modifications: (action as AssignAction).modifications.map(m => this.serializeModification(m))
-                    };
-                    break;
-
-                case ActionType.SEIZE:
-                    serialized = {
-                        actionType: ActionType.SEIZE,
-                        resourceRequirementId: (action as SeizeAction).resourceRequirementId
-                    };
-                    break;
-
-                case ActionType.RELEASE:
-                    serialized = {
-                        actionType: ActionType.RELEASE,
-                        resourceRequirementId: (action as ReleaseAction).resourceRequirementId
-                    };
-                    break;
-
-                case ActionType.DELAY:
-                    serialized = {
-                        actionType: ActionType.DELAY,
-                        duration: this.serializeDuration((action as DelayAction).duration)
-                    };
-                    break;
-
-                case ActionType.DELAY_WITH_RESOURCE: {
-                    const delayWithResource = action as DelayWithResourceAction;
-                    serialized = {
-                        actionType: ActionType.DELAY_WITH_RESOURCE,
-                        resourceRequirementId: delayWithResource.resourceRequirementId,
-                        duration: this.serializeDuration(delayWithResource.duration)
-                    };
-
-                    if (delayWithResource.keepResource !== undefined) {
-                        (serialized as any).keepResource = delayWithResource.keepResource;
-                    }
-
-                    if (delayWithResource.stateModifications && delayWithResource.stateModifications.length > 0) {
-                        (serialized as any).stateModifications = delayWithResource.stateModifications.map(m => this.serializeModification(m));
-                    }
-
-                    break;
-                }
-
-                case ActionType.SPLIT: {
-                    const splitAction = action as SplitAction;
-                    serialized = {
-                        actionType: ActionType.SPLIT,
-                        count: splitAction.count,
-                        entityTemplateId: splitAction.entityTemplateId,
-                        destinationId: splitAction.destinationId,
-                        inheritStates: splitAction.inheritStates,
-                        modifications: splitAction.modifications.map(m => this.serializeModification(m)),
-                        splitIndexState: splitAction.splitIndexState
-                    };
-                    break;
-                }
-
-                case ActionType.CREATE: {
-                    const createAction = action as CreateAction;
-                    serialized = {
-                        actionType: ActionType.CREATE,
-                        entityTemplateId: createAction.entityTemplateId,
-                        destinationId: createAction.destinationId,
-                        inheritStates: createAction.inheritStates,
-                        modifications: createAction.modifications.map(m => this.serializeModification(m))
-                    };
-                    break;
-                }
-
-                case ActionType.DISPOSE:
-                    serialized = { actionType: ActionType.DISPOSE };
-                    break;
-
-                case ActionType.JOIN: {
-                    const joinAction = action as JoinAction;
-                    serialized = {
-                        actionType: ActionType.JOIN,
-                        matchState: joinAction.matchState,
-                        joinCount: joinAction.joinCount,
-                        combinedTemplateId: joinAction.combinedTemplateId,
-                        destinationId: joinAction.destinationId,
-                        inheritStates: joinAction.inheritStates,
-                        modifications: joinAction.modifications.map(m => this.serializeModification(m)),
-                        joinCountState: joinAction.joinCountState
-                    };
-                    break;
-                }
-
-                case ActionType.LOOP: {
-                    const loopAction = action as LoopAction;
-                    serialized = {
-                        actionType: ActionType.LOOP,
-                        count: loopAction.count,
-                        actions: loopAction.actions.map(a => this.serializeAction(a))
-                    };
-                    break;
-                }
-
-                case ActionType.BRANCH: {
-                    const branchAction = action as BranchAction;
-                    serialized = {
-                        actionType: ActionType.BRANCH,
-                        condition: branchAction.condition ? branchAction.condition.toJSON() : null,
-                        ifTrue: branchAction.ifTrue.map(a => this.serializeAction(a)),
-                        ifFalse: branchAction.ifFalse.map(a => this.serializeAction(a))
-                    };
-                    break;
-                }
-
-                default:
-                    throw new InvalidModelError(`Unknown action type: ${(action as Action).actionType}`);
-            }
-
-            // Carry the stable action id through to the engine (scenario-change addressing).
-            (serialized as any).id = (action as any).id;
-
-            // Carry the optional user-facing name (authoring metadata).
-            if ((action as any).name) {
-                (serialized as any).name = (action as any).name;
-            }
-
-            // Add optional stateCondition guard
-            if ((action as any).stateCondition) {
-                const sc = (action as any).stateCondition;
-                (serialized as any).stateCondition = typeof sc.toJSON === 'function' ? sc.toJSON() : sc;
-            }
-
-            return serialized;
-        } catch (error) {
-            throw new SerializationError('Action', 'Failed to serialize action', error instanceof Error ? error : undefined);
-        }
-    }
-
-    protected serializeEntitySourceConfig(config: EntitySourceConfig): ISerializedEntitySourceConfig {
-        try {
-            if (!config.entityId) {
-                throw new InvalidModelError('EntitySourceConfig must have entityId');
-            }
-
-            const serialized: ISerializedEntitySourceConfig = {
-                entityId: config.entityId,
-                generatorType: config.generatorType
-            };
-
-            // FREQUENCY mode fields
-            if (config.periodicOccurrences !== undefined) {
-                serialized.periodicOccurrences = config.periodicOccurrences;
-            }
-            if (config.periodIntervalDuration) {
-                serialized.periodIntervalDuration = this.serializeDuration(config.periodIntervalDuration);
-            }
-            if (config.entitiesPerCreation !== undefined) {
-                serialized.entitiesPerCreation = config.entitiesPerCreation;
-            }
-            if (config.periodicStartDuration) {
-                serialized.periodicStartDuration = this.serializeDuration(config.periodicStartDuration);
-            }
-            if (config.maxEntities !== undefined) {
-                serialized.maxEntities = config.maxEntities;
-            }
-
-            // PATTERN mode fields. Lucid has no Pattern editor of its own, but a
-            // generator authored as PATTERN in Studio or drawio and opened (not
-            // necessarily edited) in Lucid must still have its generationConfig
-            // serialized faithfully at this level, rather than silently reverting
-            // to a bare FREQUENCY shape.
-            //
-            // This does NOT make a Lucid-run simulation of a PATTERN generator
-            // correct: ISerializedModel carries no `arrivalPatterns` array and
-            // ModelDefinitionSerializerV1.serialize() emits none, so the engine
-            // still receives an `arrivalPatternId` pointing at a pattern that
-            // was never sent. That gap pre-dates this change — before, the
-            // engine received a PATTERN generator with no id at all — and
-            // closing it is part of the deferred ArrivalPattern-in-Lucid
-            // integration, not this task.
-            if (config.arrivalPatternId !== undefined) {
-                serialized.arrivalPatternId = config.arrivalPatternId;
-            }
-            if (config.volume !== undefined) {
-                serialized.volume = config.volume;
-            }
-
-            // State initialization
-            if (config.initialStateModifications && config.initialStateModifications.length > 0) {
-                serialized.initialStateModifications = config.initialStateModifications.map(m => this.serializeModification(m));
-            }
-
-            return serialized;
-        } catch (error) {
-            throw new SerializationError('EntitySourceConfig', 'Failed to serialize entity source config', error instanceof Error ? error : undefined);
         }
     }
 

@@ -40,9 +40,16 @@ interface StoredConnectorData {
     sourceId?: string;
     targetId?: string;
     weight?: number;
-    entityTemplateUniqueId?: string;
-    stateCondition?: any;
-    stateModifications?: any[];
+    priority?: number;
+    // Wire-cleanup Phase B2 Task 9: `entityTemplateUniqueId` renamed to
+    // `entityId` (matches `Connector.entityId`); `stateCondition` renamed to
+    // `condition`; the old standalone `stateModifications` array has no
+    // `Connector` field any more — connector-level state changes are
+    // expressed as an ASSIGN action inside `actions` now (never executed by
+    // the engine as a separate field even before this rename, per
+    // `stateReferences.ts`'s own note), so it is read/written nowhere here.
+    entityId?: string;
+    condition?: any;
     levers?: ScenarioLever[];
 }
 
@@ -91,21 +98,19 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             connector.description = storedData.description;
         }
 
-        // Deserialize state condition
-        if (storedData?.stateCondition) {
-            connector.stateCondition = StateCondition.fromJSON(storedData.stateCondition);
+        // Deserialize condition (routing guard for STATE_CONDITION connectors)
+        if (storedData?.condition) {
+            connector.condition = StateCondition.fromJSON(storedData.condition);
         }
 
-        // Deserialize state modifications
-        if (storedData?.stateModifications) {
-            connector.stateModifications = storedData.stateModifications.map(
-                (data: any) => StateModification.fromJSON(data)
-            );
+        // Restore priority
+        if (storedData?.priority !== undefined) {
+            connector.priority = storedData.priority;
         }
 
-        // Restore entity template unique ID
-        if (storedData?.entityTemplateUniqueId) {
-            connector.entityTemplateUniqueId = storedData.entityTemplateUniqueId;
+        // Restore entity template id (routing selector for ENTITY_TEMPLATE connectors)
+        if (storedData?.entityId) {
+            connector.entityId = storedData.entityId;
         }
 
         // Carry forward scenario-lever authoring metadata. `levers` is a class
@@ -175,9 +180,9 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: this.simObject.sourceId,
             targetId: this.simObject.targetId,
             weight: this.simObject.weight,
-            entityTemplateUniqueId: this.simObject.entityTemplateUniqueId,
-            stateCondition: this.simObject.stateCondition?.toJSON(),
-            stateModifications: this.simObject.stateModifications.map(m => m.toJSON()),
+            priority: this.simObject.priority,
+            entityId: this.simObject.entityId,
+            condition: this.simObject.condition?.toJSON(),
             // Levers survive the write-back (conditional — see ActivityLucid).
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
@@ -324,9 +329,8 @@ export class ConnectorLucid extends SimObjectLucid<Connector> {
             sourceId: defaultConnector.sourceId,
             targetId: defaultConnector.targetId,
             weight: defaultConnector.weight,
-            entityTemplateUniqueId: defaultConnector.entityTemplateUniqueId,
-            stateCondition: defaultConnector.stateCondition?.toJSON(),
-            stateModifications: defaultConnector.stateModifications.map(m => m.toJSON())
+            entityId: defaultConnector.entityId,
+            condition: defaultConnector.condition?.toJSON()
         };
 
         ComponentLogger.log(LOG_PREFIX, `Setting element data for connector ID: ${line.id}`, storedData);

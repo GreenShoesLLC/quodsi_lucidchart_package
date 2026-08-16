@@ -1,20 +1,26 @@
-import { SimulationObjectType, ScenarioLever } from '@quodsi/shared';
+import { ConnectType, ScenarioLever } from '@quodsi/shared';
 import { ISerializedEntitySourceConfig } from './ISerializedEntitySourceConfig';
 
-export interface ISerializedGenerator {
+/**
+ * Wire-cleanup Phase B2 Task 9: ground-truthed against `CleanGeneratorDoc`
+ * (engine `document/clean/routing.py`) — FLAT (no `generationConfig`
+ * wrapper, dissolved at Task 5), no `type` class-tag. Shares its core-field
+ * set with `ISerializedEntitySourceConfig` (mode-scoped generator-core
+ * fields: `entityId`/`mode`/`interarrivalTime`/`batchSize`/`startDelay`/
+ * `maxCycles`/`arrivalPatternId`/`volume`/`arrivalScheduleId`/`maxEntities`/
+ * `initialStates`) — extended rather than nested. `routing@probability`
+ * sparse-omitted. `width`/`height` have NO slot at all on the clean wire
+ * (unlike `Activity`/`Resource`) — dropped unconditionally, never emitted.
+ */
+export interface ISerializedGenerator extends ISerializedEntitySourceConfig {
     id: string;
     name: string;
     description?: string;
-    type: SimulationObjectType;
-    x: number;
-    y: number;
-    width?: number;   // Path X-lite: SVG userSpace shape size; absent for legacy models
-    height?: number;
+    x?: number;
+    y?: number;
+    routing?: ConnectType;
 
-    // Required configuration
-    generationConfig: ISerializedEntitySourceConfig;
-
-    // Scenario-lever authoring metadata; only present when the component declares
-    // levers (conditional inclusion => no churn for lever-less models).
+    // Scenario-lever authoring metadata; only present when the component
+    // declares levers (conditional inclusion => no churn for lever-less models).
     levers?: ScenarioLever[];
 }

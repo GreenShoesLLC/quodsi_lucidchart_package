@@ -1,71 +1,43 @@
 {
-  "schemaVersion": "2026.08.26",
+  "schemaVersion": "2026.11.01",
   "metadata": {
-    "version": "2026.08.26",
-    "timestamp": "2026-08-12T10:19:59.011Z"
+    "version": "2026.11.01",
+    "timestamp": "2026-08-16T22:33:38.952Z"
   },
-  "model": {
-    "id": "model-5",
-    "name": "Model E1A1R0G1",
-    "description": "",
-    "reps": 1,
-    "seed": 12345,
-    "oneClockUnit": "MINUTES",
-    "simulationTimeType": "Clock",
-    "warmupClockPeriod": 0,
-    "warmupClockPeriodUnit": "HOURS",
-    "runClockPeriod": 24,
-    "runClockPeriodUnit": "HOURS",
-    "warmupDateTime": null,
-    "startDateTime": null,
-    "finishDateTime": null
+  "name": "Model E1A1R0G1",
+  "replications": 1,
+  "seed": 12345,
+  "timeUnit": "minutes",
+  "runTime": {
+    "value": 24,
+    "unit": "hours"
   },
   "entities": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "name": "Default Entity",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Default Entity"
     },
     {
       "id": "entity-1",
-      "name": "Entity1",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Entity1"
     }
   ],
   "activities": [
     {
       "id": "activity-1",
       "name": "Activity1",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY",
+          "id": "e39fa245-d1b2-4133-bdb8-400de5e4659b",
+          "type": "delay",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
-          },
-          "id": "6dc86d06-1f8f-4330-80fc-95cfaa4f0750"
+            "unit": "minutes",
+            "value": 1
+          }
         }
-      ],
-      "connectType": "Probability"
+      ]
     }
   ],
   "resources": [],
@@ -73,59 +45,24 @@
     {
       "id": "generator-1",
       "name": "Generator1",
-      "description": "",
-      "type": "Generator",
-      "x": 0,
-      "y": 0,
-      "generationConfig": {
-        "entityId": "entity-1",
-        "generatorType": "FREQUENCY",
-        "periodicOccurrences": 10,
-        "periodIntervalDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 1
-            },
-            "description": ""
-          }
-        },
-        "entitiesPerCreation": 1,
-        "periodicStartDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 0
-            },
-            "description": ""
-          }
-        },
-        "maxEntities": 999999
-      }
+      "entityId": "entity-1",
+      "interarrivalTime": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "maxCycles": 10,
+      "maxEntities": 999999
     }
   ],
   "connectors": [
     {
       "id": "connector-gen-1",
       "name": "Generator1ToActivity1",
-      "description": "",
-      "type": "Connector",
       "sourceId": "generator-1",
       "targetId": "activity-1",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     }
   ],
   "resourceRequirements": [],
-  "states": [],
-  "scenarios": []
+  "states": []
 }

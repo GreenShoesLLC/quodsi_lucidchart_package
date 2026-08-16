@@ -264,7 +264,7 @@ export class ModelValidationService extends QuodsiLogger {
                 let requirementId: string | null = null;
 
                 // Extract requirementId based on action type
-                switch (action.actionType) {
+                switch (action.type) {
                     case ActionType.SEIZE:
                         requirementId = (action as SeizeAction).resourceRequirementId || null;
                         break;
@@ -279,10 +279,10 @@ export class ModelValidationService extends QuodsiLogger {
                 if (requirementId) {
                     const requirement = requirementMap.get(requirementId);
                     if (requirement) {
-                        requirement.rootClauses.forEach(clause => {
-                            clause.requests.forEach(request => {
-                                assignedResources.add(request.resourceId);
-                            });
+                        // Wire-cleanup Phase B2 Task 6/9: `rootClauses[]` -> a single
+                        // required `rootClause` (structural "exactly one root" rule).
+                        requirement.rootClause.requests.forEach((request: { resourceId: string }) => {
+                            assignedResources.add(request.resourceId);
                         });
                     }
                 }

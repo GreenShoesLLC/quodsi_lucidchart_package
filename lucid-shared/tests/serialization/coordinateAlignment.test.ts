@@ -38,16 +38,18 @@ describe('parsePageTranslate', () => {
 
 // Minimal model exercising every coordinate the function touches. Cast through
 // unknown because we only populate the layout-bearing fields under test.
+//
+// Wire-cleanup Phase B2 Task 9: `CleanConnectorDoc` carries no geometry at
+// all — `offsetSerializedModelCoordinates` no longer shifts connectors (see
+// that function's doc comment), so `connectors` is omitted from this fixture
+// entirely. `x`/`y` are sparse-omitted at 0 on the real wire (Task 7); the
+// second activity below has neither set, exercising the undefined-defaults-
+// to-0 guard rather than a literal `0`.
 function makeModel(): ISerializedModel {
   return {
     activities: [
-      {
-        x: 540,
-        y: 160,
-      },
-    ],
-    connectors: [
-      { sourceX: 0, sourceY: 0, targetX: 800, targetY: 220, x: 400, y: 110 },
+      { x: 540, y: 160 },
+      {},
     ],
     generators: [{ x: 280, y: 160 }],
     resources: [{ x: -40, y: 260 }],
@@ -59,38 +61,38 @@ describe('offsetSerializedModelCoordinates', () => {
   it('shifts every layout-bearing coordinate by (dx, dy)', () => {
     const m = makeModel();
     offsetSerializedModelCoordinates(m, 500, 10);
-    expect(m.activities[0].x).toBe(1040);
-    expect(m.activities[0].y).toBe(170);
-    const c = m.connectors[0];
-    expect(c.sourceX).toBe(500);
-    expect(c.sourceY).toBe(10);
-    expect(c.targetX).toBe(1300);
-    expect(c.targetY).toBe(230);
-    expect(c.x).toBe(900);
-    expect(c.y).toBe(120);
-    expect(m.generators[0].x).toBe(780);
-    expect(m.resources[0].x).toBe(460);
-    expect(m.resources[0].y).toBe(270);
+    expect(m.activities[0]!.x).toBe(1040);
+    expect(m.activities[0]!.y).toBe(170);
+    expect(m.generators[0]!.x).toBe(780);
+    expect(m.resources[0]!.x).toBe(460);
+    expect(m.resources[0]!.y).toBe(270);
+  });
+
+  it('treats an absent (sparse-omitted, 0-valued) coordinate as 0, not NaN', () => {
+    const m = makeModel();
+    offsetSerializedModelCoordinates(m, 500, 10);
+    expect(m.activities[1]!.x).toBe(500);
+    expect(m.activities[1]!.y).toBe(10);
   });
 
   it('leaves entities untouched (they are not laid-out shapes)', () => {
     const m = makeModel();
     offsetSerializedModelCoordinates(m, 500, 10);
-    expect(m.entities[0].x).toBe(0);
-    expect(m.entities[0].y).toBe(0);
+    expect(m.entities[0]!.x).toBe(0);
+    expect(m.entities[0]!.y).toBe(0);
   });
 
   it('is a no-op for (0, 0)', () => {
     const m = makeModel();
     offsetSerializedModelCoordinates(m, 0, 0);
-    expect(m.activities[0].x).toBe(540);
-    expect(m.resources[0].x).toBe(-40);
+    expect(m.activities[0]!.x).toBe(540);
+    expect(m.resources[0]!.x).toBe(-40);
   });
 
   it('preserves relative distances between shapes', () => {
     const m = makeModel();
-    const before = m.activities[0].x - m.resources[0].x;
+    const before = m.activities[0]!.x! - m.resources[0]!.x!;
     offsetSerializedModelCoordinates(m, 500, 10);
-    expect(m.activities[0].x - m.resources[0].x).toBe(before);
+    expect(m.activities[0]!.x! - m.resources[0]!.x!).toBe(before);
   });
 });

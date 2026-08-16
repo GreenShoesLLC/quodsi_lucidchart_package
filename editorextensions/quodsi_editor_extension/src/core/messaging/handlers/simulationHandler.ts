@@ -351,10 +351,15 @@ export class SimulationHandler {
       const scenarioName = data.scenarioName || `Simulation ${timestamp.toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
       const jobId = `job-${documentProxy.id}-${Date.now()}`;
 
-      // Extract scenario config from model for the optimistic card
-      const reps = modelDefinition.model.reps || 0;
-      const runClockPeriod = modelDefinition.model.runClockPeriod || 0;
-      const runClockPeriodUnit = modelDefinition.model.runClockPeriodUnit || 'Minutes';
+      // Extract scenario config from model for the optimistic card.
+      // Wire-cleanup Phase B2 Task 9: `Model.reps` -> `replications`;
+      // `runClockPeriod`/`runClockPeriodUnit` collapsed into a single
+      // `runTime: Duration`. This message's own outgoing field names
+      // (`reps`/`runClockPeriod`/`runClockPeriodUnit`) are unchanged —
+      // only the read side, sourcing them from the new Model fields.
+      const reps = modelDefinition.model.replications || 0;
+      const runClockPeriod = modelDefinition.model.runTime?.value || 0;
+      const runClockPeriodUnit = modelDefinition.model.runTime?.unit || 'Minutes';
 
       // Send initial status (replaces old MODEL_RUN_ACK)
       router.send('model', {

@@ -1,8 +1,9 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { 
-    Model, 
-    SimulationObjectType, 
-    PeriodUnit, 
+import {
+    Model,
+    Duration,
+    SimulationObjectType,
+    PeriodUnit,
     SimulationTimeType,
     PlatformMetadata,
     PlatformType,
@@ -12,6 +13,17 @@ import {
 import { StorageAdapter } from '../core/StorageAdapter';
 import { SimObjectLucid } from './SimObjectLucid';
 
+/**
+ * Wire-cleanup Phase B2 Task 9: `Model`'s constructor collapsed the old
+ * (reps, seed, oneClockUnit, simulationTimeType, warmupClockPeriod,
+ * warmupClockPeriodUnit, runClockPeriod, runClockPeriodUnit) 8-field run
+ * config into (replications, seed, timeUnit, timeMode, warmupTime: Duration,
+ * runTime: Duration) — the `xClockPeriod`/`xClockPeriodUnit` pairs are now a
+ * single flat `Duration` each. Storage keeps the OLD flat field names (this
+ * is Lucid's own shape-data schema, orthogonal to the clean wire) — this
+ * class is the translation boundary between that storage shape and the new
+ * `Model` constructor/field names.
+ */
 interface StoredModelData {
     id: string;
     name?: string;
@@ -41,42 +53,43 @@ export class ModelLucid extends SimObjectLucid<Model> {
 
     protected createSimObject(): Model {
         const page = this.element as PageProxy;
-        // Create model with element-specific properties
-        const model = new Model(
-            this.platformElementId,
-            '',  // name will be set below
-            ModelDefaults.DEFAULT_REPS,
-            ModelDefaults.DEFAULT_SEED,
-            ModelDefaults.DEFAULT_CLOCK_UNIT,
-            SimulationTimeType.Clock,
-            0,
-            PeriodUnit.HOURS,
-            24,
-            PeriodUnit.HOURS,
-            null,
-            null,
-            null
-        );
 
         // Get stored custom data
         const storedData = this.storageAdapter.getElementData(page) as StoredModelData;
 
+        const reps = storedData?.reps ?? ModelDefaults.DEFAULT_REPS;
+        const seed = storedData?.seed ?? ModelDefaults.DEFAULT_SEED;
+        const timeUnit = storedData?.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
+        const timeMode = storedData?.simulationTimeType ?? SimulationTimeType.Clock;
+        const warmupTime = Duration.constant(
+            storedData?.warmupClockPeriod ?? 0,
+            storedData?.warmupClockPeriodUnit ?? PeriodUnit.HOURS
+        );
+        const runTime = Duration.constant(
+            storedData?.runClockPeriod ?? 24,
+            storedData?.runClockPeriodUnit ?? PeriodUnit.HOURS
+        );
+
+        const model = new Model(
+            this.platformElementId,
+            storedData?.name || '',
+            reps,
+            seed,
+            timeUnit,
+            timeMode,
+            warmupTime,
+            runTime,
+            storedData?.warmupDateTime ?? null,
+            storedData?.startDateTime ?? null,
+            storedData?.finishDateTime ?? null
+        );
+
         if (storedData) {
-            // Copy properties from stored data
-            model.name = storedData.name || this.getElementName();
             model.description = storedData.description ?? '';
-            model.reps = storedData.reps ?? ModelDefaults.DEFAULT_REPS;
-            model.seed = storedData.seed ?? ModelDefaults.DEFAULT_SEED;
-            model.oneClockUnit = storedData.oneClockUnit ?? ModelDefaults.DEFAULT_CLOCK_UNIT;
-            model.simulationTimeType = storedData.simulationTimeType ?? SimulationTimeType.Clock;
-            model.warmupClockPeriod = storedData.warmupClockPeriod ?? 0;
-            model.warmupClockPeriodUnit = storedData.warmupClockPeriodUnit ?? PeriodUnit.HOURS;
-            model.runClockPeriod = storedData.runClockPeriod ?? 24;
-            model.runClockPeriodUnit = storedData.runClockPeriodUnit ?? PeriodUnit.HOURS;
-            model.warmupDateTime = storedData.warmupDateTime ?? null;
-            model.startDateTime = storedData.startDateTime ?? null;
-            model.finishDateTime = storedData.finishDateTime ?? null;
             model.levers = storedData.levers ?? [];
+            if (!storedData.name) {
+                model.name = this.getElementName();
+            }
         } else {
             model.name = this.getElementName();
         }
@@ -91,19 +104,22 @@ export class ModelLucid extends SimObjectLucid<Model> {
             this.simObject.name = this.getElementName();
         }
 
-        // Store custom data properties
-        const dataToStore = {
+        // Store custom data properties. Storage keeps the OLD flat field
+        // names (warmupClockPeriod/warmupClockPeriodUnit,
+        // runClockPeriod/runClockPeriodUnit) — this write-back splits the
+        // new `Model.warmupTime`/`runTime` Durations back into that shape.
+        const dataToStore: StoredModelData = {
             id: this.platformElementId,
             name: this.simObject.name,
             description: this.simObject.description,
-            reps: this.simObject.reps,
+            reps: this.simObject.replications,
             seed: this.simObject.seed,
-            oneClockUnit: this.simObject.oneClockUnit,
-            simulationTimeType: this.simObject.simulationTimeType,
-            warmupClockPeriod: this.simObject.warmupClockPeriod,
-            warmupClockPeriodUnit: this.simObject.warmupClockPeriodUnit,
-            runClockPeriod: this.simObject.runClockPeriod,
-            runClockPeriodUnit: this.simObject.runClockPeriodUnit,
+            oneClockUnit: this.simObject.timeUnit,
+            simulationTimeType: this.simObject.timeMode,
+            warmupClockPeriod: this.simObject.warmupTime?.value ?? 0,
+            warmupClockPeriodUnit: this.simObject.warmupTime?.unit ?? PeriodUnit.HOURS,
+            runClockPeriod: this.simObject.runTime?.value ?? 24,
+            runClockPeriodUnit: this.simObject.runTime?.unit ?? PeriodUnit.HOURS,
             warmupDateTime: this.simObject.warmupDateTime,
             startDateTime: this.simObject.startDateTime,
             finishDateTime: this.simObject.finishDateTime,
@@ -120,6 +136,6 @@ export class ModelLucid extends SimObjectLucid<Model> {
 
     public validate(): boolean {
         return !!this.simObject.name &&
-            this.simObject.reps > 0;
+            this.simObject.replications > 0;
     }
 }

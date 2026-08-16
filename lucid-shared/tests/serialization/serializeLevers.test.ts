@@ -18,7 +18,6 @@ import { ModelDefinition } from '@quodsi/shared';
 import { Activity } from '@quodsi/shared';
 import { Resource } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
-import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
@@ -49,17 +48,16 @@ function buildModel(opts?: {
     modelDef.resources.add(resource);
 
     const entityId = modelDef.entities.getAll()[0].id;
-    const generationConfig: EntitySourceConfig = {
+    // `EntitySourceConfig` was dissolved flat onto `Generator` (wire-cleanup
+    // Phase B2 Task 5).
+    const generator = new Generator(
+        'generator-1',
+        'Generator1',
         entityId,
-        generatorType: GeneratorType.FREQUENCY,
-        periodicOccurrences: 10,
-        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-        entitiesPerCreation: 1,
-        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-        maxEntities: 999999,
-        initialStateModifications: []
-    };
-    const generator = new Generator('generator-1', 'Generator1', generationConfig, 'activity-1');
+        Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1))
+    );
+    generator.mode = GeneratorType.FREQUENCY;
+    generator.maxEntities = 999999;
     opts?.onGenerator?.(generator);
     modelDef.generators.add(generator);
 

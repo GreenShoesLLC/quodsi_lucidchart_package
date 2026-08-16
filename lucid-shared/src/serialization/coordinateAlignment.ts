@@ -36,10 +36,23 @@ export function parsePageTranslate(svg: string): PageTranslate {
 
 /**
  * Add (dx, dy) to every layout-bearing coordinate in the serialized model:
- * activities, generators, resources, and the top-level connectors
- * (source/target/midpoint). Entities are not laid out as shapes and are left
- * untouched. Mutates `model` in place; a (0,0) shift is a no-op. This is a
- * uniform translation, so relative geometry — and the simulation — is unchanged.
+ * activities, generators, and resources. Entities are not laid out as
+ * shapes and are left untouched. Mutates `model` in place; a (0,0) shift is
+ * a no-op. This is a uniform translation, so relative geometry — and the
+ * simulation — is unchanged.
+ *
+ * Wire-cleanup Phase B2 Task 9: two changes from the pre-clean version.
+ * (1) Connectors are no longer shifted — `CleanConnectorDoc` (engine
+ * `document/clean/routing.py`) carries NO geometry at all (verified against
+ * the engine schema: connector positions were never part of the animation
+ * layout read from the model document; the viewer derives connector paths
+ * from the two endpoint node positions instead), and `Connector.toJSON()`
+ * no longer emits `x`/`y`/`sourceX`/`sourceY`/`targetX`/`targetY` — there is
+ * nothing left on a serialized connector to shift. (2) `x`/`y` on
+ * activities/generators/resources are now sparse-omitted at 0 (Task 7), so
+ * an element sitting exactly at the origin arrives here with `x`/`y`
+ * `undefined`, not `0` — `undefined + dx` would silently become `NaN`.
+ * Every accumulator below defaults a missing coordinate to 0 before adding.
  */
 export function offsetSerializedModelCoordinates(
   model: ISerializedModel,
@@ -48,23 +61,15 @@ export function offsetSerializedModelCoordinates(
 ): void {
   if (dx === 0 && dy === 0) return;
   for (const a of model.activities ?? []) {
-    a.x += dx;
-    a.y += dy;
-  }
-  for (const c of model.connectors ?? []) {
-    c.sourceX += dx;
-    c.sourceY += dy;
-    c.targetX += dx;
-    c.targetY += dy;
-    c.x += dx;
-    c.y += dy;
+    a.x = (a.x ?? 0) + dx;
+    a.y = (a.y ?? 0) + dy;
   }
   for (const g of model.generators ?? []) {
-    g.x += dx;
-    g.y += dy;
+    g.x = (g.x ?? 0) + dx;
+    g.y = (g.y ?? 0) + dy;
   }
   for (const r of model.resources ?? []) {
-    r.x += dx;
-    r.y += dy;
+    r.x = (r.x ?? 0) + dx;
+    r.y = (r.y ?? 0) + dy;
   }
 }

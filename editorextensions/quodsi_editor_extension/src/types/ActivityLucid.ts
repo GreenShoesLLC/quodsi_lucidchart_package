@@ -46,12 +46,12 @@ interface StoredActivityData {
     name?: string;
     description?: string;
     capacity?: number;
-    inboundQueueCapacity?: number;
-    outboundQueueCapacity?: number;
+    inboundCapacity?: number;
+    outboundCapacity?: number;
     actions?: Action[];
     financialProperties?: any;
     failureProperties?: any;
-    connectType?: string;
+    routing?: string;
     resourceName?: string;  // Resource name to auto-create during conversion
     levers?: ScenarioLever[];
     queueRanking?: QueueRanking;
@@ -132,6 +132,11 @@ function hydrateModification(m: any): StateModification {
 /**
  * Hydrate actions loaded from storage.
  * Converts plain modification objects back to StateModification instances.
+ *
+ * Wire-cleanup Phase B2 Task 6/9: the action discriminator field renamed
+ * `actionType` -> `type`; `DelayWithResourceAction`'s state-modification
+ * list renamed `stateModifications` -> `modifications` (unified with every
+ * other action type's field name for the same concept).
  */
 function hydrateActions(actions: Action[] | undefined): Action[] {
     if (!actions) {
@@ -139,21 +144,21 @@ function hydrateActions(actions: Action[] | undefined): Action[] {
     }
 
     return actions.map(action => {
-        if (action.actionType === ActionType.ASSIGN) {
+        if (action.type === ActionType.ASSIGN) {
             const assignAction = action as any;
             return {
                 ...action,
                 modifications: assignAction.modifications?.map(hydrateModification) || []
             };
         }
-        if (action.actionType === ActionType.DELAY_WITH_RESOURCE) {
+        if (action.type === ActionType.DELAY_WITH_RESOURCE) {
             const delayAction = action as any;
             return {
                 ...action,
-                stateModifications: delayAction.stateModifications?.map(hydrateModification) || []
+                modifications: delayAction.modifications?.map(hydrateModification) || []
             };
         }
-        if (action.actionType === ActionType.SPLIT) {
+        if (action.type === ActionType.SPLIT) {
             const splitAction = action as any;
             return {
                 ...action,
@@ -193,8 +198,8 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             this.platformElementId,
             storedData?.name || 'New Activity',
             storedData?.capacity ?? 1,
-            storedData?.inboundQueueCapacity ?? 999999,
-            storedData?.outboundQueueCapacity ?? 999999,
+            storedData?.inboundCapacity ?? 999999,
+            storedData?.outboundCapacity ?? 999999,
             hydratedActions,
             storedData?.x ?? 0,
             storedData?.y ?? 0
@@ -215,9 +220,9 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             activity.failureProperties = FailureProperties.fromJSON(storedData.failureProperties);
         }
 
-        // Restore connectType
-        if (storedData?.connectType) {
-            activity.connectType = storedData.connectType as ConnectType;
+        // Restore routing
+        if (storedData?.routing) {
+            activity.routing = storedData.routing as ConnectType;
         }
 
         // Carry forward scenario-lever authoring metadata. `levers` is a class
@@ -295,16 +300,14 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             name: this.simObject.name,
             description: this.simObject.description,
             capacity: this.simObject.capacity,
-            inboundQueueCapacity: this.simObject.inboundQueueCapacity,
-            outboundQueueCapacity: this.simObject.outboundQueueCapacity,
+            inboundCapacity: this.simObject.inboundCapacity,
+            outboundCapacity: this.simObject.outboundCapacity,
             actions: this.simObject.actions,
             financialProperties: this.simObject.financialProperties?.toJSON(),
             failureProperties: this.simObject.failureProperties?.toJSON(),
-            connectType: this.simObject.connectType,
+            routing: this.simObject.routing,
             queueRanking: this.simObject.queueRanking,
-            // Levers survive the write-back (conditional — lever-less elements
-            // store no key; undefined drops at JSON serialization). Fixes the
-            // drop the hydration comment above warns about, on the WRITE side.
+            // Levers survive the write-back (conditional — see ActivityLucid).
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
 
@@ -376,7 +379,7 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
         // Determine actions - use parsed duration if provided
         let actions = defaultActivity.actions;
         if (fields.duration !== undefined) {
-            const duration = new Duration(
+            const duration = Duration.fromDistribution(
                 PeriodUnit.MINUTES,
                 ConstantDistribution.create(fields.duration)
             );
@@ -393,12 +396,12 @@ export class ActivityLucid extends SimObjectLucid<Activity> {
             width: defaultActivity.width,
             height: defaultActivity.height,
             capacity: fields.capacity ?? defaultActivity.capacity,
-            inboundQueueCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundQueueCapacity,
-            outboundQueueCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundQueueCapacity,
+            inboundCapacity: fields.inboundQueueCapacity ?? defaultActivity.inboundCapacity,
+            outboundCapacity: fields.outboundQueueCapacity ?? defaultActivity.outboundCapacity,
             actions: actions,
             financialProperties: defaultActivity.financialProperties?.toJSON(),
             failureProperties: defaultActivity.failureProperties?.toJSON(),
-            connectType: defaultActivity.connectType,
+            routing: defaultActivity.routing,
             resourceName: fields.resource  // Store for auto-creation during conversion
         };
 
