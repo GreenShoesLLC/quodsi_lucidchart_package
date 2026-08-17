@@ -176,6 +176,46 @@ catch {
 }
 
 
+# --- Step 1.46: Assert the packaged schema version clears the floor ---
+# @quodsi/shared is resolved through the file:../../quodsi_shared symlink at
+# BUILD time, so a stale monorepo checkout silently ships documents stamped at
+# an old MODEL_SCHEMA_VERSION that the engine rejects at run submission.
+# Step 1.45 rebuilt it; this asserts the value it produced. ClickUp 86e2p4prk.
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.46: Verifying packaged MODEL_SCHEMA_VERSION..."
+Write-Host "--------------------------------------------------"
+
+$SchemaCheckScript = @"
+const { MODEL_SCHEMA_VERSION } = require('$($MonorepoRoot -replace '\\','/')/quodsi_shared/dist-cjs/index.js');
+const FLOOR = '2026.08.20';
+const p = (v) => v.split('.').map(Number);
+const [a, b] = [p(MODEL_SCHEMA_VERSION), p(FLOOR)];
+for (let i = 0; i < 3; i++) {
+  if ((a[i] || 0) !== (b[i] || 0)) {
+    if ((a[i] || 0) < (b[i] || 0)) {
+      console.error('MODEL_SCHEMA_VERSION ' + MODEL_SCHEMA_VERSION + ' is below the floor ' + FLOOR);
+      process.exit(1);
+    }
+    break;
+  }
+}
+console.log(MODEL_SCHEMA_VERSION);
+"@
+
+try {
+    $PackagedSchemaVersion = node -e $SchemaCheckScript
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Packaged MODEL_SCHEMA_VERSION is below the required floor (2026.08.20). The monorepo checkout at $MonorepoRoot is stale - pull it and re-run. Aborting bundle."
+        exit 1
+    }
+    Write-Host "[OK] Packaged MODEL_SCHEMA_VERSION = $PackagedSchemaVersion" -ForegroundColor Green
+}
+catch {
+    Write-Error "Failed to read packaged MODEL_SCHEMA_VERSION. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+
 # --- Step 1.5: Build Shared Library ---
 Write-Host "--------------------------------------------------"
 Write-Host "Step 1.5: Building Shared Library (@quodsi/lucid-shared)..."

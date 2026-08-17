@@ -5,6 +5,7 @@ export * from './core/logging/ComponentLogger';
 
 // Constants
 export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
+export { LUCID_MIN_MODEL_SCHEMA_VERSION, assertPackagedSchemaVersion } from './constants/schemaFloor';
 export type { VersionInfo } from '@quodsi/shared';
 export * from './constants/branding';
 export * from './constants/clearedFields';
