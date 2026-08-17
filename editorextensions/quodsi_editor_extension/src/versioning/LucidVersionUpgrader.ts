@@ -87,13 +87,24 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             ? { existed: true, data: statesData }
             : { existed: false };
 
-        // Backup blocks
-        for (const block of page.blocks.values()) {
+        // Backup blocks. `allBlocks`, not `blocks` — the latter is
+        // documented (and implemented, via a shallower SDK list call) as
+        // "not including ones inside groups". `performUpgrade` below and
+        // `ModelDefinitionPageBuilder.buildFromConvertedPage` (the actual
+        // reader that constructs ActivityLucid/GeneratorLucid/ConnectorLucid
+        // from this same page) both need to agree on which elements exist —
+        // buildFromConvertedPage already iterates `allBlocks`/`allLines`, so
+        // using the shallow list here silently skipped any Activity/
+        // Generator/Resource block (or Connector line) a user had grouped
+        // (Ctrl+G — an ordinary action), leaving it un-upgraded but still
+        // read by clean-name-only readers (wire-cleanup Phase B2 Task 10
+        // finding).
+        for (const block of page.allBlocks.values()) {
             this.backupElementData(block.id, block);
         }
 
-        // Backup lines
-        for (const line of page.lines.values()) {
+        // Backup lines — same `allLines` reasoning as blocks above.
+        for (const line of page.allLines.values()) {
             this.backupElementData(line.id, line);
         }
     }
@@ -164,10 +175,14 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             targets.push({ element, blob, isPage });
         };
 
-        // Page/model first, then blocks, then lines
+        // Page/model first, then blocks, then lines. `allBlocks`/`allLines`
+        // (not `blocks`/`lines`) — see the matching comment in
+        // `beginUpgrade` above: the shallow lists exclude anything inside a
+        // Lucid Group, which `ModelDefinitionPageBuilder` does NOT exclude
+        // when it builds the ModelDefinition these same shapes feed into.
         collect(page, true);
-        for (const block of page.blocks.values()) collect(block, false);
-        for (const line of page.lines.values()) collect(line, false);
+        for (const block of page.allBlocks.values()) collect(block, false);
+        for (const line of page.allLines.values()) collect(line, false);
 
         // Review R3: the page-level resource-requirements and states lists
         // are plain arrays, not per-shape q_data blobs, so `collect` above
@@ -328,8 +343,10 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             page.shapeData.delete(LucidVersionUpgrader.STATES_KEY);
         }
 
-        // Restore blocks
-        for (const block of page.blocks.values()) {
+        // Restore blocks. `allBlocks`/`allLines` — matches `beginUpgrade`'s
+        // backup scope above; a shallow restore here would leave grouped
+        // elements upgraded (or partially upgraded) even after a rollback.
+        for (const block of page.allBlocks.values()) {
             const blockBackup = this.backupData.get(block.id);
             if (blockBackup) {
                 this.restoreElementData(block, blockBackup);
@@ -337,7 +354,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         }
 
         // Restore lines
-        for (const line of page.lines.values()) {
+        for (const line of page.allLines.values()) {
             const lineBackup = this.backupData.get(line.id);
             if (lineBackup) {
                 this.restoreElementData(line, lineBackup);
