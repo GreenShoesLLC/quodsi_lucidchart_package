@@ -7,9 +7,6 @@
 //
 // No React rendering is needed; these are pure function calls.
 
-// @quodsi/lucid-shared pulls in lucidApi.js -> axios ESM, which Jest can't parse.
-vi.mock("axios", () => ({}));
-
 import {
   createAssignAction,
   createSeizeAction,

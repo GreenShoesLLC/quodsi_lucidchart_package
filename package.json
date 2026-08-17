@@ -18,7 +18,6 @@
     "bundle": "npx lucid-package bundle"
   },
   "dependencies": {
-    "axios": "^1.15.1",
     "webpack-shell-plugin-next": "^2.3.1"
   },
   "devDependencies": {

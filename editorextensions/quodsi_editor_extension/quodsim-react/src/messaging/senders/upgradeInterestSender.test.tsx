@@ -1,6 +1,3 @@
-// @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-vi.mock("axios", () => ({}));
-
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';

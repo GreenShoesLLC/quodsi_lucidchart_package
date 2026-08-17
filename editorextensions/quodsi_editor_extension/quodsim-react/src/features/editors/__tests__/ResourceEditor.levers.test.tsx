@@ -1,8 +1,3 @@
-// @quodsi/lucid-shared (pulled in by ResourceEditor.tsx) transitively loads
-// shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
-// can't parse. (Same pattern as ConnectorsEditor.test.tsx.)
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ResourceEditor from "../ResourceEditor";

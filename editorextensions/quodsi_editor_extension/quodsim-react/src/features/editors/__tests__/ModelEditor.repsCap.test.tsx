@@ -1,7 +1,3 @@
-// @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
-// lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ModelEditor from "../ModelEditor";

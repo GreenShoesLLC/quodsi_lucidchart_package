@@ -53,8 +53,7 @@ export class ExtensionDebugService {
     'ModelOpsHandler',
 
     // Storage and API
-    'StorageAdapter',
-    'LucidApiService'
+    'StorageAdapter'
   ];
 
   private constructor() {

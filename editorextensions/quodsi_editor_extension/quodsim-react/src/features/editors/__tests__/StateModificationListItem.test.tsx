@@ -1,8 +1,3 @@
-// @quodsi/lucid-shared (pulled in by StateModificationListItem.tsx) transitively
-// loads shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
-// can't parse. (Same pattern as ConnectorsEditor.test.tsx / ResourceEditor.levers.test.tsx.)
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import StateModificationListItem from "../StateModificationListItem";

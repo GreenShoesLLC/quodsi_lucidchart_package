@@ -371,7 +371,6 @@ export {
 } from './types/swimlane/SwimLaneQuodsiData';
 
 // Service exports
-export * from './services/lucidApi';
 export { generateUUID } from '@quodsi/shared';
 // Structured shape-name parsing — moved to @quodsi/shared (conversion/nameParser)
 // so drawio and Visio can use it too; re-exported here so existing

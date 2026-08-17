@@ -1,10 +1,6 @@
 // Lucid twin of quodsi_studio/src/platforms/shared/__tests__/QueueRankingSection.test.tsx.
 // The two components must not drift, so the assertions here mirror that file's.
 
-// @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
-// lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";

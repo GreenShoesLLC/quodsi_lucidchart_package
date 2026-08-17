@@ -1,7 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 
-vi.mock('axios', () => ({}));
-
 const mockOpenStudiesModal = vi.fn();
 vi.mock('../../../messaging/senders/simulationRunSender', () => ({
   useSimulationRunSender: () => ({ openStudiesModal: mockOpenStudiesModal }),

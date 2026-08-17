@@ -1,8 +1,3 @@
-// @quodsi/lucid-shared (pulled in by StatesEditor.tsx) transitively loads
-// shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
-// can't parse. (Same pattern as StateModificationFormDialog.test.tsx.)
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import StatesEditor from "../StatesEditor";

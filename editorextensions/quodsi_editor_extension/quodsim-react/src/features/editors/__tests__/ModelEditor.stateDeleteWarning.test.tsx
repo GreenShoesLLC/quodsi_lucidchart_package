@@ -6,10 +6,6 @@
 // EditorReferenceData literal and never touches ModelEditor's wiring;
 // referenceDataBuilder.stateExpressions.test.ts stops at the builder. This
 // test is the one that actually observes the prop crossing that boundary.
-//
-// @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
-// lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";

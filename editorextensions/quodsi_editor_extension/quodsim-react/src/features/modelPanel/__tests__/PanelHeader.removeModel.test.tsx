@@ -5,9 +5,6 @@
 // prop since the Nov 2025 header redesign. These tests pin that it is reachable
 // again, and that it is reachable ONLY through the confirmation.
 
-// @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-vi.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
