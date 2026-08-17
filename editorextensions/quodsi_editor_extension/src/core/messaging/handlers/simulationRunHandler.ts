@@ -365,10 +365,26 @@ export class SimulationRunHandler {
     // Fix round (review F4): `finishDateTime` was dropped from the relay
     // entirely, so every calendar-mode embed open hit a hard
     // `missing_finish_datetime` validation blocker on the Studio side.
+    //
+    // Fix round 2 (review R1, CRITICAL): `Model.finishDateTime` is typed
+    // `Date | null`, but in the Lucid host it is actually whatever
+    // StorageAdapter's `JSON.parse` produced — an ISO STRING, never coerced
+    // to a real `Date` anywhere in `ModelLucid.createSimObject` (the
+    // monorepo documents this exact host-date hazard at
+    // `modelFields.ts`'s "DATES:" comment — flat hosts hold ISO strings,
+    // not `Date` instances, until something explicitly coerces). Calling
+    // `.toISOString()` unconditionally threw for every real calendar-mode
+    // model, killing the ENTIRE catalog send — the opposite of what F4 was
+    // fixing. String/Date-tolerant coercion below handles both shapes.
+    const rawFinishDateTime: unknown = modelDefinition.model.finishDateTime;
+    const finishDateTime: string | null =
+      typeof rawFinishDateTime === 'string'
+        ? rawFinishDateTime
+        : (rawFinishDateTime as Date | null)?.toISOString?.() ?? null;
     const catalog = SimulationRunHandler.buildStudioCatalog(
       serializedModel,
       modelDefinition.model.id,
-      modelDefinition.model.finishDateTime ? modelDefinition.model.finishDateTime.toISOString() : null,
+      finishDateTime,
     );
 
     const channel = SimulationRunHandler.getResponseChannel(msg);

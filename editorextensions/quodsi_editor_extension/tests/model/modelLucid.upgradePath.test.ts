@@ -23,7 +23,16 @@ function makeFakePageWithTitle(id: string, title: string): any {
     return page;
 }
 
-/** The old-era flat page blob a pre-clean document actually stored. */
+/**
+ * The old-era flat page blob a pre-clean document actually stored.
+ *
+ * `warmupDateTime`/`finishDateTime` (review R2): HOST-LOCAL fields with no
+ * clean-wire slot, but the upgrade transform must PRESERVE them in the
+ * upgraded domain document regardless (`ModelTransforms.ts`'s clean-era
+ * hop no longer `dropKeys`s either) — an earlier version silently lost
+ * both on every host's first upgrade-on-open, which then tripped
+ * `missing_finish_datetime` for a previously-valid calendar-mode document.
+ */
 const OLD_SHAPE_BLOB = {
     type: 'Model',
     id: 'page-upgrade-001',
@@ -36,7 +45,9 @@ const OLD_SHAPE_BLOB = {
     warmupClockPeriodUnit: 'DAYS',
     runClockPeriod: 30,
     runClockPeriodUnit: 'DAYS',
+    warmupDateTime: '2025-03-01T06:00:00.000Z',
     startDateTime: '2025-04-01T08:00:00.000Z',
+    finishDateTime: '2025-11-30T18:00:00.000Z',
 };
 
 describe('ModelLucid survives the clean-era upgrade hop (review F1)', () => {
@@ -67,6 +78,17 @@ describe('ModelLucid survives the clean-era upgrade hop (review F1)', () => {
         expect(model.warmupTime?.value).toBe(3);
         expect(model.warmupTime?.unit).toBe(PeriodUnit.DAYS);
         expect(model.startDateTime).not.toBeNull();
+
+        // Review R2: HOST-LOCAL dates survive the upgrade hop intact, and
+        // ModelLucid's own date coercion (review R1 fallout) turns them
+        // into real Date instances, not the raw ISO strings the upgraded
+        // blob actually carries.
+        expect(model.warmupDateTime).toBeInstanceOf(Date);
+        expect(model.warmupDateTime?.toISOString()).toBe('2025-03-01T06:00:00.000Z');
+        expect(model.startDateTime).toBeInstanceOf(Date);
+        expect(model.startDateTime?.toISOString()).toBe('2025-04-01T08:00:00.000Z');
+        expect(model.finishDateTime).toBeInstanceOf(Date);
+        expect(model.finishDateTime?.toISOString()).toBe('2025-11-30T18:00:00.000Z');
     });
 
     it('a re-save (updateFromPlatform) after the upgrade persists CLEAN names, not the old ones', () => {

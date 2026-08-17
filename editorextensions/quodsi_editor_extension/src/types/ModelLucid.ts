@@ -67,6 +67,35 @@ interface StoredModelData {
     levers?: ScenarioLever[];
 }
 
+/**
+ * Review R1 fallout (found while writing R1's own regression test):
+ * `Model` declares `warmupDateTime`/`startDateTime`/`finishDateTime` as
+ * `Date | null`, but `StorageAdapter.getElementData` returns whatever
+ * `JSON.parse` produced — an ISO STRING, never a `Date` instance. Every
+ * other host coerces this at the same boundary (`@quodsi/shared`'s
+ * `modelFields.ts`, `coerceDate`/`projectModelFields` — "DATES:" comment);
+ * Lucid's own `def.model` equivalent is deliberately NOT on that shared
+ * roster yet (per that module's own note — persisted/wire format changes
+ * are out of that task's scope), so this mirrors the exact same 2-line
+ * rule locally rather than pulling Lucid onto the shared roster wholesale.
+ * Passing a raw string through uncoerced means `Model.toJSON()`'s own
+ * `this.startDateTime?.toISOString()` (shared, Task 7) throws for every
+ * calendar-mode Lucid model — not just the Studio catalog relay R1 was
+ * about, the CORE WIRE SERIALIZER too.
+ */
+function coerceDate(value: unknown): Date | null {
+    if (value === undefined || value === null) return null;
+    if (value instanceof Date) return value;
+    if (typeof value !== 'string') return null;
+    const parsed = new Date(value);
+    // An unparseable string is dropped to null rather than becoming an
+    // Invalid Date (which itself throws on `.toISOString()`) — matches
+    // the "leave a bad value visible, don't crash" posture `coerceDate`
+    // documents, adapted here to null since ModelLucid has no UI surface
+    // to show the raw bad string back to a user the way a form field does.
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export class ModelLucid extends SimObjectLucid<Model> {
     constructor(pageProxy: PageProxy, storageAdapter: StorageAdapter) {
         super(pageProxy, storageAdapter);
@@ -108,9 +137,9 @@ export class ModelLucid extends SimObjectLucid<Model> {
             timeMode,
             warmupTime,
             runTime,
-            storedData?.warmupDateTime ?? null,
-            storedData?.startDateTime ?? null,
-            storedData?.finishDateTime ?? null
+            coerceDate(storedData?.warmupDateTime),
+            coerceDate(storedData?.startDateTime),
+            coerceDate(storedData?.finishDateTime)
         );
 
         if (storedData) {

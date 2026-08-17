@@ -18,10 +18,24 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     // Mirrors StorageAdapter.ENTITIES_KEY. Entities are no longer shape-mapped; the
     // migration below lifts legacy entity shapes into this page-level list.
     private static readonly ENTITIES_KEY = 'q_entities';
+    // Review R3 (wire-cleanup Phase B2 Task 9, round 3): mirror
+    // StorageAdapter.RESOURCE_REQUIREMENTS_KEY / STATES_KEY. Both are
+    // page-level PLAIN ARRAYS (not per-shape q_data envelopes) that
+    // performUpgrade previously never touched at all — an existing
+    // document's custom requirements kept `rootClauses[]`/`clauseId`/
+    // `subClauses` forever (and `ModelDefinitionPageBuilder.
+    // deserializeClause(undefined)` threw on load, since the clean reader
+    // expects `rootClause` singular), and stored states kept their old
+    // UPPERCASE enum values, which then flowed un-mapped onto the
+    // 2026.11.01 wire.
+    private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
+    private static readonly STATES_KEY = 'q_states';
 
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
     private entitiesBackup: { existed: boolean; data?: string } = { existed: false };
+    private requirementsBackup: { existed: boolean; data?: string } = { existed: false };
+    private statesBackup: { existed: boolean; data?: string } = { existed: false };
 
     constructor(currentVersion: string, options?: UpgradeOptions) {
         super(currentVersion, options);
@@ -59,6 +73,20 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             ? { existed: true, data: entitiesData }
             : { existed: false };
 
+        // Backup the page-level resource-requirements and states lists
+        // (review R3) — same treatment as entities, so a failed upgrade
+        // rolls these back too instead of leaving them upgraded (or
+        // partially upgraded) while everything else reverts.
+        const requirementsData = page.shapeData.get(LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY);
+        this.requirementsBackup = typeof requirementsData === 'string'
+            ? { existed: true, data: requirementsData }
+            : { existed: false };
+
+        const statesData = page.shapeData.get(LucidVersionUpgrader.STATES_KEY);
+        this.statesBackup = typeof statesData === 'string'
+            ? { existed: true, data: statesData }
+            : { existed: false };
+
         // Backup blocks
         for (const block of page.blocks.values()) {
             this.backupElementData(block.id, block);
@@ -79,6 +107,38 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         if (data && typeof data === 'string') {
             this.backupData.set(id, { data });
         }
+    }
+
+    /**
+     * Reads a page-level JSON array (q_res_requirements / q_states) as
+     * plain objects. Corrupt/absent data reads as empty, same posture as
+     * every other page-level list read in this class (`entitiesById`'s own
+     * parse above, and `StorageAdapter.getResourceRequirements`/`getStates`).
+     */
+    private readPageArray(page: PageProxy, key: string): any[] {
+        const raw = page.shapeData.get(key);
+        if (!raw || typeof raw !== 'string') return [];
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    /**
+     * Flattens an upgraded envelope back to the plain `{id, ...domain}`
+     * shape `q_res_requirements`/`q_states` store — NOT the same shape as
+     * `flattenEnvelope` (shared), which also carries `type` back onto the
+     * result. Neither `ISerializedResourceRequirement` nor `ISerializedState`
+     * has a `type` slot (wire-cleanup Phase B2 Task 9 — no clean-wire
+     * class-tag), and these two arrays were never envelope/type-tagged
+     * blobs in the first place.
+     */
+    private flattenArrayItem(upgraded: any): any {
+        const domain = upgraded?.domain ?? upgraded;
+        const id = upgraded?.id ?? domain?.id;
+        return { ...domain, id };
     }
 
     protected async performUpgrade(page: PageProxy): Promise<void> {
@@ -109,9 +169,30 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         for (const block of page.blocks.values()) collect(block, false);
         for (const line of page.lines.values()) collect(line, false);
 
+        // Review R3: the page-level resource-requirements and states lists
+        // are plain arrays, not per-shape q_data blobs, so `collect` above
+        // never sees them. Tag each entry with a synthetic RawElement
+        // `type` (registry keys 'ResourceRequirement'/'State' exist — B1
+        // Task 7 registered both) and fold them into the SAME
+        // `upgradeElements` call as every shape-backed element below —
+        // one call, not two/three separate ones, so the cross-element
+        // UpgradeContext (state-name resolution, weight groups, etc.) sees
+        // the full sibling set, exactly like the golden acceptance test
+        // (`cleanTransforms.golden.test.ts`) builds one combined
+        // `rawElements` array for a host's whole document.
+        const storedRequirements = this.readPageArray(page, LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY);
+        const requirementInputs: RawElement[] = storedRequirements.map((r) => ({ type: 'ResourceRequirement', ...r }));
+
+        const storedStates = this.readPageArray(page, LucidVersionUpgrader.STATES_KEY);
+        const stateInputs: RawElement[] = storedStates.map((s) => ({ type: 'State', ...s }));
+
         // Pure core upgrade — returns envelopes; mappingSource is preserved inside
         // platform, so the adapter no longer re-attaches it.
-        const result = upgradeElements(targets.map(t => t.blob), sourceVersion);
+        const combinedInputs: RawElement[] = [...targets.map(t => t.blob), ...requirementInputs, ...stateInputs];
+        const result = upgradeElements(combinedInputs, sourceVersion);
+        const elementResults = result.elements.slice(0, targets.length);
+        const requirementResults = result.elements.slice(targets.length, targets.length + requirementInputs.length);
+        const stateResults = result.elements.slice(targets.length + requirementInputs.length);
 
         // Entities are no longer shape-mapped. Lift any legacy entity shapes into the
         // page-level q_entities list (preserving id == block.id so existing entityId
@@ -132,7 +213,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         }
         let entitiesChanged = false;
 
-        result.elements.forEach((upgraded, i) => {
+        elementResults.forEach((upgraded, i) => {
             const t = targets[i];
             const type = (upgraded as any)?.type;
 
@@ -169,6 +250,24 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
                 LucidVersionUpgrader.ENTITIES_KEY,
                 JSON.stringify([...entitiesById.values()])
             );
+        }
+
+        // Write the upgraded resource-requirements / states lists back.
+        // Flat RawElement inputs are always re-wrapped into a NEW envelope
+        // object by `upgradeElements` (they're never already-envelopes, so
+        // the "return by reference when untouched" fast path never applies
+        // here) — the by-reference `changed` check the per-shape loop above
+        // uses can't distinguish "really changed" for these, so — same
+        // allowance already given to the page's own q_data above (`t.isPage`
+        // always writes) — always write back when the list is non-empty.
+        if (requirementInputs.length > 0) {
+            const upgradedRequirements = requirementResults.map((el) => this.flattenArrayItem(el));
+            page.shapeData.set(LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY, JSON.stringify(upgradedRequirements));
+        }
+
+        if (stateInputs.length > 0) {
+            const upgradedStates = stateResults.map((el) => this.flattenArrayItem(el));
+            page.shapeData.set(LucidVersionUpgrader.STATES_KEY, JSON.stringify(upgradedStates));
         }
     }
 
@@ -213,6 +312,20 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             page.shapeData.set(LucidVersionUpgrader.ENTITIES_KEY, this.entitiesBackup.data!);
         } else {
             page.shapeData.delete(LucidVersionUpgrader.ENTITIES_KEY);
+        }
+
+        // Restore the page-level resource-requirements and states lists
+        // (review R3), same delete-if-didn't-exist posture as entities.
+        if (this.requirementsBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY, this.requirementsBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY);
+        }
+
+        if (this.statesBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.STATES_KEY, this.statesBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.STATES_KEY);
         }
 
         // Restore blocks
