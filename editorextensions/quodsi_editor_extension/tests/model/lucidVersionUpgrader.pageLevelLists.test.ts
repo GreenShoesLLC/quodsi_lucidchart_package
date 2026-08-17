@@ -131,6 +131,47 @@ describe('LucidVersionUpgrader page-level lists (review R3)', () => {
         });
     });
 
+    it('upgrades a stored state that carries a stale `type` key (dialog-authored class tag) without the type shadowing the registry key', async () => {
+        // MF-1: StateFormDialog.tsx used to stamp `type: 'None'` (a
+        // SimulationObject-shaped class tag) onto every saved state, and
+        // `q_states` entries are plain objects with no toJSON hop, so the
+        // stamp reached storage verbatim. Before MF-1(b)'s fix,
+        // `{ type: 'State', ...s }` spread the stale `type: 'None'` LAST,
+        // overriding the synthetic registry key and silently skipping
+        // StateTransforms — the SCREAMING enum values would have survived
+        // untouched. Assert they don't.
+        const page = makeUpgradePage('page-4');
+        setOldShapeModelBlob(page);
+
+        const dialogAuthoredState = {
+            id: 'state-2',
+            name: 'DialogState',
+            componentType: 'RESOURCE',
+            dataType: 'BOOLEAN',
+            initialValue: false,
+            collectStatistics: true,
+            type: 'None',
+        };
+        page.shapeData.set('q_states', JSON.stringify([dialogAuthoredState]));
+
+        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        await (upgrader as any).performUpgrade(page);
+
+        const stored = JSON.parse(page.shapeData.get('q_states'));
+        expect(stored).toHaveLength(1);
+        expect(stored[0]).toMatchObject({
+            id: 'state-2',
+            name: 'DialogState',
+            componentType: 'resource',
+            dataType: 'boolean',
+            initialValue: false,
+            collectStatistics: true,
+        });
+        // ISerializedState has no `type` slot -- flattenArrayItem never
+        // re-attaches it, and the stale stamp must not have survived either.
+        expect('type' in stored[0]).toBe(false);
+    });
+
     it('leaves both lists absent when neither is stored (no spurious writes)', async () => {
         const page = makeUpgradePage('page-3');
         setOldShapeModelBlob(page);

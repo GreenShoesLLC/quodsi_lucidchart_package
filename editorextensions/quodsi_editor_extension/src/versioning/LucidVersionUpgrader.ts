@@ -195,11 +195,15 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         // the full sibling set, exactly like the golden acceptance test
         // (`cleanTransforms.golden.test.ts`) builds one combined
         // `rawElements` array for a host's whole document.
+        // Spread the stored entry FIRST: a dialog-authored entry can carry a
+        // stale `type` (e.g. State's SimulationObject-shaped `type: 'None'`),
+        // and that must not shadow the synthetic registry key below or the
+        // element's transforms (e.g. StateTransforms) never run.
         const storedRequirements = this.readPageArray(page, LucidVersionUpgrader.RESOURCE_REQUIREMENTS_KEY);
-        const requirementInputs: RawElement[] = storedRequirements.map((r) => ({ type: 'ResourceRequirement', ...r }));
+        const requirementInputs: RawElement[] = storedRequirements.map((r) => ({ ...r, type: 'ResourceRequirement' }));
 
         const storedStates = this.readPageArray(page, LucidVersionUpgrader.STATES_KEY);
-        const stateInputs: RawElement[] = storedStates.map((s) => ({ type: 'State', ...s }));
+        const stateInputs: RawElement[] = storedStates.map((s) => ({ ...s, type: 'State' }));
 
         // Pure core upgrade — returns envelopes; mappingSource is preserved inside
         // platform, so the adapter no longer re-attaches it.
