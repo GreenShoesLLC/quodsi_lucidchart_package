@@ -27,6 +27,7 @@
     "build": "vite build",
     "test": "react-scripts test",
     "lint:hooks": "node scripts/lint-hooks.js",
+    "smoke:dev": "node scripts/dev-smoke.mjs",
     "eject": "react-scripts eject",
     "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && vite",
     "postinstall": "cd ../../../lucid-shared && npm run build"

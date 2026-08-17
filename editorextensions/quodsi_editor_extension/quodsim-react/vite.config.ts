@@ -17,6 +17,16 @@ export default defineConfig({
     outDir: 'build',
     emptyOutDir: true,
   },
+  // @quodsi/lucid-shared is a LINKED (file:) dependency that compiles to
+  // CommonJS (its tsconfig sets module: "commonjs"). Vite does not pre-bundle
+  // linked deps by default, so without this the dev server hands raw CJS to
+  // the browser as ESM and every named import (SimulationStatus, ModelDefaults,
+  // ...) resolves to nothing - a completely blank page. Production is immune
+  // because rolldown converts CJS to ESM at build time, which is exactly why
+  // this only ever broke dev.
+  optimizeDeps: {
+    include: ['@quodsi/lucid-shared'],
+  },
   server: {
     // The extension's onWatchRun hook fetches http://localhost:3000 and writes
     // the result into public/quodsim-react/index.html. Both the port and the
