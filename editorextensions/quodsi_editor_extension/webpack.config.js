@@ -5,6 +5,7 @@ const process = require("process");
 
 const webpack = require("webpack");
 const WebpackShellPluginNext = require("webpack-shell-plugin-next");
+const { rewriteDevHtml, stripToRelative } = require("./scripts/devHtmlRewrite");
 
 const reactTargets = [{ name: "quodsim-react", port: 3000 }];
 
@@ -88,22 +89,16 @@ module.exports = {
           // Enable links to other React assets, even when served by the
           // extension, by pointing them at the React dev server.
           //
-          // TWO rewrites are needed, and the second is load-bearing:
-          //
-          // 1. src=/href= HTML attributes - the ordinary asset links.
-          // 2. Bare-root import specifiers inside inline module scripts.
-          //    @vitejs/plugin-react injects a Fast Refresh preamble that
-          //    imports "/@react-refresh". Lucid serves this HTML from ITS
-          //    origin, so that resolves to https://lucid.app/@react-refresh
-          //    and 404s. Being a module script, the failed import aborts the
-          //    whole preamble BEFORE it assigns window.$RefreshReg$, and every
-          //    plugin-transformed component module then throws
-          //    "ReferenceError: $RefreshReg$ is not defined" - a blank panel,
-          //    not merely a console warning. Vite's server.origin covers the
-          //    script/link tags but not this injected specifier.
-          const reactAppContentHTMLReplaced = reactAppContentHTML
-            .replaceAll(/(src|href)="\//gi, `$1="http://localhost:${target.port}/`)
-            .replaceAll(/from "\//g, `from "http://localhost:${target.port}/`);
+          // See scripts/devHtmlRewrite.js for the full explanation and the
+          // single source of truth for this rewrite (both HTML attributes
+          // AND the JS module specifiers inside inline module scripts, e.g.
+          // @vitejs/plugin-react's Fast Refresh preamble). That module is
+          // also what tests/devHtmlRewrite.test.ts exercises directly, so
+          // any change here should be made there instead.
+          const reactAppContentHTMLReplaced = rewriteDevHtml(
+            reactAppContentHTML,
+            target.port
+          );
 
           // Enable the extension to serve a copy of the React app
           fs.writeFileSync(
@@ -133,8 +128,9 @@ module.exports = {
           // so this normally matches nothing. Retained so a future config
           // regression (or a hand-edited index.html) still can't ship
           // root-absolute asset URLs, which silently 404 inside the package.
+          // See scripts/devHtmlRewrite.js for the single source of truth.
           const content = fs.readFileSync("build/index.html", "utf8");
-          const newContent = content.replaceAll(/(src|href)="\//gi, '$1="');
+          const newContent = stripToRelative(content);
           fs.writeFileSync("build/index.html", newContent);
 
           // Add React assets to the extension's bundle
