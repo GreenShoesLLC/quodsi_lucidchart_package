@@ -27,6 +27,6 @@
   },
   "dependencies": {
     "@quodsi/shared": "file:../../quodsi_shared",
-    "axios": "^1.7.9"
+    "axios": "^1.15.1"
   }
 }
