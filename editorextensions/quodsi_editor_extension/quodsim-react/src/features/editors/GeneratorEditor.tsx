@@ -573,9 +573,10 @@ const GeneratorEditor: React.FC<Props> = ({
               </select>
             </div>
 
-            {/* Generator Type Selection — only shown when editable. Lucid can
-                only author FREQUENCY generators (no Pattern editor yet), so a
-                PATTERN generator skips straight to the read-only notice below
+            {/* Generator Type Selection - only shown when editable. Lucid can
+                only author FREQUENCY generators (no Pattern or Schedule editor
+                yet), so an externally-authored generator - Arrival Pattern or
+                Arrival Schedule - skips straight to the read-only notice below
                 rather than offering a dropdown that can't represent its type. */}
             {!isExternallyAuthored && (
               <div className="pt-2 border-t">
@@ -583,7 +584,7 @@ const GeneratorEditor: React.FC<Props> = ({
                   <label className="text-xs font-medium text-gray-700">
                     Generator Type
                   </label>
-                  <span title="FREQUENCY: Creates entities at regular intervals using interarrival time. Arrival-pattern generators are authored in Quodsi Studio or the drawio extension.">
+                  <span title="FREQUENCY: Creates entities at regular intervals using interarrival time. Arrival-pattern and arrival-schedule generators are authored in Quodsi Studio or the drawio extension.">
                     <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                   </span>
                 </div>

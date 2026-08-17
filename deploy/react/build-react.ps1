@@ -5,7 +5,7 @@ Builds the quodsim-react React application for a specified target environment.
 .DESCRIPTION
 This script navigates to the project directory, cleans the previous build,
 sets environment variables based on the target environment (Dev, TST, PRD),
-verifies the variables, and then runs the 'npx react-scripts build' command.
+verifies the variables, and then runs the 'npm run build' command (Vite).
 The environment variables are set only for the scope of this script execution.
 
 .PARAMETER TargetEnvironment
@@ -98,11 +98,11 @@ Write-Host " VITE_DATA_CONNECTOR_API_URL = $($env:VITE_DATA_CONNECTOR_API_URL)"
 
 
 # 5. Run the Build Command
-Write-Host "Running 'npx react-scripts build'..." -ForegroundColor Cyan
+Write-Host "Running 'npm run build' (Vite)..." -ForegroundColor Cyan
 try {
-    # Execute npx and ensure output/errors are shown in the console
-    npx react-scripts build *>&1 | Write-Host
-    
+    # Execute npm and ensure output/errors are shown in the console
+    npm run build *>&1 | Write-Host
+
     # Check the exit code of the last native command
     if ($LASTEXITCODE -ne 0) {
         Write-Error "React build script failed with exit code $LASTEXITCODE."
@@ -112,7 +112,7 @@ try {
     }
 }
 catch {
-    Write-Error "An error occurred while attempting to run 'npx react-scripts build'. Error: $($_.Exception.Message)"
+    Write-Error "An error occurred while attempting to run 'npm run build'. Error: $($_.Exception.Message)"
     exit 1
 }
 

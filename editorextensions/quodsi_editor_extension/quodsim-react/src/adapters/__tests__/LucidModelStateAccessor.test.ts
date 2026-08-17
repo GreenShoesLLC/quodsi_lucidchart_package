@@ -1,4 +1,5 @@
 import { createLucidModelStateAccessor, ShapeInfoLike } from '../LucidModelStateAccessor'
+import type { Mock } from 'vitest'
 
 function makeDeps() {
   const listeners = new Set<() => void>()
@@ -89,7 +90,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel forwards the FULL patch verbatim to saveModel -- no field branching, no dropped keys', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: vi.Mock
+      saveModel: Mock
     }
     deps.saveModel = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
@@ -101,7 +102,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel with only arrivalPatterns reaches saveModel without being dropped (the LucidEmbedModelAccessor bug)', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: vi.Mock
+      saveModel: Mock
     }
     deps.saveModel = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
@@ -119,7 +120,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel rejects rather than swallowing a saveModel failure', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: vi.Mock
+      saveModel: Mock
     }
     deps.saveModel = vi.fn().mockRejectedValueOnce(new Error('model storage rejected'))
     const accessor = createLucidModelStateAccessor(deps)
@@ -129,7 +130,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('getShapeInfo forwards to the dep when supplied', () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      getShapeInfo: vi.Mock
+      getShapeInfo: Mock
     }
     const shape: ShapeInfoLike = {
       shapeId: 'g1',
@@ -149,7 +150,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('classifyShape forwards to the dep when supplied', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      classifyShape: vi.Mock
+      classifyShape: Mock
     }
     deps.classifyShape = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
@@ -169,7 +170,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('removeClassification forwards to the dep when supplied', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      removeClassification: vi.Mock
+      removeClassification: Mock
     }
     deps.removeClassification = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)

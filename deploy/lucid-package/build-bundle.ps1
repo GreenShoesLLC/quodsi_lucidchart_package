@@ -18,8 +18,12 @@ Specifies the target environment for the build. This value determines which envi
 variables and manifest file are used. Must be one of 'Dev', 'TST', or 'PRD'.
 
 .PARAMETER RunReactBuild
-DEPRECATED - The React build now happens automatically as part of the editor extension build.
-This parameter is kept for backwards compatibility but has no effect.
+Optional. When specified, Step 2 additionally invokes the standalone
+deploy\react\build-react.ps1 script (npm run build / Vite) against the same
+TargetEnvironment before the lucid-package build runs. The lucid-package
+build (Step 4) builds the React app itself regardless, so this is normally
+redundant -- use it only to sanity-check the standalone React build in
+isolation. When omitted (the default), Step 2 is skipped.
 
 .EXAMPLE
 # Build the bundle for Development environment
