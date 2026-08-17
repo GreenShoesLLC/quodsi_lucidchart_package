@@ -343,15 +343,25 @@ const GeneratorEditor: React.FC<Props> = ({
   useFlushOnChange(localGeneratorDraft.entityId, saveNow);
 
   // Fire saveNow when generator type changes. In practice this only fires for
-  // FREQUENCY generators today — the "Generator Type" select offers just one
-  // value, since Lucid has no Pattern editor (PATTERN generators show a
-  // read-only notice instead; see the render below).
+  // FREQUENCY generators — the "Generator Type" select renders only when the
+  // generator was NOT authored elsewhere (see isExternallyAuthored below), and
+  // it offers just one value, since Lucid has no Pattern or Schedule editor.
   useFlushOnChange(localGeneratorDraft.mode, saveNow);
 
   const entities = referenceData.entities || [];
 
   /** True when this generator was authored as PATTERN elsewhere (Studio, drawio). */
   const isPatternGenerator = localGeneratorDraft.mode === GeneratorType.PATTERN;
+  /** True when this generator was authored as SCHEDULED elsewhere (Studio, drawio). */
+  const isScheduledGenerator = localGeneratorDraft.mode === GeneratorType.SCHEDULED;
+  /**
+   * Authored outside Lucid. Lucid has neither a Pattern nor a Schedule editor,
+   * so BOTH modes get a read-only notice instead of the FREQUENCY surface.
+   * Gating on PATTERN alone (as this did until 2026-08-17) let a SCHEDULED
+   * generator render an editable type <select> whose only option is
+   * Frequency-Based — one click rewrote mode and orphaned arrivalScheduleId.
+   */
+  const isExternallyAuthored = isPatternGenerator || isScheduledGenerator;
 
   /**
    * Validates that the generator name is unique among all generators.
@@ -567,7 +577,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 only author FREQUENCY generators (no Pattern editor yet), so a
                 PATTERN generator skips straight to the read-only notice below
                 rather than offering a dropdown that can't represent its type. */}
-            {!isPatternGenerator && (
+            {!isExternallyAuthored && (
               <div className="pt-2 border-t">
                 <div className="flex items-center gap-1 mb-1">
                   <label className="text-xs font-medium text-gray-700">
@@ -589,17 +599,22 @@ const GeneratorEditor: React.FC<Props> = ({
             )}
 
             {/* Dynamic content based on generator type */}
-            {isPatternGenerator ? (
+            {isExternallyAuthored ? (
               <div className="pt-2 border-t">
                 <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-900 space-y-1">
-                  <div className="font-medium">Arrival Pattern generator</div>
+                  <div className="font-medium">
+                    {isPatternGenerator
+                      ? "Arrival Pattern generator"
+                      : "Scheduled Arrival generator"}
+                  </div>
                   <div>
-                    This generator's arrival timing is defined by an Arrival Pattern
-                    authored in Quodsi Studio or the drawio extension. Lucid does not
-                    have a Pattern editor yet, so the pattern and volume can only be
-                    changed there — editing this generator here (e.g. renaming it or
-                    changing its initial state modifications) will not affect its
-                    arrival pattern.
+                    {isPatternGenerator
+                      ? "This generator's arrival timing is defined by an Arrival Pattern authored in Quodsi Studio or the drawio extension."
+                      : "This generator's arrivals are defined by an Arrival Schedule authored in Quodsi Studio or the drawio extension."}{" "}
+                    Lucid does not have an editor for it yet, so it can only be
+                    changed there — editing this generator here (e.g. renaming it
+                    or changing its initial state modifications) will not affect
+                    its arrival timing.
                   </div>
                   {localGeneratorDraft.arrivalPatternId && (
                     <div>
@@ -608,6 +623,11 @@ const GeneratorEditor: React.FC<Props> = ({
                   )}
                   {localGeneratorDraft.volume !== undefined && (
                     <div>Volume: {localGeneratorDraft.volume}</div>
+                  )}
+                  {localGeneratorDraft.arrivalScheduleId && (
+                    <div>
+                      Schedule ID: <span className="font-mono">{localGeneratorDraft.arrivalScheduleId}</span>
+                    </div>
                   )}
                 </div>
               </div>
