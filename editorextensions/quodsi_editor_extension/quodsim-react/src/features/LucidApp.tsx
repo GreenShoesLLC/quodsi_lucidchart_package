@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useMessaging } from "src/messaging";
+import { useMessaging } from "../messaging";
 import { ModelPanel } from "./modelPanel";
 
 // Create component-specific logger using our debug service
