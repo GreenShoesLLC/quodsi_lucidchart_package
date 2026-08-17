@@ -6,8 +6,8 @@ import "./index_new.css";
 
 // Initialize the messaging system
 const cleanup = initializeMessaging({
-  enableLogging: process.env.NODE_ENV === 'development',
-  enableDevTools: process.env.NODE_ENV === 'development',
+  enableLogging: import.meta.env.DEV,
+  enableDevTools: import.meta.env.DEV,
   logPrefix: "Quodsi",
 });
 

@@ -75,28 +75,22 @@ Write-Host "--------------------------------------------------"
 switch ($TargetEnvironment) {
     'Dev' {
         # FastAPI cutover (2026-05-13): dev backend moved from Azure Functions to
-        # Container App. REACT_APP_DATA_CONNECTOR_API_URL is used by
-        # environmentDetection.ts for the "Dev" label only — actual HTTP calls
+        # Container App. VITE_DATA_CONNECTOR_API_URL is used by
+        # environmentDetection.ts for the "Dev" label only - actual HTTP calls
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
-        # AZURE_STATUS_FUNCTION_KEY retained as no-op (FastAPI ignores function
-        # keys; safe to remove once no React code references it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "zwH0vpBDPYko4QfIbNC9TjJRu4gZP9wbWu8CHuLFMrUkAzFuTazGeg=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/"
         Write-Host "DEV environment variables set for this session." -ForegroundColor Green
     }
     'TST' {
         # FastAPI cutover (2026-05-29): test backend moved from Azure Functions to
-        # Container App. Same pattern as dev — REACT_APP_DATA_CONNECTOR_API_URL is
+        # Container App. Same pattern as dev - VITE_DATA_CONNECTOR_API_URL is
         # used by environmentDetection.ts for the "Test" label only; actual HTTP calls
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
-        # AZURE_STATUS_FUNCTION_KEY retained as no-op for now (FastAPI ignores it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/"
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
     'PRD' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "IuYzy5x9yt6FRhQhL5U9j8bXePABxfSEbVQ0pVEPk6fuAzFuE0P6tw=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
         Write-Host "PRD environment variables set for this session." -ForegroundColor Green
     }
     default {
@@ -113,8 +107,7 @@ $env:QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE = "1"
 
 # Verification (optional)
 # Write-Host "Verifying variables set in this session:" -ForegroundColor Yellow
-# Write-Host " REACT_APP_DATA_CONNECTOR_API_URL = $($env:REACT_APP_DATA_CONNECTOR_API_URL)"
-# Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY is set (Length: $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY.Length))"
+# Write-Host " VITE_DATA_CONNECTOR_API_URL = $($env:VITE_DATA_CONNECTOR_API_URL)"
 
 
 # --- Step 1.4: Enforce react-hooks/rules-of-hooks (fail fast) ---

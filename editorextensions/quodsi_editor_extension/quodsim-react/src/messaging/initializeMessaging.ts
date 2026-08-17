@@ -28,8 +28,8 @@ export interface MessagingInitOptions {
 export function initializeMessaging(options?: MessagingInitOptions) {
   // Configure default options
   const config = {
-    enableLogging: process.env.NODE_ENV === 'development',
-    enableDevTools: process.env.NODE_ENV === 'development',
+    enableLogging: import.meta.env.DEV,
+    enableDevTools: import.meta.env.DEV,
     logPrefix: 'Quodsi',
     ...options
   };

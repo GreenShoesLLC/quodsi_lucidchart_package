@@ -2,13 +2,13 @@ export type Environment = 'Local' | 'Dev' | 'Test' | 'Prod' | 'Unknown';
 
 /**
  * Detects the current environment based on the API URL.
- * Parses REACT_APP_DATA_CONNECTOR_API_URL to determine which environment
+ * Parses VITE_DATA_CONNECTOR_API_URL to determine which environment
  * the application is connected to.
  *
  * @returns The detected environment name
  */
 export function detectEnvironment(): Environment {
-  const apiUrl = process.env.REACT_APP_DATA_CONNECTOR_API_URL || '';
+  const apiUrl = import.meta.env.VITE_DATA_CONNECTOR_API_URL || '';
 
   if (apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1')) {
     return 'Local';

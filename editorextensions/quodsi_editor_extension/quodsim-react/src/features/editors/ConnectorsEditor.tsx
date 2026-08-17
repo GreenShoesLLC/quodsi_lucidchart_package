@@ -56,7 +56,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   referenceData,
   states,
 }) => {
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const isDevelopment = import.meta.env.DEV;
   const { updateElementData } = useModelOpsSender();
 
   if (isDevelopment) {

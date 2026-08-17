@@ -16,7 +16,7 @@ interface LucidAppProps {
 export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
 
   // Only show debug features in development
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = import.meta.env.DEV;
 
   // Track when the component mounts (only in development)
   useEffect(() => {

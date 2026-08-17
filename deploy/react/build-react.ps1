@@ -74,18 +74,15 @@ if (Test-Path -Path $BuildOutputDirectory -PathType Container) {
 Write-Host "Setting environment variables for '$TargetEnvironment'..."
 switch ($TargetEnvironment) {
     'Dev' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://dev-quodsi-func-v1.azurewebsites.net/api/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "zwH0vpBDPYko4QfIbNC9TjJRu4gZP9wbWu8CHuLFMrUkAzFuTazGeg=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://dev-quodsi-func-v1.azurewebsites.net/api/"
         Write-Host "DEV environment variables set for this session." -ForegroundColor Green
     }
     'TST' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://tst-quodsi-func-v1.azurewebsites.net/api/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://tst-quodsi-func-v1.azurewebsites.net/api/"
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
     'PRD' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "IuYzy5x9yt6FRhQhL5U9j8bXePABxfSEbVQ0pVEPk6fuAzFuE0P6tw=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
         Write-Host "PRD environment variables set for this session." -ForegroundColor Green
     }
     # Default case should not be hit due to ValidateSet, but included for completeness
@@ -97,11 +94,7 @@ switch ($TargetEnvironment) {
 
 # 4. Verify Environment Variables (as requested)
 Write-Host "Verifying environment variables set in this session:" -ForegroundColor Yellow
-Write-Host " REACT_APP_DATA_CONNECTOR_API_URL = $($env:REACT_APP_DATA_CONNECTOR_API_URL)"
-# Consider security implications before printing keys to the console/logs
-Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY set (length: $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY.Length)). Displaying value is suppressed for security."
-# If you MUST see the key uncomment the line below, but be careful:
-# Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY = $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY)"
+Write-Host " VITE_DATA_CONNECTOR_API_URL = $($env:VITE_DATA_CONNECTOR_API_URL)"
 
 
 # 5. Run the Build Command

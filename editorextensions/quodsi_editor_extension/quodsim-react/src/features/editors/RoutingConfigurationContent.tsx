@@ -34,7 +34,7 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
   states,
   showHeader = true, // Default to true for backward compatibility
 }) => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = import.meta.env.DEV;
 
   return (
     <div className="space-y-1">
