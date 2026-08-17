@@ -165,7 +165,9 @@ const StateModificationsEditor: React.FC<Props> = ({
       {deletingIndex >= 0 && displayModifications[deletingIndex] && (
         <div className="p-3 bg-red-50 border border-red-200 rounded">
           <div className="text-sm font-medium text-red-900 mb-2">
-            Delete State Modification: "{displayModifications[deletingIndex].stateName}"?
+            Delete State Modification: "
+            {states.getByUniqueId(displayModifications[deletingIndex].stateId)?.name
+              ?? displayModifications[deletingIndex].stateId}"?
           </div>
           <div className="text-xs text-red-700 mb-3">
             This action cannot be undone.
@@ -222,10 +224,10 @@ const StateModificationsEditor: React.FC<Props> = ({
           </div>
         ) : (
           displayModifications.map((mod, index) => {
-            const state = states.getByUniqueId(mod.stateUniqueId);
+            const state = states.getByUniqueId(mod.stateId);
             return (
               <StateModificationListItem
-                key={`${mod.stateUniqueId}-${index}`}
+                key={`${mod.stateId}-${index}`}
                 modification={mod}
                 state={state}
                 onEdit={() => handleOpenEditDialog(index)}

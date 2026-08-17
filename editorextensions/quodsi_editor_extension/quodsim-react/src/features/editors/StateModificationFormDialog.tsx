@@ -7,6 +7,7 @@ import {
   StateOperation,
   StateType,
   ComponentType,
+  DistributionType,
   getSupportedOperationsForType,
   parseExpression,
   collectStateNames,
@@ -15,6 +16,100 @@ import {
   expressionHint,
 } from "@quodsi/lucid-shared";
 import { SampleDistributionEditor } from "./sample";
+
+/**
+ * Wire-cleanup Phase B2 Task 6/10: `StateModification.sample` is the clean
+ * `StateSample` shape ({value} for constant — distribution tag ABSENT means
+ * constant, never the string "constant"; {distribution: '<clean tag>',
+ * ...params} otherwise). `SampleDistributionEditor`'s own draft vocabulary
+ * (kept unchanged — it's a shared internal component, not part of this
+ * panel's rename surface) speaks a different, OLD-era vocabulary: an
+ * explicit `DistributionType.CONSTANT` ("constant") tag, `"sample_
+ * multinomial_one"` for CATEGORY (not the clean `"categorical"` tag), and
+ * old param names for UNIFORM/TRIANGULAR (`low`/`high`, `left`/`right`
+ * instead of `min`/`max` — same rename `Duration.ts`'s private
+ * `renameToClean`/`renameToLegacy` apply for durations). These two
+ * functions are this dialog's bridge, mirroring the studio panel's
+ * `buildSample`/`sampleParams` draft-local pattern.
+ */
+const renameParamsToClean = (params: Record<string, unknown>): Record<string, unknown> => {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "low" || k === "left") out.min = v;
+    else if (k === "high" || k === "right") out.max = v;
+    else out[k] = v;
+  }
+  return out;
+};
+
+const renameParamsToLegacy = (
+  distributionType: string,
+  params: Record<string, unknown>
+): Record<string, unknown> => {
+  if (distributionType === DistributionType.UNIFORM) {
+    const { min, max, ...rest } = params;
+    return { ...rest, ...(min !== undefined ? { low: min } : {}), ...(max !== undefined ? { high: max } : {}) };
+  }
+  if (distributionType === DistributionType.TRIANGULAR) {
+    const { min, max, ...rest } = params;
+    return { ...rest, ...(min !== undefined ? { left: min } : {}), ...(max !== undefined ? { right: max } : {}) };
+  }
+  return { ...params };
+};
+
+/** Draft (SampleDistributionEditor vocabulary) -> wire (`StateSample`).
+ *
+ * Fix round 1, F1: STRING states route through the SAME branch as CATEGORY
+ * — `SampleDistributionEditor.initializeDefaults` fires the OLD-era tag
+ * `"sample_multinomial_one"` for STRING too (its own STRING case treats it
+ * like a categorical pick, per its "consider using a CATEGORY state"
+ * message), so without this a STRING sample fell through to the generic
+ * default branch and persisted `distribution: "sample_multinomial_one"` — a
+ * retired tag `StateSample`'s seven clean-grammar shapes don't define. */
+const buildSample = (
+  dataType: StateType | undefined,
+  distributionType: string,
+  distributionParameters: Record<string, unknown>
+): Record<string, unknown> => {
+  if (dataType === StateType.CATEGORY || dataType === StateType.STRING) {
+    return { distribution: "categorical", probabilities: distributionParameters?.probabilities ?? {} };
+  }
+  if (dataType === StateType.BOOLEAN) {
+    return { distribution: "bernoulli", p: distributionParameters?.p ?? 0.5 };
+  }
+  if (distributionType === DistributionType.CONSTANT || !distributionType) {
+    return { value: distributionParameters?.value ?? 0 };
+  }
+  return { distribution: distributionType, ...renameParamsToClean(distributionParameters ?? {}) };
+};
+
+/** Wire (`StateSample`) -> draft (SampleDistributionEditor vocabulary).
+ *  See `buildSample`'s F1 comment — STRING mirrors CATEGORY here too, so an
+ *  existing STRING sample loads back into the editor's draft the same way
+ *  a CATEGORY one does. */
+const sampleToEditorState = (
+  dataType: StateType | undefined,
+  sample: Record<string, unknown> | undefined
+): { distributionType: string; distributionParameters: Record<string, unknown> } => {
+  if (!sample) return { distributionType: "", distributionParameters: {} };
+  if (dataType === StateType.CATEGORY || dataType === StateType.STRING) {
+    return {
+      distributionType: "sample_multinomial_one",
+      distributionParameters: { probabilities: sample.probabilities ?? {} },
+    };
+  }
+  if (dataType === StateType.BOOLEAN) {
+    return { distributionType: "bernoulli", distributionParameters: { p: sample.p ?? 0.5 } };
+  }
+  if (sample.distribution === undefined) {
+    return { distributionType: DistributionType.CONSTANT, distributionParameters: { value: sample.value ?? 0 } };
+  }
+  const { value: _value, distribution, ...rest } = sample;
+  return {
+    distributionType: distribution as string,
+    distributionParameters: renameParamsToLegacy(distribution as string, rest),
+  };
+};
 
 type OperandMode = "literal" | "expression";
 
@@ -56,7 +151,7 @@ const StateModificationFormDialog: React.FC<Props> = ({
 
   // Form state
   const [selectedStateId, setSelectedStateId] = useState<string>(
-    modification?.stateUniqueId || ""
+    modification?.stateId || ""
   );
   const [operation, setOperation] = useState<StateOperation>(
     modification?.operation || StateOperation.ASSIGN
@@ -65,28 +160,36 @@ const StateModificationFormDialog: React.FC<Props> = ({
     modification?.value?.toString() || ""
   );
   const [operandMode, setOperandMode] = useState<OperandMode>(
-    modification?.valueExpression ? "expression" : "literal"
+    modification?.expression ? "expression" : "literal"
   );
   const [valueExpression, setValueExpression] = useState<string>(
-    modification?.valueExpression ?? ""
+    modification?.expression ?? ""
   );
   const [showAdvanced, setShowAdvanced] = useState<boolean>(
-    !!(modification?.componentUniqueId || modification?.targetComponentType)
+    !!(modification?.componentId || modification?.targetComponentType)
   );
   const [targetComponentType, setTargetComponentType] = useState<string>(
     modification?.targetComponentType || ""
   );
-  const [componentUniqueId, setComponentUniqueId] = useState<string>(
-    modification?.componentUniqueId || ""
+  const [componentId, setComponentId] = useState<string>(
+    modification?.componentId || ""
   );
   const [error, setError] = useState<string>("");
 
-  // SAMPLE operation state
+  // SAMPLE operation state — draft vocabulary; see buildSample/sampleToEditorState above.
+  const initialSampleDraft = useMemo(
+    () => sampleToEditorState(
+      states.getByUniqueId(modification?.stateId ?? "")?.dataType,
+      modification?.sample as Record<string, unknown> | undefined
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
   const [distributionType, setDistributionType] = useState<string>(
-    modification?.distributionType || ""
+    initialSampleDraft.distributionType
   );
   const [distributionParameters, setDistributionParameters] = useState<Record<string, any>>(
-    modification?.distributionParameters || {}
+    initialSampleDraft.distributionParameters
   );
 
   // Get selected state
@@ -292,28 +395,30 @@ const StateModificationFormDialog: React.FC<Props> = ({
     const isExpression = operation !== StateOperation.SAMPLE && operandMode === "expression";
 
     try {
-      // For SAMPLE operations, use a placeholder value (it's ignored at
-      // runtime). In expression mode, `value` carries no meaning — exactly
-      // one of value/valueExpression is emitted below.
+      // Wire-cleanup Phase B2 Task 6/10: exactly one of value/expression/
+      // sample is carried now, UNCONDITIONALLY (StateModification.fromJSON's
+      // invariant) — SAMPLE leaves `value` undefined and carries `sample`
+      // instead (no more placeholder value alongside it); expression mode
+      // leaves `value` undefined too.
       const parsedValue = operation === StateOperation.SAMPLE
-        ? getDefaultValueForType(selectedState.dataType)
+        ? undefined
         : isExpression
         ? undefined
         : parseValue(value, selectedState.dataType);
 
       const newModification = new StateModification(
         selectedStateId,
-        selectedState.name,
         operation,
         parsedValue,
         {
-          componentUniqueId: componentUniqueId || undefined,
+          componentId: componentId || undefined,
           targetComponentType: targetComponentType
             ? (targetComponentType as ComponentType)
             : undefined,
-          distributionType: operation === StateOperation.SAMPLE ? distributionType : undefined,
-          distributionParameters: operation === StateOperation.SAMPLE ? distributionParameters : undefined,
-          valueExpression: isExpression ? trimmedExpression : undefined,
+          sample: operation === StateOperation.SAMPLE
+            ? buildSample(selectedState.dataType, distributionType, distributionParameters)
+            : undefined,
+          expression: isExpression ? trimmedExpression : undefined,
         }
       );
 
@@ -585,8 +690,8 @@ const StateModificationFormDialog: React.FC<Props> = ({
                     <input
                       type="text"
                       className="w-full px-2 py-1.5 text-xs border rounded font-mono"
-                      value={componentUniqueId}
-                      onChange={(e) => setComponentUniqueId(e.target.value)}
+                      value={componentId}
+                      onChange={(e) => setComponentId(e.target.value)}
                       placeholder="Specific component ID (optional)"
                     />
                   </div>

@@ -12,7 +12,6 @@ import { Activity } from '@quodsi/shared';
 import { Resource } from '@quodsi/shared';
 import { ResourceRequirement } from '@quodsi/shared';
 import { Generator } from '@quodsi/shared';
-import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
@@ -31,17 +30,16 @@ function buildModelWith(actions: any[]): ModelDefinition {
     modelDef.activities.add(activity);
 
     const entityId = modelDef.entities.getAll()[0].id;
-    const generationConfig: EntitySourceConfig = {
+    // `EntitySourceConfig` was dissolved flat onto `Generator` (wire-cleanup
+    // Phase B2 Task 5).
+    const generator = new Generator(
+        'generator-1',
+        'Generator1',
         entityId,
-        generatorType: GeneratorType.FREQUENCY,
-        periodicOccurrences: 10,
-        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-        entitiesPerCreation: 1,
-        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-        maxEntities: 999999,
-        initialStateModifications: []
-    };
-    const generator = new Generator('generator-1', 'Generator1', generationConfig, 'activity-1');
+        Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1))
+    );
+    generator.mode = GeneratorType.FREQUENCY;
+    generator.maxEntities = 999999;
     modelDef.generators.add(generator);
 
     return modelDef;
@@ -65,17 +63,14 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
         modelDef.activities.add(activity);
 
         const entityId = modelDef.entities.getAll()[0].id;
-        const generationConfig: EntitySourceConfig = {
+        const generator = new Generator(
+            'generator-1',
+            'Generator1',
             entityId,
-            generatorType: GeneratorType.FREQUENCY,
-            periodicOccurrences: 10,
-            periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-            entitiesPerCreation: 1,
-            periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-            maxEntities: 999999,
-            initialStateModifications: []
-        };
-        const generator = new Generator('generator-1', 'Generator1', generationConfig, 'activity-1');
+            Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1))
+        );
+        generator.mode = GeneratorType.FREQUENCY;
+        generator.maxEntities = 999999;
         modelDef.generators.add(generator);
 
         const serializer = ModelSerializerFactory.create(modelDef);
@@ -88,7 +83,7 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
     });
 
     it('carries a DelayAction id through serialization', () => {
-        const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(5));
+        const duration = Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(5));
         const delayAction = createDelayAction(duration, null, 'delay-action-fixed-id');
         expect(delayAction.id).toBe('delay-action-fixed-id');
 
@@ -103,7 +98,7 @@ describe('serializeAction emits action id (Task 6b-4)', () => {
     });
 
     it('preserves id across multiple actions on the same activity', () => {
-        const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
+        const duration = Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(1));
         const action1 = createDelayAction(duration, null, 'action-id-alpha');
         const action2 = createDelayAction(duration, null, 'action-id-beta');
 

@@ -10,7 +10,6 @@ import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { ConstantDistribution } from '@quodsi/shared';
 import { createDelayWithResourceAction } from '@quodsi/shared';
-import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 
 export function createNonSequentialFlowModel(): ModelDefinition {
@@ -33,7 +32,7 @@ export function createNonSequentialFlowModel(): ModelDefinition {
     modelDef.entities.add(entity);
 
     // Create common duration for activities
-    const duration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
+    const duration = Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
     // Create action template with resource requirement
     const action = createDelayWithResourceAction(duration, {
@@ -49,23 +48,22 @@ export function createNonSequentialFlowModel(): ModelDefinition {
     modelDef.activities.add(activity2);
     modelDef.activities.add(activity3);
 
-    // Create generator
-    const generationConfig: EntitySourceConfig = {
-        entityId: entity.id,
-        generatorType: GeneratorType.FREQUENCY,
-        periodicOccurrences: 10,
-        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-        entitiesPerCreation: 1,
-        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-        maxEntities: 999999,
-        initialStateModifications: []
-    };
+    // Create generator. `EntitySourceConfig` was dissolved flat onto
+    // `Generator` (wire-cleanup Phase B2 Task 5); the old `exitConnector`
+    // 4th-arg concept is gone — routing to activity1 is the real `Connector`
+    // created below.
     const generator = new Generator(
         'generator-1',
         'Generator1',
-        generationConfig,
-        activity1.id // exitConnector
+        entity.id,
+        Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1))
     );
+    generator.mode = GeneratorType.FREQUENCY;
+    generator.maxCycles = 10;
+    generator.batchSize = 1;
+    generator.startDelay = Duration.constant(0, PeriodUnit.HOURS);
+    generator.maxEntities = 999999;
+    generator.initialStates = [];
     modelDef.generators.add(generator);
 
     // Create connectors

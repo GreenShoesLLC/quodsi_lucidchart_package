@@ -1,147 +1,141 @@
 {
-  "formatVersion": "1.0",
-  "metadata": { "version": "1.0", "timestamp": "2025-02-19T13:01:31.679Z" },
-  "model": {
-    "id": "0_0",
-    "name": "New Model",
-    "reps": "1",
-    "seed": 12345,
-    "oneClockUnit": "MINUTES",
-    "simulationTimeType": "Clock",
-    "warmupClockPeriod": 0,
-    "warmupClockPeriodUnit": "HOURS",
-    "runClockPeriod": 24,
-    "runClockPeriodUnit": "HOURS",
-    "warmupDateTime": null,
-    "startDateTime": null,
-    "finishDateTime": null
+  "schemaVersion": "2026.11.01",
+  "metadata": {
+    "version": "2026.11.01",
+    "timestamp": "2026-08-16T22:38:30.209Z"
+  },
+  "name": "New Model",
+  "replications": 1,
+  "seed": 12345,
+  "timeUnit": "minutes",
+  "runTime": {
+    "value": 24,
+    "unit": "hours"
   },
   "entities": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "name": "Default Entity",
-      "type": "Entity"
+      "name": "Default Entity"
     }
   ],
   "activities": [
     {
       "id": "DIPGmv75pCDf",
       "name": "Activity 1",
-      "capacity": "1",
-      "inboundQueueCapacity": "1",
-      "outboundQueueCapacity": "1",
-      "operationSteps": [
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
         {
+          "id": "8fabff94-0b92-422c-824b-ae19d9dc6453",
+          "type": "delay_with_resource",
           "duration": {
-            "durationLength": 1,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "unit": "minutes",
+            "value": 1
           },
-          "requirementId": "_XDIAU91Nc80",
-          "quantity": 1
+          "resourceRequirementId": "_XDIAU91Nc80"
         },
         {
+          "id": "e37cf410-1561-4cde-b077-aa58230bda4c",
+          "type": "delay",
           "duration": {
-            "durationLength": 2,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
-          },
-          "requirementId": null,
-          "quantity": 1
+            "unit": "minutes",
+            "value": 2
+          }
         }
-      ],
-      "connectors": []
+      ]
     },
     {
       "id": "GIPGoUATZA2N",
       "name": "Activity 2",
-      "capacity": "1",
-      "inboundQueueCapacity": "1",
-      "outboundQueueCapacity": "1",
-      "operationSteps": [
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
         {
+          "id": "d9a45a21-0a8b-48f7-ae55-d6b741b2fc82",
+          "type": "delay_with_resource",
           "duration": {
-            "durationLength": 2,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "unit": "minutes",
+            "value": 2
           },
-          "requirementId": "_XDIAU91Nc80",
-          "quantity": 1
+          "resourceRequirementId": "_XDIAU91Nc80"
         }
-      ],
-      "connectors": []
+      ]
     },
     {
       "id": "OIPGffw13dbV",
       "name": "Activity 3",
-      "capacity": "1",
-      "inboundQueueCapacity": "1",
-      "outboundQueueCapacity": "1",
-      "operationSteps": [
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
+      "actions": [
         {
+          "id": "8f75b83c-4656-4b8f-b747-66dff5bb846c",
+          "type": "delay_with_resource",
           "duration": {
-            "durationLength": 3,
-            "durationPeriodUnit": "MINUTES",
-            "durationType": "CONSTANT",
-            "distribution": null
+            "unit": "minutes",
+            "value": 3
           },
-          "requirementId": "_XDIAU91Nc80",
-          "quantity": 1
+          "resourceRequirementId": "_XDIAU91Nc80"
         }
-      ],
-      "connectors": []
+      ]
     }
   ],
   "resources": [
-    { "id": "_XDIAU91Nc80", "name": "Resource 1", "capacity": "4" }
+    {
+      "id": "_XDIAU91Nc80",
+      "name": "Resource 1",
+      "capacity": 4
+    }
   ],
   "generators": [
     {
       "id": "eIPG0QGwIbDd",
       "name": "Generator 1",
-      "activityKeyId": "{SomeActivityName}",
       "entityId": "00000000-0000-0000-0000-000000000000",
-      "periodicOccurrences": "240",
-      "periodIntervalDuration": {
-        "durationLength": 6,
-        "durationPeriodUnit": "MINUTES",
-        "durationType": "CONSTANT",
-        "distribution": null
+      "interarrivalTime": {
+        "value": 6,
+        "unit": "minutes"
       },
-      "entitiesPerCreation": 1,
-      "periodicStartDuration": {
-        "durationLength": 0,
-        "durationPeriodUnit": "HOURS",
-        "durationType": "CONSTANT",
-        "distribution": null
-      },
-      "maxEntities": "998",
-      "connectors": []
+      "maxCycles": 240,
+      "maxEntities": 998
+    }
+  ],
+  "connectors": [
+    {
+      "id": "conn-gen-1",
+      "name": "Generator 1 -> Activity 1",
+      "sourceId": "eIPG0QGwIbDd",
+      "targetId": "DIPGmv75pCDf",
+      "weight": 1
+    },
+    {
+      "id": "conn-1-2",
+      "name": "Activity 1 -> Activity 2",
+      "sourceId": "DIPGmv75pCDf",
+      "targetId": "GIPGoUATZA2N",
+      "weight": 1
+    },
+    {
+      "id": "conn-2-3",
+      "name": "Activity 2 -> Activity 3",
+      "sourceId": "GIPGoUATZA2N",
+      "targetId": "OIPGffw13dbV",
+      "weight": 1
     }
   ],
   "resourceRequirements": [
     {
       "id": "_XDIAU91Nc80",
       "name": "Resource 1",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "_XDIAU91Nc80",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "_XDIAU91Nc80"
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "states": []
 }

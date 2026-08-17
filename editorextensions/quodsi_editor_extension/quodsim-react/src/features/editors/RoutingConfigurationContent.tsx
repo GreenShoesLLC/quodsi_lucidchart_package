@@ -76,7 +76,7 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
             <select
               name="connectType"
               className="w-full px-2 py-1 text-xs border rounded bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-              value={localData.connectType}
+              value={localData.routing}
               onChange={handleChange}
               disabled={outgoingConnectors.length === 1}
             >
@@ -96,7 +96,7 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
           <div className="border-t pt-1">
             <RoutingConfigurationPanel
               activityId={localData.id}
-              connectType={localData.connectType}
+              connectType={localData.routing}
               outgoingConnectors={outgoingConnectors}
               entityStates={states}
               availableEntities={referenceData?.entities || []}

@@ -1,21 +1,23 @@
 /**
  * ModelSerializer completeness test.
  *
- * Purpose: Ensure that EVERY data field on the Model domain object is carried
- * through by the serializer.  If a new field is added to Model but the
- * serializer silently drops it, one of the value-equality assertions below
- * will fail, catching the omission at CI time.
+ * Purpose: Ensure that EVERY data field on the Model domain object that has a
+ * clean-wire equivalent is carried through by the serializer. If a new field
+ * is added to Model but the serializer silently drops it, one of the
+ * value-equality assertions below will fail, catching the omission at CI
+ * time.
  *
  * Strategy:
  *   - Build a Model with EVERY field set to a distinct, non-default value so no
  *     field can survive silently as the default.
  *   - Derive the expected field list dynamically from Object.keys(model),
- *     excluding `scenarios` (legitimately serialized in the top-level scenarios
- *     array) and `type` (enum constant, always present).
- *   - Assert each expected field appears in serialized.model.
+ *     excluding fields with NO clean-wire equivalent (see EXCLUDED_FIELDS).
+ *   - Assert each expected field appears directly on the serialized document
+ *     root (wire-cleanup Phase B2 Task 9: `CleanModelDocument` puts the
+ *     model's run parameters FLAT on the document root — there is no nested
+ *     `model` sub-object any more; see `ISerializedModel`'s doc comment).
  *   - Assert spot-value checks on key fields (including levers).
  *
- * // scenarios: legitimately serialized in the top-level scenarios array
  * // Add new Model fields here if the automatic Object.keys check misses them
  */
 
@@ -24,7 +26,7 @@ import { Model } from '@quodsi/lucid-shared';
 import { ModelDefinition } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { SimulationTimeType } from '@quodsi/shared';
-import { SimulationObjectType } from '@quodsi/shared';
+import { Duration } from '@quodsi/shared';
 import { createScenarioLever, ScenarioPropertyName } from '@quodsi/lucid-shared';
 import type { ScenarioLever } from '@quodsi/lucid-shared';
 
@@ -35,19 +37,17 @@ import type { ScenarioLever } from '@quodsi/lucid-shared';
 /** Build a Model with EVERY field set to a distinct, non-default value. */
 function buildCompleteModel(): Model {
     const model = new Model(
-        'test-model-completeness-001',                  // id
-        'Completeness Test Model',                      // name
-        42,                                             // reps  (default=1)
-        9999,                                           // seed  (default=12345)
-        PeriodUnit.MINUTES,                             // oneClockUnit  (default=MINUTES per ModelDefaults, but createDefault also uses MINUTES — using MINUTES as distinct value is fine; the test detects missing fields, not wrong values)
-        SimulationTimeType.CalendarDate,                // simulationTimeType (default=Clock)
-        7,                                              // warmupClockPeriod  (default=0)
-        PeriodUnit.DAYS,                                // warmupClockPeriodUnit (default=HOURS in createDefault)
-        480,                                            // runClockPeriod  (default=24)
-        PeriodUnit.MINUTES,                             // runClockPeriodUnit (default=HOURS in createDefault)
-        new Date('2025-01-15T08:00:00Z'),               // warmupDateTime
-        new Date('2025-02-01T09:00:00Z'),               // startDateTime
-        new Date('2025-12-31T17:00:00Z')                // finishDateTime
+        'test-model-completeness-001',                  // id (no clean-wire equivalent)
+        'Completeness Test Model',                       // name
+        42,                                               // replications (default=1)
+        9999,                                             // seed (default=12345)
+        PeriodUnit.MINUTES,                               // timeUnit
+        SimulationTimeType.CalendarDate,                  // timeMode (default=Clock)
+        Duration.constant(7, PeriodUnit.DAYS),             // warmupTime (default=0)
+        Duration.constant(480, PeriodUnit.MINUTES),        // runTime (default=24 hours)
+        new Date('2025-01-15T08:00:00Z'),                 // warmupDateTime (no clean-wire equivalent)
+        new Date('2025-02-01T09:00:00Z'),                 // startDateTime (calendar-mode only)
+        new Date('2025-12-31T17:00:00Z')                  // finishDateTime (no clean-wire equivalent)
     );
 
     model.description = 'non-default description';
@@ -82,19 +82,26 @@ describe('ModelSerializer completeness — all Model fields round-trip through s
         model = buildCompleteModel();
         const modelDef = buildModelDefinition(model);
         const serialized = ModelSerializerFactory.create(modelDef).serialize(modelDef);
-        serializedModel = serialized.model as unknown as Record<string, unknown>;
+        serializedModel = serialized as unknown as Record<string, unknown>;
     });
 
     // -----------------------------------------------------------------------
     // Dynamic completeness check: every enumerable key on the Model instance
-    // (except the explicitly excluded ones) must appear in serialized.model.
+    // that has a clean-wire equivalent must appear directly on the serialized
+    // document root.
     // -----------------------------------------------------------------------
 
-    it('serializes every Model field (dynamic Object.keys completeness check)', () => {
-        // Exclusion set — fields intentionally NOT present in serialized.model:
-        //   scenarios: legitimately serialized in the top-level scenarios array
-        //   type:      SimulationObjectType enum constant; always present, not a data field
-        const EXCLUDED_FIELDS = new Set(['scenarios', 'type']);
+    it('serializes every Model field with a clean-wire equivalent (dynamic Object.keys completeness check)', () => {
+        // Exclusion set — fields intentionally NOT present on the wire:
+        //   scenarios:       legitimately serialized in the top-level scenarios array
+        //   type:            SimulationObjectType enum constant; no clean-wire class-tag
+        //   id:               round-trip-only Lucid document id; CleanModelDocument has
+        //                     NO field for it at all (dropped, not renamed — see
+        //                     Model.toJSON()'s doc comment and root.py's explicit note
+        //                     to translators)
+        //   warmupDateTime / finishDateTime: host-projection conveniences only; the
+        //                     clean wire derives them from runTime/warmupTime/startDateTime
+        const EXCLUDED_FIELDS = new Set(['scenarios', 'type', 'id', 'warmupDateTime', 'finishDateTime']);
 
         const modelFields = Object.keys(model).filter(k => !EXCLUDED_FIELDS.has(k));
 
@@ -112,51 +119,36 @@ describe('ModelSerializer completeness — all Model fields round-trip through s
         expect(serializedModel.description).toBe('non-default description');
     });
 
-    it('serializes reps correctly', () => {
-        expect(serializedModel.reps).toBe(42);
+    it('serializes replications correctly', () => {
+        expect(serializedModel.replications).toBe(42);
     });
 
     it('serializes seed correctly', () => {
         expect(serializedModel.seed).toBe(9999);
     });
 
-    it('serializes warmupClockPeriod correctly', () => {
-        expect(serializedModel.warmupClockPeriod).toBe(7);
+    it('serializes timeUnit correctly', () => {
+        expect(serializedModel.timeUnit).toBe(PeriodUnit.MINUTES);
     });
 
-    it('serializes runClockPeriod correctly', () => {
-        expect(serializedModel.runClockPeriod).toBe(480);
+    it('serializes timeMode correctly', () => {
+        expect(serializedModel.timeMode).toBe(SimulationTimeType.CalendarDate);
     });
 
-    it('serializes simulationTimeType correctly', () => {
-        expect(serializedModel.simulationTimeType).toBe(SimulationTimeType.CalendarDate);
+    it('serializes warmupTime correctly (flat Duration)', () => {
+        expect(serializedModel.warmupTime).toEqual({ value: 7, unit: PeriodUnit.DAYS });
     });
 
-    it('serializes warmupClockPeriodUnit correctly', () => {
-        expect(serializedModel.warmupClockPeriodUnit).toBe(PeriodUnit.DAYS);
+    it('serializes runTime correctly (flat Duration)', () => {
+        expect(serializedModel.runTime).toEqual({ value: 480, unit: PeriodUnit.MINUTES });
     });
 
-    it('serializes runClockPeriodUnit correctly', () => {
-        expect(serializedModel.runClockPeriodUnit).toBe(PeriodUnit.MINUTES);
-    });
-
-    // Date fields: the serializer converts Date → ISO string; accept either form.
-    it('serializes warmupDateTime as a non-null ISO string or Date', () => {
-        const val = serializedModel.warmupDateTime;
-        expect(val).not.toBeNull();
-        expect(typeof val === 'string' || val instanceof Date).toBe(true);
-    });
-
-    it('serializes startDateTime as a non-null ISO string or Date', () => {
+    // startDateTime: the serializer converts Date -> ISO string; only emitted
+    // under calendar mode (this model is CalendarDate).
+    it('serializes startDateTime as a non-null ISO string', () => {
         const val = serializedModel.startDateTime;
         expect(val).not.toBeNull();
-        expect(typeof val === 'string' || val instanceof Date).toBe(true);
-    });
-
-    it('serializes finishDateTime as a non-null ISO string or Date', () => {
-        const val = serializedModel.finishDateTime;
-        expect(val).not.toBeNull();
-        expect(typeof val === 'string' || val instanceof Date).toBe(true);
+        expect(typeof val).toBe('string');
     });
 
     // -----------------------------------------------------------------------

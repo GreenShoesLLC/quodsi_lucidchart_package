@@ -1,21 +1,24 @@
 import { ResourceRequirement } from '@quodsi/shared';
 import { Connector } from '@quodsi/shared';
 import { ConnectType } from '@quodsi/shared';
+import { ISerializedDuration } from "../serialization/interfaces/ISerializedDuration";
 import { ISerializedScenario } from "../serialization/interfaces/ISerializedScenario";
 import { SwimLaneContainment } from "./swimlane/SwimLaneQuodsiData";
 
 /**
  * A single state modification, reduced to what delete-time reference detection
  * needs (`@quodsi/shared`'s `findExpressionsReferencingState` /
- * `removeStateReferences`, see conversion/stateReferences.ts). `valueExpression`
- * is present only for expression-mode modifications (state-expressions feature);
- * literal-value modifications omit it.
+ * `removeStateReferences`, see conversion/stateReferences.ts).
+ *
+ * Wire-cleanup Phase B2 Task 6/9: `stateUniqueId` + the redundant `stateName`
+ * collapsed to the single clean-wire `stateId` field; `valueExpression`
+ * renamed to `expression` (present only for expression-mode modifications —
+ * literal-value modifications omit it).
  */
 export interface EditorReferenceStateModification {
-    stateUniqueId: string;
-    stateName: string;
+    stateId: string;
     operation: string;
-    valueExpression?: string;
+    expression?: string;
 }
 
 /**
@@ -27,20 +30,22 @@ export interface EditorReferenceStateModification {
  * `findExpressionsReferencingState`'s walkActionsForExpressions walks it — without
  * this recursion, a modification buried in a BRANCH/LOOP body would be invisible to
  * the detector even though the summary "has" actions.
+ *
+ * Wire-cleanup Phase B2 Task 9: `actionType` renamed to `type`; `duration`
+ * is the flat clean-wire `ISerializedDuration` shape (`{value, unit}` or
+ * `{distribution, ...params, unit}`), not the old nested `{durationPeriodUnit,
+ * distribution: {distributionType, parameters, description}}` wrapper. The old
+ * `stateModifications` field (Seize/DelayWithResource's differently-named
+ * modifications list) was unified into `modifications` at Task 6 — no longer
+ * a separate field here.
  */
 export interface EditorReferenceActionSummary {
     id: string;
-    actionType: string;
-    /** Reuses the same inline serialized-duration shape as generator periodIntervalDuration. */
-    duration?: {
-        durationPeriodUnit: string;
-        distribution: { distributionType: string; parameters: Record<string, number>; description?: string };
-    };
+    type: string;
+    duration?: ISerializedDuration;
     resourceRequirementId?: string | null;
-    /** State modifications carried directly by Assign/Create/Split/Join actions. */
+    /** State modifications carried by this action. */
     modifications?: EditorReferenceStateModification[];
-    /** State modifications carried by Seize/DelayWithResource actions (a differently-named field on the model). */
-    stateModifications?: EditorReferenceStateModification[];
     /** BRANCH: actions to run when the condition is true. */
     ifTrue?: EditorReferenceActionSummary[];
     /** BRANCH: actions to run when the condition is false. */
@@ -62,7 +67,7 @@ export interface EditorReferenceData {
     activities?: Array<{
         id: string,
         name: string,
-        connectType?: ConnectType,
+        routing?: ConnectType,
         actionRequirementIds?: string[];  // Requirement IDs used by actions
         /** Per-action summary for the change-request editor (Action picker + resource-requirement dropdown). */
         actions?: EditorReferenceActionSummary[];
@@ -77,18 +82,20 @@ export interface EditorReferenceData {
          * disagree.
          */
         sourceConfig?: {
-            initialStateModifications?: EditorReferenceStateModification[];
+            initialStates?: EditorReferenceStateModification[];
         };
     }>;
     generators?: Array<{
         id: string;
         name: string;
-        periodIntervalDuration?: {
-            durationPeriodUnit: string;
-            distribution: { distributionType: string; parameters: Record<string, number>; description?: string };
-        };
-        /** Initial state modifications applied to each new entity (generationConfig.initialStateModifications on the model). */
-        initialStateModifications?: EditorReferenceStateModification[];
+        /** Wire-cleanup Phase B2 Task 5/9: renamed from `periodIntervalDuration`
+         *  (dissolved `EntitySourceConfig`); flat clean-wire Duration shape. */
+        interarrivalTime?: ISerializedDuration;
+        /** Initial state modifications applied to each new entity (Generator.initialStates
+         *  on the model). Named to match `StateReferenceScope`'s own `initialStates` field
+         *  (`@quodsi/shared`'s `findExpressionsReferencingState` reads this key directly off
+         *  this same summary object — see referenceDataBuilder's integration comment). */
+        initialStates?: EditorReferenceStateModification[];
     }>;
     resourceRequirements?: ResourceRequirement[];
     connectors?: Connector[];

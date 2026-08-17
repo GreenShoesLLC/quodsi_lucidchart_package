@@ -5,6 +5,12 @@ import type { ISerializedModel } from '../serialization/interfaces/ISerializedMo
  * editor. MUST stay structurally compatible with quodsi_studio's
  * `RelayedCatalog` (src/platforms/lucid-embed/relayProtocol.ts) — it crosses
  * the postMessage boundary as plain JSON, so the two libs are bridged by shape.
+ *
+ * Wire-cleanup Phase B2 Task 9: action discriminator renamed `actionType`
+ * -> `type` (matches `@quodsi/shared`'s `Action.type`); generator's
+ * `generationConfig` wrapper dissolved — `interarrivalTime` (renamed from
+ * `periodIntervalDuration`) is now a flat field on the generator entry
+ * itself, matching `ISerializedGenerator`.
  */
 export interface EmbedModelCatalog {
   activities: Array<{
@@ -12,7 +18,7 @@ export interface EmbedModelCatalog {
     name: string;
     actions?: Array<{
       id?: string;
-      actionType: string;
+      type: string;
       duration?: unknown;
       resourceRequirementId?: string | null;
     }>;
@@ -22,7 +28,7 @@ export interface EmbedModelCatalog {
   generators: Array<{
     id: string;
     name: string;
-    generationConfig?: { periodIntervalDuration?: unknown };
+    interarrivalTime?: unknown;
   }>;
   connectors: Array<{ id: string; name: string }>;
   entities: Array<{ id: string; name: string }>;
@@ -47,12 +53,12 @@ export function reduceModelToCatalog(model: ModelInput): EmbedModelCatalog {
       actions: (a.actions ?? []).map((act) => {
         const out: {
           id?: string;
-          actionType: string;
+          type: string;
           duration?: unknown;
           resourceRequirementId?: string | null;
         } = {
           id: (act as { id?: string }).id,
-          actionType: (act as { actionType: string }).actionType,
+          type: (act as { type: string }).type,
         };
         if ('duration' in act && (act as { duration?: unknown }).duration !== undefined) {
           out.duration = (act as { duration?: unknown }).duration;
@@ -68,9 +74,7 @@ export function reduceModelToCatalog(model: ModelInput): EmbedModelCatalog {
     generators: (model.generators ?? []).map((g) => ({
       id: g.id,
       name: g.name,
-      generationConfig: g.generationConfig
-        ? { periodIntervalDuration: g.generationConfig.periodIntervalDuration }
-        : undefined,
+      interarrivalTime: g.interarrivalTime,
     })),
     connectors: Array.from(connectorMap.values()),
     entities: (model.entities ?? []).map(idName),

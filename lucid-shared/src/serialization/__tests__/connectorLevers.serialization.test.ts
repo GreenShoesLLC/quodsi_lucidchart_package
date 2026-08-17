@@ -1,36 +1,24 @@
 import { ModelDefinitionSerializerV1 } from '../v1/ModelDefinitionSerializerV1';
-import { createScenarioLever, ScenarioPropertyName } from '@quodsi/shared';
+import { Connector, createScenarioLever, ScenarioPropertyName } from '@quodsi/shared';
 
-// No full-ModelDefinition serializer test exists in lucid-shared, so (mirroring
-// actionName.serialization.test.ts) we instantiate the concrete V1 serializer and
-// reach the protected serializeConnector via an `as any` cast. A minimal
-// Connector-shaped object satisfies serializeConnector, which only requires
-// id + sourceId + an effective destination (targetId) plus the actions /
-// stateModifications arrays.
+// Instantiate the concrete V1 serializer and reach the protected
+// serializeConnector via an `as any` cast.
+//
+// Wire-cleanup Phase B2 Task 9: `serializeConnector` now delegates to
+// `Connector.toJSON()` — requires a REAL `Connector` instance (not a
+// duck-typed plain object literal). The old `getEffectiveDestinationUniqueId()`
+// legacy-fallback method is gone; `targetId` is the sole destination field now.
 function makeSerializer(): any {
     return new ModelDefinitionSerializerV1() as any;
 }
 
-function makeConnector(overrides: Record<string, unknown> = {}): any {
-    return {
-        id: 'c1',
-        name: 'Route',
-        sourceId: 'src1',
-        targetId: 'tgt1',
-        sourceX: 0,
-        sourceY: 0,
-        targetX: 1,
-        targetY: 1,
-        x: 0.5,
-        y: 0.5,
-        weight: 1,
-        actions: [],
-        stateModifications: [],
-        getEffectiveDestinationUniqueId() {
-            return (this as any).destinationUniqueId ?? (this as any).targetId;
-        },
-        ...overrides,
-    };
+function makeConnector(overrides?: (c: Connector) => void): Connector {
+    const connector = Connector.createDefault('c1', 0, 0, 1, 1);
+    connector.name = 'Route';
+    connector.sourceId = 'src1';
+    connector.targetId = 'tgt1';
+    overrides?.(connector);
+    return connector;
 }
 
 describe('serializeConnector carries Connector scenario levers', () => {
@@ -40,7 +28,7 @@ describe('serializeConnector carries Connector scenario levers', () => {
             propertyName: ScenarioPropertyName.WEIGHT,
             label: 'Branch split',
         });
-        const connector = makeConnector({ levers: [lever] });
+        const connector = makeConnector((c) => { c.levers = [lever]; });
 
         const out = serializer.serializeConnector(connector);
 

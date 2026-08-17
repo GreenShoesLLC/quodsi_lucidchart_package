@@ -8,6 +8,16 @@
 // finds the hits. A regression here would make the builder run and silently find
 // nothing — the exact "worse than no warning" failure mode this feature exists to
 // avoid.
+//
+// Wire-cleanup Phase B2 Task 6/9: fixtures and expectations use the clean field
+// names — action `type` (not `actionType`), modification `stateId`/`expression`
+// (not `stateUniqueId`/`stateName`/`valueExpression`), Generator's flat
+// `initialStates` (dissolved `EntitySourceConfig`, not nested
+// `generationConfig.initialStateModifications`), Activity's `sourceConfig.
+// initialStates` (not `.initialStateModifications`). Connector-level state
+// changes are expressed as an ASSIGN action inside `actions` now — the old
+// standalone `stateModifications` field has no `Connector` field any more, so
+// the "connectors pass through untouched" case below exercises `actions`.
 import { referenceDataBuilder } from '../../src/core/messaging/handlers/selection/utils/referenceDataBuilder';
 import { findExpressionsReferencingState } from '@quodsi/lucid-shared';
 import type { ModelManager } from '../../src/core/ModelManager';
@@ -23,23 +33,22 @@ function fakeModelManager(modelDef: any): ModelManager {
 }
 
 describe('referenceDataBuilder — state-expression wiring', () => {
-  it('carries an activity action modification valueExpression through to the summary', async () => {
+  it('carries an activity action modification expression through to the summary', async () => {
     const modelDef = {
       activities: list([
         {
           id: 'activity_1',
           name: 'Process',
-          connectType: 'CONNECT',
+          routing: 'probability',
           actions: [
             {
               id: 'action_1',
-              actionType: 'ASSIGN',
+              type: 'assign',
               modifications: [
                 {
-                  stateUniqueId: 'total_MODEL_1',
-                  stateName: 'total',
-                  operation: 'ASSIGN',
-                  valueExpression: 'qty * unit_price',
+                  stateId: 'total',
+                  operation: 'assign',
+                  expression: 'qty * unit_price',
                 },
               ],
             },
@@ -61,10 +70,9 @@ describe('referenceDataBuilder — state-expression wiring', () => {
 
     expect(referenceData.activities?.[0].actions?.[0].modifications).toEqual([
       {
-        stateUniqueId: 'total_MODEL_1',
-        stateName: 'total',
-        operation: 'ASSIGN',
-        valueExpression: 'qty * unit_price',
+        stateId: 'total',
+        operation: 'assign',
+        expression: 'qty * unit_price',
       },
     ]);
 
@@ -78,7 +86,7 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'unit_price'
     );
-    expect(hits).toEqual([{ elementId: 'activity_1', stateName: 'total', expression: 'qty * unit_price' }]);
+    expect(hits).toEqual([{ elementId: 'activity_1', stateId: 'total', expression: 'qty * unit_price' }]);
   });
 
   it('recurses into BRANCH ifTrue/ifFalse so a nested modification is still visible', async () => {
@@ -90,17 +98,16 @@ describe('referenceDataBuilder — state-expression wiring', () => {
           actions: [
             {
               id: 'branch_1',
-              actionType: 'BRANCH',
+              type: 'branch',
               ifTrue: [
                 {
                   id: 'action_2',
-                  actionType: 'ASSIGN',
+                  type: 'assign',
                   modifications: [
                     {
-                      stateUniqueId: 'flag_MODEL_1',
-                      stateName: 'flag',
-                      operation: 'ASSIGN',
-                      valueExpression: 'now() - entry_time',
+                      stateId: 'flag',
+                      operation: 'assign',
+                      expression: 'now() - entry_time',
                     },
                   ],
                 },
@@ -131,7 +138,7 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'entry_time'
     );
-    expect(hits).toEqual([{ elementId: 'activity_2', stateName: 'flag', expression: 'now() - entry_time' }]);
+    expect(hits).toEqual([{ elementId: 'activity_2', stateId: 'flag', expression: 'now() - entry_time' }]);
   });
 
   it('carries generator initialStateModifications through to the summary', async () => {
@@ -141,16 +148,15 @@ describe('referenceDataBuilder — state-expression wiring', () => {
         {
           id: 'generator_1',
           name: 'Arrivals',
-          generationConfig: {
-            initialStateModifications: [
-              {
-                stateUniqueId: 'priority_ENTITY_1',
-                stateName: 'priority',
-                operation: 'ASSIGN',
-                valueExpression: 'base_priority + 1',
-              },
-            ],
-          },
+          // Wire-cleanup Phase B2 Task 5: EntitySourceConfig dissolved —
+          // initialStates is flat on the Generator now.
+          initialStates: [
+            {
+              stateId: 'priority',
+              operation: 'assign',
+              expression: 'base_priority + 1',
+            },
+          ],
         },
       ]),
       resources: list([]),
@@ -165,12 +171,11 @@ describe('referenceDataBuilder — state-expression wiring', () => {
 
     const referenceData = await referenceDataBuilder.buildAllReferenceData(fakeModelManager(modelDef));
 
-    expect(referenceData.generators?.[0].initialStateModifications).toEqual([
+    expect(referenceData.generators?.[0].initialStates).toEqual([
       {
-        stateUniqueId: 'priority_ENTITY_1',
-        stateName: 'priority',
-        operation: 'ASSIGN',
-        valueExpression: 'base_priority + 1',
+        stateId: 'priority',
+        operation: 'assign',
+        expression: 'base_priority + 1',
       },
     ]);
 
@@ -182,10 +187,10 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'base_priority'
     );
-    expect(hits).toEqual([{ elementId: 'generator_1', stateName: 'priority', expression: 'base_priority + 1' }]);
+    expect(hits).toEqual([{ elementId: 'generator_1', stateId: 'priority', expression: 'base_priority + 1' }]);
   });
 
-  it('omits valueExpression for literal-value modifications', async () => {
+  it('omits expression for literal-value modifications', async () => {
     const modelDef = {
       activities: list([
         {
@@ -194,9 +199,9 @@ describe('referenceDataBuilder — state-expression wiring', () => {
           actions: [
             {
               id: 'action_3',
-              actionType: 'ASSIGN',
+              type: 'assign',
               modifications: [
-                { stateUniqueId: 'count_MODEL_1', stateName: 'count', operation: 'ADD', value: 1 },
+                { stateId: 'count', operation: 'add', value: 1 },
               ],
             },
           ],
@@ -216,29 +221,28 @@ describe('referenceDataBuilder — state-expression wiring', () => {
     const referenceData = await referenceDataBuilder.buildAllReferenceData(fakeModelManager(modelDef));
 
     const mod = referenceData.activities?.[0].actions?.[0].modifications?.[0];
-    expect(mod).toEqual({ stateUniqueId: 'count_MODEL_1', stateName: 'count', operation: 'ADD' });
-    expect(mod && 'valueExpression' in mod).toBe(false);
+    expect(mod).toEqual({ stateId: 'count', operation: 'add' });
+    expect(mod && 'expression' in mod).toBe(false);
   });
 
-  // Fix round 1, Finding 1: Activity.sourceConfig.initialStateModifications (a
+  // Fix round 1, Finding 1: Activity.sourceConfig.initialStates (a
   // self-generating activity's own initial state modifications, distinct from a
-  // Generator's generationConfig) was the one surface where the detector
+  // Generator's own flat initialStates) was the one surface where the detector
   // (stateReferences.ts:335-336) and Lucid's own removal path
   // (ModelManager.cleanupStateReferences, ModelManager.ts:949-959) both already
   // looked, but the builder's activity summary didn't carry it -- a silent miss.
-  it('carries an activity sourceConfig.initialStateModifications valueExpression through to the summary', async () => {
+  it('carries an activity sourceConfig.initialStates expression through to the summary', async () => {
     const modelDef = {
       activities: list([
         {
           id: 'activity_4',
           name: 'SelfGen',
           sourceConfig: {
-            initialStateModifications: [
+            initialStates: [
               {
-                stateUniqueId: 'batch_size_ENTITY_1',
-                stateName: 'batch_size',
-                operation: 'ASSIGN',
-                valueExpression: 'seed_qty * 2',
+                stateId: 'batch_size',
+                operation: 'assign',
+                expression: 'seed_qty * 2',
               },
             ],
           },
@@ -258,12 +262,11 @@ describe('referenceDataBuilder — state-expression wiring', () => {
 
     const referenceData = await referenceDataBuilder.buildAllReferenceData(fakeModelManager(modelDef));
 
-    expect(referenceData.activities?.[0].sourceConfig?.initialStateModifications).toEqual([
+    expect(referenceData.activities?.[0].sourceConfig?.initialStates).toEqual([
       {
-        stateUniqueId: 'batch_size_ENTITY_1',
-        stateName: 'batch_size',
-        operation: 'ASSIGN',
-        valueExpression: 'seed_qty * 2',
+        stateId: 'batch_size',
+        operation: 'assign',
+        expression: 'seed_qty * 2',
       },
     ]);
 
@@ -275,7 +278,7 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'seed_qty'
     );
-    expect(hits).toEqual([{ elementId: 'activity_4', stateName: 'batch_size', expression: 'seed_qty * 2' }]);
+    expect(hits).toEqual([{ elementId: 'activity_4', stateId: 'batch_size', expression: 'seed_qty * 2' }]);
   });
 
   // A LOOP body is the other recursive branch besides BRANCH's ifTrue/ifFalse;
@@ -290,18 +293,17 @@ describe('referenceDataBuilder — state-expression wiring', () => {
           actions: [
             {
               id: 'loop_1',
-              actionType: 'LOOP',
+              type: 'loop',
               count: 3,
               actions: [
                 {
                   id: 'action_5',
-                  actionType: 'ASSIGN',
+                  type: 'assign',
                   modifications: [
                     {
-                      stateUniqueId: 'total_MODEL_1',
-                      stateName: 'total',
-                      operation: 'ASSIGN',
-                      valueExpression: 'total + step_value',
+                      stateId: 'total',
+                      operation: 'assign',
+                      expression: 'total + step_value',
                     },
                   ],
                 },
@@ -326,10 +328,9 @@ describe('referenceDataBuilder — state-expression wiring', () => {
     // The summary itself nests the LOOP body under `actions`, mirroring the real model.
     expect(referenceData.activities?.[0].actions?.[0].actions?.[0].modifications).toEqual([
       {
-        stateUniqueId: 'total_MODEL_1',
-        stateName: 'total',
-        operation: 'ASSIGN',
-        valueExpression: 'total + step_value',
+        stateId: 'total',
+        operation: 'assign',
+        expression: 'total + step_value',
       },
     ]);
 
@@ -341,7 +342,7 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'step_value'
     );
-    expect(hits).toEqual([{ elementId: 'activity_5', stateName: 'total', expression: 'total + step_value' }]);
+    expect(hits).toEqual([{ elementId: 'activity_5', stateId: 'total', expression: 'total + step_value' }]);
   });
 
   // Connectors are already full Connector objects on EditorReferenceData (never
@@ -349,6 +350,12 @@ describe('referenceDataBuilder — state-expression wiring', () => {
   // detector should still find expression hits inside them. Every other test in
   // this file passes `connectors: []` -- this is the one that actually exercises
   // a populated connector.
+  //
+  // Wire-cleanup Phase B2 Task 5/9: the old standalone `stateModifications`
+  // field on a connector has no `Connector` field any more (never executed by
+  // the engine even before the rename) — connector-level state changes are
+  // expressed as an ASSIGN action inside `actions`, which is what both the
+  // detector (`walkActionsForExpressions`) and this fixture now use.
   it('passes connectors through untouched, and the detector finds expressions inside them', async () => {
     const modelDef = {
       activities: list([]),
@@ -359,12 +366,17 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       connectors: list([
         {
           id: 'connector_1',
-          stateModifications: [
+          actions: [
             {
-              stateUniqueId: 'wait_time_MODEL_1',
-              stateName: 'wait_time',
-              operation: 'ASSIGN',
-              valueExpression: 'now() - entry_time',
+              id: 'action_6',
+              type: 'assign',
+              modifications: [
+                {
+                  stateId: 'wait_time',
+                  operation: 'assign',
+                  expression: 'now() - entry_time',
+                },
+              ],
             },
           ],
         },
@@ -380,12 +392,17 @@ describe('referenceDataBuilder — state-expression wiring', () => {
     expect(referenceData.connectors).toEqual([
       {
         id: 'connector_1',
-        stateModifications: [
+        actions: [
           {
-            stateUniqueId: 'wait_time_MODEL_1',
-            stateName: 'wait_time',
-            operation: 'ASSIGN',
-            valueExpression: 'now() - entry_time',
+            id: 'action_6',
+            type: 'assign',
+            modifications: [
+              {
+                stateId: 'wait_time',
+                operation: 'assign',
+                expression: 'now() - entry_time',
+              },
+            ],
           },
         ],
       },
@@ -399,6 +416,6 @@ describe('referenceDataBuilder — state-expression wiring', () => {
       },
       'entry_time'
     );
-    expect(hits).toEqual([{ elementId: 'connector_1', stateName: 'wait_time', expression: 'now() - entry_time' }]);
+    expect(hits).toEqual([{ elementId: 'connector_1', stateId: 'wait_time', expression: 'now() - entry_time' }]);
   });
 });

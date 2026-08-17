@@ -49,6 +49,11 @@ jest.mock("../SaveStatusLine", () => ({
 function buildStates(): StateListManager {
   const states = new StateListManager();
   states.add(new State("unit_price_ENTITY_1", "unit_price", ComponentType.ENTITY, StateType.NUMBER, 0));
+  // The state a DIFFERENT modification assigns via an expression referencing
+  // the deleted state — StatesEditor resolves ExpressionStateReference.stateId
+  // (an id, wire-cleanup Phase B2 Task 6/9) to a display name against this
+  // same states list.
+  states.add(new State("total_MODEL_1", "total", ComponentType.MODEL, StateType.NUMBER, 0));
   return states;
 }
 
@@ -61,13 +66,12 @@ function referenceDataWithExpression(): EditorReferenceData {
         actions: [
           {
             id: "action_1",
-            actionType: "ASSIGN",
+            type: "assign",
             modifications: [
               {
-                stateUniqueId: "total_MODEL_1",
-                stateName: "total",
-                operation: "ASSIGN",
-                valueExpression: "qty * unit_price",
+                stateId: "total_MODEL_1",
+                operation: "assign",
+                expression: "qty * unit_price",
               },
             ],
           },
@@ -80,7 +84,7 @@ function referenceDataWithExpression(): EditorReferenceData {
 }
 
 const baseProps = {
-  model: { id: "m1", name: "My Model", reps: 1, seed: 12345, levers: [] } as any,
+  model: { id: "m1", name: "My Model", replications: 1, seed: 12345, levers: [] } as any,
   onSave: jest.fn(),
   states: buildStates(),
   onStatesChange: jest.fn(),
@@ -93,7 +97,10 @@ describe("ModelEditor — threads referenceData into the States delete dialog", 
   it("shows the expression-reference warning when deleting a state referenced by a formula elsewhere", () => {
     render(<ModelEditor {...baseProps} referenceData={referenceDataWithExpression()} />);
 
-    fireEvent.click(screen.getByTitle("Delete state"));
+    // Two states now render (unit_price + the "total" state the expression
+    // fixture resolves its display name against) — insertion order (via
+    // StateListManager's Map) puts unit_price first.
+    fireEvent.click(screen.getAllByTitle("Delete state")[0]);
 
     expect(screen.getByText('Delete State: "unit_price"?')).toBeInTheDocument();
     expect(

@@ -36,10 +36,34 @@ export function parsePageTranslate(svg: string): PageTranslate {
 
 /**
  * Add (dx, dy) to every layout-bearing coordinate in the serialized model:
- * activities, generators, resources, and the top-level connectors
- * (source/target/midpoint). Entities are not laid out as shapes and are left
- * untouched. Mutates `model` in place; a (0,0) shift is a no-op. This is a
- * uniform translation, so relative geometry — and the simulation — is unchanged.
+ * activities, generators, resources, and connectors. Entities are not laid
+ * out as shapes and are left untouched. Mutates `model` in place; a (0,0)
+ * shift is a no-op. This is a uniform translation, so relative geometry —
+ * and the simulation — is unchanged.
+ *
+ * Wire-cleanup Phase B2 Task 9 fix round (review F3): the initial pass
+ * wrongly claimed `CleanConnectorDoc` carries no geometry at all and
+ * dropped connector shifting entirely. It does carry `sourceX`/`sourceY`/
+ * `targetX`/`targetY` (engine `document/clean/routing.py:284-287`,
+ * display-only `float = Field(default=0.0, ...)`), and `Connector.toJSON()`
+ * (shared) already emits them, sparse-omitted at 0 — restored below. The
+ * midpoint `x`/`y` genuinely has no slot on `CleanConnectorDoc` and stays
+ * unshifted (there is nothing to shift).
+ *
+ * `x`/`y` on activities/generators/resources, and now `sourceX`/`sourceY`/
+ * `targetX`/`targetY` on connectors, are all sparse-omitted at 0 (Task 7),
+ * so an element/edge sitting exactly at the origin arrives here with the
+ * coordinate `undefined`, not `0`. Two different rules apply depending on
+ * why the key might be absent:
+ *   - activities/generators/resources: EVERY one of these always has a real
+ *     captured position (`block.getBoundingBox()`), so an absent `x`/`y` can
+ *     only mean "the true value happens to be 0" — shifting materializes it
+ *     (`(a.x ?? 0) + dx`), which is what a real 0-valued position shifted by
+ *     dx should become.
+ *   - connectors: shifting an ABSENT key must NOT materialize a `dx`-valued
+ *     coordinate from nothing — only keys already present are shifted, so a
+ *     sparse-omitted 0 stays sparse-omitted (`omit@0` is preserved, not
+ *     silently turned into an explicit `dx`).
  */
 export function offsetSerializedModelCoordinates(
   model: ISerializedModel,
@@ -48,23 +72,21 @@ export function offsetSerializedModelCoordinates(
 ): void {
   if (dx === 0 && dy === 0) return;
   for (const a of model.activities ?? []) {
-    a.x += dx;
-    a.y += dy;
-  }
-  for (const c of model.connectors ?? []) {
-    c.sourceX += dx;
-    c.sourceY += dy;
-    c.targetX += dx;
-    c.targetY += dy;
-    c.x += dx;
-    c.y += dy;
+    a.x = (a.x ?? 0) + dx;
+    a.y = (a.y ?? 0) + dy;
   }
   for (const g of model.generators ?? []) {
-    g.x += dx;
-    g.y += dy;
+    g.x = (g.x ?? 0) + dx;
+    g.y = (g.y ?? 0) + dy;
   }
   for (const r of model.resources ?? []) {
-    r.x += dx;
-    r.y += dy;
+    r.x = (r.x ?? 0) + dx;
+    r.y = (r.y ?? 0) + dy;
+  }
+  for (const c of model.connectors ?? []) {
+    if (c.sourceX !== undefined) c.sourceX += dx;
+    if (c.sourceY !== undefined) c.sourceY += dy;
+    if (c.targetX !== undefined) c.targetX += dx;
+    if (c.targetY !== undefined) c.targetY += dy;
   }
 }

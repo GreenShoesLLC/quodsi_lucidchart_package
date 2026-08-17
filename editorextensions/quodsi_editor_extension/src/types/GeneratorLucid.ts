@@ -1,7 +1,7 @@
 import { BlockProxy } from 'lucid-extension-sdk';
 import {
-    ConstantDistribution,
     Duration,
+    ConstantDistribution,
     Generator,
     ModelDefaults,
     PeriodUnit,
@@ -10,9 +10,8 @@ import {
     StateModification,
     parseStructuredName,
     extractGeneratorFields,
-    EntitySourceConfig,
-    createDefaultEntitySourceConfig,
     GeneratorType,
+    ConnectType,
     MappingSource,
     ScenarioLever
 } from '@quodsi/lucid-shared';
@@ -32,6 +31,18 @@ export const setGeneratorLucidLogging = (enabled: boolean): void => {
     ComponentLogger.setEnabled(LOG_PREFIX, enabled);
 };
 
+/**
+ * Wire-cleanup Phase B2 Task 9: `EntitySourceConfig` was dissolved (Task 5) —
+ * the generator-core fields (`entityId`/`mode`/`interarrivalTime`/
+ * `batchSize`/`startDelay`/`maxCycles`/`arrivalPatternId`/`volume`/
+ * `arrivalScheduleId`/`maxEntities`/`initialStates`) now live FLAT on
+ * `Generator` itself, matching the clean wire — this storage shape follows
+ * suit (previously a nested `generationConfig` object). Lucid's stored
+ * `q_data` shapes go through the same `upgradeElements()` version-upgrade
+ * pipeline as the model_definition wire (see `LucidVersionUpgrader.ts`),
+ * so an old document's nested `generationConfig` shape is migrated to this
+ * flat shape on open, same as the exported model.json is.
+ */
 interface StoredGeneratorData {
     id: string;
     name?: string;
@@ -41,8 +52,18 @@ interface StoredGeneratorData {
     // Optional shape dimensions in SVG userSpace (Path X-lite).
     width?: number;
     height?: number;
-    generationConfig?: EntitySourceConfig;
-    exitConnector?: string;
+    entityId?: string;
+    mode?: GeneratorType;
+    interarrivalTime?: Duration;
+    batchSize?: number;
+    startDelay?: Duration;
+    maxCycles?: number;
+    arrivalPatternId?: string;
+    volume?: number;
+    arrivalScheduleId?: string;
+    maxEntities?: number;
+    initialStates?: StateModification[];
+    routing?: ConnectType;
     levers?: ScenarioLever[];
 }
 
@@ -69,30 +90,39 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         // Get stored custom data first
         const storedData = this.storageAdapter.getElementData(this.element) as StoredGeneratorData;
 
-        // Get or create default generationConfig
-        const generationConfig: EntitySourceConfig = storedData?.generationConfig || createDefaultEntitySourceConfig(
-            ModelDefaults.DEFAULT_ENTITY_ID,
-            new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1))
-        );
-
-        // Set default values for periodicOccurrences and maxEntities if not set
-        // Using == null catches both null and undefined for robustness with legacy data
-        if (generationConfig.periodicOccurrences == null || generationConfig.periodicOccurrences === Infinity) {
-            generationConfig.periodicOccurrences = 999999;
-        }
-        if (generationConfig.maxEntities == null || generationConfig.maxEntities === Infinity) {
-            generationConfig.maxEntities = 999999;
-        }
+        const entityId = storedData?.entityId ?? ModelDefaults.DEFAULT_ENTITY_ID;
+        const interarrivalTime = storedData?.interarrivalTime
+            ?? Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1));
 
         // Create generator with new constructor
         const generator = new Generator(
             this.platformElementId,
             storedData?.name || 'New Generator',
-            generationConfig,
-            storedData?.exitConnector,
+            entityId,
+            interarrivalTime,
             storedData?.x ?? 0,
             storedData?.y ?? 0
         );
+
+        generator.mode = storedData?.mode ?? GeneratorType.FREQUENCY;
+        generator.batchSize = storedData?.batchSize;
+        generator.startDelay = storedData?.startDelay;
+        // Smoke-finding SF-1(b): honest absence stays absent. This used to
+        // default `?? 999999`, manufacturing an explicit legacy-sentinel
+        // value on the in-memory record even when storage genuinely omitted
+        // the field — which then leaked onto the wire as
+        // `"maxCycles": 999999, "maxEntities": 999999` (the shared-layer
+        // `Generator.toJSON()` fix, SF-1(a), now collapses the sentinel if
+        // it DOES show up, but the record itself should never invent one).
+        // A display default belongs at the DISPLAY layer — see
+        // `GeneratorEditor.tsx`'s own `INFINITY_DISPLAY_VALUE` fallback,
+        // which already does this independently for the panel's UI.
+        generator.maxCycles = storedData?.maxCycles;
+        generator.arrivalPatternId = storedData?.arrivalPatternId;
+        generator.volume = storedData?.volume;
+        generator.arrivalScheduleId = storedData?.arrivalScheduleId;
+        generator.maxEntities = storedData?.maxEntities;
+        generator.routing = storedData?.routing ?? ConnectType.Probability;
 
         // Restore description
         if (storedData?.description !== undefined) {
@@ -100,8 +130,8 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         }
 
         // Deserialize initial state modifications if stored as JSON
-        if (generationConfig.initialStateModifications) {
-            generationConfig.initialStateModifications = generationConfig.initialStateModifications.map(
+        if (storedData?.initialStates) {
+            generator.initialStates = storedData.initialStates.map(
                 (mod: any) => mod instanceof StateModification ? mod : StateModification.fromJSON(mod)
             );
         }
@@ -161,7 +191,11 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             this.simObject.name = this.getElementName('Generator');
         }
 
-        // Store updated data with generationConfig
+        // Store updated data. Every generator-core field carried through
+        // regardless of mode: a generator authored as PATTERN elsewhere
+        // (Studio, drawio) carries arrivalPatternId/volume that Lucid has no
+        // editor for (see GeneratorEditor.tsx) but must not silently drop on
+        // a routine platform write-back (e.g. dragging the shape).
         const dataToStore: StoredGeneratorData = {
             id: this.platformElementId,
             name: this.simObject.name,
@@ -170,19 +204,20 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             y: this.simObject.y,
             width: this.simObject.width,
             height: this.simObject.height,
-            // Spread the existing generationConfig rather than re-listing FREQUENCY
-            // fields by name: a generator authored as PATTERN elsewhere (Studio,
-            // drawio) carries arrivalPatternId/volume that Lucid has no editor for
-            // (see GeneratorEditor.tsx) but must not silently drop on a routine
-            // platform write-back (e.g. dragging the shape). Only
-            // initialStateModifications needs re-shaping for storage.
-            generationConfig: {
-                ...this.simObject.generationConfig,
-                initialStateModifications: this.simObject.generationConfig.initialStateModifications?.map(
-                    m => m instanceof StateModification ? m.toJSON() : m
-                )
-            },
-            exitConnector: this.simObject.exitConnector,
+            entityId: this.simObject.entityId,
+            mode: this.simObject.mode,
+            interarrivalTime: this.simObject.interarrivalTime,
+            batchSize: this.simObject.batchSize,
+            startDelay: this.simObject.startDelay,
+            maxCycles: this.simObject.maxCycles,
+            arrivalPatternId: this.simObject.arrivalPatternId,
+            volume: this.simObject.volume,
+            arrivalScheduleId: this.simObject.arrivalScheduleId,
+            maxEntities: this.simObject.maxEntities,
+            initialStates: this.simObject.initialStates?.map(
+                m => (m instanceof StateModification ? (m.toJSON() as unknown as StateModification) : m)
+            ),
+            routing: this.simObject.routing,
             // Levers survive the write-back (conditional — see ActivityLucid).
             levers: this.simObject.levers?.length ? this.simObject.levers : undefined
         };
@@ -243,25 +278,7 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             SimObjectLucid.updateBlockText(block, fields.name);
         }
 
-        // Build generationConfig from defaults and parsed fields
-        const generationConfig: EntitySourceConfig = {
-            entityId: defaultGenerator.generationConfig.entityId,
-            generatorType: GeneratorType.FREQUENCY,
-            periodicOccurrences: fields.periodicOccurrences ?? defaultGenerator.generationConfig.periodicOccurrences,
-            periodIntervalDuration: fields.interval !== undefined
-                ? new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(fields.interval))
-                : defaultGenerator.generationConfig.periodIntervalDuration,
-            entitiesPerCreation: fields.entitiesPerCreation ?? defaultGenerator.generationConfig.entitiesPerCreation,
-            periodicStartDuration: defaultGenerator.generationConfig.periodicStartDuration,
-            maxEntities: fields.maxEntities ?? defaultGenerator.generationConfig.maxEntities,
-            initialStateModifications: []
-        };
-
-        if (fields.interval !== undefined) {
-            ComponentLogger.log(LOG_PREFIX, `Using parsed interval: ${fields.interval} minutes`);
-        }
-
-        // Convert to StoredGeneratorData format
+        // Convert to StoredGeneratorData format, using parsed values where available
         const storedData: StoredGeneratorData = {
             id: defaultGenerator.id,
             name: fields.name || rawName,
@@ -269,9 +286,21 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
             y: defaultGenerator.y,
             width: defaultGenerator.width,
             height: defaultGenerator.height,
-            generationConfig: generationConfig,
-            exitConnector: defaultGenerator.exitConnector
+            entityId: defaultGenerator.entityId,
+            mode: GeneratorType.FREQUENCY,
+            interarrivalTime: fields.interval !== undefined
+                ? Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(fields.interval))
+                : defaultGenerator.interarrivalTime,
+            batchSize: fields.entitiesPerCreation ?? 1,
+            startDelay: Duration.constant(0, PeriodUnit.HOURS),
+            maxCycles: fields.periodicOccurrences ?? 999999,
+            maxEntities: fields.maxEntities ?? 999999,
+            initialStates: []
         };
+
+        if (fields.interval !== undefined) {
+            ComponentLogger.log(LOG_PREFIX, `Using parsed interval: ${fields.interval} minutes`);
+        }
 
         ComponentLogger.log(LOG_PREFIX, `Setting initial data for converted generator, block ID: ${block.id}`, storedData);
 

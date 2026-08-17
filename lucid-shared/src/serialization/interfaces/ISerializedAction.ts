@@ -1,152 +1,53 @@
-import { ISerializedDuration } from './ISerializedDuration';
+import {
+    Action,
+    ActionType,
+    AssignAction,
+    SeizeAction,
+    ReleaseAction,
+    DelayAction,
+    DelayWithResourceAction,
+    SplitAction,
+    CreateAction,
+    DisposeAction,
+    JoinAction,
+    LoopAction,
+    BranchAction,
+    ScriptAction,
+} from '@quodsi/shared';
 
 /**
- * Discriminator for action types in serialized form
+ * Wire-cleanup Phase B2 Task 9: the clean wire's Action shapes ARE
+ * `@quodsi/shared`'s own `Action` discriminated union — `type` is the
+ * discriminator field now (renamed from `actionType`), and every per-type
+ * field carries its clean name (`resourceRequirementId`, `modifications`,
+ * `condition`, ...). There is no longer a separate Lucid-only serialized
+ * action shape to hand-maintain in parallel with the domain type: these are
+ * straight re-exports/aliases. `sparsifyAction()` (shared) — called from
+ * inside `Activity.toJSON()`/`Connector.toJSON()` — is what actually
+ * sparsifies an action at the serialization boundary (strips `condition:
+ * null`, `keepResource: false`, empty action-list fields, etc.); this file
+ * only names the WIRE shape, matching the shared type exactly.
+ *
+ * `ScriptAction` (new action type, absent from the pre-Task-9 interface
+ * entirely) is included in the union via the shared re-export.
  */
-export type SerializedActionType =
-    | 'ASSIGN'
-    | 'SEIZE'
-    | 'RELEASE'
-    | 'DELAY'
-    | 'DELAY_WITH_RESOURCE'
-    | 'SPLIT'
-    | 'CREATE'
-    | 'DISPOSE'
-    | 'JOIN'
-    | 'LOOP'
-    | 'BRANCH';
+export type SerializedActionType = ActionType;
+export type ISerializedActionBase = Pick<Action, 'id' | 'type'> & { name?: string };
+export type ISerializedAssignAction = AssignAction;
+export type ISerializedSeizeAction = SeizeAction;
+export type ISerializedReleaseAction = ReleaseAction;
+export type ISerializedDelayAction = DelayAction;
+export type ISerializedDelayWithResourceAction = DelayWithResourceAction;
+export type ISerializedSplitAction = SplitAction;
+export type ISerializedCreateAction = CreateAction;
+export type ISerializedDisposeAction = DisposeAction;
+export type ISerializedJoinAction = JoinAction;
+export type ISerializedLoopAction = LoopAction;
+export type ISerializedBranchAction = BranchAction;
+export type ISerializedScriptAction = ScriptAction;
 
 /**
- * Base interface for all serialized actions
+ * Union type for all serialized actions — identical to `@quodsi/shared`'s
+ * `Action` union.
  */
-export interface ISerializedActionBase {
-    /** Stable action identity, carried through to the engine for scenario-change addressing. */
-    id?: string;
-    actionType: SerializedActionType;
-    stateCondition?: any | null;
-    /** Optional user-facing action name (authoring metadata). */
-    name?: string;
-}
-
-/**
- * Serialized AssignAction
- */
-export interface ISerializedAssignAction extends ISerializedActionBase {
-    actionType: 'ASSIGN';
-    modifications: any[]; // StateModification[]
-}
-
-/**
- * Serialized SeizeAction
- */
-export interface ISerializedSeizeAction extends ISerializedActionBase {
-    actionType: 'SEIZE';
-    resourceRequirementId: string;
-}
-
-/**
- * Serialized ReleaseAction
- */
-export interface ISerializedReleaseAction extends ISerializedActionBase {
-    actionType: 'RELEASE';
-    resourceRequirementId: string;
-}
-
-/**
- * Serialized DelayAction
- */
-export interface ISerializedDelayAction extends ISerializedActionBase {
-    actionType: 'DELAY';
-    duration: ISerializedDuration;
-}
-
-/**
- * Serialized DelayWithResourceAction (replaces OperationStep)
- */
-export interface ISerializedDelayWithResourceAction extends ISerializedActionBase {
-    actionType: 'DELAY_WITH_RESOURCE';
-    resourceRequirementId: string | null;
-    duration: ISerializedDuration;
-    keepResource?: boolean;
-    stateModifications?: any[]; // StateModification[]
-}
-
-/**
- * Serialized SplitAction
- */
-export interface ISerializedSplitAction extends ISerializedActionBase {
-    actionType: 'SPLIT';
-    count: number;
-    entityTemplateId: string | null;
-    destinationId: string | null;
-    inheritStates: string[];
-    modifications: any[]; // StateModification[]
-    splitIndexState: string | null;
-}
-
-/**
- * Serialized CreateAction
- */
-export interface ISerializedCreateAction extends ISerializedActionBase {
-    actionType: 'CREATE';
-    entityTemplateId: string | null;
-    destinationId: string | null;
-    inheritStates: string[];
-    modifications: any[];
-}
-
-/**
- * Serialized DisposeAction
- */
-export interface ISerializedDisposeAction extends ISerializedActionBase {
-    actionType: 'DISPOSE';
-}
-
-/**
- * Serialized JoinAction
- */
-export interface ISerializedJoinAction extends ISerializedActionBase {
-    actionType: 'JOIN';
-    matchState: string | null;
-    joinCount: number;
-    combinedTemplateId: string | null;
-    destinationId: string | null;
-    inheritStates: string[];
-    modifications: any[];
-    joinCountState: string | null;
-}
-
-/**
- * Serialized LoopAction
- */
-export interface ISerializedLoopAction extends ISerializedActionBase {
-    actionType: 'LOOP';
-    count: number;
-    actions: ISerializedAction[];
-}
-
-/**
- * Serialized BranchAction
- */
-export interface ISerializedBranchAction extends ISerializedActionBase {
-    actionType: 'BRANCH';
-    condition: any | null;
-    ifTrue: ISerializedAction[];
-    ifFalse: ISerializedAction[];
-}
-
-/**
- * Union type for all serialized actions
- */
-export type ISerializedAction =
-    | ISerializedAssignAction
-    | ISerializedSeizeAction
-    | ISerializedReleaseAction
-    | ISerializedDelayAction
-    | ISerializedDelayWithResourceAction
-    | ISerializedSplitAction
-    | ISerializedCreateAction
-    | ISerializedDisposeAction
-    | ISerializedJoinAction
-    | ISerializedLoopAction
-    | ISerializedBranchAction;
+export type ISerializedAction = Action;

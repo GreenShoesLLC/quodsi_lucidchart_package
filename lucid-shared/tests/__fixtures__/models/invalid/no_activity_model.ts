@@ -10,7 +10,7 @@ import { Duration } from '@quodsi/shared';
 import { PeriodUnit } from '@quodsi/shared';
 import { DurationType } from '@quodsi/shared';
 import { Model } from '@quodsi/lucid-shared';
-import { EntitySourceConfig, GeneratorType } from '@quodsi/shared';
+import { GeneratorType } from '@quodsi/shared';
 import { ConstantDistribution } from '@quodsi/shared';
 
 export function createNoActivityModel(): ModelDefinition {
@@ -33,23 +33,22 @@ export function createNoActivityModel(): ModelDefinition {
     const entity = new Entity('entity-1', 'Entity1');
     modelDef.entities.add(entity);
 
-    // Create generator (which will be invalid since there's no activity to connect to)
-    const generationConfig: EntitySourceConfig = {
-        entityId: entity.id,
-        generatorType: GeneratorType.FREQUENCY,
-        periodicOccurrences: 10,
-        periodIntervalDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(1)),
-        entitiesPerCreation: 1,
-        periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-        maxEntities: 999999,
-        initialStateModifications: []
-    };
+    // Create generator. The model is invalid because there are no
+    // Activities at all (not because of any dangling exit-connector
+    // reference — that old concept no longer exists; `EntitySourceConfig`
+    // was dissolved flat onto `Generator`, wire-cleanup Phase B2 Task 5).
     const generator = new Generator(
         'generator-1',
         'Generator1',
-        generationConfig,
-        'non-existent-activity' // exitConnector - This will cause validation error
+        entity.id,
+        Duration.fromDistribution(PeriodUnit.HOURS, ConstantDistribution.create(1))
     );
+    generator.mode = GeneratorType.FREQUENCY;
+    generator.maxCycles = 10;
+    generator.batchSize = 1;
+    generator.startDelay = Duration.constant(0, PeriodUnit.HOURS);
+    generator.maxEntities = 999999;
+    generator.initialStates = [];
     modelDef.generators.add(generator);
 
     return modelDef;

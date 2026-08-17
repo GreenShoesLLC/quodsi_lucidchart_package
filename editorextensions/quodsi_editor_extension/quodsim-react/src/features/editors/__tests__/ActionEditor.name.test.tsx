@@ -9,11 +9,11 @@ jest.mock("axios", () => ({}));
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ActionEditor } from "../ActionEditor";
-import { createDelayAction, Duration } from "@quodsi/lucid-shared";
+import { createDelayAction, Duration, PeriodUnit } from "@quodsi/lucid-shared";
 
 it("edits the action name via the Name input", () => {
   const onChange = jest.fn();
-  const action = createDelayAction(new Duration());
+  const action = createDelayAction(Duration.constant(0, PeriodUnit.MINUTES));
 
   render(
     <ActionEditor

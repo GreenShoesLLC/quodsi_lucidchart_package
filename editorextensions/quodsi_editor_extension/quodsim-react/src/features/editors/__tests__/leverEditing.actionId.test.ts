@@ -45,10 +45,10 @@ describe('actionDurationLeverLabel', () => {
   // variants now read "Delay" since the two Delay actions were consolidated
   // (18fe8074 / ClickUp 86e1uh9n4). Expectations updated 2026-07-28 to match.
   it("uses the action name when present", () => {
-    expect(actionDurationLeverLabel({ name: 'Triage', actionType: ActionType.DELAY_WITH_RESOURCE })).toBe("Triage's speed");
+    expect(actionDurationLeverLabel({ name: 'Triage', type: ActionType.DELAY_WITH_RESOURCE })).toBe("Triage's speed");
   });
   it('falls back to the type when unnamed', () => {
-    expect(actionDurationLeverLabel({ actionType: ActionType.DELAY_WITH_RESOURCE })).toBe('Delay — speed');
-    expect(actionDurationLeverLabel({ name: '  ', actionType: ActionType.DELAY })).toBe('Delay — speed');
+    expect(actionDurationLeverLabel({ type: ActionType.DELAY_WITH_RESOURCE })).toBe('Delay — speed');
+    expect(actionDurationLeverLabel({ name: '  ', type: ActionType.DELAY })).toBe('Delay — speed');
   });
 });

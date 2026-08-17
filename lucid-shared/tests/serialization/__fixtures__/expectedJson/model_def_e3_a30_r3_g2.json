@@ -1,2613 +1,1382 @@
 {
-  "schemaVersion": "2026.08.26",
+  "schemaVersion": "2026.11.01",
   "metadata": {
-    "version": "2026.08.26",
-    "timestamp": "2026-08-12T10:19:59.018Z"
+    "version": "2026.11.01",
+    "timestamp": "2026-08-17T11:46:40.093Z"
   },
-  "model": {
-    "id": "model-9",
-    "name": "Model E3A30R3G2",
-    "description": "",
-    "reps": 1,
-    "seed": 12345,
-    "oneClockUnit": "MINUTES",
-    "simulationTimeType": "Clock",
-    "warmupClockPeriod": 0,
-    "warmupClockPeriodUnit": "HOURS",
-    "runClockPeriod": 24,
-    "runClockPeriodUnit": "HOURS",
-    "warmupDateTime": null,
-    "startDateTime": null,
-    "finishDateTime": null
+  "name": "Model E3A30R3G2",
+  "replications": 1,
+  "seed": 12345,
+  "timeUnit": "minutes",
+  "runTime": {
+    "value": 24,
+    "unit": "hours"
   },
   "entities": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "name": "Default Entity",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Default Entity"
     },
     {
       "id": "entity-1",
-      "name": "Entity1",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Entity1"
     },
     {
       "id": "entity-2",
-      "name": "Entity2",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Entity2"
     },
     {
       "id": "entity-3",
-      "name": "Entity3",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Entity3"
     }
   ],
   "activities": [
     {
       "id": "activity-1",
       "name": "Activity1",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "5011f4ca-975f-4f6b-bb1b-c9a5441973e1",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "87ffa8ca-c367-4c20-8645-f86f319bffc0"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "d96b43a2-82e3-4b3f-8d4a-84860423db0d",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "cce8ea89-0252-45bb-9d21-8b9ce90282d2"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "2138970e-c6b7-4259-a82d-4406491e6a23",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "77d6868d-fa9e-4f4f-9b12-7f0a246a2898"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-2",
       "name": "Activity2",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "e991b7e8-1358-45c3-a7b4-f3e06728fee3",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "7cbfc4f9-8223-468c-af61-97f3beebc901"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "efe1187c-3072-42a0-ac7a-805b16c6e116",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "a71eb681-ae9a-465d-a168-942ef13a0b4c"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "b0d54b52-f214-4af3-ae58-768b4ea4feea",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f29a7012-ed66-47d0-b7f1-216b50886f6f"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-3",
       "name": "Activity3",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "ec25c53a-a5bb-4b90-a794-8564f94a2af4",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "74c33634-e6c3-46bf-9cc0-11e3c662e78e"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "c8f8796a-28b6-45f7-9106-9d7445afce03",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f505b74c-a785-4dd9-ac93-008242d3828b"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "a099ec48-6c64-4076-92a9-84a9de4d7a8a",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "efe74e60-5ca8-41d2-8dfa-6cd1634efb7b"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-4",
       "name": "Activity4",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "b6b6520b-79ac-49ad-8ad4-e7a63f3029aa",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "d897607b-a247-4b64-bd86-2655c2daa927"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "eed9d608-2b47-468d-9001-b5ea8be3d894",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "267f95cb-5953-454d-9155-734da782d1a1"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "2a5fa065-ac28-4b60-984f-250323d48656",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f8c66ec2-01d9-48c9-9c18-b3b42d2dcf25"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-5",
       "name": "Activity5",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "505d4a3f-2e06-4aaa-8996-117cab46183c",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "94356e00-b621-4215-95b0-13ff771656e4"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "5c65955d-5923-43eb-8627-f0649f904330",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "00988653-03e8-4090-83b1-a8d0a838bd0a"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "3c49ca46-7d52-423f-8aef-a14aaca7c992",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "6f898679-398b-4580-bf12-6f05071fb11f"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-6",
       "name": "Activity6",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "00f3d226-1325-43e6-bb53-beff5a0062f0",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f71db514-7a88-4b84-a0be-d409a9794fa2"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "25ad5b40-6e78-45db-9111-7687bf40683f",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f3d9271d-d1ee-4b05-b9d6-0550a821a33f"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "4405aa4a-2075-4095-b9b0-d861e362925b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "18c9bc1f-058c-4695-b4b5-ee08ce77198b"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-7",
       "name": "Activity7",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "ca0e8874-eff8-4210-a8c8-da05e628201d",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "b9f14b6c-a868-4ef2-b589-a3af111d233c"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "4eb5e8fc-9187-4730-a819-1d13df33d831",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "370faa1f-75da-4a3a-bcb6-de3c663d16de"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "353073b3-e66e-4185-9664-94304968d0f6",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "67caa986-7860-490c-a0a0-6d9b6f42d025"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-8",
       "name": "Activity8",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "c0c282d7-581d-4ead-8427-9ab770aec9d8",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "063f7d76-0866-48ed-819a-4519299582e5"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "9483826b-28de-48b2-ad7d-579b1c4c72ee",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c0b7219e-a292-49ab-919b-419cda596be4"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "c1800810-794f-4b64-9eab-a36aad401b99",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "9d263a8b-cef0-4ffa-8c3e-342cc8097984"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-9",
       "name": "Activity9",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "b7ac0b77-e768-4189-9d80-14ef6c0442a7",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "e2f04aff-9188-4dbd-bb85-401fa608e94c"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "280dde42-bb51-46b0-8e1f-74182dfc8715",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "9f744da2-bd65-4f51-ad5a-f77701d7453f"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "f6de0340-4c9b-4245-aafb-34bb3dd4fb6b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "77794d42-3890-4c4f-8ea7-50c4084b25b3"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-10",
       "name": "Activity10",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "0d0c29a8-c3cd-43ff-88ca-99b37eb098df",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "55cbd5e9-d9b3-4bef-b498-5d58b6c20bf2"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "bad80f6d-5952-4e7c-80dd-df0725c7cd4d",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f33922f2-2f4a-40b7-8446-e7c14689da5b"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "e6464d4a-6e42-4fc2-a978-7ad7fc4aa851",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "b087e52d-a6e4-472b-9c8b-2c007f2b3a0e"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-11",
       "name": "Activity11",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "48551c3e-d40a-4d76-95e1-bb77c7cfec6c",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "84069fa0-18eb-4e15-b7be-59e8d229443b"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "ddcfec4e-76a9-45dd-aadf-36641dca2bf0",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "b9113fd3-b3a0-439e-afd7-217d26672e83"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "65b36832-9482-4dd1-bebe-543b473e335f",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "85f0bf4e-0353-4298-8460-598119c70701"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-12",
       "name": "Activity12",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "3a6a7935-39f8-4383-80b1-4801f2d43864",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "4e670c2f-f345-472f-9639-4bf03981d4a3"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "913e9b5c-547c-4163-810d-2fdf8c6ed0c3",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "ca4e7818-7d6a-498b-8a39-51f0f907f1d8"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "ba75b64d-5f8e-408f-9971-eb315eb6b331",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "382498aa-5169-4b9f-adf5-b7c508866bae"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-13",
       "name": "Activity13",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "b546ecd8-67c7-4c25-8a0f-b01050b08124",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "3c6d61b5-e313-4f58-a3d9-2e568c70d8cc"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "317bf3b5-2035-4c5e-80b5-9c8358d4d6ad",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "aeadea48-3518-4b77-929e-07419a79274a"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "0ab0d968-1820-4d8b-bea2-b3bdef6e60bf",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c221dd6e-e56b-4d79-94c4-9c042419b6f5"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-14",
       "name": "Activity14",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "41aa28e2-76cb-4839-9177-2fe50b4db7b2",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "a7bb40b3-02dc-4b04-8eea-605097d22802"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "ae9833b2-a5ee-4550-bce7-e8d06bb6a18b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "45b6bc6c-957f-4d44-b551-71435220497c"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "49928f62-1c40-4549-a3c8-e70528adb1f6",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "2f94a7de-a78a-4119-9999-340a5e98d692"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-15",
       "name": "Activity15",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "2958f760-8068-4a08-80b4-11308931ae25",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "5e89af0e-47c0-480e-8357-46d3322171e2"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "d52deca8-aa85-4065-b7c7-08ac84b4ff07",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "d9afd917-21d9-4de3-83bd-b1560e58571e"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "21ba5ba7-2b41-46fa-9ddc-84900caeb850",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "faca10de-3652-4406-8fd1-c7f55c5b04c2"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-16",
       "name": "Activity16",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "230d11c3-e73e-470a-a7fc-d4474b7e164c",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "4394d554-5e82-4adc-9560-2df38713be2d"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "df8af4bc-0678-45de-bf1c-b43e996e23c7",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "55d0c75e-3c90-41b1-b36c-c6314ec44b63"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "ade648f6-5ceb-4580-a68f-7c70a728d6a2",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "1514499a-a49e-4490-af3c-1bac391397cd"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-17",
       "name": "Activity17",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "bdaeb8e1-07a4-46e9-84dd-857d3e2f5cd3",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "7638be5d-701a-49d7-b042-6f891f1b9b6a"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "7cbe38bf-befb-4a1c-8b24-79c34b1ded50",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "fb518833-bcab-4270-8908-190a2b8509de"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "bbde1949-6e2a-408f-a224-7512b8c64fcc",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "918ca129-dd73-4408-b908-6b8f9b76a613"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-18",
       "name": "Activity18",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "5302e3da-af79-4396-9c22-d3b32c9c36b0",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c7f9905c-3d1f-4e40-a6f9-742cd27ef964"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "0278794b-9db4-4fcb-a288-27a2c0309a0b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "27fd042d-e092-4431-97cc-4c3002e27ac7"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "6b160060-a06b-4e09-b5f5-9d7796d097e1",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "036e8110-5883-4b2b-b1cb-518d1695ceef"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-19",
       "name": "Activity19",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "d8d85599-3a03-4e79-bb79-db6404ed0064",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "18001eaa-63d5-47ff-b6f3-93575c9623cc"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "5048ad2f-64ad-40fd-bc11-6347d2522b6e",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "d54e4fe5-794e-434b-82f3-025bd063cef9"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "60445940-e59b-433f-bbab-e4003bde553a",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "3f6c0152-93cf-4e7e-a18b-32fbfef197fc"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-20",
       "name": "Activity20",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "f0f3761a-8b4a-473d-9e2a-0197e32b2643",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "86f75430-5088-4a59-9a76-d1adb1b86763"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "591b03ab-a78b-4121-b54c-41cafb6379d7",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "91dd104b-843e-4092-90da-88041acb3b58"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "87c6d176-b7bf-45ac-9263-f9b2e6527b6e",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c4ebdc32-90e4-4414-aca1-44f7bf43f194"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-21",
       "name": "Activity21",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "88e4aaab-fa5c-4980-a20d-85cb3749956a",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "4837f31f-5730-47ab-b95f-a4bcbbdd37ce"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "1ae41a8f-637b-45e6-8fdd-d5776ccb5e44",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "0c27e465-3363-4a05-afdf-c90a4cd2108d"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "7a8fd048-be95-496f-b742-61d97bcb3a4e",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c08d48ff-7990-4f65-8b0c-df41c876a3f6"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-22",
       "name": "Activity22",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "04a2d73a-a358-4ed4-876e-43306b4b6b92",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "ec1535da-aa36-48bd-a85b-1d2cca6e425a"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "378ec126-8636-4561-8d2e-32b385cab0cd",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "996658c9-e142-4f09-a195-66301af795fd"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "dd498f55-4289-47de-be12-e4ca79bc18a9",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f4793764-1112-44a2-912b-bad5dda08fbe"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-23",
       "name": "Activity23",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "5c0340f7-6dd1-4626-a7c7-c9ad84f70a9b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "2019f4dd-5b99-4fd8-bb4d-b91ecfb20c8e"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "cc6d7911-1fa5-4680-8416-6bb81357e383",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "1c7f8567-09ed-476c-9e52-90f4adffc8d3"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "4d2bd4f9-3de0-4872-9295-8d0afcc4e231",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f826c50f-3797-4a1e-80dd-b748ce2a9421"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-24",
       "name": "Activity24",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "8dc2c698-ecbe-4520-bf1f-9f8ac823a347",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "98613138-e310-42b0-a590-0b59bb3b36fe"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "5135d656-eee5-403e-ba18-7bee512cf7cd",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "55a52136-6731-4188-a08a-971268bacc54"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "deb33aed-a059-4417-af1a-67df16d16044",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "3f7e7db5-f4b4-4e0d-bd1f-740420534558"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-25",
       "name": "Activity25",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "f9464621-de9b-4a1c-823f-5d3741c94eb3",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "1c870569-842c-4f89-b11b-89d3ee5c6bfb"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "a1087605-48e0-47f1-9664-83c739eae91d",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "f44e8cee-a1a7-4afb-9fc4-0e9f6b4ef77b"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "531df912-e2d9-4fe6-a998-79bf4160422a",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "80e736d0-3d8e-4233-a19a-081479edde63"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-26",
       "name": "Activity26",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "e6aee763-97fd-445f-9cab-d2c0c1dfefc5",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "e1fb2767-dafe-4499-a651-fcc60ddce0e1"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "6cd9e693-4bc3-4df2-9064-b15decf7c6bd",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "07c59c3a-891c-4cdd-879a-425f83a435f6"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "a424c9bb-f1a4-477d-b2a4-3690daf2b0eb",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "cf6b84fb-9065-4b29-ac21-e1ba24b1253f"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-27",
       "name": "Activity27",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "d8131f56-2f44-4bbc-83fb-2cb057176ccb",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "56307d59-8414-44ba-a932-9ec3d1d9e52f"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "bd5efdce-91ec-4091-b137-e31ad37631ff",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "1ab65676-093d-4255-b26a-7142be466a84"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "90d7df33-4970-4f99-8178-a09ba26a882b",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "7bb160cd-eb5a-44a4-ad12-e5c0c620a5ce"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-28",
       "name": "Activity28",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "17e0dd14-7230-4bce-83bd-d99adff9dc74",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "380da76c-8a20-41df-8e4a-c9c110365fe7"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "4c766ae7-85dd-4cac-b0b9-12b08fea0377",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "acd7ddba-bf92-4980-ad9e-0e2165da7528"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "a660f0d7-4266-4e80-a86d-09c46d4ce1ba",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "c05c6c08-387a-4e91-9e62-c92ae0576e25"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-29",
       "name": "Activity29",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "495a98f1-571f-427a-86bd-c9c6e65746dc",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "dbaaafbd-9452-4200-bffa-5cb667d890bb"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "a2956f5a-d871-48ff-90c8-ef2d884922e5",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "2797f2a2-0d43-4395-ad1a-7361cef0fa67"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "c1a61d50-41ff-40ae-8fc0-718d943a3e42",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "a6c70c62-2426-404d-9648-dc5931a36b52"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-30",
       "name": "Activity30",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "1557836e-b6b2-42ac-8b91-ce1fef853257",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "cb4736ac-f638-49d7-a61f-41c7e8ba461f"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "3fd6f2b7-2c2a-4462-a2b0-4ac50ec69d7c",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "a2b9b86d-a92c-4856-87b3-d35b29731270"
+          "resourceRequirementId": "resource-2"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-3",
+          "id": "85c23e55-b5c3-4ab7-8445-666cb6beb905",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "1a146c05-039e-4a84-b809-510dd1219856"
+          "resourceRequirementId": "resource-3"
         }
-      ],
-      "connectType": "Probability"
+      ]
     }
   ],
   "resources": [
     {
       "id": "resource-1",
-      "name": "Resource1",
-      "description": "",
-      "type": "Resource",
-      "x": 0,
-      "y": 0,
-      "capacity": 1
+      "name": "Resource1"
     },
     {
       "id": "resource-2",
-      "name": "Resource2",
-      "description": "",
-      "type": "Resource",
-      "x": 0,
-      "y": 0,
-      "capacity": 1
+      "name": "Resource2"
     },
     {
       "id": "resource-3",
-      "name": "Resource3",
-      "description": "",
-      "type": "Resource",
-      "x": 0,
-      "y": 0,
-      "capacity": 1
+      "name": "Resource3"
     }
   ],
   "generators": [
     {
       "id": "generator-1",
       "name": "Generator1",
-      "description": "",
-      "type": "Generator",
-      "x": 0,
-      "y": 0,
-      "generationConfig": {
-        "entityId": "entity-1",
-        "generatorType": "FREQUENCY",
-        "periodicOccurrences": 10,
-        "periodIntervalDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 1
-            },
-            "description": ""
-          }
-        },
-        "entitiesPerCreation": 1,
-        "periodicStartDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 0
-            },
-            "description": ""
-          }
-        },
-        "maxEntities": 999999
-      }
+      "entityId": "entity-1",
+      "interarrivalTime": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "maxCycles": 10
     },
     {
       "id": "generator-2",
       "name": "Generator2",
-      "description": "",
-      "type": "Generator",
-      "x": 0,
-      "y": 0,
-      "generationConfig": {
-        "entityId": "entity-1",
-        "generatorType": "FREQUENCY",
-        "periodicOccurrences": 10,
-        "periodIntervalDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 1
-            },
-            "description": ""
-          }
-        },
-        "entitiesPerCreation": 1,
-        "periodicStartDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 0
-            },
-            "description": ""
-          }
-        },
-        "maxEntities": 999999
-      }
+      "entityId": "entity-1",
+      "interarrivalTime": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "maxCycles": 10
     }
   ],
   "connectors": [
     {
       "id": "connector-gen-1",
       "name": "Generator1ToActivity1",
-      "description": "",
-      "type": "Connector",
       "sourceId": "generator-1",
       "targetId": "activity-1",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 0.5,
-      "actions": [],
-      "stateModifications": []
+      "weight": 0.5
     },
     {
       "id": "connector-gen-2",
       "name": "Generator2ToActivity1",
-      "description": "",
-      "type": "Connector",
       "sourceId": "generator-2",
       "targetId": "activity-1",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 0.5,
-      "actions": [],
-      "stateModifications": []
+      "weight": 0.5
     },
     {
       "id": "connector-1",
       "name": "Activity1ToActivity2",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-1",
       "targetId": "activity-2",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-2",
       "name": "Activity2ToActivity3",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-2",
       "targetId": "activity-3",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-3",
       "name": "Activity3ToActivity4",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-3",
       "targetId": "activity-4",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-4",
       "name": "Activity4ToActivity5",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-4",
       "targetId": "activity-5",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-5",
       "name": "Activity5ToActivity6",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-5",
       "targetId": "activity-6",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-6",
       "name": "Activity6ToActivity7",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-6",
       "targetId": "activity-7",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-7",
       "name": "Activity7ToActivity8",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-7",
       "targetId": "activity-8",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-8",
       "name": "Activity8ToActivity9",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-8",
       "targetId": "activity-9",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-9",
       "name": "Activity9ToActivity10",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-9",
       "targetId": "activity-10",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-10",
       "name": "Activity10ToActivity11",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-10",
       "targetId": "activity-11",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-11",
       "name": "Activity11ToActivity12",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-11",
       "targetId": "activity-12",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-12",
       "name": "Activity12ToActivity13",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-12",
       "targetId": "activity-13",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-13",
       "name": "Activity13ToActivity14",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-13",
       "targetId": "activity-14",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-14",
       "name": "Activity14ToActivity15",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-14",
       "targetId": "activity-15",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-15",
       "name": "Activity15ToActivity16",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-15",
       "targetId": "activity-16",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-16",
       "name": "Activity16ToActivity17",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-16",
       "targetId": "activity-17",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-17",
       "name": "Activity17ToActivity18",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-17",
       "targetId": "activity-18",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-18",
       "name": "Activity18ToActivity19",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-18",
       "targetId": "activity-19",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-19",
       "name": "Activity19ToActivity20",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-19",
       "targetId": "activity-20",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-20",
       "name": "Activity20ToActivity21",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-20",
       "targetId": "activity-21",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-21",
       "name": "Activity21ToActivity22",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-21",
       "targetId": "activity-22",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-22",
       "name": "Activity22ToActivity23",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-22",
       "targetId": "activity-23",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-23",
       "name": "Activity23ToActivity24",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-23",
       "targetId": "activity-24",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-24",
       "name": "Activity24ToActivity25",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-24",
       "targetId": "activity-25",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-25",
       "name": "Activity25ToActivity26",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-25",
       "targetId": "activity-26",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-26",
       "name": "Activity26ToActivity27",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-26",
       "targetId": "activity-27",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-27",
       "name": "Activity27ToActivity28",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-27",
       "targetId": "activity-28",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-28",
       "name": "Activity28ToActivity29",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-28",
       "targetId": "activity-29",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-29",
       "name": "Activity29ToActivity30",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-29",
       "targetId": "activity-30",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     }
   ],
   "resourceRequirements": [
     {
       "id": "resource-1",
       "name": "Resource1",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "resource-1",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-1"
+          }
+        ]
+      }
     },
     {
       "id": "resource-2",
       "name": "Resource2",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "resource-2",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-2"
+          }
+        ]
+      }
     },
     {
       "id": "resource-3",
       "name": "Resource3",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "resource-3",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-3"
+          }
+        ]
+      }
     }
   ],
-  "states": [],
-  "scenarios": []
+  "states": []
 }

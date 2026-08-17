@@ -1,264 +1,142 @@
 {
-  "schemaVersion": "2026.08.26",
+  "schemaVersion": "2026.11.01",
   "metadata": {
-    "version": "2026.08.26",
-    "timestamp": "2026-08-12T10:19:59.010Z"
+    "version": "2026.11.01",
+    "timestamp": "2026-08-17T11:46:40.066Z"
   },
-  "model": {
-    "id": "model-4",
-    "name": "Model E0A2R2G1",
-    "description": "",
-    "reps": 1,
-    "seed": 12345,
-    "oneClockUnit": "MINUTES",
-    "simulationTimeType": "Clock",
-    "warmupClockPeriod": 0,
-    "warmupClockPeriodUnit": "HOURS",
-    "runClockPeriod": 24,
-    "runClockPeriodUnit": "HOURS",
-    "warmupDateTime": null,
-    "startDateTime": null,
-    "finishDateTime": null
+  "name": "Model E0A2R2G1",
+  "replications": 1,
+  "seed": 12345,
+  "timeUnit": "minutes",
+  "runTime": {
+    "value": 24,
+    "unit": "hours"
   },
   "entities": [
     {
       "id": "00000000-0000-0000-0000-000000000000",
-      "name": "Default Entity",
-      "description": "",
-      "type": "Entity",
-      "x": 0,
-      "y": 0
+      "name": "Default Entity"
     }
   ],
   "activities": [
     {
       "id": "activity-1",
       "name": "Activity1",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "3f937db8-af92-4a60-a26b-2ce0b37aeee1",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "50fa960e-738e-4575-a199-d6cfc60927a5"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "4e998f00-8c35-48c5-9644-b4a7c9ba1e36",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "d2fe27c4-053c-42d3-aa05-09790329eacb"
+          "resourceRequirementId": "resource-2"
         }
-      ],
-      "connectType": "Probability"
+      ]
     },
     {
       "id": "activity-2",
       "name": "Activity2",
-      "description": "",
-      "type": "Activity",
-      "x": 0,
-      "y": 0,
-      "capacity": 1,
-      "inboundQueueCapacity": 1,
-      "outboundQueueCapacity": 1,
+      "inboundCapacity": 1,
+      "outboundCapacity": 1,
       "actions": [
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-1",
+          "id": "9513da3a-1e13-4d0d-9b84-a1cab3ebae04",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "0a7bf62a-0d77-4539-be4e-56b81e7d4735"
+          "resourceRequirementId": "resource-1"
         },
         {
-          "actionType": "DELAY_WITH_RESOURCE",
-          "resourceRequirementId": "resource-2",
+          "id": "97255b53-e29c-47c6-bac1-d47c03f0efc1",
+          "type": "delay_with_resource",
           "duration": {
-            "durationPeriodUnit": "MINUTES",
-            "distribution": {
-              "distributionType": "constant",
-              "parameters": {
-                "value": 1
-              },
-              "description": ""
-            }
+            "unit": "minutes",
+            "value": 1
           },
-          "keepResource": false,
-          "id": "addfdf90-e2fa-42e5-8c27-ce00b3c69385"
+          "resourceRequirementId": "resource-2"
         }
-      ],
-      "connectType": "Probability"
+      ]
     }
   ],
   "resources": [
     {
       "id": "resource-1",
-      "name": "Resource1",
-      "description": "",
-      "type": "Resource",
-      "x": 0,
-      "y": 0,
-      "capacity": 1
+      "name": "Resource1"
     },
     {
       "id": "resource-2",
-      "name": "Resource2",
-      "description": "",
-      "type": "Resource",
-      "x": 0,
-      "y": 0,
-      "capacity": 1
+      "name": "Resource2"
     }
   ],
   "generators": [
     {
       "id": "generator-1",
       "name": "Generator1",
-      "description": "",
-      "type": "Generator",
-      "x": 0,
-      "y": 0,
-      "generationConfig": {
-        "entityId": "00000000-0000-0000-0000-000000000000",
-        "generatorType": "FREQUENCY",
-        "periodicOccurrences": 10,
-        "periodIntervalDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 1
-            },
-            "description": ""
-          }
-        },
-        "entitiesPerCreation": 1,
-        "periodicStartDuration": {
-          "durationPeriodUnit": "HOURS",
-          "distribution": {
-            "distributionType": "constant",
-            "parameters": {
-              "value": 0
-            },
-            "description": ""
-          }
-        },
-        "maxEntities": 999999
-      }
+      "entityId": "00000000-0000-0000-0000-000000000000",
+      "interarrivalTime": {
+        "value": 1,
+        "unit": "hours"
+      },
+      "maxCycles": 10
     }
   ],
   "connectors": [
     {
       "id": "connector-gen-1",
       "name": "Generator1ToActivity1",
-      "description": "",
-      "type": "Connector",
       "sourceId": "generator-1",
       "targetId": "activity-1",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     },
     {
       "id": "connector-1",
       "name": "Activity1ToActivity2",
-      "description": "",
-      "type": "Connector",
       "sourceId": "activity-1",
       "targetId": "activity-2",
-      "sourceX": 0,
-      "sourceY": 0,
-      "targetX": 0,
-      "targetY": 0,
-      "x": 0,
-      "y": 0,
-      "weight": 1,
-      "actions": [],
-      "stateModifications": []
+      "weight": 1
     }
   ],
   "resourceRequirements": [
     {
       "id": "resource-1",
       "name": "Resource1",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "resource-1",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-1"
+          }
+        ]
+      }
     },
     {
       "id": "resource-2",
       "name": "Resource2",
-      "type": "ResourceRequirement",
-      "rootClauses": [
-        {
-          "clauseId": "clause-1",
-          "mode": "REQUIRE_ALL",
-          "requests": [
-            {
-              "resourceId": "resource-2",
-              "quantity": 1,
-              "priority": 1,
-              "keepResource": false
-            }
-          ],
-          "subClauses": []
-        }
-      ]
+      "rootClause": {
+        "id": "clause-1",
+        "mode": "require_all",
+        "requests": [
+          {
+            "resourceId": "resource-2"
+          }
+        ]
+      }
     }
   ],
-  "states": [],
-  "scenarios": []
+  "states": []
 }

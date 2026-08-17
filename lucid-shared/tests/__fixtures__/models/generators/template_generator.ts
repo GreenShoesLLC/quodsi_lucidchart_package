@@ -14,7 +14,6 @@ import { ConstantDistribution } from '@quodsi/shared';
 import { UniformParameters, TriangularParameters, NormalParameters } from '@quodsi/shared';
 import { createDelayWithResourceAction } from '@quodsi/shared';
 import { createDelayAction } from '@quodsi/shared';
-import { EntitySourceConfig } from '@quodsi/shared';
 import { GeneratorType } from '@quodsi/lucid-shared';
 
 interface ModelConfig {
@@ -112,14 +111,14 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
     }
     
     // Create common duration for activities - default for when no specific one is needed
-    const defaultDuration = new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1));
+    const defaultDuration = Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(1));
 
     // Create activities with dedicated actions
     const activities: Activity[] = [];
     for (let i = 0; i < config.activityCount; i++) {
         // Get distribution for this activity
         const activityDistribution = getDistributionForIndex(i, 'activity');
-        const activityDuration = new Duration(PeriodUnit.MINUTES, activityDistribution);
+        const activityDuration = Duration.fromDistribution(PeriodUnit.MINUTES, activityDistribution);
 
         // Create actions for this activity
         const actions = requirements.length > 0
@@ -147,24 +146,28 @@ export function createModelDefinition(config: ModelConfig, index: number): Model
         entityForGenerator = modelDef.entities.getAll()[0];
     }
 
-    // Create generators
+    // Create generators. `EntitySourceConfig` was dissolved (wire-cleanup
+    // Phase B2 Task 5) — its fields now live flat on `Generator` itself:
+    // periodicOccurrences -> maxCycles, periodIntervalDuration ->
+    // interarrivalTime, entitiesPerCreation -> batchSize,
+    // periodicStartDuration -> startDelay. `exitConnector` (the old 4th
+    // constructor arg) no longer exists as a Generator concept — routing
+    // to the first activity is expressed entirely via the real `Connector`
+    // created below, same as it always was for every OTHER generator-to-
+    // activity edge.
     for (let i = 0; i < config.generatorCount; i++) {
-        const generationConfig: EntitySourceConfig = {
-            entityId: entityForGenerator.id,
-            generatorType: GeneratorType.FREQUENCY,
-            periodicOccurrences: 10,
-            periodIntervalDuration: new Duration(PeriodUnit.HOURS, getDistributionForIndex(i, 'generator')),
-            entitiesPerCreation: 1,
-            periodicStartDuration: new Duration(PeriodUnit.HOURS, ConstantDistribution.create(0)),
-            maxEntities: 999999,
-            initialStateModifications: []
-        };
         const generator = new Generator(
             `generator-${i + 1}`,
             `Generator${i + 1}`,
-            generationConfig,
-            activities[0].id // exitConnector
+            entityForGenerator.id,
+            Duration.fromDistribution(PeriodUnit.HOURS, getDistributionForIndex(i, 'generator'))
         );
+        generator.mode = GeneratorType.FREQUENCY;
+        generator.maxCycles = 10;
+        generator.batchSize = 1;
+        generator.startDelay = Duration.constant(0, PeriodUnit.HOURS);
+        generator.maxEntities = 999999;
+        generator.initialStates = [];
         modelDef.generators.add(generator);
 
         // Create connector from generator to first activity

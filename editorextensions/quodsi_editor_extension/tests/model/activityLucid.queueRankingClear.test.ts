@@ -58,7 +58,7 @@ const RANKED_ACTIVITY = {
     inboundQueueCapacity: 999999,
     outboundQueueCapacity: 999999,
     actions: [],
-    queueRanking: { stateName: 'severity', order: 'ASCENDING' },
+    queueRanking: { stateId: 'state-sev', order: 'ascending' },
 };
 
 /** What actually reaches the extension: JSON drops undefined-valued keys, so a
@@ -74,12 +74,12 @@ function storedData(storage: StorageAdapter, element: any): any {
 /**
  * The reconstruction ConnectorsEditor.extractActivityData performs, reproduced
  * field for field: an Activity rebuilt from the constructor arguments plus
- * connectType and financialProperties, and NOTHING else. queueRanking, levers,
+ * routing and financialProperties, and NOTHING else. queueRanking, levers,
  * description and failureProperties are all absent from what that panel sends.
  * ConnectorsEditor is reached by selecting any connector whose source is an
  * Activity, so this payload hits storage during ordinary routing edits.
  */
-function connectorsEditorPayload(stored: any, connectType: ConnectType): any {
+function connectorsEditorPayload(stored: any, routing: ConnectType): any {
     const rebuilt = new Activity(
         stored.id,
         stored.name,
@@ -90,7 +90,7 @@ function connectorsEditorPayload(stored: any, connectType: ConnectType): any {
         stored.x || 0,
         stored.y || 0
     );
-    rebuilt.connectType = connectType;
+    rebuilt.routing = routing;
     rebuilt.financialProperties = stored.financialProperties;
     return overTheWire(rebuilt);
 }
@@ -135,8 +135,8 @@ describe('clearing a queue ranking persists (finding 1)', () => {
         const block = makeFakeActivityBlock('act-1');
         storage.setElementData(block, RANKED_ACTIVITY, SimulationObjectType.Activity);
         expect(storedData(storage, block).queueRanking).toEqual({
-            stateName: 'severity',
-            order: 'ASCENDING',
+            stateId: 'state-sev',
+            order: 'ascending',
         });
 
         const manager = newManager(storage);
@@ -190,8 +190,8 @@ describe('clearing a queue ranking persists (finding 1)', () => {
 
         const activityLucid = new ActivityLucid(block, storage);
         expect(activityLucid.getSimulationObject().queueRanking).toEqual({
-            stateName: 'severity',
-            order: 'ASCENDING',
+            stateId: 'state-sev',
+            order: 'ascending',
         });
 
         // Back to FIFO.
@@ -222,14 +222,14 @@ describe('clearing a queue ranking persists (finding 1)', () => {
         await manager.saveElementData(block, partial, SimulationObjectType.Activity, page);
 
         const after = storedData(storage, block);
-        expect(after.queueRanking).toEqual({ stateName: 'severity', order: 'ASCENDING' });
+        expect(after.queueRanking).toEqual({ stateId: 'state-sev', order: 'ascending' });
         expect(after.capacity).toBe(4);
     });
 
     it('survives a ConnectorsEditor save, which never mentions queueRanking', async () => {
         // The reported defect. Selecting a connector whose source is a ranked
         // Activity opens ConnectorsEditor, which rebuilds the Activity from
-        // connectType + financialProperties only and auto-saves it as an
+        // routing + financialProperties only and auto-saves it as an
         // "Activity" update. Under key-absence inference that PERMANENTLY
         // deleted the ranking; the modeller never touched Queue Ranking.
         const storage = new StorageAdapter();
@@ -246,15 +246,15 @@ describe('clearing a queue ranking persists (finding 1)', () => {
         await manager.saveElementData(block, payload, SimulationObjectType.Activity, page);
 
         const after = storedData(storage, block);
-        expect(after.queueRanking).toEqual({ stateName: 'severity', order: 'ASCENDING' });
+        expect(after.queueRanking).toEqual({ stateId: 'state-sev', order: 'ascending' });
         // The edit the panel DID make still lands.
-        expect(after.connectType).toBe(ConnectType.StateCondition);
+        expect(after.routing).toBe(ConnectType.StateCondition);
 
         // And a fresh read of the shape — what reselecting the activity does —
         // still reports the ranking.
         expect(new ActivityLucid(block, storage).getSimulationObject().queueRanking).toEqual({
-            stateName: 'severity',
-            order: 'ASCENDING',
+            stateId: 'state-sev',
+            order: 'ascending',
         });
     });
 
@@ -277,8 +277,8 @@ describe('clearing a queue ranking persists (finding 1)', () => {
         );
 
         expect(storedData(storage, block).queueRanking).toEqual({
-            stateName: 'severity',
-            order: 'ASCENDING',
+            stateId: 'state-sev',
+            order: 'ascending',
         });
     });
 });
@@ -313,8 +313,8 @@ describe('deleting the ranked state clears the ranking (finding 2)', () => {
         const affected = await (manager as any).cleanupStateReferences('state-other', 'urgency', page);
 
         expect(storedData(storage, block).queueRanking).toEqual({
-            stateName: 'severity',
-            order: 'ASCENDING',
+            stateId: 'state-sev',
+            order: 'ascending',
         });
         expect(affected).toBe(0);
     });

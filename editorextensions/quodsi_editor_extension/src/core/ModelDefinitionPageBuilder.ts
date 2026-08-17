@@ -237,18 +237,21 @@ export class ModelDefinitionPageBuilder {
     }
 
     /**
-     * Helper to convert serialized RequirementClause to RequirementClause instance (recursive)
+     * Helper to convert serialized RequirementClause to RequirementClause instance
+     * (recursive). Wire-cleanup Phase B2 Task 6/9: `clauseId` -> `id`,
+     * `subClauses` -> `clauses`, `parentClauseId` DROPPED entirely
+     * (round-trip-only bookkeeping — tree structure comes entirely from
+     * nesting under `clauses` now).
      */
     private deserializeClause(serialized: any): RequirementClause {
         const requests = serialized.requests || [];
-        const subClauses = (serialized.subClauses || []).map((sc: any) => this.deserializeClause(sc));
+        const clauses = (serialized.clauses || []).map((sc: any) => this.deserializeClause(sc));
 
         return new RequirementClause(
-            serialized.clauseId,
+            serialized.id,
             serialized.mode,
-            serialized.parentClauseId,
             requests, // ResourceRequest objects are plain objects, no deserialization needed
-            subClauses
+            clauses
         );
     }
 
@@ -289,10 +292,10 @@ export class ModelDefinitionPageBuilder {
         for (const autoReq of autoRequirements) {
             const customReq = customById.get(autoReq.id);
             if (customReq) {
-                // Custom requirement overrides automatic one - deserialize clauses
-                const deserializedClauses = customReq.rootClauses.map(c => this.deserializeClause(c));
+                // Custom requirement overrides automatic one - deserialize the root clause
+                const deserializedRootClause = this.deserializeClause(customReq.rootClause);
                 mergedRequirements.push(
-                    new ResourceRequirement(customReq.id, customReq.name, deserializedClauses)
+                    new ResourceRequirement(customReq.id, customReq.name, deserializedRootClause)
                 );
                 customById.delete(autoReq.id); // Mark as processed
                 this.log(`Using custom requirement for resource: ${customReq.name} (ID: ${autoReq.id})`);
@@ -304,10 +307,10 @@ export class ModelDefinitionPageBuilder {
 
         // Add remaining custom requirements (pure custom, not tied to a single resource)
         for (const [id, customReq] of customById) {
-            // Deserialize clauses for pure custom requirements
-            const deserializedClauses = customReq.rootClauses.map(c => this.deserializeClause(c));
+            // Deserialize the root clause for pure custom requirements
+            const deserializedRootClause = this.deserializeClause(customReq.rootClause);
             mergedRequirements.push(
-                new ResourceRequirement(customReq.id, customReq.name, deserializedClauses)
+                new ResourceRequirement(customReq.id, customReq.name, deserializedRootClause)
             );
             this.log(`Adding pure custom requirement: ${customReq.name} (ID: ${id})`);
         }

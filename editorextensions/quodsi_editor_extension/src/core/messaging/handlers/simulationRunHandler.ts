@@ -357,7 +357,35 @@ export class SimulationRunHandler {
     }
     const serializer = ModelSerializerFactory.create(modelDefinition);
     const serializedModel = serializer.serialize(modelDefinition) as ISerializedModel;
-    const catalog = SimulationRunHandler.buildStudioCatalog(serializedModel);
+    // `modelDefinition.model.id`/`.finishDateTime` (the Lucid page/document
+    // id, and the host-projection-only finish-date convenience) have no
+    // clean-wire equivalent (wire-cleanup Phase B2 Task 9 — dropped from
+    // `ISerializedModel` entirely, per the engine schema), so both are read
+    // off the live domain `Model` instance instead of the serialized result.
+    // Fix round (review F4): `finishDateTime` was dropped from the relay
+    // entirely, so every calendar-mode embed open hit a hard
+    // `missing_finish_datetime` validation blocker on the Studio side.
+    //
+    // Fix round 2 (review R1, CRITICAL): `Model.finishDateTime` is typed
+    // `Date | null`, but in the Lucid host it is actually whatever
+    // StorageAdapter's `JSON.parse` produced — an ISO STRING, never coerced
+    // to a real `Date` anywhere in `ModelLucid.createSimObject` (the
+    // monorepo documents this exact host-date hazard at
+    // `modelFields.ts`'s "DATES:" comment — flat hosts hold ISO strings,
+    // not `Date` instances, until something explicitly coerces). Calling
+    // `.toISOString()` unconditionally threw for every real calendar-mode
+    // model, killing the ENTIRE catalog send — the opposite of what F4 was
+    // fixing. String/Date-tolerant coercion below handles both shapes.
+    const rawFinishDateTime: unknown = modelDefinition.model.finishDateTime;
+    const finishDateTime: string | null =
+      typeof rawFinishDateTime === 'string'
+        ? rawFinishDateTime
+        : (rawFinishDateTime as Date | null)?.toISOString?.() ?? null;
+    const catalog = SimulationRunHandler.buildStudioCatalog(
+      serializedModel,
+      modelDefinition.model.id,
+      finishDateTime,
+    );
 
     const channel = SimulationRunHandler.getResponseChannel(msg);
     router.send(channel, {
@@ -373,53 +401,68 @@ export class SimulationRunHandler {
   /**
    * Build the full relay catalog from a serialized model. Populates the `model`
    * block (timing fields) and all per-record optional fields (capacity, weight,
-   * generationConfig, rootClauses, etc.) so the embedded Studio can validate the
+   * sourceConfig, rootClause, etc.) so the embedded Studio can validate the
    * full model without a separate API round-trip.
    *
    * The returned shape is structurally compatible with
-   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`.
-   * Connectors come from the model's top-level `connectors[]` (flat as of the
-   * 2026.08.20 canonicalization) and carry sourceId/targetId/weight.
+   * `quodsi_studio/src/platforms/lucid-embed/relayProtocol.ts#RelayedCatalog`
+   * — wire-cleanup Phase B2 Task 9: this is the sender-side half of that
+   * file's documented gap ("buildStudioCatalog itself still sends old-era
+   * key names today ... bridged at the receive boundary by
+   * normalizeRelayedCatalog.ts ... until Task 9/10 lands"). Emits the CLEAN
+   * field names directly now (`timeMode`/`timeUnit`/`runTime`/`warmupTime`,
+   * `inboundCapacity`/`outboundCapacity`/`routing`, action `type`,
+   * `rootClause`, flat generator core fields) — `normalizeRelayedCatalog`
+   * on the Studio side can be collapsed to a no-op once this lands there.
+   * Connectors come from the model's top-level `connectors[]` and carry
+   * ONLY id/name/sourceId/targetId/weight (see `buildRelayConnectors` —
+   * `RelayCatalogConnector`'s own field list; condition/entityId/priority
+   * are NOT relayed today, fix round F4 comment correction).
    */
-  private static buildStudioCatalog(model: ISerializedModel) {
-    const m = model.model;
-
+  private static buildStudioCatalog(model: ISerializedModel, modelId: string, finishDateTime: string | null) {
     // Map + deduplicate the top-level connectors by id.
     const connectors = buildRelayConnectors(model);
 
     return {
       model: {
-        id: m.id,
-        name: m.name,
-        simulationTimeType: m.simulationTimeType,
-        runClockPeriod: m.runClockPeriod,
-        startDateTime: m.startDateTime ?? null,
-        finishDateTime: m.finishDateTime ?? null,
+        id: modelId,
+        name: model.name,
+        timeMode: model.timeMode,
+        timeUnit: model.timeUnit,
+        runTime: model.runTime,
+        warmupTime: model.warmupTime,
+        replications: model.replications,
+        startDateTime: model.startDateTime ?? null,
+        // Host-projection-only convenience with no clean-wire slot — see
+        // the call site's comment. Every calendar-mode embed relies on this
+        // to satisfy the Studio side's `missing_finish_datetime` check.
+        finishDateTime,
         // Opt-in model-level levers (reps/seed) so the live-relay embed path
         // surfaces them in the New-Study roster (the receiver — RelayedCatalog.
         // model.levers + composeModelDefinition — is already wired).
-        levers: m.levers ?? [],
+        levers: model.levers ?? [],
       },
       activities: (model.activities ?? []).map((a) => ({
         id: a.id,
         name: a.name,
         capacity: a.capacity,
-        inboundQueueCapacity: a.inboundQueueCapacity,
-        outboundQueueCapacity: a.outboundQueueCapacity,
-        connectType: a.connectType,
+        inboundCapacity: a.inboundCapacity,
+        outboundCapacity: a.outboundCapacity,
+        routing: a.routing,
         actions: (a.actions ?? []).map((ac) => {
           const base: {
             id: string;
-            actionType: string;
+            type: string;
             duration?: unknown;
             resourceRequirementId?: string | null;
-          } = { id: ac.id ?? '', actionType: ac.actionType };
+          } = { id: (ac as { id?: string }).id ?? '', type: (ac as { type: string }).type };
           if ('duration' in ac) base.duration = (ac as { duration?: unknown }).duration;
           if ('resourceRequirementId' in ac) {
             base.resourceRequirementId = (ac as { resourceRequirementId?: string | null }).resourceRequirementId ?? null;
           }
           return base;
         }),
+        sourceConfig: a.sourceConfig ? { ...a.sourceConfig } : undefined,
       })),
       resources: (model.resources ?? []).map((r) => ({
         id: r.id,
@@ -429,22 +472,19 @@ export class SimulationRunHandler {
       resourceRequirements: (model.resourceRequirements ?? []).map((rq) => ({
         id: rq.id,
         name: rq.name,
-        rootClauses: rq.rootClauses,
+        rootClause: rq.rootClause,
       })),
       generators: (model.generators ?? []).map((g) => ({
-        id: g.id,
-        name: g.name,
         // Spread rather than enumerate fields by name: a hand-picked field
         // list is exactly the shape that silently dropped PATTERN-mode fields
-        // (arrivalPatternId, volume) here — this site was missed by Task 21's
-        // grep-for-deleted-names sweep because it never referenced the
-        // deleted `timeDistributedConfigIds` field, only omitted the two
-        // fields that replaced it. Spreading means a future EntitySourceConfig
-        // field reaches this relay automatically instead of needing another
-        // enumeration site to remember it.
-        generationConfig: g.generationConfig
-          ? { ...g.generationConfig }
-          : undefined,
+        // (arrivalPatternId, volume) here in the past — this site was missed
+        // by an earlier grep-for-deleted-names sweep because it never
+        // referenced the deleted field, only omitted the ones that replaced
+        // it. Spreading means a future generator-core field reaches this
+        // relay automatically instead of needing another enumeration site to
+        // remember it. Generator's fields are already flat (dissolved
+        // EntitySourceConfig) — no nested `generationConfig` to unwrap.
+        ...g,
       })),
       connectors,
       entities: (model.entities ?? []).map((e) => ({ id: e.id, name: e.name })),

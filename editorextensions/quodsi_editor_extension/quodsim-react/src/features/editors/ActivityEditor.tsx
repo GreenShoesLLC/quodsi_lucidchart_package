@@ -259,7 +259,7 @@ export const extractActivityData = (act: any): Activity => {
       0,
       0
     );
-    activity.connectType = ConnectType.Probability; // Set default
+    activity.routing = ConnectType.Probability; // Set default
     return activity;
   }
 
@@ -271,15 +271,15 @@ export const extractActivityData = (act: any): Activity => {
     id,
     data.name || "New Activity",
     data.capacity || 1,
-    queueToDisplay(data.inboundQueueCapacity),
-    queueToDisplay(data.outboundQueueCapacity),
+    queueToDisplay(data.inboundCapacity),
+    queueToDisplay(data.outboundCapacity),
     data.actions || [],
     data.x || 0,
     data.y || 0
   );
 
-  // Preserve connectType if it exists, otherwise use default
-  activity.connectType = data.connectType || ConnectType.Probability;
+  // Preserve routing mode if it exists, otherwise use default
+  activity.routing = data.routing || ConnectType.Probability;
 
   // Initialize financialProperties if it doesn't exist
   activity.financialProperties = data.financialProperties
@@ -320,10 +320,10 @@ export const updateActivityImmutably = (
   updates: Partial<{
     name: string;
     capacity: number;
-    inboundQueueCapacity: number;
-    outboundQueueCapacity: number;
+    inboundCapacity: number;
+    outboundCapacity: number;
     actions: Action[];
-    connectType: ConnectType;
+    routing: ConnectType;
     financialProperties: ActivityFinancialProperties;
     failureProperties: FailureProperties;
     levers: ScenarioLever[];
@@ -334,15 +334,15 @@ export const updateActivityImmutably = (
     base.id,
     updates.name ?? base.name,
     updates.capacity ?? base.capacity,
-    updates.inboundQueueCapacity ?? base.inboundQueueCapacity,
-    updates.outboundQueueCapacity ?? base.outboundQueueCapacity,
+    updates.inboundCapacity ?? base.inboundCapacity,
+    updates.outboundCapacity ?? base.outboundCapacity,
     updates.actions ?? base.actions,
     base.x,
     base.y
   );
 
   // Preserve/update complex properties
-  updated.connectType = updates.connectType ?? base.connectType;
+  updated.routing = updates.routing ?? base.routing;
   updated.financialProperties =
     updates.financialProperties ?? base.financialProperties;
   updated.failureProperties =
@@ -574,7 +574,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const splitActionsWithoutDestination = localActivityDraft.actions.filter(
     (action): action is SplitAction =>
-      action.actionType === ActionType.SPLIT && !(action as SplitAction).destinationId
+      action.type === ActionType.SPLIT && !(action as SplitAction).destinationId
   );
   const hasSplitValidationError = splitActionsWithoutDestination.length > 0;
 
@@ -584,7 +584,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const createActionsWithMissingFields = localActivityDraft.actions.filter(
     (action): action is CreateAction =>
-      action.actionType === ActionType.CREATE &&
+      action.type === ActionType.CREATE &&
       (!(action as CreateAction).entityTemplateId || !(action as CreateAction).destinationId)
   );
   const hasCreateValidationError = createActionsWithMissingFields.length > 0;
@@ -595,7 +595,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const joinActionsWithMissingFields = localActivityDraft.actions.filter(
     (action): action is JoinAction =>
-      action.actionType === ActionType.JOIN &&
+      action.type === ActionType.JOIN &&
       (!(action as JoinAction).matchState || !(action as JoinAction).destinationId)
   );
   const hasJoinValidationError = joinActionsWithMissingFields.length > 0;
@@ -606,7 +606,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
    */
   const branchActionsWithMissingCondition = localActivityDraft.actions.filter(
     (action): action is BranchAction =>
-      action.actionType === ActionType.BRANCH && !(action as BranchAction).condition
+      action.type === ActionType.BRANCH && !(action as BranchAction).condition
   );
   const hasBranchValidationError = branchActionsWithMissingCondition.length > 0;
 
@@ -648,7 +648,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   useFlushOnChange(localActivityDraft.failureProperties?.enabled, saveNow);
   useFlushOnChange(localActivityDraft.failureProperties?.failureClockMode, saveNow);
   useFlushOnChange(localActivityDraft.failureProperties?.repairResourceRequirementId, saveNow);
-  useFlushOnChange(localActivityDraft.connectType, saveNow);
+  useFlushOnChange(localActivityDraft.routing, saveNow);
 
   // ============================================================================
   // EVENT HANDLERS
@@ -672,8 +672,8 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       const updates: Partial<{
         name: string;
         capacity: number;
-        inboundQueueCapacity: number;
-        outboundQueueCapacity: number;
+        inboundCapacity: number;
+        outboundCapacity: number;
       }> = {};
 
       if (name === "name") {
@@ -684,9 +684,9 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       } else if (name === "capacity") {
         updates.capacity = parseInt(value) || 1;
       } else if (name === "inboundQueueCapacity") {
-        updates.inboundQueueCapacity = parseInt(value) || 0;
+        updates.inboundCapacity = parseInt(value) || 0;
       } else if (name === "outboundQueueCapacity") {
-        updates.outboundQueueCapacity = parseInt(value) || 0;
+        updates.outboundCapacity = parseInt(value) || 0;
       }
 
       return updateActivityImmutably(prev, updates);
@@ -743,7 +743,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
   const handleAddAction = () => {
     // Create a new DelayWithResource action with a default constant distribution
     const newAction = createDelayWithResourceAction(
-      new Duration(PeriodUnit.MINUTES, ConstantDistribution.create(1))
+      Duration.fromDistribution(PeriodUnit.MINUTES, ConstantDistribution.create(1))
     );
 
     setLocalActivityDraft((prev) => {
@@ -962,7 +962,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     const newConnectType = e.target.value as ConnectType;
     setLocalActivityDraft((prev) => {
       return updateActivityImmutably(prev, {
-        connectType: newConnectType,
+        routing: newConnectType,
       });
     });
     setHasPendingChanges(true);
@@ -981,7 +981,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       (r) => r.id === requirementId
     );
     if (req) {
-      const structure = convertRootClausesToStructure(req.rootClauses);
+      const structure = convertRootClausesToStructure(req.rootClause);
       setEditingRequirement({ id: req.id, name: req.name, structure });
       setRequirementModalOpen(true);
     }
@@ -1012,7 +1012,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
     name: string;
     structure: TeamStructure;
   }) => {
-    const rootClauses = convertStructureToRootClauses(data.structure);
+    const rootClause = convertStructureToRootClauses(data.structure);
 
     // Get the current requirements array
     const currentRequirements = referenceData?.resourceRequirements || [];
@@ -1026,8 +1026,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
           ? {
               id: req.id,
               name: data.name,
-              type: SimulationObjectType.ResourceRequirement,
-              rootClauses,
+              rootClause,
             }
           : req
       );
@@ -1036,8 +1035,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
       const newRequirement = {
         id: `rr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: data.name,
-        type: SimulationObjectType.ResourceRequirement,
-        rootClauses,
+        rootClause,
       };
       updatedRequirements = [...currentRequirements, newRequirement];
     }
@@ -1187,7 +1185,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           type="number"
                           name="inboundQueueCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
-                          value={localActivityDraft.inboundQueueCapacity}
+                          value={localActivityDraft.inboundCapacity}
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
@@ -1209,7 +1207,7 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                           type="number"
                           name="outboundQueueCapacity"
                           className="w-full px-2 py-1 text-xs border rounded"
-                          value={localActivityDraft.outboundQueueCapacity}
+                          value={localActivityDraft.outboundCapacity}
                           onChange={handleInputChange}
                           min="0"
                           max={INFINITY_DISPLAY_VALUE}
@@ -1233,12 +1231,12 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
 
                 {(() => {
                   const durationActions = localActivityDraft.actions
-                    .filter((a) => a.actionType === ActionType.DELAY || a.actionType === ActionType.DELAY_WITH_RESOURCE)
+                    .filter((a) => a.type === ActionType.DELAY || a.type === ActionType.DELAY_WITH_RESOURCE)
                     .map((a) => ({
                       id: a.id,
                       label: actionDurationLeverLabel(a),
                       distributionType: (isDelayAction(a) || isDelayWithResourceAction(a))
-                        ? a.duration?.distribution?.distributionType
+                        ? a.duration?.distribution
                         : undefined,
                     }));
                   return (
@@ -1533,16 +1531,17 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     <EnhancedDurationEditor
                       periodUnit={
                         localActivityDraft.failureProperties?.mtbfDuration
-                          ?.durationPeriodUnit ?? PeriodUnit.HOURS
+                          ?.unit ?? PeriodUnit.HOURS
                       }
                       distribution={
                         localActivityDraft.failureProperties?.mtbfDuration
-                          ?.distribution ?? ConstantDistribution.create(8)
+                          ? Duration.toDistribution(localActivityDraft.failureProperties.mtbfDuration)
+                          : ConstantDistribution.create(8)
                       }
                       onChange={(periodUnit, distribution) =>
                         handleFailureChange(
                           "mtbfDuration",
-                          new Duration(periodUnit, distribution)
+                          Duration.fromDistribution(periodUnit, distribution)
                         )
                       }
                       compact={true}
@@ -1562,16 +1561,17 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                     <EnhancedDurationEditor
                       periodUnit={
                         localActivityDraft.failureProperties?.mttrDuration
-                          ?.durationPeriodUnit ?? PeriodUnit.MINUTES
+                          ?.unit ?? PeriodUnit.MINUTES
                       }
                       distribution={
                         localActivityDraft.failureProperties?.mttrDuration
-                          ?.distribution ?? ConstantDistribution.create(30)
+                          ? Duration.toDistribution(localActivityDraft.failureProperties.mttrDuration)
+                          : ConstantDistribution.create(30)
                       }
                       onChange={(periodUnit, distribution) =>
                         handleFailureChange(
                           "mttrDuration",
-                          new Duration(periodUnit, distribution)
+                          Duration.fromDistribution(periodUnit, distribution)
                         )
                       }
                       compact={true}
@@ -1676,13 +1676,14 @@ const ActivityEditor: React.FC<ActivityEditorProps> = ({
                             ?.repairResourceRequirementId
                       );
                       if (!req) return null;
+                      const clauseCount = req.rootClause?.clauses.length ?? 0;
                       return (
                         <div className="mt-1 p-1.5 bg-gray-50 border rounded text-xs text-gray-600">
                           <span className="font-medium">{req.name}</span>
-                          {req.rootClauses && req.rootClauses.length > 0 && (
+                          {clauseCount > 0 && (
                             <span className="ml-1">
-                              ({req.rootClauses.length} clause
-                              {req.rootClauses.length !== 1 ? "s" : ""})
+                              ({clauseCount} clause
+                              {clauseCount !== 1 ? "s" : ""})
                             </span>
                           )}
                         </div>

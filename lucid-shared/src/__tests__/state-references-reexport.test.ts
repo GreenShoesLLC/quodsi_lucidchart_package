@@ -13,7 +13,7 @@ it('re-exports findExpressionsReferencingState from @quodsi/shared', () => {
           {
             id: 'action_1',
             modifications: [
-              { stateUniqueId: 'total_MODEL_1', stateName: 'total', operation: 'ASSIGN', valueExpression: 'qty * unit_price' },
+              { stateId: 'total', operation: 'assign', expression: 'qty * unit_price' },
             ],
           },
         ],
@@ -24,6 +24,6 @@ it('re-exports findExpressionsReferencingState from @quodsi/shared', () => {
   const hits: ExpressionStateReference[] = findExpressionsReferencingState(scope, 'unit_price');
 
   expect(hits).toEqual([
-    { elementId: 'activity_1', stateName: 'total', expression: 'qty * unit_price' },
+    { elementId: 'activity_1', stateId: 'total', expression: 'qty * unit_price' },
   ]);
 });

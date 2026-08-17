@@ -27,9 +27,9 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nGenerators:', modelDefinition.generators.getAll().map(g => ({
         id: g.id,
         name: g.name,
-        entityId: g.generationConfig.entityId,
-        maxEntities: g.generationConfig.maxEntities,
-        periodicStartDuration: g.generationConfig.periodicStartDuration,
+        entityId: g.entityId,
+        maxEntities: g.maxEntities,
+        startDelay: g.startDelay,
         type: g.type
     })));
 

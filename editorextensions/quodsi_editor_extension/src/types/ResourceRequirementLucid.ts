@@ -2,6 +2,7 @@ import { BlockProxy } from 'lucid-extension-sdk';
 import {
     ResourceRequirement,
     RequirementClause,
+    RequirementMode,
     SimulationObjectType,
     Resource,
     MappingSource
@@ -12,8 +13,21 @@ import { StorageAdapter } from '../core/StorageAdapter';
 interface StoredResourceRequirementData {
     id: string;
     name: string;
-    rootClauses: RequirementClause[];
+    rootClause: RequirementClause;
 }
+
+/**
+ * Wire-cleanup Phase B2 Task 6/9: `ResourceRequirement`'s `rootClauses[]`
+ * array collapsed to a single required `rootClause` — the "exactly one root
+ * clause" rule is now structural, not a semantic validator check.
+ * `addClause`/`removeClause` (array mutators) were retired along with the
+ * array; a freshly scaffolded requirement now always carries a real (empty)
+ * root clause rather than an empty array.
+ */
+function emptyRootClause(): RequirementClause {
+    return new RequirementClause('clause-1', RequirementMode.REQUIRE_ALL, [], []);
+}
+
 /**
  * Lucid-specific implementation of a ResourceRequirement.
  * Maps a Lucid Block element to a simulation ResourceRequirement.
@@ -32,11 +46,11 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
 
     protected createSimObject(): ResourceRequirement {
         // Unlike other types, ResourceRequirement doesn't have a createDefault.
-        // Instead, we create a basic requirement with an empty clause array.
+        // Instead, we create a basic requirement with an empty root clause.
         return new ResourceRequirement(
             this.block.id,
             this.getElementName('Resource Requirement'),
-            [] // empty root clauses
+            emptyRootClause()
         );
     }
 
@@ -44,7 +58,7 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
      * Creates a ResourceRequirement from a specific Resource
      */
     public static createFromResource(
-        block: BlockProxy, 
+        block: BlockProxy,
         storageAdapter: StorageAdapter,
         resource: Resource
     ): ResourceRequirementLucid {
@@ -57,8 +71,8 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
         // Update name
         this.simObject.name = this.getElementName('Resource Requirement');
 
-        // Note: Resource requirement clauses and requests are typically 
-        // updated through user interactions in the panel rather than 
+        // Note: Resource requirement clauses and requests are typically
+        // updated through user interactions in the panel rather than
         // from changes to the Lucid block itself
 
         // Store updated data
@@ -81,18 +95,21 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
     }
 
     /**
-     * Additional method to add a clause to the requirement
+     * Additional method to add a sub-clause to the requirement's root clause.
      */
     public addClause(clause: RequirementClause): void {
-        this.simObject.addClause(clause);
+        this.simObject.rootClause.addSubClause(clause);
         this.storageAdapter.updateElementData(this.block, this.simObject);
     }
 
     /**
-     * Additional method to remove a clause from the requirement
+     * Additional method to remove a sub-clause (by id) from the requirement's
+     * root clause.
      */
     public removeClause(clauseId: string): void {
-        this.simObject.removeClause(clauseId);
+        this.simObject.rootClause.clauses = this.simObject.rootClause.clauses.filter(
+            (c) => c.id !== clauseId
+        );
         this.storageAdapter.updateElementData(this.block, this.simObject);
     }
 
@@ -102,14 +119,14 @@ export class ResourceRequirementLucid extends SimObjectLucid<ResourceRequirement
         const defaultRequirement = new ResourceRequirement(
             block.id,
             `Resource Requirement ${block.getClassName() || 'Block'}`,
-            [] // empty root clauses
+            emptyRootClause()
         );
 
         // Convert to StoredResourceRequirementData format
         const storedData: StoredResourceRequirementData = {
             id: defaultRequirement.id,
             name: defaultRequirement.name,
-            rootClauses: defaultRequirement.rootClauses
+            rootClause: defaultRequirement.rootClause
         };
 
         // Set up both data and metadata

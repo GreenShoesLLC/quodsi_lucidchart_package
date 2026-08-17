@@ -12,16 +12,16 @@ describe("StateModificationListItem", () => {
   const state = new State("total_MODEL_1", "total", ComponentType.MODEL, StateType.NUMBER, 0);
 
   it("renders a literal value unchanged", () => {
-    const mod = new StateModification("total_MODEL_1", "total", StateOperation.ADD, 5);
+    const mod = new StateModification("total_MODEL_1", StateOperation.ADD, 5);
     render(
       <StateModificationListItem modification={mod} state={state} onEdit={jest.fn()} onDelete={jest.fn()} />
     );
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  it("renders the expression, not the literal value, when the modification carries a valueExpression", () => {
-    const mod = new StateModification("total_MODEL_1", "total", StateOperation.ASSIGN, undefined, {
-      valueExpression: "qty * unit_price",
+  it("renders the expression, not the literal value, when the modification carries an expression", () => {
+    const mod = new StateModification("total_MODEL_1", StateOperation.ASSIGN, undefined, {
+      expression: "qty * unit_price",
     });
     render(
       <StateModificationListItem modification={mod} state={state} onEdit={jest.fn()} onDelete={jest.fn()} />

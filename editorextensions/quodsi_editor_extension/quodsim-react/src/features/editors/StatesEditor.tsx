@@ -223,7 +223,7 @@ const StatesEditor: React.FC<Props> = ({
               <ul className="mt-1 list-disc pl-4">
                 {affectedExpressions.map((hit, index) => (
                   <li key={`${hit.elementId}-${index}`}>
-                    <code>{hit.stateName} = {hit.expression}</code>
+                    <code>{states.getByUniqueId(hit.stateId)?.name ?? hit.stateId} = {hit.expression}</code>
                   </li>
                 ))}
               </ul>

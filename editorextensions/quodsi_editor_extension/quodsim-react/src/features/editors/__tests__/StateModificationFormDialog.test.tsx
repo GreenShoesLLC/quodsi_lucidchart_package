@@ -28,12 +28,13 @@ function buildStates(): StateListManager {
   states.add(
     new State("resource_level_RESOURCE_1", "resource_level", ComponentType.RESOURCE, StateType.NUMBER, 0)
   );
+  states.add(new State("label_MODEL_1", "label", ComponentType.MODEL, StateType.STRING, ""));
   return states;
 }
 
 describe("StateModificationFormDialog — expression mode", () => {
   const states = buildStates();
-  const literalModification = new StateModification("total_MODEL_1", "total", StateOperation.ASSIGN, 0);
+  const literalModification = new StateModification("total_MODEL_1", StateOperation.ASSIGN, 0);
   const baseProps = {
     isOpen: true,
     modification: literalModification,
@@ -53,7 +54,7 @@ describe("StateModificationFormDialog — expression mode", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ valueExpression: "qty * unit_price", value: undefined })
+      expect.objectContaining({ expression: "qty * unit_price", value: undefined })
     );
   });
 
@@ -83,7 +84,6 @@ describe("StateModificationFormDialog — expression mode", () => {
   it("hides expression mode for a CATEGORY target state", () => {
     const categoryModification = new StateModification(
       "status_MODEL_1",
-      "status",
       StateOperation.ASSIGN,
       "A"
     );
@@ -94,10 +94,9 @@ describe("StateModificationFormDialog — expression mode", () => {
   it("loads an existing expression back into expression mode", () => {
     const expressionModification = new StateModification(
       "total_MODEL_1",
-      "total",
       StateOperation.ASSIGN,
       undefined,
-      { valueExpression: "qty * unit_price" }
+      { expression: "qty * unit_price" }
     );
     render(<StateModificationFormDialog {...baseProps} modification={expressionModification} />);
     expect(
@@ -194,7 +193,44 @@ describe("StateModificationFormDialog — expression mode", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ valueExpression: "qty * unit_price", value: undefined })
+      expect.objectContaining({ expression: "qty * unit_price", value: undefined })
+    );
+  });
+});
+
+// Fix round 1, F1: a STRING state's SAMPLE operation must emit the clean
+// `categorical` tag, not the retired `sample_multinomial_one` distributionType
+// SampleDistributionEditor's own STRING branch uses for its draft vocabulary
+// (StateSample's seven clean-grammar shapes don't define
+// "sample_multinomial_one" at all — it would have persisted verbatim).
+describe("StateModificationFormDialog — SAMPLE for a STRING state", () => {
+  it("emits a categorical sample, not the retired sample_multinomial_one tag", () => {
+    const onSave = jest.fn();
+    const states = buildStates();
+
+    render(
+      <StateModificationFormDialog
+        isOpen={true}
+        states={states}
+        onSave={onSave}
+        onCancel={jest.fn()}
+      />
+    );
+
+    // State <select> is the first combobox; Operation is the second.
+    fireEvent.change(screen.getAllByRole("combobox")[0], {
+      target: { value: "label_MODEL_1" },
+    });
+    fireEvent.change(screen.getAllByRole("combobox")[1], {
+      target: { value: StateOperation.SAMPLE },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /add modification/i }));
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sample: { distribution: "categorical", probabilities: {} },
+      })
     );
   });
 });

@@ -20,8 +20,14 @@ const state = (name: string, componentType: ComponentType, dataType: StateType) 
   new State(`id-${name}`, name, componentType, dataType, 0);
 
 const ELIGIBLE = [state("severity", ComponentType.ENTITY, StateType.NUMBER)];
-const INELIGIBLE = [state("globalCount", ComponentType.MODEL, StateType.NUMBER)];
-const RANKING = { stateName: "severity", order: "ASCENDING" } as const;
+// Wire-cleanup Phase B2 Task 6 fix round (F1): QueueRanking is id-keyed now
+// (`stateId`), so "the ranked state is no longer eligible" is modeled here as
+// the SAME state id/name RETYPED to a scope eligibleRankingStates rejects
+// (MODEL, not ENTITY) -- not removed from `allStates` outright. Retyping
+// keeps the id resolvable (the component can still show the real name via
+// allStates.find); a true delete instead falls back to the raw id.
+const INELIGIBLE = [state("severity", ComponentType.MODEL, StateType.NUMBER)];
+const RANKING = { stateId: "id-severity", order: "ascending" } as const;
 
 describe("QueueRankingSection (Lucid)", () => {
   it("disables both controls and explains the prerequisite when nothing is eligible", () => {

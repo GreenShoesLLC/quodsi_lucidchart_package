@@ -43,9 +43,9 @@ function logModelDefinition(modelDefinition: ModelDefinition): void {
     console.log('\nGenerators:', modelDefinition.generators.getAll().map(g => ({
         id: g.id,
         name: g.name,
-        entityId: g.generationConfig.entityId,
-        maxEntities: g.generationConfig.maxEntities,
-        periodicStartDuration: g.generationConfig.periodicStartDuration,
+        entityId: g.entityId,
+        maxEntities: g.maxEntities,
+        startDelay: g.startDelay,
         type: g.type
     })));
 
@@ -195,14 +195,17 @@ describe('Valid Models Validation', () => {
     });
 
     describe('Generator Configurations', () => {
-        it('validates generator periodic start duration', () => {
+        it('validates generator start delay', () => {
             const modelDefinition = createModel_def_e0_a1_r0_g1();
             const generator = modelDefinition.generators.getAll()[0];
 
-            // Verify generator configuration
-            expect(generator.generationConfig.periodicStartDuration).toBeDefined();
-            expect(generator.generationConfig.periodicStartDuration!.durationPeriodUnit).toBeDefined();
-            expect(generator.generationConfig.periodicStartDuration!.distribution).toBeDefined();
+            // Verify generator configuration. `EntitySourceConfig.periodicStartDuration`
+            // -> `Generator.startDelay` (dissolved flat, wire-cleanup Phase B2 Task 5) —
+            // a CONSTANT Duration (0 hours) carries `unit`/`value`, no `distribution`
+            // tag (absent means constant, the clean-wire convention).
+            expect(generator.startDelay).toBeDefined();
+            expect(generator.startDelay!.unit).toBeDefined();
+            expect(generator.startDelay!.value).toBeDefined();
 
             const result = validationService.validate(modelDefinition);
 
@@ -210,7 +213,7 @@ describe('Valid Models Validation', () => {
                 console.error('\nGenerator validation failed');
                 console.error('Generator configuration:', {
                     id: generator.id,
-                    periodicStartDuration: generator.generationConfig.periodicStartDuration
+                    startDelay: generator.startDelay
                 });
                 console.error('\nValidation Errors:',
                     result.issues.filter(i => i.severity === ValidationSeverity.ERROR)

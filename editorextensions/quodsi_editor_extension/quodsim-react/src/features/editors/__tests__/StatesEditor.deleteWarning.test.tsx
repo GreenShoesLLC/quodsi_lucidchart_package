@@ -17,13 +17,18 @@ import {
 function buildStates(): StateListManager {
   const states = new StateListManager();
   states.add(new State("unit_price_ENTITY_1", "unit_price", ComponentType.ENTITY, StateType.NUMBER, 0));
+  // The state a DIFFERENT modification assigns via an expression referencing
+  // the deleted state — StatesEditor resolves ExpressionStateReference.stateId
+  // (an id, wire-cleanup Phase B2 Task 6/9) to a display name against this
+  // same states list.
+  states.add(new State("total_MODEL_1", "total", ComponentType.MODEL, StateType.NUMBER, 0));
   return states;
 }
 
 // One activity action whose modification sets a DIFFERENT state ("total") using a
 // formula that names the state under test ("unit_price"). removeStateReferences'
 // id-based matching would never touch this (it matches on the modification's own
-// stateUniqueId, "total_MODEL_1", not on names inside the formula text) -- this is
+// stateId, "total_MODEL_1", not on names inside the formula text) -- this is
 // exactly the hole findExpressionsReferencingState exists to catch.
 function referenceDataWithExpression(): EditorReferenceData {
   return {
@@ -34,13 +39,12 @@ function referenceDataWithExpression(): EditorReferenceData {
         actions: [
           {
             id: "action_1",
-            actionType: "ASSIGN",
+            type: "assign",
             modifications: [
               {
-                stateUniqueId: "total_MODEL_1",
-                stateName: "total",
-                operation: "ASSIGN",
-                valueExpression: "qty * unit_price",
+                stateId: "total_MODEL_1",
+                operation: "assign",
+                expression: "qty * unit_price",
               },
             ],
           },
@@ -63,7 +67,10 @@ describe("StatesEditor — delete-time expression warning", () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle("Delete state"));
+    // Two states now render (unit_price + the "total" state the expression
+    // fixture resolves its display name against) — insertion order (via
+    // StateListManager's Map) puts unit_price first.
+    fireEvent.click(screen.getAllByTitle("Delete state")[0]);
 
     expect(screen.getByText('Delete State: "unit_price"?')).toBeInTheDocument();
     expect(
@@ -95,7 +102,10 @@ describe("StatesEditor — delete-time expression warning", () => {
       />
     );
 
-    fireEvent.click(screen.getByTitle("Delete state"));
+    // Two states now render (unit_price + the "total" state the expression
+    // fixture resolves its display name against) — insertion order (via
+    // StateListManager's Map) puts unit_price first.
+    fireEvent.click(screen.getAllByTitle("Delete state")[0]);
 
     expect(screen.getByText('Delete State: "unit_price"?')).toBeInTheDocument();
     expect(screen.queryByText(/cannot be fixed automatically/i)).not.toBeInTheDocument();
@@ -106,7 +116,10 @@ describe("StatesEditor — delete-time expression warning", () => {
       <StatesEditor states={buildStates()} onStatesChange={jest.fn()} defaultComponentType="ALL" />
     );
 
-    fireEvent.click(screen.getByTitle("Delete state"));
+    // Two states now render (unit_price + the "total" state the expression
+    // fixture resolves its display name against) — insertion order (via
+    // StateListManager's Map) puts unit_price first.
+    fireEvent.click(screen.getAllByTitle("Delete state")[0]);
 
     expect(screen.getByText('Delete State: "unit_price"?')).toBeInTheDocument();
     expect(screen.queryByText(/cannot be fixed automatically/i)).not.toBeInTheDocument();
