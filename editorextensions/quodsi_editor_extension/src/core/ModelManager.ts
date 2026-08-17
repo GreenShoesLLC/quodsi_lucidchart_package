@@ -160,7 +160,50 @@ export class ModelManager {
                     try {
                         upgradeResult = await this.versionManager.handlePageLoad(this.currentPage);
                     } catch (error) {
+                        // Wire-cleanup Phase B2 Task 11 (carry item 4, sanctioned edit):
+                        // a failed upgrade used to fall straight through to building
+                        // the model below over storage that may still carry old field
+                        // names -- the clean-only readers (ModelDefinitionPageBuilder /
+                        // the *Lucid classes) silently default away anything they don't
+                        // recognize rather than failing loudly, a silent-loss class of
+                        // bug. Mirrors the drawio/Visio B1 posture (DrawioModelManager.
+                        // bootstrap's upgradeOnOpen catch): on upgrade failure, surface
+                        // a VISIBLE error and do NOT proceed to build.
+                        // `NotificationService.showError` (which LucidVersionManager
+                        // itself already calls on its own internal failures) is NOT
+                        // actually wired to anything user-visible today -- it is a
+                        // console.error stub ("TODO: Implement actual LucidChart
+                        // notification"). `broadcastValidationResults()` via
+                        // MODEL_VALIDATION_RESULT is the one mechanism in this file
+                        // already proven to reach the user (renders on the Model
+                        // Editor's Validation tab) -- reused here identically to the
+                        // "no model initialized" case a few lines below in
+                        // validateModel().
                         this.debug.error('Version check failed:', error);
+                        const message = error instanceof Error ? error.message : String(error);
+                        this.modelDefinition = null;
+                        this.currentValidationResult = {
+                            isValid: false,
+                            issues: [ValidationMessages.createIssue(
+                                ValidationSeverity.ERROR,
+                                'upgrade_failed',
+                                `Model upgrade failed, so the model could not be loaded: ${message}. Reload the page to retry.`
+                            )],
+                            summary: {
+                                errorCount: 1,
+                                warningCount: 0,
+                                infoCount: 0
+                            }
+                        };
+                        this.broadcastValidationResults(this.currentValidationResult);
+                        // Deliberately do NOT set versionCheckedPageId, run
+                        // ensureBaselineScenario, or reach the builder below --
+                        // leaving the gate unmarked means the NEXT
+                        // ensureModelDefinition call retries the version check
+                        // instead of latching this failure forever (mirrors
+                        // DrawioModelManager.bootstrap resetting bootstrappedRoot
+                        // on a caught upgrade-on-open failure).
+                        return null;
                     }
                     // Ensure a Baseline scenario exists for this model page
                     this.ensureBaselineScenario(this.currentPage);
