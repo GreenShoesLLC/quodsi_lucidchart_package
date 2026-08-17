@@ -1,9 +1,18 @@
 module.exports = {
   root: true,
-  extends: ["react-app"],
+  plugins: ["react-hooks"],
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: "module",
+    ecmaFeatures: { jsx: true },
+  },
   settings: {
     react: {
       version: "detect",
     },
+  },
+  rules: {
+    "react-hooks/rules-of-hooks": "error",
   },
 };
