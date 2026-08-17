@@ -1,5 +1,5 @@
 // @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -9,13 +9,13 @@ describe("PreferencesModal", () => {
   beforeEach(() => localStorage.clear());
 
   it("renders nothing when closed", () => {
-    const { container } = render(<PreferencesModal isOpen={false} onClose={jest.fn()} />);
+    const { container } = render(<PreferencesModal isOpen={false} onClose={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it("lists all size options and reflects the stored value", () => {
     localStorage.setItem("quodsi_modal_size", "large");
-    render(<PreferencesModal isOpen={true} onClose={jest.fn()} />);
+    render(<PreferencesModal isOpen={true} onClose={vi.fn()} />);
     const select = screen.getByLabelText("Simulation window size") as HTMLSelectElement;
     expect(select.value).toBe("large");
     // medium / large / xlarge / fullscreen
@@ -23,7 +23,7 @@ describe("PreferencesModal", () => {
   });
 
   it("persists the chosen size to localStorage", () => {
-    render(<PreferencesModal isOpen={true} onClose={jest.fn()} />);
+    render(<PreferencesModal isOpen={true} onClose={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Simulation window size"), {
       target: { value: "fullscreen" },
     });
@@ -31,7 +31,7 @@ describe("PreferencesModal", () => {
   });
 
   it("calls onClose when the close button is clicked", () => {
-    const onClose = jest.fn();
+    const onClose = vi.fn();
     render(<PreferencesModal isOpen={true} onClose={onClose} />);
     fireEvent.click(screen.getByTitle("Close"));
     expect(onClose).toHaveBeenCalled();

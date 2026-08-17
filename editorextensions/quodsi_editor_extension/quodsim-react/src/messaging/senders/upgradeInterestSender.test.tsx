@@ -1,11 +1,11 @@
 // @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 
-jest.mock('../MessageProvider', () => ({
+vi.mock('../MessageProvider', () => ({
   useMessaging: () => ({ app: { panelType: 'model' } }),
 }));
 
@@ -28,10 +28,10 @@ function Harness({ onResult }: { onResult: (r: 'resolved' | 'rejected') => void 
 }
 
 describe('useUpgradeInterestSender', () => {
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => vi.restoreAllMocks());
 
   test('posts an UPGRADE_INTEREST_PING envelope with the feature payload', () => {
-    const postMessageSpy = jest.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
+    const postMessageSpy = vi.spyOn(window.parent, 'postMessage').mockImplementation(() => {});
     render(<Harness onResult={() => {}} />);
 
     fireEvent.click(screen.getByText('ping'));
@@ -49,7 +49,7 @@ describe('useUpgradeInterestSender', () => {
   });
 
   test('resolves when the host acks with ok: true', () => {
-    jest.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
       // Simulate the host replying synchronously with a matching result envelope.
       window.dispatchEvent(
         new MessageEvent('message', {
@@ -65,7 +65,7 @@ describe('useUpgradeInterestSender', () => {
       );
     });
 
-    const onResult = jest.fn();
+    const onResult = vi.fn();
     render(<Harness onResult={onResult} />);
     fireEvent.click(screen.getByText('ping'));
 
@@ -75,7 +75,7 @@ describe('useUpgradeInterestSender', () => {
   });
 
   test('rejects when the host acks with ok: false', () => {
-    jest.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
+    vi.spyOn(window.parent, 'postMessage').mockImplementation((envelope: any) => {
       window.dispatchEvent(
         new MessageEvent('message', {
           data: {
@@ -90,7 +90,7 @@ describe('useUpgradeInterestSender', () => {
       );
     });
 
-    const onResult = jest.fn();
+    const onResult = vi.fn();
     render(<Harness onResult={onResult} />);
     fireEvent.click(screen.getByText('ping'));
 

@@ -40,4 +40,20 @@ export default defineConfig({
     // served from another origin.
     origin: 'http://localhost:3000',
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts'],
+    // Scope collection to actual test files. scripts/dev-smoke.mjs imports
+    // playwright by absolute file URL and is not a Vitest test - the default
+    // include glob would otherwise try to collect it.
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    // Carried over from CRA's jest.moduleNameMapper. axios ships native ESM
+    // and @quodsi/shared's lucidApi imports it at module load, so importing
+    // anything from the shared library pulls axios into every test graph.
+    // Vitest CAN parse ESM, so this stub is no longer strictly required -
+    // it is kept to hold the diff to one concern. Removing it is a safe
+    // follow-up once the migration is green.
+    alias: [{ find: /^axios$/, replacement: '/src/test-stubs/axiosStub.js' }],
+  },
 })

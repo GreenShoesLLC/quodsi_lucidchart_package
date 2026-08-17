@@ -7,7 +7,7 @@ const baseArgs = (overrides: Partial<UseAutoSaveArgs<TestDraft>> = {}): UseAutoS
   draft: { id: "e1", name: "initial" },
   hasPendingChanges: false,
   isValid: true,
-  onSave: jest.fn(),
+  onSave: vi.fn(),
   isSaving: false,
   elementId: "e1",
   debounceMs: 500,
@@ -16,17 +16,17 @@ const baseArgs = (overrides: Partial<UseAutoSaveArgs<TestDraft>> = {}): UseAutoS
 
 describe("useAutoSave", () => {
   beforeEach(() => {
-    jest.useFakeTimers();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   describe("debounce", () => {
     it("fires onSave after debounceMs when dirty + valid + not saving", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -41,13 +41,13 @@ describe("useAutoSave", () => {
 
       // Just before debounce — still no save
       act(() => {
-        jest.advanceTimersByTime(499);
+        vi.advanceTimersByTime(499);
       });
       expect(onSave).not.toHaveBeenCalled();
 
       // Debounce expires
       act(() => {
-        jest.advanceTimersByTime(1);
+        vi.advanceTimersByTime(1);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(onSave).toHaveBeenCalledWith({ id: "e1", name: "edited" });
@@ -56,7 +56,7 @@ describe("useAutoSave", () => {
 
   describe("saveNow", () => {
     it("flushes immediately, bypassing the debounce timer", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -74,7 +74,7 @@ describe("useAutoSave", () => {
     });
 
     it("does not fire onSave again when the debounce timer later expires", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -89,13 +89,13 @@ describe("useAutoSave", () => {
 
       // Advance well past the debounce window
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(onSave).toHaveBeenCalledTimes(1); // still just one
     });
 
     it("does nothing when there are no pending changes", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave, hasPendingChanges: false }) }
@@ -110,7 +110,7 @@ describe("useAutoSave", () => {
       // Advancing time afterward must also produce no save —
       // saveNow with no pending changes shouldn't reschedule anything.
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(onSave).not.toHaveBeenCalled();
     });
@@ -118,7 +118,7 @@ describe("useAutoSave", () => {
 
   describe("validation gate", () => {
     it("does not fire onSave when draft is invalid", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -127,7 +127,7 @@ describe("useAutoSave", () => {
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(onSave).not.toHaveBeenCalled();
     });
@@ -146,7 +146,7 @@ describe("useAutoSave", () => {
     });
 
     it("schedules and fires save when draft becomes valid again", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -155,20 +155,20 @@ describe("useAutoSave", () => {
       // Become invalid
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: false }));
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(onSave).not.toHaveBeenCalled();
 
       // Become valid
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isValid: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
     });
 
     it("saveNow reports status='invalid' instead of saving when invalid", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -187,7 +187,7 @@ describe("useAutoSave", () => {
 
   describe("in-flight coalescing", () => {
     it("does not fire a second onSave while one is in flight", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -196,20 +196,20 @@ describe("useAutoSave", () => {
       // First save fires
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: false }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
 
       // Save in flight + new edit
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true, isSaving: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1); // still just one — second is queued
     });
 
     it("fires one trailing save after isSaving flips false", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: true }) }
@@ -226,7 +226,7 @@ describe("useAutoSave", () => {
     });
 
     it("fires only ONE trailing save even if multiple edits occur during in-flight save", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, isSaving: true }) }
@@ -245,7 +245,7 @@ describe("useAutoSave", () => {
     });
 
     it("transitions to 'saved' when trailing flag is set but draft is no longer pending+valid", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -254,7 +254,7 @@ describe("useAutoSave", () => {
       // Step 1: User edits e1 → debounce fires → first save dispatched (call count 1)
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
 
@@ -280,7 +280,7 @@ describe("useAutoSave", () => {
 
   describe("element-switch flush", () => {
     it("flushes pending edit when elementId changes", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -307,7 +307,7 @@ describe("useAutoSave", () => {
     });
 
     it("does not flush when elementId changes with no pending changes", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave, elementId: "e1" }) }
@@ -319,7 +319,7 @@ describe("useAutoSave", () => {
     });
 
     it("does not flush when elementId changes while invalid", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -332,7 +332,7 @@ describe("useAutoSave", () => {
     });
 
     it("cancels any pending debounce timer on element switch", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave, elementId: "e1" }) }
@@ -345,14 +345,14 @@ describe("useAutoSave", () => {
       expect(onSave).toHaveBeenCalledTimes(1); // flush only
 
       act(() => {
-        jest.advanceTimersByTime(1000);
+        vi.advanceTimersByTime(1000);
       });
       expect(onSave).toHaveBeenCalledTimes(1); // no extra fire from old timer
     });
 
     // C1 — element-switch + in-flight save + trailing edit must not lose data
     it("captures and drains pending flush when element switches mid-save", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -361,7 +361,7 @@ describe("useAutoSave", () => {
       // Step 1: User edits element e1 → debounce expires → save fires
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v1" });
@@ -394,10 +394,10 @@ describe("useAutoSave", () => {
 
     // C1 — captured flush failure path (silent fire-and-forget for previous element)
     it("logs to console.error and recovers when the captured flush throws", () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // First call (the regular save) succeeds; second call (the captured flush) throws.
-      const onSave = jest
+      const onSave = vi
         .fn()
         .mockImplementationOnce(() => { /* success */ })
         .mockImplementationOnce(() => {
@@ -412,7 +412,7 @@ describe("useAutoSave", () => {
       // Trigger a normal save → success.
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
 
@@ -432,7 +432,7 @@ describe("useAutoSave", () => {
       // Status reflects the new element, not the failed captured flush.
       expect(result.current.status).toBe("saved");
 
-      void consoleErrorSpy; // afterEach restores via jest.restoreAllMocks()
+      void consoleErrorSpy; // afterEach restores via vi.restoreAllMocks()
     });
 
     // C1 — simultaneous case: isSaving=true AND trailingSaveNeededRef=true at switch time.
@@ -440,7 +440,7 @@ describe("useAutoSave", () => {
     // the captured save subsumes the trailing one. trailingSaveNeededRef is cleared on
     // switch to prevent double-fire after drain.
     it("captures the latest draft when trailing flag is set and element switches mid-save", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -449,7 +449,7 @@ describe("useAutoSave", () => {
       // Step 1: User edits e1 → debounce fires → first save dispatched (call count 1).
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true, elementId: "e1" }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v1" });
@@ -478,7 +478,7 @@ describe("useAutoSave", () => {
 
   describe("unmount flush", () => {
     it("fires onSave when unmounted with pending edits", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender, unmount } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -493,7 +493,7 @@ describe("useAutoSave", () => {
     });
 
     it("does not fire onSave on unmount when no pending edits", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { unmount } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -505,7 +505,7 @@ describe("useAutoSave", () => {
     });
 
     it("does not fire onSave on unmount when invalid", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { rerender, unmount } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -530,7 +530,7 @@ describe("useAutoSave", () => {
     });
 
     it("transitions saved → saving → saved on a successful save", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
         { initialProps: baseArgs({ onSave }) }
@@ -540,7 +540,7 @@ describe("useAutoSave", () => {
 
       // Debounce expires → dispatchSave sets status='saving'
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(result.current.status).toBe("saving");
 
@@ -558,9 +558,9 @@ describe("useAutoSave", () => {
     });
 
     it("updates lastSavedAt timestamp after successful save", () => {
-      const onSave = jest.fn();
+      const onSave = vi.fn();
       const fixedNow = 1_700_000_000_000;
-      jest.spyOn(Date, "now").mockReturnValue(fixedNow);
+      vi.spyOn(Date, "now").mockReturnValue(fixedNow);
 
       const { result, rerender } = renderHook(
         (props: UseAutoSaveArgs<TestDraft>) => useAutoSave(props),
@@ -569,7 +569,7 @@ describe("useAutoSave", () => {
 
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true, isSaving: true }));
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: false, isSaving: false }));
@@ -578,8 +578,8 @@ describe("useAutoSave", () => {
     });
 
     it("does not flicker to 'saved' if validation became invalid mid-save", async () => {
-      jest.useFakeTimers();
-      const onSave = jest.fn();
+      vi.useFakeTimers();
+      const onSave = vi.fn();
       const { result, rerender } = renderHook(
         ({ draft, hasPendingChanges, isValid, isSaving }) =>
           useAutoSave({
@@ -602,7 +602,7 @@ describe("useAutoSave", () => {
 
       // 1. Trigger debounce → save dispatched (isValid=true, hasPendingChanges=true).
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
       expect(result.current.status).toBe("saving");
@@ -639,7 +639,7 @@ describe("useAutoSave", () => {
       });
       expect(result.current.status).toBe("invalid");
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
   });
 
@@ -647,10 +647,10 @@ describe("useAutoSave", () => {
     it("transitions to 'error' when onSave throws", () => {
       // Suppress console.error noise: dispatchSave (and the unmount flush on
       // test cleanup) intentionally log when onSave throws. afterEach restores
-      // the spy via jest.restoreAllMocks().
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      // the spy via vi.restoreAllMocks().
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const onSave = jest.fn().mockImplementation(() => {
+      const onSave = vi.fn().mockImplementation(() => {
         throw new Error("save failed");
       });
       const { result, rerender } = renderHook(
@@ -660,7 +660,7 @@ describe("useAutoSave", () => {
 
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "edited" }, hasPendingChanges: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
 
       expect(onSave).toHaveBeenCalledTimes(1);
@@ -669,9 +669,9 @@ describe("useAutoSave", () => {
     });
 
     it("retries on next edit after a thrown save", () => {
-      const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const onSave = jest
+      const onSave = vi
         .fn()
         .mockImplementationOnce(() => {
           throw new Error("save failed");
@@ -688,19 +688,19 @@ describe("useAutoSave", () => {
       // First edit → fails
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v1" }, hasPendingChanges: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(1);
 
       // Second edit → succeeds
       rerender(baseArgs({ onSave, draft: { id: "e1", name: "v2" }, hasPendingChanges: true }));
       act(() => {
-        jest.advanceTimersByTime(500);
+        vi.advanceTimersByTime(500);
       });
       expect(onSave).toHaveBeenCalledTimes(2);
       expect(onSave).toHaveBeenLastCalledWith({ id: "e1", name: "v2" });
 
-      // Suppression spy is auto-restored by afterEach's jest.restoreAllMocks()
+      // Suppression spy is auto-restored by afterEach's vi.restoreAllMocks()
       void consoleErrorSpy;
     });
   });

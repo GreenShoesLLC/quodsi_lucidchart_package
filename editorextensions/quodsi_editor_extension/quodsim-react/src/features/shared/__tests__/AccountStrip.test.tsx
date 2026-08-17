@@ -1,5 +1,5 @@
 // @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -11,24 +11,24 @@ const mockAuthState: any = {
 };
 let mockEntitlementsState: any;
 
-jest.mock("../../../messaging/MessageContext", () => ({
+vi.mock("../../../messaging/MessageContext", () => ({
   useAuth: () => mockAuthState,
   useEntitlements: () => mockEntitlementsState,
 }));
 
-const mockRequestPortalUrl = jest.fn().mockResolvedValue("https://portal.example");
-jest.mock("../../../messaging/senders/portalSender", () => ({
+const mockRequestPortalUrl = vi.fn().mockResolvedValue("https://portal.example");
+vi.mock("../../../messaging/senders/portalSender", () => ({
   usePortalSender: () => ({ requestPortalUrl: mockRequestPortalUrl }),
 }));
 
-const mockRequestAuth = jest.fn();
-const mockLogout = jest.fn();
-jest.mock("../../../messaging/senders/authSender", () => ({
+const mockRequestAuth = vi.fn();
+const mockLogout = vi.fn();
+vi.mock("../../../messaging/senders/authSender", () => ({
   useAuthSender: () => ({ requestAuth: mockRequestAuth, logout: mockLogout }),
 }));
 
-const mockPingUpgradeInterest = jest.fn().mockResolvedValue(undefined);
-jest.mock("../../../messaging/senders/upgradeInterestSender", () => ({
+const mockPingUpgradeInterest = vi.fn().mockResolvedValue(undefined);
+vi.mock("../../../messaging/senders/upgradeInterestSender", () => ({
   useUpgradeInterestSender: () => ({ pingUpgradeInterest: mockPingUpgradeInterest }),
 }));
 
@@ -94,7 +94,7 @@ const OLD_HOST_ENTITLEMENTS = {
   chartExport: null,
 };
 
-const mockWriteText = jest.fn();
+const mockWriteText = vi.fn();
 
 beforeEach(() => {
   mockEntitlementsState = PRO_ENTITLEMENTS;

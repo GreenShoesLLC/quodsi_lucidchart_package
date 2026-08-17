@@ -3,7 +3,7 @@ import { LeverAuthoringSection } from '../LeverAuthoringSection';
 import { ScenarioObjectType, ScenarioPropertyName, type ScenarioLever } from '@quodsi/lucid-shared';
 
 it('checking an eligible property adds an enabled lever with a "Component — Property" default label + a default range', () => {
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[]} onChange={onChange} />);
   fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   fireEvent.click(screen.getByLabelText(/use Capacity as a scenario lever/i));
@@ -16,7 +16,7 @@ it('checking an eligible property adds an enabled lever with a "Component — Pr
 
 it('unchecking removes the lever; editing label/range patches it', () => {
   const lever: ScenarioLever = { leverId: 'lv1', propertyName: ScenarioPropertyName.CAPACITY, enabled: true, label: 'Nurses', range: { min: 7, max: 9, step: 1 } };
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   const { rerender } = render(<LeverAuthoringSection objectType={ScenarioObjectType.RESOURCE} componentName="Nurse" levers={[lever]} onChange={onChange} />);
   fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   // label shows the existing range + label
@@ -30,6 +30,6 @@ it('unchecking removes the lever; editing label/range patches it', () => {
 });
 
 it('renders nothing for an object type with no rangeable properties', () => {
-  const { container } = render(<LeverAuthoringSection objectType={ScenarioObjectType.ENTITY} componentName="Patient" levers={[]} onChange={jest.fn()} />);
+  const { container } = render(<LeverAuthoringSection objectType={ScenarioObjectType.ENTITY} componentName="Patient" levers={[]} onChange={vi.fn()} />);
   expect(container).toBeEmptyDOMElement();
 });

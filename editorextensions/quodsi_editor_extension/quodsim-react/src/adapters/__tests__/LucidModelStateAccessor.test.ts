@@ -4,7 +4,7 @@ function makeDeps() {
   const listeners = new Set<() => void>()
   let modelDefinition: Record<string, unknown> = { generators: [], arrivalPatterns: [] }
   return {
-    save: jest.fn().mockResolvedValue(undefined),
+    save: vi.fn().mockResolvedValue(undefined),
     getModelDefinition: () => modelDefinition,
     onModelChanged: (fn: () => void) => {
       listeners.add(fn)
@@ -38,7 +38,7 @@ describe('LucidModelStateAccessor', () => {
   it('notifies subscribers when the model changes', () => {
     const deps = makeDeps()
     const accessor = createLucidModelStateAccessor(deps)
-    const listener = jest.fn()
+    const listener = vi.fn()
     accessor.subscribe(listener)
     deps._emit()
     expect(listener).toHaveBeenCalledTimes(1)
@@ -47,7 +47,7 @@ describe('LucidModelStateAccessor', () => {
   it('unsubscribing detaches the listener', () => {
     const deps = makeDeps()
     const accessor = createLucidModelStateAccessor(deps)
-    const listener = jest.fn()
+    const listener = vi.fn()
     accessor.subscribe(listener)()
     deps._emit()
     expect(listener).not.toHaveBeenCalled()
@@ -89,9 +89,9 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel forwards the FULL patch verbatim to saveModel -- no field branching, no dropped keys', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: jest.Mock
+      saveModel: vi.Mock
     }
-    deps.saveModel = jest.fn().mockResolvedValue(undefined)
+    deps.saveModel = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
     const patch = { arrivalPatterns: [{ id: 'ap1' }], someUnrelatedKey: 42 }
     await accessor.updateModel(patch)
@@ -101,9 +101,9 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel with only arrivalPatterns reaches saveModel without being dropped (the LucidEmbedModelAccessor bug)', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: jest.Mock
+      saveModel: vi.Mock
     }
-    deps.saveModel = jest.fn().mockResolvedValue(undefined)
+    deps.saveModel = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
     await accessor.updateModel({ arrivalPatterns: [{ id: 'ap1' }] })
     expect(deps.saveModel).toHaveBeenCalledWith({ arrivalPatterns: [{ id: 'ap1' }] })
@@ -119,9 +119,9 @@ describe('LucidModelStateAccessor', () => {
 
   it('updateModel rejects rather than swallowing a saveModel failure', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      saveModel: jest.Mock
+      saveModel: vi.Mock
     }
-    deps.saveModel = jest.fn().mockRejectedValueOnce(new Error('model storage rejected'))
+    deps.saveModel = vi.fn().mockRejectedValueOnce(new Error('model storage rejected'))
     const accessor = createLucidModelStateAccessor(deps)
     await expect(accessor.updateModel({ arrivalPatterns: [] })).rejects.toThrow('model storage rejected')
     expect(accessor.getSnapshot().saveStatus).toBe('failed')
@@ -129,7 +129,7 @@ describe('LucidModelStateAccessor', () => {
 
   it('getShapeInfo forwards to the dep when supplied', () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      getShapeInfo: jest.Mock
+      getShapeInfo: vi.Mock
     }
     const shape: ShapeInfoLike = {
       shapeId: 'g1',
@@ -140,7 +140,7 @@ describe('LucidModelStateAccessor', () => {
       quodsiType: 'Generator',
       quodsiData: null,
     }
-    deps.getShapeInfo = jest.fn().mockReturnValue(shape)
+    deps.getShapeInfo = vi.fn().mockReturnValue(shape)
     const accessor = createLucidModelStateAccessor(deps)
     expect(accessor.getShapeInfo).toBeDefined()
     expect(accessor.getShapeInfo!('g1')).toBe(shape)
@@ -149,9 +149,9 @@ describe('LucidModelStateAccessor', () => {
 
   it('classifyShape forwards to the dep when supplied', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      classifyShape: jest.Mock
+      classifyShape: vi.Mock
     }
-    deps.classifyShape = jest.fn().mockResolvedValue(undefined)
+    deps.classifyShape = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
     const shape: ShapeInfoLike = {
       shapeId: 's1',
@@ -169,9 +169,9 @@ describe('LucidModelStateAccessor', () => {
 
   it('removeClassification forwards to the dep when supplied', async () => {
     const deps = makeDeps() as ReturnType<typeof makeDeps> & {
-      removeClassification: jest.Mock
+      removeClassification: vi.Mock
     }
-    deps.removeClassification = jest.fn().mockResolvedValue(undefined)
+    deps.removeClassification = vi.fn().mockResolvedValue(undefined)
     const accessor = createLucidModelStateAccessor(deps)
     const shape: ShapeInfoLike = {
       shapeId: 's1',
@@ -198,12 +198,12 @@ describe('LucidModelStateAccessor', () => {
   it('re-subscribing after unsubscribe re-attaches to the underlying host (ref-counted, not a dead subscription)', () => {
     const deps = makeDeps()
     const accessor = createLucidModelStateAccessor(deps)
-    const first = jest.fn()
+    const first = vi.fn()
     const unsubFirst = accessor.subscribe(first)
     unsubFirst()
     expect(deps._listenerCount()).toBe(0)
 
-    const second = jest.fn()
+    const second = vi.fn()
     accessor.subscribe(second)
     expect(deps._listenerCount()).toBe(1)
     deps._emit()
@@ -214,8 +214,8 @@ describe('LucidModelStateAccessor', () => {
   it('multiple concurrent subscribers share one underlying subscription', () => {
     const deps = makeDeps()
     const accessor = createLucidModelStateAccessor(deps)
-    const a = jest.fn()
-    const b = jest.fn()
+    const a = vi.fn()
+    const b = vi.fn()
     accessor.subscribe(a)
     accessor.subscribe(b)
     expect(deps._listenerCount()).toBe(1)

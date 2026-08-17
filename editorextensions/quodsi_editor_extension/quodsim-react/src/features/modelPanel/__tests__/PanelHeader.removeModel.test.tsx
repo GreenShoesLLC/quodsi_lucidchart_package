@@ -6,15 +6,15 @@
 // again, and that it is reachable ONLY through the confirmation.
 
 // @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PanelHeader } from "../PanelHeader";
 
 // Heavy children that pull in messaging/auth context — irrelevant to this menu.
-jest.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
-jest.mock("../../SimulationComponentSelector", () => ({
+vi.mock("../StudiesLaunchButton", () => ({ StudiesLaunchButton: () => <div /> }));
+vi.mock("../../SimulationComponentSelector", () => ({
   SimulationComponentSelector: () => <div />,
 }));
 
@@ -23,14 +23,14 @@ const baseProps = {
   validationState: null,
   currentElement: null,
   editorType: "model",
-  onElementTypeChange: jest.fn(),
+  onElementTypeChange: vi.fn(),
 };
 
 const openMenu = () => fireEvent.click(screen.getByTitle("More options"));
 
 describe("PanelHeader — Remove Quodsi Model", () => {
   it("offers the action in the overflow menu", () => {
-    render(<PanelHeader {...baseProps} onRemoveModel={jest.fn()} />);
+    render(<PanelHeader {...baseProps} onRemoveModel={vi.fn()} />);
     openMenu();
     expect(
       screen.getByRole("button", { name: /Remove Quodsi Model/i })
@@ -44,7 +44,7 @@ describe("PanelHeader — Remove Quodsi Model", () => {
   });
 
   it("does NOT remove on the menu click alone — it asks first", () => {
-    const onRemoveModel = jest.fn();
+    const onRemoveModel = vi.fn();
     render(<PanelHeader {...baseProps} onRemoveModel={onRemoveModel} />);
     openMenu();
     fireEvent.click(screen.getByRole("button", { name: /Remove Quodsi Model/i }));
@@ -54,7 +54,7 @@ describe("PanelHeader — Remove Quodsi Model", () => {
   });
 
   it("removes once the confirmation is accepted", () => {
-    const onRemoveModel = jest.fn();
+    const onRemoveModel = vi.fn();
     render(<PanelHeader {...baseProps} onRemoveModel={onRemoveModel} />);
     openMenu();
     fireEvent.click(screen.getByRole("button", { name: /Remove Quodsi Model/i }));
@@ -65,7 +65,7 @@ describe("PanelHeader — Remove Quodsi Model", () => {
   });
 
   it("cancelling leaves the model alone", () => {
-    const onRemoveModel = jest.fn();
+    const onRemoveModel = vi.fn();
     render(<PanelHeader {...baseProps} onRemoveModel={onRemoveModel} />);
     openMenu();
     fireEvent.click(screen.getByRole("button", { name: /Remove Quodsi Model/i }));

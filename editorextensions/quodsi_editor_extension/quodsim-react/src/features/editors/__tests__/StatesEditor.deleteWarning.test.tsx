@@ -1,7 +1,7 @@
 // @quodsi/lucid-shared (pulled in by StatesEditor.tsx) transitively loads
 // shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
 // can't parse. (Same pattern as StateModificationFormDialog.test.tsx.)
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -61,7 +61,7 @@ describe("StatesEditor — delete-time expression warning", () => {
     render(
       <StatesEditor
         states={buildStates()}
-        onStatesChange={jest.fn()}
+        onStatesChange={vi.fn()}
         defaultComponentType="ALL"
         referenceData={referenceDataWithExpression()}
       />
@@ -96,7 +96,7 @@ describe("StatesEditor — delete-time expression warning", () => {
     render(
       <StatesEditor
         states={buildStates()}
-        onStatesChange={jest.fn()}
+        onStatesChange={vi.fn()}
         defaultComponentType="ALL"
         referenceData={{ activities: [], generators: [], connectors: [] }}
       />
@@ -113,7 +113,7 @@ describe("StatesEditor — delete-time expression warning", () => {
 
   it("does not throw when referenceData is omitted entirely", () => {
     render(
-      <StatesEditor states={buildStates()} onStatesChange={jest.fn()} defaultComponentType="ALL" />
+      <StatesEditor states={buildStates()} onStatesChange={vi.fn()} defaultComponentType="ALL" />
     );
 
     // Two states now render (unit_price + the "total" state the expression

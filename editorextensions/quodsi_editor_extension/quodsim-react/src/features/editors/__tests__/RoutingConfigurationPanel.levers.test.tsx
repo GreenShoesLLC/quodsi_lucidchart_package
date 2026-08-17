@@ -1,7 +1,7 @@
 // @quodsi/lucid-shared (pulled in by RoutingConfigurationPanel.tsx) transitively
 // loads shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest
 // transformer can't parse. (Same pattern as ConnectorsEditor.test.tsx.)
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -15,18 +15,18 @@ import {
 import { RoutingConfigurationPanel } from "../RoutingConfigurationPanel";
 
 // Capture the updateElementData spy so the lever write-path can be asserted.
-// Must be `mock`-prefixed to be referenced inside jest.mock's factory.
-const mockUpdateElementData = jest.fn();
+// Must be `mock`-prefixed to be referenced inside vi.mock's factory.
+const mockUpdateElementData = vi.fn();
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({ updateElementData: mockUpdateElementData }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
 }));
@@ -55,7 +55,7 @@ const baseProps = {
   ],
   entityStates: new StateListManager(),
   availableEntities: [],
-  onConnectorUpdate: jest.fn(),
+  onConnectorUpdate: vi.fn(),
 };
 
 describe("RoutingConfigurationPanel — connector WEIGHT lever authoring", () => {

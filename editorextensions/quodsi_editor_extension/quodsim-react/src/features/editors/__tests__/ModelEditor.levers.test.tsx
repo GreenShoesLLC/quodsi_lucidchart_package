@@ -1,42 +1,42 @@
 // @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
 // lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ModelEditor from "../ModelEditor";
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    updateResourceRequirements: jest.fn(),
-    selectElement: jest.fn(),
-    updateElementData: jest.fn(),
+    updateResourceRequirements: vi.fn(),
+    selectElement: vi.fn(),
+    updateElementData: vi.fn(),
   }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: jest.fn() }),
+  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
   useFlushOnChange: () => {},
 }));
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
 
 const baseProps = {
   model: { id: "m1", name: "My Model", reps: 1, seed: 12345, levers: [] } as any,
-  onSave: jest.fn(),
+  onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: jest.fn(),
+  onStatesChange: vi.fn(),
   entities: [],
-  onEntitiesChange: jest.fn(),
+  onEntitiesChange: vi.fn(),
 };
 
 describe("ModelEditor — scenario lever authoring", () => {
@@ -53,7 +53,7 @@ describe("ModelEditor — scenario lever authoring", () => {
   });
 
   it("updates model levers when a lever is toggled on", () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<ModelEditor {...baseProps} onSave={onSave} />);
 
     fireEvent.click(screen.getByRole("button", { name: /scenario levers/i }));

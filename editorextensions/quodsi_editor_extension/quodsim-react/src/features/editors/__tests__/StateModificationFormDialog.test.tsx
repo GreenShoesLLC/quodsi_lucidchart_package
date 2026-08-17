@@ -1,7 +1,7 @@
 // @quodsi/lucid-shared (pulled in by StateModificationFormDialog.tsx) transitively
 // loads shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
 // can't parse. (Same pattern as ConnectorsEditor.test.tsx / ResourceEditor.levers.test.tsx.)
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -39,12 +39,12 @@ describe("StateModificationFormDialog — expression mode", () => {
     isOpen: true,
     modification: literalModification,
     states,
-    onSave: jest.fn(),
-    onCancel: jest.fn(),
+    onSave: vi.fn(),
+    onCancel: vi.fn(),
   };
 
   it("saves an expression when expression mode is selected", () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<StateModificationFormDialog {...baseProps} onSave={onSave} />);
 
     fireEvent.click(screen.getByLabelText("Expression"));
@@ -59,7 +59,7 @@ describe("StateModificationFormDialog — expression mode", () => {
   });
 
   it("blocks saving an invalid expression and shows the reason", () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<StateModificationFormDialog {...baseProps} onSave={onSave} />);
 
     fireEvent.click(screen.getByLabelText("Expression"));
@@ -128,7 +128,7 @@ describe("StateModificationFormDialog — expression mode", () => {
   });
 
   it("resets to literal mode when switching to a CATEGORY state while in expression mode, so Save cannot emit a valueExpression the target cannot accept", () => {
-    render(<StateModificationFormDialog {...baseProps} onSave={jest.fn()} />);
+    render(<StateModificationFormDialog {...baseProps} onSave={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Expression"));
     fireEvent.change(screen.getByLabelText("Expression value"), {
       target: { value: "qty * unit_price" },
@@ -151,7 +151,7 @@ describe("StateModificationFormDialog — expression mode", () => {
   // reappears if and only if operandMode is still "expression" — which is
   // what actually exercises the effect.
   it("resets to literal mode when the operation is switched to Sample from Distribution, and the reset survives switching back", () => {
-    render(<StateModificationFormDialog {...baseProps} onSave={jest.fn()} />);
+    render(<StateModificationFormDialog {...baseProps} onSave={vi.fn()} />);
     fireEvent.click(screen.getByLabelText("Expression"));
     fireEvent.change(screen.getByLabelText("Expression value"), {
       target: { value: "qty * unit_price" },
@@ -180,7 +180,7 @@ describe("StateModificationFormDialog — expression mode", () => {
   // refuses. The dialog trims on the way in AND on the way out, so pasting
   // padded text just works.
   it("trims surrounding whitespace off a pasted expression rather than saving it verbatim", () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<StateModificationFormDialog {...baseProps} onSave={onSave} />);
 
     fireEvent.click(screen.getByLabelText("Expression"));
@@ -205,7 +205,7 @@ describe("StateModificationFormDialog — expression mode", () => {
 // "sample_multinomial_one" at all — it would have persisted verbatim).
 describe("StateModificationFormDialog — SAMPLE for a STRING state", () => {
   it("emits a categorical sample, not the retired sample_multinomial_one tag", () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     const states = buildStates();
 
     render(
@@ -213,7 +213,7 @@ describe("StateModificationFormDialog — SAMPLE for a STRING state", () => {
         isOpen={true}
         states={states}
         onSave={onSave}
-        onCancel={jest.fn()}
+        onCancel={vi.fn()}
       />
     );
 

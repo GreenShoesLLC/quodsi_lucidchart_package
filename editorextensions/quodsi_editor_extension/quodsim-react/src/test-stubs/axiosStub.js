@@ -1,12 +1,11 @@
-// Jest stub for the ESM-only `axios` package.
+// Stub for the ESM-only `axios` package, used in tests.
 //
-// CRA/Jest does not transform `node_modules` by default, and the published
-// `axios` entry point is native ESM (`import ... from './lib/axios.js'`),
-// which Jest cannot parse. `@quodsi/shared`'s `lucidApi` service imports axios
+// The published `axios` entry point is native ESM (`import ... from
+// './lib/axios.js'`). `@quodsi/shared`'s `lucidApi` service imports axios
 // at module-load time, so importing anything from `@quodsi/shared` pulls axios
 // into the test graph. None of our component tests actually make HTTP calls,
-// so this no-op stub is sufficient. Mapped via `jest.moduleNameMapper` in
-// package.json (`^axios$`).
+// so this no-op stub is sufficient. Mapped via `test.alias` in
+// vite.config.ts (`^axios$`).
 const noop = () => Promise.resolve({ data: {} });
 
 const axios = {

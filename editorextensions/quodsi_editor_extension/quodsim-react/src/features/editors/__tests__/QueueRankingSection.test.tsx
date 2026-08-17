@@ -3,7 +3,7 @@
 
 // @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
 // lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
@@ -31,13 +31,13 @@ const RANKING = { stateId: "id-severity", order: "ascending" } as const;
 
 describe("QueueRankingSection (Lucid)", () => {
   it("disables both controls and explains the prerequisite when nothing is eligible", () => {
-    render(<QueueRankingSection allStates={INELIGIBLE} onChange={jest.fn()} />);
+    render(<QueueRankingSection allStates={INELIGIBLE} onChange={vi.fn()} />);
     expect(screen.getByText(QUEUE_RANKING_COPY.noStatesHint)).toBeInTheDocument();
     for (const box of screen.getAllByRole("combobox")) expect(box).toBeDisabled();
   });
 
   it("emits undefined when cleared, so the activity returns to FIFO", async () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(
       <QueueRankingSection value={{ ...RANKING }} allStates={ELIGIBLE} onChange={onChange} />
     );
@@ -50,7 +50,7 @@ describe("QueueRankingSection (Lucid)", () => {
   // through. Keying `disabled` off `!hasEligible` alone greyed the picker out
   // exactly then — the ERROR was unfixable from the panel that caused it.
   it("keeps the picker usable when the ranked state is gone, so FIFO stays reachable", async () => {
-    const onChange = jest.fn();
+    const onChange = vi.fn();
     render(
       <QueueRankingSection value={{ ...RANKING }} allStates={INELIGIBLE} onChange={onChange} />
     );
@@ -65,7 +65,7 @@ describe("QueueRankingSection (Lucid)", () => {
   // Lucid while drawio labelled it. Same copy object, so the hosts cannot drift.
   it("labels a ranking whose state is gone instead of rendering blank", () => {
     render(
-      <QueueRankingSection value={{ ...RANKING }} allStates={INELIGIBLE} onChange={jest.fn()} />
+      <QueueRankingSection value={{ ...RANKING }} allStates={INELIGIBLE} onChange={vi.fn()} />
     );
     expect(
       screen.getByRole("option", { name: QUEUE_RANKING_COPY.missingState("severity") })

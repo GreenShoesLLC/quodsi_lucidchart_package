@@ -1,7 +1,7 @@
 // @quodsi/lucid-shared (pulled in by StateModificationListItem.tsx) transitively
 // loads shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
 // can't parse. (Same pattern as ConnectorsEditor.test.tsx / ResourceEditor.levers.test.tsx.)
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
@@ -14,7 +14,7 @@ describe("StateModificationListItem", () => {
   it("renders a literal value unchanged", () => {
     const mod = new StateModification("total_MODEL_1", StateOperation.ADD, 5);
     render(
-      <StateModificationListItem modification={mod} state={state} onEdit={jest.fn()} onDelete={jest.fn()} />
+      <StateModificationListItem modification={mod} state={state} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
     expect(screen.getByText("5")).toBeInTheDocument();
   });
@@ -24,7 +24,7 @@ describe("StateModificationListItem", () => {
       expression: "qty * unit_price",
     });
     render(
-      <StateModificationListItem modification={mod} state={state} onEdit={jest.fn()} onDelete={jest.fn()} />
+      <StateModificationListItem modification={mod} state={state} onEdit={vi.fn()} onDelete={vi.fn()} />
     );
     expect(screen.getByText("qty * unit_price")).toBeInTheDocument();
     expect(screen.queryByText("undefined")).not.toBeInTheDocument();

@@ -1,32 +1,32 @@
 // @quodsi/lucid-shared (pulled in by ConnectorsEditor.tsx) transitively loads
 // shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
 // can't parse. (Same pattern as ModelEditor.test.tsx.)
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import ConnectorsEditor from "../ConnectorsEditor";
 
-jest.mock("../../../messaging/senders", () => ({
-  useModelOpsSender: () => ({ updateElementData: jest.fn() }),
+vi.mock("../../../messaging/senders", () => ({
+  useModelOpsSender: () => ({ updateElementData: vi.fn() }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: jest.fn() }),
+  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
   useFlushOnChange: () => {},
 }));
 
-jest.mock("../RoutingConfigurationContent", () => ({
+vi.mock("../RoutingConfigurationContent", () => ({
   RoutingConfigurationContent: () => <div data-testid="routing-config" />,
 }));
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));

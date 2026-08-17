@@ -1,38 +1,38 @@
 // @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
 // lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-jest.mock("axios", () => ({}));
+vi.mock("axios", () => ({}));
 
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    selectElement: jest.fn(),
-    updateElementData: jest.fn(),
+    selectElement: vi.fn(),
+    updateElementData: vi.fn(),
   }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: jest.fn() }),
+  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
   useFlushOnChange: () => {},
 }));
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
 
 const baseProps = {
-  onSave: jest.fn(),
+  onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: jest.fn(),
+  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 
