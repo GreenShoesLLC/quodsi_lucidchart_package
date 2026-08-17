@@ -13,15 +13,26 @@
 // Connector line) a user had ever grouped (Ctrl+G — an ordinary action) was
 // silently skipped by the upgrader, but still read by clean-name-only
 // readers (post wire-cleanup Phase B2 Task 9) — a reachable silent-data-loss
-// path, not merely a theoretical one. Fixed by switching all four call
+// path, not merely a theoretical one. Fixed by switching all six call
 // sites (beginUpgrade backup x2, performUpgrade collect x2, rollbackUpgrade
 // restore x2) to `allBlocks`/`allLines`.
 //
-// These fakes model that exact scenario: a block/line present in
-// `page.allBlocks`/`page.allLines` (as every real grouped element is) but
-// NOT in a shallow `page.blocks`/`page.lines` list (which this test
-// deliberately never populates, mirroring the real SDK's behavior for a
-// grouped shape).
+// These fakes model that exact scenario precisely: a block/line present in
+// `page.allBlocks`/`page.allLines` (as every real grouped element is) AND
+// ALSO give the page real, empty `blocks`/`lines` Maps (fix round 1, F2(b))
+// — a real grouped shape's page still has a valid (just narrower) shallow
+// `blocks`/`lines` collection; it is never `undefined`. Populating it as
+// empty means the PRE-FIX code path runs to completion instead of throwing
+// a `TypeError` on `page.blocks.values()` — so reverting the fix makes
+// these assertions fail on the *semantic* symptom (the grouped element's
+// data was never touched by the upgrade) rather than on an unrelated crash
+// that would only prove the fix changed which collection is accessed, not
+// that skipping it is a real behavioral defect.
+//
+// Assertions read through `upgraded.domain ?? upgraded` deliberately: a
+// still-un-upgraded shape reads back as the ORIGINAL flat blob (no
+// `.domain` wrapper), so this pattern lets a reverted fix fail as a clean
+// `expect(...).toBe(...)` value mismatch instead of another crash.
 
 import { LucidVersionUpgrader } from '../../src/versioning/LucidVersionUpgrader';
 import { makeFakePage, makeFakeBlock, makeFakeLine } from '../helpers/fakeProxies';
@@ -40,10 +51,21 @@ function setOldShapeModelBlob(page: any): void {
     }));
 }
 
+/** Real domain fields, whether the shape was upgraded (enveloped, `.domain`
+ *  present) or not (still the flat original blob). */
+function readDomain(raw: string): any {
+    const parsed = JSON.parse(raw);
+    return parsed.domain ?? parsed;
+}
+
 describe('LucidVersionUpgrader upgrades elements inside Lucid Groups', () => {
-    it('upgrades a block that only exists in allBlocks (grouped), not a shallow blocks list', async () => {
+    it('upgrades a block that only exists in allBlocks (grouped), not the shallow blocks list', async () => {
         const page = makeFakePage('page-1');
         setOldShapeModelBlob(page);
+        // A real grouped-shape page still has valid (narrower) shallow
+        // collections — never undefined. See file header, F2(b).
+        page.blocks = new Map();
+        page.lines = new Map();
 
         const groupedActivity = makeFakeBlock('activity-1');
         groupedActivity.shapeData.set('q_data', JSON.stringify({
@@ -57,27 +79,25 @@ describe('LucidVersionUpgrader upgrades elements inside Lucid Groups', () => {
             outboundQueueCapacity: 999999,
         }));
         page.allBlocks.set('activity-1', groupedActivity);
-        // Deliberately no `page.blocks` at all — matches makeFakePage's own
-        // default shape (undefined) and the real SDK's shallow list for a
-        // page whose only Activity sits inside a group.
+        // Deliberately absent from `page.blocks` — the shallow list a real
+        // grouped Activity is excluded from.
 
         const upgrader = new LucidVersionUpgrader('2026.11.01');
         await (upgrader as any).performUpgrade(page);
 
-        // performUpgrade stores the raw upgraded envelope (schemaVersion/
-        // type/id/platform/domain), same shape StorageAdapter.getElementData
-        // flattens on read — assert against the envelope's `domain` here.
-        const upgraded = JSON.parse(groupedActivity.shapeData.get('q_data'));
-        expect(upgraded.domain.routing).toBe('probability');
-        expect(upgraded.domain.inboundCapacity).toBeUndefined(); // 999999 collapses to absent
-        expect(upgraded.domain.outboundCapacity).toBeUndefined();
-        expect('connectType' in upgraded.domain).toBe(false);
-        expect('inboundQueueCapacity' in upgraded.domain).toBe(false);
+        const domain = readDomain(groupedActivity.shapeData.get('q_data'));
+        expect(domain.routing).toBe('probability');
+        expect(domain.inboundCapacity).toBeUndefined(); // 999999 collapses to absent
+        expect(domain.outboundCapacity).toBeUndefined();
+        expect('connectType' in domain).toBe(false);
+        expect('inboundQueueCapacity' in domain).toBe(false);
     });
 
-    it('upgrades a line that only exists in allLines (grouped), not a shallow lines list', async () => {
+    it('upgrades a line that only exists in allLines (grouped), not the shallow lines list', async () => {
         const page = makeFakePage('page-2');
         setOldShapeModelBlob(page);
+        page.blocks = new Map();
+        page.lines = new Map();
 
         const groupedConnector = makeFakeLine('connector-1');
         groupedConnector.shapeData.set('q_data', JSON.stringify({
@@ -95,14 +115,16 @@ describe('LucidVersionUpgrader upgrades elements inside Lucid Groups', () => {
         const upgrader = new LucidVersionUpgrader('2026.11.01');
         await (upgrader as any).performUpgrade(page);
 
-        const upgraded = JSON.parse(groupedConnector.shapeData.get('q_data'));
-        expect(upgraded.domain.entityId).toBe('entity-1');
-        expect('entityTemplateUniqueId' in upgraded.domain).toBe(false);
+        const domain = readDomain(groupedConnector.shapeData.get('q_data'));
+        expect(domain.entityId).toBe('entity-1');
+        expect('entityTemplateUniqueId' in domain).toBe(false);
     });
 
     it('backs up and restores a grouped block on a failed upgrade (rollback covers allBlocks too)', async () => {
         const page = makeFakePage('page-3');
         setOldShapeModelBlob(page);
+        page.blocks = new Map();
+        page.lines = new Map();
 
         const groupedActivity = makeFakeBlock('activity-2');
         const originalBlob = JSON.stringify({

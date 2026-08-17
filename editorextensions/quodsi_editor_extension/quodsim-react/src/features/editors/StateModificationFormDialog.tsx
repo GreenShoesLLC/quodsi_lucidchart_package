@@ -57,13 +57,21 @@ const renameParamsToLegacy = (
   return { ...params };
 };
 
-/** Draft (SampleDistributionEditor vocabulary) -> wire (`StateSample`). */
+/** Draft (SampleDistributionEditor vocabulary) -> wire (`StateSample`).
+ *
+ * Fix round 1, F1: STRING states route through the SAME branch as CATEGORY
+ * — `SampleDistributionEditor.initializeDefaults` fires the OLD-era tag
+ * `"sample_multinomial_one"` for STRING too (its own STRING case treats it
+ * like a categorical pick, per its "consider using a CATEGORY state"
+ * message), so without this a STRING sample fell through to the generic
+ * default branch and persisted `distribution: "sample_multinomial_one"` — a
+ * retired tag `StateSample`'s seven clean-grammar shapes don't define. */
 const buildSample = (
   dataType: StateType | undefined,
   distributionType: string,
   distributionParameters: Record<string, unknown>
 ): Record<string, unknown> => {
-  if (dataType === StateType.CATEGORY) {
+  if (dataType === StateType.CATEGORY || dataType === StateType.STRING) {
     return { distribution: "categorical", probabilities: distributionParameters?.probabilities ?? {} };
   }
   if (dataType === StateType.BOOLEAN) {
@@ -75,13 +83,16 @@ const buildSample = (
   return { distribution: distributionType, ...renameParamsToClean(distributionParameters ?? {}) };
 };
 
-/** Wire (`StateSample`) -> draft (SampleDistributionEditor vocabulary). */
+/** Wire (`StateSample`) -> draft (SampleDistributionEditor vocabulary).
+ *  See `buildSample`'s F1 comment — STRING mirrors CATEGORY here too, so an
+ *  existing STRING sample loads back into the editor's draft the same way
+ *  a CATEGORY one does. */
 const sampleToEditorState = (
   dataType: StateType | undefined,
   sample: Record<string, unknown> | undefined
 ): { distributionType: string; distributionParameters: Record<string, unknown> } => {
   if (!sample) return { distributionType: "", distributionParameters: {} };
-  if (dataType === StateType.CATEGORY) {
+  if (dataType === StateType.CATEGORY || dataType === StateType.STRING) {
     return {
       distributionType: "sample_multinomial_one",
       distributionParameters: { probabilities: sample.probabilities ?? {} },

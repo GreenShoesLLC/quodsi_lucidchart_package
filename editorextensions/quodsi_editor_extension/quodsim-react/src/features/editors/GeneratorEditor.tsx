@@ -406,7 +406,15 @@ const GeneratorEditor: React.FC<Props> = ({
       } else if (name === 'entitiesPerCreation') {
         updates.batchSize = parseInt(value) || 1;
       } else if (name === 'maxEntities') {
-        updates.maxEntities = parseInt(value) || INFINITY_DISPLAY_VALUE;
+        // Fix round 1, F2(a): `maxEntities: 0` is the documented off-switch
+        // (Generator.ts's own field comment; generatorCoreEntries's comment
+        // is explicit "0 ... a real, meaningful value, never collapsed to
+        // absence") — `parseInt(value) || INFINITY_DISPLAY_VALUE` treated 0
+        // as falsy and silently replaced it with "unlimited", making the
+        // off-switch untypeable. 0-preserving parse, matching the Studio
+        // twin's numberOr (GeneratorBasicTab.tsx).
+        const parsed = parseInt(value);
+        updates.maxEntities = value === '' || isNaN(parsed) ? INFINITY_DISPLAY_VALUE : parsed;
       }
 
       return updateGeneratorImmutably(prev, updates);
