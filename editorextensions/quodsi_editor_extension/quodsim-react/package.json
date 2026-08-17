@@ -24,12 +24,11 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "build": "react-scripts build",
-    "build:vite": "vite build",
+    "build": "vite build",
     "test": "react-scripts test",
     "lint:hooks": "node scripts/lint-hooks.js",
     "eject": "react-scripts eject",
-    "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && cross-env DISABLE_ESLINT_PLUGIN=true npx react-scripts start",
+    "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && vite",
     "postinstall": "cd ../../../lucid-shared && npm run build"
   },
   "eslintConfig": {

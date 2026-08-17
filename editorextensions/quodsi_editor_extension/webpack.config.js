@@ -109,12 +109,17 @@ module.exports = {
           fs.mkdirSync(`../../public/${target.name}`, { recursive: true });
 
           process.chdir(`${target.name}`);
-          child_process.execSync("npx react-scripts build", {
+          // Vite (see quodsim-react/vite.config.ts). The Lucid CLI is agnostic
+          // about what produces these files -- `bundle` only zips public/
+          // verbatim -- so the build tool is entirely this repo's choice.
+          child_process.execSync("npm run build", {
             stdio: "inherit",
           });
 
-          // In the React app's bundled HTML, enable links to other React assets,
-          // by having those links explicitly point to the extension's bundle
+          // Belt-and-braces: Vite's `base: './'` already emits relative paths,
+          // so this normally matches nothing. Retained so a future config
+          // regression (or a hand-edited index.html) still can't ship
+          // root-absolute asset URLs, which silently 404 inside the package.
           const content = fs.readFileSync("build/index.html", "utf8");
           const newContent = content.replaceAll(/(src|href)="\//gi, '$1="');
           fs.writeFileSync("build/index.html", newContent);
