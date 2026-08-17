@@ -85,12 +85,25 @@ module.exports = {
           );
           const reactAppContentHTML = await reactAppResponse.text();
 
-          // Enable links to other React assets, even when served by the extension,
-          // by having those assets' links explicitly point to the React dev server
-          const reactAppContentHTMLReplaced = reactAppContentHTML.replaceAll(
-            /(src|href)="\//gi,
-            `$1="http://localhost:${target.port}/`
-          );
+          // Enable links to other React assets, even when served by the
+          // extension, by pointing them at the React dev server.
+          //
+          // TWO rewrites are needed, and the second is load-bearing:
+          //
+          // 1. src=/href= HTML attributes - the ordinary asset links.
+          // 2. Bare-root import specifiers inside inline module scripts.
+          //    @vitejs/plugin-react injects a Fast Refresh preamble that
+          //    imports "/@react-refresh". Lucid serves this HTML from ITS
+          //    origin, so that resolves to https://lucid.app/@react-refresh
+          //    and 404s. Being a module script, the failed import aborts the
+          //    whole preamble BEFORE it assigns window.$RefreshReg$, and every
+          //    plugin-transformed component module then throws
+          //    "ReferenceError: $RefreshReg$ is not defined" - a blank panel,
+          //    not merely a console warning. Vite's server.origin covers the
+          //    script/link tags but not this injected specifier.
+          const reactAppContentHTMLReplaced = reactAppContentHTML
+            .replaceAll(/(src|href)="\//gi, `$1="http://localhost:${target.port}/`)
+            .replaceAll(/from "\//g, `from "http://localhost:${target.port}/`);
 
           // Enable the extension to serve a copy of the React app
           fs.writeFileSync(
