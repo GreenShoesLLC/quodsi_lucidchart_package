@@ -79,7 +79,11 @@ describe('rewriteDevHtml', () => {
     const input = '<script src="http://localhost:3000/x"></script>';
     const once = rewriteDevHtml(input, 3000);
     expect(once).toBe(input);
-    const twice = rewriteDevHtml(once, 3000);
+    // Second pass uses a DIFFERENT port on purpose. If any rule matched an
+    // already-absolute URL, the port would change to 5173 and this would fail.
+    // Re-running with the SAME port cannot detect that: the rule would replace
+    // the origin with a byte-identical origin and the test would pass anyway.
+    const twice = rewriteDevHtml(once, 5173);
     expect(twice).toBe(once);
   });
 
@@ -87,7 +91,8 @@ describe('rewriteDevHtml', () => {
     const input = 'import { x } from "http://localhost:3000/@react-refresh"';
     const once = rewriteDevHtml(input, 3000);
     expect(once).toBe(input);
-    const twice = rewriteDevHtml(once, 3000);
+    // Second pass uses a DIFFERENT port; see the comment on the first idempotence test above.
+    const twice = rewriteDevHtml(once, 5173);
     expect(twice).toBe(once);
   });
 
@@ -95,7 +100,8 @@ describe('rewriteDevHtml', () => {
     const input = 'import "http://localhost:3000/side-effect.js"';
     const once = rewriteDevHtml(input, 3000);
     expect(once).toBe(input);
-    const twice = rewriteDevHtml(once, 3000);
+    // Second pass uses a DIFFERENT port; see the comment on the first idempotence test above.
+    const twice = rewriteDevHtml(once, 5173);
     expect(twice).toBe(once);
   });
 
@@ -103,8 +109,16 @@ describe('rewriteDevHtml', () => {
     const input = 'import("http://localhost:3000/dynamic.js")';
     const once = rewriteDevHtml(input, 3000);
     expect(once).toBe(input);
-    const twice = rewriteDevHtml(once, 3000);
+    // Second pass uses a DIFFERENT port; see the comment on the first idempotence test above.
+    const twice = rewriteDevHtml(once, 5173);
     expect(twice).toBe(once);
+  });
+
+  it('leaves absolute URLs from other origins untouched', () => {
+    const input =
+      '<script src="https://cdn.example.com/x.js"></script>' +
+      'import { y } from "https://esm.sh/y"';
+    expect(rewriteDevHtml(input, 3000)).toBe(input);
   });
 
   it('rewrites both the @react-refresh preamble and a script src in a realistic full document, and nothing else', () => {

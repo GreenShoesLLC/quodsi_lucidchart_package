@@ -8,24 +8,27 @@ sets environment variables based on the target environment (Dev, TST, PRD),
 verifies the variables, and then runs the 'npm run build' command (Vite).
 The environment variables are set only for the scope of this script execution.
 
+This script is optional and not part of the normal build path.
+deploy/lucid-package/build-bundle.ps1 builds the React app itself at its
+Step 5, via the extension's webpack hook, regardless of whether this script
+runs. This standalone script only executes when build-bundle.ps1 is invoked
+with the -RunReactBuild switch.
+
 .PARAMETER TargetEnvironment
 Specifies the target environment for the build. Must be one of 'Dev', 'TST', or 'PRD'.
 
 .EXAMPLE
-.\Build-QuodsimReact.ps1 -TargetEnvironment Dev
+.\build-react.ps1 -TargetEnvironment Dev
 
 .EXAMPLE
-.\Build-QuodsimReact.ps1 -TargetEnvironment TST
+.\build-react.ps1 -TargetEnvironment TST
 
 .EXAMPLE
-.\Build-QuodsimReact.ps1 PRD # Parameter name can be omitted if it's the first positional parameter
+.\build-react.ps1 PRD # Parameter name can be omitted if it's the first positional parameter
 
 .NOTES
-Author: Gemini AI based on user input
-Date:   2025-03-30
 Requires PowerShell and Node.js/npm/npx installed and configured in PATH.
 Ensure you have the necessary permissions to remove the build folder and run npx.
-The Azure Function Key is sensitive; be mindful of where this script is stored and executed.
 #>
 param(
     [Parameter(Mandatory=$true, Position=0)]
