@@ -83,6 +83,30 @@ describe('rewriteDevHtml', () => {
     expect(twice).toBe(once);
   });
 
+  it('is idempotent for a from-import specifier - already-absolute URLs are untouched', () => {
+    const input = 'import { x } from "http://localhost:3000/@react-refresh"';
+    const once = rewriteDevHtml(input, 3000);
+    expect(once).toBe(input);
+    const twice = rewriteDevHtml(once, 3000);
+    expect(twice).toBe(once);
+  });
+
+  it('is idempotent for a bare side-effect import - already-absolute URLs are untouched', () => {
+    const input = 'import "http://localhost:3000/side-effect.js"';
+    const once = rewriteDevHtml(input, 3000);
+    expect(once).toBe(input);
+    const twice = rewriteDevHtml(once, 3000);
+    expect(twice).toBe(once);
+  });
+
+  it('is idempotent for a dynamic import() - already-absolute URLs are untouched', () => {
+    const input = 'import("http://localhost:3000/dynamic.js")';
+    const once = rewriteDevHtml(input, 3000);
+    expect(once).toBe(input);
+    const twice = rewriteDevHtml(once, 3000);
+    expect(twice).toBe(once);
+  });
+
   it('rewrites both the @react-refresh preamble and a script src in a realistic full document, and nothing else', () => {
     const input = [
       '<!DOCTYPE html>',

@@ -117,7 +117,7 @@ module.exports = {
           fs.mkdirSync(`../../public/${target.name}`, { recursive: true });
 
           process.chdir(`${target.name}`);
-          // Vite (see quodsim-react/vite.config.ts). The Lucid CLI is agnostic
+          // Vite (see quodsim-react/vite.config.mts). The Lucid CLI is agnostic
           // about what produces these files -- `bundle` only zips public/
           // verbatim -- so the build tool is entirely this repo's choice.
           child_process.execSync("npm run build", {

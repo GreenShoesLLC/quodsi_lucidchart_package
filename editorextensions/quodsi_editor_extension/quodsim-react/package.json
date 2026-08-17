@@ -23,23 +23,6 @@
     "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && vite",
     "postinstall": "cd ../../../lucid-shared && npm run build"
   },
-  "eslintConfig": {
-    "root": true,
-    "plugins": [
-      "react-hooks"
-    ],
-    "parser": "@typescript-eslint/parser",
-    "parserOptions": {
-      "ecmaVersion": 2022,
-      "sourceType": "module",
-      "ecmaFeatures": {
-        "jsx": true
-      }
-    },
-    "rules": {
-      "react-hooks/rules-of-hooks": "error"
-    }
-  },
   "browserslist": {
     "production": [
       ">0.2%",
