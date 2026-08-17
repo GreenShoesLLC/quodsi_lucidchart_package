@@ -52,11 +52,9 @@ describe("GeneratorEditor — PATTERN generator (read-only notice)", () => {
         generator={{
           id: "g-pattern",
           name: "Arrivals",
-          generationConfig: {
-            generatorType: "PATTERN",
-            arrivalPatternId: "ap-123",
-            volume: 500,
-          },
+          mode: "pattern",
+          arrivalPatternId: "ap-123",
+          volume: 500,
           levers: [],
         } as any}
       />
@@ -88,7 +86,7 @@ describe("GeneratorEditor — PATTERN generator (read-only notice)", () => {
         generator={{
           id: "g-frequency",
           name: "Arrivals",
-          generationConfig: { generatorType: "FREQUENCY" },
+          mode: "frequency",
           levers: [],
         } as any}
       />

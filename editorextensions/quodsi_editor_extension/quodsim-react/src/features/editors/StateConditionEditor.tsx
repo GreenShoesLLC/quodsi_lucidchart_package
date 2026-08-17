@@ -52,15 +52,15 @@ export const StateConditionEditor: React.FC<StateConditionEditorProps> = ({
   compact = false,
 }) => {
   const selectedState = condition
-    ? states.find((s) => s.name === condition.stateName)
+    ? states.find((s) => s.id === condition.stateId)
     : null;
 
   const supportedComparisons = selectedState
     ? getSupportedComparisonsForType(selectedState.dataType)
     : Object.values(StateComparison);
 
-  const handleStateChange = (stateName: string) => {
-    const state = states.find((s) => s.name === stateName);
+  const handleStateChange = (stateId: string) => {
+    const state = states.find((s) => s.id === stateId);
     if (!state) return;
 
     const newComparison =
@@ -75,19 +75,19 @@ export const StateConditionEditor: React.FC<StateConditionEditorProps> = ({
       : StateComparison.EQUAL;
 
     onChange(
-      new StateCondition(stateName, comparison, getDefaultValueForType(state))
+      new StateCondition(stateId, comparison, getDefaultValueForType(state))
     );
   };
 
   const handleComparisonChange = (comparison: StateComparison) => {
     if (!condition) return;
-    onChange(new StateCondition(condition.stateName, comparison, condition.value));
+    onChange(new StateCondition(condition.stateId, comparison, condition.value));
   };
 
   const handleValueChange = (value: number | string | boolean) => {
     if (!condition) return;
     onChange(
-      new StateCondition(condition.stateName, condition.comparison, value)
+      new StateCondition(condition.stateId, condition.comparison, value)
     );
   };
 
@@ -173,20 +173,20 @@ export const StateConditionEditor: React.FC<StateConditionEditorProps> = ({
     return (
       <div className="space-y-1">
         <select
-          value={condition?.stateName || ""}
+          value={condition?.stateId || ""}
           onChange={(e) => handleStateChange(e.target.value)}
           className="w-full px-1 py-0.5 text-xs border rounded bg-white"
           disabled={disabled}
         >
           <option value="">Select state...</option>
           {states.map((state) => (
-            <option key={state.id} value={state.name}>
+            <option key={state.id} value={state.id}>
               {state.name} ({state.dataType})
             </option>
           ))}
         </select>
 
-        {condition?.stateName && (
+        {condition?.stateId && (
           <div className="flex gap-1">
             <select
               value={condition?.comparison || StateComparison.EQUAL}
@@ -238,22 +238,22 @@ export const StateConditionEditor: React.FC<StateConditionEditorProps> = ({
         <label className="block text-xs text-gray-600 mb-1">State</label>
         <select
           className={`w-full px-2 py-1 text-xs border rounded bg-white ${
-            required && !condition?.stateName ? "border-red-300 bg-red-50" : ""
+            required && !condition?.stateId ? "border-red-300 bg-red-50" : ""
           }`}
-          value={condition?.stateName || ""}
+          value={condition?.stateId || ""}
           onChange={(e) => handleStateChange(e.target.value)}
           disabled={disabled}
         >
           <option value="">Select a state...</option>
           {states.map((state) => (
-            <option key={state.id} value={state.name}>
+            <option key={state.id} value={state.id}>
               {state.name} ({state.dataType})
             </option>
           ))}
         </select>
       </div>
 
-      {condition?.stateName && (
+      {condition?.stateId && (
         <div>
           <label className="block text-xs text-gray-600 mb-1">Comparison</label>
           <select
@@ -273,7 +273,7 @@ export const StateConditionEditor: React.FC<StateConditionEditorProps> = ({
         </div>
       )}
 
-      {condition?.stateName && (
+      {condition?.stateId && (
         <div>
           <label className="block text-xs text-gray-600 mb-1">Value</label>
           {renderValueInput()}

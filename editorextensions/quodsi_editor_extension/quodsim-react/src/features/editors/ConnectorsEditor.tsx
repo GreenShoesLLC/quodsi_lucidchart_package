@@ -79,14 +79,14 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       data.id ?? "",
       data.name ?? "",
       data.capacity || 1,
-      data.inboundQueueCapacity || Infinity,
-      data.outboundQueueCapacity || Infinity,
+      data.inboundCapacity || Infinity,
+      data.outboundCapacity || Infinity,
       data.actions || [],
       data.x || 0,
       data.y || 0
     );
 
-    safeActivity.connectType = data.connectType || ConnectType.Probability;
+    safeActivity.routing = data.routing || ConnectType.Probability;
     safeActivity.financialProperties = data.financialProperties;
 
     return safeActivity;
@@ -136,7 +136,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   });
 
   // Fire saveNow when routing type changes (no debounce — connectType is decisive).
-  useFlushOnChange(localActivityDraft.connectType, saveNow);
+  useFlushOnChange(localActivityDraft.routing, saveNow);
 
   // Invalid-input guard — placed AFTER all hooks so hook order is
   // unconditional every render (Rules of Hooks). The hooks above are
@@ -170,13 +170,13 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
       localActivityDraft.id,
       localActivityDraft.name,
       localActivityDraft.capacity,
-      localActivityDraft.inboundQueueCapacity,
-      localActivityDraft.outboundQueueCapacity,
+      localActivityDraft.inboundCapacity,
+      localActivityDraft.outboundCapacity,
       localActivityDraft.actions,
       localActivityDraft.x,
       localActivityDraft.y
     );
-    updatedActivity.connectType = newConnectType;
+    updatedActivity.routing = newConnectType;
     updatedActivity.financialProperties = localActivityDraft.financialProperties;
 
     setLocalActivityDraft(updatedActivity);

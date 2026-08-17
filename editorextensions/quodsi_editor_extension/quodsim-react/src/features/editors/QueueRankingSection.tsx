@@ -25,15 +25,19 @@ export const QueueRankingSection: React.FC<Props> = ({ value, allStates, onChang
   const eligible = eligibleRankingStates(allStates);
   const hasEligible = eligible.length > 0;
 
-  // The stored state is no longer selectable — deleted on the States tab, or
-  // retyped so it is no longer an ENTITY NUMBER state. StatePicker (the shared
-  // panels' twin of this control) renders a disabled placeholder option for
-  // this case; without one here a controlled <select> whose value matches no
-  // option renders BLANK, so the same stale ranking reads as "no ranking" in
-  // Lucid while drawio labels it. Same copy, from @quodsi/shared.
+  // Wire-cleanup Phase B2 Task 6 fix round (F1) / Task 10: QueueRanking
+  // stores a `stateId` now, not a name. The stored state may no longer be
+  // selectable — deleted on the States tab, or retyped so it is no longer an
+  // ENTITY NUMBER state. StatePicker (the shared panels' twin of this
+  // control) renders a disabled placeholder option for this case; without
+  // one here a controlled <select> whose value matches no option renders
+  // BLANK, so the same stale ranking reads as "no ranking" in Lucid while
+  // drawio labels it. Same copy, from @quodsi/shared. Resolve id -> name for
+  // display via `allStates` (not just `eligible`) so a retyped-away state
+  // still shows its real name, not its raw id.
   const missingStateName =
-    value?.stateName && !eligible.some((s) => s.name === value.stateName)
-      ? value.stateName
+    value?.stateId && !eligible.some((s) => s.id === value.stateId)
+      ? allStates.find((s) => s.id === value.stateId)?.name ?? value.stateId
       : null;
 
   return (
@@ -46,7 +50,7 @@ export const QueueRankingSection: React.FC<Props> = ({ value, allStates, onChang
         <select
           id="lucid-queue-ranking-state"
           className="w-full px-2 py-1 text-xs border rounded"
-          value={missingStateName ? "__missing__" : value?.stateName ?? ""}
+          value={missingStateName ? "__missing__" : value?.stateId ?? ""}
           // `&& !value`, not `!hasEligible` alone: delete the last eligible state
           // and the ranking on it becomes an ERROR that blocks the run, while the
           // one repair — clearing back to FIFO — lives in this very control.
@@ -63,7 +67,7 @@ export const QueueRankingSection: React.FC<Props> = ({ value, allStates, onChang
             </option>
           )}
           {eligible.map((s) => (
-            <option key={s.name} value={s.name}>
+            <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
@@ -76,12 +80,12 @@ export const QueueRankingSection: React.FC<Props> = ({ value, allStates, onChang
         <select
           id="lucid-queue-ranking-order"
           className="w-full px-2 py-1 text-xs border rounded"
-          value={value?.order ?? "ASCENDING"}
+          value={value?.order ?? "ascending"}
           disabled={!hasEligible || !value}
           onChange={(e) => onChange(setRankingOrder(value, e.target.value as QueueRankingOrder))}
         >
-          <option value="ASCENDING">{QUEUE_RANKING_COPY.orderAscending}</option>
-          <option value="DESCENDING">{QUEUE_RANKING_COPY.orderDescending}</option>
+          <option value="ascending">{QUEUE_RANKING_COPY.orderAscending}</option>
+          <option value="descending">{QUEUE_RANKING_COPY.orderDescending}</option>
         </select>
         <div className="text-xs text-gray-500 mt-1">{QUEUE_RANKING_COPY.orderHelp}</div>
       </div>

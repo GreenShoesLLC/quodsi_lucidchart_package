@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
-import { ResourceRequirement } from '@quodsi/lucid-shared';
+import { ResourceRequirement, RequirementMode } from '@quodsi/lucid-shared';
 import { convertRootClausesToStructure, generatePreview } from '../../utils/resourceRequirementConverter';
 
 interface ResourceRequirementsManagerProps {
@@ -46,7 +46,7 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
   };
 
   const generateRequirementPreview = (req: ResourceRequirement): string => {
-    const structure = convertRootClausesToStructure(req.rootClauses);
+    const structure = convertRootClausesToStructure(req.rootClause);
     return generatePreview(structure, getResourceName);
   };
 
@@ -141,10 +141,10 @@ export const ResourceRequirementsManager: React.FC<ResourceRequirementsManagerPr
                       {generateRequirementPreview(req)}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {req.rootClauses[0]?.subClauses?.length > 0
-                        ? `${req.rootClauses[0].subClauses.length + (req.rootClauses[0].requests.length > 0 ? 1 : 0)} team options`
+                      {req.rootClause?.clauses?.length > 0
+                        ? `${req.rootClause.clauses.length + (req.rootClause.requests.length > 0 ? 1 : 0)} team options`
                         : '1 team option'
-                      } • {req.rootClauses[0]?.mode === 'REQUIRE_ANY' ? 'Pick one' : 'Need all'}
+                      } • {req.rootClause?.mode === RequirementMode.REQUIRE_ANY ? 'Pick one' : 'Need all'}
                     </div>
                   </div>
                   <div className="flex gap-1 ml-2 flex-shrink-0">

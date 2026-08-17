@@ -33,7 +33,7 @@ function buildStates(): StateListManager {
 
 describe("StateModificationFormDialog — expression mode", () => {
   const states = buildStates();
-  const literalModification = new StateModification("total_MODEL_1", "total", StateOperation.ASSIGN, 0);
+  const literalModification = new StateModification("total_MODEL_1", StateOperation.ASSIGN, 0);
   const baseProps = {
     isOpen: true,
     modification: literalModification,
@@ -53,7 +53,7 @@ describe("StateModificationFormDialog — expression mode", () => {
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
 
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ valueExpression: "qty * unit_price", value: undefined })
+      expect.objectContaining({ expression: "qty * unit_price", value: undefined })
     );
   });
 
@@ -83,7 +83,6 @@ describe("StateModificationFormDialog — expression mode", () => {
   it("hides expression mode for a CATEGORY target state", () => {
     const categoryModification = new StateModification(
       "status_MODEL_1",
-      "status",
       StateOperation.ASSIGN,
       "A"
     );
@@ -94,10 +93,9 @@ describe("StateModificationFormDialog — expression mode", () => {
   it("loads an existing expression back into expression mode", () => {
     const expressionModification = new StateModification(
       "total_MODEL_1",
-      "total",
       StateOperation.ASSIGN,
       undefined,
-      { valueExpression: "qty * unit_price" }
+      { expression: "qty * unit_price" }
     );
     render(<StateModificationFormDialog {...baseProps} modification={expressionModification} />);
     expect(
@@ -194,7 +192,7 @@ describe("StateModificationFormDialog — expression mode", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /save changes/i }));
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ valueExpression: "qty * unit_price", value: undefined })
+      expect.objectContaining({ expression: "qty * unit_price", value: undefined })
     );
   });
 });

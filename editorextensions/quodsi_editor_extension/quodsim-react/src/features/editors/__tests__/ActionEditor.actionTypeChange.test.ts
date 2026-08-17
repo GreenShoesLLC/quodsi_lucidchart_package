@@ -23,6 +23,7 @@ import {
   createLoopAction,
   createBranchAction,
   Duration,
+  PeriodUnit,
 } from "@quodsi/lucid-shared";
 
 describe("handleActionTypeChange factory wiring — id assignment", () => {
@@ -32,32 +33,39 @@ describe("handleActionTypeChange factory wiring — id assignment", () => {
     expect(action.id.length).toBeGreaterThan(0);
   });
 
-  it("SEIZE: createSeizeAction('') produces a non-empty id", () => {
-    const action = createSeizeAction("");
+  // Wire-cleanup Phase B2 Task 6/10: the old '' scaffold sentinel is retired —
+  // resourceRequirementId is REQUIRED and non-empty on the clean wire, so
+  // handleActionTypeChange now calls createSeizeAction() with no argument
+  // (omits the key entirely) rather than passing ''.
+  it("SEIZE: createSeizeAction() produces a non-empty id, no resourceRequirementId", () => {
+    const action = createSeizeAction();
+    expect(action.id).toBeDefined();
+    expect(action.id.length).toBeGreaterThan(0);
+    expect(action.resourceRequirementId).toBeUndefined();
+  });
+
+  // Absent resourceRequirementId means "release ALL" on the clean wire.
+  it("RELEASE: createReleaseAction() produces a non-empty id, no resourceRequirementId", () => {
+    const action = createReleaseAction();
+    expect(action.id).toBeDefined();
+    expect(action.id.length).toBeGreaterThan(0);
+    expect(action.resourceRequirementId).toBeUndefined();
+  });
+
+  it("DELAY: createDelayAction(Duration.constant(0, MINUTES)) produces a non-empty id", () => {
+    const action = createDelayAction(Duration.constant(0, PeriodUnit.MINUTES));
     expect(action.id).toBeDefined();
     expect(action.id.length).toBeGreaterThan(0);
   });
 
-  it("RELEASE: createReleaseAction('') produces a non-empty id", () => {
-    const action = createReleaseAction("");
-    expect(action.id).toBeDefined();
-    expect(action.id.length).toBeGreaterThan(0);
-  });
-
-  it("DELAY: createDelayAction(new Duration()) produces a non-empty id", () => {
-    const action = createDelayAction(new Duration());
-    expect(action.id).toBeDefined();
-    expect(action.id.length).toBeGreaterThan(0);
-  });
-
-  it("DELAY_WITH_RESOURCE: createDelayWithResourceAction(new Duration()) produces a non-empty id", () => {
-    const action = createDelayWithResourceAction(new Duration());
+  it("DELAY_WITH_RESOURCE: createDelayWithResourceAction(Duration.constant(0, MINUTES)) produces a non-empty id", () => {
+    const action = createDelayWithResourceAction(Duration.constant(0, PeriodUnit.MINUTES));
     expect(action.id).toBeDefined();
     expect(action.id.length).toBeGreaterThan(0);
     // Verify default shape matches what the old literal set
     expect(action.resourceRequirementId).toBeNull();
     expect(action.keepResource).toBe(false);
-    expect(action.stateModifications).toEqual([]);
+    expect(action.modifications).toEqual([]);
   });
 
   it("SPLIT: createSplitAction(1) produces a non-empty id", () => {

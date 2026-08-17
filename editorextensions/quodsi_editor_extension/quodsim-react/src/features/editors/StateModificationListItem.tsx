@@ -45,61 +45,54 @@ const StateModificationListItem: React.FC<Props> = ({
   // Check if this is a SAMPLE operation
   const isSampleOperation = modification.operation === StateOperation.SAMPLE;
 
-  // Format distribution info for SAMPLE operations
+  // Format distribution info for SAMPLE operations. Wire-cleanup Phase B2
+  // Task 6/10: reads the clean `StateSample` shape (`modification.sample`)
+  // — a distribution tag ABSENT means constant (never the literal string
+  // "constant"); params are inline, clean-named (min/max/mean/std/scale),
+  // no `distributionParameters` wrapper.
   const formatDistributionInfo = (): string => {
-    const { distributionType, distributionParameters } = modification;
-    if (!distributionType) return "Distribution not configured";
+    const sample = modification.sample as Record<string, unknown> | undefined;
+    if (!sample) return "Distribution not configured";
+    const tag = sample.distribution as string | undefined;
 
-    switch (distributionType) {
-      case "sample_multinomial_one":
-        const probs = distributionParameters?.probabilities;
-        if (probs) {
-          const count = Object.keys(probs).length;
-          return `Multinomial (${count} categories)`;
-        }
-        return "Multinomial";
-      case "bernoulli":
-        const p = distributionParameters?.p;
-        if (p !== undefined) {
-          return `Bernoulli (p=${(p * 100).toFixed(0)}%)`;
-        }
-        return "Bernoulli";
-      case "normal":
-        const loc = distributionParameters?.loc;
-        const scale = distributionParameters?.scale;
-        if (loc !== undefined && scale !== undefined) {
-          return `Normal(μ=${loc}, σ=${scale})`;
-        }
-        return "Normal";
-      case "uniform":
-        const low = distributionParameters?.low;
-        const high = distributionParameters?.high;
-        if (low !== undefined && high !== undefined) {
-          return `Uniform(${low}, ${high})`;
-        }
-        return "Uniform";
-      case "exponential":
-        const expScale = distributionParameters?.scale;
-        if (expScale !== undefined) {
-          return `Exponential(λ=${expScale})`;
-        }
-        return "Exponential";
+    if (tag === undefined) {
+      const constValue = sample.value;
+      return constValue !== undefined ? `Constant(${constValue})` : "Constant";
+    }
+
+    switch (tag) {
+      case "categorical": {
+        const probs = sample.probabilities as Record<string, number> | undefined;
+        return probs ? `Multinomial (${Object.keys(probs).length} categories)` : "Multinomial";
+      }
+      case "bernoulli": {
+        const p = sample.p as number | undefined;
+        return p !== undefined ? `Bernoulli (p=${(p * 100).toFixed(0)}%)` : "Bernoulli";
+      }
+      case "normal": {
+        const mean = sample.mean;
+        const std = sample.std;
+        return mean !== undefined && std !== undefined ? `Normal(μ=${mean}, σ=${std})` : "Normal";
+      }
+      case "uniform": {
+        const min = sample.min;
+        const max = sample.max;
+        return min !== undefined && max !== undefined ? `Uniform(${min}, ${max})` : "Uniform";
+      }
+      case "exponential": {
+        const scale = sample.scale;
+        return scale !== undefined ? `Exponential(λ=${scale})` : "Exponential";
+      }
       case "triangular":
         return "Triangular";
-      case "constant":
-        const constValue = distributionParameters?.value;
-        if (constValue !== undefined) {
-          return `Constant(${constValue})`;
-        }
-        return "Constant";
       default:
-        return distributionType;
+        return tag;
     }
   };
 
   // Check if this is a cross-component modification
   const isCrossComponent =
-    modification.componentUniqueId || modification.targetComponentType;
+    modification.componentId || modification.targetComponentType;
 
   return (
     <div className="border rounded bg-white hover:bg-gray-50 transition-colors">
@@ -110,7 +103,7 @@ const StateModificationListItem: React.FC<Props> = ({
             {/* State name and type */}
             <div className="flex items-center gap-1.5 mb-1">
               <span className="text-xs font-medium text-gray-900 truncate">
-                {modification.stateName}
+                {state?.name ?? modification.stateId}
               </span>
               {state && (
                 <span
@@ -143,8 +136,8 @@ const StateModificationListItem: React.FC<Props> = ({
                     {modification.operation}
                   </span>
                   <span className="text-xs font-mono text-gray-900">
-                    {modification.valueExpression !== undefined
-                      ? modification.valueExpression
+                    {modification.expression !== undefined
+                      ? modification.expression
                       : formatValue(modification.value as number | string | boolean)}
                   </span>
                 </>
@@ -159,9 +152,9 @@ const StateModificationListItem: React.FC<Props> = ({
                     Target: {modification.targetComponentType}
                   </span>
                 )}
-                {modification.componentUniqueId && (
+                {modification.componentId && (
                   <span className="font-mono">
-                    ID: {modification.componentUniqueId}
+                    ID: {modification.componentId}
                   </span>
                 )}
               </div>
@@ -170,7 +163,7 @@ const StateModificationListItem: React.FC<Props> = ({
             {/* State not found warning */}
             {!state && (
               <div className="mt-1 text-xs text-red-600">
-                ⚠ State not found: {modification.stateUniqueId}
+                ⚠ State not found: {modification.stateId}
               </div>
             )}
           </div>

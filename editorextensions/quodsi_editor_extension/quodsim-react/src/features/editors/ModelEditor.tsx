@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import {
   Model,
   ModelDefaults,
+  Duration,
   PeriodUnit,
   SimulationTimeType,
-  SimulationObjectType,
   StateListManager,
   ValidationResult,
   ScenarioObjectType,
@@ -208,21 +208,22 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   // fields that may be falsy (e.g., seed has no UI input — always defaults).
   const onSaveWithDefaults = useCallback(
     (draft: Model) => {
-      const modelToSave: Model = {
-        ...draft,
-        type: "Model" as any, // Cast: SimulationObjectType.Model is enum; type field expects string literal
-        reps: draft.reps || 1,
-        seed: draft.seed || DEFAULT_RANDOM_SEED,
-        simulationTimeType: draft.simulationTimeType || SimulationTimeType.Clock,
-        oneClockUnit: draft.oneClockUnit || PeriodUnit.HOURS,
-        warmupClockPeriod: draft.warmupClockPeriod || 0,
-        warmupClockPeriodUnit: draft.warmupClockPeriodUnit || PeriodUnit.HOURS,
-        runClockPeriod: draft.runClockPeriod || 0,
-        runClockPeriodUnit: draft.runClockPeriodUnit || PeriodUnit.HOURS,
-        warmupDateTime: draft.warmupDateTime || null,
-        startDateTime: draft.startDateTime || null,
-        finishDateTime: draft.finishDateTime || null,
-      };
+      const modelToSave = new Model(
+        draft.id,
+        draft.name,
+        draft.replications || 1,
+        draft.seed || DEFAULT_RANDOM_SEED,
+        draft.timeUnit || PeriodUnit.HOURS,
+        draft.timeMode || SimulationTimeType.Clock,
+        draft.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS),
+        draft.runTime ?? Duration.constant(0, PeriodUnit.HOURS),
+        draft.warmupDateTime || null,
+        draft.startDateTime || null,
+        draft.finishDateTime || null
+      );
+      modelToSave.description = draft.description;
+      modelToSave.levers = draft.levers;
+      modelToSave.scenarios = draft.scenarios;
       onSave(modelToSave);
     },
     [onSave]
@@ -238,10 +239,10 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   });
 
   // Decisive selects (no useful onBlur): flush save on change.
-  useFlushOnChange(localModelDraft.simulationTimeType, saveNow);
-  useFlushOnChange(localModelDraft.runClockPeriodUnit, saveNow);
-  useFlushOnChange(localModelDraft.oneClockUnit, saveNow);
-  useFlushOnChange(localModelDraft.warmupClockPeriodUnit, saveNow);
+  useFlushOnChange(localModelDraft.timeMode, saveNow);
+  useFlushOnChange(localModelDraft.runTime?.unit, saveNow);
+  useFlushOnChange(localModelDraft.timeUnit, saveNow);
+  useFlushOnChange(localModelDraft.warmupTime?.unit, saveNow);
 
   // Trigger validation when validation tab is selected
   useEffect(() => {
@@ -281,6 +282,36 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
 
+    // Wire-cleanup Phase B2 Task 4/10: runClockPeriod(+Unit)/warmupClockPeriod(+Unit)
+    // collapsed into `runTime`/`warmupTime: Duration` ({value, unit}) — this
+    // panel keeps its own simple number+unit inputs (no distribution editor),
+    // so these four field names now update one piece of the corresponding
+    // Duration while preserving the other.
+    if (name === 'runClockPeriod' || name === 'runClockPeriodUnit') {
+      const base = localModelDraft.runTime ?? Duration.constant(0, PeriodUnit.HOURS);
+      const nextRunTime = name === 'runClockPeriod'
+        ? Duration.constant(parseFloat(value) || 0, base.unit)
+        : Duration.constant(base.value ?? 0, value as PeriodUnit);
+      setLocalModelDraft(prev => updateModelImmutably(prev, { runTime: nextRunTime }));
+      setHasPendingChanges(true);
+      return;
+    }
+    if (name === 'warmupClockPeriod' || name === 'warmupClockPeriodUnit') {
+      const base = localModelDraft.warmupTime ?? Duration.constant(0, PeriodUnit.HOURS);
+      const nextWarmupTime = name === 'warmupClockPeriod'
+        ? Duration.constant(parseFloat(value) || 0, base.unit)
+        : Duration.constant(base.value ?? 0, value as PeriodUnit);
+      setLocalModelDraft(prev => updateModelImmutably(prev, { warmupTime: nextWarmupTime }));
+      setHasPendingChanges(true);
+      return;
+    }
+
+    // Map the panel's stable input `name`s to the clean field names.
+    const fieldName = name === 'reps' ? 'replications'
+      : name === 'simulationTimeType' ? 'timeMode'
+      : name === 'oneClockUnit' ? 'timeUnit'
+      : name;
+
     // Convert values based on input type
     let convertedValue: string | number | Date | null = value;
     if (type === 'number') {
@@ -294,7 +325,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
       convertedValue = value ? new Date(value) : null;
     }
 
-    setLocalModelDraft(prev => updateModelImmutably(prev, { [name]: convertedValue } as Partial<Model>));
+    setLocalModelDraft(prev => updateModelImmutably(prev, { [fieldName]: convertedValue } as Partial<Model>));
     setHasPendingChanges(true);
   };
 
@@ -352,7 +383,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                 </div>
 
                 {/* Run Time - Conditional: Only in Clock mode */}
-                {localModelDraft.simulationTimeType === SimulationTimeType.Clock && (
+                {localModelDraft.timeMode === SimulationTimeType.Clock && (
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       <label className="text-xs font-medium text-gray-700">
@@ -367,7 +398,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         type="number"
                         name="runClockPeriod"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localModelDraft.runClockPeriod || 0}
+                        value={localModelDraft.runTime?.value || 0}
                         onChange={handleChange}
                         min="0"
                         onBlur={saveNow}
@@ -375,7 +406,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                       <select
                         name="runClockPeriodUnit"
                         className="w-full px-2 py-1 text-xs border rounded bg-white"
-                        value={localModelDraft.runClockPeriodUnit || PeriodUnit.HOURS}
+                        value={localModelDraft.runTime?.unit || PeriodUnit.HOURS}
                         onChange={handleChange}
                       >
                         {Object.values(PeriodUnit).map((unit) => (
@@ -410,7 +441,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                         name="reps"
                         data-testid="reps-input"
                         className="w-full px-2 py-1 text-xs border rounded"
-                        value={localModelDraft.reps}
+                        value={localModelDraft.replications}
                         onChange={handleChange}
                         min="1"
                         max={MAX_REPS}
@@ -431,7 +462,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                       <select
                         name="simulationTimeType"
                         className="w-full px-2 py-1 text-xs border rounded bg-white"
-                        value={localModelDraft.simulationTimeType}
+                        value={localModelDraft.timeMode}
                         onChange={handleChange}
                       >
                         {Object.values(SimulationTimeType).map((type) => (
@@ -443,7 +474,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     </div>
 
                     {/* Clock Mode Fields - Conditional */}
-                    {localModelDraft.simulationTimeType === SimulationTimeType.Clock && (
+                    {localModelDraft.timeMode === SimulationTimeType.Clock && (
                       <>
                         {/* Clock Unit */}
                         <div>
@@ -458,7 +489,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                           <select
                             name="oneClockUnit"
                             className="w-full px-2 py-1 text-xs border rounded bg-white"
-                            value={localModelDraft.oneClockUnit}
+                            value={localModelDraft.timeUnit}
                             onChange={handleChange}
                           >
                             {Object.values(PeriodUnit).map((unit) => (
@@ -484,7 +515,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                               type="number"
                               name="warmupClockPeriod"
                               className="w-full px-2 py-1 text-xs border rounded"
-                              value={localModelDraft.warmupClockPeriod || 0}
+                              value={localModelDraft.warmupTime?.value || 0}
                               onChange={handleChange}
                               min="0"
                               onBlur={saveNow}
@@ -492,7 +523,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                             <select
                               name="warmupClockPeriodUnit"
                               className="w-full px-2 py-1 text-xs border rounded bg-white"
-                              value={localModelDraft.warmupClockPeriodUnit || PeriodUnit.HOURS}
+                              value={localModelDraft.warmupTime?.unit || PeriodUnit.HOURS}
                               onChange={handleChange}
                             >
                               {Object.values(PeriodUnit).map((unit) => (
@@ -507,7 +538,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
                     )}
 
                     {/* Calendar Date Mode Fields - Conditional */}
-                    {localModelDraft.simulationTimeType === SimulationTimeType.CalendarDate && (
+                    {localModelDraft.timeMode === SimulationTimeType.CalendarDate && (
                       <>
                         <div>
                           <div className="flex items-center gap-1 mb-1">
@@ -609,7 +640,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
               setRequirementModalOpen(true);
             }}
             onEdit={(req) => {
-              const structure = convertRootClausesToStructure(req.rootClauses);
+              const structure = convertRootClausesToStructure(req.rootClause);
               setEditingRequirement({ id: req.id, name: req.name, structure });
               setRequirementModalOpen(true);
             }}
@@ -649,7 +680,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
           setEditingRequirement(null);
         }}
         onSave={(data) => {
-          const rootClauses = convertStructureToRootClauses(data.structure);
+          const rootClause = convertStructureToRootClauses(data.structure);
 
           // Create the updated/new requirement
           let savedRequirement: ResourceRequirement;
@@ -657,13 +688,13 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
 
           if (editingRequirement) {
             // Update existing requirement (could be editing auto or custom)
-            savedRequirement = new ResourceRequirement(editingRequirement.id, data.name, rootClauses);
+            savedRequirement = new ResourceRequirement(editingRequirement.id, data.name, rootClause);
             updatedRequirementsList = (resourceRequirements || []).map(req =>
               req.id === editingRequirement.id ? savedRequirement : req
             );
           } else {
             // Create new requirement (always custom)
-            savedRequirement = new ResourceRequirement(`req-${Date.now()}`, data.name, rootClauses);
+            savedRequirement = new ResourceRequirement(`req-${Date.now()}`, data.name, rootClause);
             updatedRequirementsList = [...(resourceRequirements || []), savedRequirement];
           }
 
@@ -679,8 +710,7 @@ const ModelEditor: React.FC<Props> = ({ model, onSave, onRemoveModel, onValidate
           const savePayload = customRequirementsToSave.map(req => ({
             id: req.id,
             name: req.name,
-            type: SimulationObjectType.ResourceRequirement,
-            rootClauses: req.rootClauses
+            rootClause: req.rootClause
           }));
 
           // Send custom-only array to extension

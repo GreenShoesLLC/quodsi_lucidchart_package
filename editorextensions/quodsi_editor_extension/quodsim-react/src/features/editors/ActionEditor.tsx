@@ -13,6 +13,7 @@ import {
   JoinAction,
   LoopAction,
   BranchAction,
+  ScriptAction,
   createAssignAction,
   createSeizeAction,
   createReleaseAction,
@@ -145,7 +146,7 @@ function getActionSummary(
   resourceRequirements: ResourceRequirement[],
   availableActivities: Array<{ id: string; name: string }> = []
 ): ActionSummary {
-  const typeLabel = ACTION_TYPE_SHORT_LABELS[action.actionType];
+  const typeLabel = ACTION_TYPE_SHORT_LABELS[action.type];
   let durationText = "-";
   let resourceText = "-";
 
@@ -155,28 +156,29 @@ function getActionSummary(
     return req?.name || "Unknown";
   };
 
+  // Wire-cleanup Phase B2 Task 4/10: `Duration` is now the flat clean-wire
+  // shape ({value, unit} for constant; {distribution, ...params, unit}
+  // otherwise) — no more nested `.distribution` (Distribution instance).
   const formatDuration = (duration: Duration): string => {
-    const unit = PERIOD_UNIT_SHORT[duration.durationPeriodUnit] || "?";
-    const dist = duration.distribution;
-    const distType = DISTRIBUTION_TYPE_SHORT[dist.distributionType] || dist.distributionType;
+    const unit = PERIOD_UNIT_SHORT[duration.unit] || "?";
+    const distType = duration.distribution
+      ? (DISTRIBUTION_TYPE_SHORT[duration.distribution] || duration.distribution)
+      : DISTRIBUTION_TYPE_SHORT[DistributionType.CONSTANT];
 
     // Get the primary value based on distribution type
     let value = "";
-    const params = dist.parameters;
-    if (params) {
-      if ("value" in params && params.value !== undefined) {
-        value = String(params.value);
-      } else if ("mean" in params && params.mean !== undefined) {
-        value = String(params.mean);
-      } else if ("minimum" in params && params.minimum !== undefined) {
-        value = String(params.minimum);
-      }
+    if (duration.distribution === undefined) {
+      if (duration.value !== undefined) value = String(duration.value);
+    } else if (typeof duration.mean === "number") {
+      value = String(duration.mean);
+    } else if (typeof duration.min === "number") {
+      value = String(duration.min);
     }
 
     return value ? `${value} ${unit} ${distType}` : `${distType}`;
   };
 
-  switch (action.actionType) {
+  switch (action.type) {
     case ActionType.ASSIGN: {
       const assignAction = action as AssignAction;
       const count = assignAction.modifications?.length || 0;
@@ -250,7 +252,7 @@ function getActionSummary(
       const trueCount = branchAction.ifTrue?.length || 0;
       const falseCount = branchAction.ifFalse?.length || 0;
       const conditionText = branchAction.condition
-        ? `${branchAction.condition.stateName} ${branchAction.condition.comparison} ${branchAction.condition.value}`
+        ? `${branchAction.condition.stateId} ${branchAction.condition.comparison} ${branchAction.condition.value}`
         : "No condition";
       resourceText = `${conditionText} (${trueCount}/${falseCount})`;
       break;
@@ -289,7 +291,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
   };
 
   const generateRequirementPreview = (req: ResourceRequirement): string => {
-    const structure = convertRootClausesToStructure(req.rootClauses);
+    const structure = convertRootClausesToStructure(req.rootClause);
     return generatePreview(structure, getResourceName);
   };
 
@@ -301,16 +303,24 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         newAction = createAssignAction([]);
         break;
       case ActionType.SEIZE:
-        newAction = createSeizeAction("");
+        // Wire-cleanup Phase B2 Task 6: the old '' scaffold sentinel is
+        // retired — resourceRequirementId is REQUIRED and non-empty on the
+        // clean wire. Absent here is not a valid end state; it's a
+        // validation error the author must resolve (ResourceValidation.ts's
+        // seize_missing_requirement check), same as createSeizeAction()'s
+        // own default.
+        newAction = createSeizeAction();
         break;
       case ActionType.RELEASE:
-        newAction = createReleaseAction("");
+        // Absent resourceRequirementId means "release ALL" on the clean
+        // wire — the valid default, not a sentinel to paper over.
+        newAction = createReleaseAction();
         break;
       case ActionType.DELAY:
-        newAction = createDelayAction(new Duration());
+        newAction = createDelayAction(Duration.constant(0, PeriodUnit.MINUTES));
         break;
       case ActionType.DELAY_WITH_RESOURCE:
-        newAction = createDelayWithResourceAction(new Duration());
+        newAction = createDelayWithResourceAction(Duration.constant(0, PeriodUnit.MINUTES));
         break;
       case ActionType.SPLIT:
         newAction = createSplitAction(1);
@@ -421,7 +431,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
     );
   };
 
-  // Render duration editor
+  // Render duration editor. Wire-cleanup Phase B2 Task 4/10: `Duration` is
+  // the flat clean-wire shape now — bridge to/from the generic `Distribution`
+  // class EnhancedDurationEditor works with via Duration.toDistribution.
   const renderDurationEditor = (
     duration: Duration,
     onDurationChange: (periodUnit: PeriodUnit, distribution: Distribution) => void
@@ -429,8 +441,8 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
     return (
       <EnhancedDurationEditor
         elementId={activityId}
-        periodUnit={duration.durationPeriodUnit}
-        distribution={duration.distribution}
+        periodUnit={duration.unit}
+        distribution={Duration.toDistribution(duration)}
         onChange={onDurationChange}
         label="Duration"
         compact={true}
@@ -438,22 +450,38 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
     );
   };
 
-  // Render collapsible state condition guard section
+  // Render collapsible state condition guard section.
+  //
+  // Wire-cleanup Phase B2 Task 6/10: the old flat era carried BOTH a
+  // generic per-action guard (`stateCondition`) and, for BRANCH only, a
+  // separate routing selector (`condition`). The clean schema has just ONE
+  // `condition` slot per action — for BRANCH, `condition` IS the branch
+  // selector, authored by its own required editor in renderActionContent
+  // below, so this generic guard box must not also render for BRANCH (both
+  // would read/write the same key). ScriptAction carries no condition field
+  // at all (and isn't authorable here regardless).
   const renderStateConditionGuard = () => {
+    if (action.type === ActionType.BRANCH || action.type === ActionType.SCRIPT) {
+      return null;
+    }
+
     const allStates: State[] = states?.getAll() || [];
-    const currentCondition = (action as any).stateCondition as StateCondition | null | undefined;
+    const currentCondition = (action as Exclude<Action, BranchAction | ScriptAction>).condition as StateCondition | null | undefined;
     const hasCondition = !!currentCondition;
+    const conditionStateName = currentCondition
+      ? allStates.find((s) => s.id === currentCondition.stateId)?.name ?? currentCondition.stateId
+      : "";
 
     const conditionSummary = hasCondition
-      ? `When: ${currentCondition!.stateName} ${currentCondition!.comparison} ${currentCondition!.value}`
+      ? `When: ${conditionStateName} ${currentCondition!.comparison} ${currentCondition!.value}`
       : "No condition (always runs)";
 
     const handleGuardConditionUpdate = (updatedCondition: StateCondition) => {
-      onChange({ ...action, stateCondition: updatedCondition } as Action);
+      onChange({ ...action, condition: updatedCondition } as Action);
     };
 
     const handleClearCondition = () => {
-      onChange({ ...action, stateCondition: null } as Action);
+      onChange({ ...action, condition: null } as Action);
       setConditionExpanded(false);
     };
 
@@ -470,7 +498,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           <span className="inline-flex items-center gap-1">
             {conditionExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             <span className={hasCondition ? "font-medium text-blue-700" : ""}>
-              {action.actionType === ActionType.BRANCH ? "Run Condition" : "Condition"}
+              Condition
             </span>
           </span>
           <span className={`text-[10px] ${hasCondition ? "text-blue-600" : "text-gray-400"}`}>
@@ -499,7 +527,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
 
   // Render action-specific content (expanded view)
   const renderActionContent = () => {
-    switch (action.actionType) {
+    switch (action.type) {
       case ActionType.ASSIGN: {
         const assignAction = action as AssignAction;
         if (!states) {
@@ -534,7 +562,16 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           (newId) =>
             onChange({
               ...seizeAction,
-              resourceRequirementId: newId || "",
+              // Wire-cleanup Phase B2 Task 6/10: absent (never `''`) is the
+              // only valid "not set" spelling on the clean wire — `''` is
+              // now a loud validation error, not a second way to say the
+              // same thing. Safe to clear via `undefined` here: the panel
+              // always sends the FULL actions array as one top-level
+              // `q_data` key (StorageAdapter.updateElementData replaces it
+              // wholesale, never merges inside it), and the eventual
+              // JSON.stringify on persist drops an `undefined`-valued key
+              // at any nesting depth — verified against StorageAdapter.ts.
+              resourceRequirementId: newId || undefined,
             }),
           "Resource to Seize"
         );
@@ -547,7 +584,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
           (newId) =>
             onChange({
               ...releaseAction,
-              resourceRequirementId: newId || "",
+              // Absent means "release ALL" on the clean wire (see SEIZE's
+              // comment above for why `undefined`, not `''`, is correct here).
+              resourceRequirementId: newId || undefined,
             }),
           "Resource to Release",
           "All (release all held resources)"
@@ -559,11 +598,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         return renderDurationEditor(delayAction.duration, (periodUnit, distribution) =>
           onChange({
             ...delayAction,
-            duration: {
-              ...delayAction.duration,
-              durationPeriodUnit: periodUnit,
-              distribution,
-            },
+            duration: Duration.fromDistribution(periodUnit, distribution),
           })
         );
       }
@@ -575,11 +610,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             {renderDurationEditor(dwrAction.duration, (periodUnit, distribution) =>
               onChange({
                 ...dwrAction,
-                duration: {
-                  ...dwrAction.duration,
-                  durationPeriodUnit: periodUnit,
-                  distribution,
-                },
+                duration: Duration.fromDistribution(periodUnit, distribution),
               })
             )}
 
@@ -1241,7 +1272,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
         <span className="text-[10px] font-medium text-gray-500 w-4">{index + 1}.</span>
 
         {/* Type Label */}
-        <span className="text-xs font-medium text-gray-700 w-16 truncate" title={ACTION_TYPE_LABELS[action.actionType]}>
+        <span className="text-xs font-medium text-gray-700 w-16 truncate" title={ACTION_TYPE_LABELS[action.type]}>
           {summary.typeLabel}
         </span>
 
@@ -1292,13 +1323,13 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
             <label className="block text-xs text-gray-600 mb-0.5">
               <span className="inline-flex items-center gap-1">
                 Action Type
-                <span title={ACTION_TYPE_DESCRIPTIONS[action.actionType]}>
+                <span title={ACTION_TYPE_DESCRIPTIONS[action.type]}>
                   <Info className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help" />
                 </span>
               </span>
             </label>
             <select
-              value={action.actionType}
+              value={action.type}
               onChange={(e) => handleActionTypeChange(e.target.value as ActionType)}
               className="w-full px-1 py-0.5 text-xs border rounded bg-white"
             >
@@ -1306,9 +1337,9 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
                 // DELAY collapsed into DELAY_WITH_RESOURCE (both labeled "Delay",
                 // resource optional — 86e1uh9n4). LOOP/BRANCH/SCRIPT aren't
                 // authorable in the Lucid editor (SCRIPT is Studio-only). The
-                // leading `type === action.actionType` clause grandfathers a
+                // leading `type === action.type` clause grandfathers a
                 // legacy DELAY action so it stays selectable on its own card.
-                .filter((type) => type === action.actionType || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY && type !== ActionType.SCRIPT))
+                .filter((type) => type === action.type || (type !== ActionType.LOOP && type !== ActionType.BRANCH && type !== ActionType.DELAY && type !== ActionType.SCRIPT))
                 .map((type) => (
                 <option key={type} value={type}>
                   {ACTION_TYPE_LABELS[type]}
@@ -1316,7 +1347,7 @@ export const ActionEditor: React.FC<ActionEditorProps> = ({
               ))}
             </select>
             <p className="mt-0.5 text-[10px] text-gray-500 leading-tight">
-              {ACTION_TYPE_DESCRIPTIONS[action.actionType]}
+              {ACTION_TYPE_DESCRIPTIONS[action.type]}
             </p>
           </div>
 

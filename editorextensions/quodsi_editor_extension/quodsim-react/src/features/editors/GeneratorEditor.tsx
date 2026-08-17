@@ -8,8 +8,6 @@ import {
   Distribution,
   StateListManager,
   ComponentType,
-  EntitySourceConfig,
-  createDefaultEntitySourceConfig,
   ModelDefaults,
   SimulationObjectType,
   isNameUniqueInReferenceData,
@@ -145,6 +143,16 @@ const GeneratorEditor: React.FC<Props> = ({
    * - Raw data objects with nested .data property
    * - Missing/null values (creates default generator)
    *
+   * Wire-cleanup Phase B2 Task 5/10: `EntitySourceConfig`/`generationConfig`
+   * is DISSOLVED — the generation-config fields are flat on `Generator`
+   * itself now (see `@quodsi/shared`'s `Generator.ts`). `gen` here is always
+   * an already-hydrated `Generator` domain object (built by
+   * `GeneratorLucid.createSimObject()`, which reads the live/upgraded
+   * storage shape) or its JSON round-trip through Redux/messaging — both
+   * already carry the flat clean field names, so no old-name fallback is
+   * needed at this layer (the storage-shape migration is `GeneratorLucid`'s
+   * job, not this panel's).
+   *
    * Key responsibilities:
    * - Uses INFINITY_DISPLAY_VALUE for unlimited occurrences/entities
    * - Ensures state modifications are properly initialized
@@ -156,38 +164,32 @@ const GeneratorEditor: React.FC<Props> = ({
    */
   const extractGeneratorData = (gen: any): Generator => {
     const data = gen.data || gen;
-    const existingConfig = data.generationConfig;
-
-    // Build generationConfig, merging existing values with defaults for any missing fields
-    const generationConfig: EntitySourceConfig = {
-      entityId: existingConfig?.entityId ?? data.entityId ?? ModelDefaults.DEFAULT_ENTITY_ID,
-      generatorType: existingConfig?.generatorType ?? data.generatorType ?? GeneratorType.FREQUENCY,
-      periodicOccurrences: existingConfig?.periodicOccurrences ?? data.periodicOccurrences ?? INFINITY_DISPLAY_VALUE,
-      periodIntervalDuration: existingConfig?.periodIntervalDuration ?? data.periodIntervalDuration ?? new Duration(),
-      entitiesPerCreation: existingConfig?.entitiesPerCreation ?? data.entitiesPerCreation ?? 1,
-      periodicStartDuration: existingConfig?.periodicStartDuration ?? data.periodicStartDuration ?? new Duration(),
-      maxEntities: existingConfig?.maxEntities ?? data.maxEntities ?? INFINITY_DISPLAY_VALUE,
-      // PATTERN-mode fields. Lucid has no Pattern editor (see the read-only
-      // notice in the render below), but a generator authored as PATTERN in
-      // Studio or drawio must round-trip these losslessly when opened here —
-      // otherwise editing anything else on the generator (even its name)
-      // would silently revert it toward a FREQUENCY shape.
-      arrivalPatternId: existingConfig?.arrivalPatternId ?? data.arrivalPatternId,
-      volume: existingConfig?.volume ?? data.volume,
-      initialStateModifications: existingConfig?.initialStateModifications
-        ? [...existingConfig.initialStateModifications]
-        : (data.initialStateModifications ? [...data.initialStateModifications] : [])
-    };
 
     const extractedGenerator = new Generator(
       data.id || "",
       data.name || "New Generator",
-      generationConfig,
-      data.exitConnector,
+      data.entityId ?? ModelDefaults.DEFAULT_ENTITY_ID,
+      data.interarrivalTime ?? Duration.constant(1, PeriodUnit.HOURS),
       data.x || 0,
       data.y || 0
     );
 
+    extractedGenerator.mode = data.mode ?? GeneratorType.FREQUENCY;
+    extractedGenerator.batchSize = data.batchSize ?? 1;
+    extractedGenerator.startDelay = data.startDelay ?? Duration.constant(0, PeriodUnit.MINUTES);
+    extractedGenerator.maxCycles = data.maxCycles ?? INFINITY_DISPLAY_VALUE;
+    // PATTERN-mode fields. Lucid has no Pattern editor (see the read-only
+    // notice in the render below), but a generator authored as PATTERN in
+    // Studio or drawio must round-trip these losslessly when opened here —
+    // otherwise editing anything else on the generator (even its name)
+    // would silently revert it toward a FREQUENCY shape.
+    extractedGenerator.arrivalPatternId = data.arrivalPatternId;
+    extractedGenerator.volume = data.volume;
+    extractedGenerator.arrivalScheduleId = data.arrivalScheduleId;
+    extractedGenerator.maxEntities = data.maxEntities ?? INFINITY_DISPLAY_VALUE;
+    extractedGenerator.initialStates = data.initialStates ? [...data.initialStates] : [];
+    extractedGenerator.routing = data.routing ?? extractedGenerator.routing;
+    extractedGenerator.description = data.description ?? '';
     // Preserve scenario levers (additive optional field, not a constructor param).
     extractedGenerator.levers = data.levers ?? [];
 
@@ -211,45 +213,42 @@ const GeneratorEditor: React.FC<Props> = ({
     base: Generator,
     updates: Partial<{
       name: string;
-      exitConnector: string;
-      // generationConfig fields
       entityId: string;
-      generatorType: GeneratorType;
-      periodicOccurrences: number;
-      periodIntervalDuration: Duration;
-      entitiesPerCreation: number;
-      periodicStartDuration: Duration;
+      mode: GeneratorType;
+      maxCycles: number;
+      interarrivalTime: Duration;
+      batchSize: number;
+      startDelay: Duration;
       maxEntities: number;
-      initialStateModifications: any[];
+      initialStates: any[];
       levers: ScenarioLever[];
     }>
   ): Generator => {
-    // Build updated generationConfig. arrivalPatternId/volume (PATTERN mode)
-    // are always carried through from base, never from `updates` — Lucid has
-    // no UI that produces them, and dropping them here would silently corrupt
-    // a generator authored as PATTERN in Studio or drawio (see the read-only
-    // notice in the render below).
-    const updatedConfig: EntitySourceConfig = {
-      entityId: updates.entityId ?? base.generationConfig.entityId,
-      generatorType: updates.generatorType ?? base.generationConfig.generatorType,
-      periodicOccurrences: updates.periodicOccurrences ?? base.generationConfig.periodicOccurrences,
-      periodIntervalDuration: updates.periodIntervalDuration ?? base.generationConfig.periodIntervalDuration,
-      entitiesPerCreation: updates.entitiesPerCreation ?? base.generationConfig.entitiesPerCreation,
-      periodicStartDuration: updates.periodicStartDuration ?? base.generationConfig.periodicStartDuration,
-      maxEntities: updates.maxEntities ?? base.generationConfig.maxEntities,
-      arrivalPatternId: base.generationConfig.arrivalPatternId,
-      volume: base.generationConfig.volume,
-      initialStateModifications: updates.initialStateModifications ?? base.generationConfig.initialStateModifications
-    };
-
     const updated = new Generator(
       base.id,
       updates.name ?? base.name,
-      updatedConfig,
-      updates.exitConnector ?? base.exitConnector,
+      updates.entityId ?? base.entityId,
+      updates.interarrivalTime ?? base.interarrivalTime,
       base.x,
       base.y
     );
+
+    updated.mode = updates.mode ?? base.mode;
+    updated.batchSize = updates.batchSize ?? base.batchSize;
+    updated.startDelay = updates.startDelay ?? base.startDelay;
+    updated.maxCycles = updates.maxCycles ?? base.maxCycles;
+    // arrivalPatternId/volume/arrivalScheduleId (PATTERN/SCHEDULED mode) are
+    // always carried through from base, never from `updates` — Lucid has no
+    // UI that produces them, and dropping them here would silently corrupt a
+    // generator authored as PATTERN/SCHEDULED in Studio or drawio (see the
+    // read-only notice in the render below).
+    updated.arrivalPatternId = base.arrivalPatternId;
+    updated.volume = base.volume;
+    updated.arrivalScheduleId = base.arrivalScheduleId;
+    updated.maxEntities = updates.maxEntities ?? base.maxEntities;
+    updated.initialStates = updates.initialStates ?? base.initialStates;
+    updated.routing = base.routing;
+    updated.description = base.description;
 
     // Preserve scenario levers (not a constructor param — must be copied forward).
     updated.levers = updates.levers ?? base.levers ?? [];
@@ -341,18 +340,18 @@ const GeneratorEditor: React.FC<Props> = ({
   }, [localGeneratorDraft.id]);
 
   // Fire saveNow when entity selection changes (no onBlur on selects).
-  useFlushOnChange(localGeneratorDraft.generationConfig.entityId, saveNow);
+  useFlushOnChange(localGeneratorDraft.entityId, saveNow);
 
   // Fire saveNow when generator type changes. In practice this only fires for
   // FREQUENCY generators today — the "Generator Type" select offers just one
   // value, since Lucid has no Pattern editor (PATTERN generators show a
   // read-only notice instead; see the render below).
-  useFlushOnChange(localGeneratorDraft.generationConfig.generatorType, saveNow);
+  useFlushOnChange(localGeneratorDraft.mode, saveNow);
 
   const entities = referenceData.entities || [];
 
   /** True when this generator was authored as PATTERN elsewhere (Studio, drawio). */
-  const isPatternGenerator = localGeneratorDraft.generationConfig.generatorType === GeneratorType.PATTERN;
+  const isPatternGenerator = localGeneratorDraft.mode === GeneratorType.PATTERN;
 
   /**
    * Validates that the generator name is unique among all generators.
@@ -399,13 +398,13 @@ const GeneratorEditor: React.FC<Props> = ({
       if (name === 'name') {
         updates.name = value;
       } else if (name === 'generatorType') {
-        updates.generatorType = value as GeneratorType;
+        updates.mode = value as GeneratorType;
       } else if (name === 'entityId') {
         updates.entityId = value;
       } else if (name === 'periodicOccurrences') {
-        updates.periodicOccurrences = parseInt(value) || INFINITY_DISPLAY_VALUE;
+        updates.maxCycles = parseInt(value) || INFINITY_DISPLAY_VALUE;
       } else if (name === 'entitiesPerCreation') {
-        updates.entitiesPerCreation = parseInt(value) || 1;
+        updates.batchSize = parseInt(value) || 1;
       } else if (name === 'maxEntities') {
         updates.maxEntities = parseInt(value) || INFINITY_DISPLAY_VALUE;
       }
@@ -431,27 +430,19 @@ const GeneratorEditor: React.FC<Props> = ({
    * fires once the user pauses for 500ms.
    */
   const handleDurationChange = (
-    name: "periodIntervalDuration" | "periodicStartDuration",
+    name: "interarrivalTime" | "startDelay",
     periodUnit: PeriodUnit,
     distribution: Distribution
   ) => {
     setLocalGeneratorDraft(prev => {
-      // Build updated duration object
-      const updates: any = {};
-
-      if (name === "periodIntervalDuration") {
-        updates.periodIntervalDuration = {
-          ...prev.generationConfig.periodIntervalDuration,
-          durationPeriodUnit: periodUnit,
-          distribution,
-        };
-      } else if (name === "periodicStartDuration") {
-        updates.periodicStartDuration = {
-          ...prev.generationConfig.periodicStartDuration,
-          durationPeriodUnit: periodUnit,
-          distribution,
-        };
-      }
+      // Duration (Generator's flat field) mirrors the clean wire grammar
+      // exactly ({value, unit} or {distribution, ...params, unit}) — bridge
+      // from the generic Distribution class EnhancedDurationEditor works
+      // with via Duration.fromDistribution.
+      const nextDuration = Duration.fromDistribution(periodUnit, distribution);
+      const updates: any = name === "interarrivalTime"
+        ? { interarrivalTime: nextDuration }
+        : { startDelay: nextDuration };
 
       return updateGeneratorImmutably(prev, updates);
     });
@@ -473,11 +464,11 @@ const GeneratorEditor: React.FC<Props> = ({
   const handleStateModificationsChange = (mods: any[]) => {
     // Defensive: Filter out state modifications that reference deleted states
     const validModifications = mods.filter(
-      mod => states.getByUniqueId(mod.stateUniqueId) !== undefined
+      mod => states.getByUniqueId(mod.stateId) !== undefined
     );
 
     setLocalGeneratorDraft(prev => updateGeneratorImmutably(prev, {
-      initialStateModifications: validModifications
+      initialStates: validModifications
     }));
     setHasPendingChanges(true);
   };
@@ -553,7 +544,7 @@ const GeneratorEditor: React.FC<Props> = ({
               <select
                 name="entityId"
                 className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                value={localGeneratorDraft.generationConfig.entityId}
+                value={localGeneratorDraft.entityId}
                 onChange={handleInputChange}
               >
                 {entities.map((entity) => (
@@ -581,7 +572,7 @@ const GeneratorEditor: React.FC<Props> = ({
                 <select
                   name="generatorType"
                   className="w-full px-2 py-1.5 text-xs border rounded bg-white"
-                  value={localGeneratorDraft.generationConfig.generatorType}
+                  value={localGeneratorDraft.mode}
                   onChange={handleInputChange}
                 >
                   <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
@@ -602,13 +593,13 @@ const GeneratorEditor: React.FC<Props> = ({
                     changing its initial state modifications) will not affect its
                     arrival pattern.
                   </div>
-                  {localGeneratorDraft.generationConfig.arrivalPatternId && (
+                  {localGeneratorDraft.arrivalPatternId && (
                     <div>
-                      Pattern ID: <span className="font-mono">{localGeneratorDraft.generationConfig.arrivalPatternId}</span>
+                      Pattern ID: <span className="font-mono">{localGeneratorDraft.arrivalPatternId}</span>
                     </div>
                   )}
-                  {localGeneratorDraft.generationConfig.volume !== undefined && (
-                    <div>Volume: {localGeneratorDraft.generationConfig.volume}</div>
+                  {localGeneratorDraft.volume !== undefined && (
+                    <div>Volume: {localGeneratorDraft.volume}</div>
                   )}
                 </div>
               </div>
@@ -626,14 +617,16 @@ const GeneratorEditor: React.FC<Props> = ({
                   </div>
                   <EnhancedDurationEditor
                     periodUnit={
-                      localGeneratorDraft.generationConfig.periodIntervalDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
+                      localGeneratorDraft.interarrivalTime?.unit ?? PeriodUnit.HOURS
                     }
                     distribution={
-                      localGeneratorDraft.generationConfig.periodIntervalDuration!.distribution
+                      Duration.toDistribution(
+                        localGeneratorDraft.interarrivalTime ?? Duration.constant(1, PeriodUnit.HOURS)
+                      )
                     }
                     onChange={(periodUnit, distribution) =>
                       handleDurationChange(
-                        "periodIntervalDuration",
+                        "interarrivalTime",
                         periodUnit,
                         distribution
                       )
@@ -678,7 +671,7 @@ const GeneratorEditor: React.FC<Props> = ({
                           type="number"
                           name="periodicOccurrences"
                           className="w-full px-2 py-1 text-xs border rounded"
-                          value={localGeneratorDraft.generationConfig.periodicOccurrences}
+                          value={localGeneratorDraft.maxCycles ?? INFINITY_DISPLAY_VALUE}
                           onChange={handleInputChange}
                           min="0"
                           onBlur={saveNow}
@@ -697,12 +690,16 @@ const GeneratorEditor: React.FC<Props> = ({
                         </div>
                         <EnhancedDurationEditor
                           periodUnit={
-                            localGeneratorDraft.generationConfig.periodicStartDuration?.durationPeriodUnit ?? PeriodUnit.HOURS
+                            localGeneratorDraft.startDelay?.unit ?? PeriodUnit.HOURS
                           }
-                          distribution={localGeneratorDraft.generationConfig.periodicStartDuration!.distribution}
+                          distribution={
+                            Duration.toDistribution(
+                              localGeneratorDraft.startDelay ?? Duration.constant(0, PeriodUnit.MINUTES)
+                            )
+                          }
                           onChange={(periodUnit, distribution) =>
                             handleDurationChange(
-                              "periodicStartDuration",
+                              "startDelay",
                               periodUnit,
                               distribution
                             )
@@ -730,7 +727,7 @@ const GeneratorEditor: React.FC<Props> = ({
                               type="number"
                               name="entitiesPerCreation"
                               className="w-full px-2 py-1 text-xs border rounded"
-                              value={localGeneratorDraft.generationConfig.entitiesPerCreation}
+                              value={localGeneratorDraft.batchSize ?? 1}
                               onChange={handleInputChange}
                               min="1"
                               onBlur={saveNow}
@@ -749,7 +746,7 @@ const GeneratorEditor: React.FC<Props> = ({
                               type="number"
                               name="maxEntities"
                               className="w-full px-2 py-1 text-xs border rounded"
-                              value={localGeneratorDraft.generationConfig.maxEntities}
+                              value={localGeneratorDraft.maxEntities ?? INFINITY_DISPLAY_VALUE}
                               onChange={handleInputChange}
                               min="1"
                               onBlur={saveNow}
@@ -767,7 +764,7 @@ const GeneratorEditor: React.FC<Props> = ({
               objectType={ScenarioObjectType.GENERATOR}
               componentName={localGeneratorDraft.name}
               levers={localGeneratorDraft.levers ?? []}
-              currentDistributionType={localGeneratorDraft.generationConfig.periodIntervalDuration?.distribution?.distributionType}
+              currentDistributionType={localGeneratorDraft.interarrivalTime?.distribution}
               onChange={(next) => {
                 setLocalGeneratorDraft((prev) =>
                   updateGeneratorImmutably(prev, { levers: next })
@@ -780,7 +777,7 @@ const GeneratorEditor: React.FC<Props> = ({
 
         {activeTab === "events" && (
           <StateModificationsEditor
-            modifications={localGeneratorDraft.generationConfig.initialStateModifications || []}
+            modifications={localGeneratorDraft.initialStates || []}
             onModificationsChange={handleStateModificationsChange}
             states={states}
             title="Initial State Modifications"

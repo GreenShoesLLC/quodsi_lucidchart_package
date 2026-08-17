@@ -52,8 +52,8 @@ const unranked = {
   id: "act-1",
   name: "Doctor",
   capacity: 1,
-  inboundQueueCapacity: 999999,
-  outboundQueueCapacity: 999999,
+  inboundCapacity: 999999,
+  outboundCapacity: 999999,
   actions: [],
 } as any;
 
@@ -68,10 +68,10 @@ describe("ActivityEditor — queueRanking preservation", () => {
     id: "act-1",
     name: "Doctor",
     capacity: 1,
-    inboundQueueCapacity: 999999,
-    outboundQueueCapacity: 999999,
+    inboundCapacity: 999999,
+    outboundCapacity: 999999,
     actions: [],
-    queueRanking: { stateName: "severity", order: "ASCENDING" },
+    queueRanking: { stateId: "s1", order: "ascending" },
   } as any;
 
   it("keeps the ranking when an unrelated field is edited", async () => {
@@ -86,7 +86,7 @@ describe("ActivityEditor — queueRanking preservation", () => {
     fireEvent.blur(nameInput);
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const saved = onSave.mock.calls.at(-1)[0];
-    expect(saved.queueRanking).toEqual({ stateName: "severity", order: "ASCENDING" });
+    expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
   });
 
   // The case that fails under `updates.queueRanking ?? base.queueRanking`:
@@ -112,10 +112,10 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
     id: "act-1",
     name: "Doctor",
     capacity: 1,
-    inboundQueueCapacity: 999999,
-    outboundQueueCapacity: 999999,
+    inboundCapacity: 999999,
+    outboundCapacity: 999999,
     actions: [],
-    queueRanking: { stateName: "severity", order: "ASCENDING" },
+    queueRanking: { stateId: "s1", order: "ascending" },
   } as any;
 
   async function saveAfterRename(activity: any) {
@@ -136,7 +136,7 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
 
   it("declares nothing while a ranking is set", async () => {
     const saved = await saveAfterRename(ranked);
-    expect(saved.queueRanking).toEqual({ stateName: "severity", order: "ASCENDING" });
+    expect(saved.queueRanking).toEqual({ stateId: "s1", order: "ascending" });
     expect(CLEARED_FIELDS_KEY in saved).toBe(false);
   });
 });
@@ -162,8 +162,8 @@ describe("ActivityEditor — queue ranking control", () => {
     await userEvent.selectOptions(picker, "severity");
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls.at(-1)[0].queueRanking).toEqual({
-      stateName: "severity",
-      order: "ASCENDING",
+      stateId: "s1",
+      order: "ascending",
     });
   });
 

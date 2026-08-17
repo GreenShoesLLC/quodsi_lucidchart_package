@@ -126,22 +126,16 @@ export const RoutingConfigurationPanel: React.FC<
     );
 
     // Copy optional properties
-    if (updates.entityTemplateUniqueId !== undefined) {
-      updated.entityTemplateUniqueId = updates.entityTemplateUniqueId;
+    if (updates.entityId !== undefined) {
+      updated.entityId = updates.entityId;
     } else {
-      updated.entityTemplateUniqueId = base.entityTemplateUniqueId;
+      updated.entityId = base.entityId;
     }
 
-    if (updates.stateCondition !== undefined) {
-      updated.stateCondition = updates.stateCondition;
+    if (updates.condition !== undefined) {
+      updated.condition = updates.condition;
     } else {
-      updated.stateCondition = base.stateCondition;
-    }
-
-    if (updates.stateModifications !== undefined) {
-      updated.stateModifications = updates.stateModifications;
-    } else {
-      updated.stateModifications = base.stateModifications;
+      updated.condition = base.condition;
     }
 
     // Preserve scenario levers (not a constructor param — must be copied forward).
@@ -241,7 +235,7 @@ export const RoutingConfigurationPanel: React.FC<
     entityTemplateId: string
   ) => {
     handleConnectorChange(connectorId, {
-      entityTemplateUniqueId: entityTemplateId,
+      entityId: entityTemplateId,
     });
   };
 
@@ -361,7 +355,7 @@ export const RoutingConfigurationPanel: React.FC<
           {/* Connector list */}
           <div className="space-y-3">
             {localConnectors.map((connector) => {
-              const condition = connector.stateCondition || null;
+              const condition = connector.condition || null;
 
               return (
                 <div
@@ -388,16 +382,17 @@ export const RoutingConfigurationPanel: React.FC<
                       states={entityStateOptions}
                       onChange={(updatedCondition) => {
                         handleConnectorChange(connector.id, {
-                          stateCondition: updatedCondition,
+                          condition: updatedCondition,
                         });
                       }}
                     />
 
                     {/* Display condition summary */}
-                    {condition?.stateName && condition.value !== "" && (
+                    {condition?.stateId && condition.value !== "" && (
                       <div className="text-xs text-gray-600 bg-white p-2 rounded border mt-2">
                         <span className="font-medium">Condition:</span>{" "}
-                        {condition.stateName} {condition.comparison}{" "}
+                        {entityStateOptions.find((s) => s.id === condition.stateId)?.name ?? condition.stateId}{" "}
+                        {condition.comparison}{" "}
                         {String(condition.value)}
                       </div>
                     )}
@@ -461,7 +456,7 @@ export const RoutingConfigurationPanel: React.FC<
                   </label>
                   <select
                     className="w-full px-2 py-1 text-xs border rounded bg-white"
-                    value={connector.entityTemplateUniqueId || ""}
+                    value={connector.entityId || ""}
                     onChange={(e) =>
                       handleEntityTemplateChange(connector.id, e.target.value)
                     }
