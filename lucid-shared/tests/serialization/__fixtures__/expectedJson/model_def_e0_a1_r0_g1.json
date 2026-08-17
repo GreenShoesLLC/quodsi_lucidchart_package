@@ -2,7 +2,7 @@
   "schemaVersion": "2026.11.01",
   "metadata": {
     "version": "2026.11.01",
-    "timestamp": "2026-08-16T23:37:18.317Z"
+    "timestamp": "2026-08-17T11:46:39.973Z"
   },
   "name": "Model E0A1R0G1",
   "replications": 1,
@@ -26,7 +26,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "e15b3407-b778-461a-9fe6-8e4b123af577",
+          "id": "790d7142-e719-46d1-a984-ed59f94ac820",
           "type": "delay",
           "duration": {
             "unit": "minutes",
@@ -46,8 +46,7 @@
         "value": 1,
         "unit": "hours"
       },
-      "maxCycles": 10,
-      "maxEntities": 999999
+      "maxCycles": 10
     }
   ],
   "connectors": [

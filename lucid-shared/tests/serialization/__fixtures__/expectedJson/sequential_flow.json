@@ -2,7 +2,7 @@
   "schemaVersion": "2026.11.01",
   "metadata": {
     "version": "2026.11.01",
-    "timestamp": "2026-08-16T23:37:18.415Z"
+    "timestamp": "2026-08-17T11:46:40.106Z"
   },
   "name": "Sequential Flow Model",
   "replications": 1,
@@ -30,7 +30,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "aadc950b-538c-436a-96dc-9b9409584754",
+          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -47,7 +47,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "aadc950b-538c-436a-96dc-9b9409584754",
+          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -64,7 +64,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "aadc950b-538c-436a-96dc-9b9409584754",
+          "id": "b7ad695a-e27b-4b3c-823e-f4e08a9853af",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -90,8 +90,7 @@
         "value": 1,
         "unit": "hours"
       },
-      "maxCycles": 10,
-      "maxEntities": 999999
+      "maxCycles": 10
     }
   ],
   "connectors": [

@@ -107,13 +107,21 @@ export class GeneratorLucid extends SimObjectLucid<Generator> {
         generator.mode = storedData?.mode ?? GeneratorType.FREQUENCY;
         generator.batchSize = storedData?.batchSize;
         generator.startDelay = storedData?.startDelay;
-        // Set default values for maxCycles and maxEntities if not set.
-        // Using == null catches both null and undefined for robustness with legacy data.
-        generator.maxCycles = storedData?.maxCycles ?? 999999;
+        // Smoke-finding SF-1(b): honest absence stays absent. This used to
+        // default `?? 999999`, manufacturing an explicit legacy-sentinel
+        // value on the in-memory record even when storage genuinely omitted
+        // the field — which then leaked onto the wire as
+        // `"maxCycles": 999999, "maxEntities": 999999` (the shared-layer
+        // `Generator.toJSON()` fix, SF-1(a), now collapses the sentinel if
+        // it DOES show up, but the record itself should never invent one).
+        // A display default belongs at the DISPLAY layer — see
+        // `GeneratorEditor.tsx`'s own `INFINITY_DISPLAY_VALUE` fallback,
+        // which already does this independently for the panel's UI.
+        generator.maxCycles = storedData?.maxCycles;
         generator.arrivalPatternId = storedData?.arrivalPatternId;
         generator.volume = storedData?.volume;
         generator.arrivalScheduleId = storedData?.arrivalScheduleId;
-        generator.maxEntities = storedData?.maxEntities ?? 999999;
+        generator.maxEntities = storedData?.maxEntities;
         generator.routing = storedData?.routing ?? ConnectType.Probability;
 
         // Restore description

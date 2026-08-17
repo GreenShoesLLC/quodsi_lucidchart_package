@@ -2,7 +2,7 @@
   "schemaVersion": "2026.11.01",
   "metadata": {
     "version": "2026.11.01",
-    "timestamp": "2026-08-16T23:37:18.374Z"
+    "timestamp": "2026-08-17T11:46:40.076Z"
   },
   "name": "Model E1A1R2G1",
   "replications": 1,
@@ -30,7 +30,7 @@
       "outboundCapacity": 1,
       "actions": [
         {
-          "id": "19dc0776-0729-4808-988b-1b285b42bc72",
+          "id": "3e8025be-cb15-4310-9e14-4b65afbfa8c0",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -39,7 +39,7 @@
           "resourceRequirementId": "resource-1"
         },
         {
-          "id": "94d23fd9-9bb6-4e6f-a760-3f8565c3b2f8",
+          "id": "3e556b39-18be-4657-b1d0-5c92353d9252",
           "type": "delay_with_resource",
           "duration": {
             "unit": "minutes",
@@ -69,8 +69,7 @@
         "value": 1,
         "unit": "hours"
       },
-      "maxCycles": 10,
-      "maxEntities": 999999
+      "maxCycles": 10
     }
   ],
   "connectors": [
