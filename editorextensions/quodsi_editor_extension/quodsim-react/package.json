@@ -20,7 +20,7 @@
     "test:run": "vitest run",
     "lint:hooks": "node scripts/lint-hooks.js",
     "smoke:dev": "node scripts/dev-smoke.mjs",
-    "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && vite",
+    "start": "cd ../../../lucid-shared && npm run build && cd ../editorextensions/quodsi_editor_extension/quodsim-react && vite --force",
     "postinstall": "cd ../../../lucid-shared && npm run build"
   },
   "browserslist": {
