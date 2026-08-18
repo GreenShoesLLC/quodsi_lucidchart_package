@@ -62,7 +62,7 @@ export class DocumentContext {
       metadata: metadata || this.context.metadata
     };
     
-    log.debug('Updated context:', {
+    log.trace('Updated context:', {
       documentId,
       pageId,
       isQuodsiModel

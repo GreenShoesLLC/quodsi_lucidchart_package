@@ -42,7 +42,7 @@ export class ProcessorFactory {
    * @returns The appropriate processor for the selection type
    */
   public static createProcessor(selectionType: SelectionType): BaseSelectionProcessor {
-    log.debug('Creating processor for selection type:', selectionType);
+    log.trace('Creating processor for selection type:', selectionType);
     
     const processor = ProcessorFactory.processors.get(selectionType);
     

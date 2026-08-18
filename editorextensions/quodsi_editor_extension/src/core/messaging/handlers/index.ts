@@ -30,13 +30,13 @@ export class MessageHandlers {
    * @returns Whether the message was handled by any handler
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
-    log.debug(`Handling message type: ${msg.type}`);
+    log.trace(`Handling message type: ${msg.type}`);
     
     // Try each handler in order of priority
 
     // Framework messages have highest priority
     if (FrameworkHandler.handleMessage(msg)) {
-      log.debug(`Message ${msg.type} handled by FrameworkHandler`);
+      log.trace(`Message ${msg.type} handled by FrameworkHandler`);
       return true;
     }
 

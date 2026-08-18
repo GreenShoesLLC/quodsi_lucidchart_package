@@ -23,8 +23,6 @@ export class SwimLaneProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing swimlane selection');
-
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
 
@@ -84,7 +82,7 @@ export class SwimLaneProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      log.debug('Processed swimlane data:', {
+      log.trace('Processed swimlane data:', {
         id: item.id,
         laneCount: laneInfos.length,
         hasExistingData: !!swimlaneData,

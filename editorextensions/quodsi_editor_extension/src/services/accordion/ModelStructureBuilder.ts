@@ -5,8 +5,6 @@ const log = getLogger('ModelStructureBuilder');
 
 export class ModelStructureBuilder {
     public static buildModelStructure(modelData: ModelDefinition): ModelStructure {
-        log.debug('ModelStructureBuilder.buildModelStructure');
-
         if (!modelData) {
             log.warn('Empty model data');
             return { elements: [], hierarchy: {} };
@@ -66,7 +64,6 @@ export class ModelStructureBuilder {
             });
         });
 
-        log.debug('Build complete:', { totalElements: elements.length });
         return { elements, hierarchy };
     }
 }
