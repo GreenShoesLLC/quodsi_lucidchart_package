@@ -20,7 +20,7 @@ export function useSelectionState() {
   
   // Combine state and actions into a single object
   const selectionState = useMemo(() => {
-    log.debug('Processing selection state update', {
+    log.trace('Processing selection state update', {
       hasDocumentContext: !!selection.documentContext,
       hasSelectedElements: !!selection.selectedElements?.length,
       selectionLastUpdated: selection.lastUpdated
@@ -39,7 +39,7 @@ export function useSelectionState() {
     if (!selection.documentContext) {
       log.warn('Using fallback document context - original is missing');
     } else {
-      log.debug('Using actual document context with isQuodsiModel:',
+      log.trace('Using actual document context with isQuodsiModel:',
         selection.documentContext.isQuodsiModel);
     }
 
@@ -80,7 +80,7 @@ export function useSelectionState() {
         convertPage()
     };
     
-    log.debug('Returning selection state:', {
+    log.trace('Returning selection state:', {
       documentId: result.documentId,
       documentTitle: result.documentTitle,
       isQuodsiModel: result.isQuodsiModel,

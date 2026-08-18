@@ -106,9 +106,6 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
               selectedConnectorId={selectedConnectorId}
               onConnectorUpdate={(connectorId, updates) => {
                 // Connector updates are handled via messaging in the panel
-                if (isDevelopment) {
-                  log.debug('Connector updated:', connectorId, updates);
-                }
               }}
             />
           </div>

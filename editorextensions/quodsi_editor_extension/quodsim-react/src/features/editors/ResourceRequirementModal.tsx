@@ -124,19 +124,6 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
     }
   }, [isOpen, editingRequirement]);
 
-  // Debug logging to verify availableResources
-  useEffect(() => {
-    if (isOpen) {
-      log.debug('Modal opened with:', {
-        isOpen,
-        availableResourcesCount: availableResources.length,
-        availableResources: availableResources,
-        editingRequirement: editingRequirement ? editingRequirement.name : 'none',
-        templatesCount: createTemplates(availableResources).length
-      });
-    }
-  }, [isOpen, availableResources, editingRequirement]);
-
   if (!isOpen) return null;
 
   const templates = createTemplates(availableResources);

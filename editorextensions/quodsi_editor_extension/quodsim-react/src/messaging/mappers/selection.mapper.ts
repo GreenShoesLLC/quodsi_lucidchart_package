@@ -94,7 +94,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         };
       };
       
-      logger.debug('SELECTION_CHANGED referenceData check:', {
+      logger.trace('SELECTION_CHANGED referenceData check:', {
         hasReferenceData: !!selectionData.referenceData,
         referenceDataKeys: selectionData.referenceData ? Object.keys(selectionData.referenceData) : [],
         generatorsCount: selectionData.referenceData?.generators?.length || 0,

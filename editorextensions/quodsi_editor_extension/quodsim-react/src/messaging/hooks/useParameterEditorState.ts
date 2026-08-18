@@ -43,10 +43,10 @@ export function useParameterEditorState<T>(
   // Sync with prop only when safe (not dirty and not saving)
   useEffect(() => {
     if (!isDirty && !isSaving) {
-      log.debug('Syncing with prop value:', propValue);
+      log.trace('Syncing with prop value:', propValue);
       setLocalValue(propValue);
     } else {
-      log.debug('Sync blocked:', { isDirty, isSaving });
+      log.trace('Sync blocked:', { isDirty, isSaving });
     }
   }, [propValue, isDirty, isSaving]);
 
@@ -54,7 +54,6 @@ export function useParameterEditorState<T>(
   useEffect(() => {
     if (!isSaving && isDirty) {
       // Save just completed, clear dirty flag
-      log.debug('Save completed, clearing isDirty flag');
       setIsDirty(false);
     }
   }, [isSaving, isDirty]);
@@ -128,17 +127,16 @@ export function useMultiParameterEditorState<T extends Record<string, any>>(
   // Sync with props when safe
   useEffect(() => {
     if (!isDirty && !isSaving) {
-      logMulti.debug('Syncing with prop params:', propParams);
+      logMulti.trace('Syncing with prop params:', propParams);
       setLocalParams(propParams);
     } else {
-      logMulti.debug('Sync blocked:', { isDirty, isSaving });
+      logMulti.trace('Sync blocked:', { isDirty, isSaving });
     }
   }, [propParams, isDirty, isSaving]);
 
   // Clear isDirty when save completes
   useEffect(() => {
     if (!isSaving && isDirty) {
-      logMulti.debug('Save completed, clearing isDirty flag');
       setIsDirty(false);
     }
   }, [isSaving, isDirty]);

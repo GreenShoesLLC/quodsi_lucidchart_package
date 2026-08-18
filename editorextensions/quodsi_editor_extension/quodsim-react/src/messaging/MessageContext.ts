@@ -39,7 +39,7 @@ export function useSelection() {
   const { selection } = useMessaging();
   
   // Add enhanced logging
-  log.debug('Selection state retrieved:', {
+  log.trace('Selection state retrieved:', {
     selectedElementsCount: selection?.selectedElements?.length || 0,
     hasDocumentContext: !!selection?.documentContext,
     lastUpdated: selection?.lastUpdated,

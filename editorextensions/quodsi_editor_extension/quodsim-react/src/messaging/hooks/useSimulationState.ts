@@ -33,8 +33,6 @@ export function useSimulationState(pollingInterval?: number) {
       const intervalId = window.setInterval(() => {
         // Poll for updates - this would typically involve sending a message
         // to request the current simulation status
-        log.debug('Polling for simulation updates...');
-        
         // For now, we don't have a specific "poll" message in the protocol
         // This would be added to the simulationSender if needed
       }, pollingInterval);

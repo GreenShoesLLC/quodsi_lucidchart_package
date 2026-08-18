@@ -63,7 +63,7 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   const { updateElementData } = useModelOpsSender();
 
   if (isDevelopment) {
-    log.debug("Rendered with:", {
+    log.trace("Rendered with:", {
       activityId: activity?.id,
       activityName: activity?.name,
       connectorsCount: outgoingConnectors?.length,
