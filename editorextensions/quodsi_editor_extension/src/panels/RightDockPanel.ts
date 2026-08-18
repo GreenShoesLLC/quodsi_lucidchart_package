@@ -374,19 +374,4 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         this.debug.debug('Auth ready — retrying deferred model upsert/sync');
         await this.upsertAndSyncOnPanelInit(document, currentPage);
     }
-
-    /**
-     * Enables or disables logging
-     */
-    public setLogging(enabled: boolean): void {
-        // This method is kept for backward compatibility but now delegates to the
-        // shared logger's runtime override, in place of the retired per-component
-        // debug service's enable/disable-component calls. 'error' is the same
-        // "effectively muted" convention extension.ts's namespaceLevels uses.
-        const debugGlobal = (window as any).QUODSI_DEBUG;
-        if (debugGlobal && typeof debugGlobal.setNamespaceLevel === 'function') {
-            debugGlobal.setNamespaceLevel('RightDockPanel', enabled ? 'debug' : 'error');
-        }
-        this.debug.debug(`Logging ${enabled ? 'enabled' : 'disabled'}`);
-    }
 }

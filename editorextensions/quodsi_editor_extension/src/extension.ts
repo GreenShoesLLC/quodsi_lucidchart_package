@@ -63,7 +63,6 @@ AnalyticsHandler.initialize(client);
 let rightDockPanel;
 console.info('[EXT][extension] About to create RightDockPanel');
 rightDockPanel = new RightDockPanel(client, modelManager);
-rightDockPanel.setLogging(true);
 console.info('[EXT][extension] Created RightDockPanel');
 
 // Initialize the SelectionHandler with model manager
