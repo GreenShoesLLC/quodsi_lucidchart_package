@@ -11,7 +11,7 @@ import { StorageAdapter } from '../../StorageAdapter';
 import { LucidElementFactory } from '../../../services/LucidElementFactory';
 import { LucidPageAnalyzer } from '../../../services/conversion/LucidPageAnalyzer';
 import { LucidPageConversionService } from '../../../services/conversion/LucidPageConversionService';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { SelectionHandler } from './selection';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { canonicalModelName, pushModelDefinitionSnapshot } from '../../sync/scenarioSync';
@@ -69,7 +69,7 @@ export function buildAutoMappings(
  * remove-then-add path). The inbound requestId is echoed in every result.
  */
 export class DiagramMappingRelayHandler {
-  private static logger = ExtensionDebugService.forComponent('DiagramMappingRelayHandler');
+  private static logger = getLogger('DiagramMappingRelayHandler');
 
   /**
    * Handle messages related to diagram-mapping relay operations.
@@ -117,7 +117,7 @@ export class DiagramMappingRelayHandler {
     const requestId = (msg.data as { requestId?: number })?.requestId;
     const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
     try {
-      DiagramMappingRelayHandler.logger.log('ANALYZE_PAGE received', { requestId });
+      DiagramMappingRelayHandler.logger.debug('ANALYZE_PAGE received', { requestId });
       const client = ModelManager.getClient();
       const viewport = new Viewport(client);
       const page = viewport.getCurrentPage();
@@ -127,7 +127,7 @@ export class DiagramMappingRelayHandler {
       const pageAnalyzer = new LucidPageAnalyzer();
       const previewData = pageAnalyzer.analyzePageForPreview(page, storageAdapter);
 
-      DiagramMappingRelayHandler.logger.log('ANALYZE_PAGE complete', {
+      DiagramMappingRelayHandler.logger.debug('ANALYZE_PAGE complete', {
         requestId,
         pageId: previewData.pageId,
         totalMappings: previewData.mappings.length,
@@ -159,7 +159,7 @@ export class DiagramMappingRelayHandler {
     const requestId = data?.requestId;
     const channel = DiagramMappingRelayHandler.getResponseChannel(msg);
     try {
-      DiagramMappingRelayHandler.logger.log('APPLY_SHAPE_CHANGES received', {
+      DiagramMappingRelayHandler.logger.debug('APPLY_SHAPE_CHANGES received', {
         requestId,
         changeCount: data?.changes?.length ?? 0,
       });
@@ -180,7 +180,7 @@ export class DiagramMappingRelayHandler {
 
       const result = await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
 
-      DiagramMappingRelayHandler.logger.log('APPLY_SHAPE_CHANGES complete', { requestId, result });
+      DiagramMappingRelayHandler.logger.debug('APPLY_SHAPE_CHANGES complete', { requestId, result });
 
       // Refresh the main editor: re-broadcast the selection/context so a shape
       // that's still selected behind the modal reflects its new mapping (without
@@ -220,7 +220,7 @@ export class DiagramMappingRelayHandler {
    */
   private static async handleAutoConvert(msg: EnvelopeBase): Promise<void> {
     try {
-      DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE received');
+      DiagramMappingRelayHandler.logger.debug('AUTO_CONVERT_PAGE received');
 
       const client = ModelManager.getClient();
       const modelManager = ModelManager.getInstance();
@@ -243,14 +243,14 @@ export class DiagramMappingRelayHandler {
       // All auto-proposed — no user overrides
       const userOverrideIds = new Set<string>();
 
-      DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE: converting', {
+      DiagramMappingRelayHandler.logger.debug('AUTO_CONVERT_PAGE: converting', {
         pageId: previewData.pageId,
         mappingCount: finalMappings.size,
       });
 
       await service.convertPageWithMappings(page, finalMappings, userOverrideIds);
 
-      DiagramMappingRelayHandler.logger.log('AUTO_CONVERT_PAGE: conversion complete, refreshing UI');
+      DiagramMappingRelayHandler.logger.debug('AUTO_CONVERT_PAGE: conversion complete, refreshing UI');
 
       DiagramMappingRelayHandler.postConvertRefresh(client, page.id, modelManager);
 
@@ -303,7 +303,7 @@ export class DiagramMappingRelayHandler {
         DiagramMappingRelayHandler.logger.error('postConvertRefresh: selection refresh failed', e);
       }
 
-      DiagramMappingRelayHandler.logger.log('postConvertRefresh: sent context refresh messages');
+      DiagramMappingRelayHandler.logger.debug('postConvertRefresh: sent context refresh messages');
 
       const modelName = await canonicalModelName(modelManager);
       LucidDataActionUtility.performDataAction(client, {
@@ -312,7 +312,7 @@ export class DiagramMappingRelayHandler {
         actionData: { documentId, pageId, modelName },
         asynchronous: false,
       }).then(() => {
-        DiagramMappingRelayHandler.logger.log('postConvertRefresh: model registered in database');
+        DiagramMappingRelayHandler.logger.debug('postConvertRefresh: model registered in database');
         void pushModelDefinitionSnapshot(client, { documentId, pageId, modelName }).catch(err => {
           DiagramMappingRelayHandler.logger.error('postConvertRefresh: failed to seed model snapshot:', err);
         });

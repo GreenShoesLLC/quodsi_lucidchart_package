@@ -1,7 +1,7 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { Channel, PanelRole } from './types';
 import { RoutablePanel } from './RoutablePanel';
-import { ExtensionDebugService } from '../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 /**
  * Manages communication channels with panels
@@ -24,18 +24,18 @@ export class ChannelManager {
   /**
    * Debug service for this component
    */
-  private debug = ExtensionDebugService.forComponent('ChannelManager');
+  private debug = getLogger('ChannelManager');
   
   constructor(logFn: (message: string) => void) {
     this.logFn = logFn;
-    this.debug.log('Constructed');
+    this.debug.debug('Constructed');
   }
   
   /**
    * Register a panel with a channel
    */
   public registerChannel(role: PanelRole, panel: RoutablePanel): void {
-    this.debug.log(`Registering ${role} panel:`, {
+    this.debug.debug(`Registering ${role} panel:`, {
       panelExists: !!panel,
       panelType: panel ? panel.constructor.name : 'unknown',
       panelRole: role, // Add the role explicitly for clarity
@@ -51,7 +51,7 @@ export class ChannelManager {
    * Mark a channel as ready
    */
   public markChannelReady(role: PanelRole): void {
-    this.debug.log(`Marking channel ${role} as ready`);
+    this.debug.debug(`Marking channel ${role} as ready`);
     const ch = this.channels[role];
     ch.ready = true;
     
@@ -59,7 +59,7 @@ export class ChannelManager {
     if (!ch.panel) {
       this.debug.error(`Channel ${role} marked ready but has no panel!`);
     } else {
-      this.debug.log(`Channel ${role} has valid panel:`, {
+      this.debug.debug(`Channel ${role} has valid panel:`, {
         panelType: ch.panel.constructor.name,
         panelRole: role, // Add the role explicitly
         queueSize: ch.queue.length
@@ -104,7 +104,7 @@ export class ChannelManager {
    */
   public enqueueOrSend(role: PanelRole, msg: EnvelopeBase): void {
     const ch = this.channels[role];
-    this.debug.log(`enqueueOrSend for ${role}:`, {
+    this.debug.debug(`enqueueOrSend for ${role}:`, {
       isReady: ch.ready,
       hasPanel: !!ch.panel,
       msgType: msg.type,
@@ -158,7 +158,7 @@ export class ChannelManager {
   public flushQueue(role: PanelRole): void {
     const ch = this.channels[role];
     
-    this.debug.log(`Flushing queue for ${role}:`, {
+    this.debug.debug(`Flushing queue for ${role}:`, {
       queueSize: ch.queue.length,
       hasPanel: !!ch.panel,
       isReady: ch.ready,
@@ -215,11 +215,11 @@ export class ChannelManager {
         }
       });
       
-      this.debug.log(`Queue flush complete. Remaining messages: ${ch.queue.length}`);
+      this.debug.debug(`Queue flush complete. Remaining messages: ${ch.queue.length}`);
       
       // If queue is empty, double-check panel readiness
       if (ch.queue.length === 0) {
-        this.debug.log(`Queue for ${role} is now empty. Panel ready: ${ch.ready}`);
+        this.debug.debug(`Queue for ${role} is now empty. Panel ready: ${ch.ready}`);
       }
     } catch (err) {
       this.debug.error(`Unexpected error in flushQueue:`, {
@@ -239,7 +239,7 @@ export class ChannelManager {
   public forceDeliverMessage(role: PanelRole, msgType: EnvelopeMessageType, data: any = {}): void {
     const ch = this.channels[role];
     
-    this.debug.log(`Force delivering ${msgType} to ${role}`, {
+    this.debug.debug(`Force delivering ${msgType} to ${role}`, {
       hasPanel: !!ch.panel,
       isReady: ch.ready
     });
@@ -267,7 +267,7 @@ export class ChannelManager {
       
       // Force delivery regardless of queue state
       ch.panel.relayToIframe(msg);
-      this.debug.log(`Successfully force delivered ${msgType} to ${role}`);
+      this.debug.debug(`Successfully force delivered ${msgType} to ${role}`);
     } catch (err) {
       this.debug.error(`Error force delivering message:`, {
         error: err instanceof Error ? err.message : String(err),
@@ -282,10 +282,10 @@ export class ChannelManager {
    * This helps diagnose issues with channel registration
    */
   public dumpChannelState(): void {
-    this.debug.log('CHANNEL STATE DUMP:');
+    this.debug.debug('CHANNEL STATE DUMP:');
     
     Object.entries(this.channels).forEach(([role, channel]) => {
-      this.debug.log(`Channel '${role}' state:`, {
+      this.debug.debug(`Channel '${role}' state:`, {
         role,
         ready: channel.ready,
         hasPanel: !!channel.panel,

@@ -9,13 +9,13 @@ import {
   SimulationObjectType
 } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
-import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 /**
  * Utility functions for building model item data
  */
 export const itemDataBuilder = {
-  debug: ExtensionDebugService.forComponent('ItemDataBuilder'),
+  debug: getLogger('ItemDataBuilder'),
   /**
    * Gets name from a block's text areas
    * @param block The block proxy
@@ -47,7 +47,7 @@ export const itemDataBuilder = {
     item: ItemProxy | PageProxy,
     modelManager: ModelManager
   ): Promise<ModelItemData> {
-    this.debug.log('Building model item data for', {
+    this.debug.debug('Building model item data for', {
       itemId: item.id,
       isPage: item instanceof PageProxy
     });
@@ -86,7 +86,7 @@ export const itemDataBuilder = {
       ...(isUnconverted ? { isUnconverted: true } : {})
     };
 
-    this.debug.log('Built model item data', {
+    this.debug.debug('Built model item data', {
       id: result.id,
       name: result.name,
       type: result.metadata.type
@@ -105,7 +105,7 @@ export const itemDataBuilder = {
     items: ItemProxy[],
     modelManager: ModelManager
   ): Promise<ModelItemData[]> {
-    this.debug.log('Building multiple model item data for', {
+    this.debug.debug('Building multiple model item data for', {
       itemCount: items.length
     });
     

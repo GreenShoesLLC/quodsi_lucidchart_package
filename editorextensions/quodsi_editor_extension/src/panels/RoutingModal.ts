@@ -10,7 +10,7 @@ import {
     MessageSource
 } from '@quodsi/lucid-shared';
 import { router, RoutablePanel, PanelRole } from '../core/messaging';
-import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 /**
  * Abstract base class for routing modals.
@@ -24,7 +24,7 @@ import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
  * own logic on top; they must NOT re-implement the four methods below.
  */
 export abstract class RoutingModal extends Modal implements RoutablePanel {
-    protected debug = ExtensionDebugService.forComponent('RoutingModal');
+    protected debug = getLogger('RoutingModal');
 
     /**
      * @param client      Lucid EditorClient
@@ -53,7 +53,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      * Implementation of the RoutablePanel interface.
      */
     public relayToIframe(msg: EnvelopeBase): void {
-        this.debug.log(`relayToIframe called with msg type: ${msg.type}`);
+        this.debug.debug(`relayToIframe called with msg type: ${msg.type}`);
         try {
             this.sendMessage(msg as unknown as JsonSerializable);
         } catch (err) {
@@ -79,7 +79,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
         // A chromeless embed modal closes itself via its own "Close" button:
         // intercept here and hide rather than routing to the host.
         if (envelope.type === EnvelopeMessageType.CLOSE_MODAL) {
-            this.debug.log('CLOSE_MODAL received — hiding modal');
+            this.debug.debug('CLOSE_MODAL received — hiding modal');
             this.hide();
             return;
         }
@@ -113,12 +113,12 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      */
     protected frameLoaded(): void {
         super.frameLoaded();
-        this.debug.log(`frameLoaded - registering with router as "${this.channelRole}" channel`);
+        this.debug.debug(`frameLoaded - registering with router as "${this.channelRole}" channel`);
         router.registerChannel(this.channelRole, this);
 
         const channelManager = router.getChannelManager();
         if (channelManager.isChannelReady(this.channelRole)) {
-            this.debug.log(
+            this.debug.debug(
                 `frameLoaded - ${this.channelRole} channel already ready; flushing queued messages`
             );
             channelManager.flushQueue(this.channelRole);
@@ -141,7 +141,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
      * Skipping the wipe when another modal has taken over avoids that race.
      */
     protected frameClosed(): void {
-        this.debug.log(`frameClosed - cleaning up ${this.channelRole} channel`);
+        this.debug.debug(`frameClosed - cleaning up ${this.channelRole} channel`);
         const channelManager = router.getChannelManager();
         const channel = channelManager.getChannel(this.channelRole);
         if (channel && channel.panel === this) {
@@ -152,7 +152,7 @@ export abstract class RoutingModal extends Modal implements RoutablePanel {
             // can't resurrect this now-closed modal as the channel's panel.
             router.clearFromGlobalRegistry(this.channelRole);
         } else if (channel) {
-            this.debug.log(
+            this.debug.debug(
                 `frameClosed - ${this.channelRole} channel already owned by another modal; skipping teardown`
             );
         }

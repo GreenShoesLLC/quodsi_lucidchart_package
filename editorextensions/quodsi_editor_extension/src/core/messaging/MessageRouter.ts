@@ -9,7 +9,7 @@ import { ChannelManager } from './ChannelManager';
 import { RoutablePanel } from './RoutablePanel';
 import { MessageHandlers } from './handlers'; // Pre-load handlers at initialization time
 import { AuthHandler } from './handlers/authHandler';
-import { ExtensionDebugService } from '../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 /**
  * MessageRouter singleton that handles all communication
@@ -20,7 +20,7 @@ export class MessageRouter {
   private channelManager: ChannelManager;
   private devLogging = false;
   private logBuffer: LogEntry[] = [];
-  private debug = ExtensionDebugService.forComponent('MessageRouter');
+  private debug = getLogger('MessageRouter');
 
   /**
    * Get the singleton instance of the MessageRouter
@@ -62,7 +62,7 @@ export class MessageRouter {
    * Register a panel with the router
    */
   public registerChannel(role: PanelRole, panel: RoutablePanel): void {
-    this.debug.log(`registerChannel called for ${role}`);
+    this.debug.debug(`registerChannel called for ${role}`);
     
     // Before registering, ensure we don't have a null panel
     if (!panel) {
@@ -96,7 +96,7 @@ export class MessageRouter {
       
       // Store this panel
       (window as any).quodsiExtension.panels[role] = panel;
-      this.debug.log(`Stored ${role} panel in global registry`);
+      this.debug.debug(`Stored ${role} panel in global registry`);
     }
   }
   
@@ -115,7 +115,7 @@ export class MessageRouter {
         (window as any).quodsiExtension &&
         (window as any).quodsiExtension.panels) {
       delete (window as any).quodsiExtension.panels[role];
-      this.debug.log(`Cleared ${role} panel from global registry`);
+      this.debug.debug(`Cleared ${role} panel from global registry`);
     }
   }
 
@@ -129,12 +129,12 @@ export class MessageRouter {
       
       const panel = (window as any).quodsiExtension.panels[role];
       if (panel && typeof panel.relayToIframe === 'function') {
-        this.debug.log(`Retrieved ${role} panel from global registry`);
+        this.debug.debug(`Retrieved ${role} panel from global registry`);
         return panel;
       }
     }
     
-    this.debug.log(`No ${role} panel found in global registry`);
+    this.debug.debug(`No ${role} panel found in global registry`);
     return null;
   }
   
@@ -151,7 +151,7 @@ export class MessageRouter {
     
     // If the channel already has a valid panel, we're good
     if (channel.panel && typeof channel.panel.relayToIframe === 'function') {
-      this.debug.log(`Channel ${role} already has a valid panel`);
+      this.debug.debug(`Channel ${role} already has a valid panel`);
       return true;
     }
     
@@ -203,7 +203,7 @@ export class MessageRouter {
    * Process a message received from an iframe
    */
   public receive(msg: EnvelopeBase): void {
-    this.debug.log('Received message:', msg.type, msg);
+    this.debug.debug('Received message:', msg.type, msg);
     
     if (!isEnvelope(msg)) {
       this.logDebug(`Received invalid message format`);
@@ -219,14 +219,14 @@ export class MessageRouter {
       // Only register if we don't already have a valid panel
       const channel = this.channelManager.getChannel(role);
       if (!channel || !channel.panel) {
-        this.debug.log(`Found panel reference in message, registering for ${role}`);
+        this.debug.debug(`Found panel reference in message, registering for ${role}`);
         this.registerChannel(role, (msg as any)._panelRef);
       }
     }
 
     // Handle special REACT_APP_READY message
     if (msg.type === EnvelopeMessageType.REACT_APP_READY) {
-      this.debug.log('Handling REACT_APP_READY message');
+      this.debug.debug('Handling REACT_APP_READY message');
       this.handleReactAppReady(msg);
       return;
     }
@@ -234,12 +234,12 @@ export class MessageRouter {
     // For all other messages, use pre-loaded MessageHandlers
     // Rather than dynamic import which can cause timing issues
     try {
-      this.debug.log('Forwarding message to MessageHandlers');
+      this.debug.debug('Forwarding message to MessageHandlers');
       if (MessageHandlers.handleMessage(msg)) {
-        this.debug.log('Message was handled by a handler');
+        this.debug.debug('Message was handled by a handler');
         this.logDebug(`Message ${msg.type} handled by MessageHandlers`);
       } else {
-        this.debug.log('Message was NOT handled by any handler:', msg.type);
+        this.debug.debug('Message was NOT handled by any handler:', msg.type);
         this.logDebug(`Unhandled message type: ${msg.type}`);
       }
     } catch (err) {
@@ -260,11 +260,11 @@ export class MessageRouter {
       return;
     }
     
-    this.debug.log(`Marking channel ${role} as ready`);
+    this.debug.debug(`Marking channel ${role} as ready`);
     
     // If we have a panel reference in the message, register it
     if ((msg as any)._panelRef) {
-      this.debug.log(`Registering panel from REACT_APP_READY message for ${role}`);
+      this.debug.debug(`Registering panel from REACT_APP_READY message for ${role}`);
       this.registerChannel(role, (msg as any)._panelRef);
     }
     
@@ -272,7 +272,7 @@ export class MessageRouter {
     this.channelManager.markChannelReady(role);
 
     // Ensure the channel has a panel before flushing
-    this.debug.log(`Flushing queue for ${role}:`, {
+    this.debug.debug(`Flushing queue for ${role}:`, {
       queueSize: this.channelManager.getChannel(role)?.queue.length,
       hasPanel: this.ensureChannelHasPanel(role),
       isReady: this.channelManager.isChannelReady(role)
@@ -282,7 +282,7 @@ export class MessageRouter {
     this.channelManager.flushQueue(role);
 
     // Request the panel to send MODEL_CONTEXT
-    this.debug.log(`About to request MODEL_CONTEXT for ${role}`);
+    this.debug.debug(`About to request MODEL_CONTEXT for ${role}`);
     this.requestModelContext(role);
 
     // Non-blocking auth check — broadcasts AUTH_STATUS to React
@@ -293,7 +293,7 @@ export class MessageRouter {
    * Request the panel to send MODEL_CONTEXT
    */
   private requestModelContext(role: PanelRole): void {
-    this.debug.log(`Requesting MODEL_CONTEXT from ${role} panel`);
+    this.debug.debug(`Requesting MODEL_CONTEXT from ${role} panel`);
     
     // Get the channel to access the panel
     const channel = this.channelManager.getChannel(role);
@@ -305,10 +305,10 @@ export class MessageRouter {
     // Check if the panel has a method to send model context
     const panel = channel.panel as any;
     if (panel && typeof panel.sendModelContext === 'function') {
-      this.debug.log(`Calling sendModelContext on ${role} panel`);
+      this.debug.debug(`Calling sendModelContext on ${role} panel`);
       panel.sendModelContext();
     } else if (panel && typeof panel.initializeModelContext === 'function') {
-      this.debug.log(`Calling initializeModelContext on ${role} panel`);
+      this.debug.debug(`Calling initializeModelContext on ${role} panel`);
       panel.initializeModelContext();
     } else {
       this.debug.warn(`Panel for ${role} does not have sendModelContext or initializeModelContext method`);
@@ -340,7 +340,7 @@ export class MessageRouter {
    * Enable or disable development logging
    */
   public setLogging(enabled: boolean): void {
-    this.debug.log('Logging set to:', enabled);
+    this.debug.debug('Logging set to:', enabled);
     this.devLogging = enabled;
     
     // Initialize the log buffer in the window for debugging
@@ -356,7 +356,7 @@ export class MessageRouter {
    * This is useful for diagnostics
    */
   public dumpChannelState(): void {
-    this.debug.log('Dumping channel state...');
+    this.debug.debug('Dumping channel state...');
     this.channelManager.dumpChannelState();
   }
 }

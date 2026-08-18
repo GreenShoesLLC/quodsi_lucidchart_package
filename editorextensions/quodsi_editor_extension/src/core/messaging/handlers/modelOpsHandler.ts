@@ -8,7 +8,7 @@ import { LucidPageConversionService } from '../../../services/conversion/LucidPa
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 // Simple ID generator for extension context (crypto.getRandomValues not available)
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import { SelectionHandler } from './selection';
 import { AnalyticsHandler } from './analyticsHandler';
@@ -17,7 +17,7 @@ import { AnalyticsHandler } from './analyticsHandler';
  * Handler for model operations (validate, convert, remove, results page)
  */
 export class ModelOpsHandler {
-  private static logger = ExtensionDebugService.forComponent('ModelOpsHandler');
+  private static logger = getLogger('ModelOpsHandler');
 
   /**
    * Last validation results by document ID
@@ -78,7 +78,7 @@ export class ModelOpsHandler {
   private static handleValidate(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
 
-    ModelOpsHandler.logger.log('Model validation requested', {
+    ModelOpsHandler.logger.debug('Model validation requested', {
       documentId: data.documentId
     });
 
@@ -131,7 +131,7 @@ export class ModelOpsHandler {
         timestamp: new Date()
       });
 
-      ModelOpsHandler.logger.log('Validation complete', {
+      ModelOpsHandler.logger.debug('Validation complete', {
         isValid: validationResult.isValid,
         errorCount: validationResult.summary.errorCount,
         warningCount: validationResult.summary.warningCount,
@@ -199,7 +199,7 @@ export class ModelOpsHandler {
       };
     };
     
-    ModelOpsHandler.logger.log('Validation result received', {
+    ModelOpsHandler.logger.debug('Validation result received', {
       isValid: data.isValid,
       errorCount: data.summary.errorCount,
       warningCount: data.summary.warningCount,
@@ -226,7 +226,7 @@ export class ModelOpsHandler {
         targetType?: string;
       };
       
-      ModelOpsHandler.logger.log('Model conversion requested', {
+      ModelOpsHandler.logger.debug('Model conversion requested', {
         documentId: data.documentId,
         elementId: data.elementId,
         targetType: data.targetType
@@ -247,7 +247,7 @@ export class ModelOpsHandler {
       
       // Check if this is a page conversion request (no elementId)
       if (!data.elementId) {
-        ModelOpsHandler.logger.log('Converting page to Quodsi model');
+        ModelOpsHandler.logger.debug('Converting page to Quodsi model');
         
         try {
           // Set up required services
@@ -266,7 +266,7 @@ export class ModelOpsHandler {
           
           // Convert the page
           const result = await pageConversionService.convertPage(currentPage);
-          ModelOpsHandler.logger.log('Page conversion successful:', result);
+          ModelOpsHandler.logger.debug('Page conversion successful:', result);
           
           // Send success response
           router.send('model', {
@@ -286,7 +286,7 @@ export class ModelOpsHandler {
             const documentId = document.id;
             const title = resolveModelName(document.getTitle(), new Date());
 
-            ModelOpsHandler.logger.log('Sending context refresh messages after conversion:', {
+            ModelOpsHandler.logger.debug('Sending context refresh messages after conversion:', {
               documentId,
               pageId: currentPage.id,
               title
@@ -319,7 +319,7 @@ export class ModelOpsHandler {
             // Page just became a Quodsi model — activation milestone.
             AnalyticsHandler.fire('first_model_created', { model_id: documentId });
 
-            ModelOpsHandler.logger.log('Sent MODEL_CONTEXT and triggered SelectionHandler refresh');
+            ModelOpsHandler.logger.debug('Sent MODEL_CONTEXT and triggered SelectionHandler refresh');
           }).catch(error => {
             ModelOpsHandler.logger.error('Error sending context refresh messages:', error);
           });
@@ -334,7 +334,7 @@ export class ModelOpsHandler {
       // Handle element-specific conversion (if we have an elementId)
       // This is now handled by ElementOpsHandler.handleElementConvert
       // But we'll keep a basic implementation here for backward compatibility
-      ModelOpsHandler.logger.log('Element conversion not implemented here, use ELEMENT_CONVERT');
+      ModelOpsHandler.logger.debug('Element conversion not implemented here, use ELEMENT_CONVERT');
       
       // Send response indicating we're not handling element conversion here
       router.send('model', {
@@ -385,7 +385,7 @@ export class ModelOpsHandler {
       error?: string;
     };
     
-    ModelOpsHandler.logger.log('Conversion result received', {
+    ModelOpsHandler.logger.debug('Conversion result received', {
       success: data.success,
       convertedCount: data.convertedElementIds.length,
       error: data.error
@@ -406,7 +406,7 @@ export class ModelOpsHandler {
   private static handleRemove(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
     
-    ModelOpsHandler.logger.log('Model removal requested', {
+    ModelOpsHandler.logger.debug('Model removal requested', {
       documentId: data.documentId
     });
     
@@ -430,13 +430,13 @@ export class ModelOpsHandler {
         throw new Error('No current page available for model removal');
       }
       
-      ModelOpsHandler.logger.log('Removing model from current page');
+      ModelOpsHandler.logger.debug('Removing model from current page');
       
       // Perform the actual model removal
       const modelManager = ModelManager.getInstance();
       modelManager.removeModelFromPage(currentPage);
       
-      ModelOpsHandler.logger.log('Model removal successful');
+      ModelOpsHandler.logger.debug('Model removal successful');
       
       // Send success response
       router.send('model', {
@@ -459,7 +459,7 @@ export class ModelOpsHandler {
         const title = resolveModelName(document.getTitle(), new Date());
         const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
         
-        ModelOpsHandler.logger.log('Sending context refresh messages after removal:', {
+        ModelOpsHandler.logger.debug('Sending context refresh messages after removal:', {
           documentId,
           pageId: currentPage.id,
           title,
@@ -509,7 +509,7 @@ export class ModelOpsHandler {
           }
         });
         
-        ModelOpsHandler.logger.log('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
+        ModelOpsHandler.logger.debug('Sent both MODEL_CONTEXT and SELECTION_CHANGED messages');
 
         // Remove model from quodsi_api database (fire-and-forget)
         LucidDataActionUtility.performDataAction(client, {
@@ -521,7 +521,7 @@ export class ModelOpsHandler {
           },
           asynchronous: false
         }).then(() => {
-          ModelOpsHandler.logger.log('Model removed from database after unmap');
+          ModelOpsHandler.logger.debug('Model removed from database after unmap');
         }).catch(err => {
           ModelOpsHandler.logger.error('Failed to remove model from database:', err);
         });
@@ -559,7 +559,7 @@ export class ModelOpsHandler {
       error?: string;
     };
     
-    ModelOpsHandler.logger.log('Removal result received', {
+    ModelOpsHandler.logger.debug('Removal result received', {
       success: data.success,
       error: data.error
     });
@@ -579,7 +579,7 @@ export class ModelOpsHandler {
   private static handleModelJsonRequest(msg: EnvelopeBase): boolean {
     const data = msg.data as { documentId: string };
 
-    ModelOpsHandler.logger.log('Model JSON requested', {
+    ModelOpsHandler.logger.debug('Model JSON requested', {
       documentId: data.documentId
     });
 
@@ -621,13 +621,13 @@ export class ModelOpsHandler {
       }
 
       // Ensure the model is loaded for the current page
-      ModelOpsHandler.logger.log('Ensuring model is loaded for current page...');
+      ModelOpsHandler.logger.debug('Ensuring model is loaded for current page...');
       try {
         // Check if current page is set in ModelManager
         let currentModelDef = await modelManager.getModelDefinition();
         if (!currentModelDef) {
           // Try to initialize/reload the model for the current page
-          ModelOpsHandler.logger.log('No current model definition, attempting to initialize...');
+          ModelOpsHandler.logger.debug('No current model definition, attempting to initialize...');
 
           // Check if this is a Quodsi model page
           const isQuodsiModel = modelManager.isQuodsiModel(activePageProxy);
@@ -650,7 +650,7 @@ export class ModelOpsHandler {
           }
 
           // Try to initialize the model for the current page
-          ModelOpsHandler.logger.log('Initializing model for current page...');
+          ModelOpsHandler.logger.debug('Initializing model for current page...');
           const basicModel = Model.createDefault(documentProxy.id);
           await modelManager.initializeModel(basicModel, activePageProxy);
 
@@ -678,14 +678,14 @@ export class ModelOpsHandler {
         }
 
         // Serialize the model (same as simulation button)
-        ModelOpsHandler.logger.log('Serializing model...');
+        ModelOpsHandler.logger.debug('Serializing model...');
         const serializer = ModelSerializerFactory.create(currentModelDef);
         const serializedModel = serializer.serialize(currentModelDef);
 
         // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
         SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
 
-        ModelOpsHandler.logger.log('Model serialized successfully');
+        ModelOpsHandler.logger.debug('Model serialized successfully');
 
         // Send success response with JSON
         router.send('model', {
@@ -736,7 +736,7 @@ export class ModelOpsHandler {
       error?: string;
     };
 
-    ModelOpsHandler.logger.log('Model JSON response received', {
+    ModelOpsHandler.logger.debug('Model JSON response received', {
       success: data.success,
       hasJson: !!data.modelJson,
       error: data.error

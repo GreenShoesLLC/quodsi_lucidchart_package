@@ -1,7 +1,7 @@
 import { PageProxy } from 'lucid-extension-sdk';
 import { SwimLaneQuodsiData, ISerializedModel, ActionType, createSeizeAction, createReleaseAction } from '@quodsi/lucid-shared';
 import type { ISerializedSeizeAction, ISerializedReleaseAction } from '@quodsi/lucid-shared';
-import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { isCenterInBox } from './swimLaneGeometry';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
@@ -18,7 +18,7 @@ const SWIMLANE_DATA_KEY = 'q_swimlane';
  * the in-memory ModelDefinition or shapeData.
  */
 export class SwimLaneResourceInjector {
-  private static logger = ExtensionDebugService.forComponent('SwimLaneResourceInjector');
+  private static logger = getLogger('SwimLaneResourceInjector');
 
   /**
    * Scan the page for swimlane mappings and inject Seize/Release actions
@@ -88,7 +88,7 @@ export class SwimLaneResourceInjector {
             (action) => action.type === ActionType.SEIZE && (action as ISerializedSeizeAction).resourceRequirementId === reqId
           );
           if (alreadyHasSeize) {
-            SwimLaneResourceInjector.logger.log(
+            SwimLaneResourceInjector.logger.debug(
               `Activity ${activity.id} already has SeizeAction for ${reqId}, skipping`
             );
             continue;
@@ -103,7 +103,7 @@ export class SwimLaneResourceInjector {
           activity.actions.push(releaseAction);
 
           injectedCount++;
-          SwimLaneResourceInjector.logger.log(
+          SwimLaneResourceInjector.logger.debug(
             `Injected Seize/Release for activity ${activity.id} → resource ${reqId}`
           );
         }
@@ -111,7 +111,7 @@ export class SwimLaneResourceInjector {
     }
 
     if (injectedCount > 0) {
-      SwimLaneResourceInjector.logger.log(
+      SwimLaneResourceInjector.logger.debug(
         `Injected Seize/Release brackets on ${injectedCount} activities`
       );
     }

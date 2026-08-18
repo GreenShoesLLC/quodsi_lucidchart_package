@@ -1,7 +1,7 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 interface PortalUrlRequestData {
   subNav?: string;
@@ -27,7 +27,7 @@ interface PortalUrlResponsePayload {
  * `usePortalSender` hook can match request to response.
  */
 export class PortalHandler {
-  private static logger = ExtensionDebugService.forComponent('PortalHandler');
+  private static logger = getLogger('PortalHandler');
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     if (msg.type === EnvelopeMessageType.PORTAL_URL_REQUEST) {
@@ -59,7 +59,7 @@ export class PortalHandler {
       })) as { status?: number; json?: { url?: string } };
 
       if (!result?.json?.url) {
-        PortalHandler.logger.log(
+        PortalHandler.logger.debug(
           'GeneratePortalUrl returned no url; status:',
           result?.status,
         );
