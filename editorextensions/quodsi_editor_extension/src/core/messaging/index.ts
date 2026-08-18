@@ -26,5 +26,4 @@ export const router = MessageRouter.getInstance();
  */
 export function initializeMessaging(enableLogging: boolean = true): void {
   router.setLogging(enableLogging);
-  log.debug('System initialized');
 }
