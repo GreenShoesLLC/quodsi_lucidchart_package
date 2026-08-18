@@ -7,9 +7,9 @@ import {
   EntitlementSubjectType,
 } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('EntitlementsMapper');
+const logger = getLogger('EntitlementsMapper');
 
 /**
  * Maps ENTITLEMENTS_STATUS envelope messages into Redux actions.
@@ -35,7 +35,7 @@ export function mapEntitlements(msg: EnvelopeBase): MessagingAction | null {
     chartExport?: boolean;
   };
 
-  logger.log('ENTITLEMENTS_STATUS received:', {
+  logger.debug('ENTITLEMENTS_STATUS received:', {
     subjectType: data.subjectType,
     planKey: data.planKey,
     planStatus: data.planStatus,

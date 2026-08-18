@@ -2,16 +2,15 @@ import React, { useMemo, useCallback } from 'react';
 import { useMessaging } from '../MessageProvider';
 import { transformToModelItemData } from '../mappers/modelItem.mapper';
 import { transformToValidationState } from '../mappers/validation.mapper';
-import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData } from '@quodsi/lucid-shared';
+import { JsonObject, SimulationObjectType, DiagramElementType, EditorReferenceData, getLogger } from '@quodsi/lucid-shared';
 import { useModelOpsSender } from '../senders/modelOpsSender';
 import { useSimulationSender } from '../senders/simulationSender';
 import { SimulationPollState } from '../../types/SimulationStatus';
-import { debugService } from '../utils/debugService';
 
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 // Create component-specific logger
-const logger = debugService.forComponent('useModelPanel');
+const logger = getLogger('useModelPanel');
 
 /**
  * Custom hook that brings together all the data and actions needed for the ModelPanel component.
@@ -85,7 +84,7 @@ export function useModelPanel() {
         const fromMetadata = documentContext.metadata.modelItemData;
 
         if (fromMetadata) {
-          logger.log('[useModelPanel] Model data from metadata:', {
+          logger.debug('[useModelPanel] Model data from metadata:', {
             hasData: !!fromMetadata.data,
             dataKeys: fromMetadata.data ? Object.keys(fromMetadata.data) : [],
             runClockPeriod: fromMetadata.data?.runClockPeriod,
@@ -131,7 +130,7 @@ export function useModelPanel() {
   
   // Log important flags about modelItemData
   if (modelItemData) {
-    logger.log('[useModelPanel] Final modelItemData details:', {
+    logger.debug('[useModelPanel] Final modelItemData details:', {
       id: modelItemData.id,
       name: modelItemData.name,
       hasData: !!modelItemData.data,
@@ -170,7 +169,7 @@ export function useModelPanel() {
   
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
-    logger.log('[useModelPanel] onElementUpdate CALLED:', {
+    logger.debug('[useModelPanel] onElementUpdate CALLED:', {
       elementId,
       data,
       dataKeys: data ? Object.keys(data) : [],
@@ -180,7 +179,7 @@ export function useModelPanel() {
 
     // For model type, we need special handling
     if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
-      logger.log('[useModelPanel] Updating MODEL properties:', {
+      logger.debug('[useModelPanel] Updating MODEL properties:', {
         elementId,
         type: 'Model',
         data
@@ -190,7 +189,7 @@ export function useModelPanel() {
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';
-      logger.log('[useModelPanel] Updating ELEMENT properties:', {
+      logger.debug('[useModelPanel] Updating ELEMENT properties:', {
         elementId,
         type,
         data
@@ -200,17 +199,17 @@ export function useModelPanel() {
   };
   
   const onElementTypeChange = (elementId: string, newType: SimulationObjectType) => {
-    logger.log(`Changing element ${elementId} to type ${newType}`);
+    logger.debug(`Changing element ${elementId} to type ${newType}`);
     modelOpsSender.convertElement(elementId, newType, typedDiagramElementType);
   };
   
   const onValidate = useCallback(() => {
-    logger.log('Validating model');
+    logger.debug('Validating model');
     modelOpsSender.validateModel(documentContext.documentId);
   }, [documentContext.documentId, modelOpsSender]);
   
   const onSimulate = (scenarioName?: string, scenarioDefinitionId?: string, enableAnimation?: boolean) => {
-    logger.log(`Simulating model with scenario name: ${scenarioName}, scenarioDefinitionId: ${scenarioDefinitionId}, enableAnimation: ${enableAnimation}`);
+    logger.debug(`Simulating model with scenario name: ${scenarioName}, scenarioDefinitionId: ${scenarioDefinitionId}, enableAnimation: ${enableAnimation}`);
     simulationSender.requestSimulation(
       documentContext.documentId,
       scenarioName,
@@ -223,12 +222,12 @@ export function useModelPanel() {
   };
   
   const onRemoveModel = () => {
-    logger.log('Removing model');
+    logger.debug('Removing model');
     modelOpsSender.removeModel(documentContext.documentId);
   };
   
   const onConvertPage = () => {
-    logger.log('Converting page to Quodsi model');
+    logger.debug('Converting page to Quodsi model');
     modelOpsSender.convertPage();
   };
   

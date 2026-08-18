@@ -1,10 +1,9 @@
-import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType, ISerializedState } from '@quodsi/lucid-shared';
+import { ElementShape, EnvelopeBase, EnvelopeMessageType, SimulationObjectType, DiagramElementType, ISerializedState, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 
 // Create component-specific logger
-const logger = debugService.forComponent('SelectionMapper');
+const logger = getLogger('SelectionMapper');
 
 /**
  * Maps selection and document context messages to reducer actions
@@ -40,7 +39,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         metadata?: Record<string, unknown>;
       };
 
-      logger.log('MODEL_CONTEXT details:', {
+      logger.debug('MODEL_CONTEXT details:', {
         documentId: contextData.documentId,
         title: contextData.title,
         pageId: contextData.pageId,
@@ -106,7 +105,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         rawReferenceData: selectionData.referenceData
       });
 
-      logger.log('SELECTION_CHANGED details:', {
+      logger.debug('SELECTION_CHANGED details:', {
         selectionType: selectionData.selectionType,
         documentId: selectionData.documentId,
         hasModel: selectionData.hasModel,
@@ -262,7 +261,7 @@ export function mapSelection(msg: EnvelopeBase): MessagingAction | null {
         } : {})
       };
       
-      logger.log('Returning SELECTION_UPDATE action:', {
+      logger.debug('Returning SELECTION_UPDATE action:', {
         elementCount: selectionAction.elements.length,
         firstElementId: selectionAction.elements[0]?.id,
         firstElementType: (selectionAction.elements[0] as any)?.metadata?.type,

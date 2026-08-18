@@ -1,9 +1,8 @@
-import { EnvelopeBase, EnvelopeMessageType, ValidationIssue } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ValidationIssue, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
 
 // Create component-specific logger
-const logger = debugService.forComponent('ModelOpsMapper');
+const logger = getLogger('ModelOpsMapper');
 
 /**
  * Maps model operations messages to reducer actions
@@ -22,7 +21,7 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
     return null;
   }
 
-  debugService.debug(`ModelOps mapper processing: ${msg.type}`);
+  logger.debug(`ModelOps mapper processing: ${msg.type}`);
 
   switch (msg.type) {
     case EnvelopeMessageType.MODEL_VALIDATION_RESULT:
@@ -60,7 +59,7 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
       }
 
       // Success - trigger a UI refresh to ensure proper state transition
-      logger.log('Model conversion successful, dispatching MODEL_CONVERSION_SUCCESS action');
+      logger.debug('Model conversion successful, dispatching MODEL_CONVERSION_SUCCESS action');
       return {
         type: 'MODEL_CONVERSION_SUCCESS',
         success: true
@@ -73,7 +72,7 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
         error?: string;
       };
 
-      logger.log('Processing MODEL_REMOVE_RESULT:', removeData);
+      logger.debug('Processing MODEL_REMOVE_RESULT:', removeData);
 
       // If error, log it
       if (!removeData.success && removeData.error) {
@@ -82,7 +81,7 @@ export function mapModelOps(msg: EnvelopeBase): MessagingAction | null {
       }
 
       // Success - trigger a UI refresh to ensure proper state transition
-      logger.log('Model removal successful, dispatching MODEL_REMOVAL_SUCCESS action');
+      logger.debug('Model removal successful, dispatching MODEL_REMOVAL_SUCCESS action');
       return {
         type: 'MODEL_REMOVAL_SUCCESS',
         success: true

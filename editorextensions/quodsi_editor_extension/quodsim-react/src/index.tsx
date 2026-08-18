@@ -1,7 +1,8 @@
 import { configureLogger, consoleSink, installDebugGlobal } from '@quodsi/lucid-shared';
 
 // See extension.ts for the rationale. namespaceLevels below is the former
-// debugService.disabledComponents set, now config data.
+// React debug service's disabledComponents set (now retired), captured as
+// config data.
 configureLogger({
     level: import.meta.env.DEV ? 'debug' : 'warn',
     namespaceLevels: {

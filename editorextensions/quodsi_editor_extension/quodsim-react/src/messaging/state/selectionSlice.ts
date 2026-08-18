@@ -4,10 +4,10 @@
  */
 
 import { ElementShape } from './types';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 // Create component-specific logger
-const logger = debugService.forComponent('SelectionSlice');
+const logger = getLogger('SelectionSlice');
 
 // State shape
 export interface SelectionState {
@@ -100,7 +100,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         lastUpdated: Date.now(),
       };
       
-      logger.log('SELECTION_UPDATE - Updated state:', {
+      logger.debug('SELECTION_UPDATE - Updated state:', {
         selectedElementsCount: updatedState.selectedElements.length,
         firstElementId: updatedState.selectedElements[0]?.id,
         firstElementType: updatedState.selectedElements[0]?.type,
@@ -136,7 +136,7 @@ export function selectionReducer(state: SelectionState = initialSelectionState, 
         lastUpdated: Date.now(),
       };
       
-      logger.log('DOCUMENT_CONTEXT_UPDATE - Updated state:', {
+      logger.debug('DOCUMENT_CONTEXT_UPDATE - Updated state:', {
         documentId: updatedContextState.documentContext.documentId,
         documentTitle: updatedContextState.documentContext.documentTitle,
         isQuodsiModel: updatedContextState.documentContext.isQuodsiModel,

@@ -1,7 +1,6 @@
-import { ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
+import { ExtensionConfig, QuodsiUserInfo, getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('AuthSlice');
+const logger = getLogger('AuthSlice');
 
 export interface AuthState {
   isAuthenticated: boolean;

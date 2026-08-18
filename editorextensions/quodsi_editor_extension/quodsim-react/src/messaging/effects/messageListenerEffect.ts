@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { createRxMessageHandler } from '../handlers';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('MessageListenerEffect');
+const logger = getLogger('MessageListenerEffect');
 
 /**
  * Effect for setting up message listener

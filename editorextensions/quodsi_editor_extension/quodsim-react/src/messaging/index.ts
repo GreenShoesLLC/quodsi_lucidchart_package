@@ -32,9 +32,6 @@ export { mapModelOps } from './mappers/modelOps.mapper';
 // Export the reducer
 export { messagingReducer, initialState } from './state';
 
-// Export debug service
-export { debugService } from './utils/debugService';
-
 // Export initialization function
 export { initializeMessaging, type MessagingInitOptions } from './initializeMessaging';
 

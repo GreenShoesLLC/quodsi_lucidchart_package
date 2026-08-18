@@ -1,8 +1,7 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
 
-const logger = debugService.forComponent('AuthMapper');
+const logger = getLogger('AuthMapper');
 
 /**
  * Maps auth-related envelope messages to Redux actions
@@ -11,7 +10,7 @@ export function mapAuth(msg: EnvelopeBase): MessagingAction | null {
   switch (msg.type) {
     case EnvelopeMessageType.AUTH_STATUS: {
       const data = msg.data as { isAuthenticated: boolean; user?: any; config?: any };
-      logger.log('AUTH_STATUS received:', {
+      logger.debug('AUTH_STATUS received:', {
         isAuthenticated: data.isAuthenticated,
         userId: data.user?.id,
         studioBaseUrl: data.config?.studioBaseUrl,
@@ -25,7 +24,7 @@ export function mapAuth(msg: EnvelopeBase): MessagingAction | null {
     }
     case EnvelopeMessageType.AUTH_ERROR: {
       const data = msg.data as { code: string; message: string };
-      logger.log('AUTH_ERROR received:', data);
+      logger.debug('AUTH_ERROR received:', data);
       return {
         type: 'AUTH_ERROR',
         code: data.code,

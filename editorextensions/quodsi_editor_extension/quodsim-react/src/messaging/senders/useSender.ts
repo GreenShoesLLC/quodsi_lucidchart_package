@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
-import { EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
 import { useMessaging } from '../MessageProvider';
-import { debugService } from '../utils/debugService';
+
+const logger = getLogger('useSender');
 
 /**
  * Custom hook that provides a type-safe message sender
@@ -22,7 +23,7 @@ export function useSender() {
     type: T,
     data?: any
   ) => {
-    debugService.debug(`Sending message: ${type}`, data);
+    logger.debug(`Sending message: ${type}`, data);
     sendMessage(type, data);
   }, [sendMessage]);
   
