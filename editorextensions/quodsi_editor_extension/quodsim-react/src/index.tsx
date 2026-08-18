@@ -1,4 +1,4 @@
-import { configureLogger, consoleSink, installDebugGlobal } from '@quodsi/lucid-shared';
+import { configureLogger, consoleSink, installDebugGlobal, getLogger } from '@quodsi/lucid-shared';
 
 // See extension.ts for the rationale. namespaceLevels below is the former
 // React debug service's disabledComponents set (now retired), captured as
@@ -36,6 +36,8 @@ import App from "./App";
 import { initializeMessaging } from "./messaging/initializeMessaging";
 import "./index_new.css";
 
+const log = getLogger('index');
+
 // Initialize the messaging system
 const cleanup = initializeMessaging({
   enableLogging: import.meta.env.DEV,
@@ -47,7 +49,7 @@ const cleanup = initializeMessaging({
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
-  console.error("Could not find root element to mount application");
+  log.error("Could not find root element to mount application");
 } else {
   // Always use model panel (auth has been removed)
   const panelType: "model" = "model";

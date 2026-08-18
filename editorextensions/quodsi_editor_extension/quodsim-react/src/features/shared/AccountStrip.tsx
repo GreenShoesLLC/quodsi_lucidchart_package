@@ -15,6 +15,9 @@ import {
   simulationsUsage,
   trialDaysRemaining,
 } from "../../messaging/state/entitlementsSlice";
+import { getLogger } from "@quodsi/lucid-shared";
+
+const log = getLogger("AccountStrip");
 
 const DEFAULT_SALES_EMAIL = "sales@quodsi.com";
 const COPIED_RESET_MS = 1500;
@@ -305,7 +308,7 @@ const AuthStatusIndicator: React.FC = () => {
       );
       window.open(url, "_blank", "noopener");
     } catch (err) {
-      console.error("portal_url_request_failed", err);
+      log.error("portal_url_request_failed", err);
     } finally {
       setRequestingUpgrade(false);
     }
@@ -328,7 +331,7 @@ const AuthStatusIndicator: React.FC = () => {
     if (issuer) {
       window.open(`${issuer.replace(/\/$/, "")}/logout`, "_blank", "noopener");
     } else {
-      console.warn("Sign Out: no kindeIssuer in user info; skipping Kinde logout step");
+      log.warn("Sign Out: no kindeIssuer in user info; skipping Kinde logout step");
     }
     // Extension-side handler clears local state, broadcasts AUTH_STATUS(false),
     // then calls client.revokeOAuthToken('kinde'). See authHandler.handleLogout.

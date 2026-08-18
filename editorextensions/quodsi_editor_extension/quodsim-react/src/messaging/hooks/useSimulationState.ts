@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSimulation } from '../MessageProvider';
 import { useSimulationSender } from '../senders/simulationSender';
-import { SimulationStatus } from '@quodsi/lucid-shared';
+import { SimulationStatus, getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('useSimulationState');
 
 /**
  * Enhanced hook for simulation state that combines state, computed properties,
@@ -31,7 +33,7 @@ export function useSimulationState(pollingInterval?: number) {
       const intervalId = window.setInterval(() => {
         // Poll for updates - this would typically involve sending a message
         // to request the current simulation status
-        console.log('Polling for simulation updates...');
+        log.debug('Polling for simulation updates...');
         
         // For now, we don't have a specific "poll" message in the protocol
         // This would be added to the simulationSender if needed
