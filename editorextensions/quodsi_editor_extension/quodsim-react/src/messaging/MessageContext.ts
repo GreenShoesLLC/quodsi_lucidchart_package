@@ -4,7 +4,9 @@ import {
   MessagingState, 
   MessagingAction 
 } from './state';
-import { EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('useSelection');
 
 // Context types
 export type MessagingContextValue = MessagingState & {
@@ -37,7 +39,7 @@ export function useSelection() {
   const { selection } = useMessaging();
   
   // Add enhanced logging
-  console.log('[useSelection] Selection state retrieved:', {
+  log.trace('Selection state retrieved:', {
     selectedElementsCount: selection?.selectedElements?.length || 0,
     hasDocumentContext: !!selection?.documentContext,
     lastUpdated: selection?.lastUpdated,

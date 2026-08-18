@@ -1,8 +1,3 @@
-// @quodsi/lucid-shared (pulled in by ModelPanel.tsx) transitively loads
-// shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
-// can't parse. (Same pattern as ModelEditor.test.tsx.)
-jest.mock("axios", () => ({}));
-
 import React from "react";
 import { render } from "@testing-library/react";
 import { ModelPanel } from "../ModelPanel";
@@ -20,50 +15,50 @@ const mockUseModelPanel = {
   states: [],
   resourceRequirements: [],
   outgoingConnectors: [],
-  onElementUpdate: jest.fn(),
-  onElementTypeChange: jest.fn(),
-  onValidate: jest.fn(),
-  onSimulate: jest.fn(),
-  onRemoveModel: jest.fn(),
-  onConvertPage: jest.fn(),
+  onElementUpdate: vi.fn(),
+  onElementTypeChange: vi.fn(),
+  onValidate: vi.fn(),
+  onSimulate: vi.fn(),
+  onRemoveModel: vi.fn(),
+  onConvertPage: vi.fn(),
 };
 
-jest.mock("../../../messaging/hooks/useModelPanel", () => ({
+vi.mock("../../../messaging/hooks/useModelPanel", () => ({
   useModelPanel: () => mockUseModelPanel,
 }));
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    updateStates: jest.fn(),
-    requestModelJson: jest.fn(),
+    updateStates: vi.fn(),
+    requestModelJson: vi.fn(),
   }),
 }));
 
-jest.mock("../../../messaging/MessageProvider", () => ({
+vi.mock("../../../messaging/MessageProvider", () => ({
   useMessaging: () => ({
     selection: { documentContext: { documentId: "doc-1" } },
   }),
 }));
 
 // EditorTab is a type-only import at runtime — stub the heavy ModelEditor tree.
-jest.mock("../../editors/ModelEditor", () => ({}));
+vi.mock("../../editors/ModelEditor", () => ({}));
 
 // Shallow-stub heavy children so the test isolates ModelPanel's hook order.
-jest.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
-jest.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
-jest.mock("../ElementEditor", () => ({ ElementEditor: () => <div /> }));
-jest.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
-jest.mock("../../../utils/pendingNavigation", () => ({
+vi.mock("../../shared", () => ({ AccountStrip: () => <div /> }));
+vi.mock("../PanelHeader", () => ({ PanelHeader: () => <div /> }));
+vi.mock("../ElementEditor", () => ({ ElementEditor: () => <div /> }));
+vi.mock("../ModelDefinitionViewer", () => ({ ModelDefinitionViewer: () => <div /> }));
+vi.mock("../../../utils/pendingNavigation", () => ({
   consumePendingModelEditorTab: () => null,
 }));
-jest.mock("../../../utils/pendingSubmission", () => ({
+vi.mock("../../../utils/pendingSubmission", () => ({
   setPendingSubmission: () => {},
 }));
 
 // Mock simulationRunSender since ModelPanel now uses openDiagramMappingModal from it
-jest.mock("../../../messaging/senders/simulationRunSender", () => ({
+vi.mock("../../../messaging/senders/simulationRunSender", () => ({
   useSimulationRunSender: () => ({
-    openDiagramMappingModal: jest.fn(),
+    openDiagramMappingModal: vi.fn(),
   }),
 }));
 

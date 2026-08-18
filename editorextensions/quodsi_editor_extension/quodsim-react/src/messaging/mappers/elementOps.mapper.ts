@@ -1,9 +1,8 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
+import { EnvelopeBase, EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
 
 // Create a component-specific logger
-const logger = debugService.forComponent('ElementOpsMapper');
+const logger = getLogger('ElementOpsMapper');
 
 /**
  * Map element operations messages to Redux actions
@@ -35,11 +34,11 @@ function handleElementUpdateResult(msg: EnvelopeBase): MessagingAction | null {
     errorMessage?: string;
   };
 
-  logger.log('Handling ELEMENT_UPDATE_RESULT:', data);
+  logger.debug('Handling ELEMENT_UPDATE_RESULT:', data);
 
   // Dispatch Redux action based on save success/failure
   if (data.success) {
-    logger.log(`Element ${data.elementId} saved successfully`);
+    logger.debug(`Element ${data.elementId} saved successfully`);
     return {
       type: 'ELEMENT_SAVE_SUCCESS',
       elementId: data.elementId,
@@ -64,7 +63,7 @@ function handleElementConvertResult(msg: EnvelopeBase): MessagingAction | null {
     errorMessage?: string;
   };
   
-  logger.log('Handling ELEMENT_CONVERT_RESULT:', data);
+  logger.debug('Handling ELEMENT_CONVERT_RESULT:', data);
   
   // Currently there is no toast notification system in the app
   // Just return null to indicate message was handled but no state change needed

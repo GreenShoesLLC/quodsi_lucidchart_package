@@ -1,6 +1,6 @@
 import { EditorReferenceData, EditorReferenceActionSummary, EditorReferenceStateModification } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
-import { ExtensionDebugService } from '../../../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 /**
  * Reduce a StateModification (or any object shaped like one) to the fields the
@@ -75,7 +75,7 @@ function summarizeAction(action: any): EditorReferenceActionSummary {
  * Utility for building reference data for React editors
  */
 export const referenceDataBuilder = {
-  debug: ExtensionDebugService.forComponent('ReferenceDataBuilder'),
+  debug: getLogger('ReferenceDataBuilder'),
 
   /**
    * Builds complete reference data with all elements
@@ -92,7 +92,7 @@ export const referenceDataBuilder = {
   async buildAllReferenceData(
     modelManager: ModelManager
   ): Promise<EditorReferenceData> {
-    this.debug.log('Building complete reference data for all editors');
+    this.debug.debug('Building complete reference data for all editors');
 
     const referenceData: EditorReferenceData = {};
 
@@ -178,7 +178,7 @@ export const referenceDataBuilder = {
         // Include scenarios - serialize Scenario objects
         referenceData.scenarios = modelDef.scenarios.getAll().map(scenario => scenario.toJSON());
 
-        this.debug.log('Reference data built:', {
+        this.debug.debug('Reference data built:', {
           activities: referenceData.activities?.length || 0,
           activityActionsTotal: referenceData.activities?.reduce((sum, a) => sum + (a.actions?.length || 0), 0) || 0,
           generators: referenceData.generators?.length || 0,

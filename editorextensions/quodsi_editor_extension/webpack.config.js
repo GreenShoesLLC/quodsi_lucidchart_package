@@ -5,6 +5,7 @@ const process = require("process");
 
 const webpack = require("webpack");
 const WebpackShellPluginNext = require("webpack-shell-plugin-next");
+const { rewriteDevHtml, stripToRelative } = require("./scripts/devHtmlRewrite");
 
 const reactTargets = [{ name: "quodsim-react", port: 3000 }];
 
@@ -38,7 +39,14 @@ function readLocalStudioOverride() {
   return "";
 }
 
-module.exports = {
+module.exports = (env, argv) => {
+  // lucid-package's watch path calls this export with only an `env` argument,
+  // so `argv` is undefined there - default to development. webpack-cli passes
+  // (env, argv) with argv.mode set from --mode, which is how the production
+  // bundle gets 'production'.
+  const mode = (argv && argv.mode) || "development";
+
+  return {
   entry: "./src/extension.ts",
   module: {
     rules: [
@@ -64,6 +72,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       __LOCAL_STUDIO_OVERRIDE__: JSON.stringify(readLocalStudioOverride()),
+      __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
     }),
     new WebpackShellPluginNext({
       // Run during execution of `npx lucid-package@latest test-editor-extension`.
@@ -85,11 +94,18 @@ module.exports = {
           );
           const reactAppContentHTML = await reactAppResponse.text();
 
-          // Enable links to other React assets, even when served by the extension,
-          // by having those assets' links explicitly point to the React dev server
-          const reactAppContentHTMLReplaced = reactAppContentHTML.replaceAll(
-            /(src|href)="\//gi,
-            `$1="http://localhost:${target.port}/`
+          // Enable links to other React assets, even when served by the
+          // extension, by pointing them at the React dev server.
+          //
+          // See scripts/devHtmlRewrite.js for the full explanation and the
+          // single source of truth for this rewrite (both HTML attributes
+          // AND the JS module specifiers inside inline module scripts, e.g.
+          // @vitejs/plugin-react's Fast Refresh preamble). That module is
+          // also what tests/devHtmlRewrite.test.ts exercises directly, so
+          // any change here should be made there instead.
+          const reactAppContentHTMLReplaced = rewriteDevHtml(
+            reactAppContentHTML,
+            target.port
           );
 
           // Enable the extension to serve a copy of the React app
@@ -109,14 +125,20 @@ module.exports = {
           fs.mkdirSync(`../../public/${target.name}`, { recursive: true });
 
           process.chdir(`${target.name}`);
-          child_process.execSync("npx react-scripts build", {
+          // Vite (see quodsim-react/vite.config.mts). The Lucid CLI is agnostic
+          // about what produces these files -- `bundle` only zips public/
+          // verbatim -- so the build tool is entirely this repo's choice.
+          child_process.execSync("npm run build", {
             stdio: "inherit",
           });
 
-          // In the React app's bundled HTML, enable links to other React assets,
-          // by having those links explicitly point to the extension's bundle
+          // Belt-and-braces: Vite's `base: './'` already emits relative paths,
+          // so this normally matches nothing. Retained so a future config
+          // regression (or a hand-edited index.html) still can't ship
+          // root-absolute asset URLs, which silently 404 inside the package.
+          // See scripts/devHtmlRewrite.js for the single source of truth.
           const content = fs.readFileSync("build/index.html", "utf8");
-          const newContent = content.replaceAll(/(src|href)="\//gi, '$1="');
+          const newContent = stripToRelative(content);
           fs.writeFileSync("build/index.html", newContent);
 
           // Add React assets to the extension's bundle
@@ -128,5 +150,6 @@ module.exports = {
       },
     }),
   ],
-  mode: "development",
+  mode,
+  };
 };

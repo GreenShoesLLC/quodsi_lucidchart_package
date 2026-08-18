@@ -1,6 +1,8 @@
 import { EditorClient } from 'lucid-extension-sdk';
-import { ClientAnalyticsEvent } from '@quodsi/lucid-shared';
+import { ClientAnalyticsEvent, getLogger } from '@quodsi/lucid-shared';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
+
+const log = getLogger('AnalyticsHandler');
 
 /**
  * Fires product-telemetry events from the extension host to the backend
@@ -26,7 +28,7 @@ export class AnalyticsHandler {
   public static fire(event: ClientAnalyticsEvent, properties?: Record<string, unknown>): void {
     const client = AnalyticsHandler.client;
     if (!client) {
-      console.warn('[AnalyticsHandler] not initialized; dropping', event);
+      log.warn('not initialized; dropping', event);
       return;
     }
     LucidDataActionUtility.performDataAction(client, {
@@ -35,7 +37,7 @@ export class AnalyticsHandler {
       actionData: { event, properties: properties || {} },
       asynchronous: false,
     }).catch((err) => {
-      console.warn('[AnalyticsHandler] TrackEvent failed', event, err);
+      log.warn('TrackEvent failed', event, err);
     });
   }
 }

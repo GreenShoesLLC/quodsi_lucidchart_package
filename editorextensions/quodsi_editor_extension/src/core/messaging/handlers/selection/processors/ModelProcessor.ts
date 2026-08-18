@@ -4,12 +4,14 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+const log = getLogger('ModelProcessor');
 
 /**
  * Processor for model selection
@@ -31,8 +33,6 @@ export class ModelProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[ModelProcessor] Processing model selection');
-
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
 
@@ -47,7 +47,6 @@ export class ModelProcessor extends BaseSelectionProcessor {
 
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      console.log('[ModelProcessor] Not a Quodsi model');
       return messageData;
     }
 
@@ -70,7 +69,7 @@ export class ModelProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      console.log('[ModelProcessor] Processed model data:', {
+      log.trace('Processed model data:', {
         pageId: currentPage.id,
         hasModelData: messageData.modelItemData ? 'yes' : 'no',
         hasRefData: messageData.referenceData ? 'yes' : 'no',
@@ -82,7 +81,7 @@ export class ModelProcessor extends BaseSelectionProcessor {
         } : 'none'
       });
     } catch (error) {
-      console.error('[ModelProcessor] Error processing model:', error);
+      log.error('Error processing model:', error);
       messageData.error = 'Error processing model data';
     }
     

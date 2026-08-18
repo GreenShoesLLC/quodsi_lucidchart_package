@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
-import { useMessaging } from "src/messaging";
+import { useMessaging } from "../messaging";
 import { ModelPanel } from "./modelPanel";
 
-// Create component-specific logger using our debug service
-import { debugService } from "../messaging/utils/debugService";
-const logger = debugService.forComponent("LucidAppNew");
+// Create component-specific logger using the shared logger
+import { getLogger } from "@quodsi/lucid-shared";
+const logger = getLogger("LucidAppNew");
 
 interface LucidAppProps {
   panelType?: "model";
@@ -16,13 +16,13 @@ interface LucidAppProps {
 export const LucidApp: React.FC<LucidAppProps> = ({ panelType = "model" }) => {
 
   // Only show debug features in development
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = import.meta.env.DEV;
 
   // Track when the component mounts (only in development)
   useEffect(() => {
     if (isDevelopment) {
-      logger.log(`LucidApp initialized`);
-      return () => logger.log("LucidApp unmounted");
+      logger.debug(`LucidApp initialized`);
+      return () => logger.debug("LucidApp unmounted");
     }
   }, [isDevelopment]);
 

@@ -1,7 +1,3 @@
-// @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
-// lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-jest.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -18,15 +14,15 @@ import {
   CLEARED_FIELDS_KEY,
 } from "@quodsi/lucid-shared";
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    updateResourceRequirements: jest.fn(),
-    selectElement: jest.fn(),
-    updateElementData: jest.fn(),
+    updateResourceRequirements: vi.fn(),
+    selectElement: vi.fn(),
+    updateElementData: vi.fn(),
   }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
@@ -37,14 +33,14 @@ jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
 // The real useAutoSave is a pure hook (no axios/network deps), safe to run
 // unmocked in jsdom; onBlur synchronously flushes through its real saveNow.
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
 
 const baseProps = {
   states: {} as any,
-  onStatesChange: jest.fn(),
+  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 
@@ -75,7 +71,7 @@ describe("ActivityEditor — queueRanking preservation", () => {
   } as any;
 
   it("keeps the ranking when an unrelated field is edited", async () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<ActivityEditor activity={ranked} onSave={onSave} {...baseProps} />);
     // The name input has no accessible-name association in this component
     // (label is a plain sibling, not `htmlFor`-linked), so re-query by role
@@ -92,7 +88,7 @@ describe("ActivityEditor — queueRanking preservation", () => {
   // The case that fails under `updates.queueRanking ?? base.queueRanking`:
   // a cleared ranking must STAY cleared through the next unrelated edit.
   it("keeps the ranking cleared once cleared", async () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<ActivityEditor activity={ranked} onSave={onSave} {...baseProps} />);
     const draft = updateActivityImmutably(extractActivityData(ranked), {
       queueRanking: undefined,
@@ -119,7 +115,7 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
   } as any;
 
   async function saveAfterRename(activity: any) {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<ActivityEditor activity={activity} onSave={onSave} {...baseProps} />);
     const nameInput = screen.getByDisplayValue("Doctor");
     await userEvent.clear(nameInput);
@@ -143,7 +139,7 @@ describe("ActivityEditor — explicit cleared-field declaration", () => {
 
 describe("ActivityEditor — queue ranking control", () => {
   it("offers only ENTITY NUMBER states and writes the ranking on pick", async () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     const states = makeStateListManager([
       new State("s1", "severity", ComponentType.ENTITY, StateType.NUMBER, 0),
       new State("s2", "globalCount", ComponentType.MODEL, StateType.NUMBER, 0),
@@ -175,7 +171,7 @@ describe("ActivityEditor — queue ranking control", () => {
       <ActivityEditor
         {...baseProps}
         activity={unranked}
-        onSave={jest.fn()}
+        onSave={vi.fn()}
         states={states}
       />
     );

@@ -4,7 +4,7 @@ import { DocumentProxy, ItemProxy, Viewport } from 'lucid-extension-sdk';
 import { router } from '../index';
 import { PanelRole } from '../types';
 import { ModelManager } from '../../ModelManager';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { SimulationHandler } from './simulationHandler';
 import { AuthHandler } from './authHandler';
 import { StudioEmbedModal } from '../../../panels/StudioEmbedModal';
@@ -14,7 +14,7 @@ import { upsertModel, canonicalModelName, pushModelDefinitionSnapshot } from '..
  * Handler for simulation run management messages
  */
 export class SimulationRunHandler {
-  private static logger = ExtensionDebugService.forComponent('SimulationRunHandler');
+  private static logger = getLogger('SimulationRunHandler');
 
   /**
    * Cache of resolved server model ids, keyed by `${documentId}:${pageId}`.
@@ -316,7 +316,7 @@ export class SimulationRunHandler {
       // Pan and zoom the canvas so the selected shape is visible. focusCameraOnItems
       // also handles page-switching if the shape is on a different page.
       viewport.focusCameraOnItems([proxy as ItemProxy]);
-      SimulationRunHandler.logger.log('LOCATE_ELEMENT: selected element', { elementId });
+      SimulationRunHandler.logger.debug('LOCATE_ELEMENT: selected element', { elementId });
     } catch (e) {
       SimulationRunHandler.logger.error('LOCATE_ELEMENT: error selecting element', e);
     }
@@ -332,7 +332,7 @@ export class SimulationRunHandler {
   private static async handleRequestStudioToken(msg: EnvelopeBase): Promise<void> {
     const token = await AuthHandler.getTokenForRelay();
     const channel = SimulationRunHandler.getResponseChannel(msg);
-    SimulationRunHandler.logger.log('Relaying Studio token to embed iframe', { hasToken: !!token, channel });
+    SimulationRunHandler.logger.debug('Relaying Studio token to embed iframe', { hasToken: !!token, channel });
     router.send(channel, {
       id: `msg-${Date.now()}`,
       type: EnvelopeMessageType.STUDIO_TOKEN,

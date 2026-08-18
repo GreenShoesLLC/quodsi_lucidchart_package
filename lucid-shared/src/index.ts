@@ -5,6 +5,9 @@ export * from './core/logging/ComponentLogger';
 
 // Constants
 export { MODEL_SCHEMA_VERSION, ENGINE_VERSION, EXPECTED_OUTPUT_SCHEMA_VERSION, parseVersion, compareVersions, isValidVersion } from '@quodsi/shared';
+export { configureLogger, getLogger, consoleSink, installDebugGlobal, resetLoggerForTests } from '@quodsi/shared';
+export type { LogLevel, Logger, LogRecord, Sink, LoggerConfig } from '@quodsi/shared';
+export { LUCID_MIN_MODEL_SCHEMA_VERSION, assertPackagedSchemaVersion } from './constants/schemaFloor';
 export type { VersionInfo } from '@quodsi/shared';
 export * from './constants/branding';
 export * from './constants/clearedFields';
@@ -370,7 +373,6 @@ export {
 } from './types/swimlane/SwimLaneQuodsiData';
 
 // Service exports
-export * from './services/lucidApi';
 export { generateUUID } from '@quodsi/shared';
 // Structured shape-name parsing — moved to @quodsi/shared (conversion/nameParser)
 // so drawio and Visio can use it too; re-exported here so existing

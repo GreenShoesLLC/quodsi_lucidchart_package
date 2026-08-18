@@ -28,6 +28,103 @@ The project uses a postMessage-based protocol for communication between the exte
 - Synchronization happens through message passing
 - Selection changes are broadcast to all interested components
 
+#### Logging System
+
+A shared, level-based logger replaced the legacy `ExtensionDebugService` /
+`ComponentLogger`-as-primary-path setup (2026-08-17, `feat/unified-logger`).
+It lives in `quodsi_shared/src/logging/` (`registry.ts`, `consoleSink.ts`,
+`runtimeOverride.ts`, `levels.ts`, `types.ts`), is exported from
+`@quodsi/shared`, and is re-exported unchanged from `@quodsi/lucid-shared`
+(`export { configureLogger, getLogger, consoleSink, installDebugGlobal,
+resetLoggerForTests } from '@quodsi/shared';` in `lucid-shared/src/index.ts`)
+so both the extension and the React panel import it from
+`@quodsi/lucid-shared`.
+
+**`QuodsiLogger` and `ComponentLogger`** (`lucid-shared/src/core/logging/`)
+are legacy and deliberately NOT migrated — they still call `console.*`
+directly. `QuodsiLogger`'s abstract base plus its concrete subclasses
+(`ModelValidationService`, `ModelDataSource`, `ModelDefinitionRepository`,
+`LucidPageAnalyzer`, `LucidPageConversionService`) survive by design; do not
+route new code through them.
+
+**Host configuration.** Each host calls `configureLogger({ level, sinks:
+[consoleSink()], namespaceLevels: {...} })` once at startup, then
+`installDebugGlobal()`:
+- **Extension** (`editorextensions/quodsi_editor_extension/src/extension.ts`):
+  level comes from `__QUODSI_LOG_LEVEL__`, a build-time constant injected by
+  `webpack.config.js` via `DefinePlugin` — `JSON.stringify(mode ===
+  "production" ? "warn" : "debug")`. This is NOT `process.env.NODE_ENV`: the
+  extension's `tsconfig.json` sets `"types": []`, so `@types/node`'s
+  `process` global is never in scope there, and adding it back would leak
+  Node globals (`Buffer`, `__dirname`, ...) into code that actually runs in
+  a Lucid sandbox. See `src/interop.d.ts` for the ambient declaration.
+- **React panel** (`quodsim-react/src/index.tsx`): level is
+  `import.meta.env.DEV ? 'debug' : 'warn'` (Vite's own dev/prod flag, not
+  the webpack constant — the two hosts are built by different tools).
+- **Defaults**: production ships at `warn`; development at `debug`.
+- Both hosts pass a `namespaceLevels` map that mutes historically-noisy
+  components to `'error'` (e.g. `MessageRouter`, `ChannelManager`,
+  `StorageAdapter`) — this is the former
+  `ExtensionDebugService.noisyComponents` mute list, now config data instead
+  of code.
+
+**`window.QUODSI_DEBUG`** (installed by `installDebugGlobal()` in
+`quodsi_shared/src/logging/runtimeOverride.ts`) gives support a runtime
+override surface:
+- `setLevel(level)` — sets the global level (`silent | error | warn | info |
+  debug | trace`); rejects an unknown level with a `console.warn` listing
+  valid values.
+- `setNamespaceLevel(namespace, level)` — overrides one namespace only.
+- `namespaces()` — lists namespaces currently known to the registry.
+- `reset()` — clears both overrides (`console.info`'s a confirmation).
+- Overrides persist in `localStorage` (`quodsi.log.level`,
+  `quodsi.log.namespaces`) and are re-applied on every `configureLogger`
+  call, so a support-enabled level survives a page reload mid-repro.
+  Storage access is fully feature-detected and failure-tolerant: a missing
+  or throwing `localStorage` (or a corrupt stored value) degrades silently
+  to "no override" rather than breaking logging.
+
+**Two-realm limitation (UNRESOLVED).** The Lucid extension runs in two
+separate JS realms that do not share `window` or `localStorage`: the
+extension context and the panel iframe. Setting the level in one realm does
+not affect the other, and support instructions need to name the exact
+devtools frame to select for each. This was meant to be settled by opening
+a real Lucid document and checking `typeof window.QUODSI_DEBUG` in both the
+panel-iframe and `top` devtools contexts — that check was explicitly
+skipped for this task (it needs a human with a Lucid account, and the local
+dev ports were in use). **The question is open.** To resolve it:
+1. Start the dev server and extension test server as usual.
+2. Open a Lucid document with the local test extension running.
+3. In devtools, use the Console panel's context dropdown (normally reads
+   `top`) to select the Quodsi panel's iframe, and evaluate
+   `typeof window.QUODSI_DEBUG`.
+4. Repeat with the `top` context selected instead.
+5. Whichever context answers `"object"` is the realm `window.QUODSI_DEBUG`
+   actually controls — support instructions must tell customers to select
+   that one. If both answer `"object"`, both realms need the override set
+   independently; if only one does, only that host wired
+   `installDebugGlobal()` into a context devtools can reach directly.
+
+Until someone runs this and records the result, do not guess which frame
+support should tell a customer to select.
+
+**The `no-console` ship gate.** `quodsim-react/scripts/lint-hooks.js`
+(invoked as `npm run lint:hooks --workspace
+editorextensions/quodsi_editor_extension/quodsim-react`) runs two ESLint
+passes and fails on any `no-console` (or `react-hooks/rules-of-hooks`)
+violation: pass 1 covers `quodsim-react/src` via `.eslintrc.js`; pass 2
+covers the editor extension's own `src` via an inline `overrideConfig`
+(that package has no ESLint config or devDependency of its own — eslint is
+only resolvable there because it hoists from `quodsim-react`'s
+devDependency). This gate is `deploy/lucid-package/build-bundle.ps1`'s Step
+1.4 and blocks the bundle if either pass finds a violation.
+
+> **Warning:** the gate reads config via ESLint 8's legacy `.eslintrc.js`
+> system (pinned `^8.57.0`). ESLint 9 defaults to flat config and ignores
+> `.eslintrc.js` entirely — bumping past ESLint 8 without migrating to
+> `eslint.config.js` (or explicitly forcing eslintrc mode) would make this
+> gate report "clean" forever while linting against an empty ruleset.
+
 ## Development Commands
 
 ### Initial Setup

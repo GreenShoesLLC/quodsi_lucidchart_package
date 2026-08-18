@@ -5,7 +5,7 @@ import { ScenarioObjectType, ScenarioPropertyName } from '@quodsi/lucid-shared';
 const actions = [{ id: 'act-7', label: 'Process (1)', distributionType: 'exponential' }];
 
 it('renders a duration-lever row per action and authors a DURATION lever', () => {
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={[]} onChange={onChange} actions={actions} />);
   fireEvent.click(screen.getByRole('button', { name: /scenario levers/i }));
   const cb = screen.getByLabelText(/Use Process \(1\) duration as a scenario lever/i);
@@ -31,7 +31,7 @@ it('no warning renders when an action distribution is rate-scalable (e.g. expone
 });
 
 it('editing the max input calls onChange with the lever range max updated', () => {
-  const onChange = jest.fn();
+  const onChange = vi.fn();
   const levers = [{ leverId: 'l3', propertyName: ScenarioPropertyName.DURATION, actionId: 'act-7', enabled: true, label: 'Service', range: { min: 1, max: 3, step: 1 } }];
   render(<LeverAuthoringSection objectType={ScenarioObjectType.ACTIVITY} componentName="Triage" levers={levers as any} onChange={onChange}
     actions={actions} />);

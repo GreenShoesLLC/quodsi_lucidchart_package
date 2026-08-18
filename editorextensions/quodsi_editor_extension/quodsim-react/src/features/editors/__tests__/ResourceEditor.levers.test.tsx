@@ -1,40 +1,35 @@
-// @quodsi/lucid-shared (pulled in by ResourceEditor.tsx) transitively loads
-// shared/dist/services/lucidApi.js -> axios ESM, which CRA's Jest transformer
-// can't parse. (Same pattern as ConnectorsEditor.test.tsx.)
-jest.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import ResourceEditor from "../ResourceEditor";
 
-jest.mock("../../../messaging/senders", () => ({
-  useModelOpsSender: () => ({ updateElementData: jest.fn() }),
+vi.mock("../../../messaging/senders", () => ({
+  useModelOpsSender: () => ({ updateElementData: vi.fn() }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
 // onSave is captured by useAutoSave; mock it so the basic-tab draft mutation is
 // observable without timer plumbing (the onSave-timing path is the human smoke,
 // Task 6). We still assert the section renders + the checkbox toggles the draft.
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: jest.fn() }),
+  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
   useFlushOnChange: () => {},
 }));
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
 
 const baseProps = {
   resource: { id: "r1", name: "Nurse", capacity: 3, levers: [] } as any,
-  onSave: jest.fn(),
+  onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: jest.fn(),
+  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 

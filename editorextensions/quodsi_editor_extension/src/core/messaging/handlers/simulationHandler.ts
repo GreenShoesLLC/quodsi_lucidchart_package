@@ -9,6 +9,7 @@ import {
   ENGINE_VERSION,
   parsePageTranslate,
   offsetSerializedModelCoordinates,
+  getLogger,
 } from '@quodsi/lucid-shared';
 import { SwimLaneResourceInjector } from '../../../services/SwimLaneResourceInjector';
 import {
@@ -23,6 +24,8 @@ import { ModelManager } from '../../ModelManager';
 import { LucidDataActionUtility } from '../../../utils/LucidDataActionUtility';
 import { StorageAdapter } from '../../StorageAdapter';
 import { upsertModel, canonicalModelName } from '../../sync/scenarioSync';
+
+const log = getLogger('SimulationHandler');
 
 export interface RunSubmitOutcome {
   accepted: boolean;
@@ -82,7 +85,7 @@ export class SimulationHandler {
       case EnvelopeMessageType.MODEL_RUN_REQUEST:
         // Handle async method - fire and forget, return true immediately
         SimulationHandler.handleRunRequest(msg).catch(error => {
-          console.error('[SimulationHandler] Error in handleRunRequest:', error);
+          log.error('Error in handleRunRequest:', error);
         });
         return true;
 
@@ -119,7 +122,7 @@ export class SimulationHandler {
     };
     const fromEmbed = !!data.fromEmbed;
 
-    console.log('[SimulationHandler] Simulation run requested', {
+    log.debug('Simulation run requested', {
       documentId: data.documentId,
       scenario: data.scenarioName || 'Default'
     });
@@ -131,7 +134,7 @@ export class SimulationHandler {
           (job.status === SimulationStatus.COMPLETED ||
            job.status === SimulationStatus.FAILED)) {
         SimulationHandler.activeJobs.delete(jobId);
-        console.log('[SimulationHandler] Cleaned up stale job during defensive cleanup', jobId);
+        log.debug('Cleaned up stale job during defensive cleanup', jobId);
       }
     }
 
@@ -145,7 +148,7 @@ export class SimulationHandler {
                     job.status === SimulationStatus.QUEUED));
 
     if (existingJob && !fromEmbed) {
-      console.warn('[SimulationHandler] Simulation already running for this document');
+      log.warn('Simulation already running for this document');
       router.send('model', {
         id: msg.id,
         type: EnvelopeMessageType.MODEL_RUN_STATUS,
@@ -178,14 +181,12 @@ export class SimulationHandler {
       
       try {
         client = ModelManager.getClient();
-        console.log('[SimulationHandler] Successfully retrieved EditorClient');
       } catch (error) {
-        console.error('[SimulationHandler] EditorClient not initialized:', error);
-        console.error('[SimulationHandler] ModelManager instance exists:', !!modelManager);
-        
+        log.error('EditorClient not initialized:', error, 'ModelManager instance exists:', !!modelManager);
+
         // Try to re-initialize if possible
         if ((globalThis as any).lucidEditorClient) {
-          console.log('[SimulationHandler] Found global editor client, attempting to use it');
+          log.debug('Found global editor client, attempting to use it');
           client = (globalThis as any).lucidEditorClient;
         } else {
           // Send error response
@@ -219,7 +220,7 @@ export class SimulationHandler {
       
       // Verify we have an active page
       if (!activePageProxy) {
-        console.error('[SimulationHandler] No active page found');
+        log.error('No active page found');
         
         // Send error response
         router.send('model', {
@@ -245,18 +246,16 @@ export class SimulationHandler {
       }
 
       // Ensure the model is loaded for the current page
-      console.log('[SimulationHandler] Ensuring model is loaded for current page...');
       try {
         // Check if current page is set in ModelManager
         const currentModelDef = await modelManager.getModelDefinition();
         if (!currentModelDef) {
           // Try to initialize/reload the model for the current page
-          console.log('[SimulationHandler] No current model definition, attempting to initialize...');
-          
+
           // Check if this is a Quodsi model page
           const isQuodsiModel = modelManager.isQuodsiModel(activePageProxy);
           if (!isQuodsiModel) {
-            console.error('[SimulationHandler] Current page is not a Quodsi model');
+            log.error('Current page is not a Quodsi model');
             
             // Send error response
             router.send('model', {
@@ -282,18 +281,17 @@ export class SimulationHandler {
           }
           
           // Try to initialize the model for the current page
-          console.log('[SimulationHandler] Initializing model for current page...');
           const basicModel = Model.createDefault(documentProxy.id);
           await modelManager.initializeModel(basicModel, activePageProxy);
         }
       } catch (error) {
-        console.error('[SimulationHandler] Error during model initialization:', error);
+        log.error('Error during model initialization:', error);
       }
       
       // Get model definition
       const modelDefinition = await modelManager.getModelDefinition();
       if (!modelDefinition) {
-        console.error('[SimulationHandler] No model definition found after initialization attempt');
+        log.error('No model definition found after initialization attempt');
         
         // Send error response
         router.send('model', {
@@ -319,22 +317,17 @@ export class SimulationHandler {
       }
 
       // Serialize the model
-      console.log('[SimulationHandler] Serializing model...');
       const serializer = ModelSerializerFactory.create(modelDefinition);
       const serializedModel = serializer.serialize(modelDefinition);
 
       // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
       SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
 
-      console.log('[SimulationHandler] Model serialized successfully');
-
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
       let scenarioId = data.scenarioDefinitionId || generateUUID();
 
       // Get SVG representation of the current page
-      console.log('[SimulationHandler] Getting SVG for the current page...');
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
-      console.log('[SimulationHandler] SVG obtained successfully');
 
       // getSvg() wraps the page in a translate() to normalize negative
       // coordinates into a positive viewBox. layout.json uses the raw model
@@ -344,7 +337,7 @@ export class SimulationHandler {
       const pageTranslate = parsePageTranslate(diagramSvg);
       if (pageTranslate.x !== 0 || pageTranslate.y !== 0) {
         offsetSerializedModelCoordinates(serializedModel, pageTranslate.x, pageTranslate.y);
-        console.log('[SimulationHandler] Aligned model coords to SVG page-translate', pageTranslate);
+        log.debug('Aligned model coords to SVG page-translate', pageTranslate);
       }
       const timestamp = new Date();
       const queuedAt = timestamp.toISOString();
@@ -426,7 +419,7 @@ export class SimulationHandler {
           }
         }
       } catch (syncErr) {
-        console.error('[SimulationHandler] Pre-run sync failed:', syncErr);
+        log.error('Pre-run sync failed:', syncErr);
         const job = SimulationHandler.activeJobs.get(jobId);
         if (job) { job.status = SimulationStatus.FAILED; job.lastUpdate = new Date(); }
         router.send('model', {
@@ -451,8 +444,6 @@ export class SimulationHandler {
       }
 
       // Submit to data connector
-      console.log('[SimulationHandler] Submitting simulation to data connector...');
-
       try {
         const submitResult = await LucidDataActionUtility.performDataAction(client, {
           dataConnectorName: 'quodsi_api_data_connector',
@@ -499,8 +490,6 @@ export class SimulationHandler {
           });
         }
 
-        console.log('[SimulationHandler] Simulation submitted successfully');
-
         // Update job status - keep as QUEUED (not PROCESSING) since status.json says QUEUED
         const job = SimulationHandler.activeJobs.get(jobId);
         if (job) {
@@ -539,7 +528,7 @@ export class SimulationHandler {
         // ListScenarios has 3-minute stale detection as a fallback for runtime failures
 
       } catch (submitError) {
-        console.error('[SimulationHandler] Error submitting simulation:', submitError);
+        log.error('Error submitting simulation:', submitError);
 
         // Update job status
         const job = SimulationHandler.activeJobs.get(jobId);
@@ -590,7 +579,7 @@ export class SimulationHandler {
       }
 
     } catch (error) {
-      console.error('[SimulationHandler] Error handling simulation request:', error);
+      log.error('Error handling simulation request:', error);
 
       const errorScenarioId = data.scenarioDefinitionId || 'baseline';
 
@@ -638,7 +627,7 @@ export class SimulationHandler {
       details?: Record<string, unknown>;
     };
     
-    console.log('[SimulationHandler] Simulation status update', {
+    log.debug('Simulation status update', {
       jobId: data.jobId,
       status: data.status,
       progress: data.progress
@@ -667,7 +656,7 @@ export class SimulationHandler {
     if (job?.pollInterval) {
       clearInterval(job.pollInterval);
       job.pollInterval = undefined;
-      console.log('[SimulationHandler] Stopped polling for job', jobId);
+      log.debug('Stopped polling for job', jobId);
     }
   }
 
@@ -675,13 +664,13 @@ export class SimulationHandler {
    * Stop all polling for a specific document
    */
   public static stopAllPollingForDocument(documentId: string): void {
-    console.log('[SimulationHandler] Stopping all polling for document', documentId);
+    log.debug('Stopping all polling for document', documentId);
 
     SimulationHandler.activeJobs.forEach((job, jobId) => {
       if (job.documentId === documentId) {
         SimulationHandler.stopPolling(jobId);
         SimulationHandler.activeJobs.delete(jobId);
-        console.log('[SimulationHandler] Cleaned up job', jobId);
+        log.debug('Cleaned up job', jobId);
       }
     });
   }

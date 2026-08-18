@@ -3,7 +3,7 @@ import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { StorageAdapter } from '../../StorageAdapter';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { isCenterInBox } from '../../../services/swimLaneGeometry';
 
 interface KindeAuthResult {
@@ -18,7 +18,7 @@ const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(
  * Handler for DevTools diagnostic operations
  */
 export class DevtoolsHandler {
-  private static logger = ExtensionDebugService.forComponent('DevtoolsHandler');
+  private static logger = getLogger('DevtoolsHandler');
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
@@ -72,12 +72,12 @@ export class DevtoolsHandler {
         try {
           isVertical = swimlane.getPrimaryLanesVertical();
         } catch (e) {
-          DevtoolsHandler.logger.log('Could not get lane orientation', e);
+          DevtoolsHandler.logger.debug('Could not get lane orientation', e);
         }
         try {
           isMagnetized = swimlane.getMagnetized();
         } catch (e) {
-          DevtoolsHandler.logger.log('Could not get magnetized state', e);
+          DevtoolsHandler.logger.debug('Could not get magnetized state', e);
         }
 
         // Get lanes
@@ -120,7 +120,7 @@ export class DevtoolsHandler {
             offset += laneSize;
           }
         } catch (e) {
-          DevtoolsHandler.logger.log('Could not get primary lanes', e);
+          DevtoolsHandler.logger.debug('Could not get primary lanes', e);
         }
 
         // Collect all block IDs that are contained in lanes
@@ -165,7 +165,7 @@ export class DevtoolsHandler {
         totalBlockCount: allBlocks.size,
       };
 
-      DevtoolsHandler.logger.log('Swimlane scan complete', {
+      DevtoolsHandler.logger.debug('Swimlane scan complete', {
         swimlaneCount: swimlanes.length,
         nonSwimLaneBlockCount: nonSwimLaneBlocks.length,
         totalBlockCount: result.totalBlockCount,
@@ -220,7 +220,7 @@ export class DevtoolsHandler {
   private static async handleKindeAuthRequest(msg: EnvelopeBase): Promise<void> {
     try {
       const client = ModelManager.getClient();
-      DevtoolsHandler.logger.log('Attempting Kinde OAuth token request...');
+      DevtoolsHandler.logger.debug('Attempting Kinde OAuth token request...');
 
       const token = await client.getOAuthToken('kinde');
 
@@ -233,7 +233,7 @@ export class DevtoolsHandler {
       }
 
       // Send raw token to React for decoding (extension runtime lacks atob/Buffer)
-      DevtoolsHandler.logger.log('Kinde token received, sending to React for decode');
+      DevtoolsHandler.logger.debug('Kinde token received, sending to React for decode');
 
       DevtoolsHandler.sendKindeAuthResult(msg.id, {
         success: true,

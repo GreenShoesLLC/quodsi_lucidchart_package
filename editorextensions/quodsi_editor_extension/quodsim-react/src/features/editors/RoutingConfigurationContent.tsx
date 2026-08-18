@@ -5,9 +5,12 @@ import {
   EditorReferenceData,
   StateListManager,
   Connector,
+  getLogger,
 } from "@quodsi/lucid-shared";
 import { ArrowRightLeft, Info } from "lucide-react";
 import { RoutingConfigurationPanel } from "./RoutingConfigurationPanel";
+
+const log = getLogger("RoutingConfigurationContent");
 
 interface RoutingConfigurationContentProps {
   localData: Activity;
@@ -34,7 +37,7 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
   states,
   showHeader = true, // Default to true for backward compatibility
 }) => {
-  const isDevelopment = process.env.NODE_ENV === 'development';
+  const isDevelopment = import.meta.env.DEV;
 
   return (
     <div className="space-y-1">
@@ -103,9 +106,6 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
               selectedConnectorId={selectedConnectorId}
               onConnectorUpdate={(connectorId, updates) => {
                 // Connector updates are handled via messaging in the panel
-                if (isDevelopment) {
-                  console.log('[RoutingConfigurationContent] Connector updated:', connectorId, updates);
-                }
               }}
             />
           </div>

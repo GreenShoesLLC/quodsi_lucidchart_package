@@ -1,7 +1,3 @@
-// @quodsi/lucid-shared transitively requires axios (ESM entry CRA's Jest can't parse).
-// We only use a type + a constant here, so stub it. Must precede the import.
-jest.mock("axios", () => ({}));
-
 import { getModalSizePref, setModalSizePref } from "../modalSizePref";
 
 describe("modalSizePref", () => {

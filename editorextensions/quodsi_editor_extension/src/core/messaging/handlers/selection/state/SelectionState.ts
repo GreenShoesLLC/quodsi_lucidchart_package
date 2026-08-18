@@ -6,9 +6,12 @@ import {
   EditorReferenceData, 
   DiagramElementType, 
   SelectionType,
-  SelectionState as SharedSelectionState
+  SelectionState as SharedSelectionState,
+  getLogger
 } from '@quodsi/lucid-shared';
 import { SelectionStateData } from '../types';
+
+const log = getLogger('SelectionState');
 
 /**
  * Manages selection state data
@@ -43,14 +46,14 @@ export class SelectionState {
         ...data
       };
       
-      console.log('[SelectionState] Updated from message:', {
+      log.trace('Updated from message:', {
         selectionType: this.state.selectionType,
         selectionCount: this.state.selectionCount
       });
       
       return true;
     } catch (error) {
-      console.error('[SelectionState] Error updating from message:', error);
+      log.error('Error updating from message:', error);
       return false;
     }
   }
@@ -65,7 +68,7 @@ export class SelectionState {
       ...data
     };
     
-    console.log('[SelectionState] Updated state:', {
+    log.trace('Updated state:', {
       selectionType: this.state.selectionType,
       selectionCount: this.state.selectionCount,
       hasModel: this.state.hasModel
@@ -97,8 +100,6 @@ export class SelectionState {
       documentId: '',
       hasModel: false
     };
-    
-    console.log('[SelectionState] State reset');
   }
   
   /**
@@ -113,7 +114,7 @@ export class SelectionState {
       errorDetails: details
     };
     
-    console.error('[SelectionState] Error set:', message);
+    log.error('Error set:', message);
   }
   
   /**

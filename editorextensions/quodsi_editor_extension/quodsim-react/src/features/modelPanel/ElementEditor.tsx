@@ -5,6 +5,7 @@ import {
   DiagramElementType,
   StateListManager,
   ValidationResult,
+  getLogger,
 } from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { getSimulationObjectType } from "../../utils/typeDetection";
@@ -16,6 +17,8 @@ import GeneratorEditor from "../editors/GeneratorEditor";
 import ResourceEditor from "../editors/ResourceEditor";
 import ConnectorsEditor from "../editors/ConnectorsEditor";
 import SwimLaneEditor from "../editors/SwimLaneEditor";
+
+const log = getLogger("ElementEditor");
 
 interface ElementEditorProps {
   elementType: SimulationObjectType | string;
@@ -238,7 +241,7 @@ export const ElementEditor: React.FC<ElementEditorProps> = ({
         }
 
         // Error: Source not found in either Activities or Generators - data integrity issue
-        console.error("[ElementEditor] Source not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
+        log.error("Source not found for connector:", safeElementData.id, "sourceId:", safeElementData.sourceId);
         return (
           <div className="p-3 text-red-600 bg-red-50 border border-red-200 rounded text-sm">
             <div className="font-medium">Cannot edit connector</div>

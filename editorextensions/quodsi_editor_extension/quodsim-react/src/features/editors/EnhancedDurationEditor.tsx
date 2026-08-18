@@ -9,8 +9,8 @@ import {
 } from "@quodsi/lucid-shared";
 
 import "./EnhancedDurationEditor.css";
-import { DistributionTypeSelector } from "src/features/distribution/DistributionTypeSelector";
-import { DistributionParametersEditor } from "src/features/distribution/DistributionParametersEditor";
+import { DistributionTypeSelector } from "../distribution/DistributionTypeSelector";
+import { DistributionParametersEditor } from "../distribution/DistributionParametersEditor";
 
 interface EnhancedDurationEditorProps {
   elementId?: string;

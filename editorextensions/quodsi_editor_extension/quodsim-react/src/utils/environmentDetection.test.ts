@@ -1,16 +1,16 @@
 import { detectEnvironment } from './environmentDetection';
 
-const KEY = 'REACT_APP_DATA_CONNECTOR_API_URL';
+// environmentDetection.ts reads import.meta.env.VITE_DATA_CONNECTOR_API_URL
+// (post Task-6 REACT_APP_* -> import.meta.env migration), so stub it via
+// vi.stubEnv rather than poking process.env directly.
+const KEY = 'VITE_DATA_CONNECTOR_API_URL';
 
 function withApiUrl(url: string | undefined, fn: () => void) {
-  const prev = process.env[KEY];
-  if (url === undefined) delete process.env[KEY];
-  else process.env[KEY] = url;
+  if (url !== undefined) vi.stubEnv(KEY, url);
   try {
     fn();
   } finally {
-    if (prev === undefined) delete process.env[KEY];
-    else process.env[KEY] = prev;
+    vi.unstubAllEnvs();
   }
 }
 

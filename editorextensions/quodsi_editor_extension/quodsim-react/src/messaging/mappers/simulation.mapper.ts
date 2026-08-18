@@ -1,6 +1,7 @@
-import { EnvelopeBase, EnvelopeMessageType, SimulationStatus } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, SimulationStatus, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
+
+const logger = getLogger('SimulationMapper');
 
 /**
  * Maps simulation-related messages to reducer actions
@@ -14,7 +15,7 @@ export function mapSimulation(msg: EnvelopeBase): MessagingAction | null {
     return null;
   }
 
-  debugService.debug(`Simulation mapper processing: ${msg.type}`);
+  logger.debug(`Simulation mapper processing: ${msg.type}`);
 
   switch (msg.type) {
     case EnvelopeMessageType.MODEL_RUN_STATUS:

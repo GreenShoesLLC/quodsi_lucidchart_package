@@ -6,11 +6,11 @@ import { mapSimulation } from './simulation.mapper';
 import { mapModelOps } from './modelOps.mapper';
 import { mapElementOps } from './elementOps.mapper';
 import { mapEntitlements } from './entitlements.mapper';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
 
 // Create a component-specific logger
-const logger = debugService.forComponent('MessageMapper');
+const logger = getLogger('MessageMapper');
 
 /**
  * The order of mappers determines priority when multiple mappers
@@ -33,14 +33,14 @@ const mappers = [
  * @returns The first non-null action returned by a mapper, or null if no mapper handled it
  */
 export function mapEnvelopeToAction(msg: EnvelopeBase): MessagingAction | null {
-  logger.log('MODULAR Mapping envelope to action, type:', msg.type, msg.data);
+  logger.debug('MODULAR Mapping envelope to action, type:', msg.type, msg.data);
 
   // Try each mapper until one returns a non-null result
   for (const mapper of mappers) {
     try {
       const action = mapper(msg);
       if (action) {
-        logger.log(`Mapped ${msg.type} to action ${action.type}`);
+        logger.debug(`Mapped ${msg.type} to action ${action.type}`);
         return action;
       }
     } catch (error) {

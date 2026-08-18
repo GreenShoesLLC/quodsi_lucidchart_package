@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('InitializationEffects');
+const logger = getLogger('InitializationEffects');
 
 /**
  * Effect for detecting panel type from URL
@@ -56,7 +56,7 @@ export function usePanelTypeDetectionEffect(
         detectedType = "model";
       }
 
-      logger.log(`Detected panel type: ${detectedType}`);
+      logger.debug(`Detected panel type: ${detectedType}`);
       logger.debug(`Detected panel type: ${detectedType}`);
       dispatch({ type: "APP_INITIALIZE", panelType: detectedType });
     }
@@ -85,7 +85,7 @@ export function useAuthTimeoutEffect(
       if (!authLoadingCycleCompletedRef.current) {
         logger.warn("Auth initialization timeout reached. Forcing auth initialized state to proceed.");
         logger.warn("Auth initialization timeout reached after 10 seconds!");
-        
+
         // Check for valid auth
         const { isAuthenticated, userInfo } = ensureAuthState();
         

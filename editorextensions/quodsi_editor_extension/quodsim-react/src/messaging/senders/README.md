@@ -151,7 +151,7 @@ import { useAuthSender } from './authSender';
 import { MessageProvider } from '../MessageProvider';
 
 // Mock sendMessage function
-const mockSendMessage = jest.fn();
+const mockSendMessage = vi.fn();
 
 // Mock provider wrapper
 const wrapper = ({ children }) => (

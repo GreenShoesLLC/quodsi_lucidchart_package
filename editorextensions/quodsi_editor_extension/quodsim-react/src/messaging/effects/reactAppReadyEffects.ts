@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('ReactAppReadyEffects');
+const logger = getLogger('ReactAppReadyEffects');
 
 /**
  * Effect for REACT_APP_READY sending
@@ -35,7 +35,7 @@ export function useReactAppReadyEffect(
       state.app.initialized && // App is initialized
       state.app.panelType // Panel type is determined
     ) {
-      logger.log("All conditions met for sending REACT_APP_READY:", {
+      logger.debug("All conditions met for sending REACT_APP_READY:", {
         appInitialized: state.app.initialized,
         panelType: state.app.panelType
       });
@@ -47,7 +47,7 @@ export function useReactAppReadyEffect(
       // Mark as sent so we don't send it again
       hasSentReadyRef.current = true;
 
-      logger.log("Successfully sent REACT_APP_READY message");
+      logger.debug("Successfully sent REACT_APP_READY message");
     }
   }, [
     state.app.initialized,

@@ -36,7 +36,7 @@ import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
-import { ExtensionDebugService } from "./logging/ExtensionDebugService";
+import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
 
@@ -51,7 +51,7 @@ interface ChangeTracker {
 }
 
 export class ModelManager {
-    private debug = ExtensionDebugService.forComponent('ModelManager');
+    private debug = getLogger('ModelManager');
     private modelDefinition: ModelDefinition | null = null;
     private storageAdapter: StorageAdapter;
     private currentPage: PageProxy | null = null;
@@ -96,8 +96,8 @@ export class ModelManager {
         ModelManager.editorClient = client;
         ModelManager.instance = new ModelManager(storageAdapter);
         // Use a static debug instance for the static method
-        const staticDebug = ExtensionDebugService.forComponent('ModelManager');
-        staticDebug.log('Initialized singleton instance');
+        const staticDebug = getLogger('ModelManager');
+        staticDebug.debug('Initialized singleton instance');
     }
 
     // Change tracking
@@ -116,7 +116,7 @@ export class ModelManager {
     constructor(storageAdapter: StorageAdapter) {
         this.storageAdapter = storageAdapter;
         this.versionManager = new LucidVersionManager();
-        this.debug.log('ModelManager instance created');
+        this.debug.debug('ModelManager instance created');
     }
     /**
      * Marks the model as needing rebuild and validation
@@ -172,7 +172,7 @@ export class ModelManager {
                         // `NotificationService.showError` (which LucidVersionManager
                         // itself already calls on its own internal failures) is NOT
                         // actually wired to anything user-visible today -- it is a
-                        // console.error stub ("TODO: Implement actual LucidChart
+                        // log.error stub ("TODO: Implement actual LucidChart
                         // notification"). `broadcastValidationResults()` via
                         // MODEL_VALIDATION_RESULT is the one mechanism in this file
                         // already proven to reach the user (renders on the Model
@@ -404,7 +404,7 @@ export class ModelManager {
         // Check if this is a Resource - if so, perform cascading cleanup
         const existingResource = modelDef.resources.get(elementId);
         if (existingResource) {
-            this.debug.log('Resource deletion detected, performing cascading cleanup:', elementId);
+            this.debug.debug('Resource deletion detected, performing cascading cleanup:', elementId);
 
             // Step 1: Clean up ResourceRequirements that reference this resource
             const deletedReqIds = await this.cleanupResourceReferences(elementId, this.currentPage);
@@ -412,7 +412,7 @@ export class ModelManager {
             // Step 2: For each deleted requirement, clean up action references
             for (const reqId of deletedReqIds) {
                 const affectedCount = await this.cleanupRequirementReferences(reqId, this.currentPage);
-                this.debug.log('Cleaned up actions for requirement:', { reqId, affectedCount });
+                this.debug.debug('Cleaned up actions for requirement:', { reqId, affectedCount });
             }
 
             // Also remove the auto-generated requirement from the model definition
@@ -422,17 +422,17 @@ export class ModelManager {
         // Check if this is an Entity - if so, perform cascading cleanup
         const existingEntity = modelDef.entities.get(elementId);
         if (existingEntity) {
-            this.debug.log('Entity deletion detected, performing cascading cleanup:', elementId);
+            this.debug.debug('Entity deletion detected, performing cascading cleanup:', elementId);
             const affectedCount = await this.cleanupEntityReferences(elementId, this.currentPage);
-            this.debug.log('Cleaned up entity references:', { affectedCount });
+            this.debug.debug('Cleaned up entity references:', { affectedCount });
         }
 
         // Check if this is an Activity - if so, clean up destination references in actions
         const existingActivity = modelDef.activities.get(elementId);
         if (existingActivity) {
-            this.debug.log('Activity deletion detected, performing destination cleanup:', elementId);
+            this.debug.debug('Activity deletion detected, performing destination cleanup:', elementId);
             const affectedCount = await this.cleanupActivityDestinationReferences(elementId, this.currentPage);
-            this.debug.log('Cleaned up activity destination references:', { affectedCount });
+            this.debug.debug('Cleaned up activity destination references:', { affectedCount });
         }
 
         // Remove from all list managers
@@ -509,7 +509,7 @@ export class ModelManager {
     private broadcastValidationResults(result: ValidationResult): void {
         try {
             // Result already has the correct structure with issues and summary
-            this.debug.log('Broadcasting validation results', {
+            this.debug.debug('Broadcasting validation results', {
                 isValid: result.isValid,
                 errorCount: result.summary.errorCount,
                 warningCount: result.summary.warningCount,
@@ -571,7 +571,7 @@ export class ModelManager {
     public async cleanupDeletedResource(resourceId: string): Promise<void> {
         if (!this.currentPage) return;
 
-        this.debug.log('Cleaning up deleted swimlane resource:', resourceId);
+        this.debug.debug('Cleaning up deleted swimlane resource:', resourceId);
 
         // Step 1: Clean up ResourceRequirements referencing this resource
         const deletedReqIds = await this.cleanupResourceReferences(resourceId, this.currentPage);
@@ -920,7 +920,7 @@ export class ModelManager {
                 if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
                     affectedCount++;
-                    this.debug.log('Cleaned state references from Generator:', block.id);
+                    this.debug.debug('Cleaned state references from Generator:', block.id);
                 }
             }
 
@@ -972,7 +972,7 @@ export class ModelManager {
                 if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
                     affectedCount++;
-                    this.debug.log('Cleaned state references from Activity:', block.id);
+                    this.debug.debug('Cleaned state references from Activity:', block.id);
                 }
             }
         }
@@ -1022,7 +1022,7 @@ export class ModelManager {
             if (modified) {
                 this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
                 affectedCount++;
-                this.debug.log('Cleaned state references from Connector:', line.id);
+                this.debug.debug('Cleaned state references from Connector:', line.id);
             }
         }
 
@@ -1170,7 +1170,7 @@ export class ModelManager {
      * - DELAY_WITH_RESOURCE actions: resourceRequirementId NULLIFIED (still valid as pure delay)
      */
     private async cleanupRequirementReferences(requirementId: string, page: PageProxy): Promise<number> {
-        this.debug.log('Cleaning up references to requirement:', requirementId);
+        this.debug.debug('Cleaning up references to requirement:', requirementId);
         let affectedCount = 0;
 
         // Process all activities - update actions that reference the deleted requirement
@@ -1192,7 +1192,7 @@ export class ModelManager {
                     elementData.actions = result.actions;
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
                     affectedCount++;
-                    this.debug.log('Updated activity after requirement cleanup:', block.id);
+                    this.debug.debug('Updated activity after requirement cleanup:', block.id);
                 }
             }
         }
@@ -1217,7 +1217,7 @@ export class ModelManager {
         entityId: string,
         page: PageProxy
     ): Promise<number> {
-        this.debug.log('Cleaning up references to entity:', entityId);
+        this.debug.debug('Cleaning up references to entity:', entityId);
         let affectedCount = 0;
 
         // Process all blocks (Generators and Activities)
@@ -1244,7 +1244,7 @@ export class ModelManager {
                 if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Generator);
                     affectedCount++;
-                    this.debug.log('Cleaned entity references from Generator:', block.id);
+                    this.debug.debug('Cleaned entity references from Generator:', block.id);
                 }
             }
 
@@ -1270,7 +1270,7 @@ export class ModelManager {
                 if (modified) {
                     this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
                     affectedCount++;
-                    this.debug.log('Cleaned entity references from Activity:', block.id);
+                    this.debug.debug('Cleaned entity references from Activity:', block.id);
                 }
             }
         }
@@ -1299,7 +1299,7 @@ export class ModelManager {
             if (modified) {
                 this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
                 affectedCount++;
-                this.debug.log('Cleaned entity references from Connector:', line.id);
+                this.debug.debug('Cleaned entity references from Connector:', line.id);
             }
         }
 
@@ -1315,7 +1315,7 @@ export class ModelManager {
         activityId: string,
         page: PageProxy
     ): Promise<number> {
-        this.debug.log('Cleaning up destination references to activity:', activityId);
+        this.debug.debug('Cleaning up destination references to activity:', activityId);
         let affectedCount = 0;
 
         // Process all blocks (Activities)
@@ -1340,7 +1340,7 @@ export class ModelManager {
             if (modified) {
                 this.storageAdapter.setElementData(block, elementData, SimulationObjectType.Activity);
                 affectedCount++;
-                this.debug.log('Cleaned activity destination references from Activity:', block.id);
+                this.debug.debug('Cleaned activity destination references from Activity:', block.id);
             }
         }
 
@@ -1366,7 +1366,7 @@ export class ModelManager {
             if (modified) {
                 this.storageAdapter.setElementData(line, elementData, SimulationObjectType.Connector);
                 affectedCount++;
-                this.debug.log('Cleaned activity destination references from Connector:', line.id);
+                this.debug.debug('Cleaned activity destination references from Connector:', line.id);
             }
         }
 
@@ -1462,7 +1462,7 @@ export class ModelManager {
         resourceId: string,
         page: PageProxy
     ): Promise<string[]> {
-        this.debug.log('Cleaning up references to resource:', resourceId);
+        this.debug.debug('Cleaning up references to resource:', resourceId);
         const deletedRequirementIds: string[] = [];
 
         // Get current resource requirements
@@ -1472,7 +1472,7 @@ export class ModelManager {
         const updatedRequirements = requirements.filter(req => {
             // Delete auto-generated requirement (same ID as resource)
             if (req.id === resourceId) {
-                this.debug.log('Removing auto-generated requirement for resource:', resourceId);
+                this.debug.debug('Removing auto-generated requirement for resource:', resourceId);
                 deletedRequirementIds.push(req.id);
                 return false;
             }
@@ -1480,7 +1480,7 @@ export class ModelManager {
             // Check if the root clause (wire-cleanup Phase B2 Task 6: single
             // required `rootClause`, not an array) references this resource
             if (req.rootClause && this.clauseReferencesResource(req.rootClause, resourceId)) {
-                this.debug.log('Removing requirement that references deleted resource:', req.id);
+                this.debug.debug('Removing requirement that references deleted resource:', req.id);
                 deletedRequirementIds.push(req.id);
                 return false;
             }
@@ -1491,7 +1491,7 @@ export class ModelManager {
         // Save updated requirements if any were deleted
         if (deletedRequirementIds.length > 0) {
             this.storageAdapter.setResourceRequirements(page, updatedRequirements);
-            this.debug.log('Deleted requirements count:', deletedRequirementIds.length);
+            this.debug.debug('Deleted requirements count:', deletedRequirementIds.length);
         }
 
         return deletedRequirementIds;
@@ -1511,7 +1511,7 @@ export class ModelManager {
         const newActivityIds = new Set(newModel.activities.getAll().map(a => a.id));
         for (const oldActivity of oldModel.activities.getAll()) {
             if (!newActivityIds.has(oldActivity.id)) {
-                this.debug.log('Detected deleted activity during rebuild:', oldActivity.id);
+                this.debug.debug('Detected deleted activity during rebuild:', oldActivity.id);
                 await this.cleanupActivityDestinationReferences(oldActivity.id, page);
             }
         }
@@ -1520,7 +1520,7 @@ export class ModelManager {
         const newEntityIds = new Set(newModel.entities.getAll().map(e => e.id));
         for (const oldEntity of oldModel.entities.getAll()) {
             if (!newEntityIds.has(oldEntity.id)) {
-                this.debug.log('Detected deleted entity during rebuild:', oldEntity.id);
+                this.debug.debug('Detected deleted entity during rebuild:', oldEntity.id);
                 await this.cleanupEntityReferences(oldEntity.id, page);
             }
         }
@@ -1529,7 +1529,7 @@ export class ModelManager {
         const newResourceIds = new Set(newModel.resources.getAll().map(r => r.id));
         for (const oldResource of oldModel.resources.getAll()) {
             if (!newResourceIds.has(oldResource.id)) {
-                this.debug.log('Detected deleted resource during rebuild:', oldResource.id);
+                this.debug.debug('Detected deleted resource during rebuild:', oldResource.id);
                 const deletedReqIds = await this.cleanupResourceReferences(oldResource.id, page);
                 for (const reqId of deletedReqIds) {
                     await this.cleanupRequirementReferences(reqId, page);
@@ -1542,7 +1542,7 @@ export class ModelManager {
      * Updates the states array for the model
      */
     public async updateStates(states: ISerializedState[], page: PageProxy): Promise<void> {
-        this.debug.log('updateStates - Start', {
+        this.debug.debug('updateStates - Start', {
             statesCount: states.length,
             pageId: page.id,
             pageTitle: page.getTitle()
@@ -1559,7 +1559,7 @@ export class ModelManager {
             // Clean up references for each deleted state
             let totalAffected = 0;
             for (const deletedState of deletedStates) {
-                this.debug.log('Detected deleted state, cleaning up references:', {
+                this.debug.debug('Detected deleted state, cleaning up references:', {
                     stateId: deletedState.id,
                     stateName: deletedState.name
                 });
@@ -1577,7 +1577,7 @@ export class ModelManager {
             // Mark model as dirty to force rebuild on next access
             this.markModelDirty();
 
-            this.debug.log('updateStates - Complete with cascading cleanup', {
+            this.debug.debug('updateStates - Complete with cascading cleanup', {
                 deletedCount: deletedStates.length,
                 affectedElements: totalAffected
             });
@@ -1600,7 +1600,7 @@ export class ModelManager {
      * depth so a malformed payload cannot drop it.
      */
     public async updateEntities(entities: ISerializedEntity[], page: PageProxy): Promise<void> {
-        this.debug.log('updateEntities - Start', {
+        this.debug.debug('updateEntities - Start', {
             entitiesCount: entities.length,
             pageId: page.id,
             pageTitle: page.getTitle()
@@ -1610,7 +1610,7 @@ export class ModelManager {
             // Defense in depth: ensure the default entity is always present.
             let entitiesToSave = entities;
             if (!entities.some(e => e.id === ModelDefaults.DEFAULT_ENTITY_ID)) {
-                this.debug.log('Default entity missing from payload; re-inserting it');
+                this.debug.debug('Default entity missing from payload; re-inserting it');
                 entitiesToSave = [
                     {
                         id: ModelDefaults.DEFAULT_ENTITY_ID,
@@ -1630,7 +1630,7 @@ export class ModelManager {
             // Clean up references for each deleted entity
             let totalAffected = 0;
             for (const deletedEntity of deletedEntities) {
-                this.debug.log('Detected deleted entity, cleaning up references:', {
+                this.debug.debug('Detected deleted entity, cleaning up references:', {
                     entityId: deletedEntity.id,
                     entityName: deletedEntity.name
                 });
@@ -1647,7 +1647,7 @@ export class ModelManager {
             // Mark model as dirty to force rebuild on next access
             this.markModelDirty();
 
-            this.debug.log('updateEntities - Complete with cascading cleanup', {
+            this.debug.debug('updateEntities - Complete with cascading cleanup', {
                 deletedCount: deletedEntities.length,
                 affectedElements: totalAffected
             });
@@ -1661,7 +1661,7 @@ export class ModelManager {
      * Updates the resource requirements array for the model
      */
     public async updateResourceRequirements(requirements: ISerializedResourceRequirement[], page: PageProxy): Promise<void> {
-        this.debug.log('updateResourceRequirements - Start', {
+        this.debug.debug('updateResourceRequirements - Start', {
             requirementsCount: requirements.length,
             pageId: page.id,
             pageTitle: page.getTitle()
@@ -1677,7 +1677,7 @@ export class ModelManager {
 
             // Clean up references for each deleted requirement
             for (const deletedReq of deletedReqs) {
-                this.debug.log('Detected deleted requirement, cleaning up references:', deletedReq.id);
+                this.debug.debug('Detected deleted requirement, cleaning up references:', deletedReq.id);
                 await this.cleanupRequirementReferences(deletedReq.id, page);
             }
 
@@ -1687,7 +1687,7 @@ export class ModelManager {
             // Mark model as dirty to force rebuild on next access
             this.markModelDirty();
 
-            this.debug.log('updateResourceRequirements - Complete with cascading cleanup', {
+            this.debug.debug('updateResourceRequirements - Complete with cascading cleanup', {
                 deletedCount: deletedReqs.length
             });
         } catch (error) {
@@ -1709,10 +1709,10 @@ export class ModelManager {
         const { scenarios: updated, baselineAdded, migrated } = ensureBaselineScenario(scenarios);
         if (baselineAdded || migrated) {
             if (baselineAdded) {
-                this.debug.log('ensureBaselineScenario - Creating Baseline scenario');
+                this.debug.debug('ensureBaselineScenario - Creating Baseline scenario');
             }
             if (migrated) {
-                this.debug.log('ensureBaselineScenario - Migrated legacy zero-UUID baseline to a real UUID');
+                this.debug.debug('ensureBaselineScenario - Migrated legacy zero-UUID baseline to a real UUID');
             }
             this.storageAdapter.setScenarios(page, updated);
 
@@ -1745,9 +1745,9 @@ export class ModelManager {
                     substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
                 );
                 this.storageAdapter.setScenarios(page, updated);
-                this.debug.log('Baseline synced + id substitution applied after create');
+                this.debug.debug('Baseline synced + id substitution applied after create');
             } else {
-                this.debug.log('Baseline synced after create');
+                this.debug.debug('Baseline synced after create');
             }
         } catch (err) {
             this.debug.error('Baseline post-create sync failed (non-fatal):', err);
@@ -1759,7 +1759,7 @@ export class ModelManager {
      * Scenarios have no cross-references to clean up, so this is a simple save.
      */
     public async updateScenarios(scenarios: ISerializedScenario[], page: PageProxy): Promise<void> {
-        this.debug.log('updateScenarios - Start', {
+        this.debug.debug('updateScenarios - Start', {
             scenariosCount: scenarios.length,
             pageId: page.id,
         });
@@ -1768,7 +1768,7 @@ export class ModelManager {
             this.storageAdapter.setScenarios(page, scenarios);
             this.markModelDirty();
 
-            this.debug.log('updateScenarios - Complete');
+            this.debug.debug('updateScenarios - Complete');
         } catch (error) {
             this.debug.error('Error in updateScenarios:', error);
             throw error;
@@ -1811,7 +1811,7 @@ export class ModelManager {
 
                 if (elementData.initialStates.length !== originalLength) {
                     cleaned = true;
-                    this.debug.log('Cleaned orphaned state modifications from Generator', {
+                    this.debug.debug('Cleaned orphaned state modifications from Generator', {
                         elementId: elementData.id,
                         originalCount: originalLength,
                         cleanedCount: elementData.initialStates.length,
@@ -1833,7 +1833,7 @@ export class ModelManager {
         newType: SimulationObjectType,
         page: PageProxy
     ): Promise<void> {
-        this.debug.log('handleTypeConversion - Start', {
+        this.debug.debug('handleTypeConversion - Start', {
             elementId: element.id,
             newType: newType,
             elementType: element.constructor.name
@@ -1915,7 +1915,7 @@ export class ModelManager {
                 await this.autoConvertConnectedLines(element, page);
             }
 
-            this.debug.log('handleTypeConversion - Completed successfully');
+            this.debug.debug('handleTypeConversion - Completed successfully');
 
         } catch (error) {
             this.debug.error('handleTypeConversion - Error:', error);
@@ -2052,7 +2052,7 @@ export class ModelManager {
          *  updateData by saveElementData. Empty for every silent/partial save. */
         clearedFields: readonly string[] = []
     ): Promise<void> {
-        this.debug.log('handleDataUpdate - Start', {
+        this.debug.debug('handleDataUpdate - Start', {
             elementId: element.id,
             updateDataType: typeof updateData,
             simulationObjectType: type,
@@ -2063,13 +2063,13 @@ export class ModelManager {
             // Check and log model existence
             const existingModel = this.getModel();
             if (!existingModel) {
-                this.debug.log('No existing model found. Creating new model.');
+                this.debug.debug('No existing model found. Creating new model.');
                 const model = {
                     id: page.id,
                     name: page.getTitle() || 'New Model',
                     type: SimulationObjectType.Model
                 };
-                this.debug.log('Initializing new model:', model);
+                this.debug.debug('Initializing new model:', model);
                 await this.initializeModel(model as Model, page);
             } else {
                 this.debug.debug('Existing model found:', {
@@ -2150,7 +2150,7 @@ export class ModelManager {
                 );
             }
 
-            this.debug.log('handleDataUpdate - Completed Successfully');
+            this.debug.debug('handleDataUpdate - Completed Successfully');
         } catch (error) {
             this.debug.error('Error in handleDataUpdate:', error);
             throw error;

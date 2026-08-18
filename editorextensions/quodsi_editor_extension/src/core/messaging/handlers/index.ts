@@ -1,4 +1,4 @@
-import { EnvelopeBase } from '@quodsi/lucid-shared';
+import { EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { FrameworkHandler } from './frameworkHandler';
 
 import { SimulationHandler } from './simulationHandler';
@@ -17,6 +17,8 @@ import { SwimLaneHandler } from './swimlaneHandler';
 import { AnalyticsHandler } from './analyticsHandler';
 import { UpgradeInterestHandler } from './upgradeInterestHandler';
 
+const log = getLogger('MessageHandlers');
+
 /**
  * Central handler registry that dispatches messages to the appropriate category handler
  */
@@ -28,13 +30,13 @@ export class MessageHandlers {
    * @returns Whether the message was handled by any handler
    */
   public static handleMessage(msg: EnvelopeBase): boolean {
-    console.log(`[MessageHandlers] Handling message type: ${msg.type}`);
+    log.trace(`Handling message type: ${msg.type}`);
     
     // Try each handler in order of priority
 
     // Framework messages have highest priority
     if (FrameworkHandler.handleMessage(msg)) {
-      console.log(`[MessageHandlers] Message ${msg.type} handled by FrameworkHandler`);
+      log.trace(`Message ${msg.type} handled by FrameworkHandler`);
       return true;
     }
 
@@ -109,7 +111,7 @@ export class MessageHandlers {
     }
 
     // Message wasn't handled by any handler
-    console.warn(`Unhandled message type: ${msg.type}`);
+    log.warn(`Unhandled message type: ${msg.type}`);
     return false;
   }
 }

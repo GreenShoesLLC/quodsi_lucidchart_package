@@ -21,7 +21,7 @@ import { router, RoutablePanel } from '../core/messaging';
 import { SelectionHandler, SimulationHandler } from '../core/messaging/handlers';
 import { AuthHandler } from '../core/messaging/handlers/authHandler';
 import { StorageAdapter } from '../core/StorageAdapter';
-import { ExtensionDebugService } from '../core/logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 import { upsertModel } from '../core/sync/scenarioSync';
 
 /**
@@ -30,7 +30,7 @@ import { upsertModel } from '../core/sync/scenarioSync';
  * interface to facilitate communication with the iframe content.
  */
 export class RightDockPanel extends Panel implements RoutablePanel {
-    private debug = ExtensionDebugService.forComponent('RightDockPanel');
+    private debug = getLogger('RightDockPanel');
     private isReady: boolean = false;
     private modelManager: ModelManager;
     // Tracks whether the panel-init model upsert has committed this session.
@@ -48,7 +48,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             width: 300
         });
         
-        this.debug.log('Constructor called with role: model');
+        this.debug.debug('Constructor called with role: model');
         this.modelManager = modelManager;
 
         // If the panel-init model upsert raced ahead of Kinde auth (cold load),
@@ -64,12 +64,12 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Register with the router as a model panel
      */
     protected didMount(): void {
-        this.debug.log('didMount called - registering with router as "model" panel');
+        this.debug.debug('didMount called - registering with router as "model" panel');
         
         // Register with the router
         router.registerChannel('model', this);
         
-        this.debug.log('Registered with message router');
+        this.debug.debug('Registered with message router');
     }
 
     /**
@@ -79,7 +79,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * @param msg The envelope to deliver to the iframe
      */
     public relayToIframe(msg: EnvelopeBase): void {
-        this.debug.log(`relayToIframe called with msg type: ${msg.type}`);
+        this.debug.debug(`relayToIframe called with msg type: ${msg.type}`);
 
         try {
             // Use a type assertion to bypass TypeScript's type checking
@@ -129,7 +129,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Called when the iframe has been constructed and loaded
      */
     protected frameLoaded(): void {
-        this.debug.log('frameLoaded called');
+        this.debug.debug('frameLoaded called');
 
         // Call parent method first to maintain proper behavior
         super.frameLoaded();
@@ -138,16 +138,16 @@ export class RightDockPanel extends Panel implements RoutablePanel {
         this.isReady = true;
 
         // Re-register with the router to ensure we have a valid reference
-        this.debug.log('Re-registering with router as "model" panel');
+        this.debug.debug('Re-registering with router as "model" panel');
         router.registerChannel('model', this);
         
         // IMPORTANT: Explicitly mark this channel as ready
         try {
-            this.debug.log('Explicitly marking model channel as ready');
+            this.debug.debug('Explicitly marking model channel as ready');
             const channelManager = router.getChannelManager();
             if (channelManager && typeof channelManager.markChannelReady === 'function') {
                 channelManager.markChannelReady('model');
-                this.debug.log('Successfully marked model channel as ready');
+                this.debug.debug('Successfully marked model channel as ready');
             }
         } catch (err) {
             this.debug.error('Error marking channel as ready:', err);
@@ -164,14 +164,14 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Called when the iframe has been removed from the DOM
      */
     protected frameClosed(): void {
-        this.debug.log('Frame closed, cleaning up resources');
+        this.debug.debug('Frame closed, cleaning up resources');
 
         // Stop all polling for this document
         try {
             const documentProxy = new DocumentProxy(this.client);
             const documentId = documentProxy.id;
             if (documentId) {
-                this.debug.log('Stopping simulation polling for document', documentId);
+                this.debug.debug('Stopping simulation polling for document', documentId);
                 SimulationHandler.stopAllPollingForDocument(documentId);
             }
         } catch (error) {
@@ -189,13 +189,13 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * Shows the panel
      */
     public show(): void {
-        this.debug.log('Show called');
+        this.debug.debug('Show called');
         super.show();
         
         // Don't send MODEL_CONTEXT here - wait for REACT_APP_READY
         // The React app will send REACT_APP_READY when it's ready to receive messages
         // Then MessageRouter will call our sendModelContext() method
-        this.debug.log('Panel shown, waiting for REACT_APP_READY to send MODEL_CONTEXT');
+        this.debug.debug('Panel shown, waiting for REACT_APP_READY to send MODEL_CONTEXT');
     }
 
     /**
@@ -260,7 +260,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
      * This is called by MessageRouter after AUTH and SUBSCRIPTION messages
      */
     public sendModelContext(): void {
-        this.debug.log('sendModelContext called to establish document context');
+        this.debug.debug('sendModelContext called to establish document context');
         this.initializeModelContext();
     }
     
@@ -277,7 +277,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 // Determine if this is a Quodsi model
                 const isQuodsiModel = this.modelManager.isQuodsiModel(currentPage);
                 
-                this.debug.log('Model context determined:', {
+                this.debug.debug('Model context determined:', {
                     documentId: document.id,
                     pageId: currentPage.id,
                     title: document.getTitle() || 'Untitled Document',
@@ -342,7 +342,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                 modelName: document.getTitle() || 'Untitled Model',
             });
             this.modelSyncSucceeded = true;
-            this.debug.log('Model upserted + scenarios synced on panel init', {
+            this.debug.debug('Model upserted + scenarios synced on panel init', {
                 count: scenarios.length,
             });
 
@@ -352,7 +352,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
                     substitutions.has(s.id) ? { ...s, id: substitutions.get(s.id)! } : s
                 );
                 await modelManager.updateScenarios(updated, currentPage);
-                this.debug.log('Applied server id substitutions:', Array.from(substitutions.entries()));
+                this.debug.debug('Applied server id substitutions:', Array.from(substitutions.entries()));
             }
         } catch (err) {
             this.debug.error('Failed to upsert/sync on panel init:', err);
@@ -371,21 +371,7 @@ export class RightDockPanel extends Panel implements RoutablePanel {
             return;
         }
         const { document, currentPage } = this.lastSyncContext;
-        this.debug.log('Auth ready — retrying deferred model upsert/sync');
+        this.debug.debug('Auth ready — retrying deferred model upsert/sync');
         await this.upsertAndSyncOnPanelInit(document, currentPage);
-    }
-
-    /**
-     * Enables or disables logging
-     */
-    public setLogging(enabled: boolean): void {
-        // This method is kept for backward compatibility but now delegates to the debug service
-        const debugService = ExtensionDebugService.getInstance();
-        if (enabled) {
-            debugService.enableComponent('RightDockPanel');
-        } else {
-            debugService.disableComponent('RightDockPanel');
-        }
-        this.debug.log(`Logging ${enabled ? 'enabled' : 'disabled'}`);
     }
 }

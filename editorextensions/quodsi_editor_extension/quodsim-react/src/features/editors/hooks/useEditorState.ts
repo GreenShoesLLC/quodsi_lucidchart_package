@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getLogger } from "@quodsi/lucid-shared";
+
+const log = getLogger("useAutoSave");
 
 /**
  * Custom hook that syncs form state when the element ID changes.
@@ -170,7 +173,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     try {
       onSaveRef.current(draftRef.current);
     } catch (err) {
-      console.error("[useAutoSave] save failed:", err);
+      log.error("save failed:", err);
       setStatus("error");
     }
   }, []);
@@ -244,14 +247,14 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
     if (wasSavingRef.current && !isSaving) {
       if (pendingFlushDraftRef.current !== null) {
         // Drain the captured flush for the PREVIOUS element. Fire-and-forget:
-        // failures log via console.error but do not surface in the new element's
+        // failures log via log.error but do not surface in the new element's
         // UI status, because the user has already moved on.
         const captured = pendingFlushDraftRef.current;
         pendingFlushDraftRef.current = null;
         try {
           onSaveRef.current(captured);
         } catch (err) {
-          console.error("[useAutoSave] pending flush failed:", err);
+          log.error("pending flush failed:", err);
         }
         // Note: do NOT update status or lastSavedAt — the new element's panel
         // owns its own visual state.
@@ -312,7 +315,7 @@ export function useAutoSave<T>(args: UseAutoSaveArgs<T>): UseAutoSaveResult {
         } catch (err) {
           // Cannot update React state during unmount — log for diagnosability.
           // (dispatchSave's own try/catch in Task 9 handles non-unmount errors.)
-          console.error("[useAutoSave] unmount flush failed:", err);
+          log.error("unmount flush failed:", err);
         }
       }
     };

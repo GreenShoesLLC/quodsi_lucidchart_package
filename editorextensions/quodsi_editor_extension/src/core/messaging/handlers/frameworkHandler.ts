@@ -1,4 +1,6 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('FrameworkHandler');
 
 /**
  * Handler for framework-related messages (lifecycle, errors, logging)
@@ -37,7 +39,7 @@ export class FrameworkHandler {
   private static handleError(msg: EnvelopeBase): boolean {
     const data = msg.data as { code: string; message: string; id?: string };
     
-    console.error(`[FrameworkHandler] Error received: ${data.code}`, {
+    log.error(`Error received: ${data.code}`, {
       message: data.message,
       correlationId: data.id
     });
@@ -58,9 +60,9 @@ export class FrameworkHandler {
     const data = msg.data as { level: 'debug' | 'info'; text: string };
     
     if (data.level === 'debug') {
-      console.debug(`[FrameworkHandler] ${data.text}`);
+      log.debug(`${data.text}`);
     } else {
-      console.info(`[FrameworkHandler] ${data.text}`);
+      log.info(`${data.text}`);
     }
     
     return true;

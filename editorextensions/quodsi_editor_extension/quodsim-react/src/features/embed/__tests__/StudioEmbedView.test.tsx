@@ -1,12 +1,12 @@
 import { render, screen, act } from '@testing-library/react';
 import { EnvelopeMessageType } from '@quodsi/lucid-shared';
 
-const mockSendMessage = jest.fn();
-jest.mock('../../../messaging/MessageProvider', () => ({
+const mockSendMessage = vi.fn();
+vi.mock('../../../messaging/MessageProvider', () => ({
   useMessaging: () => ({ sendMessage: mockSendMessage }),
 }));
 // Stub the heavy iframe host so we can assert which path it was handed.
-jest.mock('../EmbeddedStudioFrame', () => ({
+vi.mock('../EmbeddedStudioFrame', () => ({
   EmbeddedStudioFrame: ({ studioPath }: { studioPath: string }) => (
     <div data-testid="frame">{studioPath}</div>
   ),

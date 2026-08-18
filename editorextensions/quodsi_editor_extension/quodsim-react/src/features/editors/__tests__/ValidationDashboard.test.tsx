@@ -2,15 +2,15 @@
 // Verifies: "Go to source" appears for issues with an elementId; INFO issues
 // and stat cards (Errors/Warnings/Info count cards) are absent.
 
-jest.mock("../../../messaging/senders", () => ({
+vi.mock("../../../messaging/senders", () => ({
   useModelOpsSender: () => ({
     locateElement: mockLocateElement,
   }),
 }));
 
-const mockLocateElement = jest.fn();
-const mockOnGoToModelSettings = jest.fn();
-const mockOnGoToEntities = jest.fn();
+const mockLocateElement = vi.fn();
+const mockOnGoToModelSettings = vi.fn();
+const mockOnGoToEntities = vi.fn();
 
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";

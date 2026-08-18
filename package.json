@@ -16,12 +16,5 @@
     "start": "npx lucid-package test-editor-extension",
     "prebundle": "npm run lint:hooks --workspace editorextensions/quodsi_editor_extension/quodsim-react",
     "bundle": "npx lucid-package bundle"
-  },
-  "dependencies": {
-    "axios": "^1.7.9",
-    "webpack-shell-plugin-next": "^2.3.1"
-  },
-  "devDependencies": {
-    "@types/lodash": "^4.17.15"
   }
 }

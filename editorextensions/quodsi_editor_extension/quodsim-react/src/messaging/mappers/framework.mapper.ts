@@ -1,6 +1,7 @@
-import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
 import { MessagingAction } from '../state/types';
-import { debugService } from '../utils/debugService';
+
+const logger = getLogger('FrameworkMapper');
 
 /**
  * Maps framework-related messages to reducer actions
@@ -18,7 +19,7 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
     return null;
   }
 
-  debugService.debug(`Framework mapper processing: ${msg.type}`);
+  logger.debug(`Framework mapper processing: ${msg.type}`);
 
   switch (msg.type) {
     case EnvelopeMessageType.ERROR:
@@ -30,7 +31,7 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
       };
 
       // Log the error for debugging
-      debugService.error(`Received ERROR message: [${errorData.code}] ${errorData.message}`);
+      logger.error(`Received ERROR message: [${errorData.code}] ${errorData.message}`);
 
       // No state changes for error messages - just log them
       return null;
@@ -44,9 +45,9 @@ export function mapFramework(msg: EnvelopeBase): MessagingAction | null {
 
       // Forward to debug service
       if (logData.level === 'debug') {
-        debugService.debug(`[Host] ${logData.text}`);
+        logger.debug(`[Host] ${logData.text}`);
       } else {
-        debugService.log(`[Host] ${logData.text}`);
+        logger.debug(`[Host] ${logData.text}`);
       }
 
       // No state changes for log messages

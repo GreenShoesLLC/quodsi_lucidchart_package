@@ -5,12 +5,15 @@ import {
   EditorReferenceData,
   StateListManager,
   Connector,
+  getLogger,
 } from "@quodsi/lucid-shared";
 import { RoutingConfigurationContent } from "./RoutingConfigurationContent";
 import { useModelOpsSender } from "../../messaging/senders";
 import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
+
+const log = getLogger("ConnectorsEditor");
 
 // ============================================================================
 // TYPES
@@ -56,11 +59,11 @@ const ConnectorsEditor: React.FC<ConnectorsEditorProps> = ({
   referenceData,
   states,
 }) => {
-  const isDevelopment = process.env.NODE_ENV === "development";
+  const isDevelopment = import.meta.env.DEV;
   const { updateElementData } = useModelOpsSender();
 
   if (isDevelopment) {
-    console.log("[ConnectorsEditor] Rendered with:", {
+    log.trace("Rendered with:", {
       activityId: activity?.id,
       activityName: activity?.name,
       connectorsCount: outgoingConnectors?.length,

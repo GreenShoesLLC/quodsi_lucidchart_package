@@ -1,8 +1,7 @@
-import { EnvelopeMessageType, isEnvelope } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
+import { EnvelopeMessageType, isEnvelope, getLogger } from '@quodsi/lucid-shared';
 import { mapEnvelopeToAction } from '../mappers/mapEnvelopeToAction';
 
-const logger = debugService.forComponent('RxMessageHandlers');
+const logger = getLogger('RxMessageHandlers');
 
 /**
  * Creates a message handler function for processing messages from the host
@@ -43,11 +42,11 @@ export function createRxMessageHandler(
       }
     }
 
-    logger.log(`Received message: ${msg.type}`, msg);
+    logger.debug(`Received message: ${msg.type}`, msg);
 
     // If this is a response to a request, clean up the pending request
     if (msg.id && state.app.pendingRequests[msg.id]) {
-      logger.log(`Received response for request: ${msg.id}`);
+      logger.debug(`Received response for request: ${msg.id}`);
       dispatch({
         type: "REMOVE_PENDING_REQUEST",
         id: msg.id,
@@ -59,7 +58,7 @@ export function createRxMessageHandler(
 
     // Handle multiple actions if returned as an array
     if (Array.isArray(actionResult)) {
-      logger.log("Dispatching multiple actions:", actionResult);
+      logger.debug("Dispatching multiple actions:", actionResult);
       actionResult.forEach(action => {
         if (action) {
           dispatch(action);
@@ -68,7 +67,7 @@ export function createRxMessageHandler(
     }
     // Update state if a single action was produced
     else if (actionResult) {
-      logger.log("Dispatching action:", actionResult);
+      logger.debug("Dispatching action:", actionResult);
       dispatch(actionResult);
     }
   };

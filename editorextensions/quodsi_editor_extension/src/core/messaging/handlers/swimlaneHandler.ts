@@ -8,7 +8,7 @@ import {
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
 
@@ -28,7 +28,7 @@ function extractResourceIds(data: SwimLaneQuodsiData): string[] {
  * - This follows the pattern where the extension owns all model mutations
  */
 export class SwimLaneHandler {
-  private static logger = ExtensionDebugService.forComponent('SwimLaneHandler');
+  private static logger = getLogger('SwimLaneHandler');
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
@@ -95,7 +95,7 @@ export class SwimLaneHandler {
       const modelManager = ModelManager.getInstance();
 
       for (const resourceId of removedResourceIds) {
-        SwimLaneHandler.logger.log('Lane unconverted, cleaning up resource:', resourceId);
+        SwimLaneHandler.logger.debug('Lane unconverted, cleaning up resource:', resourceId);
         await modelManager.cleanupDeletedResource(resourceId);
       }
 
@@ -103,7 +103,7 @@ export class SwimLaneHandler {
       // picked up by loadSwimLaneResources() on next rebuild
       modelManager.invalidateModelCache();
 
-      SwimLaneHandler.logger.log('Saved swimlane data', {
+      SwimLaneHandler.logger.debug('Saved swimlane data', {
         blockId: data.swimlaneBlockId,
         laneCount: data.swimlaneData.lanes.length,
         mappedLanes: data.swimlaneData.lanes.filter(l => l !== null).length,
@@ -188,7 +188,7 @@ export class SwimLaneHandler {
       const modelManager = ModelManager.getInstance();
       modelManager.invalidateModelCache();
 
-      SwimLaneHandler.logger.log('Created Resource for lane', {
+      SwimLaneHandler.logger.debug('Created Resource for lane', {
         resourceId,
         resourceName: data.resourceName,
         laneIndex: data.laneIndex,

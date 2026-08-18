@@ -1,9 +1,13 @@
+import { getLogger } from '@quodsi/lucid-shared';
+
 /**
  * LucidDataActionUtility
- * 
+ *
  * This utility handles the OAuth workaround needed for performDataAction calls.
  * It ensures the OAuth workaround is triggered only once during the application lifecycle.
  */
+
+const log = getLogger('LucidDataActionUtility');
 
 /**
  * Interface for data action parameters
@@ -35,7 +39,6 @@ export class LucidDataActionUtility {
         // Check if we need to trigger OAuth first
         if (!this.hasTriggeredOauth) {
             try {
-                console.log("Triggering OAuth workaround before performDataAction");
                 await client.oauthXhr("lucid", {
                     url: "https://api.lucid.co/folders/search",
                     headers: {
@@ -48,9 +51,8 @@ export class LucidDataActionUtility {
                 
                 // Mark that we've triggered OAuth
                 this.hasTriggeredOauth = true;
-                console.log("Successfully triggered OAuth workaround");
             } catch (error) {
-                console.error("Error triggering OAuth workaround:", error);
+                log.error("Error triggering OAuth workaround:", error);
                 // We'll still try to continue with the data action
             }
         }
@@ -65,6 +67,5 @@ export class LucidDataActionUtility {
      */
     public static resetOauthTriggerStatus(): void {
         this.hasTriggeredOauth = false;
-        console.log("OAuth trigger status has been reset");
     }
 }

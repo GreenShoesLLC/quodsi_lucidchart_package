@@ -1,9 +1,8 @@
 import { useCallback } from 'react';
 import { v4 as uuid } from 'uuid';
-import { EnvelopeBase, EnvelopeMessageType, MessageSource } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
+import { EnvelopeBase, EnvelopeMessageType, MessageSource, getLogger } from '@quodsi/lucid-shared';
 
-const logger = debugService.forComponent('useSendMessage');
+const logger = getLogger('useSendMessage');
 
 /**
  * Hook for sending messages to the host application
@@ -44,7 +43,7 @@ export function useSendMessage(
 
       // Send message to parent window
       if (window.parent) {
-        logger.log(`Sending message: ${type}`, envelope);
+        logger.debug(`Sending message: ${type}`, envelope);
         window.parent.postMessage(envelope, "*");
       } else {
         logger.error("No parent window found to send message to");

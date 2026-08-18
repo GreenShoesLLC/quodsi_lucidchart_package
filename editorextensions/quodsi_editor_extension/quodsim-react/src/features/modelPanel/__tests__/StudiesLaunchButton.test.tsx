@@ -1,13 +1,11 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 
-jest.mock('axios', () => ({}));
-
-const mockOpenStudiesModal = jest.fn();
-jest.mock('../../../messaging/senders/simulationRunSender', () => ({
+const mockOpenStudiesModal = vi.fn();
+vi.mock('../../../messaging/senders/simulationRunSender', () => ({
   useSimulationRunSender: () => ({ openStudiesModal: mockOpenStudiesModal }),
 }));
 
-jest.mock('../../../messaging/MessageProvider', () => ({
+vi.mock('../../../messaging/MessageProvider', () => ({
   useMessaging: () => ({
     selection: { documentContext: { documentId: 'doc1', pageId: 'pg1' } },
   }),
@@ -16,7 +14,7 @@ jest.mock('../../../messaging/MessageProvider', () => ({
 import { StudiesLaunchButton } from '../StudiesLaunchButton';
 
 describe('StudiesLaunchButton', () => {
-  beforeEach(() => { jest.clearAllMocks(); });
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('renders a Studies button and launches the studies modal', () => {
     render(<StudiesLaunchButton />);

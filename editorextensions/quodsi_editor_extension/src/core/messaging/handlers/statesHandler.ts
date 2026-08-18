@@ -1,9 +1,10 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedState } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedState, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
 
+const log = getLogger('StatesHandler');
 
 /**
  * Handler for states operations (update states array)
@@ -20,7 +21,7 @@ export class StatesHandler {
       case EnvelopeMessageType.STATES_UPDATE:
         // Start the async process but return true synchronously
         StatesHandler.handleStatesUpdate(msg)
-          .catch(err => console.error('[StatesHandler] Error in handleStatesUpdate:', err));
+          .catch(err => log.error('Error in handleStatesUpdate:', err));
         return true;
 
       case EnvelopeMessageType.STATES_UPDATE_RESULT:
@@ -43,7 +44,7 @@ export class StatesHandler {
       states: ISerializedState[];
     };
 
-    console.log('[StatesHandler] States update requested', {
+    log.debug('States update requested', {
       statesCount: data.states.length
     });
 
@@ -85,7 +86,7 @@ export class StatesHandler {
       return true;
 
     } catch (error) {
-      console.error('[StatesHandler] Error updating states', error);
+      log.error('Error updating states', error);
 
       // Send error response
       router.send('model', {
@@ -116,7 +117,7 @@ export class StatesHandler {
       errorMessage?: string;
     };
 
-    console.log('[StatesHandler] States update result received', {
+    log.debug('States update result received', {
       success: data.success,
       error: data.errorMessage
     });

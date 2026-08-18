@@ -18,8 +18,12 @@ Specifies the target environment for the build. This value determines which envi
 variables and manifest file are used. Must be one of 'Dev', 'TST', or 'PRD'.
 
 .PARAMETER RunReactBuild
-DEPRECATED - The React build now happens automatically as part of the editor extension build.
-This parameter is kept for backwards compatibility but has no effect.
+Optional. When specified, Step 2 additionally invokes the standalone
+deploy\react\build-react.ps1 script (npm run build / Vite) against the same
+TargetEnvironment before the lucid-package build runs. The lucid-package
+build (Step 4) builds the React app itself regardless, so this is normally
+redundant -- use it only to sanity-check the standalone React build in
+isolation. When omitted (the default), Step 2 is skipped.
 
 .EXAMPLE
 # Build the bundle for Development environment
@@ -75,28 +79,22 @@ Write-Host "--------------------------------------------------"
 switch ($TargetEnvironment) {
     'Dev' {
         # FastAPI cutover (2026-05-13): dev backend moved from Azure Functions to
-        # Container App. REACT_APP_DATA_CONNECTOR_API_URL is used by
-        # environmentDetection.ts for the "Dev" label only — actual HTTP calls
+        # Container App. VITE_DATA_CONNECTOR_API_URL is used by
+        # environmentDetection.ts for the "Dev" label only - actual HTTP calls
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
-        # AZURE_STATUS_FUNCTION_KEY retained as no-op (FastAPI ignores function
-        # keys; safe to remove once no React code references it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "zwH0vpBDPYko4QfIbNC9TjJRu4gZP9wbWu8CHuLFMrUkAzFuTazGeg=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-dev-api.nicesand-882b0444.westus.azurecontainerapps.io/lucid/"
         Write-Host "DEV environment variables set for this session." -ForegroundColor Green
     }
     'TST' {
         # FastAPI cutover (2026-05-29): test backend moved from Azure Functions to
-        # Container App. Same pattern as dev — REACT_APP_DATA_CONNECTOR_API_URL is
+        # Container App. Same pattern as dev - VITE_DATA_CONNECTOR_API_URL is
         # used by environmentDetection.ts for the "Test" label only; actual HTTP calls
         # flow through Lucid's data connector to the manifest's callbackBaseUrl.
-        # AZURE_STATUS_FUNCTION_KEY retained as no-op for now (FastAPI ignores it).
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "w1ERk9gEfFWk8745DeA1DiuUrflDv6sVPpQOpjudXcCGAzFuawHc-g=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://ca-quodsim-test-api.ambitiouspond-d8683d4f.westus.azurecontainerapps.io/lucid/"
         Write-Host "TST environment variables set for this session." -ForegroundColor Green
     }
     'PRD' {
-        $env:REACT_APP_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
-        $env:REACT_APP_AZURE_STATUS_FUNCTION_KEY = "IuYzy5x9yt6FRhQhL5U9j8bXePABxfSEbVQ0pVEPk6fuAzFuE0P6tw=="
+        $env:VITE_DATA_CONNECTOR_API_URL = "https://prd-quodsi-func-v1.azurewebsites.net/api/"
         Write-Host "PRD environment variables set for this session." -ForegroundColor Green
     }
     default {
@@ -113,8 +111,7 @@ $env:QUODSI_SKIP_LOCAL_STUDIO_OVERRIDE = "1"
 
 # Verification (optional)
 # Write-Host "Verifying variables set in this session:" -ForegroundColor Yellow
-# Write-Host " REACT_APP_DATA_CONNECTOR_API_URL = $($env:REACT_APP_DATA_CONNECTOR_API_URL)"
-# Write-Host " REACT_APP_AZURE_STATUS_FUNCTION_KEY is set (Length: $($env:REACT_APP_AZURE_STATUS_FUNCTION_KEY.Length))"
+# Write-Host " VITE_DATA_CONNECTOR_API_URL = $($env:VITE_DATA_CONNECTOR_API_URL)"
 
 
 # --- Step 1.4: Enforce react-hooks/rules-of-hooks (fail fast) ---
@@ -172,6 +169,46 @@ try {
 catch {
     Pop-Location
     Write-Error "An error occurred while building @quodsi/shared. Error: $($_.Exception.Message)"
+    exit 1
+}
+
+
+# --- Step 1.46: Assert the packaged schema version clears the floor ---
+# @quodsi/shared is resolved through the file:../../quodsi_shared symlink at
+# BUILD time, so a stale monorepo checkout silently ships documents stamped at
+# an old MODEL_SCHEMA_VERSION that the engine rejects at run submission.
+# Step 1.45 rebuilt it; this asserts the value it produced. ClickUp 86e2p4prk.
+Write-Host "--------------------------------------------------"
+Write-Host "Step 1.46: Verifying packaged MODEL_SCHEMA_VERSION..."
+Write-Host "--------------------------------------------------"
+
+$SchemaCheckScript = @"
+const { MODEL_SCHEMA_VERSION } = require('$($MonorepoRoot -replace '\\','/')/quodsi_shared/dist-cjs/index.js');
+const FLOOR = '2026.08.20';
+const p = (v) => v.split('.').map(Number);
+const [a, b] = [p(MODEL_SCHEMA_VERSION), p(FLOOR)];
+for (let i = 0; i < 3; i++) {
+  if ((a[i] || 0) !== (b[i] || 0)) {
+    if ((a[i] || 0) < (b[i] || 0)) {
+      console.error('MODEL_SCHEMA_VERSION ' + MODEL_SCHEMA_VERSION + ' is below the floor ' + FLOOR);
+      process.exit(1);
+    }
+    break;
+  }
+}
+console.log(MODEL_SCHEMA_VERSION);
+"@
+
+try {
+    $PackagedSchemaVersion = node -e $SchemaCheckScript
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Packaged MODEL_SCHEMA_VERSION is below the required floor (2026.08.20). The monorepo checkout at $MonorepoRoot is stale - pull it and re-run. Aborting bundle."
+        exit 1
+    }
+    Write-Host "[OK] Packaged MODEL_SCHEMA_VERSION = $PackagedSchemaVersion" -ForegroundColor Green
+}
+catch {
+    Write-Error "Failed to read packaged MODEL_SCHEMA_VERSION. Error: $($_.Exception.Message)"
     exit 1
 }
 

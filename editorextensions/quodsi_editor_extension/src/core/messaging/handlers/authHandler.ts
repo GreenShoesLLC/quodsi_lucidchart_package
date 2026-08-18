@@ -1,7 +1,7 @@
 import { EnvelopeBase, EnvelopeMessageType, EntitlementPlanSource, ExtensionConfig, QuodsiUserInfo } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -72,7 +72,7 @@ function getExtensionConfig(): ExtensionConfig {
  * Manages getOAuthToken('kinde') calls and broadcasts AUTH_STATUS to React.
  */
 export class AuthHandler {
-  private static logger = ExtensionDebugService.forComponent('AuthHandler');
+  private static logger = getLogger('AuthHandler');
   private static isAuthenticated = false;
   private static currentUser: QuodsiUserInfo | undefined;
   private static currentToken: string | undefined;
@@ -129,15 +129,15 @@ export class AuthHandler {
   public static async checkCachedAuth(): Promise<void> {
     try {
       const client = ModelManager.getClient();
-      AuthHandler.logger.log('Checking for cached Kinde token...');
+      AuthHandler.logger.debug('Checking for cached Kinde token...');
 
       const token = await client.getOAuthToken('kinde');
 
       if (token) {
-        AuthHandler.logger.log('Cached Kinde token found, fetching user profile...');
+        AuthHandler.logger.debug('Cached Kinde token found, fetching user profile...');
         await AuthHandler.processToken(token);
       } else {
-        AuthHandler.logger.log('No cached Kinde token');
+        AuthHandler.logger.debug('No cached Kinde token');
         AuthHandler.broadcastAuthStatus(false);
       }
     } catch (error) {
@@ -153,14 +153,14 @@ export class AuthHandler {
   private static async handleAuthRequired(msg: EnvelopeBase): Promise<void> {
     try {
       const client = ModelManager.getClient();
-      AuthHandler.logger.log('Auth required, initiating Kinde OAuth flow...');
+      AuthHandler.logger.debug('Auth required, initiating Kinde OAuth flow...');
 
       const token = await client.getOAuthToken('kinde');
 
       if (token) {
         await AuthHandler.processToken(token);
       } else {
-        AuthHandler.logger.log('No token returned (user may have cancelled)');
+        AuthHandler.logger.debug('No token returned (user may have cancelled)');
         AuthHandler.broadcastAuthStatus(false);
       }
     } catch (error) {
@@ -194,22 +194,22 @@ export class AuthHandler {
    */
   private static async handleLogout(msg: EnvelopeBase): Promise<void> {
     try {
-      AuthHandler.logger.log('Sign-out requested; clearing local state');
+      AuthHandler.logger.debug('Sign-out requested; clearing local state');
       AuthHandler.isAuthenticated = false;
       AuthHandler.currentUser = undefined;
       AuthHandler.currentToken = undefined;
       AuthHandler.broadcastAuthStatus(false);
 
       const client = ModelManager.getClient();
-      AuthHandler.logger.log('Calling client.revokeOAuthToken(kinde)...');
+      AuthHandler.logger.debug('Calling client.revokeOAuthToken(kinde)...');
       const revoked = await client.revokeOAuthToken('kinde');
-      AuthHandler.logger.log('revokeOAuthToken result:', { revoked });
+      AuthHandler.logger.debug('revokeOAuthToken result:', { revoked });
 
       if (!revoked) {
         // Kinde's revoke endpoint rejected the call. Local state is
         // already cleared above; log and move on rather than leaving
         // the user apparently signed in.
-        AuthHandler.logger.log(
+        AuthHandler.logger.debug(
           'revokeOAuthToken returned false; local sign-out completed regardless'
         );
       }
@@ -220,9 +220,9 @@ export class AuthHandler {
       // with prompt=login in the manifest, the next Sign In still silently
       // re-issued for the same user — suggesting some Lucid-side state
       // survives revoke. Calling clear here forces a clean slate.
-      AuthHandler.logger.log('Calling client.clearOAuthToken(kinde)...');
+      AuthHandler.logger.debug('Calling client.clearOAuthToken(kinde)...');
       const cleared = await client.clearOAuthToken('kinde');
-      AuthHandler.logger.log('clearOAuthToken result:', { cleared });
+      AuthHandler.logger.debug('clearOAuthToken result:', { cleared });
     } catch (error) {
       AuthHandler.logger.error('Sign-out error:', error);
       AuthHandler.broadcastAuthError(
@@ -254,7 +254,7 @@ export class AuthHandler {
     try {
       const issuer = typeof claims.iss === 'string' ? claims.iss : null;
       if (!issuer) {
-        AuthHandler.logger.log('Token missing iss claim; skipping user profile fetch');
+        AuthHandler.logger.debug('Token missing iss claim; skipping user profile fetch');
       } else {
         const client = ModelManager.getClient();
         const profileResponse = await client.oauthXhr('kinde', {
@@ -267,11 +267,11 @@ export class AuthHandler {
           const profile = JSON.parse(profileResponse.responseText);
           email = profile.email || '';
           displayName = profile.name || profile.given_name || undefined;
-          AuthHandler.logger.log('User profile:', { email, displayName });
+          AuthHandler.logger.debug('User profile:', { email, displayName });
         }
       }
     } catch (error) {
-      AuthHandler.logger.log('Could not fetch user profile, continuing with token claims only:', error);
+      AuthHandler.logger.debug('Could not fetch user profile, continuing with token claims only:', error);
     }
 
     const user: QuodsiUserInfo = {
@@ -289,7 +289,7 @@ export class AuthHandler {
     AuthHandler.currentUser = user;
     AuthHandler.currentToken = token;
 
-    AuthHandler.logger.log('Auth successful:', { id: user.id, email: user.email, orgCode: user.orgCode });
+    AuthHandler.logger.debug('Auth successful:', { id: user.id, email: user.email, orgCode: user.orgCode });
     AuthHandler.broadcastAuthStatus(true, user);
 
     // Sync user to quodsi_api database via the Lucid data connector.
@@ -327,10 +327,10 @@ export class AuthHandler {
         asynchronous: false,
       }) as { status?: number; json?: any };
 
-      AuthHandler.logger.log('Entitlements fetched:', result);
+      AuthHandler.logger.debug('Entitlements fetched:', result);
 
       if (!result?.json) {
-        AuthHandler.logger.log(
+        AuthHandler.logger.debug(
           'Entitlements fetch returned no body; UI stays on free defaults. Status:',
           result?.status
         );
@@ -339,7 +339,7 @@ export class AuthHandler {
 
       AuthHandler.broadcastEntitlements(result.json);
     } catch (error) {
-      AuthHandler.logger.log(
+      AuthHandler.logger.debug(
         'Entitlements fetch failed (UI stays on free defaults):',
         error
       );
@@ -399,7 +399,7 @@ export class AuthHandler {
   private static async syncUserToDatabase(user: QuodsiUserInfo): Promise<void> {
     try {
       const client = ModelManager.getClient();
-      AuthHandler.logger.log('Syncing user to quodsi_api database...');
+      AuthHandler.logger.debug('Syncing user to quodsi_api database...');
 
       const result = await client.performDataAction({
         dataConnectorName: 'quodsi_api_data_connector',
@@ -411,7 +411,7 @@ export class AuthHandler {
         asynchronous: false,
       }) as { status?: number; json?: any };
 
-      AuthHandler.logger.log('User synced to quodsi_api:', result);
+      AuthHandler.logger.debug('User synced to quodsi_api:', result);
 
       // Path A — backend may have moved this user out of the shared default
       // org and into a personal org. The current JWT still references the
@@ -422,7 +422,7 @@ export class AuthHandler {
       // forcing a re-auth that would interrupt the just-completed sign-in.
       if (result?.json?.tokenRefreshRequired) {
         const newOrgCode = result.json?.user?.org_code;
-        AuthHandler.logger.log(
+        AuthHandler.logger.debug(
           'Path A: backend personalized this user. Token refresh required.',
           { newOrgCode }
         );
@@ -453,7 +453,7 @@ export class AuthHandler {
           patch.displayName = backendUser.display_name;
         }
         if (Object.keys(patch).length > 0) {
-          AuthHandler.logger.log('Backfilling currentUser from backend:', patch);
+          AuthHandler.logger.debug('Backfilling currentUser from backend:', patch);
           AuthHandler.currentUser = { ...AuthHandler.currentUser, ...patch };
           AuthHandler.broadcastAuthStatus(true, AuthHandler.currentUser);
         }
@@ -556,7 +556,7 @@ export class AuthHandler {
       const token = await client.getOAuthToken('kinde');
       if (token) {
         AuthHandler.currentToken = token;
-        AuthHandler.logger.log('Relayed a refreshed Kinde token to the embed');
+        AuthHandler.logger.debug('Relayed a refreshed Kinde token to the embed');
         return token;
       }
     } catch (error) {

@@ -1,4 +1,7 @@
 import { EditorClient, DataProxy, DataSourceProxy, CollectionProxy, MapProxy } from 'lucid-extension-sdk';
+import { getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('DataSourceReader');
 
 /**
  * Base class for accessing data sources in LucidChart
@@ -25,7 +28,7 @@ export abstract class DataSourceReader {
         return source;
       }
     }
-    console.log(`Data source "${this.dataSourceName}" not found`);
+    log.debug(`Data source "${this.dataSourceName}" not found`);
     return null;
   }
   
@@ -44,7 +47,7 @@ export abstract class DataSourceReader {
       }
     }
     
-    console.log(`Collection "${collectionName}" not found in data source "${this.dataSourceName}"`);
+    log.debug(`Collection "${collectionName}" not found in data source "${this.dataSourceName}"`);
     return null;
   }
   

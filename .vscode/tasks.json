@@ -42,18 +42,29 @@
     {
       "label": "ReactApp",
       "type": "shell",
-      "command": "npx react-scripts start",
+      "command": "npx vite",
       "options": {
         "cwd": "${workspaceFolder}/editorextensions/quodsi_editor_extension/quodsim-react"
       },
-      "problemMatcher": [],
       "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "."
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*(VITE|vite).*$",
+          "endsPattern": "^.*(ready in|Local:\\s+http).*$"
+        }
+      },
       "group": "build",
       "presentation": {
         "reveal": "always",
         "panel": "shared",
         "echo": true
-      }
+      },
+      "detail": "Vite dev server for the Lucid extension's embedded React app (react-scripts removed; this is Vite now)."
     },
     {
       "label": "Quodsi API Start",

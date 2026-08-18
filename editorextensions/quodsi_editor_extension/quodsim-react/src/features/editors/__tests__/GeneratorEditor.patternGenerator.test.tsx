@@ -1,38 +1,34 @@
-// @quodsi/lucid-shared (pulled in transitively) loads shared/dist/services/
-// lucidApi.js -> axios ESM, which CRA's Jest transformer can't parse.
-jest.mock("axios", () => ({}));
-
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
 
-jest.mock("../../../messaging/senders/modelOpsSender", () => ({
+vi.mock("../../../messaging/senders/modelOpsSender", () => ({
   useModelOpsSender: () => ({
-    selectElement: jest.fn(),
-    updateElementData: jest.fn(),
+    selectElement: vi.fn(),
+    updateElementData: vi.fn(),
   }),
 }));
 
-jest.mock("../../../messaging/hooks/useElementOpsState", () => ({
+vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
   useElementOpsState: () => ({ isSaving: () => false }),
 }));
 
-jest.mock("../hooks/useEditorState", () => ({
+vi.mock("../hooks/useEditorState", () => ({
   useFormSync: () => {},
   useSaveCompletionDetector: () => {},
-  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: jest.fn() }),
+  useAutoSave: () => ({ status: "idle", lastSavedAt: null, saveNow: vi.fn() }),
   useFlushOnChange: () => {},
 }));
 
-jest.mock("../SaveStatusLine", () => ({
+vi.mock("../SaveStatusLine", () => ({
   __esModule: true,
   default: () => <div />,
 }));
 
 const baseProps = {
-  onSave: jest.fn(),
+  onSave: vi.fn(),
   states: {} as any,
-  onStatesChange: jest.fn(),
+  onStatesChange: vi.fn(),
   referenceData: {} as any,
 };
 
@@ -94,5 +90,60 @@ describe("GeneratorEditor — PATTERN generator (read-only notice)", () => {
 
     expect(screen.getByText(/Time Between Arrivals/i)).toBeInTheDocument();
     expect(screen.queryByText(/Arrival Pattern generator/i)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * SCHEDULED generators need the same edit gate PATTERN generators got: Lucid
+ * has no Schedule editor either, and the FREQUENCY surface rendering for one
+ * is a live corruption path -- the type <select> shows blank (value
+ * "scheduled", only option "frequency") and one click rewrites mode, orphaning
+ * arrivalScheduleId.
+ */
+describe("GeneratorEditor — SCHEDULED generator (read-only notice)", () => {
+  it("renders a read-only notice and hides the FREQUENCY generation-config controls", () => {
+    render(
+      <GeneratorEditor
+        {...baseProps}
+        generator={{
+          id: "g-scheduled",
+          name: "Appointments",
+          mode: "scheduled",
+          arrivalScheduleId: "as-456",
+          levers: [],
+        } as any}
+      />
+    );
+
+    expect(screen.getByText(/Scheduled Arrival generator/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Quodsi Studio or the drawio extension/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/as-456/)).toBeInTheDocument();
+
+    // The FREQUENCY editing surface must not render at all — a hidden-but-live
+    // control would still let auto-save clobber the schedule on blur/interval.
+    expect(screen.queryByText(/Time Between Arrivals/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Advanced Settings/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Generator Type$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Frequency-Based/i)).not.toBeInTheDocument();
+  });
+
+  it("shows the Pattern notice, not the Schedule notice, for a PATTERN generator", () => {
+    render(
+      <GeneratorEditor
+        {...baseProps}
+        generator={{
+          id: "g-pattern-2",
+          name: "Arrivals",
+          mode: "pattern",
+          arrivalPatternId: "ap-789",
+          levers: [],
+        } as any}
+      />
+    );
+
+    expect(screen.getByText(/Arrival Pattern generator/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Scheduled Arrival generator/i)).not.toBeInTheDocument();
   });
 });

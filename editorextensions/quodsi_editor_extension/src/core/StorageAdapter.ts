@@ -1,5 +1,7 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('StorageAdapter');
 
 /**
  * Record of skipped elements with their mapping source
@@ -33,13 +35,13 @@ export class StorageAdapter {
 
     private log(message: string, ...args: any[]): void {
         if (this.isLoggingEnabled()) {
-            console.log(`${StorageAdapter.LOG_PREFIX} ${message}`, ...args);
+            log.debug(message, ...args);
         }
     }
 
     private logError(message: string, ...args: any[]): void {
         if (this.isLoggingEnabled()) {
-            console.error(`${StorageAdapter.LOG_PREFIX} ${message}`, ...args);
+            log.error(message, ...args);
         }
     }
 

@@ -3,10 +3,10 @@ import {
   EntitlementPlanSource,
   EntitlementPlanStatus,
   EntitlementSubjectType,
+  getLogger,
 } from '@quodsi/lucid-shared';
-import { debugService } from '../utils/debugService';
 
-const logger = debugService.forComponent('EntitlementsSlice');
+const logger = getLogger('EntitlementsSlice');
 
 export interface EntitlementsState {
   /** Whether the host has delivered an ENTITLEMENTS_STATUS yet. */

@@ -1,7 +1,7 @@
 import { EnvelopeBase, EnvelopeMessageType } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { ModelManager } from '../../ModelManager';
-import { ExtensionDebugService } from '../../logging/ExtensionDebugService';
+import { getLogger } from '@quodsi/lucid-shared';
 
 interface UpgradeInterestPingData {
   feature?: string;
@@ -23,7 +23,7 @@ interface UpgradeInterestPingResultPayload {
  * has the user's Kinde token via Lucid's platform OAuth; the panel does not.
  */
 export class UpgradeInterestHandler {
-  private static logger = ExtensionDebugService.forComponent('UpgradeInterestHandler');
+  private static logger = getLogger('UpgradeInterestHandler');
 
   public static handleMessage(msg: EnvelopeBase): boolean {
     if (msg.type === EnvelopeMessageType.UPGRADE_INTEREST_PING) {
@@ -55,7 +55,7 @@ export class UpgradeInterestHandler {
       })) as { status?: number; json?: { success?: boolean } };
 
       if (!result?.json?.success) {
-        UpgradeInterestHandler.logger.log(
+        UpgradeInterestHandler.logger.debug(
           'UpgradeInterest returned no success; status:',
           result?.status,
         );

@@ -5,6 +5,7 @@ import {
   DiagramElementType,
   SimulationObjectType,
   EditorReferenceData,
+  getLogger,
 } from "@quodsi/lucid-shared";
 import { ExtendedModelItemData } from "../../types/ModelItemData";
 import { SimulationComponentSelector } from "../SimulationComponentSelector";
@@ -14,6 +15,8 @@ import { PreferencesModal } from "../shared/PreferencesModal";
 import { RemoveModelModal } from "../shared/RemoveModelModal";
 import { getEditorAccentClass, getEditorIconClass } from "../../constants/editorColors";
 import { StudiesLaunchButton } from "./StudiesLaunchButton";
+
+const log = getLogger("PanelHeader");
 
 interface PanelHeaderProps {
   modelName: string;
@@ -100,7 +103,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
     newType: SimulationObjectType,
     elementId: string
   ) => {
-    console.log(`[PanelHeader] Type change for ${elementId}: ${newType}`);
+    log.debug(`Type change for ${elementId}: ${newType}`);
     onElementTypeChange(elementId, newType);
   };
 

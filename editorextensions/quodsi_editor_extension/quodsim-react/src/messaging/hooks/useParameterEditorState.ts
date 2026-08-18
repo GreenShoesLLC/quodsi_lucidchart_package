@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useElementOpsState } from './useElementOpsState';
+import { getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('useParameterEditorState');
+const logMulti = getLogger('useMultiParameterEditorState');
 
 /**
  * Custom hook for managing parameter editor state with Redux integration
@@ -39,10 +43,10 @@ export function useParameterEditorState<T>(
   // Sync with prop only when safe (not dirty and not saving)
   useEffect(() => {
     if (!isDirty && !isSaving) {
-      console.log('[useParameterEditorState] Syncing with prop value:', propValue);
+      log.trace('Syncing with prop value:', propValue);
       setLocalValue(propValue);
     } else {
-      console.log('[useParameterEditorState] Sync blocked:', { isDirty, isSaving });
+      log.trace('Sync blocked:', { isDirty, isSaving });
     }
   }, [propValue, isDirty, isSaving]);
 
@@ -50,7 +54,6 @@ export function useParameterEditorState<T>(
   useEffect(() => {
     if (!isSaving && isDirty) {
       // Save just completed, clear dirty flag
-      console.log('[useParameterEditorState] Save completed, clearing isDirty flag');
       setIsDirty(false);
     }
   }, [isSaving, isDirty]);
@@ -124,17 +127,16 @@ export function useMultiParameterEditorState<T extends Record<string, any>>(
   // Sync with props when safe
   useEffect(() => {
     if (!isDirty && !isSaving) {
-      console.log('[useMultiParameterEditorState] Syncing with prop params:', propParams);
+      logMulti.trace('Syncing with prop params:', propParams);
       setLocalParams(propParams);
     } else {
-      console.log('[useMultiParameterEditorState] Sync blocked:', { isDirty, isSaving });
+      logMulti.trace('Sync blocked:', { isDirty, isSaving });
     }
   }, [propParams, isDirty, isSaving]);
 
   // Clear isDirty when save completes
   useEffect(() => {
     if (!isSaving && isDirty) {
-      console.log('[useMultiParameterEditorState] Save completed, clearing isDirty flag');
       setIsDirty(false);
     }
   }, [isSaving, isDirty]);
