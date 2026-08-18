@@ -1,3 +1,34 @@
+import { configureLogger, consoleSink, installDebugGlobal } from '@quodsi/lucid-shared';
+
+// See extension.ts for the rationale. namespaceLevels below is the former
+// debugService.disabledComponents set, now config data.
+configureLogger({
+    level: import.meta.env.DEV ? 'debug' : 'warn',
+    namespaceLevels: {
+        useSilentAuth: 'error',
+        useAuthState: 'error',
+        MessageProvider: 'error',
+        ElementOpsMapper: 'error',
+        AuthMapper: 'error',
+        useSendMessage: 'error',
+        RxMessageHandlers: 'error',
+        AuthStatusHandler: 'error',
+        ReactAppReadyEffects: 'error',
+        MessageListenerEffect: 'error',
+        InitializationEffects: 'error',
+        AuthEffects: 'error',
+        AuthPanel: 'error',
+        LucidAppNew: 'error',
+        MessageMapper: 'error',
+        AuthStorageService: 'error',
+        useModelPanel: 'error',
+        SelectionMapper: 'error',
+        SelectionSlice: 'error',
+    },
+    sinks: [consoleSink()],
+});
+installDebugGlobal();
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

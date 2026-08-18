@@ -39,7 +39,14 @@ function readLocalStudioOverride() {
   return "";
 }
 
-module.exports = {
+module.exports = (env, argv) => {
+  // lucid-package's watch path calls this export with only an `env` argument,
+  // so `argv` is undefined there - default to development. webpack-cli passes
+  // (env, argv) with argv.mode set from --mode, which is how the production
+  // bundle gets 'production'.
+  const mode = (argv && argv.mode) || "development";
+
+  return {
   entry: "./src/extension.ts",
   module: {
     rules: [
@@ -65,6 +72,7 @@ module.exports = {
   plugins: [
     new webpack.DefinePlugin({
       __LOCAL_STUDIO_OVERRIDE__: JSON.stringify(readLocalStudioOverride()),
+      __QUODSI_LOG_LEVEL__: JSON.stringify(mode === "production" ? "warn" : "debug"),
     }),
     new WebpackShellPluginNext({
       // Run during execution of `npx lucid-package@latest test-editor-extension`.
@@ -142,5 +150,6 @@ module.exports = {
       },
     }),
   ],
-  mode: "development",
+  mode,
+  };
 };

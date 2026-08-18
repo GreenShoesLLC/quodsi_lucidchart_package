@@ -14,6 +14,10 @@ declare namespace lucid {
  */
 declare const __LOCAL_STUDIO_OVERRIDE__: string;
 
+/** Build-time log level, injected by webpack.config.js. 'warn' in production
+ *  bundles, 'debug' otherwise. See the DefinePlugin block there. */
+declare const __QUODSI_LOG_LEVEL__: string;
+
 /** @ignore */
 declare const console: Console;
 

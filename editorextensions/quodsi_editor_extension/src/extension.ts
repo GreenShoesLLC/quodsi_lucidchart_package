@@ -1,3 +1,34 @@
+import { configureLogger, consoleSink, installDebugGlobal } from '@quodsi/lucid-shared';
+import type { LogLevel } from '@quodsi/lucid-shared';
+
+// Configure logging before anything else runs. Production ships at 'warn' so a
+// customer's console stays clean; support can raise it at runtime with
+// window.QUODSI_DEBUG.setLevel('debug'), which persists across reloads.
+//
+// __QUODSI_LOG_LEVEL__ is a build-time constant injected by webpack.config.js's
+// DefinePlugin, not process.env.NODE_ENV: this project's tsconfig.json sets
+// "types": [], so @types/node's `process` global is never in scope here, and
+// adding it back would leak Node globals (Buffer, __dirname, ...) into a
+// package that actually runs in a Lucid sandbox. See webpack.config.js and
+// src/interop.d.ts for the injection and declaration.
+//
+// The namespaceLevels below are the former ExtensionDebugService.noisyComponents
+// mute list, now config data instead of code. 'error' means "effectively muted".
+configureLogger({
+    level: __QUODSI_LOG_LEVEL__ as LogLevel,
+    namespaceLevels: {
+        MessageRouter: 'error',
+        ChannelManager: 'error',
+        RightDockPanel: 'error',
+        ReferenceDataBuilder: 'error',
+        ItemDataBuilder: 'error',
+        ModelOpsHandler: 'error',
+        StorageAdapter: 'error',
+    },
+    sinks: [consoleSink()],
+});
+installDebugGlobal();
+
 import {
     EditorClient,
     Viewport
