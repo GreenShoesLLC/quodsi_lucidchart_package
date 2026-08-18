@@ -12,11 +12,11 @@ const logger = getLogger('ModelItemMapper');
  * @returns ModelItemData formatted object
  */
 export function transformToModelItemData(element: ElementShape | any): ExtendedModelItemData {
-  logger.debug('[transformToModelItemData] Processing element:', element);
+  logger.debug('Processing element:', element);
 
   // If the element already has the required structure (not an ElementShape from selection), use it directly
   if (element.id && element.data && element.metadata && element.metadata.type) {
-    logger.debug('[transformToModelItemData] Using existing element structure');
+    logger.debug('Using existing element structure');
     return {
       id: element.id,
       data: element.data,
@@ -40,7 +40,7 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
       diagramElementType = DiagramElementType.LINE;
     }
   }
-  logger.debug('[transformToModelItemData] Diagram element type:', diagramElementType);
+  logger.debug('Diagram element type:', diagramElementType);
 
   // Map diagram type to simulation object type if not already set in metadata
   let simulationType = SimulationObjectType.None;
@@ -48,28 +48,28 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
   // First check if metadata already contains a type
   if (element.metadata && element.metadata.type && element.metadata.type !== SimulationObjectType.None) {
     simulationType = element.metadata.type;
-    logger.debug('[transformToModelItemData] Using type from metadata:', simulationType);
+    logger.debug('Using type from metadata:', simulationType);
   } 
   // Check if there's a quodsiType in metadata
   else if (element.metadata && element.metadata.quodsiType) {
     simulationType = element.metadata.quodsiType;
-    logger.debug('[transformToModelItemData] Using quodsiType from metadata:', simulationType);
+    logger.debug('Using quodsiType from metadata:', simulationType);
   }
   // Default mapping based on diagram element type - BUT DO NOT AUTOMATICALLY MAP BLOCK TO ACTIVITY
   // Instead log a warning and keep it as None, so the user must explicitly set the type
   else if (diagramElementType === DiagramElementType.BLOCK) {
     // For blocks, we'll leave it as None and warn
     simulationType = SimulationObjectType.None;
-    logger.debug('[transformToModelItemData] Block element without type classification - NOT auto-mapping to Activity');
+    logger.debug('Block element without type classification - NOT auto-mapping to Activity');
   } 
   else if (diagramElementType === DiagramElementType.LINE) {
     simulationType = SimulationObjectType.Connector;
-    logger.debug('[transformToModelItemData] Mapping line to Connector');
+    logger.debug('Mapping line to Connector');
   }
   
   // Handle ElementShape objects
   if ('type' in element && 'id' in element) {
-    logger.debug('[transformToModelItemData] Processing ElementShape with simulationType:', simulationType);
+    logger.debug('Processing ElementShape with simulationType:', simulationType);
     
     return {
       id: element.id,
@@ -90,7 +90,7 @@ export function transformToModelItemData(element: ElementShape | any): ExtendedM
   }
 
   // Fallback for unknown format
-  logger.debug('[transformToModelItemData] Using fallback for unknown format');
+  logger.debug('Using fallback for unknown format');
   return {
     id: element.id || 'unknown',
     data: {},

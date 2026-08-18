@@ -28,6 +28,7 @@ configureLogger({
         MessageMapper: 'warn',
         AuthStorageService: 'warn',
         useModelPanel: 'warn',
+        ModelItemMapper: 'warn',
         SelectionMapper: 'warn',
         SelectionSlice: 'warn',
     },

@@ -63,7 +63,7 @@ export function useModelPanel() {
   
   // Log if we're using the fallback document context
   if (!selection.documentContext) {
-    logger.warn('Using fallback document context - original is undefined/null');
+    logger.debug('Using fallback document context - original is undefined/null');
   }
   
   // Extract current element based on appropriate case
@@ -84,7 +84,7 @@ export function useModelPanel() {
         const fromMetadata = documentContext.metadata.modelItemData;
 
         if (fromMetadata) {
-          logger.debug('[useModelPanel] Model data from metadata:', {
+          logger.debug('Model data from metadata:', {
             hasData: !!fromMetadata.data,
             dataKeys: fromMetadata.data ? Object.keys(fromMetadata.data) : [],
             runClockPeriod: fromMetadata.data?.runClockPeriod,
@@ -94,7 +94,7 @@ export function useModelPanel() {
         return fromMetadata;
       } else {
         // Create a Model element from the page - similar to buildModelItemData in old code
-        logger.warn('[useModelPanel] ⚠️ Creating Model element with EMPTY data object');
+        logger.warn('⚠️ Creating Model element with EMPTY data object');
 
         const createdModel = {
           id: documentContext.documentId,
@@ -108,7 +108,7 @@ export function useModelPanel() {
           name: documentContext.documentTitle || 'Untitled Model'
         };
 
-        logger.warn('[useModelPanel] ⚠️ Created Model element with empty data:', {
+        logger.warn('⚠️ Created Model element with empty data:', {
           modelItemData: createdModel,
           documentContext,
           hasMetadata: !!documentContext.metadata,
@@ -130,7 +130,7 @@ export function useModelPanel() {
   
   // Log important flags about modelItemData
   if (modelItemData) {
-    logger.debug('[useModelPanel] Final modelItemData details:', {
+    logger.debug('Final modelItemData details:', {
       id: modelItemData.id,
       name: modelItemData.name,
       hasData: !!modelItemData.data,
@@ -143,7 +143,7 @@ export function useModelPanel() {
       fullData: modelItemData.data
     });
   } else {
-    logger.warn('[useModelPanel] No modelItemData created or found');
+    logger.debug('No modelItemData created or found');
   }
   
   // Transform validation data (use the validation state directly, it's already in the correct format)
@@ -169,7 +169,7 @@ export function useModelPanel() {
   
   // Create action handlers using the sender hooks
   const onElementUpdate = (elementId: string, data: JsonObject) => {
-    logger.debug('[useModelPanel] onElementUpdate CALLED:', {
+    logger.debug('onElementUpdate CALLED:', {
       elementId,
       data,
       dataKeys: data ? Object.keys(data) : [],
@@ -179,7 +179,7 @@ export function useModelPanel() {
 
     // For model type, we need special handling
     if (modelItemData?.metadata?.type === SimulationObjectType.Model) {
-      logger.debug('[useModelPanel] Updating MODEL properties:', {
+      logger.debug('Updating MODEL properties:', {
         elementId,
         type: 'Model',
         data
@@ -189,7 +189,7 @@ export function useModelPanel() {
     } else {
       // For regular elements
       const type = modelItemData?.metadata?.type as string || '';
-      logger.debug('[useModelPanel] Updating ELEMENT properties:', {
+      logger.debug('Updating ELEMENT properties:', {
         elementId,
         type,
         data
