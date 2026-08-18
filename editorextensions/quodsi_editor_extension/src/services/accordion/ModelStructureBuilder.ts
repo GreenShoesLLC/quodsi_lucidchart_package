@@ -9,7 +9,6 @@ export class ModelStructureBuilder {
 
         if (!modelData) {
             log.warn('Empty model data');
-            log.debug('');
             return { elements: [], hierarchy: {} };
         }
 
@@ -68,7 +67,6 @@ export class ModelStructureBuilder {
         });
 
         log.debug('Build complete:', { totalElements: elements.length });
-        log.debug('');
         return { elements, hierarchy };
     }
 }
