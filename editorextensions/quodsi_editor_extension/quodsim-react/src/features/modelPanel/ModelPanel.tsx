@@ -5,7 +5,7 @@ import { useSimulationRunSender } from '../../messaging/senders/simulationRunSen
 import { PanelHeader } from './PanelHeader';
 import { AccountStrip } from '../shared';
 import { ElementEditor } from './ElementEditor';
-import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedEntity, EnvelopeMessageType, EnvelopeBase } from '@quodsi/lucid-shared';
+import { SimulationObjectType, DiagramElementType, StateListManager, State, ComponentType, StateType, ISerializedEntity, EnvelopeMessageType, EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { EntityRow } from '../editors/EntitiesEditor';
 import { ExtendedModelItemData } from '../../types/ModelItemData';
 import { getSimulationObjectType } from '../../utils/typeDetection';
@@ -14,6 +14,8 @@ import { ModelDefinitionViewer } from './ModelDefinitionViewer';
 import { useMessaging } from '../../messaging/MessageProvider';
 import { consumePendingModelEditorTab } from '../../utils/pendingNavigation';
 import { setPendingSubmission } from '../../utils/pendingSubmission';
+
+const log = getLogger('ModelPanel');
 
 /**
  * The main ModelPanel component that serves as the container for the model panel UI.
@@ -111,7 +113,7 @@ export const ModelPanel: React.FC = () => {
           setModelJson(data.modelJson);
           setIsModelViewerOpen(true);
         } else {
-          console.error('[ModelPanel] Failed to get model JSON:', data.error);
+          log.error('Failed to get model JSON:', data.error);
         }
       }
     };

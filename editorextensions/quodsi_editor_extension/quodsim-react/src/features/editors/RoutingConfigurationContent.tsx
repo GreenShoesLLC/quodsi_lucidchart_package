@@ -5,9 +5,12 @@ import {
   EditorReferenceData,
   StateListManager,
   Connector,
+  getLogger,
 } from "@quodsi/lucid-shared";
 import { ArrowRightLeft, Info } from "lucide-react";
 import { RoutingConfigurationPanel } from "./RoutingConfigurationPanel";
+
+const log = getLogger("RoutingConfigurationContent");
 
 interface RoutingConfigurationContentProps {
   localData: Activity;
@@ -104,7 +107,7 @@ export const RoutingConfigurationContent: React.FC<RoutingConfigurationContentPr
               onConnectorUpdate={(connectorId, updates) => {
                 // Connector updates are handled via messaging in the panel
                 if (isDevelopment) {
-                  console.log('[RoutingConfigurationContent] Connector updated:', connectorId, updates);
+                  log.debug('Connector updated:', connectorId, updates);
                 }
               }}
             />

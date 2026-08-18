@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, X, Trash2, Check, Info } from 'lucide-react';
-import { ResourceRequirement } from '@quodsi/lucid-shared';
+import { ResourceRequirement, getLogger } from '@quodsi/lucid-shared';
 import { TeamStructure, generatePreview } from '../../utils/resourceRequirementConverter';
+
+const log = getLogger('ResourceRequirementModal');
 
 interface ResourceRequirementModalProps {
   isOpen: boolean;
@@ -125,7 +127,7 @@ export const ResourceRequirementModal: React.FC<ResourceRequirementModalProps> =
   // Debug logging to verify availableResources
   useEffect(() => {
     if (isOpen) {
-      console.log('[ResourceRequirementModal] Modal opened with:', {
+      log.debug('Modal opened with:', {
         isOpen,
         availableResourcesCount: availableResources.length,
         availableResources: availableResources,
