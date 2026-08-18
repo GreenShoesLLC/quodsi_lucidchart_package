@@ -33,8 +33,6 @@ export class ModelProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing model selection');
-
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
 
@@ -49,7 +47,6 @@ export class ModelProcessor extends BaseSelectionProcessor {
 
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      log.debug('Not a Quodsi model');
       return messageData;
     }
 
@@ -72,7 +69,7 @@ export class ModelProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      log.debug('Processed model data:', {
+      log.trace('Processed model data:', {
         pageId: currentPage.id,
         hasModelData: messageData.modelItemData ? 'yes' : 'no',
         hasRefData: messageData.referenceData ? 'yes' : 'no',

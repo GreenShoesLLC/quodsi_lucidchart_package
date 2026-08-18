@@ -32,7 +32,7 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing multiple selection', {
+    log.trace('Processing multiple selection', {
       itemCount: items.length
     });
     
@@ -50,7 +50,6 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      log.debug('Not a Quodsi model');
       return messageData;
     }
     
@@ -65,7 +64,7 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
         modelManager
       );
       
-      log.debug('Built model data for multiple items:', {
+      log.trace('Built model data for multiple items:', {
         count: Array.isArray(messageData.modelItemData) ? messageData.modelItemData.length : 0
       });
     } catch (error) {

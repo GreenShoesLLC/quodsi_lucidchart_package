@@ -33,8 +33,6 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing none selection');
-    
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
     
@@ -49,7 +47,6 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      log.debug('Not a Quodsi model');
       return messageData;
     }
     
@@ -71,7 +68,7 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      log.debug('Built model data for page:', {
+      log.trace('Built model data for page:', {
         modelData: messageData.modelItemData ? 'present' : 'absent',
         refData: messageData.referenceData ? 'present' : 'absent',
         requirementsCount: messageData.referenceData?.resourceRequirements?.length || 0,
