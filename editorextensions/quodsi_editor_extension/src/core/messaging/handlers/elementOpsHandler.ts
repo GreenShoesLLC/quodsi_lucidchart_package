@@ -1,9 +1,10 @@
-import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
 
+const log = getLogger('ElementOpsHandler');
 
 /**
  * Handler for element-level operations (update, convert)
@@ -20,13 +21,13 @@ export class ElementOpsHandler {
       case EnvelopeMessageType.ELEMENT_SELECT:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementSelect(msg)
-          .catch(err => console.error('[ElementOpsHandler] Error in handleElementSelect:', err));
+          .catch(err => log.error('Error in handleElementSelect:', err));
         return true;
 
       case EnvelopeMessageType.ELEMENT_UPDATE:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementUpdate(msg)
-          .catch(err => console.error('[ElementOpsHandler] Error in handleElementUpdate:', err));
+          .catch(err => log.error('Error in handleElementUpdate:', err));
         return true;
 
       case EnvelopeMessageType.ELEMENT_UPDATE_RESULT:
@@ -35,7 +36,7 @@ export class ElementOpsHandler {
       case EnvelopeMessageType.ELEMENT_CONVERT:
         // Start the async process but return true synchronously
         ElementOpsHandler.handleElementConvert(msg)
-          .catch(err => console.error('[ElementOpsHandler] Error in handleElementConvert:', err));
+          .catch(err => log.error('Error in handleElementConvert:', err));
         return true;
 
       case EnvelopeMessageType.ELEMENT_CONVERT_RESULT:
@@ -56,7 +57,7 @@ export class ElementOpsHandler {
   private static async handleElementSelect(msg: EnvelopeBase): Promise<boolean> {
     const data = msg.data as { elementId?: string };
 
-    console.log('[ElementOpsHandler] Element select requested', { elementId: data.elementId });
+    log.debug('Element select requested', { elementId: data.elementId });
 
     try {
       const client = ModelManager.getClient();
@@ -77,7 +78,7 @@ export class ElementOpsHandler {
 
       return true;
     } catch (error) {
-      console.error('[ElementOpsHandler] Error selecting element', error);
+      log.error('Error selecting element', error);
       return false;
     }
   }
@@ -96,7 +97,7 @@ export class ElementOpsHandler {
       diagramElementType?: string;
     };
 
-    console.log('[ElementOpsHandler] Element update requested', {
+    log.debug('Element update requested', {
       elementId: data.elementId,
       type: data.type,
       diagramElementType: data.diagramElementType
@@ -119,7 +120,7 @@ export class ElementOpsHandler {
 
       // Check if this is a Model update (Page-level data)
       if (data.type === 'Model' || data.type === SimulationObjectType.Model) {
-        console.log('[ElementOpsHandler] Updating Model (Page) directly:', {
+        log.debug('Updating Model (Page) directly:', {
           elementId: data.elementId,
           pageId: currentPage.id
         });
@@ -171,14 +172,14 @@ export class ElementOpsHandler {
 
       // Refresh the UI by re-processing the current selection
       // This ensures React receives fresh data with the updated element
-      console.log('[ElementOpsHandler] Re-processing selection after save:', data.type);
+      log.debug('Re-processing selection after save:', data.type);
       const selectedItems = viewport.getSelectedItems();
       await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
       return true;
       
     } catch (error) {
-      console.error('[ElementOpsHandler] Error updating element', error);
+      log.error('Error updating element', error);
       
       // Send error response
       router.send('model', {
@@ -211,7 +212,7 @@ export class ElementOpsHandler {
       errorMessage?: string;
     };
     
-    console.log('[ElementOpsHandler] Element update result received', {
+    log.debug('Element update result received', {
       success: data.success,
       elementId: data.elementId,
       error: data.errorMessage
@@ -237,7 +238,7 @@ export class ElementOpsHandler {
       diagramElementType?: string;
     };
 
-    console.log('[ElementOpsHandler] Element conversion requested', {
+    log.debug('Element conversion requested', {
       elementId: data.elementId,
       newType: data.newType,
       diagramElementType: data.diagramElementType
@@ -267,7 +268,7 @@ export class ElementOpsHandler {
 
       // Check if this is a Model conversion (Page-level)
       if (data.newType === 'Model' || data.newType === SimulationObjectType.Model) {
-        console.log('[ElementOpsHandler] Converting to Model (Page) directly:', {
+        log.debug('Converting to Model (Page) directly:', {
           elementId: data.elementId,
           pageId: currentPage.id
         });
@@ -315,14 +316,14 @@ export class ElementOpsHandler {
 
       // Refresh the UI by re-processing the current selection
       // This ensures React receives fresh data with the updated element type
-      console.log('[ElementOpsHandler] Re-processing selection after convert:', data.newType);
+      log.debug('Re-processing selection after convert:', data.newType);
       const selectedItems = viewport.getSelectedItems();
       await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
       return true;
 
     } catch (error) {
-      console.error('[ElementOpsHandler] Error converting element', error);
+      log.error('Error converting element', error);
 
       // Send error response
       router.send('model', {
@@ -355,7 +356,7 @@ export class ElementOpsHandler {
       errorMessage?: string;
     };
     
-    console.log('[ElementOpsHandler] Element conversion result received', {
+    log.debug('Element conversion result received', {
       success: data.success,
       elementId: data.elementId,
       error: data.errorMessage
@@ -382,11 +383,11 @@ export class ElementOpsHandler {
   ): ElementProxy | null {
     const page = viewport.getCurrentPage();
     if (!page) {
-      console.log('[ElementOpsHandler] No current page found');
+      log.debug('No current page found');
       return null;
     }
 
-    console.log('[ElementOpsHandler] Finding element:', {
+    log.debug('Finding element:', {
       elementId,
       diagramElementType,
       hasHint: !!diagramElementType
@@ -397,7 +398,7 @@ export class ElementOpsHandler {
       // Check lines first when we know it's a line
       const line = page.allLines?.get(elementId);
       if (line) {
-        console.log('[ElementOpsHandler] Found element in allLines (via hint):', {
+        log.debug('Found element in allLines (via hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -406,7 +407,7 @@ export class ElementOpsHandler {
       // Still check blocks as fallback
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        console.log('[ElementOpsHandler] Found element in allBlocks (fallback from line hint):', {
+        log.debug('Found element in allBlocks (fallback from line hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -416,7 +417,7 @@ export class ElementOpsHandler {
       // Check blocks first when we know it's a block
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        console.log('[ElementOpsHandler] Found element in allBlocks (via hint):', {
+        log.debug('Found element in allBlocks (via hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -425,7 +426,7 @@ export class ElementOpsHandler {
       // Still check lines as fallback
       const line = page.allLines?.get(elementId);
       if (line) {
-        console.log('[ElementOpsHandler] Found element in allLines (fallback from block hint):', {
+        log.debug('Found element in allLines (fallback from block hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -435,7 +436,7 @@ export class ElementOpsHandler {
       // No hint provided, check both (blocks first for backwards compatibility)
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        console.log('[ElementOpsHandler] Found element in allBlocks (no hint):', {
+        log.debug('Found element in allBlocks (no hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -444,7 +445,7 @@ export class ElementOpsHandler {
 
       const line = page.allLines?.get(elementId);
       if (line) {
-        console.log('[ElementOpsHandler] Found element in allLines (no hint):', {
+        log.debug('Found element in allLines (no hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -452,7 +453,7 @@ export class ElementOpsHandler {
       }
     }
 
-    console.log('[ElementOpsHandler] Element not found:', {
+    log.debug('Element not found:', {
       elementId,
       diagramElementType,
       lineCount: page.allLines?.size || 0,
@@ -493,7 +494,7 @@ export class ElementOpsHandler {
     }
     
     // Default to None if not found
-    console.warn(`[ElementOpsHandler] Unknown element type: ${typeString}, defaulting to None`);
+    log.warn(`Unknown element type: ${typeString}, defaulting to None`);
     return SimulationObjectType.None;
   }
 }
