@@ -1,13 +1,6 @@
 import { renderHook, act } from "@testing-library/react";
-import { configureLogger, consoleSink } from "@quodsi/lucid-shared";
+import { configureLogger, consoleSink, resetLoggerForTests } from "@quodsi/lucid-shared";
 import { useAutoSave, UseAutoSaveArgs } from "../useEditorState";
-
-// useEditorState now routes its error paths through the shared logger
-// (getLogger('useAutoSave')) instead of raw console.error. The tests below
-// spy on console.error directly, so route the logger's output back through
-// a real console sink here - the consoleSink prefixes with "[useAutoSave] ",
-// reproducing the exact string the raw console.error calls used to produce.
-configureLogger({ level: "debug", sinks: [consoleSink()] });
 
 type TestDraft = { id: string; name: string };
 
@@ -25,11 +18,22 @@ const baseArgs = (overrides: Partial<UseAutoSaveArgs<TestDraft>> = {}): UseAutoS
 describe("useAutoSave", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    // useEditorState routes its error paths through the shared logger
+    // (getLogger('useAutoSave')) rather than raw console.error, and the registry is
+    // silent with no sinks by default. Route its output back through a real console
+    // sink so the console.error spies below still fire - consoleSink prefixes with
+    // "[useAutoSave] ", reproducing the exact string the raw calls produced.
+    //
+    // Scoped to this suite on purpose: the registry is module-level singleton state,
+    // so configuring it at module scope would leak a live sink into every other test
+    // file the moment vitest's isolate default changes.
+    configureLogger({ level: "debug", sinks: [consoleSink()] });
   });
 
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    resetLoggerForTests();
   });
 
   describe("debounce", () => {
