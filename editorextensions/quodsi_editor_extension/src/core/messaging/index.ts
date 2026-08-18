@@ -2,6 +2,7 @@
 
 import { MessageRouter } from './MessageRouter';
 export { MessageRouter } from './MessageRouter';
+import { getLogger } from '@quodsi/lucid-shared';
 
 // Export types from the new location
 export { PanelRole, Channel, LogEntry } from './types';
@@ -9,6 +10,8 @@ export { RoutablePanel } from './RoutablePanel';
 
 // Re-export handlers for direct access
 export { MessageHandlers } from './handlers';
+
+const log = getLogger('Messaging');
 
 // Export the singleton instance
 export const router = MessageRouter.getInstance();
@@ -23,5 +26,5 @@ export const router = MessageRouter.getInstance();
  */
 export function initializeMessaging(enableLogging: boolean = true): void {
   router.setLogging(enableLogging);
-  console.log('[Messaging] System initialized');
+  log.debug('System initialized');
 }
