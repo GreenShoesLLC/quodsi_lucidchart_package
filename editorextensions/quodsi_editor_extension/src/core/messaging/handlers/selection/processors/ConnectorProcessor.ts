@@ -33,8 +33,6 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing connector selection');
-    
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
     
@@ -49,17 +47,16 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
-    
+
     // Ensure ModelManager knows about the current page for model definition building
-    log.debug('Setting current page on ModelManager:', {
+    log.trace('Setting current page on ModelManager:', {
       pageId: currentPage.id,
       pageTitle: currentPage.getTitle(),
       hasSetCurrentPageMethod: typeof modelManager.setCurrentPage === 'function'
     });
-    
+
     if (modelManager.setCurrentPage) {
       modelManager.setCurrentPage(currentPage);
     } else {
@@ -89,7 +86,7 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
         
-        log.debug('Processed connector data:', {
+        log.trace('Processed connector data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
@@ -106,12 +103,6 @@ export class ConnectorProcessor extends BaseSelectionProcessor {
         try {
           const serialized = JSON.stringify(messageData);
           const deserialized = JSON.parse(serialized);
-          log.debug('CHECKPOINT_3: Message serialization test', {
-            originalSize: serialized.length,
-            deserializedHasRefData: !!deserialized.referenceData,
-            deserializedActivitiesLength: deserialized.referenceData?.activities?.length,
-            hasMarkerAfterSerialization: !!deserialized.referenceData?._debugMarker
-          });
         } catch (serError) {
           log.error('CHECKPOINT_3: Message serialization failed:', serError);
         }

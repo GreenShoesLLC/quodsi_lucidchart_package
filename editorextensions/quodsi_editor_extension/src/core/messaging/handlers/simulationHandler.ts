@@ -181,11 +181,9 @@ export class SimulationHandler {
       
       try {
         client = ModelManager.getClient();
-        log.debug('Successfully retrieved EditorClient');
       } catch (error) {
-        log.error('EditorClient not initialized:', error);
-        log.error('ModelManager instance exists:', !!modelManager);
-        
+        log.error('EditorClient not initialized:', error, 'ModelManager instance exists:', !!modelManager);
+
         // Try to re-initialize if possible
         if ((globalThis as any).lucidEditorClient) {
           log.debug('Found global editor client, attempting to use it');
@@ -248,14 +246,12 @@ export class SimulationHandler {
       }
 
       // Ensure the model is loaded for the current page
-      log.debug('Ensuring model is loaded for current page...');
       try {
         // Check if current page is set in ModelManager
         const currentModelDef = await modelManager.getModelDefinition();
         if (!currentModelDef) {
           // Try to initialize/reload the model for the current page
-          log.debug('No current model definition, attempting to initialize...');
-          
+
           // Check if this is a Quodsi model page
           const isQuodsiModel = modelManager.isQuodsiModel(activePageProxy);
           if (!isQuodsiModel) {
@@ -285,7 +281,6 @@ export class SimulationHandler {
           }
           
           // Try to initialize the model for the current page
-          log.debug('Initializing model for current page...');
           const basicModel = Model.createDefault(documentProxy.id);
           await modelManager.initializeModel(basicModel, activePageProxy);
         }
@@ -322,22 +317,17 @@ export class SimulationHandler {
       }
 
       // Serialize the model
-      log.debug('Serializing model...');
       const serializer = ModelSerializerFactory.create(modelDefinition);
       const serializedModel = serializer.serialize(modelDefinition);
 
       // Inject runtime-derived swimlane resource requirements (Seize/Release brackets)
       SwimLaneResourceInjector.inject(serializedModel, activePageProxy);
 
-      log.debug('Model serialized successfully');
-
       // Use scenario definition ID as blob folder name (or generate UUID for baseline)
       let scenarioId = data.scenarioDefinitionId || generateUUID();
 
       // Get SVG representation of the current page
-      log.debug('Getting SVG for the current page...');
       const diagramSvg = await activePageProxy.getSvg(undefined, true);
-      log.debug('SVG obtained successfully');
 
       // getSvg() wraps the page in a translate() to normalize negative
       // coordinates into a positive viewBox. layout.json uses the raw model
@@ -454,8 +444,6 @@ export class SimulationHandler {
       }
 
       // Submit to data connector
-      log.debug('Submitting simulation to data connector...');
-
       try {
         const submitResult = await LucidDataActionUtility.performDataAction(client, {
           dataConnectorName: 'quodsi_api_data_connector',
@@ -501,8 +489,6 @@ export class SimulationHandler {
             data: refreshed,
           });
         }
-
-        log.debug('Simulation submitted successfully');
 
         // Update job status - keep as QUEUED (not PROCESSING) since status.json says QUEUED
         const job = SimulationHandler.activeJobs.get(jobId);

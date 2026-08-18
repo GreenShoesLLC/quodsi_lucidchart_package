@@ -28,61 +28,56 @@ export const selectionTypeUtils = {
     items: ItemProxy[],
     modelManager: ModelManager
   ): Promise<SelectionType> {
-    log.debug('Determining selection type', { 
-      itemCount: items.length 
+    log.trace('Determining selection type', {
+      itemCount: items.length
     });
 
     if (items.length === 0) {
-      log.debug('No items selected, returning NONE');
       return SelectionType.NONE;
     }
-    
+
     if (items.length > 1) {
-      log.debug('Multiple items selected, returning MULTIPLE');
       return SelectionType.MULTIPLE;
     }
 
     const item = items[0];
-    log.debug('Processing single item selection', { 
-      itemId: item.id 
-    });
 
     // Check for swimlane blocks BEFORE the unconverted check.
     // Swimlanes are visual containers, not simulation objects — they use
     // q_swimlane storage (not q_data), so they'd be classified as "unconverted"
     // without this early return.
     if (item instanceof BlockProxy && item.getClassName() === 'AdvancedSwimLaneBlock') {
-      log.debug('Item is a swimlane block', { itemId: item.id });
+      log.trace('Item is a swimlane block', { itemId: item.id });
       return SelectionType.SWIMLANE;
     }
 
     if (modelManager.isUnconvertedElement(item)) {
-      log.debug('Item is unconverted', { 
-        itemId: item.id 
+      log.trace('Item is unconverted', {
+        itemId: item.id
       });
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
     const typeInfo = modelManager.getElementType(item);
-    log.debug('Retrieved type info', {
+    log.trace('Retrieved type info', {
       itemId: item.id,
       typeInfo
     });
 
     if (!typeInfo?.type || typeInfo.type === SimulationObjectType.None) {
-      log.debug('Invalid or None type, treating as unconverted', {
+      log.trace('Invalid or None type, treating as unconverted', {
         itemId: item.id
       });
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
     const selectionType = this.mapElementTypeToSelectionType(typeInfo.type);
-    log.debug('Mapped element type to selection type', {
+    log.trace('Mapped element type to selection type', {
       itemId: item.id,
       elementType: typeInfo.type,
       selectionType
     });
-    
+
     return selectionType;
   },
 
@@ -92,8 +87,8 @@ export const selectionTypeUtils = {
    * @returns The corresponding selection type
    */
   mapElementTypeToSelectionType(elementType: SimulationObjectType): SelectionType {
-    log.debug('Mapping element type to selection type', { 
-      elementType 
+    log.trace('Mapping element type to selection type', {
+      elementType
     });
 
     // Create a type-safe mapping object
@@ -107,9 +102,9 @@ export const selectionTypeUtils = {
     };
 
     const result = mapping[elementType] ?? SelectionType.UNKNOWN_BLOCK;
-    log.debug('Type mapping result', { 
-      elementType, 
-      result 
+    log.trace('Type mapping result', {
+      elementType,
+      result
     });
     
     return result;

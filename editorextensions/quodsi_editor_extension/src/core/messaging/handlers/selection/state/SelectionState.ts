@@ -46,7 +46,7 @@ export class SelectionState {
         ...data
       };
       
-      log.debug('Updated from message:', {
+      log.trace('Updated from message:', {
         selectionType: this.state.selectionType,
         selectionCount: this.state.selectionCount
       });
@@ -68,7 +68,7 @@ export class SelectionState {
       ...data
     };
     
-    log.debug('Updated state:', {
+    log.trace('Updated state:', {
       selectionType: this.state.selectionType,
       selectionCount: this.state.selectionCount,
       hasModel: this.state.hasModel
@@ -100,8 +100,6 @@ export class SelectionState {
       documentId: '',
       hasModel: false
     };
-    
-    log.debug('State reset');
   }
   
   /**

@@ -33,8 +33,6 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing generator selection');
-    
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
     
@@ -49,7 +47,6 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
 
@@ -79,7 +76,7 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
         
-        log.debug('Processed generator data:', {
+        log.trace('Processed generator data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',

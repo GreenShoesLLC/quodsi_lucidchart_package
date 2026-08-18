@@ -34,8 +34,6 @@ export class ActivityProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    log.debug('Processing activity selection');
-
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
 
@@ -50,7 +48,6 @@ export class ActivityProcessor extends BaseSelectionProcessor {
 
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
 
@@ -85,7 +82,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           this.detectSwimLaneContainment(item, currentPage, messageData);
         }
 
-        log.debug('Processed activity data:', {
+        log.trace('Processed activity data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',

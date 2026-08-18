@@ -61,7 +61,6 @@ export class SelectionHandler {
    */
   public static setModelManager(manager: ModelManager): void {
     SelectionHandler.modelManager = manager;
-    log.debug('Model manager set');
   }
   
   /**
@@ -90,14 +89,13 @@ export class SelectionHandler {
     
     // Prevent concurrent processing of selection changes
     if (SelectionHandler.isHandlingSelectionChange) {
-      log.debug('Already handling selection change, ignoring new event');
       return;
     }
-    
+
     SelectionHandler.isHandlingSelectionChange = true;
-    
+
     try {
-      log.debug('Handling selection change', {
+      log.trace('Handling selection change', {
         itemCount: items.length,
         items: items.map(i => i.id)
       });
@@ -129,7 +127,7 @@ export class SelectionHandler {
         manager
       );
       
-      log.debug('Selection type determined:', selectionType);
+      log.trace('Selection type determined:', selectionType);
       
       // Get appropriate processor for this selection type
       const processor = ProcessorFactory.createProcessor(selectionType);
@@ -194,16 +192,10 @@ export class SelectionHandler {
         const page = viewport.getCurrentPage();
 
         if (page) {
-          log.debug('Building modelItemData for Quodsi model page');
           modelItemData = await itemDataBuilder.buildModelItemData(
             page,
             SelectionHandler.modelManager
           );
-          log.debug('Built modelItemData:', {
-            id: modelItemData?.id,
-            hasData: !!modelItemData?.data,
-            dataKeys: modelItemData?.data ? Object.keys(modelItemData.data) : []
-          });
         }
       } catch (error) {
         log.error('Error building modelItemData:', error);
@@ -224,15 +216,9 @@ export class SelectionHandler {
           SelectionHandler.modelManager.setCurrentPage(page);
         }
 
-        log.debug('Building referenceData for Quodsi model page');
         referenceData = await referenceDataBuilder.buildAllReferenceData(
           SelectionHandler.modelManager
         );
-        log.debug('Built referenceData:', {
-          requirementsCount: referenceData?.resourceRequirements?.length || 0,
-          statesCount: referenceData?.states?.length || 0,
-          resourcesCount: referenceData?.resources?.length || 0
-        });
       } catch (error) {
         log.error('Error building referenceData:', error);
       }
@@ -247,7 +233,7 @@ export class SelectionHandler {
       ...(referenceData ? { referenceData } : {})
     };
 
-    log.debug('Sending SELECTION_CHANGED message', {
+    log.trace('Sending SELECTION_CHANGED message', {
       selectionType: messageData.selectionType,
       hasModel: messageData.hasModel,
       itemCount: messageData.selectionCount,
@@ -334,7 +320,5 @@ export class SelectionHandler {
   public static reset(): void {
     SelectionHandler.selectionState.reset();
     SelectionHandler.isHandlingSelectionChange = false;
-    
-    log.debug('State reset');
   }
 }

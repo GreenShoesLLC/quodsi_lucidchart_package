@@ -39,7 +39,6 @@ export class LucidDataActionUtility {
         // Check if we need to trigger OAuth first
         if (!this.hasTriggeredOauth) {
             try {
-                log.debug("Triggering OAuth workaround before performDataAction");
                 await client.oauthXhr("lucid", {
                     url: "https://api.lucid.co/folders/search",
                     headers: {
@@ -52,7 +51,6 @@ export class LucidDataActionUtility {
                 
                 // Mark that we've triggered OAuth
                 this.hasTriggeredOauth = true;
-                log.debug("Successfully triggered OAuth workaround");
             } catch (error) {
                 log.error("Error triggering OAuth workaround:", error);
                 // We'll still try to continue with the data action
@@ -69,6 +67,5 @@ export class LucidDataActionUtility {
      */
     public static resetOauthTriggerStatus(): void {
         this.hasTriggeredOauth = false;
-        log.debug("OAuth trigger status has been reset");
     }
 }

@@ -54,8 +54,6 @@ const storageAdapter = new StorageAdapter();
 ModelManager.initialize(client, storageAdapter);
 const modelManager = ModelManager.getInstance();
 
-log.info('Using new messaging system with RightDockPanel');
-
 // Initialize messaging system with logging enabled
 initializeMessaging(true);
 
@@ -63,9 +61,7 @@ initializeMessaging(true);
 AnalyticsHandler.initialize(client);
 
 let rightDockPanel;
-log.info('About to create RightDockPanel');
 rightDockPanel = new RightDockPanel(client, modelManager);
-log.info('Created RightDockPanel');
 
 // Initialize the SelectionHandler with model manager
 SelectionHandler.setModelManager(modelManager);
@@ -74,5 +70,3 @@ SelectionHandler.setModelManager(modelManager);
 viewport.hookSelection((items) => {
     SelectionHandler.handleLucidSelectionEvent(client, items);
 });
-log.info('Selection handler hooked');
-log.info('Completed Successfully');

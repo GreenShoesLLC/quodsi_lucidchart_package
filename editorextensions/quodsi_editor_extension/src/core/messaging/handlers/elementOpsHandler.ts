@@ -383,11 +383,10 @@ export class ElementOpsHandler {
   ): ElementProxy | null {
     const page = viewport.getCurrentPage();
     if (!page) {
-      log.debug('No current page found');
       return null;
     }
 
-    log.debug('Finding element:', {
+    log.trace('Finding element:', {
       elementId,
       diagramElementType,
       hasHint: !!diagramElementType
@@ -398,7 +397,7 @@ export class ElementOpsHandler {
       // Check lines first when we know it's a line
       const line = page.allLines?.get(elementId);
       if (line) {
-        log.debug('Found element in allLines (via hint):', {
+        log.trace('Found element in allLines (via hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -407,7 +406,7 @@ export class ElementOpsHandler {
       // Still check blocks as fallback
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        log.debug('Found element in allBlocks (fallback from line hint):', {
+        log.trace('Found element in allBlocks (fallback from line hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -417,7 +416,7 @@ export class ElementOpsHandler {
       // Check blocks first when we know it's a block
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        log.debug('Found element in allBlocks (via hint):', {
+        log.trace('Found element in allBlocks (via hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -426,7 +425,7 @@ export class ElementOpsHandler {
       // Still check lines as fallback
       const line = page.allLines?.get(elementId);
       if (line) {
-        log.debug('Found element in allLines (fallback from block hint):', {
+        log.trace('Found element in allLines (fallback from block hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -436,7 +435,7 @@ export class ElementOpsHandler {
       // No hint provided, check both (blocks first for backwards compatibility)
       const block = page.allBlocks?.get(elementId);
       if (block) {
-        log.debug('Found element in allBlocks (no hint):', {
+        log.trace('Found element in allBlocks (no hint):', {
           elementId,
           type: 'BlockProxy'
         });
@@ -445,7 +444,7 @@ export class ElementOpsHandler {
 
       const line = page.allLines?.get(elementId);
       if (line) {
-        log.debug('Found element in allLines (no hint):', {
+        log.trace('Found element in allLines (no hint):', {
           elementId,
           type: 'LineProxy'
         });
@@ -453,7 +452,7 @@ export class ElementOpsHandler {
       }
     }
 
-    log.debug('Element not found:', {
+    log.trace('Element not found:', {
       elementId,
       diagramElementType,
       lineCount: page.allLines?.size || 0,
