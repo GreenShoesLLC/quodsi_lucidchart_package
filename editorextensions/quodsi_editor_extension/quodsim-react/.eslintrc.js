@@ -14,5 +14,6 @@ module.exports = {
   },
   rules: {
     "react-hooks/rules-of-hooks": "error",
+    "no-console": "error",
   },
 };
