@@ -1,4 +1,4 @@
-import { configureLogger, consoleSink, installDebugGlobal } from '@quodsi/lucid-shared';
+import { configureLogger, consoleSink, installDebugGlobal, getLogger } from '@quodsi/lucid-shared';
 import type { LogLevel } from '@quodsi/lucid-shared';
 
 // Configure logging before anything else runs. Production ships at 'warn' so a
@@ -40,6 +40,8 @@ import { initializeMessaging } from './core/messaging';
 import { SelectionHandler } from './core/messaging/handlers/selection';
 import { AnalyticsHandler } from './core/messaging/handlers/analyticsHandler';
 
+const log = getLogger('extension');
+
 const client = new EditorClient();
 const viewport = new Viewport(client);
 // Store client globally as a fallback for handlers
@@ -52,7 +54,7 @@ const storageAdapter = new StorageAdapter();
 ModelManager.initialize(client, storageAdapter);
 const modelManager = ModelManager.getInstance();
 
-console.info('[EXT][extension] Using new messaging system with RightDockPanel');
+log.info('[EXT] Using new messaging system with RightDockPanel');
 
 // Initialize messaging system with logging enabled
 initializeMessaging(true);
@@ -61,9 +63,9 @@ initializeMessaging(true);
 AnalyticsHandler.initialize(client);
 
 let rightDockPanel;
-console.info('[EXT][extension] About to create RightDockPanel');
+log.info('[EXT] About to create RightDockPanel');
 rightDockPanel = new RightDockPanel(client, modelManager);
-console.info('[EXT][extension] Created RightDockPanel');
+log.info('[EXT] Created RightDockPanel');
 
 // Initialize the SelectionHandler with model manager
 SelectionHandler.setModelManager(modelManager);
@@ -72,5 +74,5 @@ SelectionHandler.setModelManager(modelManager);
 viewport.hookSelection((items) => {
     SelectionHandler.handleLucidSelectionEvent(client, items);
 });
-console.info('[EXT][extension] Selection handler hooked');
-console.info('[EXT][extension] Completed Successfully');
+log.info('[EXT] Selection handler hooked');
+log.info('[EXT] Completed Successfully');

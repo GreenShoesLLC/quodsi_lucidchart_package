@@ -1,13 +1,15 @@
 import { ModelStructure, ModelElement } from '@quodsi/lucid-shared';
-import { ModelDefinition, SimulationObjectType } from '@quodsi/lucid-shared';
+import { ModelDefinition, SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('ModelStructureBuilder');
 
 export class ModelStructureBuilder {
     public static buildModelStructure(modelData: ModelDefinition): ModelStructure {
-        console.group('ModelStructureBuilder.buildModelStructure');
+        log.debug('ModelStructureBuilder.buildModelStructure');
 
         if (!modelData) {
-            console.warn('Empty model data');
-            console.groupEnd();
+            log.warn('Empty model data');
+            log.debug('');
             return { elements: [], hierarchy: {} };
         }
 
@@ -65,8 +67,8 @@ export class ModelStructureBuilder {
             });
         });
 
-        console.debug('Build complete:', { totalElements: elements.length });
-        console.groupEnd();
+        log.debug('Build complete:', { totalElements: elements.length });
+        log.debug('');
         return { elements, hierarchy };
     }
 }

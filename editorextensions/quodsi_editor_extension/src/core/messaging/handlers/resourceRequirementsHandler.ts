@@ -1,9 +1,10 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedResourceRequirement, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
 
+const log = getLogger('ResourceRequirementsHandler');
 
 /**
  * Handler for resource requirements operations (update resource requirements array)
@@ -20,7 +21,7 @@ export class ResourceRequirementsHandler {
       case EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE:
         // Start the async process but return true synchronously
         ResourceRequirementsHandler.handleResourceRequirementsUpdate(msg)
-          .catch(err => console.error('[ResourceRequirementsHandler] Error in handleResourceRequirementsUpdate:', err));
+          .catch(err => log.error('Error in handleResourceRequirementsUpdate:', err));
         return true;
 
       case EnvelopeMessageType.RESOURCE_REQUIREMENTS_UPDATE_RESULT:
@@ -43,7 +44,7 @@ export class ResourceRequirementsHandler {
       resourceRequirements: ISerializedResourceRequirement[];
     };
 
-    console.log('[ResourceRequirementsHandler] Resource requirements update requested', {
+    log.debug('Resource requirements update requested', {
       requirementsCount: data.resourceRequirements.length
     });
 
@@ -85,7 +86,7 @@ export class ResourceRequirementsHandler {
       return true;
 
     } catch (error) {
-      console.error('[ResourceRequirementsHandler] Error updating resource requirements', error);
+      log.error('Error updating resource requirements', error);
 
       // Send error response
       router.send('model', {
@@ -116,7 +117,7 @@ export class ResourceRequirementsHandler {
       errorMessage?: string;
     };
 
-    console.log('[ResourceRequirementsHandler] Resource requirements update result received', {
+    log.debug('Resource requirements update result received', {
       success: data.success,
       error: data.errorMessage
     });
