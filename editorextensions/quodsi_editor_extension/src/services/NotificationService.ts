@@ -1,3 +1,7 @@
+import { getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('NotificationService');
+
 /**
  * Service for managing user notifications in the LucidChart environment
  */
@@ -20,7 +24,7 @@ export class NotificationService {
      * Shows an informational message
      */
     public showMessage(message: string): void {
-        console.log('Info:', message);
+        log.debug('Info:', message);
         // TODO: Implement actual LucidChart notification
     }
 
@@ -28,7 +32,7 @@ export class NotificationService {
      * Shows a warning message
      */
     public showWarning(message: string): void {
-        console.warn('Warning:', message);
+        log.warn('Warning:', message);
         // TODO: Implement actual LucidChart notification
     }
 
@@ -36,7 +40,7 @@ export class NotificationService {
      * Shows an error message
      */
     public showError(message: string): void {
-        console.error('Error:', message);
+        log.error('Error:', message);
         // TODO: Implement actual LucidChart notification
     }
 }

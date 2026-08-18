@@ -1,9 +1,10 @@
-import { EnvelopeBase, EnvelopeMessageType, ISerializedEntity } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ISerializedEntity, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport, PageProxy } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
 import { SelectionHandler } from './selection/SelectionHandler';
 
+const log = getLogger('EntitiesHandler');
 
 /**
  * Handler for entities operations (update entities array)
@@ -22,7 +23,7 @@ export class EntitiesHandler {
       case EnvelopeMessageType.ENTITIES_UPDATE:
         // Start the async process but return true synchronously
         EntitiesHandler.handleEntitiesUpdate(msg)
-          .catch(err => console.error('[EntitiesHandler] Error in handleEntitiesUpdate:', err));
+          .catch(err => log.error('Error in handleEntitiesUpdate:', err));
         return true;
 
       case EnvelopeMessageType.ENTITIES_UPDATE_RESULT:
@@ -45,7 +46,7 @@ export class EntitiesHandler {
       entities: ISerializedEntity[];
     };
 
-    console.log('[EntitiesHandler] Entities update requested', {
+    log.debug('Entities update requested', {
       entitiesCount: data.entities.length
     });
 
@@ -86,7 +87,7 @@ export class EntitiesHandler {
       return true;
 
     } catch (error) {
-      console.error('[EntitiesHandler] Error updating entities', error);
+      log.error('Error updating entities', error);
 
       // Send error response
       router.send('model', {
@@ -117,7 +118,7 @@ export class EntitiesHandler {
       errorMessage?: string;
     };
 
-    console.log('[EntitiesHandler] Entities update result received', {
+    log.debug('Entities update result received', {
       success: data.success,
       error: data.errorMessage
     });
