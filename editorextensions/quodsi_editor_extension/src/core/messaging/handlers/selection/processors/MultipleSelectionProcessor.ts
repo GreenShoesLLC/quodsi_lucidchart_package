@@ -4,11 +4,13 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
+
+const log = getLogger('MultipleSelectionProcessor');
 
 /**
  * Processor for multiple item selection
@@ -30,7 +32,7 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[MultipleSelectionProcessor] Processing multiple selection', {
+    log.debug('Processing multiple selection', {
       itemCount: items.length
     });
     
@@ -48,7 +50,7 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      console.log('[MultipleSelectionProcessor] Not a Quodsi model');
+      log.debug('Not a Quodsi model');
       return messageData;
     }
     
@@ -63,11 +65,11 @@ export class MultipleSelectionProcessor extends BaseSelectionProcessor {
         modelManager
       );
       
-      console.log('[MultipleSelectionProcessor] Built model data for multiple items:', {
+      log.debug('Built model data for multiple items:', {
         count: Array.isArray(messageData.modelItemData) ? messageData.modelItemData.length : 0
       });
     } catch (error) {
-      console.error('[MultipleSelectionProcessor] Error building model item data:', error);
+      log.error('Error building model item data:', error);
       messageData.error = 'Error building model data for multiple items';
     }
     

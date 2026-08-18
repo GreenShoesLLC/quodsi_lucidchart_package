@@ -4,12 +4,15 @@ import {
   BlockProxy, 
   LineProxy 
 } from 'lucid-extension-sdk';
-import { 
-  SelectionType, 
-  SimulationObjectType, 
-  ElementShape 
+import {
+  SelectionType,
+  SimulationObjectType,
+  ElementShape,
+  getLogger
 } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
+
+const log = getLogger('selectionTypeUtils');
 
 /**
  * Utility functions for selection type determination
@@ -25,22 +28,22 @@ export const selectionTypeUtils = {
     items: ItemProxy[],
     modelManager: ModelManager
   ): Promise<SelectionType> {
-    console.log('[selectionTypeUtils] Determining selection type', { 
+    log.debug('Determining selection type', { 
       itemCount: items.length 
     });
 
     if (items.length === 0) {
-      console.log('[selectionTypeUtils] No items selected, returning NONE');
+      log.debug('No items selected, returning NONE');
       return SelectionType.NONE;
     }
     
     if (items.length > 1) {
-      console.log('[selectionTypeUtils] Multiple items selected, returning MULTIPLE');
+      log.debug('Multiple items selected, returning MULTIPLE');
       return SelectionType.MULTIPLE;
     }
 
     const item = items[0];
-    console.log('[selectionTypeUtils] Processing single item selection', { 
+    log.debug('Processing single item selection', { 
       itemId: item.id 
     });
 
@@ -49,32 +52,32 @@ export const selectionTypeUtils = {
     // q_swimlane storage (not q_data), so they'd be classified as "unconverted"
     // without this early return.
     if (item instanceof BlockProxy && item.getClassName() === 'AdvancedSwimLaneBlock') {
-      console.log('[selectionTypeUtils] Item is a swimlane block', { itemId: item.id });
+      log.debug('Item is a swimlane block', { itemId: item.id });
       return SelectionType.SWIMLANE;
     }
 
     if (modelManager.isUnconvertedElement(item)) {
-      console.log('[selectionTypeUtils] Item is unconverted', { 
+      log.debug('Item is unconverted', { 
         itemId: item.id 
       });
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
     const typeInfo = modelManager.getElementType(item);
-    console.log('[selectionTypeUtils] Retrieved type info', {
+    log.debug('Retrieved type info', {
       itemId: item.id,
       typeInfo
     });
 
     if (!typeInfo?.type || typeInfo.type === SimulationObjectType.None) {
-      console.log('[selectionTypeUtils] Invalid or None type, treating as unconverted', {
+      log.debug('Invalid or None type, treating as unconverted', {
         itemId: item.id
       });
       return SelectionType.UNCONVERTED_ELEMENT;
     }
 
     const selectionType = this.mapElementTypeToSelectionType(typeInfo.type);
-    console.log('[selectionTypeUtils] Mapped element type to selection type', {
+    log.debug('Mapped element type to selection type', {
       itemId: item.id,
       elementType: typeInfo.type,
       selectionType
@@ -89,7 +92,7 @@ export const selectionTypeUtils = {
    * @returns The corresponding selection type
    */
   mapElementTypeToSelectionType(elementType: SimulationObjectType): SelectionType {
-    console.log('[selectionTypeUtils] Mapping element type to selection type', { 
+    log.debug('Mapping element type to selection type', { 
       elementType 
     });
 
@@ -104,7 +107,7 @@ export const selectionTypeUtils = {
     };
 
     const result = mapping[elementType] ?? SelectionType.UNKNOWN_BLOCK;
-    console.log('[selectionTypeUtils] Type mapping result', { 
+    log.debug('Type mapping result', { 
       elementType, 
       result 
     });

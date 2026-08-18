@@ -1,4 +1,4 @@
-import { SelectionType } from '@quodsi/lucid-shared';
+import { SelectionType, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { NoneSelectionProcessor } from './NoneSelectionProcessor';
 import { MultipleSelectionProcessor } from './MultipleSelectionProcessor';
@@ -9,6 +9,8 @@ import { GeneratorProcessor } from './GeneratorProcessor';
 import { ModelProcessor } from './ModelProcessor';
 import { UnconvertedProcessor } from './UnconvertedProcessor';
 import { SwimLaneProcessor } from './SwimLaneProcessor';
+
+const log = getLogger('ProcessorFactory');
 
 /**
  * Factory for creating the appropriate selection processor
@@ -40,12 +42,12 @@ export class ProcessorFactory {
    * @returns The appropriate processor for the selection type
    */
   public static createProcessor(selectionType: SelectionType): BaseSelectionProcessor {
-    console.log('[ProcessorFactory] Creating processor for selection type:', selectionType);
+    log.debug('Creating processor for selection type:', selectionType);
     
     const processor = ProcessorFactory.processors.get(selectionType);
     
     if (!processor) {
-      console.log('[ProcessorFactory] No processor found for type, using default');
+      log.debug('No processor found for type, using default');
       return ProcessorFactory.defaultProcessor;
     }
     
@@ -58,7 +60,7 @@ export class ProcessorFactory {
    * @param processor The processor to register
    */
   public static registerProcessor(selectionType: SelectionType, processor: BaseSelectionProcessor): void {
-    console.log('[ProcessorFactory] Registering processor for selection type:', selectionType);
+    log.debug('Registering processor for selection type:', selectionType);
     ProcessorFactory.processors.set(selectionType, processor);
   }
   

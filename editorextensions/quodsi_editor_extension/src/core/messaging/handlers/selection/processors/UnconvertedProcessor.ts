@@ -4,11 +4,13 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
+
+const log = getLogger('UnconvertedProcessor');
 
 /**
  * Processor for unconverted element selection
@@ -30,7 +32,7 @@ export class UnconvertedProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[UnconvertedProcessor] Processing unconverted element selection');
+    log.debug('Processing unconverted element selection');
     
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
@@ -46,7 +48,7 @@ export class UnconvertedProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      console.log('[UnconvertedProcessor] Not a Quodsi model or multiple items selected');
+      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
     
@@ -70,12 +72,12 @@ export class UnconvertedProcessor extends BaseSelectionProcessor {
       // Set diagram element type
       messageData.diagramElementType = this.getDiagramElementType(item);
       
-      console.log('[UnconvertedProcessor] Processed unconverted element:', {
+      log.debug('Processed unconverted element:', {
         id: item.id,
         diagramElementType: messageData.diagramElementType
       });
     } catch (error) {
-      console.error('[UnconvertedProcessor] Error building model item data:', error);
+      log.error('Error building model item data:', error);
       messageData.error = 'Error building model data for unconverted element';
     }
     

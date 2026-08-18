@@ -4,12 +4,14 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, SwimLaneQuodsiData, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, SwimLaneQuodsiData, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+const log = getLogger('ActivityProcessor');
 import { isCenterInBox } from '../../../../../services/swimLaneGeometry';
 
 /**
@@ -32,7 +34,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[ActivityProcessor] Processing activity selection');
+    log.debug('Processing activity selection');
 
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
@@ -48,7 +50,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
 
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      console.log('[ActivityProcessor] Not a Quodsi model or multiple items selected');
+      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
 
@@ -83,7 +85,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           this.detectSwimLaneContainment(item, currentPage, messageData);
         }
 
-        console.log('[ActivityProcessor] Processed activity data:', {
+        log.debug('Processed activity data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
@@ -95,11 +97,11 @@ export class ActivityProcessor extends BaseSelectionProcessor {
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {
-        console.error('[ActivityProcessor] Error processing activity:', error);
+        log.error('Error processing activity:', error);
         messageData.error = 'Error processing activity data';
       }
     } else {
-      console.error('[ActivityProcessor] No type info found for activity');
+      log.error('No type info found for activity');
       messageData.error = 'No type info found for activity';
     }
     
@@ -162,7 +164,7 @@ export class ActivityProcessor extends BaseSelectionProcessor {
         }
       }
     } catch (error) {
-      console.error('[ActivityProcessor] Error detecting swimlane containment:', error);
+      log.error('Error detecting swimlane containment:', error);
     }
   }
 }

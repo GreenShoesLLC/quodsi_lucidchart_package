@@ -1,5 +1,7 @@
-import { EnvelopeBase } from '@quodsi/lucid-shared';
+import { EnvelopeBase, getLogger } from '@quodsi/lucid-shared';
 import { DocumentContextData } from '../types';
+
+const log = getLogger('DocumentContext');
 
 /**
  * Manages document context information
@@ -24,7 +26,7 @@ export class DocumentContext {
         ...data
       };
       
-      console.log('[DocumentContext] Updated from message:', {
+      log.debug('Updated from message:', {
         documentId: this.context.documentId,
         pageId: this.context.pageId,
         isQuodsiModel: this.context.isQuodsiModel
@@ -32,7 +34,7 @@ export class DocumentContext {
       
       return true;
     } catch (error) {
-      console.error('[DocumentContext] Error updating from message:', error);
+      log.error('Error updating from message:', error);
       return false;
     }
   }
@@ -60,7 +62,7 @@ export class DocumentContext {
       metadata: metadata || this.context.metadata
     };
     
-    console.log('[DocumentContext] Updated context:', {
+    log.debug('Updated context:', {
       documentId,
       pageId,
       isQuodsiModel

@@ -22,6 +22,9 @@ import { ModelManager } from '../../../ModelManager';
 import { itemDataBuilder } from './utils/itemDataBuilder';
 import { AnalyticsHandler } from '../analyticsHandler';
 import { referenceDataBuilder } from './utils/referenceDataBuilder';
+import { getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('SelectionHandler');
 
 /**
  * Handler for selection and document context related messages
@@ -58,7 +61,7 @@ export class SelectionHandler {
    */
   public static setModelManager(manager: ModelManager): void {
     SelectionHandler.modelManager = manager;
-    console.log('[SelectionHandler] Model manager set');
+    log.debug('Model manager set');
   }
   
   /**
@@ -87,14 +90,14 @@ export class SelectionHandler {
     
     // Prevent concurrent processing of selection changes
     if (SelectionHandler.isHandlingSelectionChange) {
-      console.log('[SelectionHandler] Already handling selection change, ignoring new event');
+      log.debug('Already handling selection change, ignoring new event');
       return;
     }
     
     SelectionHandler.isHandlingSelectionChange = true;
     
     try {
-      console.log('[SelectionHandler] Handling selection change', {
+      log.debug('Handling selection change', {
         itemCount: items.length,
         items: items.map(i => i.id)
       });
@@ -106,7 +109,7 @@ export class SelectionHandler {
       const documentId = document.id;
       
       if (currentPage === undefined) {
-        console.error('[SelectionHandler] No current page found');
+        log.error('No current page found');
         SelectionHandler.handleError('No current page found');
         return;
       }
@@ -126,7 +129,7 @@ export class SelectionHandler {
         manager
       );
       
-      console.log('[SelectionHandler] Selection type determined:', selectionType);
+      log.debug('Selection type determined:', selectionType);
       
       // Get appropriate processor for this selection type
       const processor = ProcessorFactory.createProcessor(selectionType);
@@ -147,7 +150,7 @@ export class SelectionHandler {
       SelectionHandler.sendSelectionChangedMessage();
       
     } catch (error) {
-      console.error('[SelectionHandler] Error handling selection event:', error);
+      log.error('Error handling selection event:', error);
       SelectionHandler.handleError(error instanceof Error ? error.message : String(error));
     } finally {
       SelectionHandler.isHandlingSelectionChange = false;
@@ -160,7 +163,7 @@ export class SelectionHandler {
    * @param details Optional error details
    */
   private static handleError(message: string, details?: any): void {
-    console.error('[SelectionHandler] Error:', message, details);
+    log.error('Error:', message, details);
     
     // Set error in selection state
     SelectionHandler.selectionState.setError(message, details);
@@ -191,19 +194,19 @@ export class SelectionHandler {
         const page = viewport.getCurrentPage();
 
         if (page) {
-          console.log('[SelectionHandler] Building modelItemData for Quodsi model page');
+          log.debug('Building modelItemData for Quodsi model page');
           modelItemData = await itemDataBuilder.buildModelItemData(
             page,
             SelectionHandler.modelManager
           );
-          console.log('[SelectionHandler] Built modelItemData:', {
+          log.debug('Built modelItemData:', {
             id: modelItemData?.id,
             hasData: !!modelItemData?.data,
             dataKeys: modelItemData?.data ? Object.keys(modelItemData.data) : []
           });
         }
       } catch (error) {
-        console.error('[SelectionHandler] Error building modelItemData:', error);
+        log.error('Error building modelItemData:', error);
       }
     }
 
@@ -221,17 +224,17 @@ export class SelectionHandler {
           SelectionHandler.modelManager.setCurrentPage(page);
         }
 
-        console.log('[SelectionHandler] Building referenceData for Quodsi model page');
+        log.debug('Building referenceData for Quodsi model page');
         referenceData = await referenceDataBuilder.buildAllReferenceData(
           SelectionHandler.modelManager
         );
-        console.log('[SelectionHandler] Built referenceData:', {
+        log.debug('Built referenceData:', {
           requirementsCount: referenceData?.resourceRequirements?.length || 0,
           statesCount: referenceData?.states?.length || 0,
           resourcesCount: referenceData?.resources?.length || 0
         });
       } catch (error) {
-        console.error('[SelectionHandler] Error building referenceData:', error);
+        log.error('Error building referenceData:', error);
       }
     }
 
@@ -244,7 +247,7 @@ export class SelectionHandler {
       ...(referenceData ? { referenceData } : {})
     };
 
-    console.log('[SelectionHandler] Sending SELECTION_CHANGED message', {
+    log.debug('Sending SELECTION_CHANGED message', {
       selectionType: messageData.selectionType,
       hasModel: messageData.hasModel,
       itemCount: messageData.selectionCount,
@@ -332,6 +335,6 @@ export class SelectionHandler {
     SelectionHandler.selectionState.reset();
     SelectionHandler.isHandlingSelectionChange = false;
     
-    console.log('[SelectionHandler] State reset');
+    log.debug('State reset');
   }
 }

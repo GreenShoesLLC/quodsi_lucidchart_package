@@ -4,12 +4,14 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+const log = getLogger('GeneratorProcessor');
 
 /**
  * Processor for generator selection
@@ -31,7 +33,7 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[GeneratorProcessor] Processing generator selection');
+    log.debug('Processing generator selection');
     
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
@@ -47,7 +49,7 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model or we don't have exactly one item, return basic info
     if (!isQuodsiModel || items.length !== 1) {
-      console.log('[GeneratorProcessor] Not a Quodsi model or multiple items selected');
+      log.debug('Not a Quodsi model or multiple items selected');
       return messageData;
     }
 
@@ -77,7 +79,7 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
         // Set diagram element type
         messageData.diagramElementType = this.getDiagramElementType(item);
         
-        console.log('[GeneratorProcessor] Processed generator data:', {
+        log.debug('Processed generator data:', {
           id: item.id,
           hasModelData: messageData.modelItemData ? 'yes' : 'no',
           hasRefData: messageData.referenceData ? 'yes' : 'no',
@@ -85,11 +87,11 @@ export class GeneratorProcessor extends BaseSelectionProcessor {
           diagramElementType: messageData.diagramElementType
         });
       } catch (error) {
-        console.error('[GeneratorProcessor] Error processing generator:', error);
+        log.error('Error processing generator:', error);
         messageData.error = 'Error processing generator data';
       }
     } else {
-      console.error('[GeneratorProcessor] No type info found for generator');
+      log.error('No type info found for generator');
       messageData.error = 'No type info found for generator';
     }
     

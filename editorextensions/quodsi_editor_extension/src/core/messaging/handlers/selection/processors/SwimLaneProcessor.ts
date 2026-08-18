@@ -3,11 +3,13 @@ import {
   ItemProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, SimulationObjectType } from '@quodsi/lucid-shared';
+import { SelectionType, SimulationObjectType, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+const log = getLogger('SwimLaneProcessor');
 
 /**
  * Processor for swimlane block selection.
@@ -21,7 +23,7 @@ export class SwimLaneProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[SwimLaneProcessor] Processing swimlane selection');
+    log.debug('Processing swimlane selection');
 
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
@@ -82,13 +84,13 @@ export class SwimLaneProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      console.log('[SwimLaneProcessor] Processed swimlane data:', {
+      log.debug('Processed swimlane data:', {
         id: item.id,
         laneCount: laneInfos.length,
         hasExistingData: !!swimlaneData,
       });
     } catch (error) {
-      console.error('[SwimLaneProcessor] Error processing swimlane:', error);
+      log.error('Error processing swimlane:', error);
       messageData.error = 'Error processing swimlane data';
     }
 

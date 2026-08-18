@@ -12,11 +12,14 @@ import {
   DiagramElementType,
   ValidationResult,
   ValidationMessages,
-  ValidationSeverity
+  ValidationSeverity,
+  getLogger
 } from '@quodsi/lucid-shared';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { selectionTypeUtils } from '../utils/selectionTypeUtils';
+
+const log = getLogger('BaseSelectionProcessor');
 
 /**
  * Base class for all selection processors
@@ -86,7 +89,7 @@ export abstract class BaseSelectionProcessor {
       const result = await modelManager.validateModel();
       return result;
     } catch (error) {
-      console.error('[BaseSelectionProcessor] Error getting validation result:', error);
+      log.error('Error getting validation result:', error);
 
       // Create a properly formatted ValidationResult
       const errorIssue = ValidationMessages.createIssue(

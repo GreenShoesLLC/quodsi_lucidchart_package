@@ -4,12 +4,14 @@ import {
   ElementProxy,
   PageProxy
 } from 'lucid-extension-sdk';
-import { SelectionType, ValidationResult } from '@quodsi/lucid-shared';
+import { SelectionType, ValidationResult, getLogger } from '@quodsi/lucid-shared';
 import { BaseSelectionProcessor } from './BaseSelectionProcessor';
 import { ModelManager } from '../../../../../core/ModelManager';
 import { SelectionStateData } from '../types';
 import { itemDataBuilder } from '../utils/itemDataBuilder';
 import { referenceDataBuilder } from '../utils/referenceDataBuilder';
+
+const log = getLogger('NoneSelectionProcessor');
 
 /**
  * Processor for no selection (page-level selection)
@@ -31,7 +33,7 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
     selectionType: SelectionType,
     modelManager: ModelManager
   ): Promise<Partial<SelectionStateData>> {
-    console.log('[NoneSelectionProcessor] Processing none selection');
+    log.debug('Processing none selection');
     
     const documentId = this.getDocumentId(client);
     const isQuodsiModel = modelManager.isQuodsiModel(currentPage);
@@ -47,7 +49,7 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
     
     // If this isn't a Quodsi model, return the basic info
     if (!isQuodsiModel) {
-      console.log('[NoneSelectionProcessor] Not a Quodsi model');
+      log.debug('Not a Quodsi model');
       return messageData;
     }
     
@@ -69,7 +71,7 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
         modelManager
       );
 
-      console.log('[NoneSelectionProcessor] Built model data for page:', {
+      log.debug('Built model data for page:', {
         modelData: messageData.modelItemData ? 'present' : 'absent',
         refData: messageData.referenceData ? 'present' : 'absent',
         requirementsCount: messageData.referenceData?.resourceRequirements?.length || 0,
@@ -77,7 +79,7 @@ export class NoneSelectionProcessor extends BaseSelectionProcessor {
         resourcesCount: messageData.referenceData?.resources?.length || 0
       });
     } catch (error) {
-      console.error('[NoneSelectionProcessor] Error building data:', error);
+      log.error('Error building data:', error);
       messageData.error = 'Error building data for page';
     }
     
