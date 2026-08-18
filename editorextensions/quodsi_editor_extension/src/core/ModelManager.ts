@@ -172,7 +172,7 @@ export class ModelManager {
                         // `NotificationService.showError` (which LucidVersionManager
                         // itself already calls on its own internal failures) is NOT
                         // actually wired to anything user-visible today -- it is a
-                        // console.error stub ("TODO: Implement actual LucidChart
+                        // log.error stub ("TODO: Implement actual LucidChart
                         // notification"). `broadcastValidationResults()` via
                         // MODEL_VALIDATION_RESULT is the one mechanism in this file
                         // already proven to reach the user (renders on the Model
