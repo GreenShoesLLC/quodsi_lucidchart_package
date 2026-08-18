@@ -9,6 +9,7 @@ import {
   NormalParameters,
   ExponentialParameters,
   createDefaultDistribution,
+  getLogger,
 } from "@quodsi/lucid-shared";
 
 import { ConstantParameterEditor } from "./parameters/ConstantParameterEditor";
@@ -16,6 +17,8 @@ import { UniformParameterEditor } from "./parameters/UniformParameterEditor";
 import { TriangularParameterEditor } from "./parameters/TriangularParameterEditor";
 import { NormalParameterEditor } from "./parameters/NormalParameterEditor";
 import { ExponentialParameterEditor } from "./parameters/ExponentialParameterEditor";
+
+const log = getLogger("DistributionParametersEditor");
 
 interface DistributionParametersEditorProps {
   elementId?: string;
@@ -43,7 +46,7 @@ export const DistributionParametersEditor: React.FC<
 
     // Case 2: Explicit type change - create new default
     if (previousTypeRef.current !== null && previousTypeRef.current !== distributionType) {
-      console.log(`[DistributionParametersEditor] Type changed from ${previousTypeRef.current} to ${distributionType}, creating default distribution`);
+      log.debug(`Type changed from ${previousTypeRef.current} to ${distributionType}, creating default distribution`);
       const newDist = createDefaultDistribution(distributionType);
       previousDistributionRef.current = newDist;
       previousTypeRef.current = distributionType;
@@ -52,7 +55,7 @@ export const DistributionParametersEditor: React.FC<
 
     // Case 3: Initial load or distribution is null - create default
     if (!distribution) {
-      console.log(`[DistributionParametersEditor] No distribution provided, creating default ${distributionType}`);
+      log.debug(`No distribution provided, creating default ${distributionType}`);
       const newDist = createDefaultDistribution(distributionType);
       previousDistributionRef.current = newDist;
       previousTypeRef.current = distributionType;
@@ -60,8 +63,8 @@ export const DistributionParametersEditor: React.FC<
     }
 
     // Case 4: Type mismatch but not an explicit change - WARNING
-    console.warn(
-      `[DistributionParametersEditor] Type mismatch detected! ` +
+    log.warn(
+      `Type mismatch detected! ` +
       `Expected ${distributionType}, got ${distribution.distributionType}. ` +
       `This may cause parameter loss. Creating default distribution.`
     );

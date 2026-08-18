@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import { useSelection } from '../MessageProvider';
 import { useModelOpsSender } from '../senders/modelOpsSender';
+import { getLogger } from '@quodsi/lucid-shared';
+
+const log = getLogger('useSelectionState');
 
 /**
  * Enhanced hook for selection state that combines state and actions
@@ -17,7 +20,7 @@ export function useSelectionState() {
   
   // Combine state and actions into a single object
   const selectionState = useMemo(() => {
-    console.log('[useSelectionState] Processing selection state update', {
+    log.debug('Processing selection state update', {
       hasDocumentContext: !!selection.documentContext,
       hasSelectedElements: !!selection.selectedElements?.length,
       selectionLastUpdated: selection.lastUpdated
@@ -34,9 +37,9 @@ export function useSelectionState() {
     };
     
     if (!selection.documentContext) {
-      console.warn('[useSelectionState] Using fallback document context - original is missing');
+      log.warn('Using fallback document context - original is missing');
     } else {
-      console.log('[useSelectionState] Using actual document context with isQuodsiModel:', 
+      log.debug('Using actual document context with isQuodsiModel:',
         selection.documentContext.isQuodsiModel);
     }
 
@@ -77,7 +80,7 @@ export function useSelectionState() {
         convertPage()
     };
     
-    console.log('[useSelectionState] Returning selection state:', {
+    log.debug('Returning selection state:', {
       documentId: result.documentId,
       documentTitle: result.documentTitle,
       isQuodsiModel: result.isQuodsiModel,

@@ -1,5 +1,13 @@
 import { renderHook, act } from "@testing-library/react";
+import { configureLogger, consoleSink } from "@quodsi/lucid-shared";
 import { useAutoSave, UseAutoSaveArgs } from "../useEditorState";
+
+// useEditorState now routes its error paths through the shared logger
+// (getLogger('useAutoSave')) instead of raw console.error. The tests below
+// spy on console.error directly, so route the logger's output back through
+// a real console sink here - the consoleSink prefixes with "[useAutoSave] ",
+// reproducing the exact string the raw console.error calls used to produce.
+configureLogger({ level: "debug", sinks: [consoleSink()] });
 
 type TestDraft = { id: string; name: string };
 
