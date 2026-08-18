@@ -72,9 +72,6 @@ messaging/
 │   ├── index.ts
 │   └── types.ts
 │
-├── utils/               # Utility functions
-│   └── debugService.ts
-│
 ├── MessageContext.ts    # Context definitions and hooks
 ├── MessageProvider.tsx  # Main provider component
 └── index.ts             # Main entry point
@@ -263,18 +260,27 @@ export const useAuthPanelState = () => {
 
 ## Debugging
 
-The messaging system includes a debugging service:
+The messaging system uses the shared, level-based logger (the old
+`debugService` module has been deleted):
 
 ```typescript
-import { debugService } from './messaging';
+import { getLogger } from '@quodsi/lucid-shared';
 
-// Component-specific logger
-const logger = debugService.forComponent('YourComponent');
+// Component-specific logger, created once at module scope
+const log = getLogger('YourComponent');
 
 // Log messages
-logger.log('Component initialized');
-logger.error('Something went wrong', error);
+log.debug('Component initialized');
+log.error('Something went wrong', error);
 ```
+
+Namespace levels (which components log at which severity) are configured
+once in `src/index.tsx`, alongside the shared `configureLogger` call. Add a
+new component's namespace there rather than at each call site.
+
+Console output is otherwise disallowed: `npm run lint:hooks` enforces
+`no-console` and is part of the deploy gate, so use `getLogger`/`log.*`
+instead of `console.*` directly.
 
 ## Extending the System
 
@@ -338,7 +344,7 @@ export function useFeatureState() {
    - Document effect behavior and dependencies
 
 5. **Debugging**
-   - Use the debugService for consistent logging
+   - Use `getLogger` (`@quodsi/lucid-shared`) for consistent logging
    - Include relevant context in log messages
    - Add debug logs at critical state transitions
    - Use component-specific loggers

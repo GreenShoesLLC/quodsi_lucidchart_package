@@ -3,28 +3,33 @@ import { configureLogger, consoleSink, installDebugGlobal, getLogger } from '@qu
 // See extension.ts for the rationale. namespaceLevels below is the former
 // React debug service's disabledComponents set (now retired), captured as
 // config data.
+// 'warn', not 'error'. The retired React debugService gated only .log and
+// .debug on its enabled flag - .error and .warn printed unconditionally - so
+// pinning these to 'error' would silence warns that always used to show. The
+// extension's map is 'error' because ExtensionDebugService gated all five
+// methods, making mute there mean "errors only".
 configureLogger({
     level: import.meta.env.DEV ? 'debug' : 'warn',
     namespaceLevels: {
-        useSilentAuth: 'error',
-        useAuthState: 'error',
-        MessageProvider: 'error',
-        ElementOpsMapper: 'error',
-        AuthMapper: 'error',
-        useSendMessage: 'error',
-        RxMessageHandlers: 'error',
-        AuthStatusHandler: 'error',
-        ReactAppReadyEffects: 'error',
-        MessageListenerEffect: 'error',
-        InitializationEffects: 'error',
-        AuthEffects: 'error',
-        AuthPanel: 'error',
-        LucidAppNew: 'error',
-        MessageMapper: 'error',
-        AuthStorageService: 'error',
-        useModelPanel: 'error',
-        SelectionMapper: 'error',
-        SelectionSlice: 'error',
+        useSilentAuth: 'warn',
+        useAuthState: 'warn',
+        MessageProvider: 'warn',
+        ElementOpsMapper: 'warn',
+        AuthMapper: 'warn',
+        useSendMessage: 'warn',
+        RxMessageHandlers: 'warn',
+        AuthStatusHandler: 'warn',
+        ReactAppReadyEffects: 'warn',
+        MessageListenerEffect: 'warn',
+        InitializationEffects: 'warn',
+        AuthEffects: 'warn',
+        AuthPanel: 'warn',
+        LucidAppNew: 'warn',
+        MessageMapper: 'warn',
+        AuthStorageService: 'warn',
+        useModelPanel: 'warn',
+        SelectionMapper: 'warn',
+        SelectionSlice: 'warn',
     },
     sinks: [consoleSink()],
 });
