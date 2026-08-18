@@ -15,8 +15,13 @@ import {
 import { StorageAdapter } from '../core/StorageAdapter';
 import { LucidElementFactory } from '../services/LucidElementFactory';
 import { ModelLucid } from '../types/ModelLucid';
+import { getLogger } from '@quodsi/lucid-shared';
 
 const SWIMLANE_DATA_KEY = 'q_swimlane';
+
+// Named moduleLog, not log, because this class already has a private log()
+// method and an unqualified `log` inside it would be ambiguous to a reader.
+const moduleLog = getLogger('ModelDefinitionPageBuilder');
 
 export class ModelDefinitionPageBuilder {
     private loggingEnabled: boolean = false;
@@ -44,8 +49,18 @@ export class ModelDefinitionPageBuilder {
      * Logs a message if logging is enabled
      */
     private log(message: string, level: 'log' | 'warn' | 'error' = 'log'): void {
-        if (this.isLoggingEnabled()) {
-            console[level](`[${this.constructor.name}] ${message}`);
+        if (!this.isLoggingEnabled()) {
+            return;
+        }
+        // The shared console sink prefixes [ModelDefinitionPageBuilder] itself,
+        // so the template prefix this used to build by hand is gone - keeping it
+        // would print the name twice.
+        if (level === 'error') {
+            moduleLog.error(message);
+        } else if (level === 'warn') {
+            moduleLog.warn(message);
+        } else {
+            moduleLog.debug(message);
         }
     }
 
