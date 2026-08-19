@@ -78,6 +78,13 @@ export enum EnvelopeMessageType {
   REQUEST_STUDIO_CATALOG = "REQUEST_STUDIO_CATALOG",
   STUDIO_CATALOG = "STUDIO_CATALOG",
 
+  // Arrival Pattern editor -- hosted directly by the extension (not an
+  // embedded Studio surface): opens PatternEditorModal, a RoutingModal that
+  // loads the packaged extension's own quodsim-react bundle at ?view=pattern
+  // so the modal can escape the 300px right-dock panel iframe it used to be
+  // trapped in.
+  OPEN_PATTERN_MODAL = "OPEN_PATTERN_MODAL",
+
   // Diagram Mapping (Phase 2B)
   ANALYZE_PAGE = "ANALYZE_PAGE",
   PAGE_ANALYSIS_RESULT = "PAGE_ANALYSIS_RESULT",

@@ -14,6 +14,7 @@ export class ChannelManager {
     model: { ready: false, queue: [] },
     results: { ready: false, queue: [] },
     'studio-embed': { ready: false, queue: [] },
+    pattern: { ready: false, queue: [] },
   };
   
   /**

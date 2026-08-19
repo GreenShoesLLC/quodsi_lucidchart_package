@@ -3,12 +3,12 @@ import { EnvelopeMessageType } from './envelopeMessageTypes';
 /**
  * Source context for a message
  */
-export type MessageSource = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe';
+export type MessageSource = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe' | 'pattern-iframe';
 
 /**
  * Target context for a message
  */
-export type MessageTarget = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe' | 'broadcast';
+export type MessageTarget = 'host' | 'model-iframe' | 'auth-iframe' | 'results-iframe' | 'studio-embed-iframe' | 'pattern-iframe' | 'broadcast';
 
 /**
  * Base envelope interface for all Quodsi messages.

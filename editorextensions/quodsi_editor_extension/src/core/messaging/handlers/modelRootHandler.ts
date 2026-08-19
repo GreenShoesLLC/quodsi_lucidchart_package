@@ -1,7 +1,8 @@
-import { EnvelopeBase, EnvelopeMessageType, getLogger } from '@quodsi/lucid-shared';
+import { EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi/lucid-shared';
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 
 const log = getLogger('ModelRootHandler');
 
@@ -24,9 +25,34 @@ export class ModelRootHandler {
           .catch(err => log.error('Error in handleUpdate:', err));
         return true;
 
+      case EnvelopeMessageType.OPEN_PATTERN_MODAL:
+        ModelRootHandler.handleOpenPatternModal(msg);
+        return true;
+
       default:
         return false;
     }
+  }
+
+  /**
+   * Handle OPEN_PATTERN_MODAL: open the arrival-pattern editor in a real
+   * Lucid modal over the whole application. Lives here (not
+   * simulationRunHandler) because the pattern editor is a model-root-adjacent
+   * editor with no server-side model to resolve -- unlike the embedded Studio
+   * surfaces (Studies, Diagram Mapping), it needs nothing but the shape id
+   * already on hand, and this file is where the model-root projection it
+   * edits (arrivalPatterns) is otherwise read/written.
+   */
+  private static handleOpenPatternModal(msg: EnvelopeBase): void {
+    const data = msg.data as { shapeId?: string; modalSize?: ModalSize };
+    if (!data?.shapeId) {
+      log.error('OPEN_PATTERN_MODAL: missing shapeId');
+      return;
+    }
+    new PatternEditorModal(ModelManager.getClient(), {
+      shapeId: data.shapeId,
+      modalSize: data.modalSize,
+    }).show();
   }
 
   /** Push the current projection to React. Also called after every write. */
@@ -40,7 +66,10 @@ export class ModelRootHandler {
 
     const projection = await modelManager.buildModelRootProjection(currentPage);
 
-    router.send('model', {
+    // Broadcast (not just to 'model'): the pattern modal listens on its own
+    // 'pattern' channel, and both surfaces need the fresh projection so the
+    // panel's summary stays in sync while the modal is open editing it.
+    router.send('broadcast', {
       id: correlationId,
       type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
       source: 'host',

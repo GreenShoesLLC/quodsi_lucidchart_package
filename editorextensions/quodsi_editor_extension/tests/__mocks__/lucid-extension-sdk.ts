@@ -6,6 +6,15 @@ export class LineProxy {}
 export class PageProxy {}
 export class Viewport {}
 export class DocumentProxy {}
-export class Modal {}
+// Captures the config a subclass passes to `super(client, config)` on
+// `.config` so tests can assert on the url/size/title a RoutingModal
+// subclass (e.g. PatternEditorModal, StudioEmbedModal) computed, without
+// pulling in the real SDK's iframe/platform machinery.
+export class Modal {
+  public readonly config: unknown;
+  constructor(_client: unknown, config: unknown) {
+    this.config = config;
+  }
+}
 export class Panel {}
 export class EditorClient {}
