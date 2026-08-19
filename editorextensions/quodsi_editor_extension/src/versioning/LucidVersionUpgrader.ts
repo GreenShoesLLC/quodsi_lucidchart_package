@@ -37,6 +37,13 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     // SimulationObjectType.None — same pre-existing quirk as State; see
     // ArrivalPatternTransforms' own registry-key note).
     private static readonly ARRIVAL_PATTERNS_KEY = 'q_arrival_patterns';
+    // Mirrors StorageAdapter.ARRIVAL_SCHEDULES_KEY (Task 2). Same page-level
+    // PLAIN ARRAY treatment as arrival patterns/requirements/states above:
+    // the registry matches on the HOST-STORED type string 'ArrivalSchedule',
+    // NOT the class's own `type` field (ArrivalSchedule.type is
+    // SimulationObjectType.None -- same pre-existing quirk as State/
+    // ArrivalPattern; see ArrivalScheduleTransforms' own registry-key note).
+    private static readonly ARRIVAL_SCHEDULES_KEY = 'q_arrival_schedules';
 
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
@@ -44,6 +51,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     private requirementsBackup: { existed: boolean; data?: string } = { existed: false };
     private statesBackup: { existed: boolean; data?: string } = { existed: false };
     private arrivalPatternsBackup: { existed: boolean; data?: string } = { existed: false };
+    private arrivalSchedulesBackup: { existed: boolean; data?: string } = { existed: false };
 
     constructor(currentVersion: string, options?: UpgradeOptions) {
         super(currentVersion, options);
@@ -100,6 +108,15 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const arrivalPatternsData = page.shapeData.get(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
         this.arrivalPatternsBackup = typeof arrivalPatternsData === 'string'
             ? { existed: true, data: arrivalPatternsData }
+            : { existed: false };
+
+        // Backup the page-level arrival-schedules list (Task 4) -- same
+        // treatment as arrival patterns, so a failed upgrade rolls these
+        // back too instead of leaving a torn document (schedules upgraded
+        // while everything else reverts).
+        const arrivalSchedulesData = page.shapeData.get(LucidVersionUpgrader.ARRIVAL_SCHEDULES_KEY);
+        this.arrivalSchedulesBackup = typeof arrivalSchedulesData === 'string'
+            ? { existed: true, data: arrivalSchedulesData }
             : { existed: false };
 
         // Backup blocks. `allBlocks`, not `blocks` — the latter is
@@ -230,6 +247,14 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const storedArrivalPatterns = this.readPageArray(page, LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
         const arrivalPatternInputs: RawElement[] = storedArrivalPatterns.map((p) => ({ ...p, type: 'ArrivalPattern' }));
 
+        // Task 4: the page-level arrival-schedules list gets the same
+        // fold-into-the-combined-call treatment as patterns/requirements/
+        // states above. Spread the stored entry FIRST (same reasoning as
+        // the others): a dialog-authored entry could carry a stale `type`,
+        // and that must not shadow the synthetic registry key below.
+        const storedArrivalSchedules = this.readPageArray(page, LucidVersionUpgrader.ARRIVAL_SCHEDULES_KEY);
+        const arrivalScheduleInputs: RawElement[] = storedArrivalSchedules.map((s) => ({ ...s, type: 'ArrivalSchedule' }));
+
         // Pure core upgrade — returns envelopes; mappingSource is preserved inside
         // platform, so the adapter no longer re-attaches it.
         const combinedInputs: RawElement[] = [
@@ -237,6 +262,7 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             ...requirementInputs,
             ...stateInputs,
             ...arrivalPatternInputs,
+            ...arrivalScheduleInputs,
         ];
         const result = upgradeElements(combinedInputs, sourceVersion);
         const elementResults = result.elements.slice(0, targets.length);
@@ -245,8 +271,18 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             targets.length + requirementInputs.length,
             targets.length + requirementInputs.length + stateInputs.length
         );
+        // Bounded now that arrival schedules follow this segment — appending
+        // a new last segment moves the boundary the previous last segment
+        // (arrival patterns) relied on; an unbounded slice(start) here would
+        // silently pull the schedule envelopes into these results too.
         const arrivalPatternResults = result.elements.slice(
-            targets.length + requirementInputs.length + stateInputs.length
+            targets.length + requirementInputs.length + stateInputs.length,
+            targets.length + requirementInputs.length + stateInputs.length + arrivalPatternInputs.length
+        );
+        // Arrival schedules are the new last segment, so unbounded slice(start)
+        // is safe here for the same reason it used to be safe for patterns.
+        const arrivalScheduleResults = result.elements.slice(
+            targets.length + requirementInputs.length + stateInputs.length + arrivalPatternInputs.length
         );
 
         // Entities are no longer shape-mapped. Lift any legacy entity shapes into the
@@ -337,6 +373,19 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             const upgradedArrivalPatterns = arrivalPatternResults.map((el) => this.flattenArrayItem(el));
             page.shapeData.set(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY, JSON.stringify(upgradedArrivalPatterns));
         }
+
+        // Task 4: write the upgraded arrival-schedules list back, same
+        // always-write-when-non-empty posture as patterns/requirements/
+        // states above (flat RawElement inputs are always re-wrapped into a
+        // NEW envelope, so the by-reference `changed` check the per-shape
+        // loop uses can't distinguish "really changed" here either). A page
+        // with no stored list (arrivalScheduleInputs.length === 0) is left
+        // alone -- do NOT write an empty array, which would churn every
+        // pre-schedule document on open.
+        if (arrivalScheduleInputs.length > 0) {
+            const upgradedArrivalSchedules = arrivalScheduleResults.map((el) => this.flattenArrayItem(el));
+            page.shapeData.set(LucidVersionUpgrader.ARRIVAL_SCHEDULES_KEY, JSON.stringify(upgradedArrivalSchedules));
+        }
     }
 
     /**
@@ -402,6 +451,15 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             page.shapeData.set(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY, this.arrivalPatternsBackup.data!);
         } else {
             page.shapeData.delete(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
+        }
+
+        // Restore the page-level arrival-schedules list (Task 4), same
+        // delete-if-didn't-exist posture as entities/requirements/states/
+        // arrival patterns.
+        if (this.arrivalSchedulesBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.ARRIVAL_SCHEDULES_KEY, this.arrivalSchedulesBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.ARRIVAL_SCHEDULES_KEY);
         }
 
         // Restore blocks. `allBlocks`/`allLines` — matches `beginUpgrade`'s

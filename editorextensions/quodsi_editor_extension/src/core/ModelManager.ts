@@ -1615,6 +1615,46 @@ export class ModelManager {
                 newModel.arrivalPatterns.getAll().map(p => p.toJSON()) as ISerializedArrivalPattern[]
             );
         }
+
+        // Detect deleted Generators → remove an orphaned ArrivalSchedule.
+        //
+        // Mirrors the ArrivalPattern branch above exactly, for the same
+        // reason: native canvas deletion of a generator never reaches
+        // removeElement() (only the panel un-convert path and
+        // LucidPageConversionService call it, and it early-returns once the
+        // shape proxy is already gone). This rebuild diff is the only hook
+        // that observes a canvas-deleted generator. oldModel is the
+        // pre-rebuild ModelDefinition, still holding the deleted generator's
+        // arrivalScheduleId, so read-before-removal falls out for free.
+        //
+        // Spares a schedule still referenced by another generator in
+        // newModel (a hand-authored share) -- evaluated against newModel
+        // (the survivors), not oldModel, which would still show the
+        // deleted generator referencing its own schedule and never clean
+        // up anything.
+        for (const oldGenerator of oldModel.generators.getAll()) {
+            if (newGeneratorIds.has(oldGenerator.id)) continue;
+
+            const scheduleId = oldGenerator.arrivalScheduleId;
+            if (!scheduleId) continue;
+
+            this.debug.debug('Detected deleted generator during rebuild:', oldGenerator.id);
+
+            const stillReferenced = newModel.generators.getAll().some(
+                g => g.arrivalScheduleId === scheduleId
+            );
+            if (stillReferenced) continue;
+
+            this.debug.debug('Removing orphaned ArrivalSchedule after generator deletion:', {
+                generatorId: oldGenerator.id,
+                scheduleId
+            });
+            newModel.arrivalSchedules.remove(scheduleId);
+            this.storageAdapter.setArrivalSchedules(
+                page,
+                newModel.arrivalSchedules.getAll().map(s => s.toJSON()) as ISerializedArrivalSchedule[]
+            );
+        }
     }
 
     /**
