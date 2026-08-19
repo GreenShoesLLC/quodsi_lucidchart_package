@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import GeneratorEditor from "../GeneratorEditor";
-import { GeneratorType, EnvelopeMessageType } from "@quodsi/lucid-shared";
+import { GeneratorType, EnvelopeMessageType, DEFAULT_MODAL_SIZE } from "@quodsi/lucid-shared";
 
 // Hoisted so the "populated projection" describe block below can assert on
 // calls made to updateElementData -- a plain `() => ({ updateElementData:
@@ -11,9 +11,16 @@ import { GeneratorType, EnvelopeMessageType } from "@quodsi/lucid-shared";
 // second time internally to reach the shape-scoped save route -- Task 10
 // review, Critical 2), so a non-hoisted mock can't be inspected from outside
 // the component. vi.hoisted keeps ONE stable reference both call sites share.
-const { mockUpdateElementData, mockSelectElement } = vi.hoisted(() => ({
+//
+// mockSendMessage: Task 4 -- "Edit pattern" now sends OPEN_PATTERN_MODAL via
+// useSimulationRunSender -> useSender -> useMessaging().sendMessage, rather
+// than opening an in-panel modal. Wired into the useMessaging mock below
+// (real useSender/useSimulationRunSender run, so getModalSizePref's real
+// read is exercised too) so tests can assert on the envelope's type/data.
+const { mockUpdateElementData, mockSelectElement, mockSendMessage } = vi.hoisted(() => ({
   mockUpdateElementData: vi.fn(),
   mockSelectElement: vi.fn(),
+  mockSendMessage: vi.fn(),
 }));
 
 vi.mock("../../../messaging/senders/modelOpsSender", () => ({
@@ -46,7 +53,7 @@ vi.mock("../SaveStatusLine", () => ({
 // hook's own postMessage plumbing still runs for real against jsdom's
 // window.
 vi.mock("../../../messaging/MessageProvider", () => ({
-  useMessaging: () => ({ app: { panelType: "model" } }),
+  useMessaging: () => ({ app: { panelType: "model" }, sendMessage: mockSendMessage }),
 }));
 
 function patternGenerator() {
@@ -209,6 +216,7 @@ describe("GeneratorEditor PATTERN mode", () => {
   beforeEach(() => {
     mockUpdateElementData.mockClear();
     mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
   });
 
   it("offers PATTERN in the generator type dropdown", () => {
@@ -242,12 +250,19 @@ describe("GeneratorEditor PATTERN mode", () => {
     expect(screen.queryByText(/arrivals per/i)).not.toBeInTheDocument();
   });
 
-  it("opens the pattern modal from the button", () => {
+  it("asks the host to open the pattern modal, with the shape id and the modal size preference", () => {
+    // Task 4: the panel no longer draws the editor inline -- clicking "Edit
+    // pattern" sends OPEN_PATTERN_MODAL (handled by modelRootHandler.ts) so
+    // the host opens a real Lucid modal over the whole application instead.
     render(<GeneratorEditor generator={patternGenerator()} {...baseProps} />);
     fireEvent.click(screen.getByRole("button", { name: /edit pattern/i }));
-    expect(
-      screen.getByRole("dialog", { name: /arrival pattern/i })
-    ).toBeInTheDocument();
+
+    expect(mockSendMessage).toHaveBeenCalledWith(
+      EnvelopeMessageType.OPEN_PATTERN_MODAL,
+      { shapeId: "g1", modalSize: DEFAULT_MODAL_SIZE }
+    );
+    // And no in-panel dialog renders -- that surface is gone.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("still shows the SCHEDULED read-only notice unchanged (byte-unchanged branch, sanity check)", () => {
@@ -288,6 +303,7 @@ describe("GeneratorEditor PATTERN mode — summary reflects a populated projecti
   beforeEach(() => {
     mockUpdateElementData.mockClear();
     mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
   });
 
   it("renders the linked pattern's volume once a snapshot has arrived", () => {
@@ -333,6 +349,7 @@ describe("GeneratorEditor PATTERN mode — switch-to-PATTERN lifecycle round tri
   beforeEach(() => {
     mockUpdateElementData.mockClear();
     mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
   });
 
   it("creates a new pattern, links it via arrivalPatternId, and seeds a default volume", async () => {
@@ -469,6 +486,7 @@ describe("GeneratorEditor PATTERN mode — PATTERN -> FREQUENCY -> PATTERN in on
   beforeEach(() => {
     mockUpdateElementData.mockClear();
     mockSelectElement.mockClear();
+    mockSendMessage.mockClear();
   });
 
   it("ends with exactly one pattern and no orphan after PATTERN -> FREQUENCY -> PATTERN", async () => {

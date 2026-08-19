@@ -43,16 +43,17 @@ const baseProps = {
 
 /**
  * Task 10 updated this describe block: Lucid now HAS a Pattern editor
- * (PatternModal, opened via "Edit pattern"), so a PATTERN generator no
- * longer renders the old read-only notice -- that notice, and this block's
- * assertions, moved to GeneratorEditor.pattern.test.tsx, which covers the
- * dropdown option, the summary+button replacing the notice, and the modal
- * opening. What's LEFT here is the FREQUENCY control case (unchanged
- * behaviour, kept as a regression guard) and a same-file sanity check that a
- * PATTERN generator's settings tab no longer contains the notice text this
- * file used to assert on.
+ * (opened via "Edit pattern", as a real Lucid modal the host draws -- see
+ * Task 4), so a PATTERN generator no longer renders the old read-only
+ * notice -- that notice, and this block's assertions, moved to
+ * GeneratorEditor.pattern.test.tsx, which covers the dropdown option, the
+ * summary+button replacing the notice, and the OPEN_PATTERN_MODAL send.
+ * What's LEFT here is the FREQUENCY control case (unchanged behaviour, kept
+ * as a regression guard) and a same-file sanity check that a PATTERN
+ * generator's settings tab no longer contains the notice text this file
+ * used to assert on.
  */
-describe("GeneratorEditor — PATTERN generator (now authored via PatternModal, not a read-only notice)", () => {
+describe("GeneratorEditor — PATTERN generator (now authored via a host modal, not a read-only notice)", () => {
   it("does NOT render the old read-only notice for a PATTERN generator (moved to GeneratorEditor.pattern.test.tsx)", () => {
     render(
       <GeneratorEditor

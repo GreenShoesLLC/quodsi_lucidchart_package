@@ -48,8 +48,8 @@ export type ModelRootTransport = {
   /** Ask the host for a fresh snapshot. Optional -- absent in unit tests. */
   request?(): void
   /**
-   * Persist a shape-scoped patch (e.g. PatternModal/GeneratorPatternTab's
-   * volume slider, or its fork-on-edit linking, both via
+   * Persist a shape-scoped patch (e.g. the arrival-pattern editor modal's
+   * GeneratorPatternTab volume slider, or its fork-on-edit linking, both via
    * accessor.updateShape). Optional -- absent in unit tests that only
    * exercise the model-root half; when absent, deps.save throws rather than
    * silently no-opping (see createModelRootSource's own comment).

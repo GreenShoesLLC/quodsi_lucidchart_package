@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Duration,
   Generator,
@@ -25,8 +25,8 @@ import { useElementOpsState } from "../../messaging/hooks/useElementOpsState";
 import { useFormSync, useSaveCompletionDetector, useAutoSave, useFlushOnChange } from "./hooks/useEditorState";
 import SaveStatusLine from "./SaveStatusLine";
 import { useModelOpsSender } from "../../messaging/senders/modelOpsSender";
+import { useSimulationRunSender } from "../../messaging/senders/simulationRunSender";
 import { useModelRootSource } from "../../adapters/useModelRootSource";
-import { PatternModal } from "./PatternModal";
 import {
   summarizeArrivalPattern,
   ensurePatternForGenerator,
@@ -50,7 +50,7 @@ const INFINITY_DISPLAY_VALUE = 999999;
 // volume <= 0 as an ERROR (blocks simulation) — so switching to PATTERN with
 // no volume seeded would immediately red-flag the model before the user has
 // touched anything. 1000 is a plausible, easy-to-eyeball starting point the
-// user overwrites in PatternModal; it is only applied when the generator
+// user overwrites in the arrival-pattern editor modal; it is only applied when the generator
 // doesn't already have a volume from a prior PATTERN stint (switching
 // PATTERN -> FREQUENCY -> PATTERN keeps whatever was there). Mirrors
 // quodsi_studio's GeneratorBasicTab.tsx DEFAULT_PATTERN_VOLUME (not
@@ -114,9 +114,12 @@ type GeneratorTab = "settings" | "events" | "states";
  * - Frequency: Interarrival time, periodic occurrences, and start delay (FREQUENCY generators only)
  * - Pattern: PATTERN generators show a plain-language summary of their linked
  *   ArrivalPattern (summarizeArrivalPattern) plus an "Edit pattern" button
- *   that opens PatternModal, hosting the shared Season/Week/Day cascade
- *   editor (quodsi_studio's GeneratorPatternTab). SCHEDULED generators still
- *   get the read-only notice — Lucid has no Schedule editor yet.
+ *   that asks the host to open the arrival-pattern editor as a real Lucid
+ *   modal (OPEN_PATTERN_MODAL, handled by modelRootHandler.ts), hosting the
+ *   shared Season/Week/Day cascade editor (quodsi_studio's
+ *   GeneratorPatternTab) over the whole application rather than inside this
+ *   300px panel. SCHEDULED generators still get the read-only notice —
+ *   Lucid has no Schedule editor yet.
  * - Events: Initial state modifications for created entities
  * - States: State variable definitions
  *
@@ -143,8 +146,9 @@ type GeneratorTab = "settings" | "events" | "states";
  *
  * Key Features:
  * - FREQUENCY generators get the full editable settings; PATTERN generators
- *   get a summary + "Edit pattern" button opening the shared cascade editor;
- *   SCHEDULED generators (Lucid can't author these yet) get a read-only notice.
+ *   get a summary + "Edit pattern" button that opens the shared cascade
+ *   editor in a host modal (see OPEN_PATTERN_MODAL above); SCHEDULED
+ *   generators (Lucid can't author these yet) get a read-only notice.
  * - Auto-save for all fields via useAutoSave hook (debounce + onBlur flush
  *   on typed inputs; useEffect flush for select dropdowns)
  * - Guard conditions prevent data loss when switching generators
@@ -207,8 +211,8 @@ const GeneratorEditor: React.FC<Props> = ({
     extractedGenerator.startDelay = data.startDelay ?? Duration.constant(0, PeriodUnit.MINUTES);
     extractedGenerator.maxCycles = data.maxCycles ?? INFINITY_DISPLAY_VALUE;
     // PATTERN-mode fields. arrivalPatternId/volume are not driven by any
-    // input in THIS form (PatternModal/GeneratorPatternTab write them
-    // through the accessor directly), and arrivalScheduleId stays read-only
+    // input in THIS form (the arrival-pattern editor modal/GeneratorPatternTab
+    // write them through the accessor directly), and arrivalScheduleId stays read-only
     // (Lucid has no Schedule editor). A generator authored elsewhere must
     // still round-trip these losslessly when opened here — otherwise editing
     // anything else on the generator (even its name) would silently revert
@@ -278,9 +282,10 @@ const GeneratorEditor: React.FC<Props> = ({
     // arrivalPatternId/volume: from `updates` when the caller explicitly
     // provided them (the PATTERN mode-switch handler only -- see its own
     // comment), otherwise always carried through from base. No OTHER input
-    // handler in this component produces these keys (PatternModal's own
-    // volume slider writes through the accessor directly, not through this
-    // draft). arrivalScheduleId is never settable from `updates` at all --
+    // handler in this component produces these keys (the arrival-pattern
+    // editor modal's own volume slider writes through the accessor
+    // directly, not through this draft). arrivalScheduleId is never
+    // settable from `updates` at all --
     // it stays read-only, Lucid has no Schedule editor. Silently dropping
     // any of the three here would corrupt a generator authored as
     // PATTERN/SCHEDULED elsewhere.
@@ -341,43 +346,49 @@ const GeneratorEditor: React.FC<Props> = ({
   const [nameError, setNameError] = useState<string | null>(null);
 
   /**
-   * Whether the full-width Arrival Pattern editor (PatternModal, hosting the
-   * shared Season/Week/Day cascade) is open. PATTERN generators only.
-   */
-  const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
-
-  /**
-   * The generator id PatternModal is editing, frozen at the moment "Edit
-   * pattern" is clicked. The canvas sits outside this panel's iframe, so the
-   * modal does not block canvas clicks -- without freezing this, selecting a
-   * different PATTERN generator while the modal is open would silently swap
-   * which generator's pattern is being edited underneath the user (PatternModal's
-   * own header comment documents this contract). null until first opened.
-   */
-  const [patternModalShapeId, setPatternModalShapeId] = useState<string | null>(null);
-
-  /**
    * Set when the shape-write half of a PATTERN-mode-switch lifecycle
    * (ensurePatternForGenerator / removePatternForGenerator) rejects --
    * accessor.updateShape can reject on a host error or its own 30s timeout.
    * Surfaced next to the Generator Type control since that is the field the
    * failed write was triggered by; cleared on the next mode-switch attempt
    * and when the generator selection changes.
+   *
+   * The write can reject up to 30s after it was issued, by which time the
+   * user may have selected a different generator -- so the .catch handlers
+   * that set this compare the generator id the write was FOR
+   * (`generatorId`, captured in their own closure) against
+   * currentGeneratorIdRef.current before setting it, so a late rejection
+   * for a generator the user has since navigated away from never paints an
+   * error on whatever is selected now.
    */
   const [patternLifecycleError, setPatternLifecycleError] = useState<string | null>(null);
+
+  /**
+   * Mirrors localGeneratorDraft.id for the async lifecycle .catch handlers
+   * above, which close over the write's own generatorId and need to compare
+   * it against whichever generator is CURRENT at rejection time (state
+   * reads inside a stale closure would see the id from when the write was
+   * issued, not now). Kept in sync by the `[localGeneratorDraft.id]` effect
+   * below.
+   */
+  const currentGeneratorIdRef = useRef<string>(localGeneratorDraft.id);
 
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
 
   // Model-root projection (generators + arrivalPatterns + model settings) and
-  // the accessor shared cross-platform panels (PatternModal/GeneratorPatternTab)
-  // read/write through. `modelRootProjection` is null until the host's first
-  // MODEL_ROOT_SNAPSHOT arrives -- every read below tolerates that via `?? []`
-  // fallbacks or a `modelRootProjection &&` guard, never assumes it is populated.
+  // the accessor shared cross-platform panels (the arrival-pattern editor
+  // modal/GeneratorPatternTab) read/write through. `modelRootProjection` is
+  // null until the host's first MODEL_ROOT_SNAPSHOT arrives -- every read
+  // below tolerates that via `?? []` fallbacks or a `modelRootProjection &&`
+  // guard, never assumes it is populated.
   const { accessor, projection: modelRootProjection } = useModelRootSource();
 
   // Get the selectElement function for navigating to Model Editor
   const { selectElement } = useModelOpsSender();
+
+  // Get the sender for OPEN_PATTERN_MODAL (host-hosted arrival-pattern editor).
+  const { openPatternModal } = useSimulationRunSender();
 
   /**
    * Redux-managed state for save operation tracking.
@@ -409,16 +420,15 @@ const GeneratorEditor: React.FC<Props> = ({
     elementId: localGeneratorDraft.id,
   });
 
-  // Reset nameError and close PatternModal when generator changes. Without
-  // the isPatternModalOpen reset: select a PATTERN generator, open the
-  // modal, select a FREQUENCY generator (PatternModal unmounts since it's
-  // only rendered when isPatternGenerator, but isPatternModalOpen stays
-  // true), then select any PATTERN generator -- the modal remounts already
-  // open, with no user action.
+  // Reset nameError and any stale pattern-lifecycle error when generator
+  // changes, and keep currentGeneratorIdRef in sync so the lifecycle
+  // .catch handlers (see patternLifecycleError's declaration comment) can
+  // tell a late rejection for a generator the user has since navigated
+  // away from apart from one for whatever is selected now.
   useEffect(() => {
     setNameError(null);
-    setIsPatternModalOpen(false);
     setPatternLifecycleError(null);
+    currentGeneratorIdRef.current = localGeneratorDraft.id;
   }, [localGeneratorDraft.id]);
 
   // Fire saveNow when entity selection changes (no onBlur on selects).
@@ -432,7 +442,7 @@ const GeneratorEditor: React.FC<Props> = ({
 
   const entities = referenceData.entities || [];
 
-  /** True when this generator is authored as an Arrival Pattern (editable here via PatternModal). */
+  /** True when this generator is authored as an Arrival Pattern (editable via the host-hosted arrival-pattern editor modal). */
   const isPatternGenerator = localGeneratorDraft.mode === GeneratorType.PATTERN;
   /**
    * True when this generator was authored as SCHEDULED elsewhere (Studio,
@@ -564,7 +574,13 @@ const GeneratorEditor: React.FC<Props> = ({
           // reusing SaveStatusLine (which renders useAutoSave's status, an
           // unrelated write path).
           log.error('PATTERN mode-switch lifecycle write failed:', err);
-          setPatternLifecycleError('Could not save the pattern switch. Try again.');
+          // Only surface the error if the user is still on the generator
+          // this write was for -- a rejection up to 30s later can otherwise
+          // land on whatever generator is selected NOW (see
+          // patternLifecycleError's declaration comment).
+          if (currentGeneratorIdRef.current === generatorId) {
+            setPatternLifecycleError('Could not save the pattern switch. Try again.');
+          }
         });
       } else if (localGeneratorDraft.mode === GeneratorType.PATTERN) {
         // Severs the link and deletes the pattern UNLESS another generator
@@ -601,9 +617,11 @@ const GeneratorEditor: React.FC<Props> = ({
           }
         })().catch(err => {
           // See the switch-to-PATTERN branch's identical .catch above for
-          // the full rationale.
+          // the full rationale, including the currentGeneratorIdRef guard.
           log.error('PATTERN mode-switch-away lifecycle write failed:', err);
-          setPatternLifecycleError('Could not save the pattern switch. Try again.');
+          if (currentGeneratorIdRef.current === generatorId) {
+            setPatternLifecycleError('Could not save the pattern switch. Try again.');
+          }
         });
       }
     }
@@ -870,11 +888,11 @@ const GeneratorEditor: React.FC<Props> = ({
                   type="button"
                   className="w-full px-2 py-1.5 text-xs border border-border-strong rounded bg-surface text-secondary hover:bg-surface-hover"
                   onClick={() => {
-                    // Freeze the shapeId at click time (see patternModalShapeId's
-                    // declaration comment) -- must be set BEFORE opening so
-                    // PatternModal never renders with a stale/null id.
-                    setPatternModalShapeId(localGeneratorDraft.id);
-                    setIsPatternModalOpen(true);
+                    // Ask the host to open the arrival-pattern editor as a
+                    // real Lucid modal over the whole application (see
+                    // useSimulationRunSender's openPatternModal). The panel
+                    // no longer draws the editor itself.
+                    openPatternModal(localGeneratorDraft.id);
                   }}
                 >
                   Edit pattern
@@ -1110,15 +1128,6 @@ const GeneratorEditor: React.FC<Props> = ({
 
       {/* Auto-save status */}
       <SaveStatusLine status={status} lastSavedAt={lastSavedAt} />
-
-      {isPatternGenerator && (
-        <PatternModal
-          open={isPatternModalOpen}
-          onClose={() => setIsPatternModalOpen(false)}
-          shapeId={patternModalShapeId ?? localGeneratorDraft.id}
-          accessor={accessor}
-        />
-      )}
     </div>
   );
 };
