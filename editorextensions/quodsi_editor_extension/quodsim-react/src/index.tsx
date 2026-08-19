@@ -41,6 +41,9 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { initializeMessaging } from "./messaging/initializeMessaging";
 import "./index_new.css";
+// Relative, not via the exports map: quodsi_studio's package.json exports
+// does not publish theme.css as a subpath.
+import '../../../../../quodsi_studio/src/platforms/shared/theme.css';
 
 const log = getLogger('index');
 
