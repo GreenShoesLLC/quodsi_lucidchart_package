@@ -35,6 +35,8 @@ export {
   Activity,
   ActivityFinancialProperties,
   ActivityListManager,
+  ArrivalPattern,
+  ArrivalPatternListManager,
   BooleanPropertyModification,
   ComponentListManager,
   ComponentType,

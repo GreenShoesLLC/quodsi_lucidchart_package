@@ -7,6 +7,7 @@ import {
     RequirementClause,
     State,
     Entity,
+    ArrivalPattern,
     Scenario,
     SwimLaneQuodsiData,
     SwimLaneResourceData,
@@ -209,6 +210,9 @@ export class ModelDefinitionPageBuilder {
             // Load entities from storage
             this.loadEntities(page, modelDefinition);
 
+            // Load arrival patterns from storage
+            this.loadArrivalPatterns(page, modelDefinition);
+
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
 
@@ -397,6 +401,42 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final entities count: ${modelDefinition.entities.size()}`);
+    }
+
+    /**
+     * Loads arrival patterns from storage and adds them to the model definition.
+     *
+     * Patterns are a page-level list (q_arrival_patterns), mirroring entities
+     * and states. Fields absent from storage are left at the ArrivalPattern
+     * constructor's defaults — ArrivalPattern.toJSON() omits at those defaults
+     * on the way out, so an absent key means "still default", not "unset".
+     */
+    private loadArrivalPatterns(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading arrival patterns from storage');
+
+        const serializedPatterns = this.storageAdapter.getArrivalPatterns(page);
+        this.log(`Found ${serializedPatterns.length} arrival patterns in storage`);
+
+        for (const serialized of serializedPatterns) {
+            try {
+                const pattern = new ArrivalPattern(serialized.id, serialized.name);
+                if (serialized.cycle !== undefined) pattern.cycle = serialized.cycle as any;
+                if (serialized.seasonMode !== undefined) pattern.seasonMode = serialized.seasonMode as any;
+                if (serialized.countMode !== undefined) pattern.countMode = serialized.countMode as any;
+                if (serialized.seasonWeights !== undefined) pattern.seasonWeights = serialized.seasonWeights;
+                if (serialized.dayOfWeekWeights !== undefined) pattern.dayOfWeekWeights = serialized.dayOfWeekWeights;
+                if (serialized.hourWeights !== undefined) pattern.hourWeights = serialized.hourWeights;
+                if (serialized.withinHourOffset !== undefined) {
+                    pattern.withinHourOffset = serialized.withinHourOffset as any;
+                }
+                modelDefinition.arrivalPatterns.add(pattern);
+                this.log(`Added arrival pattern: ${pattern.name}`);
+            } catch (error) {
+                this.log(`Error deserializing arrival pattern: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final arrival patterns count: ${modelDefinition.arrivalPatterns.size()}`);
     }
 
     /**
