@@ -4,18 +4,33 @@ import { createBufferingAccessor } from '../bufferingAccessor'
 function makeBase(initial: any = { generators: [], arrivalPatterns: [], model: {} }) {
   let def = initial
   const listeners = new Set<() => void>()
-  let snap = { modelDefinition: def, saveStatus: 'idle' as const, saveError: null }
+  let snap: any = { modelDefinition: def, saveStatus: 'idle', saveError: null }
+  const notifyAll = () => { listeners.forEach((l) => l()) }
+
+  // A write on the REAL base accessor notifies twice -- 'saving', then 'saved'
+  // -- and its getSnapshot rebuilds the snapshot OBJECT on either transition
+  // (LucidModelStateAccessor.ts:139-150 and :180-225), while the host's
+  // modelDefinition stays exactly as it was. Modelling that here is what lets
+  // this suite see a bound that counts snapshot identities instead of model
+  // changes: with bare `vi.fn()` writes that never notify, no test can.
+  const write = async (..._args: unknown[]): Promise<void> => {
+    snap = { modelDefinition: def, saveStatus: 'saving', saveError: null }
+    notifyAll()
+    snap = { modelDefinition: def, saveStatus: 'saved', saveError: null }
+    notifyAll()
+  }
+
   return {
     accessor: {
       subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l) } },
       getSnapshot: () => snap,
-      updateShape: vi.fn().mockResolvedValue(undefined),
-      updateModel: vi.fn().mockResolvedValue(undefined),
+      updateShape: vi.fn(write),
+      updateModel: vi.fn(write),
     },
     pushSnapshot(next: any) {
       def = next
       snap = { modelDefinition: def, saveStatus: 'idle', saveError: null }
-      listeners.forEach((l) => l())
+      notifyAll()
     },
   }
 }
@@ -260,6 +275,80 @@ describe('createBufferingAccessor', () => {
 
     await expect(debounced).rejects.toThrow(/host said no/)
     // The close path must not be told "all written" when the last write failed.
+    await expect(onClose).rejects.toThrow(/host said no/)
+  })
+
+  it('does not spend the bound on save-status churn from an unrelated write', async () => {
+    const base = makeBase({
+      generators: [{ id: 'g1', name: 'G', volume: 100 }],
+      arrivalPatterns: [{ id: 'ap1', name: 'P' }],
+      model: {},
+    })
+    const buf = createBufferingAccessor(base.accessor as any, { debounceMs: 500 })
+
+    // A model-root write: acked by the host, but not yet echoed back.
+    void buf.updateModel({ arrivalPatterns: [{ id: 'ap1', name: 'RENAMED' }] })
+    await buf.flush()
+
+    // Now an UNRELATED shape write. The base accessor rebuilds its snapshot
+    // twice for it ('saving', then 'saved') with the host's modelDefinition
+    // untouched. Those are not host-originated changes, so they must not spend
+    // the model overlay's allowance -- one unrelated write would otherwise burn
+    // the whole default of 2 and revert the panel to the pre-edit patterns.
+    void buf.updateShape('g1', 'Generator', { volume: 8500 })
+    await buf.flush()
+
+    const patterns = (buf.getSnapshot().modelDefinition as any).arrivalPatterns
+    expect(patterns[0].name).toBe('RENAMED')
+  })
+
+  it('does not start the bound clock until the host actually acks the write', async () => {
+    const base = makeBase({
+      generators: [{ id: 'g1', name: 'G', volume: 100 }], arrivalPatterns: [], model: {},
+    })
+    let release: () => void = () => {}
+    base.accessor.updateShape.mockImplementation(
+      () => new Promise<void>((resolve) => { release = resolve }),
+    )
+    const buf = createBufferingAccessor(base.accessor as any, { debounceMs: 500 })
+
+    void buf.updateShape('g1', 'Generator', { volume: 8500 })
+    const flushing = buf.flush()   // promoted into inFlight -- but NOT yet acked
+    await vi.advanceTimersByTimeAsync(0)   // let sendBatch reach the (hanging) write
+
+    // Host model changes keep arriving while our write is still in the air.
+    for (let i = 0; i < 5; i += 1) {
+      base.pushSnapshot({
+        generators: [{ id: 'g1', name: 'G', volume: 100 + i }], arrivalPatterns: [], model: {},
+      })
+    }
+
+    // A bound started at PROMOTION would have discarded this edit several
+    // snapshots ago, while it was still legitimately in flight to a slow host.
+    // The clock may only start once the host has definitively received it.
+    expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(8500)
+
+    release()
+    await flushing
+  })
+
+  it('keeps reporting an earlier failure while its rolled-back edit is still buffered', async () => {
+    const { accessor } = makeBase()
+    accessor.updateShape.mockRejectedValueOnce(new Error('host said no'))
+    const buf = createBufferingAccessor(accessor as any, { debounceMs: 500 })
+
+    void buf.updateShape('g1', 'Generator', { volume: 42 })
+    const failing = buf.flush()      // batch A: fails, rolls the overlay back into pending
+    void buf.updateShape('g2', 'Generator', { volume: 7 })
+    const succeeding = buf.flush()   // batch B: promoted before A ran, chained after it
+    const onClose = buf.flush()      // nothing of its own -- drains and reports
+
+    await expect(failing).rejects.toThrow(/host said no/)
+    await succeeding
+
+    // B succeeded, but A's edit is back in `pending` and unsent. "A later write
+    // worked" is not "everything is written", and the close path must not be
+    // told that it is.
     await expect(onClose).rejects.toThrow(/host said no/)
   })
 

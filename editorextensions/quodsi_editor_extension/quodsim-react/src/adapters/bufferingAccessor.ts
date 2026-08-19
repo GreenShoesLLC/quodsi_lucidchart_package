@@ -98,12 +98,27 @@
 // promotion could discard an edit still legitimately in flight to a slow host.
 // An unacked entry never expires, however many snapshots arrive.
 //
-// The bound counts BASE SNAPSHOTS rather than milliseconds on purpose. The harm
-// being prevented is "the overlay masks host-originated changes", and a base
-// snapshot IS a host-originated change; counting them measures the harm
-// directly. A time bound is a proxy that could let many snapshots be masked
-// inside one window, or expire an entry during a quiet period when it was
-// masking nothing at all.
+// The bound counts HOST MODEL CHANGES rather than milliseconds on purpose. The
+// harm being prevented is "the overlay masks host-originated changes", so
+// counting those changes measures the harm directly. A time bound is a proxy
+// that could let many changes be masked inside one window, or expire an entry
+// during a quiet period when it was masking nothing at all.
+//
+// "Host model change" means specifically a base snapshot whose modelDefinition
+// differs from the last one -- NOT merely a new base snapshot object. The base
+// accessor also rebuilds its snapshot on saveStatus transitions, twice per
+// write, so counting snapshot identities would let one unrelated write spend
+// the whole allowance without the host's model moving at all. syncBase is where
+// that gate lives.
+//
+// N = 2 (one change of grace) is deliberately small, and small is affordable
+// precisely BECAUSE of that gate: each tick is now a real host model change, of
+// which there are very few while a user types. The grace exists for one case --
+// a genuine host change (another editor, a canvas edit) landing between our ack
+// and our echo, which must not be allowed to drop the overlay and flicker the
+// user's value back. N = 1 would sacrifice exactly that, which the stale-
+// snapshot test pins, to save one masked change; N > 2 buys nothing but more
+// masking on the divergent-echo path.
 
 import type {
   ModelStateAccessor,
@@ -258,7 +273,8 @@ export function createBufferingAccessor(
   let timer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
 
-  // Counts DISTINCT base snapshots this accessor has observed. The unit the
+  // Counts base snapshots whose MODEL DEFINITION actually changed -- see
+  // syncBase for why snapshot identity is the wrong event to count. The unit the
   // inFlight bound is denominated in.
   let baseSnapshotSeq = 0
 
@@ -392,11 +408,21 @@ export function createBufferingAccessor(
    */
   function syncBase(): ModelStateSnapshot {
     const baseSnap = base.getSnapshot()
-    if (baseSnap !== lastSeenBase) {
-      lastSeenBase = baseSnap
-      baseSnapshotSeq++
-      reconcile(baseSnap)
-    }
+    if (baseSnap === lastSeenBase) return baseSnap
+    const previousDef = lastSeenBase?.modelDefinition
+    lastSeenBase = baseSnap
+    // GATED ON THE MODEL DEFINITION, NOT THE SNAPSHOT OBJECT. The base accessor
+    // rebuilds its snapshot on every saveStatus/saveError transition as well as
+    // on a model change (LucidModelStateAccessor getSnapshot's cache compares
+    // all three), and each write notifies twice -- 'saving' then 'saved'. So a
+    // single unrelated write changes the snapshot identity twice with the host's
+    // model untouched, which on an identity-counted bound would burn the entire
+    // default allowance and revert an acked-but-unechoed overlay for no reason.
+    // Counting model changes is also what the "WHY inFlight IS BOUNDED" note
+    // above actually claims this counter measures.
+    if (baseSnap.modelDefinition === previousDef) return baseSnap
+    baseSnapshotSeq++
+    reconcile(baseSnap)
     return baseSnap
   }
 
@@ -502,22 +528,34 @@ export function createBufferingAccessor(
    * Move everything pending into inFlight and return it as the batch to send.
    *
    * Runs SYNCHRONOUSLY at flush() entry, before any await, so the batch is
-   * frozen the instant flush() is called. That is what lets `flush()` mean
-   * "write what was buffered when you asked" -- which is what a close-path
-   * `await flush()` has to mean. Deferring the promote into the queued send
-   * instead (inside `flushQueue.then(...)`, the shape this naturally wants to
-   * take) lets two racing flush() calls both promote the same edit and lets
-   * flush()'s promise cover edits made after the call; mutation-tested, that
-   * breaks the close-path failure report.
+   * frozen the instant flush() is called.
    *
-   * It is NOT, however, what makes the during-a-flush case work -- an earlier
-   * draft of this comment claimed it was, and the claim is wrong. That case is
+   * WHAT THAT BUYS: the null-vs-batch decision is available AT CALL TIME, and
+   * that decision is the sole input to flush()'s drain-and-report branch. Defer
+   * the promote into the queued send and every flush() call looks like it has
+   * work to do, queues an empty send, and resolves cheerfully -- so a close-path
+   * caller can never be told that the last write failed. (Mutation-tested: a
+   * deferred promote breaks the close-path failure test and nothing else.
+   * Double-promotion is NOT the reason -- promotion under deferral would run
+   * inside `flushQueue`, which is strictly serialized, so a second promote
+   * necessarily finds `pending` empty. An earlier draft of this comment claimed
+   * otherwise and was wrong.)
+   *
+   * WHAT IT DOES NOT BUY: it is not what makes the during-a-flush case work --
+   * an even earlier draft claimed that, and it is also wrong. That case is
    * carried entirely by the pending/inFlight split: an edit typed after this
    * point lands in `pending`, the one overlay a base snapshot can never retire
    * (the host cannot be reporting a value it was never sent), and `pending`
    * outranks `inFlight` in the merge -- so the echo of the OLD write retires
-   * only the old entry and the newer value is simply still there. Deferring the
-   * promote leaves that test passing, which is how the claim was caught.
+   * only the old entry and the newer value is simply still there.
+   *
+   * KEEP IT SYNCHRONOUS ANYWAY, AND FOR THIS REASON TOO: under a deferred
+   * promote the mid-flight TEST still passes while no longer exercising the
+   * mid-flight SCENARIO at all. The later edit gets swallowed into the same
+   * batch, so there is never an older write in flight underneath a newer
+   * pending value -- the test goes green by a different route and silently
+   * stops covering anything. A test that keeps passing while covering nothing
+   * is worse than one that fails.
    */
   function promotePending(): Batch | null {
     const shapes = Array.from(pendingShape.values())
@@ -650,7 +688,14 @@ export function createBufferingAccessor(
     )
     flushQueue = run.then(
       () => {
-        lastFlushError = null
+        // Clear only when the buffer is genuinely empty. A batch promoted BEFORE
+        // an earlier batch failed still succeeds on its own terms, but the
+        // failed batch's edit has been rolled back into `pending` and is unsent
+        // -- so "a later write worked" is not "everything is written", and the
+        // close path must not be told that it is.
+        if (pendingShape.size === 0 && Object.keys(pendingModel).length === 0) {
+          lastFlushError = null
+        }
       },
       (err: unknown) => {
         lastFlushError = err
