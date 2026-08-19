@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedArrivalSchedule, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
 
 const log = getLogger('StorageAdapter');
 
@@ -14,6 +14,7 @@ export class StorageAdapter {
     private static readonly STATES_KEY = 'q_states';
     private static readonly ENTITIES_KEY = 'q_entities';
     private static readonly ARRIVAL_PATTERNS_KEY = 'q_arrival_patterns';
+    private static readonly ARRIVAL_SCHEDULES_KEY = 'q_arrival_schedules';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly SCENARIOS_KEY = 'q_scenarios';
@@ -283,6 +284,61 @@ export class StorageAdapter {
             this.log('Successfully cleared arrival patterns');
         } catch (error) {
             this.logError('Error clearing arrival patterns:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the arrival-schedule list for a page.
+     *
+     * Model-level list, sibling of q_entities/q_arrival_patterns — NOT
+     * shape-mapped. One schedule per generator is enforced by the UI, not
+     * here.
+     */
+    public setArrivalSchedules(page: ElementProxy, schedules: ISerializedArrivalSchedule[]): void {
+        try {
+            this.log('Setting arrival schedules for page:', {
+                pageId: page.id,
+                schedulesCount: schedules.length
+            });
+            page.shapeData.set(StorageAdapter.ARRIVAL_SCHEDULES_KEY, JSON.stringify(schedules));
+            this.log('Successfully set arrival schedules');
+        } catch (error) {
+            this.logError('Error setting arrival schedules:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the arrival-schedule list for a page. Returns [] rather than
+     * throwing on corrupt data — an unreadable schedule list must not stop
+     * the whole page from loading.
+     */
+    public getArrivalSchedules(page: ElementProxy): ISerializedArrivalSchedule[] {
+        try {
+            const raw = page.shapeData.get(StorageAdapter.ARRIVAL_SCHEDULES_KEY);
+            if (!raw || typeof raw !== 'string') {
+                this.log('No arrival schedules found, returning empty array');
+                return [];
+            }
+            const schedules = JSON.parse(raw) as ISerializedArrivalSchedule[];
+            this.log('Retrieved arrival schedules:', { count: schedules.length });
+            return schedules;
+        } catch (error) {
+            this.logError('Error getting arrival schedules:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the arrival-schedule list for a page.
+     */
+    public clearArrivalSchedules(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.ARRIVAL_SCHEDULES_KEY);
+            this.log('Successfully cleared arrival schedules');
+        } catch (error) {
+            this.logError('Error clearing arrival schedules:', error);
             throw error;
         }
     }
@@ -682,6 +738,7 @@ export class StorageAdapter {
             this.clearStates(page);
             this.clearEntities(page);
             this.clearArrivalPatterns(page);
+            this.clearArrivalSchedules(page);
             this.clearResourceRequirements(page);
             // NOTE: q_time_patterns / q_time_distributed_configs are intentionally
             // NOT cleared here. The time-distributed generator feature was retired

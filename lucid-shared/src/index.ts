@@ -38,6 +38,8 @@ export {
   ActivityListManager,
   ArrivalPattern,
   ArrivalPatternListManager,
+  ArrivalSchedule,
+  ArrivalScheduleListManager,
   BooleanPropertyModification,
   ComponentListManager,
   ComponentType,

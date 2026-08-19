@@ -8,6 +8,7 @@ import {
     State,
     Entity,
     ArrivalPattern,
+    ArrivalSchedule,
     SeasonMode,
     UnitlessSample,
     Scenario,
@@ -214,6 +215,9 @@ export class ModelDefinitionPageBuilder {
 
             // Load arrival patterns from storage
             this.loadArrivalPatterns(page, modelDefinition);
+
+            // Load arrival schedules from storage
+            this.loadArrivalSchedules(page, modelDefinition);
 
             // Load scenarios from storage
             this.loadScenarios(page, modelDefinition);
@@ -454,6 +458,42 @@ export class ModelDefinitionPageBuilder {
         }
 
         this.log(`Final arrival patterns count: ${modelDefinition.arrivalPatterns.size()}`);
+    }
+
+    /**
+     * Loads arrival schedules from storage and adds them to the model definition.
+     *
+     * Schedules are a page-level list (q_arrival_schedules), mirroring
+     * arrival patterns. Fields absent from storage are left at the
+     * ArrivalSchedule constructor's defaults — ArrivalSchedule.toJSON()
+     * omits at those defaults on the way out, so an absent key means "still
+     * default", not "unset". Unlike ArrivalPattern's seasonMode, there is no
+     * class-default / wire-omit-rule divergence here: `timeUnit`'s class
+     * default and toJSON() omit value are both PeriodUnit.MINUTES, and
+     * `arrivals`' default/omit value are both []. So no wire-default
+     * override is needed — leaving fields untouched when absent already
+     * resolves to the correct value. `source` is never restored: toJSON()
+     * drops it unconditionally, so the constructor default stands.
+     */
+    private loadArrivalSchedules(page: PageProxy, modelDefinition: ModelDefinition): void {
+        this.log('Loading arrival schedules from storage');
+
+        const serializedSchedules = this.storageAdapter.getArrivalSchedules(page);
+        this.log(`Found ${serializedSchedules.length} arrival schedules in storage`);
+
+        for (const serialized of serializedSchedules) {
+            try {
+                const schedule = new ArrivalSchedule(serialized.id, serialized.name);
+                if (serialized.timeUnit !== undefined) schedule.timeUnit = serialized.timeUnit as any;
+                if (serialized.arrivals !== undefined) schedule.arrivals = serialized.arrivals;
+                modelDefinition.arrivalSchedules.add(schedule);
+                this.log(`Added arrival schedule: ${schedule.name}`);
+            } catch (error) {
+                this.log(`Error deserializing arrival schedule: ${error}`, 'error');
+            }
+        }
+
+        this.log(`Final arrival schedules count: ${modelDefinition.arrivalSchedules.size()}`);
     }
 
     /**
