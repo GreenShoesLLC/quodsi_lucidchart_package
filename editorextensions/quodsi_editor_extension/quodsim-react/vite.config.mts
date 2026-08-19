@@ -27,11 +27,13 @@ export default defineConfig({
   optimizeDeps: {
     include: [
       '@quodsi/lucid-shared',
-      // Pre-bundled to front-load them at server boot and avoid a
-      // mid-session "optimized dependencies changed, reloading" full-page
-      // reload. @dnd-kit/core and @dnd-kit/sortable are already direct
-      // dependencies of quodsim-react (used by ActivityEditor.tsx);
-      // @dnd-kit/utilities arrives only via Studio's panels.
+      // Pre-bundled so Vite front-loads them at server boot instead of
+      // discovering them mid-session and forcing a full-page reload
+      // ("optimized dependencies changed. reloading"). All three are used by
+      // quodsim-react's own ActivityEditor.tsx AND by Studio's imported
+      // panels. Note @dnd-kit/utilities is used but NOT declared in
+      // package.json -- it resolves only as a transitive dep of core and
+      // sortable. Pre-existing; listing it here does not fix that.
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
