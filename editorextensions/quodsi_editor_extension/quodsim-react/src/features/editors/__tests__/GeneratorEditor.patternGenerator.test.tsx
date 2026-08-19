@@ -25,6 +25,15 @@ vi.mock("../SaveStatusLine", () => ({
   default: () => <div />,
 }));
 
+// Task 10: GeneratorEditor now calls useModelRootSource() directly (talks to
+// the extension host via useMessaging()), which every render of this
+// component depends on -- mock it the same way GeneratorEditor.pattern.test.tsx
+// does. Without this, rendering any generator here (PATTERN or not) throws,
+// since useMessaging() has no MessageProvider ancestor in these tests.
+vi.mock("../../../messaging/MessageProvider", () => ({
+  useMessaging: () => ({ app: { panelType: "model" } }),
+}));
+
 const baseProps = {
   onSave: vi.fn(),
   states: {} as any,
@@ -33,15 +42,18 @@ const baseProps = {
 };
 
 /**
- * Task 21: Lucid has no Pattern editor, so a generator authored as PATTERN in
- * Studio or drawio must render as a read-only notice here, never as an
- * editable Rate (FREQUENCY) generator — the judgement call the whole task
- * turned on. These tests assert the notice is a real edit gate: the
- * generation-config controls (Generator Type select, interarrival Duration
- * editor, Advanced Settings) are absent, not just visually secondary.
+ * Task 10 updated this describe block: Lucid now HAS a Pattern editor
+ * (PatternModal, opened via "Edit pattern"), so a PATTERN generator no
+ * longer renders the old read-only notice -- that notice, and this block's
+ * assertions, moved to GeneratorEditor.pattern.test.tsx, which covers the
+ * dropdown option, the summary+button replacing the notice, and the modal
+ * opening. What's LEFT here is the FREQUENCY control case (unchanged
+ * behaviour, kept as a regression guard) and a same-file sanity check that a
+ * PATTERN generator's settings tab no longer contains the notice text this
+ * file used to assert on.
  */
-describe("GeneratorEditor — PATTERN generator (read-only notice)", () => {
-  it("renders a read-only notice and hides the FREQUENCY generation-config controls", () => {
+describe("GeneratorEditor — PATTERN generator (now authored via PatternModal, not a read-only notice)", () => {
+  it("does NOT render the old read-only notice for a PATTERN generator (moved to GeneratorEditor.pattern.test.tsx)", () => {
     render(
       <GeneratorEditor
         {...baseProps}
@@ -56,23 +68,25 @@ describe("GeneratorEditor — PATTERN generator (read-only notice)", () => {
       />
     );
 
-    // The read-only notice is present, naming where the pattern is authored.
-    expect(screen.getByText(/Arrival Pattern generator/i)).toBeInTheDocument();
+    // The old externally-authored notice text must not appear for PATTERN --
+    // it is now reserved for SCHEDULED only (see the block below).
+    expect(screen.queryByText(/Arrival Pattern generator/i)).not.toBeInTheDocument();
     expect(
-      screen.getByText(/Quodsi Studio or the drawio extension/i)
-    ).toBeInTheDocument();
-    expect(screen.getByText(/ap-123/)).toBeInTheDocument();
-    expect(screen.getByText(/Volume: 500/i)).toBeInTheDocument();
+      screen.queryByText(/Quodsi Studio or the drawio extension/i)
+    ).not.toBeInTheDocument();
 
-    // The FREQUENCY editing surface must not render at all — a hidden-but-live
-    // control would still let auto-save clobber the pattern on blur/interval.
+    // The FREQUENCY editing surface still must not render for PATTERN — a
+    // hidden-but-live control would let auto-save clobber the pattern.
     expect(screen.queryByText(/Time Between Arrivals/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Advanced Settings/i)).not.toBeInTheDocument();
-    // "Generator Type" (the select's label) and "Frequency-Based" (its only
-    // option) both live inside the `!isPatternGenerator` block; their absence
-    // confirms that block did not render, not just that it's visually hidden.
-    expect(screen.queryByText(/^Generator Type$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Frequency-Based/i)).not.toBeInTheDocument();
+
+    // PATTERN now DOES get the Generator Type dropdown (Task 10 restored it)
+    // plus the "Edit pattern" authoring surface -- see
+    // GeneratorEditor.pattern.test.tsx for the full assertions on both.
+    expect(screen.getByText(/^Generator Type$/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /edit pattern/i })
+    ).toBeInTheDocument();
   });
 
   it("still renders the FREQUENCY controls for a FREQUENCY generator (control case)", () => {
@@ -129,7 +143,7 @@ describe("GeneratorEditor — SCHEDULED generator (read-only notice)", () => {
     expect(screen.queryByText(/Frequency-Based/i)).not.toBeInTheDocument();
   });
 
-  it("shows the Pattern notice, not the Schedule notice, for a PATTERN generator", () => {
+  it("shows the Edit-pattern authoring surface, not the Schedule notice, for a PATTERN generator", () => {
     render(
       <GeneratorEditor
         {...baseProps}
@@ -143,7 +157,12 @@ describe("GeneratorEditor — SCHEDULED generator (read-only notice)", () => {
       />
     );
 
-    expect(screen.getByText(/Arrival Pattern generator/i)).toBeInTheDocument();
+    // Task 10: PATTERN no longer shows either amber notice -- it gets the
+    // summary + "Edit pattern" button (see GeneratorEditor.pattern.test.tsx).
     expect(screen.queryByText(/Scheduled Arrival generator/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Arrival Pattern generator/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /edit pattern/i })
+    ).toBeInTheDocument();
   });
 });
