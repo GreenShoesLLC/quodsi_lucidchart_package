@@ -38,10 +38,9 @@ vi.mock("../../../messaging/hooks/useElementOpsState", () => ({
 
 // Real useFormSync (NOT mocked) -- this suite is specifically about
 // behaviour when the SELECTED generator changes across a rerender, which is
-// exactly what useFormSync drives (mirrors
-// GeneratorEditor.patternModalShapeId.test.tsx's same choice, for the same
-// reason). The other three hooks are mocked away; their own machinery isn't
-// under test here.
+// exactly what useFormSync drives, so it has to run for real rather than be
+// stubbed out. The other three hooks are mocked away; their own machinery
+// isn't under test here.
 vi.mock("../hooks/useEditorState", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../hooks/useEditorState")>();
   return {

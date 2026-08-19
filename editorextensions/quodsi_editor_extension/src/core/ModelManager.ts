@@ -1576,6 +1576,44 @@ export class ModelManager {
                 }
             }
         }
+
+        // Detect deleted Generators → remove an orphaned ArrivalPattern.
+        //
+        // Native canvas deletion of a generator never reaches removeElement()
+        // (see its doc comment above: only the panel un-convert path and
+        // LucidPageConversionService call it, and it early-returns once the
+        // shape proxy is already gone). This is the only hook that observes
+        // a canvas-deleted generator, via the rebuild diff. oldModel is the
+        // pre-rebuild ModelDefinition, still holding the deleted generator's
+        // arrivalPatternId, so read-before-removal falls out for free.
+        //
+        // Spares a pattern still referenced by another generator in
+        // newModel (a hand-authored share) -- same invariant removeElement
+        // enforces for its own callers.
+        const newGeneratorIds = new Set(newModel.generators.getAll().map(g => g.id));
+        for (const oldGenerator of oldModel.generators.getAll()) {
+            if (newGeneratorIds.has(oldGenerator.id)) continue;
+
+            const patternId = oldGenerator.arrivalPatternId;
+            if (!patternId) continue;
+
+            this.debug.debug('Detected deleted generator during rebuild:', oldGenerator.id);
+
+            const stillReferenced = newModel.generators.getAll().some(
+                g => g.arrivalPatternId === patternId
+            );
+            if (stillReferenced) continue;
+
+            this.debug.debug('Removing orphaned ArrivalPattern after generator deletion:', {
+                generatorId: oldGenerator.id,
+                patternId
+            });
+            newModel.arrivalPatterns.remove(patternId);
+            this.storageAdapter.setArrivalPatterns(
+                page,
+                newModel.arrivalPatterns.getAll().map(p => p.toJSON()) as ISerializedArrivalPattern[]
+            );
+        }
     }
 
     /**
