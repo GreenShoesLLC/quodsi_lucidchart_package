@@ -2164,19 +2164,39 @@ export class ModelManager {
 
             // Determine element name
             const elementName = this.getDefaultElementName(element);
+            // Fetched once, up front, so both the name resolution below and the
+            // create-vs-update branch further down (~line 2229) see the same
+            // snapshot of storage.
+            const existingElementData = this.storageAdapter.getElementData<any>(element);
+            const hasExplicitName = updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData;
             this.debug.debug('Element name determination:', {
                 defaultElementName: elementName,
-                updateDataContainsName: updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData
+                updateDataContainsName: hasExplicitName,
+                hasExistingStoredName: existingElementData?.name !== undefined
             });
+
+            // Resolve the name to persist.
+            //
+            // - An explicit `name` in the patch always wins (a falsy value, e.g.
+            //   `''`, still falls back to the canvas label -- this preserves the
+            //   pre-existing `|| elementName` behaviour, not a new rule).
+            // - A partial patch that OMITS `name` must not reset it: absence of a
+            //   key in a partial patch means "leave this field unchanged", so it
+            //   falls back to whatever name is already in storage.
+            // - Only when there is no prior stored name at all -- i.e. this is the
+            //   element's first save / creation -- does it default to the canvas
+            //   label, matching StorageAdapter.setElementData's create path (see
+            //   the getElementData(element) != null branch below).
+            const resolvedName: string = hasExplicitName
+                ? ((updateData as { name?: string }).name || elementName)
+                : (existingElementData?.name || elementName);
 
             // Prepare element data
             let elementData = {
                 id: element.id,
                 type: type,
                 ...updateData,
-                name: (updateData && typeof updateData === 'object' && !Array.isArray(updateData) && 'name' in updateData)
-                    ? (updateData as { name?: string }).name || elementName
-                    : elementName
+                name: resolvedName
             };
 
             this.debug.debug('Prepared Element Data:', {
@@ -2226,7 +2246,7 @@ export class ModelManager {
                 ? generatorStorageRemoveKeys(clearedFields)
                 : undefined;
 
-            if (this.storageAdapter.getElementData(element) != null) {
+            if (existingElementData != null) {
                 this.storageAdapter.updateElementData(element, elementData, { removeKeys });
                 this.markModelDirty(element.id);
             } else {
