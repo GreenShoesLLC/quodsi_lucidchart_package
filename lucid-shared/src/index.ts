@@ -20,6 +20,7 @@ export * from './types/ConversionPreview';
 export * from './types/ConversionResult';
 export * from './types/EditorReferenceData';
 export * from './types/ModelItemData';
+export * from './types/ModelRootProjection';
 
 export * from './types/PageStatus';
 export * from './types/ProcessAnalysisResult';

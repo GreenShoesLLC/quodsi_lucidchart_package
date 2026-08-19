@@ -29,6 +29,7 @@ import {
     ValidationIssue,
     ensureBaselineScenario,
     takeClearedFields,
+    ModelRootProjection,
 } from "@quodsi/lucid-shared";
 import { StorageAdapter } from "./StorageAdapter";
 import { BlockProxy, DocumentProxy, ElementProxy, PageProxy, EditorClient, LineProxy } from "lucid-extension-sdk";
@@ -50,33 +51,6 @@ interface ChangeTracker {
     lastValidationUpdate: number;          // Timestamp of last validation
     pendingChanges: Set<string>;          // IDs of elements with pending changes
 }
-
-/**
- * Plain-data projection of the model root read by shared cross-platform
- * panels (starting with GeneratorPatternTab). NOT `ISerializedModel`: that
- * wire shape is flat by design (no nested `model` block) and carries
- * `warmupTime`/`runTime` as Durations, not the `warmupDateTime`/
- * `finishDateTime` the cascade editor's date math needs. This mirrors
- * drawio's `wrapProjectionAsModelDefinition`.
- */
-export type ModelRootProjection = {
-    generators: Array<{
-        id: string;
-        name: string;
-        levers?: unknown[];
-        entityId?: string;
-        mode?: string;
-        arrivalPatternId?: string;
-        volume?: number;
-    }>;
-    arrivalPatterns: ISerializedArrivalPattern[];
-    model: {
-        timeMode?: string;
-        startDateTime?: string | null;
-        warmupDateTime?: string | null;
-        finishDateTime?: string | null;
-    };
-};
 
 export class ModelManager {
     private debug = getLogger('ModelManager');
@@ -1695,39 +1669,36 @@ export class ModelManager {
      * `patch.scenarios` alone made an `{ arrivalPatterns }` patch vanish with
      * no error and no warning.
      *
-     * Cache invalidation is deliberately NOT done here: the handler that
-     * calls this method (ModelRootHandler.handleUpdate) always follows it
-     * with `validateModel()`, which already forces
-     * `changeTracker.modelDefinitionDirty = true` and rebuilds before the
-     * post-write MODEL_ROOT_SNAPSHOT is sent. Duplicating that here would
-     * also break test construction that stubs a bare `{ storageAdapter,
-     * debug }` object via `Object.create(ModelManager.prototype)`, which has
-     * no `changeTracker` to write to.
+     * Unknown keys are checked BEFORE anything is written, so a mixed patch
+     * like `{ arrivalPatterns, bogus }` throws without persisting the
+     * recognised keys either -- all-or-nothing, not a partial write followed
+     * by a loud failure.
+     *
+     * Mirrors its siblings (updateStates / updateEntities /
+     * updateResourceRequirements / updateScenarios): every one of them calls
+     * `markModelDirty()` after writing, and this does too, so the cached
+     * ModelDefinition is never left stale for a caller that reads it without
+     * also calling `validateModel()` first.
      */
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const unhandled: string[] = [];
-
-        for (const key of Object.keys(patch)) {
-            switch (key) {
-                case 'arrivalPatterns':
-                    this.storageAdapter.setArrivalPatterns(
-                        page,
-                        patch.arrivalPatterns as ISerializedArrivalPattern[]
-                    );
-                    break;
-                default:
-                    unhandled.push(key);
-            }
-        }
-
+        const unhandled = Object.keys(patch).filter(key => key !== 'arrivalPatterns');
         if (unhandled.length > 0) {
             throw new Error(
                 `updateModelRoot: no persistence path for model-root key(s): ${unhandled.join(', ')}. ` +
-                'The patch was NOT fully persisted. Add a case above rather than ignoring it.'
+                'The patch was NOT persisted. Add a case above rather than ignoring it.'
             );
         }
+
+        if ('arrivalPatterns' in patch) {
+            this.storageAdapter.setArrivalPatterns(
+                page,
+                patch.arrivalPatterns as ISerializedArrivalPattern[]
+            );
+        }
+
+        this.markModelDirty();
     }
 
     /**

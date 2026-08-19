@@ -52,9 +52,13 @@ export class ModelRootHandler {
 
   private static async handleUpdate(msg: EnvelopeBase): Promise<void> {
     // The WHOLE patch, forwarded verbatim -- no key inspection here.
-    const data = msg.data as { patch: Record<string, unknown> };
+    // Guarded the same way the log line below already was: an unwrapped or
+    // missing payload must not throw a confusing `Object.keys(undefined)`
+    // TypeError out of this handler.
+    const data = msg.data as { patch?: Record<string, unknown> };
+    const patch = data.patch ?? {};
 
-    log.debug('Model-root update requested', { keys: Object.keys(data.patch ?? {}) });
+    log.debug('Model-root update requested', { keys: Object.keys(patch) });
 
     try {
       const modelManager = ModelManager.getInstance();
@@ -64,7 +68,7 @@ export class ModelRootHandler {
         throw new Error('Current page not available');
       }
 
-      await modelManager.updateModelRoot(data.patch, currentPage);
+      await modelManager.updateModelRoot(patch, currentPage);
       await modelManager.validateModel();
 
       router.send('model', {
@@ -75,12 +79,6 @@ export class ModelRootHandler {
         version: '1.0',
         data: { success: true },
       });
-
-      // Push the fresh projection so React's cache updates without a
-      // round-trip request of its own. Safe to rely on updateModelRoot NOT
-      // invalidating the cache itself: validateModel() above already forced
-      // a rebuild, so this snapshot reflects the just-written patch.
-      await ModelRootHandler.sendSnapshot(msg.id);
 
     } catch (error) {
       log.error('Error updating model root', error);
@@ -95,6 +93,16 @@ export class ModelRootHandler {
           errorMessage: error instanceof Error ? error.message : String(error),
         },
       });
+      return;
     }
+
+    // Push the fresh projection so React's cache updates without a
+    // round-trip request of its own. Deliberately OUTSIDE the try/catch
+    // above: the write already succeeded and its MODEL_ROOT_UPDATE_RESULT
+    // was already sent, so a failure here must not re-report the write
+    // itself as failed (that would tell React a durably-persisted patch
+    // didn't save). It gets its own independent error log instead.
+    ModelRootHandler.sendSnapshot(msg.id)
+      .catch(err => log.error('Error sending post-update model-root snapshot:', err));
   }
 }
