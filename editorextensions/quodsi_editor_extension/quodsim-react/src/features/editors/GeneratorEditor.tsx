@@ -13,6 +13,7 @@ import {
   isNameUniqueInReferenceData,
   ScenarioObjectType,
   declareClearedFields,
+  getLogger,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
@@ -33,6 +34,8 @@ import {
   renamePatternForGenerator,
   type LifecycleModel,
 } from "quodsi_studio/platforms/shared";
+
+const log = getLogger("GeneratorEditor");
 
 // ============================================================================
 // CONSTANTS
@@ -343,6 +346,26 @@ const GeneratorEditor: React.FC<Props> = ({
    */
   const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
 
+  /**
+   * The generator id PatternModal is editing, frozen at the moment "Edit
+   * pattern" is clicked. The canvas sits outside this panel's iframe, so the
+   * modal does not block canvas clicks -- without freezing this, selecting a
+   * different PATTERN generator while the modal is open would silently swap
+   * which generator's pattern is being edited underneath the user (PatternModal's
+   * own header comment documents this contract). null until first opened.
+   */
+  const [patternModalShapeId, setPatternModalShapeId] = useState<string | null>(null);
+
+  /**
+   * Set when the shape-write half of a PATTERN-mode-switch lifecycle
+   * (ensurePatternForGenerator / removePatternForGenerator) rejects --
+   * accessor.updateShape can reject on a host error or its own 30s timeout.
+   * Surfaced next to the Generator Type control since that is the field the
+   * failed write was triggered by; cleared on the next mode-switch attempt
+   * and when the generator selection changes.
+   */
+  const [patternLifecycleError, setPatternLifecycleError] = useState<string | null>(null);
+
   // Get element operations state from Redux
   const elementOpsState = useElementOpsState();
 
@@ -386,9 +409,16 @@ const GeneratorEditor: React.FC<Props> = ({
     elementId: localGeneratorDraft.id,
   });
 
-  // Reset nameError when generator changes
+  // Reset nameError and close PatternModal when generator changes. Without
+  // the isPatternModalOpen reset: select a PATTERN generator, open the
+  // modal, select a FREQUENCY generator (PatternModal unmounts since it's
+  // only rendered when isPatternGenerator, but isPatternModalOpen stays
+  // true), then select any PATTERN generator -- the modal remounts already
+  // open, with no user action.
   useEffect(() => {
     setNameError(null);
+    setIsPatternModalOpen(false);
+    setPatternLifecycleError(null);
   }, [localGeneratorDraft.id]);
 
   // Fire saveNow when entity selection changes (no onBlur on selects).
@@ -506,6 +536,7 @@ const GeneratorEditor: React.FC<Props> = ({
         // the model-root write closes that window: by the time
         // buildModelRootProjection runs (for either write's own snapshot
         // push), the link has already landed.
+        setPatternLifecycleError(null);
         void (async () => {
           // `name` included even though this handler never changes it:
           // ModelManager.handleDataUpdate falls back to a shape-derived
@@ -522,7 +553,19 @@ const GeneratorEditor: React.FC<Props> = ({
           if (ensured.model !== model) {
             await accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
           }
-        })();
+        })().catch(err => {
+          // accessor.updateShape/updateModel can reject (host error, or the
+          // 30s accessor timeout). Unhandled, that was an invisible unhandled
+          // promise rejection: the local draft already shows PATTERN mode and
+          // the new arrivalPatternId, but the write never landed. Logged
+          // through the shared logger (no-console ship gate) and surfaced
+          // next to the Generator Type control -- see patternLifecycleError's
+          // declaration comment for why this state exists rather than
+          // reusing SaveStatusLine (which renders useAutoSave's status, an
+          // unrelated write path).
+          log.error('PATTERN mode-switch lifecycle write failed:', err);
+          setPatternLifecycleError('Could not save the pattern switch. Try again.');
+        });
       } else if (localGeneratorDraft.mode === GeneratorType.PATTERN) {
         // Severs the link and deletes the pattern UNLESS another generator
         // still references it -- deleting it out from under a sibling would
@@ -530,6 +573,7 @@ const GeneratorEditor: React.FC<Props> = ({
         const removed = removePatternForGenerator(model, generatorId);
         patternFieldUpdates = { arrivalPatternId: undefined };
 
+        setPatternLifecycleError(null);
         void (async () => {
           // arrivalPatternId: undefined never reaches storage on its own --
           // a documented Lucid platform constraint (Task 10 review round 3,
@@ -555,7 +599,12 @@ const GeneratorEditor: React.FC<Props> = ({
           if (removed !== model) {
             await accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
           }
-        })();
+        })().catch(err => {
+          // See the switch-to-PATTERN branch's identical .catch above for
+          // the full rationale.
+          log.error('PATTERN mode-switch-away lifecycle write failed:', err);
+          setPatternLifecycleError('Could not save the pattern switch. Try again.');
+        });
       }
     }
 
@@ -785,6 +834,9 @@ const GeneratorEditor: React.FC<Props> = ({
                   <option value={GeneratorType.FREQUENCY}>Frequency-Based</option>
                   <option value={GeneratorType.PATTERN}>Arrival Pattern</option>
                 </select>
+                {patternLifecycleError && (
+                  <p className="text-xs text-red-500 mt-1">{patternLifecycleError}</p>
+                )}
               </div>
             )}
 
@@ -817,7 +869,13 @@ const GeneratorEditor: React.FC<Props> = ({
                 <button
                   type="button"
                   className="w-full px-2 py-1.5 text-xs border border-border-strong rounded bg-surface text-secondary hover:bg-surface-hover"
-                  onClick={() => setIsPatternModalOpen(true)}
+                  onClick={() => {
+                    // Freeze the shapeId at click time (see patternModalShapeId's
+                    // declaration comment) -- must be set BEFORE opening so
+                    // PatternModal never renders with a stale/null id.
+                    setPatternModalShapeId(localGeneratorDraft.id);
+                    setIsPatternModalOpen(true);
+                  }}
                 >
                   Edit pattern
                 </button>
@@ -1057,7 +1115,7 @@ const GeneratorEditor: React.FC<Props> = ({
         <PatternModal
           open={isPatternModalOpen}
           onClose={() => setIsPatternModalOpen(false)}
-          shapeId={localGeneratorDraft.id}
+          shapeId={patternModalShapeId ?? localGeneratorDraft.id}
           accessor={accessor}
         />
       )}

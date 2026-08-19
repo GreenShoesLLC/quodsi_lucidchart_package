@@ -438,6 +438,43 @@ export class ModelManager {
             this.debug.debug('Cleaned up activity destination references:', { affectedCount });
         }
 
+        // Check if this is a Generator with a linked ArrivalPattern - if so,
+        // remove the pattern UNLESS another generator still references it
+        // (a hand-authored share; deleting it out from under a sibling
+        // generator would be worse). Read BEFORE the generator record is
+        // removed below, so `arrivalPatternId` is still on hand.
+        //
+        // This mirrors removePatternForGenerator's "generator deleted" rule
+        // (quodsi_studio's platforms/shared/panels/arrivalPatternLifecycle.ts
+        // -- see its own doc comment) -- that helper was previously wired
+        // ONLY into GeneratorEditor.tsx's mode-switch handler, never into
+        // deletion, so a deleted PATTERN generator's pattern survived
+        // forever in q_arrival_patterns. Reimplemented here rather than
+        // imported: removePatternForGenerator operates on a plain-object
+        // `{generators, arrivalPatterns}` projection shape, and the package
+        // that exports it (quodsi_studio) is a dependency of quodsim-react
+        // only -- the extension host has no dependency edge to it. The
+        // invariant enforced is identical: spare a pattern still referenced
+        // by another generator.
+        const existingGenerator = modelDef.generators.get(elementId);
+        const patternIdToCheck = existingGenerator?.arrivalPatternId;
+        if (patternIdToCheck) {
+            const stillReferenced = modelDef.generators.getAll().some(
+                g => g.id !== elementId && g.arrivalPatternId === patternIdToCheck
+            );
+            if (!stillReferenced) {
+                this.debug.debug('Generator deletion detected, removing orphaned ArrivalPattern:', {
+                    elementId,
+                    patternId: patternIdToCheck
+                });
+                modelDef.arrivalPatterns.remove(patternIdToCheck);
+                this.storageAdapter.setArrivalPatterns(
+                    this.currentPage,
+                    modelDef.arrivalPatterns.getAll().map(p => p.toJSON()) as ISerializedArrivalPattern[]
+                );
+            }
+        }
+
         // Remove from all list managers
         modelDef.activities.remove(elementId);
         modelDef.connectors.remove(elementId);
@@ -1712,6 +1749,18 @@ export class ModelManager {
      * warmupDateTime/finishDateTime the cascade's date math needs.
      */
     public async buildModelRootProjection(page: PageProxy): Promise<ModelRootProjection> {
+        // Honor `page` -- getModelDefinition()/ensureModelDefinition() read
+        // `this.currentPage`, not any parameter, so a caller building the
+        // projection for a page other than the currently-tracked one used to
+        // silently get the WRONG page's data (updateModelRoot, right above,
+        // already honors its own `page` argument for the write side -- this
+        // brings the read side in line). Only switches (and force-rebuilds
+        // via setCurrentPage's markModelDirty) when the pages actually
+        // differ, so the common same-page call stays on the cached
+        // ModelDefinition.
+        if (this.currentPage?.id !== page.id) {
+            this.setCurrentPage(page);
+        }
         const def = await this.getModelDefinition();
         if (!def) {
             return { generators: [], arrivalPatterns: [], model: {} };
