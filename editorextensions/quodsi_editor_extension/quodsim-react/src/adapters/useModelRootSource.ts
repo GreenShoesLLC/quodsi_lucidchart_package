@@ -36,7 +36,6 @@ import {
   ModelRootProjection,
 } from '@quodsi/lucid-shared'
 import { useMessaging } from '../messaging/MessageProvider'
-import { useModelOpsSender } from '../messaging/senders/modelOpsSender'
 import {
   createLucidModelStateAccessor,
   type LucidModelStateAccessorDeps,
@@ -78,14 +77,20 @@ export function createModelRootSource(transport: ModelRootTransport) {
     },
 
     // Forwards to transport.saveShape, which the React hook below wires to
-    // the SAME element-update route (modelOpsSender.updateElementData ->
-    // ELEMENT_UPDATE) GeneratorEditor's own field edits already use -- see
-    // that hook's own comment. Until now this threw unconditionally ("wire
-    // deps.save to the existing element-update route instead"); Task 10
-    // review (Critical 2) found that gap was live, not hypothetical --
+    // the SAME ELEMENT_UPDATE route (same envelope type, same host handler
+    // ElementOpsHandler.handleElementUpdate, same StorageAdapter merge)
+    // GeneratorEditor's own field edits already use -- see that hook's own
+    // comment. Until Task 10 review round 2 this threw unconditionally
+    // ("wire deps.save to the existing element-update route instead");
     // GeneratorPatternTab's volume input and fork-linking both call
-    // accessor.updateShape, and both were silently rejecting. A transport
-    // with no saveShape wired (e.g. a bare unit test) still fails loudly,
+    // accessor.updateShape, and both were silently rejecting. Round 3
+    // upgraded the wiring again: saveShape now AWAITS the real
+    // ELEMENT_UPDATE_RESULT confirmation (round 2's version resolved the
+    // instant the message was sent), because a caller that needs to
+    // sequence a shape write before a model-root write -- GeneratorEditor's
+    // PATTERN mode-switch does, see its own comment -- needs deps.save to
+    // mean "durably persisted", not "message dispatched". A transport with
+    // no saveShape wired (e.g. a bare unit test) still fails loudly,
     // matching updateModel's own "no saveModel dependency configured"
     // posture -- never a silent no-op.
     save: async (shapeId, type, patch) => {
@@ -146,13 +151,6 @@ export function useModelRootSource(): {
 } {
   const { app } = useMessaging()
   const source: MessageSource = SOURCE_BY_PANEL[app.panelType || 'model'] ?? 'model-iframe'
-
-  // Same sender GeneratorEditor's own onSave path uses (handleElementSave ->
-  // onElementUpdate -> updateElementData -> ELEMENT_UPDATE). Reusing it here
-  // means a shape-scoped write from a shared panel (accessor.updateShape,
-  // e.g. PatternModal's volume slider) reaches the real persistence path
-  // instead of a second, parallel one.
-  const { updateElementData } = useModelOpsSender()
 
   // Lazy-init once per component instance. createModelRootSource has no side
   // effects (it doesn't send anything), so re-running this check on every
@@ -219,15 +217,80 @@ export function useModelRootSource(): {
         window.parent.postMessage(envelope, '*')
       },
 
-      // ELEMENT_UPDATE is fire-and-forget from the caller's point of view --
-      // updateElementData dispatches ELEMENT_SAVE_START and posts the
-      // message synchronously; there is no ELEMENT_UPDATE_RESULT reply to
-      // await (unlike MODEL_ROOT_UPDATE's round trip above). Resolving
-      // immediately after the real send matches how every other field on
-      // this generator already "saves": optimistic, tracked via Redux
-      // elementOpsState, not via a promise the caller blocks on.
-      async saveShape(shapeId, type, patch) {
-        updateElementData(shapeId, type, patch)
+      // Real confirmed round trip -- mirrors send()'s MODEL_ROOT_UPDATE
+      // handling immediately above (and usePortalSender's one-shot RPC
+      // idiom): mint a correlation id, await the matching
+      // ELEMENT_UPDATE_RESULT, resolve/reject on success/failure. This is
+      // NOT the same JS call updateElementData makes (which never surfaces
+      // its envelope id, so it can't be awaited this way) -- but it IS the
+      // same wire-level route: identical ELEMENT_UPDATE envelope shape,
+      // handled by the identical host handler
+      // (ElementOpsHandler.handleElementUpdate -> ModelManager.saveElementData
+      // -> StorageAdapter.updateElementData, which merges rather than
+      // clobbers -- verified in Task 10 review round 2).
+      //
+      // On confirmed success, request() a fresh snapshot. This is the fix
+      // for the "split-brain projection" finding (Task 10 review round 3):
+      // ELEMENT_UPDATE never triggers a MODEL_ROOT_SNAPSHOT push on its own
+      // (only MODEL_ROOT_REQUEST and the post-write push after
+      // MODEL_ROOT_UPDATE do), and that post-write push is built by
+      // buildModelRootProjection CONCURRENTLY with an in-flight shape write
+      // -- so a caller that fires both writes in parallel can have the
+      // model-root snapshot land BEFORE the shape write's arrivalPatternId
+      // reaches storage, permanently missing the link. Re-requesting here
+      // only fires once THIS shape write is confirmed durable, so a caller
+      // that awaits saveShape before issuing its own model-root write (see
+      // GeneratorEditor's PATTERN mode-switch handler) is guaranteed a
+      // projection that reflects both halves before making its next
+      // lifecycle decision.
+      saveShape(shapeId, type, patch) {
+        return new Promise<void>((resolve, reject) => {
+          if (!window.parent) {
+            reject(new Error('No parent window to send element update to'))
+            return
+          }
+
+          const correlationId = uuid()
+          let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+          const handler = (event: MessageEvent) => {
+            const msg = event.data
+            if (
+              msg?.id === correlationId &&
+              msg?.type === EnvelopeMessageType.ELEMENT_UPDATE_RESULT
+            ) {
+              window.removeEventListener('message', handler)
+              if (timeoutId !== undefined) clearTimeout(timeoutId)
+              const data = (msg.data || {}) as { success?: boolean; errorMessage?: string }
+              if (data.success) {
+                resolve()
+                // Fire-and-forget from THIS function's point of view -- the
+                // caller's own await is already satisfied; the fresh
+                // snapshot arrives via the persistent listener below like
+                // any other push.
+                transport.request?.()
+              } else {
+                reject(new Error(data.errorMessage || 'Element update failed'))
+              }
+            }
+          }
+
+          window.addEventListener('message', handler)
+          timeoutId = setTimeout(() => {
+            window.removeEventListener('message', handler)
+            reject(new Error('Element update timed out'))
+          }, MODEL_ROOT_UPDATE_TIMEOUT_MS)
+
+          const envelope: EnvelopeBase = {
+            id: correlationId,
+            type: EnvelopeMessageType.ELEMENT_UPDATE,
+            source,
+            target: 'host',
+            version: '1.0',
+            data: { elementId: shapeId, type, data: { ...patch, id: shapeId } },
+          }
+          window.parent.postMessage(envelope, '*')
+        })
       },
     }
 

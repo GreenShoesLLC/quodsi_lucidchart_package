@@ -12,6 +12,7 @@ import {
   SimulationObjectType,
   isNameUniqueInReferenceData,
   ScenarioObjectType,
+  declareClearedFields,
   type ScenarioLever,
 } from "@quodsi/lucid-shared";
 import { LeverAuthoringSection } from "./LeverAuthoringSection";
@@ -464,6 +465,7 @@ const GeneratorEditor: React.FC<Props> = ({
     if (name === 'generatorType' && modelRootProjection) {
       const nextMode = value as GeneratorType;
       const model = modelRootProjection as unknown as LifecycleModel;
+      const generatorId = localGeneratorDraft.id;
 
       if (nextMode === GeneratorType.PATTERN) {
         // Idempotent: a generator already linked to a present pattern comes
@@ -474,41 +476,86 @@ const GeneratorEditor: React.FC<Props> = ({
         // updateModel call sites; an unguarded write here fired a
         // postMessage round trip + validateModel() + snapshot push on every
         // keystroke of an unrelated field, not just on a real mode switch).
-        const ensured = ensurePatternForGenerator(model, localGeneratorDraft.id);
-        if (ensured.model !== model) {
-          void accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
-        }
-
-        // The generator's own flat fields (mode, arrivalPatternId, volume)
-        // persist through the shape-scoped route (accessor.updateShape),
-        // NOT through this form's onSave/updateElementData autosave path --
-        // updateGeneratorImmutably deliberately refuses arrivalPatternId/
-        // volume from a plain `updates` object for every OTHER caller, and a
-        // model-root patch is restricted to arrivalPatterns (the host's
-        // update-model-root route throws on any other key), so
-        // updateModel({ generators }) is not an option here. Mirrors
-        // quodsi_studio's GeneratorBasicTab.tsx handleTypeChange exactly,
-        // including seeding a default volume (Task 10 review, Critical 1).
+        const ensured = ensurePatternForGenerator(model, generatorId);
         const seededVolume = localGeneratorDraft.volume ?? DEFAULT_PATTERN_VOLUME;
-        void accessor.updateShape(localGeneratorDraft.id, 'Generator', {
-          mode: nextMode,
-          arrivalPatternId: ensured.patternId,
-          volume: seededVolume,
-        });
         patternFieldUpdates = { arrivalPatternId: ensured.patternId, volume: seededVolume };
+
+        // SEQUENCED, not parallel -- Task 10 review round 3, "split-brain
+        // projection". The generator's own flat fields (mode, arrivalPatternId,
+        // volume) persist through the shape-scoped route (accessor.updateShape)
+        // -- updateGeneratorImmutably deliberately refuses these from a plain
+        // `updates` object for every OTHER caller, and a model-root patch is
+        // restricted to arrivalPatterns (the host's update-model-root route
+        // throws on any other key), so updateModel({ generators }) is not an
+        // option. Mirrors quodsi_studio's GeneratorBasicTab.tsx
+        // handleTypeChange, including seeding a default volume (Critical 1) --
+        // but Studio issues both halves through ONE accessor over ONE model,
+        // so ordering between them is moot there. Lucid has two independent
+        // write routes (ELEMENT_UPDATE for the shape half, MODEL_ROOT_UPDATE
+        // for arrivalPatterns), and MODEL_ROOT_UPDATE's own post-write
+        // snapshot push (buildModelRootProjection, on the host) runs
+        // CONCURRENTLY with whatever ELEMENT_UPDATE is still in flight for
+        // the same generator -- so firing both together let the snapshot
+        // land showing the new pattern in arrivalPatterns but NOT linked
+        // from the generator. A later removePatternForGenerator call, given
+        // that stale projection, found no link, silently no-op'd instead of
+        // deleting the pattern, and the NEXT switch to PATTERN minted a
+        // second one. accessor.updateShape's returned promise now resolves
+        // only once the host CONFIRMS the shape write (ELEMENT_UPDATE_RESULT)
+        // -- see useModelRootSource's saveShape -- so awaiting it here before
+        // the model-root write closes that window: by the time
+        // buildModelRootProjection runs (for either write's own snapshot
+        // push), the link has already landed.
+        void (async () => {
+          // `name` included even though this handler never changes it:
+          // ModelManager.handleDataUpdate falls back to a shape-derived
+          // default name whenever an update payload omits the `name` key
+          // at all (not just when it's undefined) -- harmless for a
+          // real Lucid BlockProxy whose on-canvas text label usually
+          // matches, but not a dependency this write should take on.
+          await accessor.updateShape(generatorId, 'Generator', {
+            name: localGeneratorDraft.name,
+            mode: nextMode,
+            arrivalPatternId: ensured.patternId,
+            volume: seededVolume,
+          });
+          if (ensured.model !== model) {
+            await accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
+          }
+        })();
       } else if (localGeneratorDraft.mode === GeneratorType.PATTERN) {
         // Severs the link and deletes the pattern UNLESS another generator
         // still references it -- deleting it out from under a sibling would
         // be worse.
-        const removed = removePatternForGenerator(model, localGeneratorDraft.id);
-        if (removed !== model) {
-          void accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
-        }
-        void accessor.updateShape(localGeneratorDraft.id, 'Generator', {
-          mode: nextMode,
-          arrivalPatternId: undefined,
-        });
+        const removed = removePatternForGenerator(model, generatorId);
         patternFieldUpdates = { arrivalPatternId: undefined };
+
+        void (async () => {
+          // arrivalPatternId: undefined never reaches storage on its own --
+          // a documented Lucid platform constraint (Task 10 review round 3,
+          // Minor): the panel->extension JSON transport drops undefined-
+          // valued keys, and StorageAdapter.updateElementData's merge
+          // additionally strips them from the incoming patch (a partial
+          // update must not clobber stored fields it didn't mention) -- so
+          // "the user cleared this" and "this payload never mentions it"
+          // arrive identical, and the stale link would silently survive.
+          // Generator now follows the SAME explicit cleared-field
+          // declaration Activity's queueRanking already established
+          // (declareClearedFields here; the extension-side removeKeys half
+          // is generatorStorageRemoveKeys in GeneratorLucid.ts, wired into
+          // ModelManager.ts's handleDataUpdate the same way
+          // activityStorageRemoveKeys already is).
+          // `name` included for the same reason as the switch-to-PATTERN
+          // write above -- see its comment.
+          await accessor.updateShape(
+            generatorId,
+            'Generator',
+            declareClearedFields({ name: localGeneratorDraft.name, mode: nextMode }, ['arrivalPatternId'])
+          );
+          if (removed !== model) {
+            await accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
+          }
+        })();
       }
     }
 

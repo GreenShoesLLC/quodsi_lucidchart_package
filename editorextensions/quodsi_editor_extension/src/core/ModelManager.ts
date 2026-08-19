@@ -38,6 +38,7 @@ import { ModelDefinitionPageBuilder } from "./ModelDefinitionPageBuilder";
 import { ModelStructureBuilder } from "../services/accordion/ModelStructureBuilder";
 import { LucidElementFactory } from "../services/LucidElementFactory";
 import { activityStorageRemoveKeys } from "../types/ActivityLucid";
+import { generatorStorageRemoveKeys } from "../types/GeneratorLucid";
 import { getLogger } from '@quodsi/lucid-shared';
 import { router } from "./messaging";
 import { LucidVersionManager } from "../versioning/LucidVersionManager";
@@ -2205,21 +2206,24 @@ export class ModelManager {
             // fields the panel did not send (e.g. width/height) are preserved.
             // Fall back to a full create when there is no prior q_data.
             //
-            // Activities carry one field the merge cannot round-trip: queueRanking,
-            // where absence of the key IS the value ("first come, first served").
-            // The panel's clear arrives here as a MISSING key — JSON transport drops
-            // undefined — so it must be spelled out as a deletion or the stored
-            // ranking survives a clear.
+            // Activities and Generators each carry one field the merge cannot
+            // round-trip: Activity.queueRanking and Generator.arrivalPatternId,
+            // where absence of the key IS the value ("first come, first served";
+            // "no linked pattern"). The panel's clear arrives here as a MISSING
+            // key — JSON transport drops undefined — so it must be spelled out
+            // as a deletion or the stored value survives a clear.
             //
             // Spelled out by the WRITER, never inferred from the missing key: most
             // Activity payloads that reach here are partial (ConnectorsEditor sends
             // connectType + financialProperties only; handleElementConvert can send
             // a bare stub) and would otherwise read as a clear. Only a declaration
-            // deletes. See activityStorageRemoveKeys for the full story; this is the
-            // path a panel save actually walks (the panel never reaches
-            // ActivityLucid.updateFromPlatform).
+            // deletes. See activityStorageRemoveKeys / generatorStorageRemoveKeys for
+            // the full story; this is the path a panel save actually walks (the
+            // panel never reaches ActivityLucid.updateFromPlatform).
             const removeKeys = type === SimulationObjectType.Activity
                 ? activityStorageRemoveKeys(clearedFields)
+                : type === SimulationObjectType.Generator
+                ? generatorStorageRemoveKeys(clearedFields)
                 : undefined;
 
             if (this.storageAdapter.getElementData(element) != null) {
