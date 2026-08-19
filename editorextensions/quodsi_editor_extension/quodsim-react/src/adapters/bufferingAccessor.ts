@@ -56,15 +56,54 @@
 //     which this pass never touches, and which outranks inFlight in the merge.
 //
 // The one case worth stating explicitly: an edit typed WHILE a flush is in
-// flight lands in `pending` (flush promotes synchronously at call time, so the
-// batch is already captured). The older echo then retires the older inFlight
-// entry and the newer pending value survives it. That is the mid-flight case
-// the design flagged as the subtle one.
+// flight lands in `pending`, so the older echo retires the older inFlight entry
+// and the newer pending value survives it. That is the mid-flight case the
+// design flagged as the subtle one, and the split above is the whole of its
+// handling -- see promotePending for what the flush timing does and does not
+// contribute to it.
 //
 // Value-equality reconciliation has one benign quirk: if the user edits a field
 // back to the value the base already holds, the inFlight entry retires on the
 // next snapshot rather than on its own echo. Harmless -- the base already
 // displays the value the user asked for.
+//
+// ------------------------------------------------------------------------
+// WHY inFlight IS BOUNDED (and why the comparator is NOT loosened)
+// ------------------------------------------------------------------------
+// Exact structural equality is the right test -- anything looser starts
+// guessing that a write committed when it did not. But on its own it assumes
+// the host echoes back what it was sent, and THIS host does not always:
+// `ModelDefinitionPageBuilder.loadArrivalPatterns` rebuilds every pattern
+// through `new ArrivalPattern(...)`, forces `seasonMode = SeasonMode.WEEK`
+// BEFORE applying the serialized value, rehydrates `withinHourOffset` via
+// `UnitlessSample.fromJSON(...)`, and echoes `toJSON()`. Because `updateModel`
+// writes `arrivalPatterns` WHOLESALE and `valuesEqual` compares key counts, a
+// single default-filled key anywhere in that array breaks equality for the
+// whole entry -- and a NEWLY CREATED pattern, the exact flow this modal exists
+// for, is the likeliest to hit it.
+//
+// Unbounded, such an entry would mask the base for the life of the accessor:
+// the panel would show its own `arrivalPatterns` forever and never see
+// host-originated changes -- INCLUDING the orphaned-pattern cleanup in
+// `ModelManager` -- which is the orphan/duplicate failure class this branch has
+// already paid for twice, arriving from the other direction.
+//
+// So each entry is bounded: once a write has been ACKNOWLEDGED by the base
+// accessor, the entry survives at most `maxSnapshotsAfterAck` further base
+// snapshots and is then dropped, matched or not. After an ack the host is
+// authoritative, and a client overlay that outlives it is strictly worse than
+// a one-frame flicker.
+//
+// The clock starts at the ACK, never at promotion: a bound that started at
+// promotion could discard an edit still legitimately in flight to a slow host.
+// An unacked entry never expires, however many snapshots arrive.
+//
+// The bound counts BASE SNAPSHOTS rather than milliseconds on purpose. The harm
+// being prevented is "the overlay masks host-originated changes", and a base
+// snapshot IS a host-originated change; counting them measures the harm
+// directly. A time bound is a proxy that could let many snapshots be masked
+// inside one window, or expire an entry during a quiet period when it was
+// masking nothing at all.
 
 import type {
   ModelStateAccessor,
@@ -75,16 +114,40 @@ import type { ModelDefinition } from '@quodsi/shared'
 
 type ShapePatch = { shapeId: string; type: DomainType; patch: Record<string, unknown> }
 
+/**
+ * An inFlight shape entry: the patch plus the base-snapshot sequence number at
+ * which the base accessor acknowledged it. `null` means "not acked yet", which
+ * is what makes the entry immune to the bound.
+ */
+type InFlightShapeEntry = ShapePatch & { ackedAtSeq: number | null }
+
 export type BufferingAccessor = ModelStateAccessor & {
   /**
    * Write everything buffered right now, bypassing the debounce. Resolves when
    * the base accessor has accepted it (or rejects with the base's error).
-   * Call this on modal close and on unmount: without it, a user who types and
-   * immediately closes loses the edit.
+   * Call this on modal close: without it, a user who types and immediately
+   * closes loses the edit.
    */
   flush(): Promise<void>
-  /** Cancel the pending debounce timer and detach from the base accessor. */
+  /**
+   * Final fire-and-forget flush, then detach from the base accessor and stop
+   * all timers. Safe to call on unmount without a preceding flush() -- see the
+   * function's own comment for why it flushes rather than discarding.
+   */
   dispose(): void
+}
+
+export type BufferingAccessorOptions = {
+  /** Trailing debounce for host writes, in milliseconds. */
+  debounceMs: number
+  /**
+   * How many base snapshots an ACKNOWLEDGED inFlight entry may survive before
+   * it is dropped whether or not the host echoed it back. Default 2, which
+   * gives exactly one snapshot of grace: an entry survives a stale snapshot
+   * arriving between its ack and its echo, and is dropped on the next one.
+   * See the "WHY inFlight IS BOUNDED" note above.
+   */
+  maxSnapshotsAfterAck?: number
 }
 
 /**
@@ -102,6 +165,8 @@ const DOMAIN_LIST_KEY: Record<DomainType, string> = {
   Generator: 'generators',
   Resource: 'resources',
 }
+
+const DEFAULT_MAX_SNAPSHOTS_AFTER_ACK = 2
 
 function overlayKey(shapeId: string, type: DomainType): string {
   return `${type}:${shapeId}`
@@ -175,18 +240,27 @@ function applyShapePatch(
 
 export function createBufferingAccessor(
   base: ModelStateAccessor,
-  opts: { debounceMs: number },
+  opts: BufferingAccessorOptions,
 ): BufferingAccessor {
+  const maxSnapshotsAfterAck = opts.maxSnapshotsAfterAck ?? DEFAULT_MAX_SNAPSHOTS_AFTER_ACK
+
   // `pending` holds edits not yet sent. `inFlight` holds edits handed to the base
   // accessor but not yet echoed back in a base snapshot -- they must stay visible
   // or the value flickers back to its old state for a whole round trip.
   let pendingShape = new Map<string, ShapePatch>()
   let pendingModel: Record<string, unknown> = {}
-  let inFlightShape = new Map<string, ShapePatch>()
+  let inFlightShape = new Map<string, InFlightShapeEntry>()
   let inFlightModel: Record<string, unknown> = {}
+  // The model overlay is a flat record, so one ack stamp covers all of it.
+  let inFlightModelAckedAtSeq: number | null = null
 
   const listeners = new Set<() => void>()
   let timer: ReturnType<typeof setTimeout> | null = null
+  let disposed = false
+
+  // Counts DISTINCT base snapshots this accessor has observed. The unit the
+  // inFlight bound is denominated in.
+  let baseSnapshotSeq = 0
 
   // Bumped whenever the overlay's CONTENT could differ. Promotion
   // (pending -> inFlight) and rollback (inFlight -> pending) deliberately do
@@ -245,8 +319,9 @@ export function createBufferingAccessor(
   // --- reconciliation ----------------------------------------------------
 
   /**
-   * Retire the inFlight keys the base snapshot now reflects; keep the rest.
-   * `pending` is deliberately untouched -- see the module header.
+   * Retire the inFlight keys the base snapshot now reflects, then drop whatever
+   * has outlived the post-ack bound. `pending` is deliberately untouched by
+   * both passes -- see the module header.
    */
   function reconcile(baseSnap: ModelStateSnapshot): void {
     const baseDef = baseSnap.modelDefinition as unknown as Record<string, unknown> | null
@@ -254,19 +329,38 @@ export function createBufferingAccessor(
     let changed = false
 
     for (const [key, entry] of Array.from(inFlightShape.entries())) {
+      // PASS 1: retire what the base demonstrably reflects.
       const current = findShapeEntry(baseDef, entry)
       // No such row yet (e.g. a shape the projection has not caught up to):
       // the base cannot be said to reflect the write, so keep showing it.
-      if (current === undefined) continue
-      const remaining: Record<string, unknown> = {}
-      for (const [field, value] of Object.entries(entry.patch)) {
-        if (!valuesEqual(current[field], value)) remaining[field] = value
+      if (current !== undefined) {
+        const remaining: Record<string, unknown> = {}
+        for (const [field, value] of Object.entries(entry.patch)) {
+          if (!valuesEqual(current[field], value)) remaining[field] = value
+        }
+        const remainingKeys = Object.keys(remaining).length
+        if (remainingKeys !== Object.keys(entry.patch).length) {
+          changed = true
+          if (remainingKeys === 0) {
+            inFlightShape.delete(key)
+            continue
+          }
+          // Keep the ack stamp across a partial retire: the bound is a property
+          // of the WRITE, not of whichever keys have echoed back so far.
+          inFlightShape.set(key, { ...entry, patch: remaining })
+        }
       }
-      const remainingKeys = Object.keys(remaining).length
-      if (remainingKeys === Object.keys(entry.patch).length) continue
-      changed = true
-      if (remainingKeys === 0) inFlightShape.delete(key)
-      else inFlightShape.set(key, { shapeId: entry.shapeId, type: entry.type, patch: remaining })
+      // PASS 2: give up on what the host acked but never echoed back in a
+      // recognisable form. Unacked entries (ackedAtSeq === null) are exempt.
+      const survivor = inFlightShape.get(key)
+      if (
+        survivor !== undefined &&
+        survivor.ackedAtSeq !== null &&
+        baseSnapshotSeq - survivor.ackedAtSeq >= maxSnapshotsAfterAck
+      ) {
+        inFlightShape.delete(key)
+        changed = true
+      }
     }
 
     const remainingModel: Record<string, unknown> = {}
@@ -277,6 +371,15 @@ export function createBufferingAccessor(
       inFlightModel = remainingModel
       changed = true
     }
+    if (
+      Object.keys(inFlightModel).length > 0 &&
+      inFlightModelAckedAtSeq !== null &&
+      baseSnapshotSeq - inFlightModelAckedAtSeq >= maxSnapshotsAfterAck
+    ) {
+      inFlightModel = {}
+      changed = true
+    }
+    if (Object.keys(inFlightModel).length === 0) inFlightModelAckedAtSeq = null
 
     if (changed) overlayVersion++
   }
@@ -291,6 +394,7 @@ export function createBufferingAccessor(
     const baseSnap = base.getSnapshot()
     if (baseSnap !== lastSeenBase) {
       lastSeenBase = baseSnap
+      baseSnapshotSeq++
       reconcile(baseSnap)
     }
     return baseSnap
@@ -309,6 +413,12 @@ export function createBufferingAccessor(
     }
     return cachedSnapshot
   }
+
+  // Observe the base's CURRENT snapshot at construction, so `baseSnapshotSeq`
+  // starts at 1 and counts genuine arrivals from there. Without this the very
+  // first getSnapshot() would spend one of the bound's allowance on a snapshot
+  // that predates every write this accessor will ever make.
+  syncBase()
 
   // Subscribed eagerly rather than ref-counted (the idiom
   // createLucidModelStateAccessor uses) because reconciliation must keep
@@ -339,6 +449,9 @@ export function createBufferingAccessor(
   }
 
   function scheduleFlush(): void {
+    // Nothing may be armed after teardown: a timer that outlived dispose()
+    // would write through the base accessor after the consumer has gone.
+    if (disposed) return
     // Trailing debounce: each edit resets the clock, which is what collapses a
     // WeightStrip drag from dozens of host rebuilds into one.
     cancelTimer()
@@ -348,8 +461,9 @@ export function createBufferingAccessor(
         // Swallowed deliberately: nobody awaits the timer-driven flush, and an
         // unhandled rejection here would be noise. The failure is already
         // visible -- the base accessor sets saveStatus 'failed' / saveError and
-        // notifies, and rollback() keeps the edit in the overlay so it is
-        // retried on the next flush rather than lost.
+        // notifies, rollback() keeps the edit in the overlay so it is retried
+        // on the next flush rather than lost, and flush() itself reports it to
+        // the next caller (see `lastFlushError`).
       })
     }, opts.debounceMs)
   }
@@ -387,20 +501,23 @@ export function createBufferingAccessor(
   /**
    * Move everything pending into inFlight and return it as the batch to send.
    *
-   * THE TIMING HERE IS THE DESIGN, NOT AN IMPLEMENTATION DETAIL -- do not move
-   * this call inside the promise chain. It runs SYNCHRONOUSLY at flush() entry,
-   * before any await, so the batch is frozen the instant flush() is called.
-   * Everything the user types after that moment lands in `pending`, which is the
-   * one overlay a base snapshot can never retire (the host cannot be reporting a
-   * value it was never sent) and which outranks `inFlight` in the merge.
+   * Runs SYNCHRONOUSLY at flush() entry, before any await, so the batch is
+   * frozen the instant flush() is called. That is what lets `flush()` mean
+   * "write what was buffered when you asked" -- which is what a close-path
+   * `await flush()` has to mean. Deferring the promote into the queued send
+   * instead (inside `flushQueue.then(...)`, the shape this naturally wants to
+   * take) lets two racing flush() calls both promote the same edit and lets
+   * flush()'s promise cover edits made after the call; mutation-tested, that
+   * breaks the close-path failure report.
    *
-   * That is what makes the during-a-flush case need no special handling at all:
-   * the echo of the OLD write retires only the old inFlight entry, and the newer
-   * pending edit -- untouched by reconcile, and merged after it -- is simply
-   * still there. Promote later (e.g. inside `flushChain.then(...)`, the shape
-   * this naturally wants to take) and the newer edit is swallowed into the same
-   * batch instead, so the case silently stops being exercised and the real
-   * mid-flight race stops being handled. See the module header.
+   * It is NOT, however, what makes the during-a-flush case work -- an earlier
+   * draft of this comment claimed it was, and the claim is wrong. That case is
+   * carried entirely by the pending/inFlight split: an edit typed after this
+   * point lands in `pending`, the one overlay a base snapshot can never retire
+   * (the host cannot be reporting a value it was never sent), and `pending`
+   * outranks `inFlight` in the merge -- so the echo of the OLD write retires
+   * only the old entry and the newer value is simply still there. Deferring the
+   * promote leaves that test passing, which is how the claim was caught.
    */
   function promotePending(): Batch | null {
     const shapes = Array.from(pendingShape.values())
@@ -414,13 +531,38 @@ export function createBufferingAccessor(
         shapeId: entry.shapeId,
         type: entry.type,
         patch: { ...(already?.patch ?? {}), ...entry.patch },
+        // Un-acks the merged entry: it now carries keys the host has not seen,
+        // so the bound must not expire it until THIS batch is acknowledged.
+        ackedAtSeq: null,
       })
     }
-    inFlightModel = { ...inFlightModel, ...model }
+    if (Object.keys(model).length > 0) {
+      inFlightModel = { ...inFlightModel, ...model }
+      inFlightModelAckedAtSeq = null
+    }
     pendingShape = new Map()
     pendingModel = {}
     // No overlayVersion bump: the union is byte-for-byte what it was.
     return { shapes, model }
+  }
+
+  /**
+   * The base accepted this batch. Stamp the entries it covered with the current
+   * snapshot sequence, starting their bound. Entries acked by an EARLIER batch
+   * keep their older stamp, so an unrelated later write cannot extend how long
+   * a divergent entry gets to mask the base.
+   */
+  function markBatchAcked(batch: Batch): void {
+    for (const entry of batch.shapes) {
+      const key = overlayKey(entry.shapeId, entry.type)
+      const current = inFlightShape.get(key)
+      if (current !== undefined && current.ackedAtSeq === null) {
+        inFlightShape.set(key, { ...current, ackedAtSeq: baseSnapshotSeq })
+      }
+    }
+    if (Object.keys(batch.model).length > 0 && inFlightModelAckedAtSeq === null) {
+      inFlightModelAckedAtSeq = baseSnapshotSeq
+    }
   }
 
   /**
@@ -443,6 +585,7 @@ export function createBufferingAccessor(
     inFlightShape = new Map()
     pendingModel = { ...inFlightModel, ...pendingModel }
     inFlightModel = {}
+    inFlightModelAckedAtSeq = null
     // The union is unchanged, so this bump only guarantees the cache is not
     // reasoning about maps that no longer exist. It costs at most one
     // content-identical rebuild, on a path that already failed.
@@ -456,8 +599,9 @@ export function createBufferingAccessor(
     try {
       // ORDERING INVARIANT: every shape write completes before any model write.
       // The host builds its model-root projection FROM shape storage, so a
-      // model write landing first leaves the client's projection missing a link
-      // it just created -- which orphans and duplicates arrival patterns.
+      // model write landing before its shape write leaves the client's
+      // projection missing a link it just created -- which orphans and
+      // duplicates arrival patterns.
       for (const entry of batch.shapes) {
         await base.updateShape(entry.shapeId, entry.type, entry.patch)
       }
@@ -468,40 +612,94 @@ export function createBufferingAccessor(
       rollback()
       throw err
     }
-    // Success: inFlight stays in the overlay until a base snapshot echoes it
-    // (see reconcile). If an edit arrived while this batch was in flight and no
-    // debounce is armed for it, arm one so it is not stranded.
+    // Success. The overlay stays until a base snapshot echoes it (see
+    // reconcile) -- but the bound's clock starts HERE, now that the host has
+    // definitively received it.
+    markBatchAcked(batch)
+    // If an edit arrived while this batch was in flight and no debounce is
+    // armed for it, arm one so it is not stranded. No-op once disposed.
     if (timer === null && (pendingShape.size > 0 || Object.keys(pendingModel).length > 0)) {
       scheduleFlush()
     }
   }
 
   // Serializes flushes: two batches must never be in flight at once, or the
-  // shape-before-model ordering would only hold within each batch. Kept
-  // never-rejected so one failure does not poison every later flush.
-  let flushChain: Promise<void> = Promise.resolve()
+  // shape-before-model invariant would hold only WITHIN each batch and two
+  // concurrent batches could interleave. `flushQueue` is kept never-rejected so
+  // one failure does not poison every later flush; `lastFlushError` carries the
+  // outcome instead, so a caller with nothing of its own to send can still be
+  // told the truth.
+  let flushQueue: Promise<void> = Promise.resolve()
+  let lastFlushError: unknown = null
 
   function flush(): Promise<void> {
     cancelTimer()
     const batch = promotePending()
-    // Nothing new to send, but an earlier flush may still be in the air --
-    // resolve only once the queue is empty, so "flush on close" means it.
-    if (batch === null) return flushChain
-    const run = flushChain.then(
+    if (batch === null) {
+      // Nothing new to send, but an earlier flush may still be in the air.
+      // Resolve only once the queue drains -- and then REPORT that flush's
+      // failure rather than resolving cheerfully, so a close-path caller can
+      // tell "everything is written" from "the last write failed".
+      return flushQueue.then(() => {
+        if (lastFlushError !== null) throw lastFlushError
+      })
+    }
+    const run = flushQueue.then(
       () => sendBatch(batch),
       () => sendBatch(batch),
     )
-    flushChain = run.catch(() => undefined)
+    flushQueue = run.then(
+      () => {
+        lastFlushError = null
+      },
+      (err: unknown) => {
+        lastFlushError = err
+      },
+    )
     return run
   }
 
+  /**
+   * Tear down -- but flush first.
+   *
+   * The alternative (detach and drop whatever is buffered) makes "clean up" mean
+   * "silently discard the user's work", which is precisely the failure the
+   * debounce introduces and the design called out: a user who types and
+   * immediately closes must not lose the edit. A consumer that wires ONLY
+   * dispose() on unmount is the likeliest wiring, so the safe behaviour belongs
+   * in the default rather than in a convention every caller has to remember.
+   *
+   * The final flush is fire-and-forget: at unmount there is no longer anyone to
+   * show an error to. A caller that needs to KNOW the write landed should
+   * `await flush()` first and then dispose() -- that flush reports the outcome,
+   * and dispose()'s own is then a cheap no-op that just drains the queue.
+   */
   function dispose(): void {
+    if (disposed) return
     cancelTimer()
+    void flush().catch(() => {
+      // Nobody left to tell; rollback has already kept the edit in the overlay,
+      // which is itself about to be discarded along with this accessor.
+    })
+    disposed = true
     unsubscribeBase()
     listeners.clear()
   }
 
   return {
+    // Spread FIRST so every optional member the base implements -- classifyShape,
+    // getShapeInfo, removeClassification, runScenario, cancelScenarioRun,
+    // loadScenarios, refreshScenarios -- passes through. They are all optional on
+    // the contract, so omitting them typechecks cleanly and turns every caller's
+    // `accessor.classifyShape?.(...)` into a silent no-op: a trap that costs
+    // nothing today (GeneratorPatternTab touches only the four core methods) and
+    // bites the moment this wrapper is used higher up.
+    //
+    // Spread rather than delegation because the base is
+    // createLucidModelStateAccessor's object literal of closures, so the copied
+    // references stay bound. A class-instance base with methods on its prototype
+    // would need explicit delegation instead.
+    ...base,
     subscribe,
     getSnapshot,
     updateShape,
