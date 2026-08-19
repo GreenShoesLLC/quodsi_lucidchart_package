@@ -115,6 +115,33 @@ describe('createBufferingAccessor', () => {
     expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(8500)
   })
 
+  it('holds the flushed value visible when a STALE base snapshot arrives', async () => {
+    const base = makeBase({
+      generators: [{ id: 'g1', name: 'G', volume: 100 }], arrivalPatterns: [], model: {},
+    })
+    const buf = createBufferingAccessor(base.accessor as any, { debounceMs: 500 })
+
+    void buf.updateShape('g1', 'Generator', { volume: 8500 })
+    await buf.flush()
+
+    // A snapshot the host built BEFORE our write landed, so it still reports the
+    // old volume. Snapshots arrive unsolicited (a canvas edit, another panel's
+    // write, a refresh), not only as the echo of our own write -- so "a snapshot
+    // arrived" must never be read as "our write committed".
+    base.pushSnapshot({
+      generators: [{ id: 'g1', name: 'G', volume: 100 }], arrivalPatterns: [], model: {},
+    })
+
+    // The user must not watch their value snap back to 100 for a round trip.
+    expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(8500)
+
+    // ...and when the real echo does arrive, the base takes over cleanly.
+    base.pushSnapshot({
+      generators: [{ id: 'g1', name: 'G', volume: 8500 }], arrivalPatterns: [], model: {},
+    })
+    expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(8500)
+  })
+
   it('does not clobber an edit made while a flush was in flight', async () => {
     const base = makeBase({
       generators: [{ id: 'g1', name: 'G', volume: 100 }], arrivalPatterns: [], model: {},

@@ -386,9 +386,21 @@ export function createBufferingAccessor(
 
   /**
    * Move everything pending into inFlight and return it as the batch to send.
-   * Synchronous, and called at flush() entry rather than when the write
-   * actually starts: an edit typed after this point belongs to the NEXT batch
-   * and must stay in `pending`, where the older echo cannot retire it.
+   *
+   * THE TIMING HERE IS THE DESIGN, NOT AN IMPLEMENTATION DETAIL -- do not move
+   * this call inside the promise chain. It runs SYNCHRONOUSLY at flush() entry,
+   * before any await, so the batch is frozen the instant flush() is called.
+   * Everything the user types after that moment lands in `pending`, which is the
+   * one overlay a base snapshot can never retire (the host cannot be reporting a
+   * value it was never sent) and which outranks `inFlight` in the merge.
+   *
+   * That is what makes the during-a-flush case need no special handling at all:
+   * the echo of the OLD write retires only the old inFlight entry, and the newer
+   * pending edit -- untouched by reconcile, and merged after it -- is simply
+   * still there. Promote later (e.g. inside `flushChain.then(...)`, the shape
+   * this naturally wants to take) and the newer edit is swallowed into the same
+   * batch instead, so the case silently stops being exercised and the real
+   * mid-flight race stops being handled. See the module header.
    */
   function promotePending(): Batch | null {
     const shapes = Array.from(pendingShape.values())
