@@ -409,6 +409,101 @@ const GeneratorEditor: React.FC<Props> = ({
     setHasPendingChanges
   );
 
+  // ==========================================================================
+  // MODAL-AUTHORED FIELDS: adopt fresh values for the SAME generator
+  // ==========================================================================
+  //
+  // THE BUG THIS FIXES. useFormSync's effect depends on [elementId] only, so
+  // the draft is re-synced from props ONLY when the selection changes -- never
+  // when fresh data arrives for the generator already open. Meanwhile
+  // updateGeneratorImmutably deliberately carries volume/arrivalPatternId
+  // forward into every save. So: edit the volume in the arrival-pattern modal,
+  // close it, then change this generator's NAME here, and the panel's autosave
+  // writes the whole Generator back including the STALE volume -- silently
+  // reverting the modal's edit. The panel summary showed the stale volume too,
+  // until the generator was deselected and reselected.
+  //
+  // WHY PROPS AND NOT modelRootProjection. The modal's volume write is a
+  // SHAPE write (accessor.updateShape -> ELEMENT_UPDATE), and
+  // ElementOpsHandler deliberately does NOT push a MODEL_ROOT_SNAPSHOT after
+  // one (that split-brain race is documented in
+  // GeneratorEditor.pattern.test.tsx's fake host). What it DOES do, every
+  // time, is re-run SelectionHandler, which sends a fresh SELECTION_CHANGED to
+  // the 'model' panel -- i.e. new props for this component. So the projection
+  // can still be carrying the pre-edit volume when the props already carry the
+  // new one; props are the reliable source here and the projection is not.
+  //
+  // WHY NOT WIDEN useFormSync. It is shared by every editor (Activity,
+  // Resource, Entity, Connector, Model, ...). Widening it turns its currently
+  // unreachable "same element, no pending changes -> sync from props" branch
+  // live for all of them, and each of those extract*Data functions builds a
+  // NEW instance per call, so a prop-driven re-sync there needs per-editor
+  // value comparison to avoid a setState-per-render loop. That is a redesign
+  // with reach well beyond this bug. This effect touches exactly the two
+  // fields this panel never edits directly.
+  //
+  // WHY IT CANNOT CLOBBER AN IN-PROGRESS PANEL EDIT. Two reasons, and both
+  // matter:
+  //   1. It only ever writes volume/arrivalPatternId. No input in this form
+  //      produces those two (see updateGeneratorImmutably's own comment) --
+  //      the only local writer is the PATTERN mode-switch handler, which
+  //      persists the same values to the host in the same breath.
+  //   2. It fires on a CHANGE in the incoming values, not on a difference
+  //      between props and draft. A stale prop that merely disagrees with a
+  //      value the mode-switch handler just seeded locally does not fire,
+  //      because that prop did not change. (Prev-value-compare, not
+  //      skip-once: the latter is the pattern StrictMode's double-invoke
+  //      breaks.)
+  const incomingGeneratorData: any = (generator as any)?.data ?? generator;
+  const incomingVolume: number | undefined = incomingGeneratorData?.volume;
+  const incomingArrivalPatternId: string | undefined = incomingGeneratorData?.arrivalPatternId;
+  const lastSeenModalFieldsRef = useRef<{
+    id: string;
+    volume: number | undefined;
+    arrivalPatternId: string | undefined;
+  } | null>(null);
+
+  useEffect(() => {
+    const seen = lastSeenModalFieldsRef.current;
+    const next = {
+      id: generator.id,
+      volume: incomingVolume,
+      arrivalPatternId: incomingArrivalPatternId,
+    };
+
+    if (
+      seen &&
+      seen.id === next.id &&
+      seen.volume === next.volume &&
+      seen.arrivalPatternId === next.arrivalPatternId
+    ) {
+      return; // nothing new arrived
+    }
+
+    lastSeenModalFieldsRef.current = next;
+
+    // First sighting of this generator (mount, or a selection switch):
+    // useFormSync has already seeded the draft from these very props, so
+    // there is nothing to adopt and no baseline to compare against yet.
+    if (!seen || seen.id !== next.id) return;
+
+    setLocalGeneratorDraft(prev => {
+      if (prev.id !== next.id) return prev;
+      if (prev.volume === next.volume && prev.arrivalPatternId === next.arrivalPatternId) {
+        return prev; // already in step -- keep the reference stable
+      }
+      // Deliberately does NOT set hasPendingChanges: this is data coming FROM
+      // the host, not an edit by the user, and must not trigger a save of its
+      // own. If the user DOES have an edit in flight, the autosave effect
+      // already depends on `draft` and will carry the fresh value along with
+      // it -- which is exactly the clobber this fixes.
+      return updateGeneratorImmutably(prev, {
+        volume: next.volume,
+        arrivalPatternId: next.arrivalPatternId,
+      });
+    });
+  }, [generator.id, incomingVolume, incomingArrivalPatternId, updateGeneratorImmutably]);
+
   useSaveCompletionDetector(isSaving, setHasPendingChanges);
 
   const { status, lastSavedAt, saveNow } = useAutoSave<Generator>({

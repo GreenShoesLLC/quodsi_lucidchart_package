@@ -128,6 +128,82 @@ describe('PatternEditorView', () => {
     expect(accessor2).not.toBe(accessor1)
   })
 
+  // THE CLOSE PATH -- read this before trusting the unmount test below it.
+  //
+  // That unmount test exercises a lifecycle PRODUCTION NEVER RUNS: when a Lucid
+  // modal closes, the host destroys the iframe and the JS realm with it, so
+  // React never unmounts and no effect cleanup fires. It passes purely because
+  // RTL's unmount() calls the cleanup by hand. It is kept because it still pins
+  // the unmount case that DOES exist (a re-render swapping the view out), but it
+  // proves nothing about closing the modal.
+  //
+  // These do: they fire the events a real document teardown fires, with the
+  // component still mounted, and assert the write reached the base accessor.
+  //
+  // FAKE TIMERS ARE LOAD-BEARING HERE. With real timers the 500ms debounce
+  // fires on its own inside waitFor's 1s budget, so the test passes whether or
+  // not the listener exists -- exactly the mistake the unmount test made. Time
+  // is frozen below and never advanced, so the ONLY thing that can move the
+  // batch to the base accessor is the unload listener. (Verified by deleting
+  // the addEventListener calls: both cases below fail.)
+  //
+  // WHAT THEY STILL DO NOT PROVE: that a real browser lets the queued microtask
+  // run before it destroys the realm. jsdom keeps the document alive after the
+  // event, so the send always completes here. What is verified is the wiring --
+  // the listener exists, is bound to the live accessor, and promotes+sends the
+  // pending batch -- not that the race is won. See PatternEditorView's own
+  // comment for why that is the honest limit.
+  describe('close path (no unmount involved)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it.each(['pagehide', 'beforeunload'])(
+      'flushes a pending edit to the base accessor on "%s", with the debounce never allowed to fire',
+      async (eventName) => {
+        setSearch('view=pattern&shapeId=g1')
+        currentProjection = { generators: [], arrivalPatterns: [], model: {} }
+
+        render(<PatternEditorView />)
+
+        await act(async () => {
+          void lastProps.accessor.updateShape('g1', 'Generator', { volume: 42 })
+        })
+
+        // Time has NOT advanced: the debounce cannot have fired.
+        expect(baseAccessor.updateShape).not.toHaveBeenCalled()
+
+        await act(async () => {
+          window.dispatchEvent(new Event(eventName))
+        })
+
+        expect(baseAccessor.updateShape).toHaveBeenCalledWith('g1', 'Generator', { volume: 42 })
+      },
+    )
+
+    it('removes the listeners on unmount, so a later unload event writes nothing', async () => {
+      setSearch('view=pattern&shapeId=g1')
+      currentProjection = { generators: [], arrivalPatterns: [], model: {} }
+
+      const { unmount } = render(<PatternEditorView />)
+      const accessor = lastProps.accessor
+      unmount()
+      ;(baseAccessor.updateShape as any).mockClear()
+
+      await act(async () => {
+        void accessor.updateShape('g1', 'Generator', { volume: 7 })
+      })
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'))
+      })
+
+      expect(baseAccessor.updateShape).not.toHaveBeenCalled()
+    })
+  })
+
   it('flushes a pending edit through to the base accessor on unmount, so closing right after typing does not lose it', async () => {
     setSearch('view=pattern&shapeId=g1')
     currentProjection = { generators: [], arrivalPatterns: [], model: {} }

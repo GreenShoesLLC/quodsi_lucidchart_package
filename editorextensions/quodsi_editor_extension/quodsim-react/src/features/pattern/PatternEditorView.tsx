@@ -37,6 +37,12 @@
 // left to report a failure to. Nothing in this codebase proves Lucid keeps
 // the iframe alive long enough for a same-tick microtask to run before
 // teardown; this is a documented risk, not a verified guarantee.
+//
+// AND UNMOUNT IS NOT THE CLOSE PATH. Closing a Lucid modal destroys the
+// iframe outright -- React never unmounts, so that cleanup never runs in
+// production. The `pagehide`/`beforeunload` flush added below is what
+// actually covers "typed, then clicked X"; see its own comment for what it
+// does and does not guarantee.
 import { useEffect, useMemo } from 'react'
 import { GeneratorPatternTab } from 'quodsi_studio/platforms/shared'
 import { useModelRootSource } from '../../adapters/useModelRootSource'
@@ -65,8 +71,62 @@ export function PatternEditorView() {
     // user who types and immediately closes the modal does not lose the
     // edit -- see the module header for what this call does and does not
     // guarantee once the iframe itself is torn down.
+    //
+    // KEPT, but note it is NOT the close path. React unmount does not happen
+    // when a Lucid modal closes: the host destroys the modal iframe and the
+    // whole JS realm goes with it, so no cleanup, no component lifecycle.
+    // This cleanup is correct for the cases where React really does unmount
+    // (a re-render that swaps the view out, a test's unmount()), and those
+    // are the only cases it covers. The unload-time flush below is what
+    // covers the real close.
     return () => {
       accessor.dispose()
+    }
+  }, [accessor])
+
+  // THE CLOSE PATH.
+  //
+  // Clicking the modal's X tears down this iframe's document. Nothing else in
+  // this bundle reacts to that: index.tsx's `unload` listener only runs the
+  // messaging cleanup and never calls root.unmount(). Without the listeners
+  // below, the ONLY thing that ever moved an edit to the host was the 500ms
+  // debounce -- so anything typed in the last ~500ms before the click was
+  // silently dropped.
+  //
+  // WHAT THIS BUYS, HONESTLY. flush() promotes the pending batch
+  // SYNCHRONOUSLY, but the base accessor's window.parent.postMessage runs on
+  // the following microtask (the accessor serializes sends through an
+  // internal promise queue). Microtasks queued during an unload event still
+  // drain inside that same task in every engine we target, so the message is
+  // normally handed to the parent window before the realm dies -- and once
+  // postMessage has been CALLED, delivery no longer depends on this iframe
+  // surviving. But "normally" is the honest word: this is a narrow race we
+  // are winning by convention, not a guarantee the platform gives us. It is
+  // strictly better than the debounce-only status quo, not airtight. Making
+  // it airtight needs a synchronous send path (design change), not a
+  // different event name.
+  //
+  // WHY BOTH EVENTS. `pagehide` is the primary hook -- it is the modern
+  // document-unload signal and fires when a nested browsing context is
+  // discarded, which is what modal close does. `beforeunload` is added as a
+  // belt-and-braces earlier hook for the whole-tab navigation case, where it
+  // fires before unloading begins and therefore gives the queued microtask
+  // the most room. It costs nothing: a listener that never calls
+  // preventDefault and never sets returnValue cannot raise a "leave site?"
+  // prompt. Both call the same flush, which is idempotent -- a second call
+  // with nothing pending just drains the queue.
+  useEffect(() => {
+    const flushNow = () => {
+      void accessor.flush().catch(() => {
+        // Nobody left to report to: the document is going away. rollback()
+        // has already returned the edit to the overlay, which dies with it.
+      })
+    }
+    window.addEventListener('pagehide', flushNow)
+    window.addEventListener('beforeunload', flushNow)
+    return () => {
+      window.removeEventListener('pagehide', flushNow)
+      window.removeEventListener('beforeunload', flushNow)
     }
   }, [accessor])
 

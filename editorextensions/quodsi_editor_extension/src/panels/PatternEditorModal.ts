@@ -14,9 +14,17 @@ import { RoutingModal } from './RoutingModal';
  * 'studio-embed'.
  */
 export class PatternEditorModal extends RoutingModal {
+  /**
+   * Invoked once this modal's iframe has closed. ModelRootHandler uses it to
+   * release its "a pattern modal is open" guard -- see handleOpenPatternModal.
+   * Assigned after super() (no `this` before it) and read only from
+   * frameClosed, which cannot fire before the constructor returns.
+   */
+  private readonly onClosed?: () => void;
+
   constructor(
     client: EditorClient,
-    opts: { shapeId: string; modalSize?: ModalSize },
+    opts: { shapeId: string; modalSize?: ModalSize; onClosed?: () => void },
   ) {
     const url = `quodsim-react/index.html?view=pattern&shapeId=${encodeURIComponent(opts.shapeId)}`;
     const size = opts.modalSize ?? DEFAULT_MODAL_SIZE;
@@ -25,5 +33,16 @@ export class PatternEditorModal extends RoutingModal {
         ? { fullScreen: true as const }
         : MODAL_SIZE_DIMENSIONS[size];
     super(client, { url, title: 'Arrival Pattern', ...sizeOpts }, 'pattern');
+    this.onClosed = opts.onClosed;
+  }
+
+  /**
+   * RoutingModal.frameClosed does the channel teardown; this adds the
+   * open-guard release on top. Ordering: super() first, so the channel is
+   * already released by the time anything reacts to the callback.
+   */
+  protected frameClosed(): void {
+    super.frameClosed();
+    this.onClosed?.();
   }
 }

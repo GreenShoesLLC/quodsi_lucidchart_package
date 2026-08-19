@@ -264,6 +264,53 @@ describe('createBufferingAccessor', () => {
     expect(accessor.updateShape).toHaveBeenCalledTimes(1)
   })
 
+  // React 18 StrictMode (dev builds only) mounts, runs every effect cleanup,
+  // then mounts again. useSyncExternalStore therefore calls subscribe ->
+  // unsubscribe -> subscribe, and the consumer's own effect cleanup calls
+  // dispose() in between. With a one-way `disposed` latch the accessor came
+  // back from that cycle permanently dead: edits rendered locally and NOTHING
+  // reached the host, in the exact build a developer runs.
+  it('still writes to the host after a StrictMode-style mount -> dispose -> re-mount cycle', async () => {
+    const { accessor } = makeBase()
+    const buf = createBufferingAccessor(accessor as any, { debounceMs: 500 })
+
+    // First (throwaway) StrictMode mount.
+    const unsubscribe = buf.subscribe(() => {})
+    unsubscribe()
+    buf.dispose()
+
+    // Second (real) mount: useSyncExternalStore subscribes again.
+    buf.subscribe(() => {})
+
+    void buf.updateShape('g1', 'Generator', { volume: 8500 })
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(accessor.updateShape).toHaveBeenCalledWith('g1', 'Generator', { volume: 8500 })
+  })
+
+  it('re-attaches to the base after revival, so host snapshots still reconcile', async () => {
+    const base = makeBase({
+      generators: [{ id: 'g1', name: 'G', volume: 100 }], arrivalPatterns: [], model: {},
+    })
+    const buf = createBufferingAccessor(base.accessor as any, { debounceMs: 500 })
+
+    buf.subscribe(() => {})()
+    buf.dispose()
+
+    const listener = vi.fn()
+    buf.subscribe(listener)
+
+    // A host-originated change must still reach both the merged snapshot and
+    // the (re-)subscribed listener -- a revived accessor that never re-attached
+    // to the base would serve the snapshot it was frozen with.
+    base.pushSnapshot({
+      generators: [{ id: 'g1', name: 'G', volume: 777 }], arrivalPatterns: [], model: {},
+    })
+
+    expect(listener).toHaveBeenCalled()
+    expect((buf.getSnapshot().modelDefinition as any).generators[0].volume).toBe(777)
+  })
+
   it('reports an earlier failure to a close-path flush() that has nothing of its own', async () => {
     const { accessor } = makeBase()
     accessor.updateShape.mockRejectedValueOnce(new Error('host said no'))

@@ -12,10 +12,10 @@
 // whose source is 'pattern-iframe' gets its RESULT routed to 'pattern';
 // everything else (source 'model-iframe', the side panel) still gets
 // 'model' -- unchanged from before this task, so the working panel path is
-// provably unaffected. The follow-up MODEL_ROOT_SNAPSHOT stays a broadcast
-// regardless of the requester (that's a different concern, pinned already
-// by modelRootHandler.broadcast.test.ts -- this file only re-confirms it
-// survives the routing change).
+// provably unaffected. The follow-up MODEL_ROOT_SNAPSHOT goes to BOTH
+// consuming surfaces regardless of the requester (that's a different concern,
+// pinned in detail by modelRootHandler.broadcast.test.ts -- this file only
+// re-confirms it survives the routing change).
 //
 // Mocking style mirrors tests/messaging/modelRootHandler.broadcast.test.ts
 // (Task 2's closely-related test): mock lucid-extension-sdk's Viewport in
@@ -30,8 +30,18 @@ let currentPage: any = null;
 };
 
 const sendMock = jest.fn();
+// A pattern modal is open in this file's scenarios (the updates under test
+// originate FROM it), so its channel has a registered panel -- which is what
+// sendSnapshot consults before addressing the 'pattern' channel.
+let patternChannelPanel: unknown = { relayToIframe: () => undefined };
 jest.mock('../../src/core/messaging/index', () => ({
-  router: { send: sendMock },
+  router: {
+    send: sendMock,
+    getChannelManager: () => ({
+      getChannel: (role: string) =>
+        role === 'pattern' ? { ready: true, queue: [], panel: patternChannelPanel } : undefined,
+    }),
+  },
 }));
 
 let modelManagerStub: any;
@@ -65,6 +75,7 @@ function updateMsg(source: string, id: string): any {
 
 beforeEach(() => {
   sendMock.mockClear();
+  patternChannelPanel = { relayToIframe: () => undefined };
   currentPage = { id: 'page-1' };
   modelManagerStub = {
     buildModelRootProjection: async () => ({ generators: [], arrivalPatterns: [] }),
@@ -94,14 +105,16 @@ describe('ModelRootHandler.getResponseChannel routing', () => {
     expect(resultMsg.data.success).toBe(true);
   });
 
-  it('still broadcasts the follow-up MODEL_ROOT_SNAPSHOT after a pattern-originated update (Task 2 behaviour unaffected)', async () => {
+  it('still refreshes BOTH surfaces with the follow-up MODEL_ROOT_SNAPSHOT after a pattern-originated update', async () => {
     await (ModelRootHandler as any).handleUpdate(updateMsg('pattern-iframe', 'req-pattern-2'));
     await flush();
 
-    expect(sendMock).toHaveBeenCalledTimes(2);
-    const [snapshotTarget, snapshotMsg] = sendMock.mock.calls[1];
-    expect(snapshotTarget).toBe('broadcast');
-    expect(snapshotMsg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
+    // RESULT to the requester, then the snapshot to the panel AND the modal.
+    expect(sendMock).toHaveBeenCalledTimes(3);
+    expect(sendMock.mock.calls.slice(1).map(([t]: [string]) => t)).toEqual(['model', 'pattern']);
+    for (const [, msg] of sendMock.mock.calls.slice(1)) {
+      expect(msg.type).toBe(EnvelopeMessageType.MODEL_ROOT_SNAPSHOT);
+    }
   });
 
   it('routes a failed pattern-originated update\'s RESULT to "pattern" too, and never broadcasts the error', async () => {

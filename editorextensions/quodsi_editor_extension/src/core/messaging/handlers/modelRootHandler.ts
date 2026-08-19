@@ -14,6 +14,13 @@ const log = getLogger('ModelRootHandler');
  * ModelManager.updateModelRoot; this handler forwards the patch verbatim.
  */
 export class ModelRootHandler {
+  /**
+   * The pattern-editor modal currently open, if any. Set synchronously in
+   * handleOpenPatternModal (before show(), so a second click in the same tick
+   * already sees it) and cleared by that modal's own frameClosed callback.
+   */
+  private static openPatternModal: PatternEditorModal | null = null;
+
   public static handleMessage(msg: EnvelopeBase): boolean {
     switch (msg.type) {
       case EnvelopeMessageType.MODEL_ROOT_REQUEST:
@@ -50,10 +57,37 @@ export class ModelRootHandler {
       log.error('OPEN_PATTERN_MODAL: missing shapeId');
       return;
     }
-    new PatternEditorModal(ModelManager.getClient(), {
+
+    // SINGLETON GUARD. 'pattern' is a singleton channel on the router, and
+    // this path has no server round trip to slow the button down (unlike the
+    // Studies surfaces, which at least had an UpsertModel in the way). A
+    // double-click therefore opened TWO modals, and the second one's
+    // frameLoaded re-registered the channel over the first: the first modal's
+    // replies were then routed to the second, and its own writes hung for the
+    // full 30s MODEL_ROOT_UPDATE timeout before rejecting.
+    //
+    // There is no precedent for a singleton-surface guard elsewhere in this
+    // codebase (the embed modals are all unguarded), so this keeps it as
+    // simple as possible: hold the open modal, refuse a second open, release
+    // on frameClosed. The release is identity-checked so a late frameClosed
+    // from an earlier modal cannot clear a newer one's claim -- the same race
+    // RoutingModal.frameClosed already guards its channel teardown against.
+    if (ModelRootHandler.openPatternModal) {
+      log.debug('OPEN_PATTERN_MODAL: a pattern modal is already open; ignoring');
+      return;
+    }
+
+    const modal = new PatternEditorModal(ModelManager.getClient(), {
       shapeId: data.shapeId,
       modalSize: data.modalSize,
-    }).show();
+      onClosed: () => {
+        if (ModelRootHandler.openPatternModal === modal) {
+          ModelRootHandler.openPatternModal = null;
+        }
+      },
+    });
+    ModelRootHandler.openPatternModal = modal;
+    modal.show();
   }
 
   /**
@@ -82,17 +116,52 @@ export class ModelRootHandler {
 
     const projection = await modelManager.buildModelRootProjection(currentPage);
 
-    // Broadcast (not just to 'model'): the pattern modal listens on its own
-    // 'pattern' channel, and both surfaces need the fresh projection so the
-    // panel's summary stays in sync while the modal is open editing it.
-    router.send('broadcast', {
-      id: correlationId,
-      type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
-      source: 'host',
-      target: 'model-iframe',
-      version: '1.0',
-      data: { projection },
-    });
+    // Sent to the two surfaces that CONSUME a model-root snapshot -- the side
+    // panel and the pattern-editor modal -- rather than broadcast.
+    //
+    // Both must still receive it: that was the point of the change that
+    // introduced the broadcast (the panel's summary has to stay in sync while
+    // the modal is open editing the same model root). What broadcast added on
+    // top of that was pure cost. MessageRouter.send('broadcast') iterates ALL
+    // FOUR roles and ChannelManager.enqueueOrSend QUEUES for any channel with
+    // no panel, so every snapshot was retained forever in the 'results' and
+    // 'studio-embed' queues (neither surface reads MODEL_ROOT_SNAPSHOT, so
+    // nothing ever drains them until one happens to open), and
+    // ensureChannelHasPanel logged an error-level "Could not recover panel
+    // for ..." three times per snapshot -- at a level production prints.
+    //
+    // WHY THIS SHAPE AND NOT A ROUTER CHANGE. The alternative was teaching the
+    // router/ChannelManager to skip the enqueue for a "snapshot class" of
+    // message. The router has no concept of message classes -- its send() is
+    // deliberately per-target, and this file's own getResponseChannel already
+    // picks a target per message. Naming targets is using the router as
+    // designed; a message-class exception would be new machinery on a shared
+    // component for one message type.
+    //
+    // 'model' is sent unconditionally -- its queue is legitimate: a snapshot
+    // that predates REACT_APP_READY must wait for the panel, and that queue is
+    // drained on ready. 'pattern' is skipped when no modal is registered,
+    // because a closed modal's queue is never drained by anyone (RoutingModal
+    // clears it on frameClosed) -- and a modal that opens LATER asks for its
+    // own snapshot on mount via MODEL_ROOT_REQUEST, so it loses nothing.
+    const channelManager = router.getChannelManager();
+    const targets: PanelRole[] = ['model'];
+    if (channelManager.getChannel('pattern')?.panel) {
+      targets.push('pattern');
+    }
+
+    for (const target of targets) {
+      // A fresh envelope per target: router.send mutates msg.target in place,
+      // so a shared object would leave the second send stamping over the first.
+      router.send(target, {
+        id: correlationId,
+        type: EnvelopeMessageType.MODEL_ROOT_SNAPSHOT,
+        source: 'host',
+        target: `${target}-iframe`,
+        version: '1.0',
+        data: { projection },
+      });
+    }
   }
 
   private static async handleUpdate(msg: EnvelopeBase): Promise<void> {

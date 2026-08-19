@@ -446,19 +446,54 @@ export function createBufferingAccessor(
   // that predates every write this accessor will ever make.
   syncBase()
 
-  // Subscribed eagerly rather than ref-counted (the idiom
-  // createLucidModelStateAccessor uses) because reconciliation must keep
-  // running whether or not React is currently subscribed: an overlay left
-  // un-retired would keep masking the host's own later changes. dispose()
-  // is the teardown.
-  const unsubscribeBase = base.subscribe(() => {
+  function onBaseChanged(): void {
     syncBase()
     // Notify unconditionally: base notifications also carry saveStatus /
     // saveError changes, which are part of the snapshot we hand out.
     notify()
-  })
+  }
 
+  // Subscribed eagerly rather than ref-counted (the idiom
+  // createLucidModelStateAccessor uses) because reconciliation must keep
+  // running whether or not React is currently subscribed: an overlay left
+  // un-retired would keep masking the host's own later changes. dispose()
+  // is the teardown -- a REVERSIBLE one, see subscribe() below.
+  let unsubscribeBase = base.subscribe(onBaseChanged)
+
+  /**
+   * Subscribe -- and revive the accessor if it was disposed.
+   *
+   * WHY REVIVAL EXISTS. `disposed` used to be a one-way latch, and React 18's
+   * StrictMode makes a one-way latch fatal in dev builds: it mounts, runs every
+   * effect cleanup, then mounts again. The consumer's cleanup calls dispose(),
+   * so by the time the real (second) mount is live the accessor is permanently
+   * dead -- scheduleFlush() early-returns forever, typing renders locally and
+   * NOTHING is ever written to the host. Production bundles never hit it, which
+   * is exactly what makes it expensive: it only bites whoever is developing.
+   *
+   * Revival hangs off subscribe() rather than off each write because subscribe()
+   * is the signal that a live consumer has attached -- useSyncExternalStore
+   * calls it on (re-)mount, which is precisely the StrictMode re-mount. A write
+   * against an accessor nobody is subscribed to stays inert, so a stray timer
+   * from a genuinely-finished consumer still cannot write through.
+   */
   function subscribe(listener: () => void): () => void {
+    if (disposed) {
+      disposed = false
+      // Re-attach to the base. The old unsubscribe already ran in dispose(),
+      // so this is a fresh subscription, not a duplicate.
+      unsubscribeBase = base.subscribe(onBaseChanged)
+      // Catch up on anything the base changed while we were detached --
+      // otherwise the merged snapshot could keep serving a stale base and the
+      // inFlight bound would be counted against the wrong sequence.
+      syncBase()
+      // Anything dispose()'s final flush left pending (a rejected write rolled
+      // back into the overlay) deserves another attempt now that a consumer is
+      // watching again.
+      if (pendingShape.size > 0 || Object.keys(pendingModel).length > 0) {
+        scheduleFlush()
+      }
+    }
     listeners.add(listener)
     return () => {
       listeners.delete(listener)
@@ -720,6 +755,9 @@ export function createBufferingAccessor(
    * and dispose()'s own is then a cheap no-op that just drains the queue.
    */
   function dispose(): void {
+    // NOT a one-way latch: subscribe() clears `disposed` and re-attaches if a
+    // consumer comes back (React StrictMode's dev-only mount/cleanup/re-mount
+    // does exactly that). See subscribe()'s own comment.
     if (disposed) return
     cancelTimer()
     void flush().catch(() => {
