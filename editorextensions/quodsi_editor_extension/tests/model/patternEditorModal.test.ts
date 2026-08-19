@@ -32,6 +32,16 @@ function configOf(modal: PatternEditorModal): any {
     return (modal as any).config;
 }
 
+/**
+ * RoutingModal stores its constructor's third argument -- the channel role
+ * -- on the private `channelRole` field (see RoutingModal.ts's
+ * `messageFromFrame`, which reads `${this.channelRole}-iframe`). Private is
+ * compile-time only; `as any` reaches the real runtime field.
+ */
+function channelRoleOf(modal: PatternEditorModal): unknown {
+    return (modal as any).channelRole;
+}
+
 describe('PatternEditorModal', () => {
     it('sizes as fullScreen when the preference is "fullscreen"', () => {
         const modal = new PatternEditorModal(FAKE_CLIENT, { shapeId: 'gen-1', modalSize: 'fullscreen' });
@@ -79,5 +89,16 @@ describe('PatternEditorModal', () => {
         const modal = new PatternEditorModal(FAKE_CLIENT, { shapeId: 'gen-1' });
         expect(configOf(modal).title).toBe('Arrival Pattern');
         expect(configOf(modal).chromeless).toBeFalsy();
+    });
+
+    it('registers itself on the "pattern" channel, not "model" or any other role', () => {
+        // The channel role is what makes the modal reachable by the router
+        // (RoutingModal.frameLoaded registers it, messageFromFrame stamps
+        // outgoing envelopes with it). A copy-paste of 'model' here would
+        // pass every other test in this file -- url/size/title are all
+        // independent of it -- and produce a modal that opens and then
+        // silently receives nothing.
+        const modal = new PatternEditorModal(FAKE_CLIENT, { shapeId: 'gen-1' });
+        expect(channelRoleOf(modal)).toBe('pattern');
     });
 });
