@@ -42,6 +42,7 @@ export type {
 export type { ISerializedEntitySourceConfig } from './interfaces/ISerializedEntitySourceConfig';
 export type { ISerializedScenarioChangeRequest } from './interfaces/ISerializedScenarioChangeRequest';
 export type { ISerializedScenario } from './interfaces/ISerializedScenario';
+export type { ISerializedArrivalPattern } from './interfaces/ISerializedArrivalPattern';
 // Errors
 export { SerializerError } from './errors/SerializerError';
 export { InvalidModelError } from './errors/InvalidModelError';

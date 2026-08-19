@@ -54,6 +54,8 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
             // writer (`scaffold_clean.json` carries neither an empty `states` array
             // scenario here nor a `scenarios` key at all when there is nothing to say).
             const scenarios = modelDefinition.scenarios.getAll().map(scenario => scenario.toJSON());
+            const arrivalPatterns = modelDefinition.arrivalPatterns.getAll()
+                .map(pattern => pattern.toJSON());
 
             const document = {
                 schemaVersion: MODEL_SCHEMA_VERSION,
@@ -80,7 +82,8 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                 states: modelDefinition.states.getAll().map(state =>
                     this.serializeState(state)
                 ),
-                scenarios: scenarios.length ? scenarios : undefined
+                scenarios: scenarios.length ? scenarios : undefined,
+                arrivalPatterns: arrivalPatterns.length ? arrivalPatterns : undefined
             };
 
             return JSON.parse(JSON.stringify(document)) as ISerializedModelV1;
