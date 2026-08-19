@@ -141,4 +141,109 @@ describe('LucidVersionUpgrader arrival schedules (Task 4)', () => {
 
         expect(page.shapeData.get('q_arrival_schedules')).toBe(originalRaw);
     });
+
+    it('lands every page-level list and the shape target in its own key, pinning the whole segment ladder (requirements -> states -> patterns -> schedules)', async () => {
+        // Task 4 review fix: the earlier slice-bounds test only ever pinned
+        // the patterns->schedules boundary (R = S = 0 there). Trap 2 has now
+        // bitten twice on this branch -- this test stores ALL FOUR
+        // page-level lists plus a real shape target at once, so the next
+        // person appending a fifth list gets a failing test on cross-
+        // contamination at ANY boundary, not just the last one.
+        const page = makeUpgradePage('page-ladder');
+        setOldShapeModelBlob(page);
+
+        const activityBlock = { id: 'activity-1', shapeData: (() => {
+            const m = new Map<string, string>();
+            return { get: (k: string) => m.get(k), set: (k: string, v: string) => { m.set(k, v); }, delete: (k: string) => { m.delete(k); } };
+        })() } as any;
+        activityBlock.shapeData.set('q_data', JSON.stringify({
+            type: 'Activity',
+            id: 'activity-1',
+            version: '2026.10.11',
+            name: 'Triage',
+            capacity: 1,
+            connectType: 'Probability',
+            inboundQueueCapacity: 999999,
+            outboundQueueCapacity: 999999,
+        }));
+        page.allBlocks.set('activity-1', activityBlock);
+
+        const oldRequirement = {
+            id: 'rr-1',
+            name: 'RR1',
+            rootClauses: [
+                {
+                    clauseId: 'clause-1',
+                    mode: 'REQUIRE_ALL',
+                    requests: [{ resourceId: 'r1', quantity: 1, priority: 1, keepResource: false }],
+                    subClauses: [],
+                },
+            ],
+        };
+        page.shapeData.set('q_res_requirements', JSON.stringify([oldRequirement]));
+
+        const oldState = {
+            id: 'state-1',
+            name: 'priority',
+            componentType: 'ENTITY',
+            dataType: 'NUMBER',
+            initialValue: 0,
+            collectStatistics: true,
+        };
+        page.shapeData.set('q_states', JSON.stringify([oldState]));
+
+        const oldPattern = {
+            type: 'ArrivalPattern', id: 'ap-1', name: 'P1', cycle: 'DAY',
+        };
+        page.shapeData.set('q_arrival_patterns', JSON.stringify([oldPattern]));
+
+        const oldSchedule = {
+            type: 'ArrivalSchedule', id: 'sched-1', name: 'Schedule1',
+            timeUnit: 'MINUTES', arrivals: [{ time: 5, quantity: 1, entityId: 'entity-b' }],
+        };
+        page.shapeData.set('q_arrival_schedules', JSON.stringify([oldSchedule]));
+
+        const upgrader = new LucidVersionUpgrader('2026.11.01');
+        await (upgrader as any).performUpgrade(page);
+
+        // The shape target (index 0 in the combined call, alongside the
+        // page itself) upgraded on its own -- no requirement/state/pattern/
+        // schedule fields leaked onto it.
+        const upgradedActivity = JSON.parse(activityBlock.shapeData.get('q_data'));
+        const activityDomain = upgradedActivity.domain ?? upgradedActivity;
+        expect(activityDomain.routing).toBe('probability');
+        expect(activityDomain).not.toHaveProperty('rootClause');
+        expect(activityDomain).not.toHaveProperty('cycle');
+        expect(activityDomain).not.toHaveProperty('timeUnit');
+
+        const storedRequirements = JSON.parse(page.shapeData.get('q_res_requirements'));
+        expect(storedRequirements).toHaveLength(1);
+        expect(storedRequirements[0].id).toBe('rr-1');
+        expect(storedRequirements[0]).not.toHaveProperty('componentType');
+        expect(storedRequirements[0]).not.toHaveProperty('cycle');
+        expect(storedRequirements[0]).not.toHaveProperty('timeUnit');
+
+        const storedStates = JSON.parse(page.shapeData.get('q_states'));
+        expect(storedStates).toHaveLength(1);
+        expect(storedStates[0].id).toBe('state-1');
+        expect(storedStates[0]).not.toHaveProperty('rootClause');
+        expect(storedStates[0]).not.toHaveProperty('cycle');
+        expect(storedStates[0]).not.toHaveProperty('timeUnit');
+
+        const storedPatterns = JSON.parse(page.shapeData.get('q_arrival_patterns'));
+        expect(storedPatterns).toHaveLength(1);
+        expect(storedPatterns[0].id).toBe('ap-1');
+        expect(storedPatterns[0].cycle).toBe('day');
+        expect(storedPatterns[0]).not.toHaveProperty('componentType');
+        expect(storedPatterns[0]).not.toHaveProperty('timeUnit');
+        expect(storedPatterns[0]).not.toHaveProperty('arrivals');
+
+        const storedSchedules = JSON.parse(page.shapeData.get('q_arrival_schedules'));
+        expect(storedSchedules).toHaveLength(1);
+        expect(storedSchedules[0].id).toBe('sched-1');
+        expect(storedSchedules[0].timeUnit).toBe('minutes');
+        expect(storedSchedules[0]).not.toHaveProperty('componentType');
+        expect(storedSchedules[0]).not.toHaveProperty('cycle');
+        expect(storedSchedules[0]).not.toHaveProperty('rootClause');
+    });
 });

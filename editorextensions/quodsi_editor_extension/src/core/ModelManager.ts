@@ -476,6 +476,43 @@ export class ModelManager {
             }
         }
 
+        // Check if this is a Generator with a linked ArrivalSchedule - if so,
+        // remove the schedule UNLESS another generator still references it.
+        // Same shape as the ArrivalPattern block above, and for the same
+        // reason: this method's two callers (saveElementData's un-convert
+        // path, LucidPageConversionService's re-conversion path) run with a
+        // live element proxy, BEFORE the generator record is removed below,
+        // so `arrivalScheduleId` is still on hand here. The rebuild-diff
+        // branch in detectAndCleanupDeletedElements cannot substitute for
+        // this: removeElement mutates `modelDef.generators` in place, so by
+        // the next rebuild `oldModel` no longer carries the deleted
+        // generator's `arrivalScheduleId` and the diff never sees it -- an
+        // un-converted or re-converted SCHEDULED generator's schedule would
+        // otherwise survive forever in q_arrival_schedules as silent dead
+        // data (no validation rule flags an unreferenced schedule).
+        //
+        // A generator can carry both arrivalPatternId and arrivalScheduleId
+        // at once (Lucid storage strips `undefined`, not stale defined
+        // values, so a stale id can survive a mode switch) -- this block is
+        // independent of the pattern block above and fires on its own.
+        const scheduleIdToCheck = existingGenerator?.arrivalScheduleId;
+        if (scheduleIdToCheck) {
+            const stillReferencedSchedule = modelDef.generators.getAll().some(
+                g => g.id !== elementId && g.arrivalScheduleId === scheduleIdToCheck
+            );
+            if (!stillReferencedSchedule) {
+                this.debug.debug('Generator deletion detected, removing orphaned ArrivalSchedule:', {
+                    elementId,
+                    scheduleId: scheduleIdToCheck
+                });
+                modelDef.arrivalSchedules.remove(scheduleIdToCheck);
+                this.storageAdapter.setArrivalSchedules(
+                    this.currentPage,
+                    modelDef.arrivalSchedules.getAll().map(s => s.toJSON()) as ISerializedArrivalSchedule[]
+                );
+            }
+        }
+
         // Remove from all list managers
         modelDef.activities.remove(elementId);
         modelDef.connectors.remove(elementId);

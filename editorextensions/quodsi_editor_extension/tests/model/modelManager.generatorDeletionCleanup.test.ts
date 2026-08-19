@@ -256,4 +256,44 @@ describe('ModelManager.detectAndCleanupDeletedElements - Generator deletion (arr
         expect(newModel.arrivalSchedules.get('sched-untouched')).toBeDefined();
         expect(storage.getArrivalSchedules(page)).toEqual([unrelatedSchedule.toJSON()]);
     });
+
+    it('removes both an orphaned pattern and an orphaned schedule when a generator carrying both stale ids is deleted', async () => {
+        // Genuinely reachable state (review finding): Lucid storage strips
+        // `undefined`, not stale-but-defined values, so a generator that
+        // switched modes can end up carrying both arrivalPatternId and
+        // arrivalScheduleId at once. Both branches in
+        // detectAndCleanupDeletedElements are independent and must each
+        // fire for the same deleted generator.
+        const storage = new StorageAdapter();
+        const page = makeFakePage('page-1');
+
+        const oldModel = new ModelDefinition(new Model('model-1', 'Test Model', 1));
+        const generator = new Generator('gen-both', 'GenBoth', 'entity-default');
+        generator.mode = GeneratorType.SCHEDULED;
+        generator.arrivalPatternId = 'pattern-stale';
+        generator.arrivalScheduleId = 'sched-current';
+        oldModel.generators.add(generator);
+
+        const pattern = new ArrivalPattern('pattern-stale', 'Stale pattern');
+        oldModel.arrivalPatterns.add(pattern);
+        const schedule = new ArrivalSchedule('sched-current', 'Current schedule');
+        oldModel.arrivalSchedules.add(schedule);
+
+        // New model: gen-both was deleted on canvas; both lists are still
+        // loaded independently from page storage until cleanup runs.
+        const newModel = new ModelDefinition(new Model('model-1', 'Test Model', 1));
+        newModel.arrivalPatterns.add(new ArrivalPattern('pattern-stale', 'Stale pattern'));
+        newModel.arrivalSchedules.add(new ArrivalSchedule('sched-current', 'Current schedule'));
+
+        storage.setArrivalPatterns(page, [pattern.toJSON() as ISerializedArrivalPattern]);
+        storage.setArrivalSchedules(page, [schedule.toJSON() as ISerializedArrivalSchedule]);
+
+        const manager = new ModelManager(storage);
+        await (manager as any).detectAndCleanupDeletedElements(oldModel, newModel, page);
+
+        expect(newModel.arrivalPatterns.get('pattern-stale')).toBeUndefined();
+        expect(storage.getArrivalPatterns(page)).toEqual([]);
+        expect(newModel.arrivalSchedules.get('sched-current')).toBeUndefined();
+        expect(storage.getArrivalSchedules(page)).toEqual([]);
+    });
 });
