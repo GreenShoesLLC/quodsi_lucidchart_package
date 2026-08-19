@@ -25,16 +25,13 @@ export default defineConfig({
   // because rolldown converts CJS to ESM at build time, which is exactly why
   // this only ever broke dev.
   optimizeDeps: {
-    // @quodsi/lucid-shared is a LINKED (file:) dependency compiling to
-    // CommonJS; without pre-bundling, the dev server hands raw CJS to the
-    // browser as ESM and every named import resolves to nothing (blank page).
     include: [
       '@quodsi/lucid-shared',
-      // Heavy node_modules deps reached ONLY through the excluded
-      // quodsi_studio source. Without this, Vite discovers them on demand the
-      // first time a panel using them renders and does a full-page reload
-      // ("optimized dependencies changed. reloading"). Front-loading them to
-      // server boot avoids that mid-session reload. Mirrors quodsi_drawio.
+      // Pre-bundled to front-load them at server boot and avoid a
+      // mid-session "optimized dependencies changed, reloading" full-page
+      // reload. @dnd-kit/core and @dnd-kit/sortable are already direct
+      // dependencies of quodsim-react (used by ActivityEditor.tsx);
+      // @dnd-kit/utilities arrives only via Studio's panels.
       '@dnd-kit/core',
       '@dnd-kit/sortable',
       '@dnd-kit/utilities',
