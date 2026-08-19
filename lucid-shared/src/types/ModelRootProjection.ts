@@ -1,4 +1,5 @@
 import { ISerializedArrivalPattern } from '../serialization/interfaces/ISerializedArrivalPattern';
+import { ISerializedArrivalSchedule } from '../serialization/interfaces/ISerializedArrivalSchedule';
 
 /**
  * Plain-data projection of the model root read by shared cross-platform
@@ -26,6 +27,12 @@ export type ModelRootProjection = {
         volume?: number;
     }>;
     arrivalPatterns: ISerializedArrivalPattern[];
+    // Optional (unlike arrivalPatterns) so the pre-existing ModelRootProjection
+    // literals in quodsim-react's tests -- written before this field existed --
+    // stay valid without a scope-creeping edit here. ModelManager.buildModelRootProjection
+    // always populates it; there is no UI consumer yet (Task 3 of the
+    // arrival-schedules persistence plan is host-side only).
+    arrivalSchedules?: ISerializedArrivalSchedule[];
     model: {
         timeMode?: string;
         startDateTime?: string | null;

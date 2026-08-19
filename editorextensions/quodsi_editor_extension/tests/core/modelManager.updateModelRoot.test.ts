@@ -4,6 +4,8 @@ describe('ModelManager.updateModelRoot', () => {
     const storageAdapter = {
       setArrivalPatterns: (_p: unknown, v: unknown) => { saved.arrivalPatterns = v; },
       getArrivalPatterns: () => [],
+      setArrivalSchedules: (_p: unknown, v: unknown) => { saved.arrivalSchedules = v; },
+      getArrivalSchedules: () => [],
     };
     const changeTracker = {
       modelDefinitionDirty: false,
@@ -32,6 +34,46 @@ describe('ModelManager.updateModelRoot', () => {
     // a caller that reads buildModelRootProjection right after a write must
     // not see a stale cached ModelDefinition, even without an intervening
     // validateModel() call.
+    expect(changeTracker.modelDefinitionDirty).toBe(true);
+  });
+
+  it('persists an arrivalSchedules patch and self-invalidates the ModelDefinition cache', async () => {
+    const { saved, storageAdapter, changeTracker } = harness();
+    const { ModelManager } = require('../../src/core/ModelManager');
+    const mm: any = Object.create(ModelManager.prototype);
+    mm.storageAdapter = storageAdapter;
+    mm.debug = { debug: () => {}, error: () => {} };
+    mm.changeTracker = changeTracker;
+
+    await mm.updateModelRoot({ arrivalSchedules: [{ id: 'as-1', name: 'S1' }] }, { id: 'page-1' });
+
+    expect(saved.arrivalSchedules).toEqual([{ id: 'as-1', name: 'S1' }]);
+    expect(changeTracker.modelDefinitionDirty).toBe(true);
+  });
+
+  // The one worth having: a single patch carrying BOTH model-root keys must
+  // persist both. This is the actual test of whether updateModelRoot's
+  // dispatch generalised for a second model-level list, or whether
+  // arrivalSchedules just became a second hardcoded special case sitting
+  // next to arrivalPatterns without proving the route is generic.
+  it('persists both arrivalPatterns and arrivalSchedules from a single mixed patch', async () => {
+    const { saved, storageAdapter, changeTracker } = harness();
+    const { ModelManager } = require('../../src/core/ModelManager');
+    const mm: any = Object.create(ModelManager.prototype);
+    mm.storageAdapter = storageAdapter;
+    mm.debug = { debug: () => {}, error: () => {} };
+    mm.changeTracker = changeTracker;
+
+    await mm.updateModelRoot(
+      {
+        arrivalPatterns: [{ id: 'ap-1', name: 'P1' }],
+        arrivalSchedules: [{ id: 'as-1', name: 'S1' }],
+      },
+      { id: 'page-1' }
+    );
+
+    expect(saved.arrivalPatterns).toEqual([{ id: 'ap-1', name: 'P1' }]);
+    expect(saved.arrivalSchedules).toEqual([{ id: 'as-1', name: 'S1' }]);
     expect(changeTracker.modelDefinitionDirty).toBe(true);
   });
 

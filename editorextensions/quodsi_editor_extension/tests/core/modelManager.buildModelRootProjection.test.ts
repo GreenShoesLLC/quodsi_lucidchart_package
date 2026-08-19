@@ -34,11 +34,13 @@ describe('ModelManager.buildModelRootProjection', () => {
       'page-A': {
         generators: { getAll: () => [{ id: 'gen-a', name: 'A', levers: [], entityId: 'e', mode: 'FREQUENCY' }] },
         arrivalPatterns: { getAll: () => [] },
+        arrivalSchedules: { getAll: () => [{ id: 'as-a', name: 'Schedule A', toJSON: () => ({ id: 'as-a', name: 'Schedule A' }) }] },
         model: {},
       },
       'page-B': {
         generators: { getAll: () => [{ id: 'gen-b', name: 'B', levers: [], entityId: 'e', mode: 'FREQUENCY' }] },
         arrivalPatterns: { getAll: () => [] },
+        arrivalSchedules: { getAll: () => [] },
         model: {},
       },
     };
@@ -56,6 +58,14 @@ describe('ModelManager.buildModelRootProjection', () => {
       expect.objectContaining({ id: 'gen-b' }),
     ]);
     expect(mm.currentPage.id).toBe('page-B');
+  });
+
+  it('includes arrivalSchedules in the projection, serialized via toJSON', async () => {
+    const { mm } = harness();
+
+    const projection = await mm.buildModelRootProjection({ id: 'page-A' });
+
+    expect(projection.arrivalSchedules).toEqual([{ id: 'as-a', name: 'Schedule A' }]);
   });
 
   it('does not force a cache-dirty rebuild when the passed page matches currentPage', async () => {

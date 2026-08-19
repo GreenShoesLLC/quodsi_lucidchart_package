@@ -21,6 +21,7 @@ import {
     ISerializedState,
     ISerializedEntity,
     ISerializedArrivalPattern,
+    ISerializedArrivalSchedule,
     ModelDefaults,
     ISerializedResourceRequirement,
     ISerializedScenario,
@@ -1759,7 +1760,8 @@ export class ModelManager {
     public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
         this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
 
-        const unhandled = Object.keys(patch).filter(key => key !== 'arrivalPatterns');
+        const knownKeys = ['arrivalPatterns', 'arrivalSchedules'];
+        const unhandled = Object.keys(patch).filter(key => !knownKeys.includes(key));
         if (unhandled.length > 0) {
             throw new Error(
                 `updateModelRoot: no persistence path for model-root key(s): ${unhandled.join(', ')}. ` +
@@ -1771,6 +1773,13 @@ export class ModelManager {
             this.storageAdapter.setArrivalPatterns(
                 page,
                 patch.arrivalPatterns as ISerializedArrivalPattern[]
+            );
+        }
+
+        if ('arrivalSchedules' in patch) {
+            this.storageAdapter.setArrivalSchedules(
+                page,
+                patch.arrivalSchedules as ISerializedArrivalSchedule[]
             );
         }
 
@@ -1801,7 +1810,7 @@ export class ModelManager {
         }
         const def = await this.getModelDefinition();
         if (!def) {
-            return { generators: [], arrivalPatterns: [], model: {} };
+            return { generators: [], arrivalPatterns: [], arrivalSchedules: [], model: {} };
         }
 
         const toIso = (v: Date | null | undefined): string | null =>
@@ -1819,6 +1828,8 @@ export class ModelManager {
             })),
             arrivalPatterns: def.arrivalPatterns.getAll()
                 .map(p => p.toJSON()) as ISerializedArrivalPattern[],
+            arrivalSchedules: def.arrivalSchedules.getAll()
+                .map(s => s.toJSON()) as ISerializedArrivalSchedule[],
             model: {
                 timeMode: def.model.timeMode,
                 startDateTime: toIso(def.model.startDateTime),
