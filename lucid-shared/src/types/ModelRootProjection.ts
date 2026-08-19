@@ -27,11 +27,14 @@ export type ModelRootProjection = {
         volume?: number;
     }>;
     arrivalPatterns: ISerializedArrivalPattern[];
-    // Optional (unlike arrivalPatterns) so the pre-existing ModelRootProjection
-    // literals in quodsim-react's tests -- written before this field existed --
-    // stay valid without a scope-creeping edit here. ModelManager.buildModelRootProjection
-    // always populates it; there is no UI consumer yet (Task 3 of the
-    // arrival-schedules persistence plan is host-side only).
+    // TEMPORARILY optional, unlike arrivalPatterns -- NOT because it can
+    // genuinely be absent. ModelManager.buildModelRootProjection populates
+    // it on every path, same guarantee as arrivalPatterns. It's optional
+    // only because no UI consumer exists yet: the task that adds one will
+    // touch quodsim-react's ModelRootProjection fixtures anyway, with real
+    // assertions on schedule content, so widening ~57 fixture literals here
+    // first (with nothing to assert) would be premature churn. Make this
+    // required at that point and let the fixtures fail until updated.
     arrivalSchedules?: ISerializedArrivalSchedule[];
     model: {
         timeMode?: string;
