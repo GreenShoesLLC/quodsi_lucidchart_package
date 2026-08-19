@@ -36,6 +36,7 @@ import {
   ModelRootProjection,
 } from '@quodsi/lucid-shared'
 import { useMessaging } from '../messaging/MessageProvider'
+import { useModelOpsSender } from '../messaging/senders/modelOpsSender'
 import {
   createLucidModelStateAccessor,
   type LucidModelStateAccessorDeps,
@@ -47,6 +48,14 @@ export type ModelRootTransport = {
   send(patch: Record<string, unknown>): Promise<void>
   /** Ask the host for a fresh snapshot. Optional -- absent in unit tests. */
   request?(): void
+  /**
+   * Persist a shape-scoped patch (e.g. PatternModal/GeneratorPatternTab's
+   * volume slider, or its fork-on-edit linking, both via
+   * accessor.updateShape). Optional -- absent in unit tests that only
+   * exercise the model-root half; when absent, deps.save throws rather than
+   * silently no-opping (see createModelRootSource's own comment).
+   */
+  saveShape?(shapeId: string, type: string, patch: Record<string, unknown>): Promise<void>
 }
 
 export function createModelRootSource(transport: ModelRootTransport) {
@@ -68,11 +77,25 @@ export function createModelRootSource(transport: ModelRootTransport) {
       return () => { listeners.delete(listener) }
     },
 
-    save: async () => {
-      throw new Error(
-        'useModelRootSource: shape-scoped saves do not belong on this source; ' +
-        'wire deps.save to the existing element-update route instead.'
-      )
+    // Forwards to transport.saveShape, which the React hook below wires to
+    // the SAME element-update route (modelOpsSender.updateElementData ->
+    // ELEMENT_UPDATE) GeneratorEditor's own field edits already use -- see
+    // that hook's own comment. Until now this threw unconditionally ("wire
+    // deps.save to the existing element-update route instead"); Task 10
+    // review (Critical 2) found that gap was live, not hypothetical --
+    // GeneratorPatternTab's volume input and fork-linking both call
+    // accessor.updateShape, and both were silently rejecting. A transport
+    // with no saveShape wired (e.g. a bare unit test) still fails loudly,
+    // matching updateModel's own "no saveModel dependency configured"
+    // posture -- never a silent no-op.
+    save: async (shapeId, type, patch) => {
+      if (!transport.saveShape) {
+        throw new Error(
+          'useModelRootSource: no saveShape transport configured -- this ' +
+          'shape-scoped patch was NOT persisted'
+        )
+      }
+      await transport.saveShape(shapeId, type, patch)
     },
 
     // Forwarded VERBATIM. Never branch on keys here -- see the module doc on
@@ -123,6 +146,13 @@ export function useModelRootSource(): {
 } {
   const { app } = useMessaging()
   const source: MessageSource = SOURCE_BY_PANEL[app.panelType || 'model'] ?? 'model-iframe'
+
+  // Same sender GeneratorEditor's own onSave path uses (handleElementSave ->
+  // onElementUpdate -> updateElementData -> ELEMENT_UPDATE). Reusing it here
+  // means a shape-scoped write from a shared panel (accessor.updateShape,
+  // e.g. PatternModal's volume slider) reaches the real persistence path
+  // instead of a second, parallel one.
+  const { updateElementData } = useModelOpsSender()
 
   // Lazy-init once per component instance. createModelRootSource has no side
   // effects (it doesn't send anything), so re-running this check on every
@@ -187,6 +217,17 @@ export function useModelRootSource(): {
           data: {},
         }
         window.parent.postMessage(envelope, '*')
+      },
+
+      // ELEMENT_UPDATE is fire-and-forget from the caller's point of view --
+      // updateElementData dispatches ELEMENT_SAVE_START and posts the
+      // message synchronously; there is no ELEMENT_UPDATE_RESULT reply to
+      // await (unlike MODEL_ROOT_UPDATE's round trip above). Resolving
+      // immediately after the real send matches how every other field on
+      // this generator already "saves": optimistic, tracked via Redux
+      // elementOpsState, not via a promise the caller blocks on.
+      async saveShape(shapeId, type, patch) {
+        updateElementData(shapeId, type, patch)
       },
     }
 

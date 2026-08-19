@@ -41,6 +41,18 @@ import {
 // (999999 is used to represent unlimited occurrences/entities in the UI)
 const INFINITY_DISPLAY_VALUE = 999999;
 
+// A freshly-created ArrivalPattern has no volume, and
+// ArrivalPatternValidation's `arrival_pattern_invalid_volume` rule treats
+// volume <= 0 as an ERROR (blocks simulation) — so switching to PATTERN with
+// no volume seeded would immediately red-flag the model before the user has
+// touched anything. 1000 is a plausible, easy-to-eyeball starting point the
+// user overwrites in PatternModal; it is only applied when the generator
+// doesn't already have a volume from a prior PATTERN stint (switching
+// PATTERN -> FREQUENCY -> PATTERN keeps whatever was there). Mirrors
+// quodsi_studio's GeneratorBasicTab.tsx DEFAULT_PATTERN_VOLUME (not
+// exported from the shared barrel, so duplicated here rather than imported).
+const DEFAULT_PATTERN_VOLUME = 1000;
+
 // Tab navigation configuration
 const TAB_CONFIG = [
   {
@@ -236,6 +248,14 @@ const GeneratorEditor: React.FC<Props> = ({
       maxEntities: number;
       initialStates: any[];
       levers: ScenarioLever[];
+      // Settable ONLY by the PATTERN lifecycle handlers in handleInputChange
+      // (mode switch), never by a plain typed/selected field. `undefined` is
+      // a meaningful value here (clears the link on switching away from
+      // PATTERN), so these are read via an `in` presence-check below, not
+      // `??` — `?? base...` cannot distinguish "not provided, keep base"
+      // from "explicitly provided as undefined, clear it".
+      arrivalPatternId: string | undefined;
+      volume: number | undefined;
     }>
   ): Generator => {
     const updated = new Generator(
@@ -251,14 +271,17 @@ const GeneratorEditor: React.FC<Props> = ({
     updated.batchSize = updates.batchSize ?? base.batchSize;
     updated.startDelay = updates.startDelay ?? base.startDelay;
     updated.maxCycles = updates.maxCycles ?? base.maxCycles;
-    // arrivalPatternId/volume/arrivalScheduleId are always carried through
-    // from base, never from this form's own `updates` — none of this
-    // component's input handlers produce them (PatternModal writes
-    // arrivalPatternId/volume through the accessor directly; arrivalScheduleId
-    // stays read-only, Lucid has no Schedule editor). Dropping them here would
-    // silently corrupt a generator authored as PATTERN/SCHEDULED elsewhere.
-    updated.arrivalPatternId = base.arrivalPatternId;
-    updated.volume = base.volume;
+    // arrivalPatternId/volume: from `updates` when the caller explicitly
+    // provided them (the PATTERN mode-switch handler only -- see its own
+    // comment), otherwise always carried through from base. No OTHER input
+    // handler in this component produces these keys (PatternModal's own
+    // volume slider writes through the accessor directly, not through this
+    // draft). arrivalScheduleId is never settable from `updates` at all --
+    // it stays read-only, Lucid has no Schedule editor. Silently dropping
+    // any of the three here would corrupt a generator authored as
+    // PATTERN/SCHEDULED elsewhere.
+    updated.arrivalPatternId = 'arrivalPatternId' in updates ? updates.arrivalPatternId : base.arrivalPatternId;
+    updated.volume = 'volume' in updates ? updates.volume : base.volume;
     updated.arrivalScheduleId = base.arrivalScheduleId;
     updated.maxEntities = updates.maxEntities ?? base.maxEntities;
     updated.initialStates = updates.initialStates ?? base.initialStates;
@@ -372,7 +395,7 @@ const GeneratorEditor: React.FC<Props> = ({
 
   // Fire saveNow when generator type changes. The "Generator Type" select
   // renders (offering FREQUENCY and PATTERN) whenever the generator was not
-  // authored as SCHEDULED elsewhere (see isExternallyAuthored below) — Lucid
+  // authored as SCHEDULED elsewhere (see isScheduledGenerator below) — Lucid
   // still has no Schedule editor.
   useFlushOnChange(localGeneratorDraft.mode, saveNow);
 
@@ -380,17 +403,14 @@ const GeneratorEditor: React.FC<Props> = ({
 
   /** True when this generator is authored as an Arrival Pattern (editable here via PatternModal). */
   const isPatternGenerator = localGeneratorDraft.mode === GeneratorType.PATTERN;
-  /** True when this generator was authored as SCHEDULED elsewhere (Studio, drawio). */
-  const isScheduledGenerator = localGeneratorDraft.mode === GeneratorType.SCHEDULED;
   /**
-   * Authored outside Lucid. Lucid now has a Pattern editor (see the
-   * "Edit pattern" branch below), but still no Schedule editor, so only
-   * SCHEDULED remains externally-authored and keeps the read-only notice.
-   * A SCHEDULED generator must still be kept off the type <select> whose
-   * only FREQUENCY/PATTERN options can't represent it — one click there
+   * True when this generator was authored as SCHEDULED elsewhere (Studio,
+   * drawio). Lucid still has no Schedule editor, so this generator keeps the
+   * read-only notice and is kept off the type <select> entirely -- its only
+   * FREQUENCY/PATTERN options can't represent SCHEDULED, and one click there
    * would rewrite mode and orphan arrivalScheduleId.
    */
-  const isExternallyAuthored = isScheduledGenerator;
+  const isScheduledGenerator = localGeneratorDraft.mode === GeneratorType.SCHEDULED;
 
   /**
    * Validates that the generator name is unique among all generators.
@@ -430,6 +450,68 @@ const GeneratorEditor: React.FC<Props> = ({
    */
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    // Pattern lifecycle on mode switch, computed BEFORE the local-draft
+    // update below so a resulting arrivalPatternId/volume change lands in
+    // the SAME setLocalGeneratorDraft call as `mode` -- one coherent state
+    // transition, not two racing ones. ensurePatternForGenerator /
+    // removePatternForGenerator are the ONLY thing that creates, deletes or
+    // links a pattern -- do not reimplement any of it here. Guarded on
+    // modelRootProjection: with no snapshot yet there is no
+    // generators/arrivalPatterns list to ensure/remove against.
+    let patternFieldUpdates: { arrivalPatternId: string | undefined; volume?: number } | null = null;
+
+    if (name === 'generatorType' && modelRootProjection) {
+      const nextMode = value as GeneratorType;
+      const model = modelRootProjection as unknown as LifecycleModel;
+
+      if (nextMode === GeneratorType.PATTERN) {
+        // Idempotent: a generator already linked to a present pattern comes
+        // back unchanged, same model reference and same patternId. Safe to
+        // call repeatedly -- the `ensured.model !== model` guard then skips
+        // the model-root write entirely in that case (Task 10 review,
+        // Important 3 -- mirrors GeneratorBasicTab.tsx's three guarded
+        // updateModel call sites; an unguarded write here fired a
+        // postMessage round trip + validateModel() + snapshot push on every
+        // keystroke of an unrelated field, not just on a real mode switch).
+        const ensured = ensurePatternForGenerator(model, localGeneratorDraft.id);
+        if (ensured.model !== model) {
+          void accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
+        }
+
+        // The generator's own flat fields (mode, arrivalPatternId, volume)
+        // persist through the shape-scoped route (accessor.updateShape),
+        // NOT through this form's onSave/updateElementData autosave path --
+        // updateGeneratorImmutably deliberately refuses arrivalPatternId/
+        // volume from a plain `updates` object for every OTHER caller, and a
+        // model-root patch is restricted to arrivalPatterns (the host's
+        // update-model-root route throws on any other key), so
+        // updateModel({ generators }) is not an option here. Mirrors
+        // quodsi_studio's GeneratorBasicTab.tsx handleTypeChange exactly,
+        // including seeding a default volume (Task 10 review, Critical 1).
+        const seededVolume = localGeneratorDraft.volume ?? DEFAULT_PATTERN_VOLUME;
+        void accessor.updateShape(localGeneratorDraft.id, 'Generator', {
+          mode: nextMode,
+          arrivalPatternId: ensured.patternId,
+          volume: seededVolume,
+        });
+        patternFieldUpdates = { arrivalPatternId: ensured.patternId, volume: seededVolume };
+      } else if (localGeneratorDraft.mode === GeneratorType.PATTERN) {
+        // Severs the link and deletes the pattern UNLESS another generator
+        // still references it -- deleting it out from under a sibling would
+        // be worse.
+        const removed = removePatternForGenerator(model, localGeneratorDraft.id);
+        if (removed !== model) {
+          void accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
+        }
+        void accessor.updateShape(localGeneratorDraft.id, 'Generator', {
+          mode: nextMode,
+          arrivalPatternId: undefined,
+        });
+        patternFieldUpdates = { arrivalPatternId: undefined };
+      }
+    }
+
     setLocalGeneratorDraft(prev => {
       // Build updates object based on which field changed
       const updates: any = {};
@@ -456,6 +538,19 @@ const GeneratorEditor: React.FC<Props> = ({
         updates.maxEntities = value === '' || isNaN(parsed) ? INFINITY_DISPLAY_VALUE : parsed;
       }
 
+      // Fold in the PATTERN lifecycle's generator-half result (if any) so the
+      // local draft -- and therefore the summary block, which reads
+      // localGeneratorDraft.arrivalPatternId/volume directly -- reflects the
+      // new link immediately, without waiting on a MODEL_ROOT_SNAPSHOT round
+      // trip. See updateGeneratorImmutably's own comment on why these two
+      // keys need an `in` presence-check rather than `??`.
+      if (patternFieldUpdates) {
+        updates.arrivalPatternId = patternFieldUpdates.arrivalPatternId;
+        if ('volume' in patternFieldUpdates) {
+          updates.volume = patternFieldUpdates.volume;
+        }
+      }
+
       return updateGeneratorImmutably(prev, updates);
     });
 
@@ -466,35 +561,18 @@ const GeneratorEditor: React.FC<Props> = ({
 
       // Pattern lifecycle: the user never types a pattern name directly, so
       // this is the only path that changes one -- keeps a linked pattern's
-      // derived name in sync with the generator's own name. No-ops (inside
-      // the helper) when this generator has no linked pattern.
+      // derived name in sync with the generator's own name.
+      // renamePatternForGenerator no-ops (returns the SAME model reference)
+      // when this generator has no linked pattern; the `renamed !== model`
+      // guard below turns that into "skip the write" -- no round trip on
+      // every keystroke for a FREQUENCY generator (Task 10 review,
+      // Important 3).
       if (modelRootProjection && localGeneratorDraft.mode === GeneratorType.PATTERN) {
         const model = modelRootProjection as unknown as LifecycleModel;
         const renamed = renamePatternForGenerator(model, localGeneratorDraft.id, value);
-        void accessor.updateModel({ arrivalPatterns: renamed.arrivalPatterns });
-      }
-    }
-
-    // Pattern lifecycle on mode switch. These helpers are the ONLY thing that
-    // creates, deletes or renames a pattern -- do not reimplement any of it
-    // here. Guarded on modelRootProjection: with no snapshot yet there is no
-    // generators/arrivalPatterns list to ensure/remove against.
-    if (name === 'generatorType' && modelRootProjection) {
-      const nextMode = value as GeneratorType;
-      const model = modelRootProjection as unknown as LifecycleModel;
-
-      if (nextMode === GeneratorType.PATTERN) {
-        // Idempotent: a generator already linked to a present pattern comes
-        // back unchanged, same reference and same patternId. Safe to call
-        // repeatedly.
-        const ensured = ensurePatternForGenerator(model, localGeneratorDraft.id);
-        void accessor.updateModel({ arrivalPatterns: ensured.model.arrivalPatterns });
-      } else if (localGeneratorDraft.mode === GeneratorType.PATTERN) {
-        // Severs the link and deletes the pattern UNLESS another generator
-        // still references it -- deleting it out from under a sibling would
-        // be worse.
-        const removed = removePatternForGenerator(model, localGeneratorDraft.id);
-        void accessor.updateModel({ arrivalPatterns: removed.arrivalPatterns });
+        if (renamed !== model) {
+          void accessor.updateModel({ arrivalPatterns: renamed.arrivalPatterns });
+        }
       }
     }
 
@@ -667,14 +745,27 @@ const GeneratorEditor: React.FC<Props> = ({
             {isPatternGenerator ? (
               <div className="pt-2 border-t space-y-2">
                 <div className="text-xs text-secondary space-y-0.5">
-                  {summarizeArrivalPattern(
-                    (modelRootProjection?.arrivalPatterns ?? []).find(
-                      (p) => p.id === localGeneratorDraft.arrivalPatternId
-                    ),
-                    localGeneratorDraft.volume ?? 0
-                  ).map((line, i) => (
-                    <div key={i}>{line}</div>
-                  ))}
+                  {modelRootProjection === null ? (
+                    // No MODEL_ROOT_SNAPSHOT has arrived yet -- the pattern's
+                    // shape (season/week/day weights) lives in
+                    // modelRootProjection.arrivalPatterns, so summarizing now
+                    // would report "spread evenly" for a pattern that may not
+                    // be uniform at all: the right volume, an invented shape.
+                    // A loading placeholder is the only rendering that isn't
+                    // confidently wrong (Task 10 review, Minor 6). This
+                    // self-corrects the moment the snapshot lands (the
+                    // request() fired by useModelRootSource on mount).
+                    <div>Loading pattern…</div>
+                  ) : (
+                    summarizeArrivalPattern(
+                      (modelRootProjection.arrivalPatterns ?? []).find(
+                        (p) => p.id === localGeneratorDraft.arrivalPatternId
+                      ),
+                      localGeneratorDraft.volume ?? 0
+                    ).map((line, i) => (
+                      <div key={i}>{line}</div>
+                    ))
+                  )}
                 </div>
                 <button
                   type="button"
