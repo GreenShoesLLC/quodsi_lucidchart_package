@@ -1,5 +1,5 @@
 import { ElementProxy, PageProxy } from 'lucid-extension-sdk';
-import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
+import { PageStatus, SimulationObjectType, ISerializedState, ISerializedEntity, ISerializedArrivalPattern, ISerializedResourceRequirement, ISerializedScenario, MappingSource, ElementTypeInfo, MODEL_SCHEMA_VERSION, flattenEnvelope, makeEnvelope, getLogger } from '@quodsi/lucid-shared';
 
 const log = getLogger('StorageAdapter');
 
@@ -13,6 +13,7 @@ export class StorageAdapter {
     private static readonly SIMULATION_STATUS_KEY = 'q_simulation_status';
     private static readonly STATES_KEY = 'q_states';
     private static readonly ENTITIES_KEY = 'q_entities';
+    private static readonly ARRIVAL_PATTERNS_KEY = 'q_arrival_patterns';
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly SKIPPED_ELEMENTS_KEY = 'q_skipped_elements';
     private static readonly SCENARIOS_KEY = 'q_scenarios';
@@ -228,6 +229,60 @@ export class StorageAdapter {
             this.log('Successfully cleared entities');
         } catch (error) {
             this.logError('Error clearing entities:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Sets the arrival-pattern list for a page.
+     *
+     * Model-level list, sibling of q_entities/q_scenarios — NOT shape-mapped.
+     * One pattern per generator is enforced by the UI, not here.
+     */
+    public setArrivalPatterns(page: ElementProxy, patterns: ISerializedArrivalPattern[]): void {
+        try {
+            this.log('Setting arrival patterns for page:', {
+                pageId: page.id,
+                patternsCount: patterns.length
+            });
+            page.shapeData.set(StorageAdapter.ARRIVAL_PATTERNS_KEY, JSON.stringify(patterns));
+            this.log('Successfully set arrival patterns');
+        } catch (error) {
+            this.logError('Error setting arrival patterns:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gets the arrival-pattern list for a page. Returns [] rather than
+     * throwing on corrupt data — an unreadable pattern list must not stop the
+     * whole page from loading.
+     */
+    public getArrivalPatterns(page: ElementProxy): ISerializedArrivalPattern[] {
+        try {
+            const raw = page.shapeData.get(StorageAdapter.ARRIVAL_PATTERNS_KEY);
+            if (!raw || typeof raw !== 'string') {
+                this.log('No arrival patterns found, returning empty array');
+                return [];
+            }
+            const patterns = JSON.parse(raw) as ISerializedArrivalPattern[];
+            this.log('Retrieved arrival patterns:', { count: patterns.length });
+            return patterns;
+        } catch (error) {
+            this.logError('Error getting arrival patterns:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Clears the arrival-pattern list for a page.
+     */
+    public clearArrivalPatterns(page: ElementProxy): void {
+        try {
+            page.shapeData.delete(StorageAdapter.ARRIVAL_PATTERNS_KEY);
+            this.log('Successfully cleared arrival patterns');
+        } catch (error) {
+            this.logError('Error clearing arrival patterns:', error);
             throw error;
         }
     }
@@ -626,6 +681,7 @@ export class StorageAdapter {
             this.clearSimulationStatus(page);
             this.clearStates(page);
             this.clearEntities(page);
+            this.clearArrivalPatterns(page);
             this.clearResourceRequirements(page);
             // NOTE: q_time_patterns / q_time_distributed_configs are intentionally
             // NOT cleared here. The time-distributed generator feature was retired
