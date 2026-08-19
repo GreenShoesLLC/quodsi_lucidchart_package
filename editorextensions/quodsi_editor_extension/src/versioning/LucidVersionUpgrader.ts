@@ -30,12 +30,20 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
     // 2026.11.01 wire.
     private static readonly RESOURCE_REQUIREMENTS_KEY = 'q_res_requirements';
     private static readonly STATES_KEY = 'q_states';
+    // Mirrors StorageAdapter.ARRIVAL_PATTERNS_KEY (Task 4). Same page-level
+    // PLAIN ARRAY treatment as requirements/states above: the registry
+    // matches on the HOST-STORED type string 'ArrivalPattern', NOT the
+    // class's own `type` field (ArrivalPattern.type is
+    // SimulationObjectType.None — same pre-existing quirk as State; see
+    // ArrivalPatternTransforms' own registry-key note).
+    private static readonly ARRIVAL_PATTERNS_KEY = 'q_arrival_patterns';
 
     private preflightChecker: LucidPreflightChecker;
     private backupData: Map<string, ShapeDataBackup>;
     private entitiesBackup: { existed: boolean; data?: string } = { existed: false };
     private requirementsBackup: { existed: boolean; data?: string } = { existed: false };
     private statesBackup: { existed: boolean; data?: string } = { existed: false };
+    private arrivalPatternsBackup: { existed: boolean; data?: string } = { existed: false };
 
     constructor(currentVersion: string, options?: UpgradeOptions) {
         super(currentVersion, options);
@@ -85,6 +93,13 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const statesData = page.shapeData.get(LucidVersionUpgrader.STATES_KEY);
         this.statesBackup = typeof statesData === 'string'
             ? { existed: true, data: statesData }
+            : { existed: false };
+
+        // Backup the page-level arrival-patterns list (Task 7) — same
+        // treatment as entities, so a failed upgrade rolls these back too.
+        const arrivalPatternsData = page.shapeData.get(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
+        this.arrivalPatternsBackup = typeof arrivalPatternsData === 'string'
+            ? { existed: true, data: arrivalPatternsData }
             : { existed: false };
 
         // Backup blocks. `allBlocks`, not `blocks` — the latter is
@@ -205,13 +220,34 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
         const storedStates = this.readPageArray(page, LucidVersionUpgrader.STATES_KEY);
         const stateInputs: RawElement[] = storedStates.map((s) => ({ ...s, type: 'State' }));
 
+        // Task 7: the page-level arrival-patterns list gets the same
+        // fold-into-the-combined-call treatment as requirements/states
+        // above, for the same reason — one `upgradeElements` call so the
+        // cross-element UpgradeContext sees the full sibling set. Spread
+        // the stored entry FIRST (same reasoning as requirements/states):
+        // a dialog-authored entry could carry a stale `type`, and that must
+        // not shadow the synthetic registry key below.
+        const storedArrivalPatterns = this.readPageArray(page, LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
+        const arrivalPatternInputs: RawElement[] = storedArrivalPatterns.map((p) => ({ ...p, type: 'ArrivalPattern' }));
+
         // Pure core upgrade — returns envelopes; mappingSource is preserved inside
         // platform, so the adapter no longer re-attaches it.
-        const combinedInputs: RawElement[] = [...targets.map(t => t.blob), ...requirementInputs, ...stateInputs];
+        const combinedInputs: RawElement[] = [
+            ...targets.map(t => t.blob),
+            ...requirementInputs,
+            ...stateInputs,
+            ...arrivalPatternInputs,
+        ];
         const result = upgradeElements(combinedInputs, sourceVersion);
         const elementResults = result.elements.slice(0, targets.length);
         const requirementResults = result.elements.slice(targets.length, targets.length + requirementInputs.length);
-        const stateResults = result.elements.slice(targets.length + requirementInputs.length);
+        const stateResults = result.elements.slice(
+            targets.length + requirementInputs.length,
+            targets.length + requirementInputs.length + stateInputs.length
+        );
+        const arrivalPatternResults = result.elements.slice(
+            targets.length + requirementInputs.length + stateInputs.length
+        );
 
         // Entities are no longer shape-mapped. Lift any legacy entity shapes into the
         // page-level q_entities list (preserving id == block.id so existing entityId
@@ -288,6 +324,19 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             const upgradedStates = stateResults.map((el) => this.flattenArrayItem(el));
             page.shapeData.set(LucidVersionUpgrader.STATES_KEY, JSON.stringify(upgradedStates));
         }
+
+        // Task 7: write the upgraded arrival-patterns list back, same
+        // always-write-when-non-empty posture as requirements/states above
+        // (flat RawElement inputs are always re-wrapped into a NEW envelope,
+        // so the by-reference `changed` check the per-shape loop uses
+        // can't distinguish "really changed" here either). A page with no
+        // stored list (arrivalPatternInputs.length === 0) is left alone —
+        // do NOT write an empty array, which would churn every
+        // pre-pattern document on open.
+        if (arrivalPatternInputs.length > 0) {
+            const upgradedArrivalPatterns = arrivalPatternResults.map((el) => this.flattenArrayItem(el));
+            page.shapeData.set(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY, JSON.stringify(upgradedArrivalPatterns));
+        }
     }
 
     /**
@@ -345,6 +394,14 @@ export class LucidVersionUpgrader extends BaseVersionUpgrader {
             page.shapeData.set(LucidVersionUpgrader.STATES_KEY, this.statesBackup.data!);
         } else {
             page.shapeData.delete(LucidVersionUpgrader.STATES_KEY);
+        }
+
+        // Restore the page-level arrival-patterns list (Task 7), same
+        // delete-if-didn't-exist posture as entities/requirements/states.
+        if (this.arrivalPatternsBackup.existed) {
+            page.shapeData.set(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY, this.arrivalPatternsBackup.data!);
+        } else {
+            page.shapeData.delete(LucidVersionUpgrader.ARRIVAL_PATTERNS_KEY);
         }
 
         // Restore blocks. `allBlocks`/`allLines` — matches `beginUpgrade`'s
