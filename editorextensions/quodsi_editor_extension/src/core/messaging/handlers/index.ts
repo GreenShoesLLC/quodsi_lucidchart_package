@@ -6,6 +6,7 @@ import { ModelOpsHandler } from './modelOpsHandler';
 import { ElementOpsHandler } from './elementOpsHandler';
 import { StatesHandler } from './statesHandler';
 import { EntitiesHandler } from './entitiesHandler';
+import { ModelRootHandler } from './modelRootHandler';
 import { ResourceRequirementsHandler } from './resourceRequirementsHandler';
 import { SelectionHandler } from './selection';
 import { SimulationRunHandler } from './simulationRunHandler';
@@ -80,6 +81,11 @@ export class MessageHandlers {
       return true;
     }
 
+    // Model-root operations messages (generic list route -- arrivalPatterns, etc.)
+    if (ModelRootHandler.handleMessage(msg)) {
+      return true;
+    }
+
     // Resource requirements operations messages
     if (ResourceRequirementsHandler.handleMessage(msg)) {
       return true;
@@ -126,6 +132,7 @@ export {
   ElementOpsHandler,
   StatesHandler,
   EntitiesHandler,
+  ModelRootHandler,
   ResourceRequirementsHandler,
   SimulationRunHandler,
   DiagramMappingRelayHandler,

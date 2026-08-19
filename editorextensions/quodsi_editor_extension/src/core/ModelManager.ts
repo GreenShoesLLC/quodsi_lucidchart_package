@@ -20,6 +20,7 @@ import {
     ValidationMessages,
     ISerializedState,
     ISerializedEntity,
+    ISerializedArrivalPattern,
     ModelDefaults,
     ISerializedResourceRequirement,
     ISerializedScenario,
@@ -49,6 +50,33 @@ interface ChangeTracker {
     lastValidationUpdate: number;          // Timestamp of last validation
     pendingChanges: Set<string>;          // IDs of elements with pending changes
 }
+
+/**
+ * Plain-data projection of the model root read by shared cross-platform
+ * panels (starting with GeneratorPatternTab). NOT `ISerializedModel`: that
+ * wire shape is flat by design (no nested `model` block) and carries
+ * `warmupTime`/`runTime` as Durations, not the `warmupDateTime`/
+ * `finishDateTime` the cascade editor's date math needs. This mirrors
+ * drawio's `wrapProjectionAsModelDefinition`.
+ */
+export type ModelRootProjection = {
+    generators: Array<{
+        id: string;
+        name: string;
+        levers?: unknown[];
+        entityId?: string;
+        mode?: string;
+        arrivalPatternId?: string;
+        volume?: number;
+    }>;
+    arrivalPatterns: ISerializedArrivalPattern[];
+    model: {
+        timeMode?: string;
+        startDateTime?: string | null;
+        warmupDateTime?: string | null;
+        finishDateTime?: string | null;
+    };
+};
 
 export class ModelManager {
     private debug = getLogger('ModelManager');
@@ -1655,6 +1683,90 @@ export class ModelManager {
             this.debug.error('Error in updateEntities:', error);
             throw error;
         }
+    }
+
+    /**
+     * Persist a model-ROOT patch. The patch arrives WHOLE from
+     * LucidModelStateAccessor.updateModel and is dispatched per key here --
+     * the single place in this path that is allowed to know key names.
+     *
+     * An unrecognised key THROWS. It must never be dropped silently: that is
+     * the bug LucidEmbedModelAccessor once shipped, where branching on
+     * `patch.scenarios` alone made an `{ arrivalPatterns }` patch vanish with
+     * no error and no warning.
+     *
+     * Cache invalidation is deliberately NOT done here: the handler that
+     * calls this method (ModelRootHandler.handleUpdate) always follows it
+     * with `validateModel()`, which already forces
+     * `changeTracker.modelDefinitionDirty = true` and rebuilds before the
+     * post-write MODEL_ROOT_SNAPSHOT is sent. Duplicating that here would
+     * also break test construction that stubs a bare `{ storageAdapter,
+     * debug }` object via `Object.create(ModelManager.prototype)`, which has
+     * no `changeTracker` to write to.
+     */
+    public async updateModelRoot(patch: Record<string, unknown>, page: PageProxy): Promise<void> {
+        this.debug.debug('updateModelRoot - Start', { keys: Object.keys(patch) });
+
+        const unhandled: string[] = [];
+
+        for (const key of Object.keys(patch)) {
+            switch (key) {
+                case 'arrivalPatterns':
+                    this.storageAdapter.setArrivalPatterns(
+                        page,
+                        patch.arrivalPatterns as ISerializedArrivalPattern[]
+                    );
+                    break;
+                default:
+                    unhandled.push(key);
+            }
+        }
+
+        if (unhandled.length > 0) {
+            throw new Error(
+                `updateModelRoot: no persistence path for model-root key(s): ${unhandled.join(', ')}. ` +
+                'The patch was NOT fully persisted. Add a case above rather than ignoring it.'
+            );
+        }
+    }
+
+    /**
+     * Build the plain-data projection the shared panels read.
+     *
+     * Shape is dictated by GeneratorPatternTab, which reads
+     * `state.modelDefinition` as `{ generators, arrivalPatterns, model }` with
+     * `model` as a SUB-OBJECT. ISerializedModel cannot serve this: it is flat
+     * by design and carries warmupTime/runTime as Durations rather than the
+     * warmupDateTime/finishDateTime the cascade's date math needs.
+     */
+    public async buildModelRootProjection(page: PageProxy): Promise<ModelRootProjection> {
+        const def = await this.getModelDefinition();
+        if (!def) {
+            return { generators: [], arrivalPatterns: [], model: {} };
+        }
+
+        const toIso = (v: Date | null | undefined): string | null =>
+            v ? v.toISOString() : null;
+
+        return {
+            generators: def.generators.getAll().map(g => ({
+                id: g.id,
+                name: g.name,
+                levers: g.levers,
+                entityId: g.entityId,
+                mode: g.mode,
+                arrivalPatternId: g.arrivalPatternId,
+                volume: g.volume,
+            })),
+            arrivalPatterns: def.arrivalPatterns.getAll()
+                .map(p => p.toJSON()) as ISerializedArrivalPattern[],
+            model: {
+                timeMode: def.model.timeMode,
+                startDateTime: toIso(def.model.startDateTime),
+                warmupDateTime: toIso(def.model.warmupDateTime),
+                finishDateTime: toIso(def.model.finishDateTime),
+            },
+        };
     }
 
     /**

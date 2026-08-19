@@ -43,6 +43,16 @@ export enum EnvelopeMessageType {
   STATES_UPDATE_RESULT = "STATES_UPDATE_RESULT",
   ENTITIES_UPDATE = "ENTITIES_UPDATE",
   ENTITIES_UPDATE_RESULT = "ENTITIES_UPDATE_RESULT",
+
+  // Model-root list operations. Deliberately GENERIC: the patch is forwarded
+  // whole and dispatched per key by the handler, so adding a second
+  // model-level list (arrivalSchedules) needs no new message type. A per-key
+  // message is what let `{ arrivalPatterns }` be silently dropped once before.
+  MODEL_ROOT_REQUEST = "MODEL_ROOT_REQUEST",
+  MODEL_ROOT_SNAPSHOT = "MODEL_ROOT_SNAPSHOT",
+  MODEL_ROOT_UPDATE = "MODEL_ROOT_UPDATE",
+  MODEL_ROOT_UPDATE_RESULT = "MODEL_ROOT_UPDATE_RESULT",
+
   RESOURCE_REQUIREMENTS_UPDATE = "RESOURCE_REQUIREMENTS_UPDATE",
   RESOURCE_REQUIREMENTS_UPDATE_RESULT = "RESOURCE_REQUIREMENTS_UPDATE_RESULT",
 
