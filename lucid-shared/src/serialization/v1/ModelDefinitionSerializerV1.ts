@@ -56,6 +56,8 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
             const scenarios = modelDefinition.scenarios.getAll().map(scenario => scenario.toJSON());
             const arrivalPatterns = modelDefinition.arrivalPatterns.getAll()
                 .map(pattern => pattern.toJSON());
+            const arrivalSchedules = modelDefinition.arrivalSchedules.getAll()
+                .map(schedule => schedule.toJSON());
 
             const document = {
                 schemaVersion: MODEL_SCHEMA_VERSION,
@@ -83,7 +85,8 @@ export class ModelDefinitionSerializerV1 extends BaseModelDefinitionSerializer {
                     this.serializeState(state)
                 ),
                 scenarios: scenarios.length ? scenarios : undefined,
-                arrivalPatterns: arrivalPatterns.length ? arrivalPatterns : undefined
+                arrivalPatterns: arrivalPatterns.length ? arrivalPatterns : undefined,
+                arrivalSchedules: arrivalSchedules.length ? arrivalSchedules : undefined
             };
 
             return JSON.parse(JSON.stringify(document)) as ISerializedModelV1;
