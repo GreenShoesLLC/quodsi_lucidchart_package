@@ -7,15 +7,10 @@
 // later Lucid editor is expected to follow -- keep it a thin, honest bridge
 // rather than a place that re-implements host logic.
 //
-// TYPES: quodsi_lucidchart_package is a separate git repo from quodsi_studio
-// (no npm workspace / build dependency between them today), so the
-// `ModelStateAccessor` contract below is a STRUCTURAL MIRROR of
-// `quodsi_studio/src/platforms/shared/types.ts`, not an import of it. If that
-// file's contract changes, this one must be updated to match by hand. `unknown`
-// stands in for `@quodsi/shared`'s `ModelDefinition` for the same reason --
-// this repo has no dependency on that package. Task 21 (wiring the shared
-// GeneratorPatternTab into ElementEditor.tsx) is what proves these shapes line
-// up at the real call site.
+// TYPES: this package now depends on quodsi_studio via a file: reference, so
+// the ModelStateAccessor contract is IMPORTED rather than mirrored by hand.
+// The hand-written mirror this file carried until 2026-08-18 was verified to
+// match the real contract before deletion.
 //
 // ARCHITECTURE: `createLucidModelStateAccessor(deps)` takes a small
 // dependency-injection surface (`getModelDefinition`, `onModelChanged`,
@@ -43,45 +38,15 @@
 // storage" guarantee still depends on Task 21 wiring `deps.saveModel` to the
 // extension's actual persistence path; see updateModel's own comment.
 
-/** Cross-platform shape descriptor. Mirrors ShapeInfoLike in quodsi_studio. */
-export type ShapeInfoLike = {
-  shapeId: string
-  name: string
-  masterName: string | null
-  text: string | null
-  is1D: boolean
-  quodsiType: string | null
-  quodsiData: string | null
-}
+import type {
+  ShapeInfoLike,
+  DomainType,
+  ModelStateSnapshot,
+  ModelStateAccessor,
+} from 'quodsi_studio/platforms/shared'
+import type { ModelDefinition } from '@quodsi/shared'
 
-export type DomainType = 'Activity' | 'Resource' | 'Generator' | 'Entity' | 'Connector'
-
-export type ModelStateSnapshot = {
-  // `unknown` stands in for `@quodsi/shared`'s `ModelDefinition` -- see the
-  // module doc comment. Consumers that need the concrete shape cast at the
-  // call site (Task 21), same as every other ModelStateAccessor host does
-  // internally via `as unknown as ModelDefinition`.
-  modelDefinition: Record<string, unknown> | null
-  saveStatus: 'idle' | 'saving' | 'saved' | 'failed'
-  saveError: string | null
-  scenariosLoading?: boolean
-  scenariosRefreshing?: boolean
-}
-
-/** Structural mirror of quodsi_studio/src/platforms/shared/types.ts's ModelStateAccessor. */
-export interface ModelStateAccessor {
-  subscribe(listener: () => void): () => void
-  getSnapshot(): ModelStateSnapshot
-  updateShape(shapeId: string, type: DomainType, patch: Record<string, unknown>): Promise<void>
-  updateModel(patch: Record<string, unknown>): Promise<void>
-  classifyShape?(shape: ShapeInfoLike, type: DomainType): Promise<void>
-  getShapeInfo?(shapeId: string): ShapeInfoLike | null
-  removeClassification?(shape: ShapeInfoLike): Promise<void>
-  runScenario?(scenarioId: string, enableAnimation: boolean, updateModel?: boolean): void
-  cancelScenarioRun?(runId: string): Promise<void>
-  loadScenarios?(): Promise<void>
-  refreshScenarios?(): Promise<void>
-}
+export type { ShapeInfoLike, DomainType, ModelStateSnapshot, ModelStateAccessor }
 
 /**
  * Dependencies this adapter needs from whatever Lucid-side host wires it up.
@@ -159,7 +124,16 @@ export function createLucidModelStateAccessor(deps: LucidModelStateAccessorDeps)
     lastRawModelDefinition = raw
     lastSaveStatus = saveStatus
     lastSaveError = saveError
-    return { modelDefinition: raw, saveStatus, saveError }
+    // The real ModelStateAccessor contract types modelDefinition as
+    // `ModelDefinition | null` (the mirror this file carried until
+    // 2026-08-18 had it as `Record<string, unknown> | null`). `deps` stays
+    // untyped here -- every current deps implementation is JSON-shaped data
+    // from a different JS realm (postMessage) or from Lucid shape storage,
+    // not a real ModelDefinition instance -- so the cast happens at this one
+    // site, matching what every other ModelStateAccessor host does
+    // internally (e.g. `as unknown as ModelDefinition` in Visio's
+    // ModelManager and lucid-embed's composeModelDefinition).
+    return { modelDefinition: raw as unknown as ModelDefinition, saveStatus, saveError }
   }
 
   function getSnapshot(): ModelStateSnapshot {
