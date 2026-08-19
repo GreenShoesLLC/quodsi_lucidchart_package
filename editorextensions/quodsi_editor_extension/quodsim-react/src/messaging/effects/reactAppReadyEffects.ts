@@ -23,7 +23,7 @@ const logger = getLogger('ReactAppReadyEffects');
  */
 export function useReactAppReadyEffect(
   state: {
-    app: { initialized: boolean; panelType?: 'auth' | 'model' | 'results' | 'studio-embed' };
+    app: { initialized: boolean; panelType?: 'auth' | 'model' | 'results' | 'studio-embed' | 'pattern' };
   },
   sendMessage: (type: EnvelopeMessageType, data?: any) => void,
   hasSentReadyRef: React.MutableRefObject<boolean>
