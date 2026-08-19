@@ -10,6 +10,16 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  resolve: {
+    // quodsi_studio is a symlinked (file:) dependency; its own bare `react`
+    // imports otherwise resolve past the symlink to its real path's node_modules
+    // (the monorepo root) instead of this package's node_modules. The production
+    // build already dedupes this correctly on its own; Vitest's SSR-style module
+    // resolution does not, producing a second physical React module instance and
+    // a null-dispatcher "Invalid hook call" the moment GeneratorPatternTab
+    // actually renders. Force both resolutions to the same copy everywhere.
+    dedupe: ['react', 'react-dom'],
+  },
   build: {
     // The extension's webpack hook and both deploy scripts copy from `build/`,
     // which is CRA's default. Keeping the name means Task 7 changes the build
