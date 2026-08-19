@@ -22,7 +22,7 @@
 import { StorageAdapter } from '../../src/core/StorageAdapter';
 import { ModelDefinitionPageBuilder } from '../../src/core/ModelDefinitionPageBuilder';
 import { LucidElementFactory } from '../../src/services/LucidElementFactory';
-import { ModelDefinition, Model, SimulationTimeType, PeriodUnit } from '@quodsi/lucid-shared';
+import { ModelDefinition, Model, SimulationTimeType, PeriodUnit, ArrivalPattern, SeasonMode } from '@quodsi/lucid-shared';
 import { makeFakePage } from '../helpers/fakeProxies';
 
 function makeBuilder(): { builder: ModelDefinitionPageBuilder; storageAdapter: StorageAdapter } {
@@ -69,6 +69,34 @@ describe('ModelDefinitionPageBuilder.loadArrivalPatterns', () => {
         expect(loaded?.seasonWeights).toEqual([]);
         expect(loaded?.dayOfWeekWeights).toEqual([]);
         expect(loaded?.hourWeights).toEqual([]);
+    });
+
+    it('round-trips a WEEK-mode pattern without flipping it back to MONTH (wire-default omit rule)', () => {
+        // ArrivalPattern's class scaffold default is MONTH, but toJSON()
+        // omits `seasonMode` when it equals the WIRE default, WEEK -- so a
+        // saved WEEK pattern serializes with no `seasonMode` key at all.
+        // The loader must resolve that absence back to WEEK, not to the
+        // freshly-constructed MONTH. Goes through the real ArrivalPattern
+        // instance's own toJSON() and the real setArrivalPatterns/
+        // getArrivalPatterns round trip, not a hand-built fixture, so the
+        // omission is the genuine one toJSON() produces.
+        const { builder, storageAdapter } = makeBuilder();
+        const page = makeFakePage('page-1');
+
+        const authored = new ArrivalPattern('ap-1', 'P1');
+        authored.seasonMode = SeasonMode.WEEK;
+        authored.seasonWeights = Array.from({ length: 52 }, (_, i) => i + 1);
+        const serialized = authored.toJSON() as any;
+        expect('seasonMode' in serialized).toBe(false); // sanity: confirms the omission this test guards against
+
+        storageAdapter.setArrivalPatterns(page, [serialized]);
+        const modelDefinition = makeModelDefinition();
+
+        (builder as any).loadArrivalPatterns(page, modelDefinition);
+
+        const loaded = modelDefinition.arrivalPatterns.get('ap-1');
+        expect(loaded?.seasonMode).toBe(SeasonMode.WEEK);
+        expect(loaded?.seasonWeights).toHaveLength(52);
     });
 
     it('leaves the list empty when nothing is stored', () => {

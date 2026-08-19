@@ -8,6 +8,8 @@ import {
     State,
     Entity,
     ArrivalPattern,
+    SeasonMode,
+    UnitlessSample,
     Scenario,
     SwimLaneQuodsiData,
     SwimLaneResourceData,
@@ -410,6 +412,18 @@ export class ModelDefinitionPageBuilder {
      * and states. Fields absent from storage are left at the ArrivalPattern
      * constructor's defaults — ArrivalPattern.toJSON() omits at those defaults
      * on the way out, so an absent key means "still default", not "unset".
+     *
+     * `seasonMode` is the one field where that rule does NOT mean "leave it
+     * at the class scaffold default": ArrivalPattern's class default is
+     * MONTH (a deliberate authoring-UX choice), but toJSON()'s omit rule
+     * compares against WEEK, the engine's real wire default
+     * (`CleanArrivalPatternDoc.season_mode`). So an absent `seasonMode` key
+     * means "still WEEK", not "still MONTH" — the reader must resolve the
+     * absent case to the WIRE default, not the constructor's own default,
+     * or a saved WEEK pattern (52 weights) silently reads back as MONTH (12
+     * weights expected) on the very next page load, corrupting the pattern
+     * and failing ArrivalPatternValidation. Do not "simplify" this back to
+     * `if (serialized.seasonMode !== undefined) ...` — that is the bug.
      */
     private loadArrivalPatterns(page: PageProxy, modelDefinition: ModelDefinition): void {
         this.log('Loading arrival patterns from storage');
@@ -421,13 +435,16 @@ export class ModelDefinitionPageBuilder {
             try {
                 const pattern = new ArrivalPattern(serialized.id, serialized.name);
                 if (serialized.cycle !== undefined) pattern.cycle = serialized.cycle as any;
+                // Wire default (WEEK), not the class default (MONTH) — see the
+                // method doc comment above for why these two differ.
+                pattern.seasonMode = SeasonMode.WEEK;
                 if (serialized.seasonMode !== undefined) pattern.seasonMode = serialized.seasonMode as any;
                 if (serialized.countMode !== undefined) pattern.countMode = serialized.countMode as any;
                 if (serialized.seasonWeights !== undefined) pattern.seasonWeights = serialized.seasonWeights;
                 if (serialized.dayOfWeekWeights !== undefined) pattern.dayOfWeekWeights = serialized.dayOfWeekWeights;
                 if (serialized.hourWeights !== undefined) pattern.hourWeights = serialized.hourWeights;
                 if (serialized.withinHourOffset !== undefined) {
-                    pattern.withinHourOffset = serialized.withinHourOffset as any;
+                    pattern.withinHourOffset = UnitlessSample.fromJSON(serialized.withinHourOffset);
                 }
                 modelDefinition.arrivalPatterns.add(pattern);
                 this.log(`Added arrival pattern: ${pattern.name}`);
