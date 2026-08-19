@@ -2,6 +2,7 @@ import { EnvelopeBase, EnvelopeMessageType, JsonObject, SimulationObjectType, ge
 import { router } from '../index';
 import { Viewport, ElementProxy, PageProxy, EditorClient } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { PanelRole } from '../types';
 import { SelectionHandler } from './selection/SelectionHandler';
 
 const log = getLogger('ElementOpsHandler');
@@ -46,6 +47,32 @@ export class ElementOpsHandler {
       default:
         return false;
     }
+  }
+
+  /**
+   * Determine which channel to send a response to based on the message
+   * source. Mirrors SimulationRunHandler.getResponseChannel /
+   * DiagramMappingRelayHandler.getResponseChannel / ModelRootHandler's own
+   * copy: a message that originates from the pattern-editor modal
+   * ('pattern-iframe') gets its reply routed back to the 'pattern' channel;
+   * everything else (the side panel, source 'model-iframe') goes to
+   * 'model' -- the channel this handler always used before the modal
+   * existed, so a panel-originated request is unaffected.
+   *
+   * Used only by handleElementUpdate (ELEMENT_UPDATE / ELEMENT_UPDATE_RESULT)
+   * -- the route the pattern modal's bufferingAccessor actually calls
+   * (via useModelRootSource's saveShape). handleElementConvert
+   * (ELEMENT_CONVERT / ELEMENT_CONVERT_RESULT) intentionally does NOT use
+   * this: the pattern modal never sends ELEMENT_CONVERT (its
+   * GeneratorPatternTab only calls accessor.updateShape/updateModel), and
+   * shape-type conversion is only reachable from the side panel's element
+   * editors (ActivityEditor/GeneratorEditor/ModelEditor via
+   * modelOpsSender.convertElement) -- see elementOpsHandler.ts's
+   * handleElementConvert sends, left hardcoded to 'model'.
+   */
+  private static getResponseChannel(msg: EnvelopeBase): PanelRole {
+    if (msg.source === 'pattern-iframe') return 'pattern';
+    return 'model';
   }
 
   /**
@@ -103,6 +130,8 @@ export class ElementOpsHandler {
       diagramElementType: data.diagramElementType
     });
 
+    const channel = ElementOpsHandler.getResponseChannel(msg);
+
     try {
       // Get the client and model manager from singleton
       const client = ModelManager.getClient();
@@ -156,13 +185,14 @@ export class ElementOpsHandler {
       
       // Validate the model after update
       await modelManager.validateModel();
-      
-      // Send success response
-      router.send('model', {
+
+      // Send success response -- routed to whichever surface issued the
+      // request (side panel or the pattern-editor modal), not always 'model'.
+      router.send(channel, {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: true,
@@ -177,16 +207,17 @@ export class ElementOpsHandler {
       await SelectionHandler.handleLucidSelectionEvent(client, selectedItems, modelManager);
 
       return true;
-      
+
     } catch (error) {
       log.error('Error updating element', error);
-      
-      // Send error response
-      router.send('model', {
+
+      // Send error response -- same requester-derived routing as the
+      // success path above.
+      router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.ELEMENT_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: false,
@@ -194,7 +225,7 @@ export class ElementOpsHandler {
           errorMessage: error instanceof Error ? error.message : String(error)
         }
       });
-      
+
       return false;
     }
   }
@@ -301,7 +332,11 @@ export class ElementOpsHandler {
       // Validate the model after conversion
       await modelManager.validateModel();
 
-      // Send success response
+      // Send success response -- deliberately hardcoded to 'model', not
+      // getResponseChannel(msg). ELEMENT_CONVERT is only ever sent by the
+      // side panel's element editors (modelOpsSender.convertElement); the
+      // pattern-editor modal has no conversion UI and never issues this
+      // message. See getResponseChannel's doc comment above.
       router.send('model', {
         id: msg.id, // Use same ID for correlation
         type: EnvelopeMessageType.ELEMENT_CONVERT_RESULT,
@@ -325,7 +360,8 @@ export class ElementOpsHandler {
     } catch (error) {
       log.error('Error converting element', error);
 
-      // Send error response
+      // Send error response -- same hardcoded 'model' as the success path
+      // above (see that comment for why).
       router.send('model', {
         id: msg.id,
         type: EnvelopeMessageType.ELEMENT_CONVERT_RESULT,

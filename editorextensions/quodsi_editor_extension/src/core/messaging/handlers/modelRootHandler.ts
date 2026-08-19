@@ -2,6 +2,7 @@ import { EnvelopeBase, EnvelopeMessageType, ModalSize, getLogger } from '@quodsi
 import { router } from '../index';
 import { Viewport } from 'lucid-extension-sdk';
 import { ModelManager } from '../../ModelManager';
+import { PanelRole } from '../types';
 import { PatternEditorModal } from '../../../panels/PatternEditorModal';
 
 const log = getLogger('ModelRootHandler');
@@ -55,6 +56,21 @@ export class ModelRootHandler {
     }).show();
   }
 
+  /**
+   * Determine which channel to send a response to based on the message
+   * source. Mirrors SimulationRunHandler.getResponseChannel /
+   * DiagramMappingRelayHandler.getResponseChannel: a message that
+   * originates from the pattern-editor modal ('pattern-iframe') gets its
+   * reply routed back to the 'pattern' channel; everything else (the side
+   * panel, source 'model-iframe') goes to 'model' -- the same channel this
+   * handler always used before the modal existed, so a panel-originated
+   * request is unaffected.
+   */
+  private static getResponseChannel(msg: EnvelopeBase): PanelRole {
+    if (msg.source === 'pattern-iframe') return 'pattern';
+    return 'model';
+  }
+
   /** Push the current projection to React. Also called after every write. */
   public static async sendSnapshot(correlationId: string): Promise<void> {
     const modelManager = ModelManager.getInstance();
@@ -89,6 +105,8 @@ export class ModelRootHandler {
 
     log.debug('Model-root update requested', { keys: Object.keys(patch) });
 
+    const channel = ModelRootHandler.getResponseChannel(msg);
+
     try {
       const modelManager = ModelManager.getInstance();
       const viewport = new Viewport(ModelManager.getClient());
@@ -100,22 +118,22 @@ export class ModelRootHandler {
       await modelManager.updateModelRoot(patch, currentPage);
       await modelManager.validateModel();
 
-      router.send('model', {
+      router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: { success: true },
       });
 
     } catch (error) {
       log.error('Error updating model root', error);
-      router.send('model', {
+      router.send(channel, {
         id: msg.id,
         type: EnvelopeMessageType.MODEL_ROOT_UPDATE_RESULT,
         source: 'host',
-        target: 'model-iframe',
+        target: `${channel}-iframe`,
         version: '1.0',
         data: {
           success: false,
